@@ -21,9 +21,18 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.update.nlri.nlri import _UNPARSED, NLRI
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
+
+# How much of an NLRI we can not encode goes in the log, so that a route which is dropped can
+# be identified and decoded, without a four kilobyte FlowSpec NLRI filling the log on every
+# cycle of a RIB which still holds it.
+_LOG_NLRI_OCTETS = 32
+
+# The narrowest NLRI there can be: a mask of zero, with no prefix octets behind it.
+_MIN_NLRI_OCTETS = 1
 
 
 class NLRICollection:
@@ -348,6 +357,92 @@ class MPNLRICollection:
         # Case 3: Global nexthop, no link-local available - send as 16-byte
         return nh_rd + nh_packed
 
+    def _fragmented(
+        self,
+        code: int,
+        preamble: bytes,
+        packed_nlris: list[bytes],
+        maximum: int,
+    ) -> 'Generator[bytes, None, None]':
+        """Fill MP attributes of at most `maximum` octets with as many of these NLRIs as fit.
+
+        An NLRI which does not fit an attribute of its own is logged and left out.  No
+        fragmentation can place it, and the limit is our own: the maximum here is what is left
+        of an UPDATE once our attributes are in it, so the peer has done nothing and cannot be
+        told anything useful.
+
+        The two things this used to do instead both ended the session:
+
+        * it raised `RuntimeError` when that NLRI was the first of its group, and nothing
+          between here and `Peer._run`'s last resort `except Exception` catches it, so one
+          route of ours reset an established session, losing every route of every family; and
+          since the route is still in the RIB when the session comes back, it is a flap loop
+          rather than a failure;
+        * when the NLRI was not the first, it opened the next attribute with it and never
+          asked whether it fitted there either, so the last fragment came out over the budget.
+          RFC 4271 4.1 gives the maximum message size and 6.1 makes the peer answer a message
+          over it with a NOTIFICATION, so the session went down from the other end.
+
+        The native IPv4 pass of `UpdateCollection.messages` has always logged and dropped.
+
+        Args:
+            code: MP_REACH_NLRI or MP_UNREACH_NLRI attribute type code.
+            preamble: The leading octets of the attribute, repeated in every fragment.
+            packed_nlris: The NLRIs of this family, already in wire format.
+            maximum: Maximum bytes per attribute, preamble and NLRIs included.
+
+        Yields:
+            Wire-format attribute bytes (with flags/type/length header).
+        """
+        attribute = 'MP_REACH_NLRI' if code == self._CODE_MP_REACH_NLRI else 'MP_UNREACH_NLRI'
+        preamble_length = len(preamble)
+
+        if self._attr_len(preamble_length + _MIN_NLRI_OCTETS) > maximum:
+            # Not one NLRI of this family can be sent, which is one fact about our attributes
+            # rather than one about each route, so it is said once.  Saying it per NLRI would
+            # put a critical line per route in the log on every pass over the RIB.
+            log.critical(
+                lazymsg(
+                    'update.pack.error reason=attributes_too_large attribute={attribute} afi={afi} safi={safi} '
+                    'nlri_count={nlri_count} maximum_bytes={maximum_bytes} action=not_sent',
+                    attribute=attribute,
+                    afi=self._afi,
+                    safi=self._safi,
+                    nlri_count=len(packed_nlris),
+                    maximum_bytes=maximum,
+                ),
+                'parser',
+            )
+            return
+
+        fragment = preamble
+
+        for packed_nlri in packed_nlris:
+            if self._attr_len(preamble_length + len(packed_nlri)) > maximum:
+                log.critical(
+                    lazymsg(
+                        'update.pack.error reason=nlri_too_large attribute={attribute} afi={afi} safi={safi} '
+                        'nlri_bytes={nlri_bytes} maximum_bytes={maximum_bytes} nlri={nlri} action=not_sent',
+                        attribute=attribute,
+                        afi=self._afi,
+                        safi=self._safi,
+                        nlri_bytes=len(packed_nlri),
+                        maximum_bytes=maximum,
+                        nlri=packed_nlri[:_LOG_NLRI_OCTETS].hex(),
+                    ),
+                    'parser',
+                )
+                continue
+            if self._attr_len(len(fragment) + len(packed_nlri)) > maximum:
+                assert self._attr_len(len(fragment)) <= maximum, 'an MP attribute grew past the budget'
+                yield self._attribute_header(code, len(fragment)) + fragment
+                fragment = preamble
+            fragment = fragment + packed_nlri
+
+        if len(fragment) > preamble_length:
+            assert self._attr_len(len(fragment)) <= maximum, 'the last MP attribute grew past the budget'
+            yield self._attribute_header(code, len(fragment)) + fragment
+
     def packed_reach_attributes(
         self,
         negotiated: 'Negotiated',
@@ -387,23 +482,7 @@ class MPNLRICollection:
         for nexthop, packed_nlris in mpnlri.items():
             # Build header: AFI(2) + SAFI(1) + NH_len(1) + NH + reserved(1)
             header = afi_bytes + safi_bytes + bytes([len(nexthop)]) + nexthop + bytes([0])
-            header_length = len(header)
-            payload = header
-
-            for packed_nlri in packed_nlris:
-                # Check if adding this NLRI would exceed maximum
-                if self._attr_len(len(payload) + len(packed_nlri)) > maximum:
-                    if len(payload) == header_length:
-                        raise RuntimeError('NLRI too large for attribute size limit')
-                    # Yield current payload and start new one
-                    yield self._attribute_header(self._CODE_MP_REACH_NLRI, len(payload)) + payload
-                    payload = header + packed_nlri
-                else:
-                    payload = payload + packed_nlri
-
-            # Yield final payload for this nexthop
-            if len(payload) > header_length:
-                yield self._attribute_header(self._CODE_MP_REACH_NLRI, len(payload)) + payload
+            yield from self._fragmented(self._CODE_MP_REACH_NLRI, header, packed_nlris, maximum)
 
     def packed_unreach_attributes(
         self,
@@ -435,23 +514,7 @@ class MPNLRICollection:
 
         # Build header: AFI(2) + SAFI(1)
         header = self._afi.pack_afi() + self._safi.pack_safi()
-        header_length = len(header)
-        payload = header
-
-        for packed_nlri in packed_nlris:
-            # Check if adding this NLRI would exceed maximum
-            if self._attr_len(len(payload) + len(packed_nlri)) > maximum:
-                if len(payload) == header_length:
-                    raise RuntimeError('NLRI too large for attribute size limit')
-                # Yield current payload and start new one
-                yield self._attribute_header(self._CODE_MP_UNREACH_NLRI, len(payload)) + payload
-                payload = header + packed_nlri
-            else:
-                payload = payload + packed_nlri
-
-        # Yield final payload
-        if len(payload) > header_length:
-            yield self._attribute_header(self._CODE_MP_UNREACH_NLRI, len(payload)) + payload
+        yield from self._fragmented(self._CODE_MP_UNREACH_NLRI, header, packed_nlris, maximum)
 
     def __len__(self) -> int:
         """Return number of NLRIs in collection."""

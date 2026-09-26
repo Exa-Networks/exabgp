@@ -19,8 +19,10 @@ So this file asserts on the bytes the split produces, on both sides of it:
   * a withdraw-only UPDATE carries no path attribute and an announce-only one does;
   * the split did not cost us batching, which is what keeps a table load to one message per
     thousand prefixes rather than one per prefix;
-  * and the overwhelmingly common shapes, withdraw-only and announce-only, still produce
-    byte for byte what they produced before the split existed.
+  * the overwhelmingly common shapes, withdraw-only and announce-only, still produce
+    byte for byte what they produced before the split existed;
+  * and an NLRI which is too wide for an MP attribute of its own is logged and left out,
+    rather than raising into the reactor or being sent in a message over the negotiated size.
 """
 
 from __future__ import annotations
@@ -34,6 +36,7 @@ from exabgp.bgp.message.update import Update, UpdateCollection
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection, NextHop
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.bgp.message.update.nlri import collection as nlri_collection
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
@@ -498,14 +501,109 @@ def test_an_announcement_wider_than_what_is_left_is_refused_after_the_withdrawal
 
 
 def test_an_unpackable_mp_withdrawal_is_refused_rather_than_raised() -> None:
-    """MPNLRICollection raises RuntimeError on a budget too small for one NLRI.
+    """A budget which cannot hold an attribute header at all is refused by the caller.
 
     A withdraw-only VPNv4 collection keeps its path attributes, unlike a unicast one, so it
     is the shape where an MP withdrawal can be unaffordable.  Removing the guards which used
     to return long before this point is only safe because the MP loop now checks its own
-    budget: without that check this raises a Python exception into the reactor.
+    budget.  The guard here stays so that one fact about the attributes is logged once rather
+    than once per route, which is what the generator below it would do.
     """
     negotiated = session()
     messages = generated([], [vpn_routed('10.0.1.0/24').nlri], attributes_leaving(negotiated, 0), negotiated)
 
     assert messages == [], 'an UPDATE was generated for a withdrawal which cannot be packed'
+
+
+# --------------------------------------- an NLRI we can not encode is dropped, not raised
+
+
+def test_a_lone_mp_announcement_wider_than_the_budget_is_dropped_rather_than_raised() -> None:
+    """One NLRI too wide for an MP_REACH_NLRI of its own used to raise RuntimeError.
+
+    Nothing between here and `Peer._run`'s last resort `except Exception` catches it, so a
+    route of our own which will not fit reset an established session.  The peer had done
+    nothing and lost every route of every family, and the route is still in the RIB on the
+    next session, which makes it a flap loop rather than a failure.  A local encoding limit
+    is not a protocol error: it is logged and the NLRI is left out, which is what the native
+    IPv4 pass has always done.
+    """
+    negotiated = session()
+    # An MP_REACH_NLRI for IPv6 unicast spends 21 octets on AFI, SAFI, a 16 byte next-hop and
+    # the reserved octet, before its first NLRI, so ten leaves room for none of it.
+    messages = generated([routed('2001:db8::/64')], [], attributes_leaving(negotiated, 10), negotiated)
+
+    assert messages == [], 'an UPDATE was generated for an announcement which cannot be packed'
+
+
+def test_a_lone_mp_withdrawal_wider_than_the_budget_is_dropped_rather_than_raised() -> None:
+    """The MP_UNREACH half of the same defect: the same two lines, the same escape."""
+    negotiated = session()
+    messages = generated([], [vpn_routed('10.0.1.0/24').nlri], attributes_leaving(negotiated, 10), negotiated)
+
+    assert messages == [], 'an UPDATE was generated for a withdrawal which cannot be packed'
+
+
+def test_an_mp_announcement_wider_than_the_budget_does_not_oversize_the_message() -> None:
+    """The same NLRI behind one which fits produced an UPDATE over the negotiated size.
+
+    An NLRI which overflows the current attribute opens the next one, and nothing asked
+    whether it fits there either, so the last fragment came out wider than the budget.  RFC
+    4271 4.1 gives the maximum message size, and 6.1 makes the peer answer a message over it
+    with a NOTIFICATION, so this took the session down from the other end instead.
+
+    The NLRIs of a family are sorted by their packed form, which begins with the mask, so the
+    widest is normally the last of its group: this is the shape the defect takes in practice.
+    """
+    negotiated = session()
+    # Thirty octets past the MP_REACH header holds the /8 which needs two and not the /64
+    # which needs nine.
+    messages = generated(
+        [routed('2001:db8::/64'), routed('2000::/8')], [], attributes_leaving(negotiated, 30), negotiated
+    )
+
+    announced, withdrawn = decoded(messages, negotiated)
+    assert announced == ['2000::/8'], 'the NLRI which fits was dropped with the one which did not'
+    assert withdrawn == []
+
+
+def test_an_mp_withdrawal_wider_than_the_budget_does_not_oversize_the_message() -> None:
+    """The MP_UNREACH half: a withdraw-only VPNv4 collection still carries its attributes."""
+    negotiated = session()
+    # MP_UNREACH_NLRI spends three octets on AFI and SAFI, and a VPNv4 NLRI carries a label
+    # and a route distinguisher, so twenty holds the /8 at thirteen octets and not the /32 at
+    # sixteen.
+    withdraws = [vpn_routed('10.0.0.1/32').nlri, vpn_routed('10.0.0.0/8').nlri]
+    messages = generated([], withdraws, attributes_leaving(negotiated, 20), negotiated)
+
+    announced, withdrawn = decoded(messages, negotiated)
+    expected = '10.0.0.0/8 label 800 (12801) rd 1.2.3.4:5'
+    assert withdrawn == [expected], 'the NLRI which fits was dropped with the one which did not'
+    assert announced == []
+
+
+def test_a_family_which_can_hold_no_nlri_at_all_is_reported_once(monkeypatch) -> None:
+    """One critical line for the family, not one per route, which is a log flood.
+
+    The budget is what is left of an UPDATE once our attributes are in it, so a budget too
+    narrow for the attribute header plus a single octet says one thing about the attributes and
+    nothing about any particular route.  Reporting it per NLRI would write a critical line per
+    route on every pass over a RIB which still holds them.
+    """
+    negotiated = session()
+    reported: list[str] = []
+    # The patch goes through the module under test rather than through `exabgp.logger`, because
+    # tests/unit/test_rib_flush_async.py replaces sys.modules['exabgp.logger'] with a MagicMock
+    # at import time and never puts it back.  Every test module collected after it, which is
+    # every one later in the alphabet, binds a mock with `from exabgp.logger import log`, and
+    # patching that mock patches nothing the encoder can see: this asserted on zero calls and
+    # would have passed whatever the encoder logged.
+    monkeypatch.setattr(nlri_collection.log, 'critical', lambda message, source='': reported.append(message()))
+
+    announces = [routed('2001:db8::/64'), routed('2001:db9::/64'), routed('2001:dba::/64')]
+    messages = generated(announces, [], attributes_leaving(negotiated, 10), negotiated)
+
+    assert messages == [], 'an UPDATE was generated for a family which cannot hold one NLRI'
+    assert len(reported) == 1, f'three routes were refused in {len(reported)} log lines'
+    assert 'afi=ipv6 safi=unicast' in reported[0], 'the log does not say which family was refused'
+    assert 'nlri_count=3' in reported[0], 'the log does not say how many routes were dropped'

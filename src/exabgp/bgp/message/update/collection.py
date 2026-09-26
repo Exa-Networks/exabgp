@@ -596,9 +596,19 @@ class UpdateCollection(Message):
             withdraw_size = negotiated.msg_size - 19 - 2 - 2 - len(base_attr)
             if include_withdraw and withdraw_nlris:
                 if withdraw_size <= 0:
-                    # packed_unreach_attributes raises RuntimeError rather than yield nothing,
-                    # so it is never called with a budget which cannot hold anything.
-                    log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
+                    # A budget which cannot hold an attribute header is one fact about the
+                    # attributes, not one per route, so it is said here rather than by
+                    # packed_unreach_attributes once per NLRI.  This used to claim that
+                    # generator "raises RuntimeError rather than yield nothing, so it is never
+                    # called with a budget which cannot hold anything": false twice over, since
+                    # a positive budget narrower than one NLRI walked past this guard and the
+                    # RuntimeError was an escape into the reactor rather than a refusal.
+                    log.critical(
+                        lazymsg(
+                            'update.pack.error reason=attributes_too_large afi={afi} safi={safi}', afi=afi, safi=safi
+                        ),
+                        'parser',
+                    )
                 else:
                     for mpurnlri in mp_withdraw.packed_unreach_attributes(negotiated, withdraw_size):
                         yield self._message(
