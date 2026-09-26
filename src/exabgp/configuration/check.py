@@ -196,10 +196,26 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                     routed = update.announces[0]
                     nlri = routed.nlri
                     nexthop = routed.nexthop
-                else:
+                elif update.nlris:
                     nlri = update.nlris[0]
                     nexthop = IP.NoNextHop
                     routed = RoutedNLRI(nlri, nexthop)
+                else:
+                    # An UPDATE which re-decodes to no NLRI at all. A flow route with no match
+                    # block reaches here: it packs a FlowSpec NLRI of length zero, which RFC 8955
+                    # 4.2 makes a match on every packet, and which does not survive its own
+                    # decode. Indexing nlris[0] answered that with IndexError out of a validation
+                    # tool, and the traceback asked the operator to open a bug report about their
+                    # own configuration. Whether such a rule should be refused outright is a
+                    # separate question; a validator must say what it found either way.
+                    log.error(
+                        lazymsg(
+                            'check.update.no-nlri route={route}',
+                            route=str1,
+                        ),
+                        'parser',
+                    )
+                    return False
                 route2 = Route(nlri, update.attributes, nexthop=nexthop)
                 str2 = route2.extensive()
                 recoded = list(UpdateCollection([routed], [], update.attributes).messages(recode_negotiated))
