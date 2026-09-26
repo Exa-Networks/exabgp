@@ -21,6 +21,13 @@ Version 6.0.0:
    Configuration checks account for automatic marking and export refusal.
    This is partial RFC 9234 support: helpers still own ingress OTC insertion
    and ineligible-route exclusion.
+ * Incompatible: an extended community "target:" or "origin:" whose global
+   administrator is an AS above 65535, or is written with a trailing L, is encoded as
+   the Four-Octet AS Specific type of RFC 5668 (0x02). It was encoded as the IPv4
+   address type (0x01), so "target:4200000000:100" went out as the address
+   250.86.234.0 and etc/exabgp/parse-community.conf's "target:120000L:123" as
+   "target:0.1.212.192:123". A peer sees a different community on the wire; a dotted
+   address and an AS below 65536 are unchanged.
  * Compatibility: MP_REACH_NLRI is now the first path attribute of the UPDATEs we send,
    and one UPDATE carries one NLRI field only. RFC 7606 section 5.1 asks for both: it
    SHALL be first, and a message MUST NOT hold more than one of a non-empty Withdrawn

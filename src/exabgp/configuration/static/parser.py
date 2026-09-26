@@ -489,12 +489,13 @@ def large_community(tokeniser: 'Tokeniser') -> LargeCommunities:
 # fmt: off
 _HEADER = {
     # header and subheader
+    # RFC 4360: two octet AS (0x00) and IPv4 address (0x01); RFC 5668: four octet AS (0x02)
     'target':   bytes([0x00, 0x02]),
     'target4':  bytes([0x01, 0x02]),
-    # TODO: OriginASN4Number (2,2)
+    'target-as4': bytes([0x02, 0x02]),
     'origin':   bytes([0x00, 0x03]),
     'origin4':  bytes([0x01, 0x03]),
-    # TODO: RouteTargetASN4Number (2,3)
+    'origin-as4': bytes([0x02, 0x03]),
     'redirect': bytes([0x80, 0x08]),
     'l2info':   bytes([0x80, 0x0A]),
     'redirect-to-nexthop': bytes([0x08, 0x00]),
@@ -506,8 +507,10 @@ _HEADER = {
 _ENCODE = {
     'target':   'HL',
     'target4':  'LH',
+    'target-as4': 'LH',
     'origin':   'HL',
     'origin4':  'LH',
+    'origin-as4': 'LH',
     'redirect': 'HL',
     'l2info':   'BBHH',
     'bandwidth': 'Hf',
@@ -563,8 +566,12 @@ def _encode(command: str, components: list[int], parts: list[str]) -> tuple[byte
         raise ValueError('invalid extended community type {}'.format(command))
 
     if command in ('origin', 'target'):
-        if components[0] > _SIZE_H or '.' in parts[0] or parts[0][-1] == 'L':
+        # a dotted global administrator is an IPv4 address; an AS too large for two octets, or
+        # written with a trailing L, is a four octet AS and not an address
+        if '.' in parts[0]:
             command += '4'
+        elif components[0] > _SIZE_H or parts[0][-1] == 'L':
+            command += '-as4'
 
     encoding = _ENCODE[command]
 
