@@ -70,6 +70,20 @@ class ParseFlowRoute(Section):
 
     def post(self):
         route = self.scope.get_route()
+
+        # RFC 8955 4.2 encodes the value as `<[component]+>`, one component or more: the
+        # components are individually optional, the list is not. The same section says an NLRI
+        # "not encoded as specified here ... is considered malformed", so a rule with no match
+        # is malformed on the wire and we must not build one.
+        #
+        # It is also the most dangerous thing we could emit. A packet matches "the intersection
+        # (AND) of all the components present", and the intersection of nothing is every packet,
+        # so `then { discard; }` with no match is discard-all. flow.py already refuses this
+        # shape on the way IN, from a peer; until now we would announce what we would not
+        # accept.
+        if not route.nlri.rules:
+            return self.error.set('a flow route needs at least one match, or it matches every packet')
+
         if route.nlri.rd is not RouteDistinguisher.NORD:
             route.nlri.safi = SAFI.flow_vpn
         return True
