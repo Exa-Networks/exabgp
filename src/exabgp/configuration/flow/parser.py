@@ -53,6 +53,11 @@ from exabgp.rib.change import Change
 SINGLE_SLASH = 1  # Format with single slash (IP/prefix)
 DOUBLE_SLASH = 2  # IPv6 format with offset (IP/prefix/offset)
 
+# FlowSpec prefix netmask bounds.  The mask goes out in a single wire byte which nothing
+# downstream checks, so an IPv4 /33 would otherwise be announced as prefix length 0x21.
+IPV4_MAX_NETMASK = 32
+IPV6_MAX_NETMASK = 128
+
 # Bit width constants for validation
 ASN16_MAX_BITS = 16  # 16-bit ASN field size
 ASN32_MAX_BITS = 32  # 32-bit ASN field size
@@ -80,40 +85,78 @@ def flow(tokeniser):
     return Change(Flow(), Attributes())
 
 
+def _bounded_netmask(netmask, maximum):
+    """The netmask the operator wrote, refused unless a FlowSpec prefix can carry it.
+
+    `CIDR` stores the mask and `IPrefix4`/`IPrefix6` pack it into a single wire byte
+    without looking at it, so this is the only place an out of range mask can be stopped:
+    a `/33` otherwise went out as prefix length 0x21, which no receiver can read.
+    """
+    mask = int(netmask)
+    if not 0 <= mask <= maximum:
+        raise ValueError('netmask %d is not in the range 0-%d' % (mask, maximum))
+    return mask
+
+
+def _bounded_offset(offset, netmask):
+    """The IPv6 offset the operator wrote, bounded by its own netmask.
+
+    RFC 8956 section 3.1 encodes the (netmask - offset) bits which follow the first
+    `offset` bits.  The all-addresses component is exactly length zero with offset zero;
+    every other one needs an offset below its netmask, or the pattern carries no bit to
+    match on.  `IPrefix6.pack` writes the offset out unchecked.
+    """
+    value = int(offset)
+    valid = value == 0 if netmask == 0 else 0 <= value < netmask
+    if not valid:
+        raise ValueError('offset %d must be zero for /0 or in the range 0-%d' % (value, netmask - 1))
+    return value
+
+
+def _flow_prefix(data, what, klass4, klass6):
+    """The component a flow source/destination token describes, or a ValueError naming it.
+
+    The three branches (IPv4, IPv6, IPv6 with an offset) had no `else` and no handler, so
+    a token matching none of them left the generator empty and the caller,
+    `configuration/flow/__init__.py route()`, added no component at all.  RFC 8955 section
+    4.2 makes a FlowSpec NLRI with no components a match on *every* packet, so
+    `source not-an-ip` loaded and announced a one byte NLRI which matched all traffic
+    instead of the narrow filter the operator wrote.
+    """
+    is_ipv4 = data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0
+    is_ipv6 = data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH
+    is_ipv6_offset = data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH
+
+    if not (is_ipv4 or is_ipv6 or is_ipv6_offset):
+        expected = 'IPv4/mask, IPv6/mask or IPv6/mask/offset'
+        raise ValueError("'%s' is not a valid flow %s\n  Expected format: %s" % (data, what, expected))
+
+    try:
+        if is_ipv4:
+            ip, netmask = data.split('/')
+            mask = _bounded_netmask(netmask, IPV4_MAX_NETMASK)
+            raw = b''.join(bytes([int(_)]) for _ in ip.split('.'))
+            return klass4(raw, mask)
+        if is_ipv6:
+            ip, netmask = data.split('/')
+            return klass6(IP.pton(ip), _bounded_netmask(netmask, IPV6_MAX_NETMASK), 0)
+        ip, netmask, offset = data.split('/')
+        mask = _bounded_netmask(netmask, IPV6_MAX_NETMASK)
+        return klass6(IP.pton(ip), mask, _bounded_offset(offset, mask))
+    except (OSError, IndexError, ValueError) as exc:
+        # inet_pton answers a malformed address with a bare OSError, and int()/bytes() with a
+        # ValueError which names neither the token nor the setting it was written on
+        raise ValueError("'%s' is not a valid flow %s (%s)" % (data, what, exc)) from None
+
+
 def source(tokeniser):
     """Update source to handle both IPv4 and IPv6 flows."""
-    data = tokeniser()
-    # Check if it's IPv4
-    if data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0:
-        ip, netmask = data.split('/')
-        raw = b''.join(bytes([int(_)]) for _ in ip.split('.'))
-        yield Flow4Source(raw, int(netmask))
-    # Check if it's IPv6 without an offset
-    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH:
-        ip, netmask = data.split('/')
-        yield Flow6Source(IP.pton(ip), int(netmask), 0)
-    # Check if it's IPv6 with an offset
-    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH:
-        ip, netmask, offset = data.split('/')
-        yield Flow6Source(IP.pton(ip), int(netmask), int(offset))
+    yield _flow_prefix(tokeniser(), 'source', Flow4Source, Flow6Source)
 
 
 def destination(tokeniser):
     """Update destination to handle both IPv4 and IPv6 flows."""
-    data = tokeniser()
-    # Check if it's IPv4
-    if data.count('.') == IPv4.DOT_COUNT and data.count(':') == 0:
-        ip, netmask = data.split('/')
-        raw = b''.join(bytes([int(_)]) for _ in ip.split('.'))
-        yield Flow4Destination(raw, int(netmask))
-    # Check if it's IPv6 without an offset
-    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == SINGLE_SLASH:
-        ip, netmask = data.split('/')
-        yield Flow6Destination(IP.pton(ip), int(netmask), 0)
-    # Check if it's IPv6 with an offset
-    elif data.count(':') >= IPv6.COLON_MIN and data.count('/') == DOUBLE_SLASH:
-        ip, netmask, offset = data.split('/')
-        yield Flow6Destination(IP.pton(ip), int(netmask), int(offset))
+    yield _flow_prefix(tokeniser(), 'destination', Flow4Destination, Flow6Destination)
 
 
 # Expressions
