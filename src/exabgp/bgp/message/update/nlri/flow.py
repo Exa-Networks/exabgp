@@ -690,6 +690,30 @@ class Flow6Source(IPrefix6, FlowSource):
     NAME: ClassVar[str] = 'source-ipv6'
 
 
+FLOW_PREFIX_IDS: tuple[int, ...] = (FlowDestination.ID, FlowSource.ID)
+
+
+def prefix_family_conflict(rules: dict[int, list[Any]], rule: Any, afi: AFI | None = None) -> str:
+    """Why the prefix `rule` cannot join `rules`, or '' when it can.
+
+    RFC 8955 and RFC 8956 give IPv4 and IPv6 flow routes an AFI each, so every source and
+    destination prefix of one rule is of the same family. `afi`, when given, is the family the
+    route was announced in. Anything which is not a prefix has no family of its own to clash.
+    """
+    if rule.ID not in FLOW_PREFIX_IDS:
+        return ''
+    if afi is not None and rule.afi != afi:
+        return f'{rule.NAME} {rule} cannot be used in an {afi} flow route, a flow route matches one address family'
+    for rule_id in FLOW_PREFIX_IDS:
+        for existing in rules.get(rule_id, []):
+            if existing.afi != rule.afi:
+                return (
+                    f'{rule.NAME} {rule} cannot be combined with {existing.NAME} {existing}, '
+                    'a flow route matches one address family'
+                )
+    return ''
+
+
 class FlowIPProtocol(IOperationByte, NumericString, FlowIPv4):
     """IPv4 IP protocol filter (e.g., TCP=6, UDP=17, ICMP=1)."""
 
@@ -1184,29 +1208,23 @@ class Flow(NLRI):
             packed = self._pack_from_rules()
         return len(packed)
 
-    def add(self, rule: Any) -> bool:  # Any is FlowRule
-        """Add a rule to the Flow NLRI.
+    def family_conflict(self, rule: Any) -> str:  # Any is FlowRule
+        """Why `rule` cannot be added to this flow route, or '' when it can."""
+        return prefix_family_conflict(self.rules, rule)
 
+    def add(self, rule: Any) -> bool:  # Any is FlowRule
+        """Add a rule to the Flow NLRI, False when its prefix clashes with the family of another.
+
+        Several sources or destinations are allowed, as some vendors accept them, but all of one
+        family: family_conflict() says why a refused rule was refused.
         Adding rules marks _packed as stale, requiring recomputation on next pack.
         """
         ID = rule.ID
-        if ID in (FlowDestination.ID, FlowSource.ID):
-            # re-enabled multiple source/destination as it is allowed by some vendor
-            # if ID in self.rules:
-            # 	return False
-            if ID == FlowDestination.ID:
-                pair = self.rules.get(FlowSource.ID, [])
-            else:
-                pair = self.rules.get(FlowDestination.ID, [])
-            if pair:
-                # rule and pair[0] are IPrefix subclasses (FlowIPv4/FlowIPv6) which have afi
-                rule_afi = getattr(rule, 'afi', None)
-                pair_afi = getattr(pair[0], 'afi', None)
-                if rule_afi is not None and pair_afi is not None and rule_afi != pair_afi:
-                    return False
-            # TODO: verify if this is correct - why reset the afi of the NLRI object after initialisation?
-            if rule.NAME.endswith('ipv6'):
-                self._afi = AFI.ipv6
+        if self.family_conflict(rule):
+            return False
+        # TODO: verify if this is correct - why reset the afi of the NLRI object after initialisation?
+        if ID in FLOW_PREFIX_IDS and rule.afi == AFI.ipv6:
+            self._afi = AFI.ipv6
         self.rules.setdefault(ID, []).append(rule)
         self._packed_stale = True  # Mark packed as stale after modification
         return True

@@ -188,6 +188,10 @@ class NLRI(Family):
         """Add data to NLRI. Only implemented by Flow NLRI."""
         raise NotImplementedError('add() only implemented by Flow NLRI')
 
+    def family_conflict(self, data: Any) -> str:
+        """Why add() refuses data, or '' when it would not. Only implemented by Flow NLRI."""
+        raise NotImplementedError('family_conflict() only implemented by Flow NLRI')
+
     def index(self) -> bytes:
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
 

@@ -142,7 +142,9 @@ class Scope(Error):
             self._added.add(name)
 
     def nlri_add(self, name: str, command: str, data: Any) -> None:
-        self.get_route().nlri.add(data)
+        nlri = self.get_route().nlri
+        if not nlri.add(data):
+            raise ValueError(nlri.family_conflict(data))
 
     # Settings mode: deferred NLRI construction
 

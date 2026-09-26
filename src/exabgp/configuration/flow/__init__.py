@@ -129,7 +129,8 @@ def route(tokeniser: Any) -> list[Route]:
             else:
                 # Flow rules that need iteration and add()
                 for adding in handler(tokeniser):
-                    flow_nlri.add(adding)
+                    if not flow_nlri.add(adding):
+                        raise ValueError(flow_nlri.family_conflict(adding))
         elif target == ActionTarget.ATTRIBUTE:
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
             attributes.add(handler(tokeniser))

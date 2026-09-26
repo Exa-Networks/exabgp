@@ -131,6 +131,15 @@ Version 6.0.0:
  * Compatibility: the fragment bitmask is split per family, so an IPv6 flow no longer
    reports a Don't Fragment bit IPv6 does not have. RFC 8955 figure 4 has DF, IsF, FF and
    LF where RFC 8956 figure 1 has only LF, FF and IsF.
+ * Incompatible: a flow route whose source and destination prefixes are not all of one
+   address family is refused, in the configuration and on the API, where it used to be
+   accepted and changed (issue #1188). "source 10.0.0.0/24; destination 2001:db8::/32;"
+   loaded as "source 10.0.0.0/24" alone, so a rule meant for one destination matched
+   every destination; two destinations of different families went out as one rule; and
+   "announce ipv4 flow" packed an IPv6 prefix into an IPv4 flow NLRI. A configuration
+   holding such a rule now fails to load, naming the line and both prefixes, and an API
+   command sending one gets an error back instead of a success. Split the rule in two,
+   one per family.
  * Fix: BGP-LS no longer refuses input RFC 9552 protects. An unrecognised Protocol-ID
    closed the session, and IANA has assigned 7, 8 and 9 since RFC 7752, so a peer doing
    BGP-LS with Segment Routing was answered with a NOTIFICATION. The gate is removed from
