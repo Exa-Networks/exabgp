@@ -41,7 +41,9 @@ def test_a_pipe_we_may_not_open_says_why(tmp_path, capsys, no_alarm):
         cli.open_writer(name)
 
     assert exit_info.value.code == 1
-    captured = capsys.readouterr().out
+    # stderr, not stdout: a diagnostic is not part of the answer a caller reads off
+    # stdout, and main reports these on stderr too
+    captured = capsys.readouterr().err
     assert 'could not communicate with ExaBGP' in captured
     assert 'Permission denied' in captured
 
@@ -63,4 +65,4 @@ def test_a_pipe_with_nobody_at_the_other_end_still_says_exabgp_is_not_running(tm
         cli.open_writer(name)
 
     assert exit_info.value.code == 1
-    assert 'ExaBGP is not running' in capsys.readouterr().out
+    assert 'ExaBGP is not running' in capsys.readouterr().err
