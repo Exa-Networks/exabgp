@@ -148,11 +148,12 @@ over; seven sites moved Notify 3/0 → 3/9.
 | 3.14 | main: `check_fifo` reported to the daemon, and `open_writer` had a dead handler | ✅ fixed 2026-09-26 | `0bc6c6e10`. 5.0 had both closed already. See §17. |
 | 3.6 | 5.0 attribute cache is process-wide and keyed on wire bytes only | ✅ fixed 2026-09-25 | `709706aa9`. Moved onto `Negotiated`. See §16. |
 | 3.13 | `qa/bin/functional encoding` is intermittently red, about 1 run in 10 | 🟡 pre-existing, unexplained |
+| 3.15 | 5.0: `exabgp validate` crashes on a flow route with no match block | 🔴 confirmed, not fixed |
 | 3.7 | 5.0: one peer's OPEN rewrites every other session's capability variant | ✅ fixed 2026-09-26 | 5.0 `7b0e71f61`. main was already correct. |
 | 3.8 | 5.0: a labelled NLRI with no S bit closes the session (RFC 8277 §2.2 says ignore it) | ✅ fixed 2026-09-26 | 5.0, agent report. main already had the block at `inet.py:453`. |
 | 3.9 | 5.0 BGP-LS NODE/PREFIXv4/PREFIXv6 assign `self._pack` where the base reads `_packed` | ✅ fixed 2026-09-26 | 5.0 `2cb34163b`. main was already correct. |
-| 3.10 | 5.0: a BGP-LS prefix NLRI with no Local Node Descriptors TLV ends the session | 🔴 confirmed, not fixed |
-| 3.11 | 5.0 flow config silently drops an unparseable source/destination, giving discard-all | 🔴 confirmed, not fixed |
+| 3.10 | 5.0: a BGP-LS prefix NLRI with no Local Node Descriptors TLV ends the session | ✅ fixed 2026-09-26 | 5.0 `4cbb83b4f`. main already correct. |
+| 3.11 | 5.0 flow config silently drops an unparseable source/destination, giving discard-all | ✅ fixed 2026-09-26 | 5.0 `04de5164f`. main already correct. Two more instances found. See §18. |
 | 3.12 | 5.0 MULTISESSION Session ID never decoded, so the 2/8 refusal is dead code | 🟡 confirmed, not fixed |
 
 Items 3.7 to 3.12 were each **reproduced by running**, not inferred, and deliberately left:
@@ -305,7 +306,7 @@ output moved. `med` and `local-preference` stay JSON numbers, `aigp` stays the q
 | `check_exa_style` | **had no cannot-run path at all**: `rglob` over a missing tree yields nothing, every rule counts 0, it prints `ok` four times and **exits 0** |
 
 The last is the one that matters. A clean bill of health over an empty walk, and nobody
-investigates a green gate. This is the fourth instance of the pattern in §18 below. Each gate
+investigates a green gate. This is the fourth instance of the pattern in §19 below. Each gate
 now has `CANNOT_RUN = 2`, and `check_exa_style` a `MIN_SOURCE_FILES = 50` floor on the walk
 against 392 today, so it cannot fire on a real checkout.
 
@@ -996,7 +997,60 @@ a flag which can never be true.
 
 ---
 
-## 18. Process rules learned the hard way
+## 18. The flow match that matched everything, 2026-09-26
+
+`source not-an-ip;` loaded without complaint and announced:
+
+```
+pack_nlri() hex  : 00   len 1
+```
+
+One byte, length zero, no components. RFC 8955 §4.2 makes that a match on **every** packet, so
+
+```
+flow { route test { match { source not-an-ip; } then { discard; } } }
+```
+
+is a discard-all rule. The route did not fail to build; the component vanished, `rules == {}`,
+and nothing was logged. On a mitigation box that is a filter dropping traffic nobody asked to
+drop, written by an operator who narrowed it and was not told the narrowing failed. It reaches
+the live injection path as well as the configuration file.
+
+Two causes, one fix. A missing `else` on three `if`/`elif` branches left the generator empty for
+a token matching none of them. A missing bound let `int(netmask)` reach `IPrefix4.pack`, which
+writes it into one wire byte, so `10.0.0.0/33` packed `0602210a000000` with `0x21` = 33.
+
+**Two more instances of the second half, which this ledger had not recorded:** an IPv6 offset is
+not bounded either, so `source 2001:db8::/64/200` packed an offset of 200; and four tokens which
+did error reported the internals against the **wrong line**, `2001:db8:::/32` naming line 9 where
+the operator wrote line 12.
+
+main was already correct, verified by running main rather than reading it.
+
+Nothing which loads today stops loading: 33 distinct flow tokens across `etc`, `qa`, `tests` and
+`doc` all sit inside the new bounds, every previously accepted token packs byte-identically, and
+all 86 `etc/exabgp/*.conf` still validate. 73 tests, about half negative space, because a range
+check one off breaks a working deployment and that is worse than the bug.
+
+### 3.15, found alongside and left alone
+
+A flow route with **no match block at all** still produces the empty match-everything NLRI, and
+`exabgp validate` then crashes on it. Reproduced independently:
+
+```
+File ".../src/exabgp/configuration/check.py", line 152, in _check_route_generation
+IndexError: list index out of range
+exit=1
+```
+
+and the output invites the operator to file a bug report. Pre-existing, and two questions in
+one: `check.py` indexes `nlris[0]` without checking it is non-empty, and whether an explicitly
+empty flow rule should be accepted as RFC 8955 match-all or refused outright. The second is a
+decision, so both were left.
+
+---
+
+## 19. Process rules learned the hard way
 
 - **Never `git add -A`.** Commit `2114ec208` swept up an agent's unreviewed BGP-LS work and
   was pushed with a message that did not describe it. Corrected in `a8683597e` rather than
@@ -1011,6 +1065,12 @@ a flag which can never be true.
 - **Writes outside the primary directory need the sandbox disabled.** An edit to `../5.0`
   fails with `PermissionError: Operation not permitted` otherwise, which reads like a file
   permission problem and is not.
+- **Three comments I wrote asserted a mechanism I had not checked**, and each was plausible and
+  wrong the same way: that `self._pack = packed` destroyed an inherited method (it shadowed
+  nothing, `GenericBGPLS` is a sibling); that `socket.SO_BINDTODEVICE = 25` mutates the module in
+  practice (macOS has the option at 4404, so the branch is unreachable there); and that
+  `l2vpn/vpls` stayed in the round-trip ratchet for the length bug main fixed (5.0 never had it,
+  both its differences are deliberate). Describing a mechanism is not checking one.
 - **Four tests were green for the wrong reason**, which is the same failure as a green gate
   measuring nothing: the respawn limiter's own test pinned the defect as intended behaviour in
   its docstring; `test_internal_attribute_packing` passed because everything returned `b''`;
