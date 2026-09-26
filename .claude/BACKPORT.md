@@ -2,6 +2,11 @@
 
 Bug fixes that need backporting to stable branches.
 
+**Rule:** a stable release (5.0) never changes behaviour, not even for a bug fix. A fix
+which changes what a configuration accepts, what goes on the wire, or what the API prints
+stays on `main` and is recorded here as ⚪ Skip. Documentation describing 5.0 describes
+what it does today, verified by running it.
+
 **Last reviewed commit:** 0da20411
 
 **Branch locations:**
@@ -52,6 +57,7 @@ Bug fixes that need backporting to stable branches.
 ## Notes
 
 **Not backported (6.0-only or refactoring):**
+- FlowSpec rule mixing IPv4 and IPv6 prefixes refused (#1188), and IPv6 rt-redirect type 0x000d (#927): behaviour changes, 6.0 only
 - Python 3.10+ syntax changes (ca284e03, ade3edff)
 - Async mode fixes (9a6a9e49, f2d6852d, 8f4c046e) - async is 6.0-only
 - CLI fixes (c2036349, 1b8e359f, 5c6f7c36) - new CLI is 6.0-only

@@ -140,6 +140,16 @@ Version 6.0.0:
    holding such a rule now fails to load, naming the line and both prefixes, and an API
    command sending one gets an error back instead of a success. Split the rule in two,
    one per family.
+ * Compatibility: the IPv6 route-target redirect of RFC 8956 6.1 works (issue #927).
+   "redirect [2001:db8::1]:100;" was a syntax error, the community was encoded as type
+   0x0002, a plain RFC 5701 route-target rather than 0x000d, in the eight octet extended
+   community attribute rather than attribute 25, and the address was installed as the
+   route's next-hop. All four are fixed. What an API program receives changes twice: a
+   0x000d community, until now an empty JSON "string" and hex in the text encoder, reads
+   "redirect [2001:db8::1]:100" in both, and the pre-RFC draft value 0x800b, until now
+   "redirect 2001:db8::1:100" in the text encoder, is hex there as it already was in
+   JSON. A program matching the old text, where the number could not be told apart from
+   the last group of the address, needs the brackets.
  * Fix: BGP-LS no longer refuses input RFC 9552 protects. An unrecognised Protocol-ID
    closed the session, and IANA has assigned 7, 8 and 9 since RFC 7752, so a peer doing
    BGP-LS with Segment Routing was answered with a NOTIFICATION. The gate is removed from

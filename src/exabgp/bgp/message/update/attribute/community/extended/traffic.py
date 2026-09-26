@@ -446,13 +446,14 @@ class TrafficNextHopSimpson(ExtendedCommunity):
 
 @ExtendedCommunityIPv6.register_subtype
 class TrafficRedirectIPv6(ExtendedCommunityIPv6):
-    """Redirect to VRF using IPv6 address (RFC 5701).
+    """Redirect to VRF using an IPv6-Address-Specific Route-Target (RFC 8956 6.1, rt-redirect-ipv6).
 
-    Uses IPv6 Address Specific Extended Community format (20 bytes).
+    The encoding of the RFC 5701 route-target (20 bytes) "with the Type value always 0x000d".
+    It used to write 0x0002, the plain route-target, and register the draft value 0x800b.
     """
 
-    COMMUNITY_TYPE: ClassVar[int] = 0x80
-    COMMUNITY_SUBTYPE: ClassVar[int] = 0x0B
+    COMMUNITY_TYPE: ClassVar[int] = 0x00
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x0D
 
     def __init__(self, packed: Buffer) -> None:
         ExtendedCommunityIPv6.__init__(self, packed)
@@ -460,7 +461,7 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
     @classmethod
     def make_traffic_redirect_ipv6(cls, ip: str, asn: int) -> TrafficRedirectIPv6:
         """Create TrafficRedirectIPv6 from semantic values."""
-        packed = pack('!BB16sH', 0x00, 0x02, socket.inet_pton(socket.AF_INET6, ip), asn)
+        packed = pack('!BB16sH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, socket.inet_pton(socket.AF_INET6, ip), asn)
         return cls(packed)
 
     @property
@@ -472,8 +473,8 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
         value: int = unpack('!H', self._packed[18:20])[0]
         return value
 
-    def __str__(self) -> str:
-        return 'redirect %s:%d' % (self.ip, self.asn)
+    def __repr__(self) -> str:
+        return 'redirect [%s]:%d' % (self.ip, self.asn)
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRedirectIPv6:

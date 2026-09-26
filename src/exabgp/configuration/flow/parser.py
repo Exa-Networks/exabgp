@@ -426,8 +426,44 @@ def rate_limit(tokeniser: 'Tokeniser') -> ExtendedCommunities:
     return ExtendedCommunities().add(TrafficRate.make_traffic_rate(ASN(0), speed))
 
 
-def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
+def _redirect_target(tokeniser: 'Tokeniser') -> str:
+    """The redirect target as one string.
+
+    The tokeniser splits `[2001:db8::1]:100` at the brackets, into `[`, `2001:db8::1`, `]` and
+    `:100`, so an IPv6 target is put back together here before it is read.
+    """
     data: str = tokeniser()
+    if data != '[':
+        return data
+    address: str = tokeniser()
+    if tokeniser() != ']':
+        raise ValueError(f'redirect [{address} is missing its closing bracket')
+    if tokeniser.peek().startswith(':'):
+        return f'[{address}]{tokeniser()}'
+    return f'[{address}]'
+
+
+def _redirect_ipv6(data: str) -> tuple[IP, ExtendedCommunitiesIPv6]:
+    """`[address]:number`, the IPv6-Address-Specific route-target of RFC 8956 6.1.
+
+    A redirect to a VRF has no next-hop, and the community is twenty bytes, so it goes in the
+    IPv6 extended community attribute (25), never in the eight byte one (16).
+    """
+    address, number = data[1:].split(']:', 1)
+    if IP.from_string(address).ipv4():
+        raise ValueError(f'redirect {data} needs an IPv6 address, an IPv4 one is written without []')
+    if not number.isdigit():
+        raise ValueError(f'redirect {data} needs a number after the address')
+    if int(number) >= pow(2, LOCAL_ADMIN_16_BITS):
+        raise ValueError('Local administrator field is a 16 bits number, value too large {}'.format(number))
+    community = TrafficRedirectIPv6.make_traffic_redirect_ipv6(address, int(number))
+    return IP.NoNextHop, ExtendedCommunitiesIPv6().add(community)
+
+
+def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities | ExtendedCommunitiesIPv6]:
+    data: str = _redirect_target(tokeniser)
+    if data.startswith('[') and ']:' in data:
+        return _redirect_ipv6(data)
     count: int = data.count(':')
 
     # the redirect is an IPv4 or an IPv6 nexthop
@@ -444,23 +480,11 @@ def redirect(tokeniser: 'Tokeniser') -> tuple[IP, ExtendedCommunities]:
 
     # the redirect is an ipv6:NN route-target using []: notation
     if count > 1:
-        if ']:' not in data:
-            try:
-                ip: IP = IP.from_string(data)
-                return ip, ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
-            except (OSError, ValueError):
-                raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []') from None
-
-        nn: str
-        ip_str: str
-        ip_str, nn = data.split(']:')
-        ip_str = ip_str.replace('[', '', 1)
-
-        if int(nn) >= pow(2, LOCAL_ADMIN_16_BITS):
-            raise ValueError('Local administrator field is a 16 bits number, value too large {}'.format(nn))
-        return IP.from_string(ip_str), ExtendedCommunities().add(
-            TrafficRedirectIPv6.make_traffic_redirect_ipv6(ip_str, int(nn))
-        )
+        try:
+            ip: IP = IP.from_string(data)
+            return ip, ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
+        except (OSError, ValueError):
+            raise ValueError('it looks like you tried to use an IPv6 but did not enclose it in []') from None
 
     # the redirect is an ASN:NN route-target
     if True:  # count == 1:
