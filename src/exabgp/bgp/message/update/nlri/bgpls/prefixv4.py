@@ -65,7 +65,14 @@ class PREFIXv4(BGPLS):
         self.local_node = local_node
         self.prefix = prefix
         self.nexthop = nexthop
-        self._pack = packed
+        # `_packed`, not `_pack`.  The base class reads `_packed` in pack_nlri, __len__ and
+        # index, so writing the wire to `_pack` left `_packed` at the b'' the base set and
+        # pack_nlri answered a four octet header announcing a length of zero: identical for
+        # every route of this type, which is what index() keys the RIB on.  The name is not
+        # an override of anything this class has, GenericBGPLS is a sibling rather than an
+        # ancestor, which is why nothing ever raised.
+        if packed is not None:
+            self._packed = packed
         self.route_d = route_d
 
     @classmethod
@@ -116,14 +123,17 @@ class PREFIXv4(BGPLS):
             route_d=rd,
         )
 
+    # The identity of these NLRI is their wire: the descriptors are what tell two routes of
+    # one type apart, and `_packed` holds them.  __eq__ used to compare only CODE, domain,
+    # proto_id and route_d, so two prefixes of one domain were equal whatever they described,
+    # and NODE.__hash__ used (proto_id, node_ids) while its __eq__ used neither, which breaks
+    # the rule that equal objects hash equal.  Both now read the same tuple, and it is the
+    # same information index() carries, so equality agrees with RIB identity.
+    def _identity(self):
+        return (self.CODE, self.domain, self.proto_id, self.route_d, self._packed)
+
     def __eq__(self, other):
-        return (
-            isinstance(other, PREFIXv4)
-            and self.CODE == other.CODE
-            and self.domain == other.domain
-            and self.proto_id == other.proto_id
-            and self.route_d == other.route_d
-        )
+        return isinstance(other, PREFIXv4) and self._identity() == other._identity()
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -132,7 +142,7 @@ class PREFIXv4(BGPLS):
         return self.json()
 
     def __hash__(self):
-        return hash((self.CODE, self.domain, self.proto_id, self.route_d))
+        return hash(self._identity())
 
     def as_dict(self):
         nlri = BGPLS.as_dict(self)
@@ -168,4 +178,4 @@ class PREFIXv4(BGPLS):
         return f'{{ {content} }}'
 
     def pack(self, negotiated=None):
-        return self._pack
+        return self._packed
