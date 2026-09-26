@@ -38,11 +38,18 @@ from .corpus import seeds_for
 # there is obedience and not disagreement. _ignoring_label_trailing_bits masks
 # those four bits and all three families now round trip.
 #
-#   l2vpn/vpls                  differs by more than that: the two byte length
-#                               prefix is re-encoded as the payload size it kept
-#                               rather than the size the peer announced, so a
-#                               stack framed at 18 comes back as 17. main fixed
-#                               this in vpls.py; here it is still open.
+#   l2vpn/vpls                  differs for two reasons, and neither is a defect.
+#                               Its decoder takes the length as a MINIMUM and reads
+#                               the seventeen bytes it understands, so an NLRI
+#                               framed at 18 is re-emitted at 17, which is what we
+#                               hold. And pack_nlri sets the bottom-of-stack bit
+#                               unconditionally, which test_vpls.py's
+#                               test_pack_sets_bottom_of_stack argues for. Unlike
+#                               the nlri-mpls families the difference is not
+#                               confined to the four bits RFC 8277 2.2 makes
+#                               unreadable, so masking cannot reach it. It stays
+#                               here as a statement that the entry is understood,
+#                               not as a defect waiting for a fix.
 #   ipv4/rtc                    a length below 96 is accepted and re-encoded as
 #                               96. RTC prefix length decides what the route
 #                               target matches, so a reflector changes the

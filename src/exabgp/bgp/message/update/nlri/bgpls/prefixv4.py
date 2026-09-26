@@ -105,13 +105,21 @@ class PREFIXv4(BGPLS):
 
             log.critical(lambda tlv_type=tlv_type: f'unknown prefix v4 TLV {tlv_type}')
 
-        # both are mandatory (RFC 7752 section 3.2), and json() assumes they are there
-        for mandatory, mandatory_name in (
-            (TLV_LOCAL_NODE_DESC, 'Local Node Descriptors'),
-            (TLV_IP_REACHABILITY, 'IP Reachability Information'),
-        ):
-            if mandatory not in seen:
-                raise Notify(3, 10, f'BGP-LS {cls.NAME} NLRI is missing the {mandatory_name} TLV')
+        # RFC 7752 section 3.2 makes both mandatory, but only one of them is load bearing here.
+        # Without the reachability TLV the accessors have nothing to read and json() fails, so
+        # that one is refused. The Local Node Descriptors are not read by anything on this path,
+        # and a prefix NLRI without them decoded and rendered before, so refusing it would drop
+        # a route on upgrade. RFC 9552 8.2.2 is explicit that an NLRI is not to be called
+        # malformed over which optional TLVs it includes or excludes, and link.py in this same
+        # package already accepts their absence.
+        if TLV_IP_REACHABILITY not in seen:
+            raise Notify(3, 10, f'BGP-LS {cls.NAME} NLRI is missing the IP Reachability Information TLV')
+
+        if TLV_LOCAL_NODE_DESC not in seen:
+            log.debug(
+                lambda: f'BGP-LS {cls.NAME} NLRI carries no Local Node Descriptors TLV',
+                'parser',
+            )
 
         return cls(
             domain=domain,
