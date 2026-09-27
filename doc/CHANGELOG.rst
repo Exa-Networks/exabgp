@@ -51,7 +51,9 @@ Version 6.0.0:
    negotiated. A flow route now takes "path-information <id>", in a route block, in the one
    line form and on the API, and sends it in front of the NLRI once ADD-PATH is negotiated.
    Two routes with the same match and different identifiers are two paths, where one used
-   to replace the other.
+   to replace the other. With "add-path send/receive" and no "add-path { }" block every
+   family of the neighbor is offered, which now includes its flow families: list the
+   families wanted in an "add-path { }" block to keep flow without ADD-PATH.
  * Feature: a neighbour can be disabled and enabled, issue #1013. "neighbor <ip> disable
    [<text>]" closes the session with Cease / Administrative Shutdown, the text being the
    RFC 9003 Shutdown Communication, and ExaBGP does not open another until "neighbor <ip>

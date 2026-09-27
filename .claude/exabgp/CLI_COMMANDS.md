@@ -719,7 +719,8 @@ Announce FlowSpec rule.
 
 **Syntax:**
 ```bash
-announce flow route <match_conditions> then <actions>
+announce flow route <match_conditions> <actions>
+announce flow route { match { <conditions> } then { <actions> } }
 ```
 
 **Route options:**
@@ -742,8 +743,8 @@ announce flow route <match_conditions> then <actions>
 
 **Examples:**
 ```bash
-exabgp> announce flow route destination 10.0.0.0/24 protocol tcp port =80 then discard
-exabgp> announce flow route source 192.168.0.0/16 then rate-limit 1000000
+exabgp> announce flow route destination 10.0.0.0/24 protocol =tcp port =80 discard
+exabgp> announce flow route source 192.168.0.0/16 rate-limit 1000000
 exabgp> announce flow route { path-information 2; match { destination 10.0.0.0/24; } then { discard; } }
 ```
 
