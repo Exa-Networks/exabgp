@@ -1,7 +1,7 @@
 """What a Notify says, to our log and to the peer.
 
-A Notify carries two things which used to be one.  The *detail* is our explanation, for the
-log, the API and str(): it is appended to the IANA names of the code and subcode, so a
+A Notify carries two things which used to be one.  The *detail* is our explanation, for
+str() and so for the log: it is appended to the IANA names of the code and subcode, so a
 caller only writes what the names do not already say.  The *data* is the NOTIFICATION Data
 field, whose content several RFCs define (RFC 4271 6.1 wants the erroneous Length field
 for a Bad Message Length, RFC 7313 5 the complete ROUTE-REFRESH message).  When the caller

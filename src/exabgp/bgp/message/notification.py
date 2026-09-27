@@ -220,7 +220,7 @@ class Notification(Message, Exception):
 class Notify(Notification):
     """A NOTIFICATION we send.
 
-    `detail` is our explanation, for the log, the API and str().  It is appended to the
+    `detail` is our explanation, for str() and so for the log.  It is appended to the
     IANA names of the code and subcode, so a caller writes only what the names do not say.
 
     `data` is the Data field, for the subcodes whose content an RFC defines: the erroneous

@@ -4,18 +4,6 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
- * Fix: a peer sending an End-of-RIB reset the session. The End-of-RIB decodes to its own
-   message class, which the handler for received UPDATEs read as an UPDATE, and the error
-   closed the session without a NOTIFICATION. adj-rib-in is on by default, so the default
-   configuration met it with any peer which sends one, which most do. The test peer never
-   sent an End-of-RIB, and does now.
- * Fix: a BoRR or EoRR received from a peer is handled as RFC 7313 section 4 describes. Both
-   were taken for a refresh request and answered by replaying every route we send. A BoRR
-   now marks the peer's routes for that family stale in the adj-rib-in, and the EoRR
-   removes those it did not send again. With Graceful Restart from the peer, a BoRR before
-   its End-of-RIB is ignored, and we no longer send a BoRR before our own End-of-RIB. "rib
-   flush out" only brackets the refresh with BoRR and EoRR when the peer advertised
-   Enhanced Route Refresh, where it went by our own configuration.
  * Incompatible: "teardown" takes a code as well as a subcode. The documentation said the
    number was the error code, while the code always sent Cease with the number as the
    subcode, so "teardown 6" sent Cease / Other Configuration Change. One number keeps that
@@ -26,11 +14,18 @@ Version 6.0.0:
    Shutdown Communication, for anything else the Data field. "teardown" alone now sends
    Administrative Shutdown where it answered with an error, and "teardown 300" is refused
    where it raised inside the peer and closed the session without a NOTIFICATION.
+ * Fix: a BoRR or EoRR received from a peer is handled as RFC 7313 section 4 describes. Both
+   were taken for a refresh request and answered by replaying every route we send. A BoRR
+   now marks the peer's routes for that family stale in the adj-rib-in, and the EoRR
+   removes those it did not send again. With Graceful Restart from the peer, a BoRR before
+   its End-of-RIB is ignored, and we no longer send a BoRR before our own End-of-RIB. "rib
+   flush out" only brackets the refresh with BoRR and EoRR when the peer advertised
+   Enhanced Route Refresh, where it went by our own configuration.
  * Fix: the Data field of the NOTIFICATIONs we send holds what the RFCs define. A Bad
    Message Type carries the type octet, an Unsupported Version Number carries the version
    we support, an Invalid Message Length for a ROUTE-REFRESH carries the whole message, and
    an UPDATE error about an attribute carries the attribute as it was received. They all
-   carried an English sentence, which is now in our log and the API only. When no RFC
+   carried an English sentence, which is now only in our log. When no RFC
    defines the field, the peer still gets the sentence. With no sentence the field is
    empty, where it used to repeat the name of the subcode the peer had just read.
  * Fix: a ROUTE-REFRESH with a Message Subtype other than 0, 1 or 2 is ignored and logged,
@@ -48,6 +43,21 @@ Version 6.0.0:
  * Change: the names of NOTIFICATION codes and subcodes in the log and the API follow the
    IANA registry, e.g. "Finite State Machine Error" rather than "State machine error", and
    the codes and subcodes added since RFC 4486 are named.
+ * Feature: "require" as the value of a capability refuses a peer which does not advertise
+   it. "asn4 require;" advertises ASN4 and closes the session with Unsupported Capability,
+   as RFC 5492 describes, when the peer's OPEN does not carry it; the Data field lists our
+   own capabilities the peer left out. It is accepted by asn4, route-refresh,
+   extended-message, operational, software-version, nexthop and link-local-nexthop. A peer
+   refused this way is not reconnected until the configuration is reloaded, as RFC 5492
+   asks. Without "require", a missing capability is logged and the session runs without
+   it, as before.
+ * Feature: "prefix-limit N" after a family, e.g. "ipv4 unicast prefix-limit 10000;", caps
+   how many routes the peer may hold with us in that family. The route which takes it past
+   the limit closes the session with Cease / Maximum Number of Prefixes Reached (RFC 4486),
+   carrying the family and the limit. The limit is local, so a reload changes it without
+   dropping the session.
+ * Incompatible: a family line accepted anything after the SAFI and ignored it. Only
+   "prefix-limit N" may follow now, so "ipv4 unicast foo;" is a configuration error.
  * Incompatible: a flow route which redirects to an address now sends the community of
    draft-ietf-idr-flowspec-redirect-ip, which carries the address itself, instead of the
    one from draft-simpson-idr-flowspec-redirect-ip, which carries none and takes the target
