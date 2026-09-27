@@ -34,32 +34,36 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # only 2-4% of duplicated data therefore it is not worth to cache
 
 
+# HEAD and TAIL print a segment the way the configuration writes it, so a path shown by
+# exabgp can be given back to it:  as-path [ 1 2 ] ( 3 4 ) confed-sequence [ 5 ]
+
+
 class SET(list[ASN]):
     ID: ClassVar[int] = 0x01
     NAME: ClassVar[str] = 'as-set'
-    HEAD: ClassVar[str] = '['
-    TAIL: ClassVar[str] = ']'
+    HEAD: ClassVar[str] = '('
+    TAIL: ClassVar[str] = ')'
 
 
 class SEQUENCE(list[ASN]):
     ID: ClassVar[int] = 0x02
     NAME: ClassVar[str] = 'as-sequence'
-    HEAD: ClassVar[str] = '('
-    TAIL: ClassVar[str] = ')'
+    HEAD: ClassVar[str] = '['
+    TAIL: ClassVar[str] = ']'
 
 
 class CONFED_SEQUENCE(list[ASN]):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'as-confed-sequence'
-    HEAD: ClassVar[str] = '{('
-    TAIL: ClassVar[str] = ')}'
+    HEAD: ClassVar[str] = 'confed-sequence ['
+    TAIL: ClassVar[str] = ']'
 
 
 class CONFED_SET(list[ASN]):
     ID: ClassVar[int] = 0x04
     NAME: ClassVar[str] = 'as-confed-set'
-    HEAD: ClassVar[str] = '{['
-    TAIL: ClassVar[str] = ']}'
+    HEAD: ClassVar[str] = 'confed-set ['
+    TAIL: ClassVar[str] = ']'
 
 
 # TypeVar for segment types - allows slicing to preserve type
@@ -167,6 +171,19 @@ class ASPath(Attribute):
             if isinstance(seg, (SEQUENCE, CONFED_SEQUENCE)):
                 result.extend(seg)
         return result
+
+    def has_confed(self) -> bool:
+        """Whether the path holds an AS_CONFED_SEQUENCE or an AS_CONFED_SET (RFC 5065)."""
+        return any(isinstance(seg, (CONFED_SEQUENCE, CONFED_SET)) for seg in self.aspath)
+
+    def without_confed(self) -> 'ASPath':
+        """The path a peer outside the confederation may be sent (RFC 5065 5)."""
+        outside = tuple(seg for seg in self.aspath if not isinstance(seg, (CONFED_SEQUENCE, CONFED_SET)))
+        return type(self)(self._pack_segments_raw(outside, self._asn4), self._asn4)
+
+    def has_set(self) -> bool:
+        """Whether the path holds an AS_SET or an AS_CONFED_SET, both deprecated by RFC 9774."""
+        return any(isinstance(seg, (SET, CONFED_SET)) for seg in self.aspath)
 
     @property
     def as_set(self) -> list[ASN]:

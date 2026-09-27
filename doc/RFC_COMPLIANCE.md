@@ -19,6 +19,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc4684 | 0 | 0 | 0 | 0 | 1 | 3 | - |
 | rfc4724 | 6 | 0 | 0 | 6 | 7 | 0 | 100% |
 | rfc4760 | 5 | 0 | 0 | 5 | 0 | 8 | 100% |
+| rfc5065 | 10 | 0 | 0 | 10 | 6 | 8 | 100% |
 | rfc5082 | 2 | 0 | 0 | 2 | 2 | 2 | 100% |
 | rfc5492 | 7 | 0 | 0 | 7 | 1 | 6 | 100% |
 | rfc5668 | 0 | 0 | 0 | 0 | 0 | 1 | - |
@@ -37,6 +38,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc9012 | 6 | 0 | 0 | 6 | 1 | 0 | 100% |
 | rfc9234 | 12 | 0 | 0 | 12 | 4 | 1 | 100% |
 | rfc9552 | 12 | 0 | 0 | 12 | 2 | 0 | 100% |
+| rfc9774 | 2 | 0 | 0 | 2 | 2 | 3 | 100% |
 | rfc9830 | 4 | 0 | 0 | 4 | 0 | 0 | 100% |
 
 ## draft-ietf-idr-bgp-multisession-07
@@ -241,9 +243,9 @@ NO_EXPORT outside community/initial/community.py and configuration/static/parser
 returns nothing.
 - **Well-known Communities** (MUST NOT) `rfc1997#wellknown-no-export-subconfed` - gap
   > All routes received carrying a communities attribute containing this value MUST NOT be advertised to external BGP peers (this includes peers in other members autonomous systems inside a BGP confederation).
-  As NO_EXPORT: it binds re-advertisement, which exabgp does not do.  exabgp additionally
-has no confederation support at all, so the boundary this names does not exist in the
-code either.
+  As NO_EXPORT: it binds re-advertisement, which exabgp does not do.  exabgp now knows its
+confederation (RFC 5065, the neighbour `confederation` block) and so where this boundary
+lies, but as it propagates nothing across it the rule has nothing to act on.
 - **Well-known Communities** (SHALL) `rfc1997#wellknown-operations-implemented` - gap
   > The following communities have global significance and their operations shall be implemented in any community-attribute-aware BGP speaker.
   Lowercase "shall" in the source, which is the 1996 spelling of the keyword; RFC 1997
@@ -1038,6 +1040,125 @@ data[3:4], so whatever the sender put in the third byte never reaches a decision
   > A BGP speaker that uses Multiprotocol Extensions SHOULD use the Capability Advertisement procedures [BGP-CAP] to determine whether the speaker could use Multiprotocol Extensions with a particular peer.
   - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_our_open_advertises_the_multiprotocol_capability`
   - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_a_family_we_want_is_not_used_until_the_peer_answers`
+
+## rfc5065
+
+- **4** (MUST) `rfc5065#4-identifier-to-non-members` - proven
+  > A member of a BGP confederation MUST use its AS Confederation Identifier in all transactions with peers that are not members of its confederation.
+  Session.open_asn() gives the identifier to a peer whose AS is neither local-as nor a
+member.  The OPEN carries it, and the AS_PATH defaults build on the AS the OPEN carried.
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_a_peer_outside_the_confederation_sees_the_identifier`
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_a_peer_inside_the_confederation_sees_our_member_as`
+- **4** (MUST) `rfc5065#4-member-as-to-members` - proven
+  > A member of a BGP confederation MUST use its Member-AS Number in all transactions with peers that are members of the same confederation as the local BGP speaker.
+  local-as is the Member-AS Number, and Session.open_asn() keeps it for a peer in our own
+Member-AS or in one of the members.
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_a_peer_inside_the_confederation_sees_our_member_as`
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_a_peer_outside_the_confederation_sees_the_identifier`
+- **4** (SHALL) `rfc5065#4-own-identifier-is-own-as` - not-applicable
+  > A BGP speaker receiving an AS_PATH attribute containing an autonomous system matching its own AS Confederation Identifier SHALL treat the path in the same fashion as if it had received a path containing its own AS number.
+  exabgp does no AS_PATH loop detection for its own AS number either: it selects no path
+and installs none, and hands received routes to the API as they arrived.  There is no
+treatment of our own AS for the identifier to share.
+- **4** (SHALL) `rfc5065#4-own-member-as-is-own-as` - not-applicable
+  > A BGP speaker receiving an AS_PATH attribute containing an AS_CONFED_SEQUENCE or AS_CONFED_SET that contains its own Member-AS Number SHALL treat the path in the same fashion as if it had received a path containing its own AS number.
+  As for the identifier: exabgp does no AS_PATH loop detection for its own AS number, so
+there is no treatment for a Member-AS Number to share.
+- **4.1** (MAY) `rfc5065#4.1-multiple-instances` - not-applicable
+  > Whenever the modification of the AS_PATH attribute calls for including or prepending the AS Confederation Identifier or Member-AS Number of the local system, the local system MAY include/prepend more than one instance of that value in the AS_PATH attribute.
+  exabgp prepends nothing to a configured AS_PATH.  An operator wanting more than one
+instance writes them in the as-path of the route.
+- **4.1** (SHALL NOT) `rfc5065#4.1a-same-member-as-path-unmodified` - proven
+  > a) When a given BGP speaker advertises the route to another BGP speaker located in its own Member-AS, the advertising speaker SHALL NOT modify the AS_PATH attribute associated with the route.
+  To a peer in our own Member-AS the configured AS_PATH is sent as it is, and a route
+without one gets the empty AS_PATH of rule (c) for originated routes.  exabgp never
+rewrites a path it sends inside its own AS, so there is no configuration which violates
+this to test the other side with.
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_inside_our_own_member_as_the_path_is_not_modified`
+- **4.1** (SHOULD) `rfc5065#4.1b1-confed-sequence-overflow` - not-applicable
+  > If the act of prepending will cause an overflow in the AS_PATH segment (i.e., more than 255 ASs), it SHOULD prepend a new segment of type AS_CONFED_SEQUENCE and prepend its own AS number to this new segment.
+  A rule for propagating a learned route, and exabgp does not propagate: it sends the
+AS_PATH the operator configured.  The configuration refuses a segment of more than 255
+AS numbers, so the overflow can not arise from it.
+- **4.1** (SHALL) `rfc5065#4.1c-update-path-to-non-members` - not-applicable
+  > c) When a given BGP speaker advertises the route to a BGP speaker located in a neighboring autonomous system that is not a member of the local confederation, the advertising speaker SHALL update the AS_PATH attribute as follows:
+  The steps are the rules for propagating a learned route.  exabgp sends the AS_PATH the
+operator configured, prepending nothing, as it does outside a confederation.  Step 1,
+removing the confederation segments, it does apply, see 4.1c1.  A route with no AS_PATH
+is originated, and gets the identifier alone in an AS_SEQUENCE as rule (a) for
+originated routes says.
+- **4.1** (MUST) `rfc5065#4.1c1-remove-confed-segments` - proven
+  > 1) if any path segments of the AS_PATH are of the type AS_CONFED_SEQUENCE or AS_CONFED_SET, those segments MUST be removed from the AS_PATH attribute, leaving the sanitized AS_PATH attribute to be operated on by steps 2, 3 or 4.
+  AttributeCollection.pack_attribute strips them with ASPath.without_confed() for a peer
+outside the confederation, whatever the operator configured.
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_confederation_segments_never_leave_the_confederation`
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_confederation_segments_go_to_another_member`
+- **4.1** (SHOULD) `rfc5065#4.1c2-sequence-overflow` - not-applicable
+  > If the act of prepending will cause an overflow in the AS_PATH segment (i.e., more than 255 ASs), it SHOULD prepend a new segment of type AS_SEQUENCE and prepend its own AS number to this new segment.
+  A rule for propagating a learned route, which exabgp does not do, see 4.1b1.
+- **5** (SHALL) `rfc5065#5-confed-segments-from-outside-malformed` - proven
+  > If a BGP speaker receives such an UPDATE message, it SHALL treat the message as having a malformed AS_PATH according to the procedures of [BGP-4], Section 6.3 ("UPDATE Message Error Handling").
+  UpdateCollection._malformed_confederation_path, once a confederation is configured.  A
+malformed AS_PATH is treat-as-withdraw since RFC 7606 section 7.2, not the session reset
+of RFC 4271 section 6.3.  Without a confederation block exabgp is no member and has no
+members to tell apart, and it keeps accepting these paths as it always did.
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_confederation_segments_from_a_peer_outside_withdraw_the_route`
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_a_plain_path_from_a_peer_outside_is_advertised`
+- **5** (SHALL) `rfc5065#5-member-path-must-start-with-confed-sequence` - proven
+  > If a BGP speaker receives such an UPDATE message, it SHALL treat the message as having a malformed AS_PATH according to the procedures of [BGP-4], Section 6.3 ("UPDATE Message Error Handling").
+  From a peer in another Member-AS, an AS_PATH which is empty or does not start with an
+AS_CONFED_SEQUENCE is treated as withdrawn, as for the confederation segments from a
+peer outside the confederation.
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_a_path_from_another_member_not_starting_with_a_confed_sequence_withdraws`
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_a_path_from_another_member_starting_with_a_confed_sequence_is_advertised`
+- **5** (MUST NOT) `rfc5065#5-no-confed-segments-to-non-members` - proven
+  > A BGP speaker MUST NOT transmit updates containing AS_CONFED_SET or AS_CONFED_SEQUENCE attributes to peers that are not members of the local confederation.
+  Removed in AttributeCollection.pack_attribute, see 4.1c1.  The AS4_PATH built for an
+OLD speaker drops them too (RFC 6793 section 6).
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_confederation_segments_never_leave_the_confederation`
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_confederation_segments_go_to_another_member`
+- **5.2** (MAY) `rfc5065#5.2-med-compare-configurable` - not-applicable
+  > An implementation MAY provide the ability to configure path selection such that MEDs of two routes are comparable if the first autonomous systems in the AS_PATHs are the same, regardless of AS_SEQUENCE or AS_CONFED_SEQUENCE in the AS_PATH.
+  exabgp does not select between paths.
+- **5.2** (SHOULD) `rfc5065#5.2-med-compare-first-sequence` - not-applicable
+  > MEDs of two routes SHOULD only be compared if the first autonomous systems in the first AS_SEQUENCE in both routes are the same -- i.e., skip all the autonomous systems in the AS_CONFED_SET and AS_CONFED_SEQUENCE.
+  exabgp does not select between paths, so it never compares MEDs.
+- **5.2** (MAY) `rfc5065#5.2-med-compare-members` - not-applicable
+  > An implementation MAY compare MEDs from different Member Autonomous Systems of the same confederation.
+  exabgp does not select between paths.
+- **5.2** (MAY) `rfc5065#5.2-med-compare-multiple-paths` - not-applicable
+  > An implementation MAY compare MEDs received from a Member-AS via multiple paths.
+  exabgp does not select between paths.
+- **5.2** (SHALL) `rfc5065#5.2-next-hop-and-med-unchanged-to-members` - proven
+  > It SHALL be legal for a BGP speaker to advertise an unchanged NEXT_HOP and MULTI_EXIT_DISC (MED) attribute to peers in a neighboring Member-AS of the local confederation.
+  A permission rather than an obligation: exabgp sends the NEXT_HOP and MED it was
+configured with to any peer, and a member of the confederation is no exception.
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_med_and_next_hop_go_unchanged_to_another_member`
+- **5.3** (SHOULD NOT) `rfc5065#5.3-confed-segments-not-counted` - not-applicable
+  > 3) When comparing routes using AS_PATH length, CONFED_SEQUENCE and CONFED_SETs SHOULD NOT be counted.
+  exabgp does not compare routes.  Where it counts AS numbers, reconstructing a path from
+an AS4_PATH under RFC 6793, confederation segments already count as none.
+- **5.3** (MUST) `rfc5065#5.3-path-selection-as-inside-as` - not-applicable
+  > Path selection criteria for information received from members inside a confederation MUST follow the same rules used for information received from members inside the same autonomous system, as specified in [BGP-4].
+  exabgp does not select between paths: received routes go to the API as they arrived.
+- **5.3** (SHALL) `rfc5065#5.3-selection-rules` - not-applicable
+  > In addition, the following rules SHALL be applied:
+  The four rules are all about path selection, which exabgp does not do.
+- **6** (MUST) `rfc5065#6-members-support-confederations` - proven
+  > This compatibility issue implies that all BGP speakers participating in a confederation MUST support BGP confederations.
+  The neighbour `confederation` block.  A property of the implementation, with no peer
+input to test the other side with.
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_the_confederation_block_reaches_the_session`
+- **6** (MUST) `rfc5065#6-recognize-confed-segments` - proven
+  > All BGP speakers participating as members of a confederation MUST recognize the AS_CONFED_SET and AS_CONFED_SEQUENCE segment type extensions to the AS_PATH attribute.
+  ASPath decodes all four segment types and names them in the JSON; a fifth type is a
+malformed AS_PATH.
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_both_confederation_segment_types_are_decoded`
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_a_segment_type_beyond_the_four_is_malformed`
+- **Appendix A** (MUST) `rfc5065#appendix-confed-segments-kept-separate` - not-applicable
+  > Confederation-type segments (AS_CONFED_SET and AS_CONFED_SEQUENCE) MUST be kept separate from non-confederation segments (AS_SET and AS_SEQUENCE).
+  A rule for aggregation, which exabgp does not do.  The configuration keeps the four
+segment types apart in any case, each written with its own keyword or bracket.
 
 ## rfc5082
 
@@ -3411,6 +3532,48 @@ this decoder for a length error is a Notify, so there is no input which reaches 
 side of the branch.  Whether a skippable error ought to have been an 'NLRI discard'
 instead is a different sentence, recorded as rfc9552#8.2.2-nlri-discard.
   - `tests/unit/rfc/test_rfc9552_bgpls.py::test_a_length_error_the_decoder_cannot_step_over_resets_the_session`
+
+## rfc9774
+
+- **3** (MUST NOT) `rfc9774#3-must-not-advertise-as-set` - proven
+  > Unless explicitly configured by a network operator to do otherwise (e.g., during a transition phase), BGP speakers: * MUST NOT advertise BGP UPDATE messages containing AS_SETs or AS_CONFED_SETs and
+  exabgp never builds an AS_SET or an AS_CONFED_SET itself: the AS_PATH it makes for a route
+with none is an AS_SEQUENCE of the local AS, or empty, and the AS4_PATH it adds for an OLD
+speaker keeps the segments it was given.  A set reaches the wire only when the operator
+wrote one in the route, which is the configuration the sentence exempts, and exabgp is
+used to test other implementations with exactly such routes.  There is therefore no peer
+input, and no configuration short of that exemption, to write the negative test with.
+  - `tests/unit/rfc/test_rfc9774_as_set.py::test_the_as_path_exabgp_makes_itself_holds_no_set`
+- **3** (MUST) `rfc9774#3-treat-as-withdraw-on-as-set` - proven
+  > * MUST use the "treat-as-withdraw" error handling behavior per [RFC7606] upon reception of BGP UPDATE messages containing AS_SETs or AS_CONFED_SETs in the AS_PATH or AS4_PATH [RFC6793].
+  UpdateCollection._withdrawn_in_context moves the announced routes to the withdrawals when
+the AS_PATH, or an AS4_PATH still present once RFC 6793 is applied, holds either kind of
+set.  The neighbour option `as-set accept` is the operator configuration section 3 allows,
+for route collectors which want to see these routes.  An AS_CONFED_SET in an AS4_PATH is
+already discarded as a segment by RFC 6793 section 6, before this check sees it.
+  - `tests/unit/rfc/test_rfc9774_as_set.py::test_a_route_with_a_set_in_its_as_path_is_withdrawn`
+  - `tests/unit/rfc/test_rfc9774_as_set.py::test_a_set_arriving_in_the_as4_path_of_an_old_speaker_withdraws_the_route`
+  - `tests/unit/rfc/test_rfc9774_as_set.py::test_a_route_with_only_sequences_is_advertised`
+- **5.2** (SHOULD) `rfc9774#5.2-atomic-aggregate-when-truncated` - not-applicable
+  > If the resulting AS_PATH would be truncated from the otherwise expected result of BGP AS_PATH aggregation (an AS_SET would not be generated and possibly some ASes are removed from the "longest leading sequence" of ASes), the ATOMIC_AGGREGATE Path Attribute SHOULD be attached.
+  exabgp does not aggregate routes, so it never truncates an aggregated AS_PATH.  An
+operator building an aggregate by hand sets `atomic-aggregate` on the route.
+- **5.2** (MUST) `rfc9774#5.2-truncate-after-origin-as` - not-applicable
+  > To ensure a consistent BGP origin AS is announced for aggregate BGP routes for implementations of "brief" BGP aggregation, the implementation MUST be configured to truncate the AS_PATH after the right-most instance of the desired origin AS for the aggregate.
+  exabgp does not aggregate routes: it announces the prefixes and AS_PATHs it is configured
+or told through the API to announce, so it has no brief aggregation to configure.
+- **6.1** (MUST) `rfc9774#6.1-operators-use-consistent-brief` - not-applicable
+  > When aggregating prefixes, network operators MUST use consistent brief aggregation as described in Section 5.2.
+  An obligation on network operators, not on a BGP implementation, and exabgp does not
+aggregate routes.
+- **6.2** (SHOULD) `rfc9774#6.2-more-specifics-to-contributing-as` - not-applicable
+  > Instead, more specific prefixes (from the aggregate) SHOULD be announced to each contributing AS, excluding any that were learned from the contributing AS in consideration.
+  exabgp does not aggregate routes and does not re-announce what it learns, so there is
+nothing for it to exclude.
+- **6.2** (SHOULD NOT) `rfc9774#6.2-no-aggregate-to-contributing-as` - not-applicable
+  > An aggregate prefix SHOULD NOT be announced to the contributing ASes.
+  exabgp does not aggregate routes and has no notion of contributing ASes: which prefixes
+go to which neighbour is the operator's configuration.
 
 ## rfc9830
 

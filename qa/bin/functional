@@ -1010,6 +1010,9 @@ class Record:
         + 'abcdefghijklmnopqrstuvwxyz'
         + 'αβγδεζηθικλμνξοπρςστυφχψω'
         + 'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ'
+        # the parsing tests take one nick per configuration in etc/exabgp, which outgrew
+        # the five alphabets above
+        + 'абвгдежзийклмнопрстуфхцчшщэюя'
     )
 
     def __init__(self, nick: str, name: str) -> None:

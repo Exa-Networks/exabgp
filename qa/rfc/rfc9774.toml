@@ -1,0 +1,140 @@
+# RFC 9774 - Deprecation of AS_SET and AS_CONFED_SET in BGP
+# https://www.rfc-editor.org/rfc/rfc9774
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc9774.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Section 3 is the protocol change, and both halves of it open with "Unless explicitly
+# configured by a network operator to do otherwise".  exabgp only sends the AS_PATH it is
+# given, so an AS_SET on the wire is one the operator wrote; on receipt the neighbour
+# option `as-set accept` is that configuration.  Sections 5 and 6 are about aggregation,
+# which exabgp does not do.
+
+rfc = "rfc9774"
+title = "Deprecation of AS_SET and AS_CONFED_SET in BGP"
+url = "https://www.rfc-editor.org/rfc/rfc9774"
+
+
+# ============================================================ 3 Updates to RFCs 4271 and 5065
+
+[[requirement]]
+id = "rfc9774#3-must-not-advertise-as-set"
+section = "3"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+Unless explicitly configured by a network operator to do otherwise
+(e.g., during a transition phase), BGP speakers:
+
+*  MUST NOT advertise BGP UPDATE messages containing AS_SETs or
+AS_CONFED_SETs and
+"""
+note = """
+exabgp never builds an AS_SET or an AS_CONFED_SET itself: the AS_PATH it makes for a route
+with none is an AS_SEQUENCE of the local AS, or empty, and the AS4_PATH it adds for an OLD
+speaker keeps the segments it was given.  A set reaches the wire only when the operator
+wrote one in the route, which is the configuration the sentence exempts, and exabgp is
+used to test other implementations with exactly such routes.  There is therefore no peer
+input, and no configuration short of that exemption, to write the negative test with.
+"""
+
+[[requirement]]
+id = "rfc9774#3-treat-as-withdraw-on-as-set"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+*  MUST use the "treat-as-withdraw" error handling behavior per
+[RFC7606] upon reception of BGP UPDATE messages containing AS_SETs
+or AS_CONFED_SETs in the AS_PATH or AS4_PATH [RFC6793].
+"""
+note = """
+UpdateCollection._withdrawn_in_context moves the announced routes to the withdrawals when
+the AS_PATH, or an AS4_PATH still present once RFC 6793 is applied, holds either kind of
+set.  The neighbour option `as-set accept` is the operator configuration section 3 allows,
+for route collectors which want to see these routes.  An AS_CONFED_SET in an AS4_PATH is
+already discarded as a segment by RFC 6793 section 6, before this check sees it.
+"""
+
+
+# ============================================================ 5.2 Consistent brief aggregation
+
+[[requirement]]
+id = "rfc9774#5.2-truncate-after-origin-as"
+section = "5.2"
+level = "MUST"
+status = "not-applicable"
+text = """
+To ensure a consistent BGP origin AS is announced for aggregate BGP
+routes for implementations of "brief" BGP aggregation, the
+implementation MUST be configured to truncate the AS_PATH after the
+right-most instance of the desired origin AS for the aggregate.
+"""
+note = """
+exabgp does not aggregate routes: it announces the prefixes and AS_PATHs it is configured
+or told through the API to announce, so it has no brief aggregation to configure.
+"""
+
+[[requirement]]
+id = "rfc9774#5.2-atomic-aggregate-when-truncated"
+section = "5.2"
+level = "SHOULD"
+status = "not-applicable"
+text = """
+If the resulting AS_PATH would be truncated from the otherwise
+expected result of BGP AS_PATH aggregation (an AS_SET would not be
+generated and possibly some ASes are removed from the "longest
+leading sequence" of ASes), the ATOMIC_AGGREGATE Path Attribute
+SHOULD be attached.
+"""
+note = """
+exabgp does not aggregate routes, so it never truncates an aggregated AS_PATH.  An
+operator building an aggregate by hand sets `atomic-aggregate` on the route.
+"""
+
+
+# ============================================================ 6 Operational Considerations
+
+[[requirement]]
+id = "rfc9774#6.1-operators-use-consistent-brief"
+section = "6.1"
+level = "MUST"
+status = "not-applicable"
+text = """
+When aggregating prefixes, network operators MUST use consistent
+brief aggregation as described in Section 5.2.
+"""
+note = """
+An obligation on network operators, not on a BGP implementation, and exabgp does not
+aggregate routes.
+"""
+
+[[requirement]]
+id = "rfc9774#6.2-no-aggregate-to-contributing-as"
+section = "6.2"
+level = "SHOULD NOT"
+status = "not-applicable"
+text = """
+An aggregate prefix SHOULD NOT be announced to the contributing ASes.
+"""
+note = """
+exabgp does not aggregate routes and has no notion of contributing ASes: which prefixes
+go to which neighbour is the operator's configuration.
+"""
+
+[[requirement]]
+id = "rfc9774#6.2-more-specifics-to-contributing-as"
+section = "6.2"
+level = "SHOULD"
+status = "not-applicable"
+text = """
+Instead, more specific prefixes (from the aggregate) SHOULD be
+announced to each contributing AS, excluding any that were learned
+from the contributing AS in consideration.
+"""
+note = """
+exabgp does not aggregate routes and does not re-announce what it learns, so there is
+nothing for it to exclude.
+"""

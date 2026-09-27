@@ -223,61 +223,70 @@ def med(tokeniser: 'Tokeniser') -> MED:
     return MED.from_int(int(value))
 
 
-def as_path(tokeniser: 'Tokeniser') -> AS2Path:
-    as_path: list[SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET | ASN] = []
-    insert: (SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET) | None = None
+# a path segment carries its number of AS in one octet (RFC 4271 4.3)
+MAX_SEGMENT_ASNS = 255
 
+# how each segment is opened in the configuration, and the token which closes it:
+#   as-path [ 1 2 ] ( 3 4 ) confed-sequence [ 5 ] confed-set [ 6 7 ];
+_SEGMENT_OPEN: dict[str, tuple[type[SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET], str]] = {
+    '[': (SEQUENCE, ']'),
+    '(': (SET, ')'),
+}
+_SEGMENT_KEYWORD: dict[str, type[CONFED_SEQUENCE | CONFED_SET]] = {
+    'confed-sequence': CONFED_SEQUENCE,
+    'confed-set': CONFED_SET,
+}
+
+
+def _as_path_segment(tokeniser: 'Tokeniser', opener: str) -> SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET:
+    """One segment, from the token which opened it to its matching close."""
+    kind: type[SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET]
+    if opener in _SEGMENT_KEYWORD:
+        kind = _SEGMENT_KEYWORD[opener]
+        bracket = tokeniser()
+        if bracket not in _SEGMENT_OPEN:
+            raise ValueError(f"'{opener}' must be followed by '[' or '(', not '{bracket}'")
+        close = _SEGMENT_OPEN[bracket][1]
+    else:
+        kind, close = _SEGMENT_OPEN[opener]
+
+    segment = kind()
     while True:
         value = tokeniser()
+        if value == close:
+            break
+        if value == ',':
+            continue
+        if value in ('', ';', ']', ')'):
+            raise ValueError(f"as-path segment opened with '{opener}' is not closed with '{close}'")
+        if len(segment) == MAX_SEGMENT_ASNS:
+            raise ValueError(f'an as-path segment holds at most {MAX_SEGMENT_ASNS} AS numbers')
+        try:
+            segment.append(ASN.from_string(value))
+        except ValueError:
+            raise ValueError(f"'{value}' is not an AS number in the as-path") from None
+    if not segment:
+        raise ValueError('an as-path segment can not be empty')
+    return segment
 
-        if value == '[':
-            value = tokeniser.peek()
 
-            if value != '{':
-                insert = SEQUENCE()
-            else:
-                insert = CONFED_SEQUENCE()
+def as_path(tokeniser: 'Tokeniser') -> AS2Path:
+    value = tokeniser()
+    if value not in _SEGMENT_OPEN and value not in _SEGMENT_KEYWORD:
+        try:
+            return AS2Path.make_aspath([SEQUENCE([ASN.from_string(value)])])
+        except ValueError:
+            raise ValueError('could not parse as-path') from None
 
-        elif value == '(':
-            value = tokeniser.peek()
+    # `as-path [ ]` alone is the empty path, which is not an empty segment
+    if value == '[' and tokeniser.peek() == ']':
+        tokeniser()
+        return AS2Path.make_aspath([])
 
-            if value != '{':
-                insert = SET()
-            else:
-                insert = CONFED_SET()
-
-        elif len(as_path) == 0:
-            try:
-                return AS2Path.make_aspath([SEQUENCE([ASN.from_string(value)])])
-            except ValueError:
-                raise ValueError('could not parse as-path') from None
-        else:
-            raise ValueError('could not parse as-path')
-
-        while True:
-            value = tokeniser()
-
-            # could be too nice eating a trailing and ignore a erroneous },,
-            # but simpler that way
-            if value in (',', '}'):
-                continue
-
-            if value in (')', ']'):
-                as_path.append(insert)
-
-                value = tokeniser.peek()
-                if value in ('[', '('):
-                    break
-
-                # Filter out any ASN that snuck in, only keep segment types
-                segments = [seg for seg in as_path if isinstance(seg, (SEQUENCE, CONFED_SEQUENCE, SET, CONFED_SET))]
-                return AS2Path.make_aspath(segments)
-
-            try:
-                insert.append(ASN.from_string(value))
-                continue
-            except ValueError:
-                raise ValueError('could not parse as-path') from None
+    segments: list[SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET] = [_as_path_segment(tokeniser, value)]
+    while tokeniser.peek() in _SEGMENT_OPEN or tokeniser.peek() in _SEGMENT_KEYWORD:
+        segments.append(_as_path_segment(tokeniser, tokeniser()))
+    return AS2Path.make_aspath(segments)
 
 
 def local_preference(tokeniser: 'Tokeniser') -> LocalPreference:

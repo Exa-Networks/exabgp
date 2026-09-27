@@ -49,6 +49,7 @@ class Neighbor:
     host_name: str
     domain_name: str
     group_updates: bool
+    as_set: str
     auto_flush: bool
     adj_rib_in: bool
     adj_rib_out: bool
@@ -85,6 +86,7 @@ class Neighbor:
         self.host_name = ''
         self.domain_name = ''
         self.group_updates = True
+        self.as_set = 'withdraw'
         self.auto_flush = True
         self.adj_rib_in = True
         self.adj_rib_out = True
@@ -180,6 +182,7 @@ class Neighbor:
         neighbor.host_name = settings.host_name
         neighbor.domain_name = settings.domain_name
         neighbor.group_updates = settings.group_updates
+        neighbor.as_set = settings.as_set
         neighbor.auto_flush = settings.auto_flush
         neighbor.adj_rib_in = settings.adj_rib_in
         neighbor.adj_rib_out = settings.adj_rib_out
@@ -346,7 +349,10 @@ class Neighbor:
             # which keys the API prints. Both are applied live through reconfigure().
             and self.session.role == other.session.role
             and self.session.role_strict == other.session.role_strict
+            and self.session.confederation == other.session.confederation
+            and self.session.confederation_members == other.session.confederation_members
             and self.group_updates == other.group_updates
+            and self.as_set == other.as_set
             and self.auto_flush == other.auto_flush
             and self.adj_rib_in == other.adj_rib_in
             and self.adj_rib_out == other.adj_rib_out
@@ -623,6 +629,7 @@ Neighbor {peer-address}
             + (f'\n\tlisten {neighbor.session.listen};\n' if neighbor.session.listen else '')
             + (f'\n\tconnect {neighbor.session.connect};\n' if neighbor.session.connect else '')
             + f'\tgroup-updates {"true" if neighbor.group_updates else "false"};\n'
+            f'\tas-set {neighbor.as_set};\n'
             f'\tauto-flush {"true" if neighbor.auto_flush else "false"};\n'
             f'\tadj-rib-in {"true" if neighbor.adj_rib_in else "false"};\n'
             f'\tadj-rib-out {"true" if neighbor.adj_rib_out else "false"};\n'
@@ -632,6 +639,7 @@ Neighbor {peer-address}
             + (f'\toutgoing-ttl {neighbor.session.outgoing_ttl};\n' if neighbor.session.outgoing_ttl else '')
             + (f'\tincoming-ttl {neighbor.session.incoming_ttl};\n' if neighbor.session.incoming_ttl else '')
             + cls._configuration_role(neighbor)
+            + cls._configuration_confederation(neighbor)
             + f'\tcapability {{\n'
             f'\t\tasn4 {state(cap.asn4.is_enabled(), CapabilityCode.FOUR_BYTES_ASN)};\n'
             f'\t\troute-refresh {state(bool(cap.route_refresh), CapabilityCode.ROUTE_REFRESH)};\n'
@@ -679,6 +687,14 @@ Neighbor {peer-address}
             f'\t\tadd-meta {"enable" if session.role_add_meta else "disable"};\n'
             '\t}\n'
         )
+
+    @staticmethod
+    def _configuration_confederation(neighbor: Neighbor) -> str:
+        session = neighbor.session
+        if not session.confederation:
+            return ''
+        members = ' '.join(str(asn) for asn in session.confederation_members)
+        return f'\tconfederation {{\n\t\tidentifier {session.confederation};\n\t\tmembers [ {members} ];\n\t}}\n'
 
     @classmethod
     def as_dict(cls, answer: dict[str, Any]) -> dict[str, Any]:

@@ -382,7 +382,7 @@ class Protocol:
         assert self.connection is not None
         assert self.neighbor.session.router_id is not None
         if self.neighbor.session.local_as:
-            local_as = self.neighbor.session.local_as
+            local_as = self.neighbor.session.open_asn()
         elif self.negotiated.received_open:
             local_as = self.negotiated.received_open.asn
             if local_as == AS_TRANS and Capability.CODE.FOUR_BYTES_ASN in self.negotiated.received_open.capabilities:

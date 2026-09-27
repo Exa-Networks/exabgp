@@ -4,6 +4,22 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Feature: BGP confederations (RFC 5065), issue #96. A neighbor "confederation {
+   identifier <asn>; members [ <asn> ... ]; }" block makes local-as our Member-AS. The
+   OPEN carries the identifier to a peer outside the confederation and the Member-AS to a
+   peer inside; a route with no as-path gets the AS_PATH RFC 5065 gives an originated
+   route; LOCAL_PREF is sent to the other members; confederation segments never reach a
+   peer outside; and confederation segments from outside, or a path from another member
+   not starting with an AS_CONFED_SEQUENCE, are treated as withdrawn.
+ * Fix: an AS path printed by exabgp reads back as the same path. A sequence was printed
+   in "( )" and a set in "[ ]", the other way round from the configuration, so a route
+   shown by exabgp and given back to it swapped them. Confederation segments are written
+   "confed-sequence [ ... ]" and "confed-set [ ... ]": the "{ }" form the parser claimed
+   to read could never be used, as braces delimit sections of the configuration.
+ * Incompatible: a route received with an AS_SET or AS_CONFED_SET in its AS_PATH is
+   treated as withdrawn, as RFC 9774 requires, and an AS4_PATH from a two octet peer is
+   checked the same way. They used to be accepted and passed to the API as announcements.
+   "as-set accept;" on a neighbor keeps the old behaviour, for route collectors.
  * Incompatible: the routes an API process announced are withdrawn when it exits, issue
    #304. They used to stay announced with nothing left to withdraw them, so a crashed
    DDoS detector kept its blackholes up. A route which replaced one from the configuration

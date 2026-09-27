@@ -48,7 +48,13 @@ neighbor <ip-address> {
     incoming-ttl <ttl>;  // GTSM: lowest TTL we accept from the peer
     outgoing-ttl <ttl>;  // the TTL we send with
 
+    confederation {              // RFC 5065, local-as is our Member-AS
+        identifier <asn>;
+        members [ <asn> ... ];   // the other Member-ASes
+    }
+
     group-updates <truthvalue>;
+    as-set <withdraw | accept>;  // received AS_SET / AS_CONFED_SET, RFC 9774
     auto-flush <truthvalue>;
     adj-rib-in <truthvalue>;
     adj-rib-out <truthvalue>;
@@ -120,7 +126,7 @@ neighbor <ip-address> {
         route <ip-address>/<prefixlength> {
           next-hop <ip-address>; // only mandatory attribute
           origin ( IGP | EGP | INCOMPLETE );
-          as-path [ <as-sequence-asn> | ( <as-set ) ];
+          as-path <asn> | [ <as-sequence> ] ( <as-set> ) confed-sequence [ <asn> ] confed-set [ <asn> ];
           as-sequence;
           med <med>;
           aigp <aigp>;
@@ -229,7 +235,7 @@ neighbor <ip-address> {
 
             next-hop <ip-address>;
             origin ( IGP | EGP | INCOMPLETE );
-            as-path [ <as-sequence-asn> | ( <as-set ) ];
+            as-path <asn> | [ <as-sequence> ] ( <as-set> ) confed-sequence [ <asn> ] confed-set [ <asn> ];
             med <med>;
             local-preference <preference>;
 
@@ -359,6 +365,45 @@ neighbors behind it configured with different
 .Ic incoming-ttl
 values get whichever was set last.
 Give a neighbor needing its own minimum its own listening address.
+.Sh CONFEDERATION
+With a
+.Ic confederation
+block the neighbor is a member of an RFC 5065 confederation.
+.Ic local-as
+is our Member-AS Number and
+.Ic identifier
+the AS the world outside sees.
+A peer whose
+.Ic peer-as
+is our own or one of the
+.Ic members
+is inside the confederation, any other is outside it.
+.Pp
+The OPEN carries the identifier to a peer outside and our Member-AS to a
+peer inside.
+A route with no as-path is sent with the identifier in an AS_SEQUENCE to a
+peer outside, our Member-AS in an AS_CONFED_SEQUENCE to another member, and
+an empty path inside our own Member-AS.
+LOCAL_PREF goes to every peer inside the confederation.
+.Pp
+A configured as-path is sent as written, as it is outside a confederation,
+so a route for another member should start with
+.Dq confed-sequence [ <local-as> ] .
+The confederation segments are removed from any path sent to a peer outside.
+On receipt, confederation segments from a peer outside, or a path from
+another member not starting with an AS_CONFED_SEQUENCE, are treated as
+withdrawn.
+Without a confederation block these paths are accepted as before.
+.Sh AS_SET AND AS_CONFED_SET
+RFC 9774 deprecates both path segment types.
+A route received with either in its AS_PATH, or in an AS4_PATH from a peer
+without four octet AS support, is treated as withdrawn, as RFC 7606 describes.
+.Dq as-set accept
+on a neighbor passes such routes on unchanged, for a route collector which
+wants to see them.
+.Pp
+Routes we send are not checked: a set only reaches the wire when a route was
+written with one, and the RFC leaves that to the operator.
 .Sh SEE ALSO
 .Xr exabgp 1 .
 .Sh CAVEATS

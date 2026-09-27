@@ -410,8 +410,8 @@ def test_aspath_string_representation() -> None:
     string_repr = str(aspath)
     assert '65001' in string_repr
     assert '65002' in string_repr
-    assert '(' in string_repr  # SEQUENCE uses parentheses
-    assert ')' in string_repr
+    # a sequence prints as the configuration writes it, so it reads back as a sequence
+    assert string_repr == '[ 65001 65002 ]'
 
 
 def test_aspath_json_representation() -> None:

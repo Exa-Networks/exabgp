@@ -72,6 +72,20 @@ class Session:
     role_strict: bool = False
     role_otc: bool = True
     role_add_meta: bool = True
+    # RFC 5065: the AS Confederation Identifier, 0 when not in a confederation, and the
+    # Member-AS Numbers besides local-as. Set by ParseConfederation.apply.
+    confederation: ASN = field(default_factory=lambda: ASN(0))
+    confederation_members: tuple[ASN, ...] = ()
+
+    def in_confederation(self, asn: ASN) -> bool:
+        """Whether an AS is a Member-AS of our confederation, our own included."""
+        return bool(self.confederation) and (asn == self.local_as or asn in self.confederation_members)
+
+    def open_asn(self) -> ASN:
+        """The AS we speak as: the confederation identifier to a peer outside it (RFC 5065 4)."""
+        if self.confederation and not self.in_confederation(self.peer_as):
+            return self.confederation
+        return self.local_as
 
     @property
     def auto_discovery(self) -> bool:

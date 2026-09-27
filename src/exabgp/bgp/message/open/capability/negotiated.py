@@ -368,6 +368,27 @@ class Negotiated:
         """Return True if this is an IBGP session (local_as == peer_as)."""
         return self.local_as == self.peer_as
 
+    @property
+    def confederation(self) -> ASN:
+        """Our AS Confederation Identifier (RFC 5065), 0 outside one.
+
+        UNSET is a session with no neighbour, so it is in no confederation.
+        """
+        neighbor = getattr(self, 'neighbor', None)
+        return neighbor.session.confederation if neighbor is not None else ASN(0)
+
+    @property
+    def confed_member(self) -> bool:
+        """The peer is in another Member-AS of our confederation (RFC 5065)."""
+        if not self.confederation or self.local_as == self.peer_as:
+            return False
+        return bool(self.neighbor.session.in_confederation(self.peer_as))
+
+    @property
+    def confed_outside(self) -> bool:
+        """We are in a confederation and the peer is not (RFC 5065)."""
+        return bool(self.confederation) and not self.neighbor.session.in_confederation(self.peer_as)
+
     def required(self, afi: AFI, safi: SAFI) -> bool:
         """Get addpath status based on internal direction - if IN use receive, else use send"""
         from exabgp.bgp.message.direction import Direction

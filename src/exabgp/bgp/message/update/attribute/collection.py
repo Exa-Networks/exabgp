@@ -43,6 +43,7 @@ from exabgp.bgp.message.update.attribute.aspath import (
     SEQUENCE,
     SET,
     AS2Path,
+    ASPath,
     PathSegment,
 )
 from exabgp.bgp.message.update.attribute.attribute import (
@@ -346,41 +347,49 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
         )
 
+    @staticmethod
+    def _default_attributes(negotiated: Negotiated) -> dict[int, Callable[[], Attribute | _NOTHING]]:
+        """What a route without ORIGIN, AS_PATH or LOCAL_PREF is sent with, by where the peer is.
+
+        RFC 5065 4.1 for an originated route: an empty AS_PATH inside our own AS, our
+        Member-AS in an AS_CONFED_SEQUENCE to another member of the confederation, and our
+        AS (the confederation identifier once in one) in an AS_SEQUENCE to anyone else.
+        RFC 5065 5.2 lets LOCAL_PREF go to another member as it goes inside our own AS.
+        """
+        local_asn = negotiated.local_as
+        internal = local_asn == negotiated.peer_as
+        member = not internal and negotiated.confed_member
+
+        def as_path() -> Attribute:
+            if internal:
+                return AS2Path.make_aspath([])
+            segment = CONFED_SEQUENCE([local_asn]) if member else SEQUENCE([local_asn])
+            return AS2Path.make_aspath([segment], asn4=local_asn.asn4())
+
+        return {
+            Attribute.CODE.ORIGIN: lambda: Origin.from_int(Origin.IGP),
+            Attribute.CODE.AS_PATH: as_path,
+            Attribute.CODE.LOCAL_PREF: lambda: LocalPreference.from_int(100) if internal or member else NOTHING,
+        }
+
     def pack_attribute(
         self, negotiated: Negotiated, with_default: bool = True, without_next_hop: bool = False
     ) -> bytes:
-        local_asn = negotiated.local_as
-        peer_asn = negotiated.peer_as
-
         message = b''
-
-        default: dict[int, Callable[[int, int], Attribute | _NOTHING]] = {
-            Attribute.CODE.ORIGIN: lambda left, right: Origin.from_int(Origin.IGP),
-            Attribute.CODE.AS_PATH: lambda left, right: (
-                AS2Path.make_aspath([])
-                if left == right
-                else AS2Path.make_aspath(
-                    [
-                        SEQUENCE(
-                            [
-                                local_asn,
-                            ],
-                        ),
-                    ],
-                    asn4=local_asn.asn4(),
-                )
-            ),
-            Attribute.CODE.LOCAL_PREF: lambda left, right: LocalPreference.from_int(100) if left == right else NOTHING,
-        }
+        default = self._default_attributes(negotiated)
+        # LOCAL_PREF is for our own AS and, in a confederation, its other members
+        external = negotiated.local_as != negotiated.peer_as and not negotiated.confed_member
+        # RFC 5065 5: no AS_CONFED_SEQUENCE or AS_CONFED_SET to a peer outside the confederation
+        outside = negotiated.confed_outside
 
         # `without_next_hop` is asked for by the messages which carry their routes in an
         # MP_REACH_NLRI, where RFC 4760 section 3 says the attribute SHOULD NOT be sent.
         # It is a packing choice rather than a change to the collection: these attributes
         # are the RIB's, their index keys the attribute cache, and an IPv4 unicast route
         # sharing the set still needs its NEXT_HOP.
-        skip: dict[int, Callable[[int, int, Attribute], bool]] = {
-            Attribute.CODE.NEXT_HOP: lambda left, right, nh: without_next_hop or cast(NextHop, nh).ipv4() is not True,
-            Attribute.CODE.LOCAL_PREF: lambda left, right, nh: left != right,
+        skip: dict[int, Callable[[Attribute], bool]] = {
+            Attribute.CODE.NEXT_HOP: lambda nh: without_next_hop or cast(NextHop, nh).ipv4() is not True,
+            Attribute.CODE.LOCAL_PREF: lambda _: external,
         }
 
         keys = list(self)
@@ -395,7 +404,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 continue
 
             if code not in keys and code in default:
-                attr = default[code](local_asn, peer_asn)
+                attr = default[code]()
                 if attr is not NOTHING:
                     # attr is Origin, AS2Path, or LocalPreference - all Attribute subclasses
                     message += attr.pack_attribute(negotiated)
@@ -403,8 +412,11 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
             attribute = self[code]
 
-            if code in skip and skip[code](local_asn, peer_asn, attribute):
+            if code in skip and skip[code](attribute):
                 continue
+
+            if outside and isinstance(attribute, ASPath) and attribute.has_confed():
+                attribute = attribute.without_confed()
 
             message += attribute.pack_attribute(negotiated)
 

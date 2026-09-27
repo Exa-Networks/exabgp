@@ -23,6 +23,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.attribute.otc import OTC
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
+from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, ASPath
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
 from exabgp.bgp.message.update.nlri.label import Label
@@ -659,6 +660,51 @@ class UpdateCollection(Message):
     # Note: This method can raise ValueError, IndexError, TypeError, struct.error (from unpack).
     # These exceptions are caught by the caller in reactor/protocol.py:read_message() which
     # wraps them in a Notify(1, 0) to signal a malformed message to the peer.
+    @staticmethod
+    def _withdrawn_in_context(attributes: AttributeCollection, legacy: bool, negotiated: Negotiated) -> bool:
+        """Whether the announced routes of this UPDATE are to be treated as withdrawn."""
+        # RFC 7606: an UPDATE carrying reachable NLRI must include the attributes
+        # needed to interpret those routes. NEXT_HOP applies to the legacy IPv4
+        # NLRI field; MP_REACH_NLRI carries its own next hop.
+        if (
+            Attribute.CODE.ORIGIN not in attributes
+            or Attribute.CODE.AS_PATH not in attributes
+            or (legacy and Attribute.CODE.NEXT_HOP not in attributes)
+        ):
+            return True
+        if UpdateCollection._malformed_confederation_path(attributes.get(Attribute.CODE.AS_PATH, None), negotiated):
+            return True
+        # RFC 9774 3: a route with an AS_SET or AS_CONFED_SET is treated as withdrawn,
+        # unless the operator configured the neighbour to accept them (`as-set accept`).
+        # An AS4_PATH still here was not dropped by RFC 6793 and its sets now count.
+        neighbor = getattr(negotiated, 'neighbor', None)
+        if getattr(neighbor, 'as_set', 'withdraw') == 'accept':
+            return False
+        for code in (Attribute.CODE.AS_PATH, Attribute.CODE.AS4_PATH):
+            path = attributes.get(code, None)
+            if isinstance(path, ASPath) and path.has_set():
+                return True
+        return False
+
+    @staticmethod
+    def _malformed_confederation_path(path: Attribute | None, negotiated: Negotiated) -> bool:
+        """RFC 5065 5: the two AS_PATHs a member of a confederation must call malformed.
+
+        Only once a confederation is configured: a speaker outside one has no members to
+        tell apart, and exabgp used to accept these paths from any peer. RFC 7606 turns
+        the malformed AS_PATH RFC 4271 6.3 would reset the session for into a withdraw.
+        """
+        if not isinstance(path, ASPath) or not negotiated.confederation:
+            return False
+        # confederation segments from a peer outside the confederation
+        if negotiated.confed_outside:
+            return path.has_confed()
+        # from another Member-AS, a path which does not start with an AS_CONFED_SEQUENCE
+        if negotiated.confed_member:
+            segments = path.aspath
+            return not segments or not isinstance(segments[0], CONFED_SEQUENCE)
+        return False
+
     @classmethod
     def _parse_payload(cls, data: Buffer, negotiated: Negotiated) -> UpdateCollection:
         """Parse raw UPDATE payload bytes into semantic UpdateCollection.
@@ -769,23 +815,13 @@ class UpdateCollection(Message):
             # while converting each contained NLRI to the semantic routed form.
             announces.extend(reach.iter_routed())
 
-        # RFC 7606: an UPDATE carrying reachable NLRI must include the attributes
-        # needed to interpret those routes. NEXT_HOP applies to the legacy IPv4
-        # NLRI field; MP_REACH_NLRI carries its own next hop.
-        if announces:
-            missing_mandatory = (
-                Attribute.CODE.ORIGIN not in attributes
-                or Attribute.CODE.AS_PATH not in attributes
-                or (bool(announced_view) and Attribute.CODE.NEXT_HOP not in attributes)
-            )
-            if missing_mandatory:
-                # AttributeCollection.unpack() may have returned the session's
-                # cached collection. Missing-mandatory is UPDATE context, not an
-                # interpretation of the attribute bytes, so adding its marker to
-                # that shared object would poison later updates with the same
-                # bytes. Copy the mapping only on this malformed path.
-                attributes = attributes.copy()
-                attributes.add(TreatAsWithdraw())
+        if announces and cls._withdrawn_in_context(attributes, bool(announced_view), negotiated):
+            # AttributeCollection.unpack() may have returned the session's cached
+            # collection. These reasons are UPDATE context, not an interpretation of
+            # the attribute bytes, so adding the marker to that shared object would
+            # poison later updates with the same bytes. Copy the mapping only here.
+            attributes = attributes.copy()
+            attributes.add(TreatAsWithdraw())
 
         # Treat-as-withdraw is an action on every announced route, not merely a
         # diagnostic attribute. NLRI parsing has completed at this point, so all

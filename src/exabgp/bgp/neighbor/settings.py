@@ -132,6 +132,7 @@ class NeighborSettings:
         host_name: Hostname capability
         domain_name: Domain name capability
         group_updates: Group UPDATE messages
+        as_set: 'withdraw' or 'accept' a received AS_SET / AS_CONFED_SET (RFC 9774)
         auto_flush: Auto flush routes
         adj_rib_in: Maintain adjacency RIB in
         adj_rib_out: Maintain adjacency RIB out
@@ -155,6 +156,7 @@ class NeighborSettings:
     host_name: str = ''
     domain_name: str = ''
     group_updates: bool = True
+    as_set: str = 'withdraw'
     auto_flush: bool = True
     adj_rib_in: bool = True
     adj_rib_out: bool = True

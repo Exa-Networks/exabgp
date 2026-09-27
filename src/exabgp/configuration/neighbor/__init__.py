@@ -33,6 +33,7 @@ from exabgp.configuration.parser import auto_asn, md5_base64
 # description, domainname, hostname, md5, rate_limit, source_interface
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 from exabgp.configuration.tcpao import ParseTCPAO
+from exabgp.configuration.confederation import ParseConfederation
 from exabgp.configuration.role import ParseRole
 from exabgp.configuration.capability import ParseCapability
 from exabgp.configuration.validator import IntValidators, RequirableValidator
@@ -212,6 +213,15 @@ class ParseNeighbor(Section):
                 key=ActionKey.COMMAND,
             ),
             # Behavior options
+            'as-set': Leaf(
+                type=ValueType.ENUMERATION,
+                description='Received routes with an AS_SET or AS_CONFED_SET (RFC 9774)',
+                choices=['withdraw', 'accept'],
+                default='withdraw',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+            ),
             'group-updates': Leaf(
                 type=ValueType.BOOLEAN,
                 description='Group updates for efficiency',
@@ -272,6 +282,7 @@ class ParseNeighbor(Section):
             'capability': Container(description='BGP capabilities'),
             'tcp-ao': Container(description='TCP-AO (RFC 5925) authentication'),
             'role': ParseRole.schema,
+            'confederation': ParseConfederation.schema,
             'add-path': Container(description='ADD-PATH configuration'),
             'nexthop': Container(description='Next-hop encoding options'),
             'api': Container(description='External process API'),
@@ -309,6 +320,7 @@ class ParseNeighbor(Section):
         'md5-base64': False,
         'passive': True,
         'group-updates': True,
+        'as-set': 'withdraw',
         'auto-flush': True,
         'adj-rib-out': False,
         'adj-rib-in': False,
@@ -345,6 +357,7 @@ class ParseNeighbor(Section):
         'host-name': 'host_name',
         'domain-name': 'domain_name',
         'group-updates': 'group_updates',
+        'as-set': 'as_set',
         'auto-flush': 'auto_flush',
         'adj-rib-in': 'adj_rib_in',
         'adj-rib-out': 'adj_rib_out',
@@ -678,7 +691,7 @@ class ParseNeighbor(Section):
 
         families = self._post_families(local)
         neighbor = self._post_neighbor(local, families)
-        role_issue = ParseRole.apply(neighbor, local)
+        role_issue = ParseRole.apply(neighbor, local) or ParseConfederation.apply(neighbor, local)
         if role_issue:
             return self.error.set(role_issue)
 

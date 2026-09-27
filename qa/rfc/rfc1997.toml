@@ -78,9 +78,9 @@ peers (this includes peers in other members autonomous
 systems inside a BGP confederation).
 """
 note = """
-As NO_EXPORT: it binds re-advertisement, which exabgp does not do.  exabgp additionally
-has no confederation support at all, so the boundary this names does not exist in the
-code either.
+As NO_EXPORT: it binds re-advertisement, which exabgp does not do.  exabgp now knows its
+confederation (RFC 5065, the neighbour `confederation` block) and so where this boundary
+lies, but as it propagates nothing across it the rule has nothing to act on.
 """
 
 [[requirement]]
