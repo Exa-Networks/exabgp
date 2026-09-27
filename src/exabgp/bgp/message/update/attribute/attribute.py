@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.bgp.message.notification import Notify
 from exabgp.util.cache import Cache
 
 # Attribute length encoding constants
@@ -322,7 +321,9 @@ class Attribute:
             kls.ID = attribute_id
             return kls
 
-        raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))
+        # every caller checks registered() first, so this is our bug, not the peer's.  It
+        # was Notify(2, 4), an OPEN error, which a peer would have been sent
+        raise RuntimeError(f'no class registered for attribute {attribute_id} with flag 0x{flag:02X}')
 
     @classmethod
     def klass_by_id(cls, attribute_id: int) -> Type[Attribute] | None:
@@ -349,7 +350,10 @@ class Attribute:
                 cls.cache[cls.ID].cache(cache_key, instance)
             return instance
 
-        raise Notify(2, 4, 'can not handle attribute id {}'.format(attribute_id))
+        # An unknown attribute is not malformed: AttributeCollection.parse keeps it as a
+        # generic one.  Only the read-only wire iterator asks for every code, and it skips
+        # what this refuses.  It was Notify(2, 4), an OPEN error, meant for a peer
+        raise ValueError(f'no class registered for attribute {attribute_id} with flag 0x{flag:02X}')
 
     @classmethod
     def setCache(cls) -> None:

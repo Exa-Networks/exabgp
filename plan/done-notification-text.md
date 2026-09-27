@@ -235,3 +235,11 @@ for p in pathlib.Path('src').rglob('*.py'):
                 print(f'{p}:{n.lineno}', ', '.join(ast.unparse(a) for a in n.args))
 EOF
 ```
+
+## Follow-ups (2026-09-27, after completion)
+
+- 2f resolved: `Attribute.klass` raises RuntimeError (only reached after `registered()`),
+  `Attribute.unpack` raises ValueError for an unregistered code, which the read-only wire
+  iterator already caught.  Neither is a Notify any more.  `tests/unit/test_attribute_unregistered.py`.
+- `NotifyError` carries a Data field; `connection.py` fills it with the refused Length
+  octets for a (1, 2), and `protocol.py` no longer rebuilds them.
