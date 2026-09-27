@@ -28,7 +28,7 @@ class IncomingRIB(Cache):
     _path_warned: set[tuple[FamilyTuple, bytes]]
     _end_of_rib: set[FamilyTuple]
     # RFC 7313 4: per family, the routes a BoRR marked stale and nothing has re-sent since.
-    # A subset of what the cache holds, so the cache bounds it
+    # A subset of what the cache and the prefix-limit count hold, so they bound it
     _stale: dict[FamilyTuple, set[bytes]]
     # RFC 4486 4: per limited family, the routes the peer holds with us.  Kept apart from
     # the cache, which adj-rib-in can turn off, and bounded by the limit: the route which
@@ -65,8 +65,12 @@ class IncomingRIB(Cache):
             stale.discard(self._make_index(nlri))
 
     def mark_stale(self, family: FamilyTuple) -> None:
-        """A BoRR: every route of the family held now is stale until the peer sends it again."""
-        self._stale[family] = set(self._seen.get(family, {}))
+        """A BoRR: every route of the family held now is stale until the peer sends it again.
+
+        "Held" is the cache and the prefix-limit count together: the count is kept with
+        adj-rib-in off, when the cache is empty, and the EoRR has to release it too.
+        """
+        self._stale[family] = set(self._seen.get(family, {})) | self._prefixes.get(family, set())
 
     def purge_stale(self, family: FamilyTuple) -> list[Route] | None:
         """An EoRR: remove what is still stale, or None when no BoRR came before it."""

@@ -321,3 +321,18 @@ def test_a_purged_route_no_longer_counts_against_the_prefix_limit() -> None:
     session.receive(RouteRefresh.end)
 
     assert session.incoming.count_prefix(route(KEPT).nlri) == 1
+
+
+def test_the_prefix_limit_is_released_with_adj_rib_in_off() -> None:
+    """The prefix-limit counts whether the cache is on or not, so the stale set has to too."""
+    session = Session()
+    session.incoming = IncomingRIB(False, {FAMILY, OTHER})
+    session.ctx.neighbor.rib.incoming = session.incoming
+    for prefix in (KEPT, DROPPED):
+        session.announced(prefix)
+        session.incoming.count_prefix(route(prefix).nlri)
+    session.receive(RouteRefresh.start)
+    session.announced(KEPT)
+    session.receive(RouteRefresh.end)
+
+    assert session.incoming.count_prefix(route(KEPT).nlri) == 1

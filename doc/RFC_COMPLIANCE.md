@@ -1485,9 +1485,9 @@ for the neighbour, which is the only configuration under which exabgp handles th
   - `tests/unit/rfc/test_rfc7313_operation.py::test_route_refresh_enabled_advertises_the_enhanced_capability_too`
 - **4** (MUST) `rfc7313#4-borr-marks-routes-stale` - proven
   > When a BGP speaker receives a BoRR message from a peer, it MUST mark all the routes with the given Address Family Identifier and Subsequent Address Family Identifier, <AFI, SAFI> [RFC2918], from that peer as stale.
-  IncomingRIB.mark_stale records the adj-rib-in entries of the family, and a route received
-again before the EoRR stops being stale.  With adj-rib-in disabled exabgp holds no route
-from the peer, and there is nothing to mark.
+  IncomingRIB.mark_stale records the adj-rib-in entries of the family, and the routes the
+prefix-limit counts for it, which it does with adj-rib-in off as well.  A route received
+again before the EoRR stops being stale.
   - `tests/unit/rfc/test_rfc7313_operation.py::test_what_the_peer_did_not_repeat_is_removed_at_the_eorr`
   - `tests/unit/rfc/test_rfc7313_operation.py::test_a_route_re_sent_after_the_borr_is_no_longer_stale`
 - **4** (MUST) `rfc7313#4-eorr-removes-stale-routes` - proven

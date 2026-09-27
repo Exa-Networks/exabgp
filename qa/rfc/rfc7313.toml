@@ -98,9 +98,9 @@ Subsequent Address Family Identifier, <AFI, SAFI> [RFC2918], from
 that peer as stale.
 """
 note = """
-IncomingRIB.mark_stale records the adj-rib-in entries of the family, and a route received
-again before the EoRR stops being stale.  With adj-rib-in disabled exabgp holds no route
-from the peer, and there is nothing to mark.
+IncomingRIB.mark_stale records the adj-rib-in entries of the family, and the routes the
+prefix-limit counts for it, which it does with adj-rib-in off as well.  A route received
+again before the EoRR stops being stale.
 """
 
 [[requirement]]
