@@ -112,18 +112,37 @@ except Exception:
 out = {}
 seen = {}
 
-def through_collection(attribute):
-    # An attribute's own json() is not how a message is rendered: AttributeCollection is,
-    # and it reaches some attributes through str() instead.  Asking the attribute directly
-    # exercises code a peer cannot reach, which is how Aggregator4.json() came to be
-    # reported as a regression: AS4_AGGREGATOR is merged into AGGREGATOR before anything
-    # renders, so that method never runs in an UPDATE.  Render the way production does.
-    collection = AttributeCollection()
-    collection.add(attribute)
-    return collection.json()
+TREAT_AS_WITHDRAW = int(Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW)
+DISCARD = int(Attribute.CODE.INTERNAL_DISCARD)
 
 
-def record(key, fn, given=b'', render=None):
+def through_parse(code, flag, value):
+    # What a peer experiences, which is not what the attribute class raises.
+    # AttributeCollection.parse is the only place RFC 7606 lives: it turns most malformed
+    # attributes into a treat-as-withdraw or a discard, and only some into a NOTIFICATION.
+    # Calling klass.unpack_attribute() instead reported 445 of these 1196 probes as a Python
+    # crash and 562 as a refusal, where a peer sees no crash at all and 100 refusals.
+    #
+    # The length field is two octets when the flag says Extended Length, and every flag in
+    # the registry sets it. Writing one octet makes the parser read the value as a length
+    # and call all 1196 a withdraw, which is how this was first got wrong.
+    if flag & int(Attribute.Flag.EXTENDED_LENGTH):
+        header = bytes([flag, code]) + struct.pack('!H', len(value))
+    else:
+        header = bytes([flag, code, len(value)])
+    # Negotiated.UNSET rather than a stub: AIGP reads negotiated.aigp, and a session object
+    # built by hand here reports its own missing members as decoder crashes
+    parsed = AttributeCollection().parse(header + value, Negotiated.UNSET)
+    if TREAT_AS_WITHDRAW in parsed:
+        return 'WITHDRAW'
+    if DISCARD in parsed:
+        return 'DISCARD'
+    if code in parsed:
+        return 'PRESENT:' + hashlib.sha1(parsed.json().encode()).hexdigest()[:10]
+    return 'ABSENT'
+
+
+def record(key, fn, given=b''):
     # the input is recorded with the verdict, so the driver can prove both trees decoded the
     # same bytes. A corpus built inside the probe is built from that tree's own registries,
     # and two trees quietly comparing different inputs is a gate which reports nothing.
@@ -140,7 +159,7 @@ def record(key, fn, given=b'', render=None):
         out[key] = 'REFUSED'
         return
     try:
-        rendered = render(value) if render else value.json()
+        rendered = value.json()
     except Exception as exc:
         # NotImplementedError is a choice, not a failure: some attributes are rendered by
         # AttributeCollection through str().  It keeps a distinct verdict so the relative
@@ -230,15 +249,17 @@ for name, afi, safi, wire in SHAPED:
         )
 
 for key in sorted(Attribute.registered_attributes, key=str):
-    klass = Attribute.registered_attributes[key]
     for length in range(0, 26):
         for fill in (b'\\x00', b'\\xff'):
-            record(
-                'attr/%d/%d/%d/%s' % (key[0], key[1], length, fill.hex()),
-                lambda k=klass, d=fill * length: k.unpack_attribute(d, Negotiated.UNSET),
-                fill * length,
-                through_collection,
-            )
+            attribute_key = 'attr/%d/%d/%d/%s' % (key[0], key[1], length, fill.hex())
+            payload = fill * length
+            seen[attribute_key] = payload.hex()
+            try:
+                out[attribute_key] = through_parse(key[0], key[1], payload)
+            except Notify:
+                out[attribute_key] = 'NOTIFY'
+            except Exception as exc:
+                out[attribute_key] = 'ERROR:' + type(exc).__name__
 
 for code in sorted(Capability.registered_capability, key=int):
     for length in range(0, 22):
