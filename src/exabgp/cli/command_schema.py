@@ -272,8 +272,8 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         options={
             'notification': CLIValueSpec(
                 value_type=ValueType.INTEGER,
-                description='BGP notification code (1-6)',
-                examples=['6'],
+                description='Cease subcode, or code then subcode, then optional text (default 6 2)',
+                examples=['4', '6 2 maintenance'],
                 required=False,
             ),
         },

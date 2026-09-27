@@ -193,3 +193,37 @@ def test_the_session_survives_right_up_to_the_negotiated_value(clock: Clock, ela
     clock.advance(elapsed)
 
     timer_under_test.check_ka_timer()
+
+
+# ----------------------------------------------- 8.2.2 no OPEN arrives while in OpenSent
+
+
+@pytest.mark.asyncio
+async def test_waiting_too_long_for_the_open_is_hold_timer_expired() -> None:
+    """RFC 4271 8.2.2, OpenSent: "If the HoldTimer_Expires (Event 10), the local system:
+    - sends a NOTIFICATION message with the error code Hold Timer Expired".
+
+    exabgp sent (5, 1), Receive Unexpected Message in OpenSent State, which RFC 6608 keeps
+    for a message which did arrive.  Here nothing arrived at all.
+    """
+    import asyncio
+    from unittest.mock import Mock, patch
+
+    from exabgp.reactor.peer import Peer
+
+    async def silent(_ip: str) -> Open:
+        await asyncio.Event().wait()
+        raise AssertionError('the peer never sends its OPEN')
+
+    neighbor = Mock()
+    neighbor.uid = '1'
+    neighbor.api = {'neighbor-changes': False, 'fsm': False}
+    with patch('exabgp.reactor.peer.peer.getenv') as environment:
+        environment.return_value.bgp.openwait = 0.01
+        peer = Peer(neighbor, Mock())
+        peer.proto = Mock()
+        peer.proto.read_open = silent
+        with pytest.raises(Notify) as caught:
+            await peer._read_open()
+
+    assert (caught.value.code, caught.value.subcode) == (HOLD_TIMER_EXPIRED, UNSPECIFIC)

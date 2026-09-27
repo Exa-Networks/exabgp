@@ -4,6 +4,16 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Incompatible: "teardown" takes a code as well as a subcode. The documentation said the
+   number was the error code, while the code always sent Cease with the number as the
+   subcode, so "teardown 6" sent Cease / Other Configuration Change. One number keeps that
+   meaning, so existing scripts send what they sent before. Two numbers are the code and
+   the subcode, any value from 0 to 255, for anyone testing how another implementation
+   reacts; a value IANA does not assign is logged as a warning. Text after the numbers is
+   sent too: for Administrative Shutdown and Administrative Reset it is the RFC 9003
+   Shutdown Communication, for anything else the Data field. "teardown" alone now sends
+   Administrative Shutdown where it answered with an error, and "teardown 300" is refused
+   where it raised inside the peer and closed the session without a NOTIFICATION.
  * Fix: the Data field of the NOTIFICATIONs we send holds what the RFCs define. A Bad
    Message Type carries the type octet, an Unsupported Version Number carries the version
    we support, an Invalid Message Length for a ROUTE-REFRESH carries the whole message, and
@@ -14,10 +24,15 @@ Version 6.0.0:
  * Fix: a ROUTE-REFRESH with a Message Subtype other than 0, 1 or 2 is ignored and logged,
    as RFC 7313 section 5 requires. It was answered with subcode 2 of error code 7, which
    came from an expired draft, was never assigned by IANA, and closed the session.
+ * Fix: waiting too long for the OPEN sends Hold Timer Expired, which is what RFC 4271
+   section 8 asks for in OpenSent. It sent the RFC 6608 subcode for an unexpected message,
+   when no message had arrived at all.
  * Fix: a Shutdown Communication of up to 255 octets is read. RFC 9003 raised the limit
    from the 128 octets of RFC 8203 and anything longer was reported as invalid. The one we
    send is UTF-8, cut to 128 octets on a character boundary; one accented letter made it
    raise instead of being sent.
+ * Fix: when the API process cannot be told a session is up, the session is closed with
+   Cease / Out of Resources. It used Cease subcode 0, which IANA lists as reserved.
  * Change: the names of NOTIFICATION codes and subcodes in the log and the API follow the
    IANA registry, e.g. "Finite State Machine Error" rather than "State machine error", and
    the codes and subcodes added since RFC 4486 are named.

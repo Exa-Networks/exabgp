@@ -14,7 +14,7 @@ B1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003040202
 B1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"2.2.2.2":[{"nlri":"2.2.0.0/16"}]}}}}}}
 B1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 # NOTIFY
-B2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0015:03:0604
+B2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001F:03:0604096261636B20736F6F6E
 
 # first and second and third route and EOR
 C1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003040101010140050400000064100101

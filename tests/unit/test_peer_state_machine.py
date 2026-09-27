@@ -22,6 +22,7 @@ os.environ['exabgp_tcp_attempts'] = '0'
 
 from exabgp.bgp.fsm import FSM  # noqa: E402
 from exabgp.bgp.message import Scheduling  # noqa: E402
+from exabgp.bgp.message.notification import Notify  # noqa: E402
 from exabgp.reactor.peer import Peer, Stats  # noqa: E402
 
 
@@ -201,7 +202,8 @@ class TestPeerStateTransitions:
 
         peer.reestablish()
 
-        assert peer._teardown == 3
+        assert peer._teardown is not None
+        assert (peer._teardown.code, peer._teardown.subcode) == (6, 3)
         assert peer._restart is True
         assert peer._restarted is True
 
@@ -373,7 +375,7 @@ class TestPeerTimers:
         peer = Peer(neighbor, reactor)
         peer._delay.increase()
 
-        peer.teardown(3, restart=True)
+        peer.teardown(Notify(6, 3), restart=True)
 
         # Delay should be reset (_next should be 0)
         assert peer._delay._next == 0
@@ -409,7 +411,7 @@ class TestPeerErrorRecovery:
 
         peer = Peer(neighbor, reactor)
         peer.fsm.change(FSM.ESTABLISHED)
-        peer._teardown = 6
+        peer._teardown = Notify(6, 6)
 
         peer._reset('notification received', 'error')
 
@@ -751,9 +753,10 @@ class TestPeerReconfigure:
         reactor = Mock()
 
         peer = Peer(neighbor, reactor)
-        peer.teardown(6, restart=False)
+        notify = Notify(6, 6)
+        peer.teardown(notify, restart=False)
 
-        assert peer._teardown == 6
+        assert peer._teardown is notify
         assert peer._restart is False
 
 

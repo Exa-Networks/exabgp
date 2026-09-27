@@ -485,39 +485,42 @@ exabgp> json show neighbor
 
 #### teardown
 
-Gracefully shutdown neighbor connection.
+Close a neighbor session with a NOTIFICATION of the client's choosing.
 
 **Syntax:**
 ```bash
-teardown [neighbor_selector] [notification_code]
+teardown [neighbor_selector]                              # Cease / Administrative Shutdown (6, 2)
+teardown [neighbor_selector] <subcode> [<text>]           # Cease / <subcode>
+teardown [neighbor_selector] <code> <subcode> [<text>]    # any code and subcode
 ```
 
 **Parameters:**
-- `notification_code` (optional) - BGP notification code (default: 6 = Cease)
+- one number is a **Cease subcode**, which is what the command has always sent
+  (`teardown 6` is Cease / Other Configuration Change, not code 6)
+- two numbers are the **code and subcode**, any value from 0 to 255, so a client testing
+  another implementation can send anything; a value IANA does not assign is logged as a
+  warning, a value over 255 is answered with an error
+- `text`: for (6, 2) and (6, 4) it is the RFC 9003 Shutdown Communication (UTF-8, cut to
+  128 octets); for any other subcode it is the Data field.  Quote it if it starts with a digit
 
 **Selectors:** See Neighbor Selectors section above
 
-**Returns:** Confirmation
+**Returns:** Confirmation, or an error naming what could not be sent
 
 **Examples:**
 ```bash
-# Teardown specific neighbor
-exabgp> neighbor 192.168.1.1 teardown
-
-# Teardown with notification code
-exabgp> neighbor 10.0.0.1 teardown 6
-
-# Teardown by peer-as selector
+exabgp> neighbor 192.168.1.1 teardown                        # 6/2
+exabgp> neighbor 10.0.0.1 teardown 4                         # 6/4 Administrative Reset
+exabgp> neighbor 10.0.0.1 teardown 6 2 "[TICKET-1] upgrade, back in 2h"
+exabgp> neighbor 10.0.0.1 teardown 4 "12 monkeys"            # quoted: starts with a digit
+exabgp> neighbor 10.0.0.1 teardown 3 1 testing               # UPDATE / Malformed Attribute List
 exabgp> neighbor * peer-as 65000 teardown
 ```
 
-**Notification codes:**
-- 1 = Message Header Error
-- 2 = OPEN Message Error
-- 3 = UPDATE Message Error
-- 4 = Hold Timer Expired
-- 5 = Finite State Machine Error
-- 6 = Cease (default)
+**Cease subcodes (RFC 4486, RFC 8538, RFC 9384):** 1 Maximum Number of Prefixes Reached,
+2 Administrative Shutdown, 3 Peer De-configured, 4 Administrative Reset, 5 Connection
+Rejected, 6 Other Configuration Change, 7 Connection Collision Resolution, 8 Out of
+Resources, 9 Hard Reset, 10 BFD Down.
 
 ---
 

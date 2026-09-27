@@ -216,7 +216,9 @@ class Peer:
         self._restarted: bool = FORCE_GRACEFUL
 
         # We have been asked to teardown the session with this code
-        self._teardown: int | None = None
+        # The NOTIFICATION to close the session with, once one is asked for.  It was the
+        # Cease subcode as an int, which made a subcode of 0 look like no teardown at all
+        self._teardown: Notify | None = None
 
         self._delay: Delay = Delay()
         self.recv_timer: ReceiveTimer | None = None
@@ -309,7 +311,7 @@ class Peer:
         return self._teardown is not None and not self._restart
 
     def stop(self) -> None:
-        self._teardown = 3
+        self._teardown = Notify(6, 3)
         self._restart = False
         self._restarted = False
         self._delay.reset()
@@ -349,7 +351,7 @@ class Peer:
 
     def reestablish(self, restart_neighbor: 'Neighbor' | None = None) -> None:
         # we want to tear down the session and re-establish it
-        self._teardown = 3
+        self._teardown = Notify(6, 3)
         self._restart = True
         self._restarted = True
         self._neighbor = restart_neighbor
@@ -373,9 +375,19 @@ class Peer:
                 restart_neighbor.previous = None
                 self._neighbor = None  # Prevent double-processing when peer connects
 
-    def teardown(self, code: int, restart: bool = True) -> None:
+    def _announce_up_to_the_api(self) -> None:
+        if not (self.neighbor.api and self.neighbor.api['neighbor-changes']):
+            return
+        try:
+            self.reactor.processes.up(self.neighbor)
+        except ProcessError:
+            # RFC 4486 Out of Resources: we cannot carry on for want of a local resource,
+            # the helper process.  This was (6, 0), which IANA lists as Reserved
+            raise Notify(6, 8, 'the API process could not be told the session is up') from None
+
+    def teardown(self, notify: Notify, restart: bool = True) -> None:
         self._restart = restart
-        self._teardown = code
+        self._teardown = notify
         self._delay.reset()
 
     def socket(self) -> int:
@@ -510,7 +522,9 @@ class Peer:
             )
             return message
         except asyncio.TimeoutError:
-            raise Notify(5, 1, 'waited for open too long, we do not like stuck in active') from None
+            # RFC 4271 8.2.2: the hold timer expiring in OpenSent sends Hold Timer Expired.
+            # (5, 1) is RFC 6608's for a message which arrived, and here none did
+            raise Notify(4, 0, f'no OPEN received within {wait} seconds') from None
 
     async def _send_ka(self) -> None:
         """Sends KEEPALIVE message using async I/O"""
@@ -676,8 +690,8 @@ class Peer:
         assert self.recv_timer is not None
         assert self.proto.negotiated.sent_open is not None
 
-        if self._teardown:
-            raise Notify(6, 3)
+        if self._teardown is not None:
+            raise self._teardown
 
         # Initialize session state
         self.neighbor.rib.incoming.clear()
@@ -709,11 +723,7 @@ class Peer:
             'reactor',
         )
         self.stats['up'] += 1
-        if self.neighbor.api and self.neighbor.api['neighbor-changes']:
-            try:
-                self.reactor.processes.up(self.neighbor)
-            except ProcessError:
-                raise Notify(6, 0, 'ExaBGP Internal error, sorry.') from None
+        self._announce_up_to_the_api()
 
         # Re-announce ASM messages on restart
         for family in self.neighbor.asm:
@@ -735,7 +745,7 @@ class Peer:
         peer_loop_timer = LoopTimer(f'peer_main_{self.id()}', warn_threshold_ms=50)
 
         try:
-            while not self._teardown:
+            while self._teardown is None:
                 peer_loop_timer.start()
 
                 # Handle configuration reload
@@ -782,8 +792,8 @@ class Peer:
                     await asyncio.sleep(0)
                 else:
                     await asyncio.sleep(0.001)
-                    if self._teardown:
-                        log.debug(lazymsg('async.mainloop.exiting teardown={td}', td=self._teardown), self.id())
+                    if self._teardown is not None:
+                        log.debug(lazymsg('async.mainloop.exiting teardown={td}', td=str(self._teardown)), self.id())
                         break
 
                 # Log timing for this iteration
@@ -810,7 +820,7 @@ class Peer:
             raise NetworkError('closing')
 
         assert self._teardown is not None
-        raise Notify(6, self._teardown)
+        raise self._teardown
 
     async def _run(self) -> None:
         """Main peer loop using async/await"""

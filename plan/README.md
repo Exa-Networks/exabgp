@@ -126,6 +126,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-notification-text.md` | 2026-09-27 | NOTIFICATION names per IANA, RFC-defined Data field, wrong subcodes, API teardown |
 | `done-paths-limit.md` | 2026-09-09 | PATHS-LIMIT capability (#1218): enforcement across batches, bounded audit, wire test |
 | `done-attribute-cache-per-session.md` | 2026-08-22 | Attribute cache was process-wide and ignored negotiated state; scoped to the session |
 | `done-read-cancellation-desync.md` | 2026-08-22 | A read cancelled by the 100ms deadline lost its bytes and desynced the session |

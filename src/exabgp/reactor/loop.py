@@ -28,6 +28,7 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from exabgp.bgp.message.notification import Notify
     from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.bgp.fsm import FSM
@@ -529,8 +530,8 @@ class Reactor:
     def register_peer(self, name: str, peer: Peer) -> None:
         self._peers[name] = peer
 
-    def teardown_peer(self, name: str, code: int) -> None:
-        self._peers[name].teardown(code)
+    def teardown_peer(self, name: str, notify: Notify) -> None:
+        self._peers[name].teardown(notify)
 
     def shutdown(self) -> None:
         """Terminate all the current BGP connections"""

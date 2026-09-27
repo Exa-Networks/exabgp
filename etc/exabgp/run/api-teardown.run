@@ -35,7 +35,8 @@ def main() -> None:
             announce=(('1.1.0.0/16', 2), ('2.2.0.0/16', 1)),
         )
 
-        send('neighbor 127.0.0.1 teardown 4')
+        # the code, subcode and RFC 9003 communication form, end to end
+        send('neighbor 127.0.0.1 teardown 6 4 "back soon"')
         barrier('the second teardown', state=(('down', 2),))
 
         barrier('the third session coming up', expected_count=0, state=(('up', 3),))

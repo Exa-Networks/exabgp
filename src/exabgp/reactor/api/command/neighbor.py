@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shlex
 from typing import TYPE_CHECKING
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.neighbor import NeighborTemplate
+from exabgp.logger import lazymsg, log
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -68,25 +71,54 @@ def list_neighbor(
     return True
 
 
+# the default when the client names nothing: RFC 4486 Cease, Administrative Shutdown
+_TEARDOWN_DEFAULT = (6, 2)
+_OCTET_MAX = 255
+
+
+def _octet(token: str) -> int:
+    if not token.isdigit() or int(token) > _OCTET_MAX:
+        raise ValueError(f'{token!r} is not a value from 0 to {_OCTET_MAX}')
+    return int(token)
+
+
+def teardown_notification(arguments: str) -> Notify:
+    """The NOTIFICATION `teardown [<code>] [<subcode>] [<text>]` asks for.
+
+    One number is a Cease subcode, which is what the command always sent whatever the
+    documentation said; two are a code and a subcode.  Any value a wire octet can hold is
+    accepted, for clients testing another implementation, and one IANA does not assign is
+    warned about.  Text starting with a digit has to be quoted, or it reads as a number.
+    """
+    tokens = shlex.split(arguments)  # raises ValueError on an unbalanced quote
+    numbers: list[int] = []
+    while tokens and len(numbers) < len(_TEARDOWN_DEFAULT) and tokens[0].isdigit():
+        numbers.append(_octet(tokens.pop(0)))
+    if not numbers and tokens:
+        raise ValueError(f'expected a code or a subcode, got {tokens[0]!r}')
+    if not numbers:
+        code, subcode = _TEARDOWN_DEFAULT
+    elif len(numbers) == 1:
+        code, subcode = 6, numbers[0]
+    else:
+        code, subcode = numbers
+    if not Notify.is_assigned(code, subcode):
+        log.warning(lazymsg('teardown.unassigned code={c} subcode={s}', c=code, s=subcode), 'api')
+    return Notify(code, subcode, ' '.join(tokens))
+
+
 def teardown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     try:
-        # command contains the teardown code (e.g., "6" for code 6)
-        code = command.strip()
-        if not code.isdigit():
-            reactor.processes.answer_error_sync(service)
-            return False
-        for peer_key in peers:
-            if peer_key in reactor.established_peers():
-                reactor.teardown_peer(peer_key, int(code))
-                self.log_message(f'teardown scheduled for {peer_key}')
-        reactor.processes.answer_done_sync(service)
-        return True
-    except ValueError:
-        reactor.processes.answer_error_sync(service)
+        notify = teardown_notification(command)
+    except ValueError as exc:
+        reactor.processes.answer_error_sync(service, str(exc))
         return False
-    except IndexError:
-        reactor.processes.answer_error_sync(service)
-        return False
+    for peer_key in peers:
+        if peer_key in reactor.established_peers():
+            reactor.teardown_peer(peer_key, notify)
+            self.log_message(f'teardown scheduled for {peer_key}')
+    reactor.processes.answer_done_sync(service)
+    return True
 
 
 def show_neighbor(
