@@ -99,17 +99,32 @@ class TestReading:
 
 
 class TestTheHelperGoingAway:
-    def test_a_hung_up_pipe_alone_is_not_yet_a_problem(self, processes: Any, pipe: Any) -> None:
-        """A closed writer reports POLLIN as well as POLLHUP, and POLLIN is tested first.
+    def test_a_hung_up_pipe_which_is_also_readable_is_not_yet_a_problem(self, processes: Any, pipe: Any) -> None:
+        """On macOS a closed writer reports POLLIN as well as POLLHUP, and POLLIN is tested first.
 
         So the hang-up is not what ends the helper: the empty read which follows is, and
         only once poll() has an exit code for the child. Until then this is a quiet turn.
+        The events are forced because what the kernel reports depends on the platform.
         """
         _, write_fd = pipe
         os.close(write_fd)
 
-        assert list(processes.received()) == []
+        with patch('exabgp.reactor.api.processes.select.poll') as poller:
+            poller.return_value.poll.return_value = [(0, select.POLLIN | select.POLLHUP)]
+            assert list(processes.received()) == []
+
         assert processes.problems == []
+
+    def test_a_hung_up_pipe_with_nothing_to_read_is_a_problem(self, processes: Any, pipe: Any) -> None:
+        """On Linux a closed writer with an empty pipe reports POLLHUP alone, with no data behind it."""
+        _, write_fd = pipe
+        os.close(write_fd)
+
+        with patch('exabgp.reactor.api.processes.select.poll') as poller:
+            poller.return_value.poll.return_value = [(0, select.POLLHUP)]
+            assert list(processes.received()) == []
+
+        assert processes.problems == ['test']
 
     def test_an_invalid_descriptor_is_a_problem(self, processes: Any) -> None:
         """POLLERR and POLLNVAL have no data behind them, so this is the branch they take."""
