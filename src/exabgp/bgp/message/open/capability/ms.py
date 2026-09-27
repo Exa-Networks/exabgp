@@ -18,6 +18,10 @@ from exabgp.util.types import Buffer
 # ================================================================= MultiSession
 #
 
+# draft-ietf-idr-bgp-multisession-07 section 4: the value is one octet of flags followed by
+# the Session ID.
+FLAGS_SIZE_BYTES = 1
+
 
 @Capability.register()
 @Capability.register(Capability.CODE.MULTISESSION_CISCO)
@@ -61,12 +65,13 @@ class MultiSession(Capability, list[CapabilityCode]):
             return instance
         instance._seen = True
 
-        if not data:
-            # The draft's value always starts with one flags octet. An empty
-            # Session ID is therefore encoded as a one-byte value (0x00 flags
-            # and no following codes), not as a zero-length value. Without the
-            # flags octet the Session ID length would be capability length - 1,
-            # which is impossible, so reject the malformed OPEN.
+        if len(data) < FLAGS_SIZE_BYTES:
+            # The draft's value always starts with one flags octet, and infers the
+            # Session ID length as "the capability length minus one", so a zero length
+            # value is not the encoding the draft defines. Section 4 would give an empty
+            # Session ID a meaning, but guessing that a peer meant it is accepting input
+            # which does not follow the encoding. Every implementation seen on the wire,
+            # Cisco's code 131 included, sends the flags octet. 5.0 accepts this value.
             raise Notify(2, 0, 'multisession capability is missing its flags byte')
 
         # The first byte is flags. The G bit is deprecated and reserved bits MUST
@@ -74,7 +79,7 @@ class MultiSession(Capability, list[CapabilityCode]):
         # capability code, so no partial-record case exists and the loop is bounded
         # by the received value length. The draft also requires receivers to ignore
         # the MultiSession capability itself if it appears in the Session ID.
-        for code in data[1:]:
+        for code in data[FLAGS_SIZE_BYTES:]:
             if code in (Capability.CODE.MULTISESSION, Capability.CODE.MULTISESSION_CISCO):
                 continue
             instance.append(CapabilityCode(code))

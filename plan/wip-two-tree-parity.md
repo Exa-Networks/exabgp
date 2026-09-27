@@ -2,7 +2,7 @@
 
 **Status:** 🚧 In progress
 **Started:** 2026-09-25
-**Last Updated:** 2026-09-25
+**Last Updated:** 2026-09-27
 **Trees:** `main` (6.0.0, development) and `../5.0` (production). Separate clones, ~190 commits diverged.
 
 ## Why this file exists
@@ -157,6 +157,9 @@ over; seven sites moved Notify 3/0 → 3/9.
 | 3.12 | 5.0 MULTISESSION Session ID never decoded, so the 2/8 refusal is dead code | ✅ fixed 2026-09-26 | 5.0 `439047b83`. Carried a live `KeyError` too. See §19. |
 | 3.16 | 5.0 tolerates a zero-length MULTISESSION value where main answers `Notify(2, 0)` | ❓ decision | the trees now disagree; one should change |
 | 3.17 | 5.0 `MultiSession.extract()` is not draft §4 conformant | 🟢 parity | main fixed it in `7a7bdeea3`; wrong bytes, right meaning |
+| 3.16 | ~~decision~~ decided 2026-09-27: main stays strict, `Notify(2, 0)` | ✅ decided, divergence kept | invalid encoding gets 2/0 even without a MUST. 5.0 stays lenient (stable branch). See §24. |
+| 3.18 | multi-session with N families keeps one neighbour, not N | 🔴 confirmed, not fixed, **both trees** | every per-family copy has the same `Neighbor.name()`. Strict xfail in `tests/unit/rfc/test_draft_multisession.py`. See §24. |
+| 3.19 | exabgp never sends Cisco code 131, so a Cisco multisession peer gets `Notify(2, 9)` | ❓ decision, not reproduced against a router | inferred from `negotiated.py` and `capabilities._session`. See §24. |
 
 All of 3.6 to 3.12 are now fixed. They were each **reproduced by running**, not inferred, and deliberately left:
 three agents were in the tree at once, and 3.8 has an interop question worth a human. §12
@@ -1386,3 +1389,49 @@ result rather than from "intermittent".
   families swept 600 times each with inputs their decoder rejected at byte one. Assume a green
   gate is mismeasuring until something external says otherwise. Not one of these was caught by
   the thing itself.
+
+---
+
+## 24. MULTISESSION, 3.16 resolved and the draft enrolled, 2026-09-27
+
+**3.16.** ~~main now reads a zero length value as an empty Session Id, as 5.0 does.~~
+SUPERSEDED the same day. main was relaxed, then put back on Thomas's decision: `Notify(2, 0)` is
+the fair answer to a value which does not follow the encoding, even with no MUST. §4 says the
+Session Id "is the capability length minus one", so zero length is malformed. §4's
+"empty equals `{MULTIPROTOCOL}`" gives it a possible meaning, but that is a guess about
+what the peer meant. The Cisco capture below removed the only interop reason to relax: no
+implementation seen sends a zero length value. 5.0 keeps accepting it, because tightening
+a stable branch is what BACKPORT.md forbids. The divergence is deliberate and stays. The
+relaxed version is saved in `.claude/backups/*-ms-relaxed.patch`.
+
+**Draft enrolled.** `qa/rfc/text/draft-ietf-idr-bgp-multisession-07.txt`, the ledger
+`qa/rfc/draft-ietf-idr-bgp-multisession-07.toml` (31 entries), tests in
+`tests/unit/rfc/test_draft_multisession.py`, ceiling 1 in `qa/rfc_compliance.json`. The
+checker accepted a draft name as the `rfc` key unchanged. Marker ids must be string
+literals: an f-string id is silently not seen, and the requirement reads as untested.
+Most of §6 (collision handling) is `gap`, because the listener hands a connection to a Peer
+by address before its OPEN is read.
+
+**Cisco 131, real bytes.** PacketLife `4-byte_AS_numbers_Full_Support.cap` (two Cisco IOS
+routers, 2010, mirrored at github.com/epiecs/packetlife-backup, commit 4a77a47e, sha256
+`1a14718a...488b51`), frames 2 and 3: `02 03 83 01 00`. That is one flags octet and no
+Session Id, which is the layout of draft revision 01. No zero length 131 was found anywhere.
+Wireshark's dissector requires length >= 1. So main's `Notify(2, 0)` does not refuse a
+Cisco router. Frame 2's OPEN is now a unit test.
+
+**3.18, found on the way.** With `capability { multi-session enable; }` and two families,
+`configuration/neighbor/__init__.py` deep-copies the neighbour per family and narrows only
+`rib.outgoing.families`. `Neighbor.name()` is built from `families()`, which is unchanged,
+so both copies get the same name and `self.neighbors[name]` keeps the last one. Measured:
+one neighbour, outgoing families `{ipv6 unicast}`, OPEN still announcing both families.
+5.0 has the same code (`neighbor.py:180`, `configuration/neighbor/__init__.py:351`).
+Not fixed: it changes how many sessions a configuration opens, which wants a decision.
+
+**3.19, inferred only.** Nothing assigns `MULTISESSION_CISCO` in sent capabilities, so
+exabgp always offers 68. A Cisco router offers 131 alone. Negotiated then sees neither
+variant on both sides, and because we announced 68 it answers `(2, 9)` "multisession is
+mandatory". Not reproduced against a router.
+
+3.18 and 3.19 are low priority: Thomas notes the draft is not deployed and exabgp may be
+its only implementation.
+

@@ -1,0 +1,522 @@
+# draft-ietf-idr-bgp-multisession-07 - Multisession BGP
+# https://datatracker.ietf.org/doc/html/draft-ietf-idr-bgp-multisession-07
+#
+# Every `text` below is quoted verbatim from
+# qa/rfc/text/draft-ietf-idr-bgp-multisession-07.txt and is checked against it on every run
+# of ./qa/bin/check_rfc_compliance.
+#
+# This is an Internet-Draft, not an RFC.  It expired in March 2013 and was never published,
+# but it is what the MULTISESSION capability (code 68) in
+# src/exabgp/bgp/message/open/capability/ms.py implements, so its sentences are held to the
+# same standard as an RFC's.  Revision 07 is the last one, and the one the code comments cite.
+#
+# Two facts the decoder is built on carry no RFC 2119 keyword, so they have no id:
+#
+#   section 4  "The size of the list is inferred from the length of the overall
+#              capability; it is the capability length minus one."
+#   section 4  "Empty Session Id list and Session Id containing 1 (one, Multiprotocol
+#              Extensions) as the only value are considered equal"
+#
+# The first decides the zero length value: it leaves a Session Id of minus one octets, so it
+# does not follow the encoding, and ms.py answers Notify(2, 0) although no sentence says MUST.
+# The second would give it a meaning, but guessing what a peer meant is not a reason to accept
+# what it did not encode.  5.0 accepts it; see plan/wip-two-tree-parity.md item 3.16.
+# tests/unit/rfc/test_draft_multisession.py tests both regardless.
+#
+# The capability code Cisco uses, 131, is decoded by the same class.  It is not this
+# draft's code, so nothing here binds it.  What a Cisco router actually sends is `83 01 00`,
+# a flags octet and no Session Id, which is the layout of draft revision 01: frame 2 of the
+# PacketLife capture 4-byte_AS_numbers_Full_Support.cap, kept as a test in
+# tests/unit/rfc/test_draft_multisession.py.  exabgp never sends 131 itself.
+#
+# How exabgp runs multisession today matters to most of sections 6 to 10.  Enabling it
+# on a neighbour with several families is meant to create one neighbour per family, but
+# Neighbor.name() is built from families(), which the split does not narrow, so every copy
+# gets the same name and only the last survives in Configuration.neighbors.  There is one
+# session per peer, it carries every family in its OPEN, and RFC 4271 section 6.8 governs
+# it.  The trivial-groups entry below demonstrates that with a strict xfail.
+
+rfc = "draft-ietf-idr-bgp-multisession-07"
+title = "Multisession BGP"
+url = "https://datatracker.ietf.org/doc/html/draft-ietf-idr-bgp-multisession-07"
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#1-implement-the-session-criteria"
+section = "1"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+Routers implementing this specification MUST also implement the base
+criteria that is used to define sessions.
+"""
+note = """
+The only criterion exabgp uses is the AFI/SAFI list, so this is the MP-BGP requirement
+below in general form.  A property of the speaker, with no peer input which violates it.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#1-implement-mp-bgp"
+section = "1"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+For example if AFI/SAFI
+based sessions are desired then routers implementing this
+specification MUST also implement MP-BGP [RFC4760].
+"""
+note = """
+A property of the speaker: an OPEN which carries MULTISESSION also carries the
+multiprotocol capability, which Capabilities.new adds unconditionally.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#4-g-bit-is-not-relied-on"
+section = "4"
+level = "SHOULD NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+As
+this information can be deduced from Session Id, the use of G bit is
+deprecated - implementations conforming to final version of
+Multisession specification SHOULD NOT rely on value of the G bit.
+"""
+note = """
+Positive only: the G bit is a flag we skip, so the test is that the Session Id decodes the
+same with it set.  There is no value of the bit a peer could send to catch us relying on it.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#4-reserved-flags"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Reserved - MUST be set to zero by sender, MUST be ignored by receiver
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#4-own-code-not-listed"
+section = "4"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+The Multisession capability code itself MUST NOT be listed; if listed
+it MUST be ignored upon receipt.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#4-compound-session-id-lists-mp"
+section = "4"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+However, if BGP speaker wishes to use compound Session Id that
+includes AFI/SAFI list as one of the components, then Capability Code
+1 MUST be explicitly included in the Session Id.
+"""
+note = """
+exabgp never builds a compound Session Id.  Capabilities._session sends MULTIPROTOCOL as
+the only component, and there is no configuration which adds another.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#4-all-or-none-sessions"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+For given pair of BGP peers Multisession capability MUST be used
+either on all or none sessions.
+"""
+note = """
+Every session exabgp runs with a peer is built from the one neighbour block which enabled
+multi-session, so none of them can differ.  This is about what we send, and there is no peer
+input which violates it on our side.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#5-use-the-new-subcodes"
+section = "5"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+BGP implementations conforming to this specification SHOULD use new
+sub-codes as described further down in section "Connection
+establishment" of this document.
+"""
+note = """
+Positive only: this is which subcode we choose, 8 for a Session Id mismatch and 9 for a
+peer without the capability.  The sections these refer to have their own entries with
+both sides.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#6-evaluate-before-connecting"
+section = "6"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+Before attempting to create new session local system SHOULD evaluate
+existing sessions with the same peer.
+"""
+note = """
+Each exabgp Peer decides alone whether to connect.  Nothing looks at the other sessions
+with the same address, because each neighbour is a separate Peer and none of them knows
+about the rest.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#6-established-session-wins-a-full-match"
+section = "6"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+Upon receipt of an OPEN messages BGP speaker MUST evaluate existing
+sessions with the same peer.  If there is already a session in
+ESTABLISHED state and multisession distinguisher values of the old
+and the new OPEN messages fully match, the old session remains and
+the new MUST be closed.
+"""
+note = """
+The outcome happens to hold, but not the procedure.  The listener hands an incoming
+connection to the first neighbour whose addresses match (listener.py) before any OPEN is
+read, and an ESTABLISHED Peer refuses it with Cease 6/7.  So the old session stays and the
+new one is closed, but whatever its Session Id, which is the RFC 4271 section 6.8
+procedure, not an evaluation of the OPEN.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#6-unique-sessions-may-both-establish"
+section = "6"
+level = "MAY"
+status = "gap"
+polarity = "both"
+text = """
+Otherwise two sessions are considered unique and both MAY transition
+to the ESTABLISHED state (subject to rest of BGP specification).
+"""
+note = """
+exabgp never has two sessions with one peer: the per-family neighbours collapse into one
+(see the header of this file), and the listener would give both connections to the same
+Peer in any case.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#6-no-rfc4271-collision-for-unique-sessions"
+section = "6"
+level = "MUST NOT"
+status = "gap"
+polarity = "both"
+text = """
+If there is a session in OpenConfirm or OpenSent state and two
+sessions do not collide according to this document, then both
+sessions proceed as normally and section 6.8 of RFC4271 MUST NOT be
+applied.
+"""
+note = """
+exabgp applies RFC 4271 section 6.8 to every second connection from the same address
+(Peer.handle_connection), whatever the two Session Ids are.  It cannot tell two unique
+sessions apart because the connection reaches a Peer before its OPEN is read.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#6-rfc4271-collision-for-colliding-sessions"
+section = "6"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+If on the other hand two sessions collide according to
+definition of this document, then original procedure from section 6.8
+of RFC4271 MUST be applied, except for the NOTIFICATION type.
+"""
+note = """
+Section 6.8 is applied, but with its own Cease 6/7, which is the exception this sentence
+makes.  And it is applied to every pair of connections, not only to the ones this document
+says collide, so the procedure is not the one described.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#6-collision-notification"
+section = "6"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+Whereas original specification prescribes to use 'Cease' error code,
+multisession enabled BGP speaker SHOULD send NOTIFICATION message as
+described in this document.
+"""
+note = """
+A collision is answered with Cease 6/7 whether multisession was negotiated or not.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#7-advertise-on-every-session"
+section = "7"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+When BGP Multisession is enabled by configuration for given peer and
+configuration dictates that multiple sessions can potentially be
+established with given peer, BGP speaker MUST advertise Multisession
+Capability code in the OPEN message on every session with given peer.
+"""
+note = """
+About what we send.  Every neighbour a multi-session block produces announces the
+capability; a peer has no way to make us omit it.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#7-otherwise-not-advertised"
+section = "7"
+level = "SHOULD NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+In all other cases Multisession capability SHOULD NOT be advertised.
+"""
+note = """
+About what we send: a neighbour without multi-session enabled has no MULTISESSION
+capability in its OPEN.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#7-same-session-id-everywhere"
+section = "7"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+The value of Session Id MUST be the same on every session.
+"""
+note = """
+exabgp sends one Session Id, MULTIPROTOCOL alone, from Capabilities._session.  There is no
+configuration which changes it, so no session can differ.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#7-peer-without-capability"
+section = "7"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+When Multisession-enabled BGP speaker receives an OPEN message
+without BGP Multisession Capability code it MUST assume that peer is
+not capable of multiple sessions and MUST use original Connection
+Collision Detection procedure as described in section 6.8 of RFC4271.
+"""
+note = """
+exabgp has no mode where multisession is enabled but optional.  Enabling it makes it
+required, and section 11 says what a speaker which requires it does with such a peer:
+drop the session.  Negotiated answers Notify(2, 9), which the section 11 entry tests, so
+the fallback this sentence describes never arises.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#7-session-id-mismatch-is-a-grouping-conflict"
+section = "7"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When Multisession-enabled BGP speaker receives an OPEN message
+containing BGP Multisession Capability Code but with Session Id not
+matching its own Session Id, local BGP speaker MUST send NOTIFICATION
+message with Error Code set to 2 ("OPEN Message Error") and Error
+Sub-code set to 8 ("Grouping Conflict") and drop the session.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#7-matching-session-id-checks-collisions"
+section = "7"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+If
+received Session Id matches locally configured Session Id then BGP
+speaker MUST verify whether this session would collide with any of
+the existing as described in section "Modified Connection Collision
+Handling".
+"""
+note = """
+The collision procedure of section 6 is not implemented, see its entries.  Collisions are
+handled by RFC 4271 section 6.8 before the OPEN is read.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#7-no-matching-group-is-a-grouping-conflict"
+section = "7"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+3.  In all other cases local BGP speaker MUST send NOTIFICATION
+message with Error Code set to 2 (OPEN Message Error) and Error
+Sub-code set to 8 (Grouping conflict).
+"""
+note = """
+Negotiated compares the value of every capability the Session Id names, and answers
+Notify(2, 8) when one differs.  It requires an exact match: case 2, one partially matching
+group, is not implemented, so a peer the draft would accept on a partial match is refused.
+Case 2 carries no RFC 2119 keyword.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#9-reset-only-the-affected-session"
+section = "9"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+If multisession-enabled BGP speaker detects an error condition that
+warrants session reset, it SHOULD reset only session that was
+affected by the error.
+"""
+note = """
+There is one session per peer carrying every family (see the header of this file), so an
+error in any family resets all of them.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#10-disabled-by-default"
+section = "10"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+Multisession feature SHOULD be disabled by default.
+"""
+note = """
+A configuration default, with no peer input involved.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#10-per-peer-option"
+section = "10"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+BGP
+implementation SHOULD provide configuration-time option to enable
+multisession extension on per-peer basis.
+"""
+note = """
+`capability { multi-session enable; }` inside a neighbour block.  A configuration
+feature, with no peer input involved.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#10-control-non-trivial-groups"
+section = "10"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+If BGP implementation
+supports non-trivial groups, then it SHOULD provide configuration-
+time option for operator to control how sessions are grouped.
+"""
+note = """
+exabgp supports no non-trivial groups: the only grouping is one family per session.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#10-view-each-group"
+section = "10"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+BGP implementation supporting multisession extension SHOULD allow
+operator to view state of each individual group and at least last
+NOTIFICATION message that caused connection reset.
+"""
+note = """
+There is one session per peer (see the header of this file), so there is no per-group
+state to show.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#10-no-hard-coded-group-restrictions"
+section = "10"
+level = "SHOULD NOT"
+status = "gap"
+polarity = "both"
+text = """
+For the sake of interoperability between BGP speakers supporting
+multisession, an implementation SHOULD NOT impose hard-coded
+restrictions on groups based on particular Session Id are put
+together.
+"""
+note = """
+exabgp hard-codes one family per session, which is the restriction this sentence asks an
+implementation not to impose.  The sentence after it is what that obliges us to instead.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#10-support-trivial-groups"
+section = "10"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+If such restrictions are unavoidable, then BGP
+implementation MUST support at least trivial groups based on that
+attribute.
+"""
+note = """
+One session per AFI/SAFI is what the per-family split in
+configuration/neighbor/__init__.py sets out to build, and it does not: every copy has the
+same Neighbor.name(), so only the last one is kept.  Demonstrated by a strict xfail in
+tests/unit/rfc/test_draft_multisession.py, so it counts as untested until fixed.  5.0 has
+the same code.
+
+Positive only: this is a property of the sessions we build from our own configuration,
+and there is no peer input which violates it.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#11-required-multisession-refuses-a-peer-without-it"
+section = "11"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a BGP speaker receives OPEN message that doesn't include
+Multisession Capability and local BGP speaker is required to use
+multisession (e.g. through configuration by operator), the local BGP
+speaker MUST drop the session and send appropriate NOTIFICATION
+message as described in Section 5.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-bgp-multisession-07#11-always-advertise"
+section = "11"
+level = "SHOULD"
+status = "not-applicable"
+polarity = "both"
+text = """
+As previously mentioned, the BGP speaker SHOULD always advertise the
+Multisession capability in its OPEN message, even towards "backward
+compatibility" peers.
+"""
+note = """
+The draft contradicts itself here.  Nothing earlier says this: section 7 says the capability
+"SHOULD NOT be advertised" unless multisession is enabled for the peer, and section 10 says
+it "SHOULD be disabled by default".  exabgp follows those two, which have entries above.
+"""

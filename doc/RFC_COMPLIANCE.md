@@ -8,6 +8,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 
 | RFC | proven | shown | untested | binding | excused | advisory | coverage |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| draft-ietf-idr-bgp-multisession-07 | 10 | 1 | 0 | 11 | 6 | 13 | 91% |
 | rfc1997 | 1 | 0 | 0 | 1 | 4 | 3 | 100% |
 | rfc4271 | 29 | 0 | 0 | 29 | 8 | 4 | 100% |
 | rfc4360 | 0 | 0 | 0 | 0 | 2 | 3 | - |
@@ -34,6 +35,159 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc9234 | 12 | 0 | 0 | 12 | 4 | 1 | 100% |
 | rfc9552 | 12 | 0 | 0 | 12 | 2 | 0 | 100% |
 | rfc9830 | 4 | 0 | 0 | 4 | 0 | 0 | 100% |
+
+## draft-ietf-idr-bgp-multisession-07
+
+- **1** (MUST) `draft-ietf-idr-bgp-multisession-07#1-implement-mp-bgp` - proven
+  > For example if AFI/SAFI based sessions are desired then routers implementing this specification MUST also implement MP-BGP [RFC4760].
+  A property of the speaker: an OPEN which carries MULTISESSION also carries the
+multiprotocol capability, which Capabilities.new adds unconditionally.
+  - `tests/unit/rfc/test_draft_multisession.py::test_every_multisession_neighbour_announces_it_with_the_same_session_id`
+- **1** (MUST) `draft-ietf-idr-bgp-multisession-07#1-implement-the-session-criteria` - proven
+  > Routers implementing this specification MUST also implement the base criteria that is used to define sessions.
+  The only criterion exabgp uses is the AFI/SAFI list, so this is the MP-BGP requirement
+below in general form.  A property of the speaker, with no peer input which violates it.
+  - `tests/unit/rfc/test_draft_multisession.py::test_every_multisession_neighbour_announces_it_with_the_same_session_id`
+- **10** (SHOULD) `draft-ietf-idr-bgp-multisession-07#10-control-non-trivial-groups` - not-applicable
+  > If BGP implementation supports non-trivial groups, then it SHOULD provide configuration- time option for operator to control how sessions are grouped.
+  exabgp supports no non-trivial groups: the only grouping is one family per session.
+- **10** (SHOULD) `draft-ietf-idr-bgp-multisession-07#10-disabled-by-default` - proven
+  > Multisession feature SHOULD be disabled by default.
+  A configuration default, with no peer input involved.
+  - `tests/unit/rfc/test_draft_multisession.py::test_a_neighbour_which_did_not_enable_it_does_not_announce_it`
+- **10** (SHOULD NOT) `draft-ietf-idr-bgp-multisession-07#10-no-hard-coded-group-restrictions` - gap
+  > For the sake of interoperability between BGP speakers supporting multisession, an implementation SHOULD NOT impose hard-coded restrictions on groups based on particular Session Id are put together.
+  exabgp hard-codes one family per session, which is the restriction this sentence asks an
+implementation not to impose.  The sentence after it is what that obliges us to instead.
+- **10** (SHOULD) `draft-ietf-idr-bgp-multisession-07#10-per-peer-option` - proven
+  > BGP implementation SHOULD provide configuration-time option to enable multisession extension on per-peer basis.
+  `capability { multi-session enable; }` inside a neighbour block.  A configuration
+feature, with no peer input involved.
+  - `tests/unit/rfc/test_draft_multisession.py::test_every_multisession_neighbour_announces_it_with_the_same_session_id`
+- **10** (MUST) `draft-ietf-idr-bgp-multisession-07#10-support-trivial-groups` - known gap, demonstrated by a failing test
+  > If such restrictions are unavoidable, then BGP implementation MUST support at least trivial groups based on that attribute.
+  One session per AFI/SAFI is what the per-family split in
+configuration/neighbor/__init__.py sets out to build, and it does not: every copy has the
+same Neighbor.name(), so only the last one is kept.  Demonstrated by a strict xfail in
+tests/unit/rfc/test_draft_multisession.py, so it counts as untested until fixed.  5.0 has
+the same code.
+
+Positive only: this is a property of the sessions we build from our own configuration,
+and there is no peer input which violates it.
+  - `tests/unit/rfc/test_draft_multisession.py::test_multisession_with_two_families_makes_one_session_per_family`
+- **10** (SHOULD) `draft-ietf-idr-bgp-multisession-07#10-view-each-group` - gap
+  > BGP implementation supporting multisession extension SHOULD allow operator to view state of each individual group and at least last NOTIFICATION message that caused connection reset.
+  There is one session per peer (see the header of this file), so there is no per-group
+state to show.
+- **11** (SHOULD) `draft-ietf-idr-bgp-multisession-07#11-always-advertise` - not-applicable
+  > As previously mentioned, the BGP speaker SHOULD always advertise the Multisession capability in its OPEN message, even towards "backward compatibility" peers.
+  The draft contradicts itself here.  Nothing earlier says this: section 7 says the capability
+"SHOULD NOT be advertised" unless multisession is enabled for the peer, and section 10 says
+it "SHOULD be disabled by default".  exabgp follows those two, which have entries above.
+- **11** (MUST) `draft-ietf-idr-bgp-multisession-07#11-required-multisession-refuses-a-peer-without-it` - proven
+  > If a BGP speaker receives OPEN message that doesn't include Multisession Capability and local BGP speaker is required to use multisession (e.g. through configuration by operator), the local BGP speaker MUST drop the session and send appropriate NOTIFICATION message as described in Section 5.
+  - `tests/unit/rfc/test_draft_multisession.py::test_a_peer_which_announces_multisession_is_not_refused_for_lacking_it`
+  - `tests/unit/rfc/test_draft_multisession.py::test_a_peer_without_multisession_is_refused_with_grouping_required`
+- **4** (MUST) `draft-ietf-idr-bgp-multisession-07#4-all-or-none-sessions` - proven
+  > For given pair of BGP peers Multisession capability MUST be used either on all or none sessions.
+  Every session exabgp runs with a peer is built from the one neighbour block which enabled
+multi-session, so none of them can differ.  This is about what we send, and there is no peer
+input which violates it on our side.
+  - `tests/unit/rfc/test_draft_multisession.py::test_every_multisession_neighbour_announces_it_with_the_same_session_id`
+- **4** (MUST) `draft-ietf-idr-bgp-multisession-07#4-compound-session-id-lists-mp` - not-applicable
+  > However, if BGP speaker wishes to use compound Session Id that includes AFI/SAFI list as one of the components, then Capability Code 1 MUST be explicitly included in the Session Id.
+  exabgp never builds a compound Session Id.  Capabilities._session sends MULTIPROTOCOL as
+the only component, and there is no configuration which adds another.
+- **4** (SHOULD NOT) `draft-ietf-idr-bgp-multisession-07#4-g-bit-is-not-relied-on` - proven
+  > As this information can be deduced from Session Id, the use of G bit is deprecated - implementations conforming to final version of Multisession specification SHOULD NOT rely on value of the G bit.
+  Positive only: the G bit is a flag we skip, so the test is that the Session Id decodes the
+same with it set.  There is no value of the bit a peer could send to catch us relying on it.
+  - `tests/unit/rfc/test_draft_multisession.py::test_the_g_bit_does_not_change_the_session_id`
+- **4** (MUST NOT) `draft-ietf-idr-bgp-multisession-07#4-own-code-not-listed` - proven
+  > The Multisession capability code itself MUST NOT be listed; if listed it MUST be ignored upon receipt.
+  - `tests/unit/rfc/test_draft_multisession.py::test_our_session_id_does_not_list_the_multisession_code`
+  - `tests/unit/rfc/test_draft_multisession.py::test_the_multisession_code_in_a_received_session_id_is_ignored`
+- **4** (MUST) `draft-ietf-idr-bgp-multisession-07#4-reserved-flags` - proven
+  > Reserved - MUST be set to zero by sender, MUST be ignored by receiver
+  - `tests/unit/rfc/test_draft_multisession.py::test_we_send_the_flags_octet_as_zero`
+  - `tests/unit/rfc/test_draft_multisession.py::test_reserved_flag_bits_from_a_peer_are_ignored`
+- **5** (SHOULD) `draft-ietf-idr-bgp-multisession-07#5-use-the-new-subcodes` - proven
+  > BGP implementations conforming to this specification SHOULD use new sub-codes as described further down in section "Connection establishment" of this document.
+  Positive only: this is which subcode we choose, 8 for a Session Id mismatch and 9 for a
+peer without the capability.  The sections these refer to have their own entries with
+both sides.
+  - `tests/unit/rfc/test_draft_multisession.py::test_a_peer_with_another_session_id_is_a_grouping_conflict`
+- **6** (SHOULD) `draft-ietf-idr-bgp-multisession-07#6-collision-notification` - gap
+  > Whereas original specification prescribes to use 'Cease' error code, multisession enabled BGP speaker SHOULD send NOTIFICATION message as described in this document.
+  A collision is answered with Cease 6/7 whether multisession was negotiated or not.
+- **6** (MUST) `draft-ietf-idr-bgp-multisession-07#6-established-session-wins-a-full-match` - gap
+  > Upon receipt of an OPEN messages BGP speaker MUST evaluate existing sessions with the same peer. If there is already a session in ESTABLISHED state and multisession distinguisher values of the old and the new OPEN messages fully match, the old session remains and the new MUST be closed.
+  The outcome happens to hold, but not the procedure.  The listener hands an incoming
+connection to the first neighbour whose addresses match (listener.py) before any OPEN is
+read, and an ESTABLISHED Peer refuses it with Cease 6/7.  So the old session stays and the
+new one is closed, but whatever its Session Id, which is the RFC 4271 section 6.8
+procedure, not an evaluation of the OPEN.
+- **6** (SHOULD) `draft-ietf-idr-bgp-multisession-07#6-evaluate-before-connecting` - gap
+  > Before attempting to create new session local system SHOULD evaluate existing sessions with the same peer.
+  Each exabgp Peer decides alone whether to connect.  Nothing looks at the other sessions
+with the same address, because each neighbour is a separate Peer and none of them knows
+about the rest.
+- **6** (MUST NOT) `draft-ietf-idr-bgp-multisession-07#6-no-rfc4271-collision-for-unique-sessions` - gap
+  > If there is a session in OpenConfirm or OpenSent state and two sessions do not collide according to this document, then both sessions proceed as normally and section 6.8 of RFC4271 MUST NOT be applied.
+  exabgp applies RFC 4271 section 6.8 to every second connection from the same address
+(Peer.handle_connection), whatever the two Session Ids are.  It cannot tell two unique
+sessions apart because the connection reaches a Peer before its OPEN is read.
+- **6** (MUST) `draft-ietf-idr-bgp-multisession-07#6-rfc4271-collision-for-colliding-sessions` - gap
+  > If on the other hand two sessions collide according to definition of this document, then original procedure from section 6.8 of RFC4271 MUST be applied, except for the NOTIFICATION type.
+  Section 6.8 is applied, but with its own Cease 6/7, which is the exception this sentence
+makes.  And it is applied to every pair of connections, not only to the ones this document
+says collide, so the procedure is not the one described.
+- **6** (MAY) `draft-ietf-idr-bgp-multisession-07#6-unique-sessions-may-both-establish` - gap
+  > Otherwise two sessions are considered unique and both MAY transition to the ESTABLISHED state (subject to rest of BGP specification).
+  exabgp never has two sessions with one peer: the per-family neighbours collapse into one
+(see the header of this file), and the listener would give both connections to the same
+Peer in any case.
+- **7** (MUST) `draft-ietf-idr-bgp-multisession-07#7-advertise-on-every-session` - proven
+  > When BGP Multisession is enabled by configuration for given peer and configuration dictates that multiple sessions can potentially be established with given peer, BGP speaker MUST advertise Multisession Capability code in the OPEN message on every session with given peer.
+  About what we send.  Every neighbour a multi-session block produces announces the
+capability; a peer has no way to make us omit it.
+  - `tests/unit/rfc/test_draft_multisession.py::test_every_multisession_neighbour_announces_it_with_the_same_session_id`
+- **7** (MUST) `draft-ietf-idr-bgp-multisession-07#7-matching-session-id-checks-collisions` - gap
+  > If received Session Id matches locally configured Session Id then BGP speaker MUST verify whether this session would collide with any of the existing as described in section "Modified Connection Collision Handling".
+  The collision procedure of section 6 is not implemented, see its entries.  Collisions are
+handled by RFC 4271 section 6.8 before the OPEN is read.
+- **7** (MUST) `draft-ietf-idr-bgp-multisession-07#7-no-matching-group-is-a-grouping-conflict` - proven
+  > 3. In all other cases local BGP speaker MUST send NOTIFICATION message with Error Code set to 2 (OPEN Message Error) and Error Sub-code set to 8 (Grouping conflict).
+  Negotiated compares the value of every capability the Session Id names, and answers
+Notify(2, 8) when one differs.  It requires an exact match: case 2, one partially matching
+group, is not implemented, so a peer the draft would accept on a partial match is refused.
+Case 2 carries no RFC 2119 keyword.
+  - `tests/unit/rfc/test_draft_multisession.py::test_a_peer_whose_families_match_ours_is_accepted`
+  - `tests/unit/rfc/test_draft_multisession.py::test_a_peer_whose_families_differ_from_ours_is_a_grouping_conflict`
+- **7** (SHOULD NOT) `draft-ietf-idr-bgp-multisession-07#7-otherwise-not-advertised` - proven
+  > In all other cases Multisession capability SHOULD NOT be advertised.
+  About what we send: a neighbour without multi-session enabled has no MULTISESSION
+capability in its OPEN.
+  - `tests/unit/rfc/test_draft_multisession.py::test_a_neighbour_which_did_not_enable_it_does_not_announce_it`
+- **7** (MUST) `draft-ietf-idr-bgp-multisession-07#7-peer-without-capability` - not-applicable
+  > When Multisession-enabled BGP speaker receives an OPEN message without BGP Multisession Capability code it MUST assume that peer is not capable of multiple sessions and MUST use original Connection Collision Detection procedure as described in section 6.8 of RFC4271.
+  exabgp has no mode where multisession is enabled but optional.  Enabling it makes it
+required, and section 11 says what a speaker which requires it does with such a peer:
+drop the session.  Negotiated answers Notify(2, 9), which the section 11 entry tests, so
+the fallback this sentence describes never arises.
+- **7** (MUST) `draft-ietf-idr-bgp-multisession-07#7-same-session-id-everywhere` - proven
+  > The value of Session Id MUST be the same on every session.
+  exabgp sends one Session Id, MULTIPROTOCOL alone, from Capabilities._session.  There is no
+configuration which changes it, so no session can differ.
+  - `tests/unit/rfc/test_draft_multisession.py::test_every_multisession_neighbour_announces_it_with_the_same_session_id`
+- **7** (MUST) `draft-ietf-idr-bgp-multisession-07#7-session-id-mismatch-is-a-grouping-conflict` - proven
+  > When Multisession-enabled BGP speaker receives an OPEN message containing BGP Multisession Capability Code but with Session Id not matching its own Session Id, local BGP speaker MUST send NOTIFICATION message with Error Code set to 2 ("OPEN Message Error") and Error Sub-code set to 8 ("Grouping Conflict") and drop the session.
+  - `tests/unit/rfc/test_draft_multisession.py::test_a_peer_with_our_session_id_is_accepted`
+  - `tests/unit/rfc/test_draft_multisession.py::test_a_peer_with_another_session_id_is_a_grouping_conflict`
+- **9** (SHOULD) `draft-ietf-idr-bgp-multisession-07#9-reset-only-the-affected-session` - gap
+  > If multisession-enabled BGP speaker detects an error condition that warrants session reset, it SHOULD reset only session that was affected by the error.
+  There is one session per peer carrying every family (see the header of this file), so an
+error in any family resets all of them.
 
 ## rfc1997
 
@@ -762,6 +916,7 @@ prefix before a flush gets both in one UPDATE.
 - **3** (SHOULD NOT) `rfc4760#3-no-next-hop-attribute` - proven
   > An UPDATE message that carries no NLRI, other than the one encoded in the MP_REACH_NLRI attribute, SHOULD NOT carry the NEXT_HOP attribute. If such a message contains the NEXT_HOP attribute, the BGP speaker that receives the message SHOULD ignore this attribute.
   - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_an_update_carrying_only_mp_reach_has_no_next_hop_attribute`
+  - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_a_parsed_mp_route_carries_no_next_hop_attribute`
   - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_a_next_hop_attribute_beside_mp_reach_does_not_reach_the_mp_nlri`
 - **3** (SHOULD) `rfc4760#3-reserved-ignored-on-receipt` - proven
   > A 1 octet field that MUST be set to 0, and SHOULD be ignored upon receipt.
@@ -2237,10 +2392,18 @@ which comes out.
 - **4** (MUST) `rfc8955#4-next-hop-length-zero` - known gap, demonstrated by a failing test
   > When advertising Flow Specifications, the Length of the Next-Hop Network Address MUST be set to 0.
   `MPNLRICollection._encode_nexthop` returns no bytes for `IP.NoNextHop`, so the ordinary
-flow route, which carries none, packs a next-hop length of 0.  The negative side does not
-hold: the flow configuration grammar has a `next-hop` keyword (used by the redirect-to-IP
-drafts) and a flow route which carries one packs a four octet next-hop into MP_REACH_NLRI,
-against this sentence.  Shown by a failing test rather than described.
+flow route, which carries none, packs a next-hop length of 0.  Every redirect-to-an-address
+action now keeps it that way: `redirect <ip>`, `copy <ip>` and `redirect-to-nexthop <ip>`
+send the draft-ietf-idr-flowspec-redirect-ip community, which carries the address itself, so
+nothing needs the next-hop field.  That draft replaces draft-simpson-idr-flowspec-redirect-ip,
+which is where the four octet next-hop came from.
+
+The negative side still does not hold, because the older encoding is still reachable on
+request: `redirect-simpson`, `copy-simpson` and a bare `redirect-to-nexthop` take their
+target from the route's `next-hop` keyword and so pack a four octet next-hop, against this
+sentence.  They are kept because for anyone using them the next hop IS the redirect target,
+and zeroing it would send their traffic somewhere else.  Shown by a failing test rather than
+described.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_flow_specification_is_advertised_with_a_next_hop_length_of_zero`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_next_hop_on_a_flow_route_is_not_put_on_the_wire`
 - **4.2** (MAY) `rfc8955#4.2-component-once` - proven

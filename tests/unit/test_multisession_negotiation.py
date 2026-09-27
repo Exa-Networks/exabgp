@@ -144,8 +144,27 @@ def test_multisession_ignores_flags_and_its_own_codes() -> None:
 
 
 def test_zero_length_multisession_value_is_rejected() -> None:
+    """Draft section 4 infers the Session Id length as "the capability length minus one",
+    so a value with no flags octet does not follow the encoding and is refused with
+    Notify(2, 0), even though no sentence says MUST about it. 5.0 accepts it, see
+    plan/wip-two-tree-parity.md item 3.16.
+    """
     with pytest.raises(Notify, match='flags byte'):
         MultiSession.unpack_capability(MultiSession(), b'', Capability.CODE.MULTISESSION)
+
+
+def test_negotiated_multisession_zero_length_session_id_refuses_the_open() -> None:
+    """The whole OPEN path: the refusal comes out of Capabilities.unpack, before any
+    negotiation, as the NOTIFICATION the reactor sends.
+    """
+    mp_value = make_multiprotocol_capability().extract_capability_bytes()[0]
+
+    with pytest.raises(Notify) as raised:
+        Capabilities.unpack(
+            pack_open_parameters([(Capability.CODE.MULTIPROTOCOL, mp_value), (Capability.CODE.MULTISESSION, b'')])
+        )
+
+    assert (raised.value.code, raised.value.subcode) == (2, 0)
 
 
 def test_repeated_multisession_capability_keeps_the_first_session_id() -> None:
