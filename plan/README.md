@@ -47,6 +47,7 @@
 | `plan-api-v6-nexthop-removal.md` | Remove nexthop from NLRI JSON |
 | `plan-documentation-review.md` | Documentation review |
 | `plan-llgr.md` | Long-Lived Graceful Restart (RFC 9494, issue #292) |
+| `plan-unsent-notifications.md` | Handover: what (2,7) and (6,1) owe when a feature needs them |
 
 ### Completed (done-) and Directories
 
