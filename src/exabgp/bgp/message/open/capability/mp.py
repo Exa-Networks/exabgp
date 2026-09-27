@@ -43,7 +43,7 @@ class MultiProtocol(Capability, list[FamilyTuple]):
         assert isinstance(instance, MultiProtocol)
         # MultiProtocol capability is 4 bytes: AFI(2) + reserved(1) + SAFI(1)
         if len(data) < 4:
-            raise Notify(2, 0, f'MultiProtocol capability too short: need 4 bytes, got {len(data)}')
+            raise Notify.short(2, 0, 'MultiProtocol capability', 4, len(data))
         afi: AFI = AFI.unpack_afi(data[:2])
         safi: SAFI = SAFI.unpack_safi(data[3:4])
         if (afi, safi) in instance:

@@ -91,7 +91,7 @@ class TunnelEncap(Attribute):
         sr_policy_seen: bool = False
         while data:
             if len(data) < _TUNNEL_TLV_HEADER:
-                raise Notify(3, 1, f'Tunnel Encap TLV header truncated: need {_TUNNEL_TLV_HEADER}, got {len(data)}')
+                raise Notify.short(3, 1, 'Tunnel Encap TLV header', _TUNNEL_TLV_HEADER, len(data))
             tunnel_type: int = unpack('!H', data[0:2])[0]
             length: int = unpack('!H', data[2:4])[0]
             if len(data) < _TUNNEL_TLV_HEADER + length:

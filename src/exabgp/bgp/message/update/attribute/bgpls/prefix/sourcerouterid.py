@@ -35,7 +35,7 @@ class SourceRouterId(BaseLS):
     def unpack_bgpls(cls, data: Buffer) -> SourceRouterId:
         length = len(data)
         if length not in (4, 16):
-            raise Notify(3, 5, 'Error parsing SR Source Router ID. Wrong size')
+            raise Notify(3, 5, f'Source Router Identifier TLV is {length} octets, expected 4 or 16')
         return cls(data)
 
     @classmethod

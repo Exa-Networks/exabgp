@@ -47,5 +47,5 @@ class Srlg(BaseLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> Srlg:
         if len(data) % 4:
-            raise Notify(3, 5, 'Unable to decode SRLG')
+            raise Notify(3, 5, f'SRLG TLV is {len(data)} octets, not a multiple of 4')
         return cls(data)

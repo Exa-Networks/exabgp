@@ -53,5 +53,5 @@ class KeepAlive(Message):
         if data:
             # RFC 4271 6.1: a KEEPALIVE whose Length is not 19 is a Bad Message Length,
             # and the Data field carries that Length rather than the payload's hex
-            raise Notify(1, 2, pack('!H', Message.HEADER_LEN + len(data)))
+            raise Notify(1, 2, f'KEEPALIVE body of {len(data)} octets', data=pack('!H', Message.HEADER_LEN + len(data)))
         return cls(data)

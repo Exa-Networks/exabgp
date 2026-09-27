@@ -81,11 +81,11 @@ class Srv6L2Service:
         while data:
             # Sub-TLV header: type(1) + length(2) = 3 bytes minimum
             if len(data) < 3:
-                raise Notify(3, 1, f'SRv6 L2 Service Sub-TLV header truncated: need 3 bytes, got {len(data)}')
+                raise Notify.short(3, 1, 'SRv6 L2 Service Sub-TLV header', 3, len(data))
             code: int = data[0]
             length = unpack('!H', data[1:3])[0]
             if len(data) < length + 3:
-                raise Notify(3, 1, f'SRv6 L2 Service Sub-TLV truncated: need {length + 3} bytes, got {len(data)}')
+                raise Notify.short(3, 1, 'SRv6 L2 Service Sub-TLV', length + 3, len(data))
             if code in cls.registered_subtlvs:
                 subtlv: GenericSrv6ServiceSubTlv = cls.registered_subtlvs[code].unpack_attribute(
                     data[3 : length + 3], length

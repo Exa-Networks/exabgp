@@ -1,0 +1,182 @@
+# RFC 9003 - Extended BGP Administrative Shutdown Communication
+# https://www.rfc-editor.org/rfc/rfc9003
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc9003.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# RFC 9003 obsoletes RFC 8203.  The difference which matters to a receiver is the length:
+# RFC 8203 capped the communication at 128 octets, RFC 9003 lets a sender go to 255 when it
+# knows the peer supports it.  exabgp refused anything over 128 until this was enrolled.
+
+rfc = "rfc9003"
+title = "Extended BGP Administrative Shutdown Communication"
+url = "https://www.rfc-editor.org/rfc/rfc9003"
+
+
+# ============================================================ 2 Shutdown Communication
+
+[[requirement]]
+id = "rfc9003#2-may-include-a-communication"
+section = "2"
+level = "MAY"
+status = "required"
+polarity = "positive-only"
+text = """
+If a BGP speaker decides to terminate its session with a BGP
+neighbor, and it sends a NOTIFICATION message with the Error Code
+"Cease" and Error Subcode "Administrative Shutdown" or
+"Administrative Reset" [RFC4486], it MAY include a UTF-8-encoded
+string.
+"""
+note = """
+Notify(6, 2, text) and Notify(6, 4, text) carry the text as the communication.  exabgp's
+own teardown sends none, which the RFC allows and which every receiver understands.
+"""
+
+[[requirement]]
+id = "rfc9003#2-subcode-is-shutdown-or-reset"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Subcode:  The Error Subcode value MUST be one of the following
+values: 2 ("Administrative Shutdown") or 4 ("Administrative
+Reset").
+"""
+note = """
+Only (6, 2) and (6, 4) get the length octet on send, and only those are parsed as a
+communication on receipt.  The negative test is another Cease subcode, whose text goes out
+as it is.
+"""
+
+[[requirement]]
+id = "rfc9003#2-communication-is-utf8"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+To support international characters, the
+Shutdown Communication field MUST be encoded using UTF-8.
+"""
+note = """
+Positive only: this constrains what we send.  The receiving side is the next entry.
+Notify encoded the text as ASCII, so a communication with one accented letter raised
+UnicodeEncodeError rather than being sent.
+"""
+
+[[requirement]]
+id = "rfc9003#2-must-not-interpret-invalid-utf8"
+section = "2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+A
+receiving BGP speaker MUST NOT interpret invalid UTF-8 sequences.
+"""
+note = """
+Notification.data reports an invalid sequence as invalid, with the octets in hex, rather
+than decoding it with replacement characters.
+"""
+
+[[requirement]]
+id = "rfc9003#2-shortest-form-required"
+section = "2"
+level = "REQUIRED"
+status = "required"
+polarity = "both"
+text = """
+UTF-8 "Shortest Form"
+encoding is REQUIRED to guard against the technical issues
+outlined in [UTR36].
+"""
+note = """
+Python's UTF-8 codec produces the shortest form and refuses an overlong one, so both sides
+come from the codec; the tests pin that it is the strict codec in use.
+"""
+
+[[requirement]]
+id = "rfc9003#2-report-the-communication"
+section = "2"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+Mechanisms concerning the reporting of information contained in the
+Shutdown Communication are implementation specific but SHOULD include
+methods such as syslog [RFC5424].
+"""
+note = """
+A received NOTIFICATION goes to the log, which can be syslog, and to the API as
+`notification` with the decoded communication.
+"""
+
+
+# ============================================================ 3 Operational Considerations
+
+[[requirement]]
+id = "rfc9003#3-up-to-255-octets-may-be-sent"
+section = "3"
+level = "MAY"
+status = "required"
+polarity = "positive-only"
+text = """
+If it is known that the peer BGP speaker supports this specification,
+then a Shutdown Communication that is not longer than 255 octets MAY
+be sent.
+"""
+note = """
+exabgp cannot know it, so it never sends more than 128.  What this obliges is the other
+side: a peer which knows we support RFC 9003 may send 255, and we must read it.  We read
+anything up to the 255 the one octet Length field can say.
+"""
+
+[[requirement]]
+id = "rfc9003#3-no-longer-than-128-octets-unless-known"
+section = "3"
+level = "SHOULD NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+Otherwise, a Shutdown Communication MAY be sent, but it
+SHOULD NOT be longer than 128 octets.
+"""
+note = """
+Notify cuts the communication to 128 octets, on a character boundary so what is sent is
+still valid UTF-8.
+"""
+
+
+# ============================================================ 4 Error Handling
+
+[[requirement]]
+id = "rfc9003#4-log-invalid-utf8"
+section = "4"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+If a Shutdown Communication with an invalid UTF-8 sequence is
+received, a message indicating this event SHOULD be logged for the
+attention of the operator.
+"""
+note = """
+The rendering says "invalid Shutdown Communication (invalid UTF-8)", and that rendering is
+what the received NOTIFICATION is logged as.
+"""
+
+[[requirement]]
+id = "rfc9003#4-hexdump-malformed"
+section = "4"
+level = "MAY"
+status = "required"
+polarity = "positive-only"
+text = """
+An erroneous or malformed Shutdown
+Communication itself MAY be logged in a hexdump format.
+"""
+note = """
+The invalid rendering carries the octets in hex after the reason.
+"""

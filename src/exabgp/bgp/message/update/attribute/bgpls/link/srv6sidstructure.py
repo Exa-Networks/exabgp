@@ -80,9 +80,7 @@ class Srv6SidStructure(BaseLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> Srv6SidStructure:
         if len(data) < SRV6_SID_STRUCTURE_LEN:
-            raise Notify(
-                3, 5, f'SRv6 SID Structure: data too short, need {SRV6_SID_STRUCTURE_LEN} bytes, got {len(data)}'
-            )
+            raise Notify.short(3, 5, 'SRv6 SID Structure', SRV6_SID_STRUCTURE_LEN, len(data))
         return cls(data)
 
     def __str__(self) -> str:

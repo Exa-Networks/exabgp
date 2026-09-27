@@ -340,6 +340,28 @@ def test_an_mp_reach_which_cannot_be_read_is_an_optional_attribute_error(value: 
     assert notify.subcode == OPTIONAL_ATTRIBUTE_ERROR
 
 
+@pytest.mark.parametrize(
+    'value', [value for value, _ in TRUNCATED_MP_REACH], ids=[name for _, name in TRUNCATED_MP_REACH]
+)
+@pytest.mark.rfc('rfc4271#6.3-optional-attribute-error-data-field')
+def test_an_optional_attribute_error_carries_the_attribute(value: bytes) -> None:
+    """The Data field held an English sentence; the RFC asks for the attribute as it came."""
+    notify = refused(body(attributes=ORIGIN_IGP + EMPTY_AS_PATH + mp_reach(value), nlri=b''), IPV4_UNICAST)
+
+    assert notify.data == mp_reach(value)
+
+
+def test_an_mp_reach_with_the_wrong_flags_carries_the_attribute_as_sent() -> None:
+    """Unmarked: the flag check raises 3/9 outside the decoder, and must carry the same."""
+    sent = (
+        bytes([OPTIONAL | TRANSITIVE, Attribute.CODE.MP_REACH_NLRI, len(WELL_FORMED_MP_REACH)]) + WELL_FORMED_MP_REACH
+    )
+    notify = refused(body(attributes=ORIGIN_IGP + EMPTY_AS_PATH + sent, nlri=b''), IPV4_UNICAST)
+
+    assert (notify.code, notify.subcode) == (UPDATE_MESSAGE_ERROR, OPTIONAL_ATTRIBUTE_ERROR)
+    assert notify.data == sent
+
+
 @pytest.mark.rfc('rfc4271#6.3-optional-attribute-error', polarity='negative')
 def test_a_well_formed_mp_reach_is_accepted() -> None:
     parsed = parse(body(attributes=ORIGIN_IGP + EMPTY_AS_PATH + mp_reach(WELL_FORMED_MP_REACH), nlri=b''), IPV4_UNICAST)

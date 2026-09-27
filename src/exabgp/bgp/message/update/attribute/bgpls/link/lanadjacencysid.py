@@ -69,9 +69,7 @@ class LanAdjacencySid(FlagLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> LanAdjacencySid:
         if len(data) < SRADJ_LAN_MIN_LENGTH:
-            raise Notify(
-                3, 5, f'SR Adjacency LAN SID: data too short, need {SRADJ_LAN_MIN_LENGTH} bytes, got {len(data)}'
-            )
+            raise Notify.short(3, 5, 'SR Adjacency LAN SID', SRADJ_LAN_MIN_LENGTH, len(data))
         original_data = data
         # We only support IS-IS flags for now.
         flags = cls.unpack_flags(data[0:1])

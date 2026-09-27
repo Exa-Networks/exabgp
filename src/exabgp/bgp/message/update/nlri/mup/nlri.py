@@ -141,11 +141,7 @@ class MUP(NLRI):
             Notify: If the data is shorter than the minimum
         """
         if len(data) < minimum:
-            raise Notify(
-                3,
-                10,
-                '{} MUP NLRI is too short: need at least {} bytes, got {}'.format(cls.NAME, minimum, len(data)),
-            )
+            raise Notify.short(3, 10, f'{cls.NAME} MUP NLRI', minimum, len(data))
 
     @classmethod
     def unpack_nlri(
@@ -157,7 +153,7 @@ class MUP(NLRI):
         path_info, data = NLRI.consume_path_information(data, addpath)
         # MUP NLRI: arch_type(1) + route_type(2) + length(1) + route_data(length)
         if len(data) < 4:
-            raise Notify(3, 10, f'MUP NLRI too short: need at least 4 bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'MUP NLRI', 4, len(data))
         arch = data[0]
         code = int.from_bytes(data[1:3], 'big')
         length = data[3]
@@ -165,7 +161,7 @@ class MUP(NLRI):
         # arch and code byte size is 4 byte
         end = length + 4
         if len(data) < end:
-            raise Notify(3, 10, f'MUP NLRI truncated: need {end} bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'MUP NLRI', end, len(data))
 
         key = '{}:{}'.format(arch, code)
         if key in cls.registered_mup:

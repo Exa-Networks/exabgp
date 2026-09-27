@@ -77,9 +77,7 @@ class Srv6(FlagLS):
         min_length = SRV6_LAN_ENDX_ISIS_MIN_LENGTH if protocol_type == ISIS else SRV6_LAN_ENDX_OSPF_MIN_LENGTH
         if len(data) < min_length:
             proto_name = 'ISIS' if protocol_type == ISIS else 'OSPF'
-            raise Notify(
-                3, 5, f'SRv6 LAN End.X SID ({proto_name}): data too short, need {min_length} bytes, got {len(data)}'
-            )
+            raise Notify.short(3, 5, f'SRv6 LAN End.X SID ({proto_name})', min_length, len(data))
         behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]

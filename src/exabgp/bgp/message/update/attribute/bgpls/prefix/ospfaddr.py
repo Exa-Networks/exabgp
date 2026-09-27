@@ -32,7 +32,7 @@ class OspfForwardingAddress(BaseLS):
     def unpack_bgpls(cls, data: Buffer) -> OspfForwardingAddress:
         length = len(data)
         if length not in (4, 16):
-            raise Notify(3, 5, 'Error parsing OSPF Forwarding Address. Wrong size')
+            raise Notify(3, 5, f'OSPF Forwarding Address TLV is {length} octets, expected 4 or 16')
         return cls(data)
 
     @classmethod

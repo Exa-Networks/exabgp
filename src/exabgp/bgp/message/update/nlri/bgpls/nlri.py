@@ -229,11 +229,7 @@ class BGPLS(NLRI):
             Notify: If the data is shorter than the minimum
         """
         if len(data) < minimum:
-            raise Notify(
-                3,
-                10,
-                'BGP-LS {} NLRI is too short: need at least {} bytes, got {}'.format(cls.__name__, minimum, len(data)),
-            )
+            raise Notify.short(3, 10, f'BGP-LS {cls.__name__} NLRI', minimum, len(data))
 
     @classmethod
     def iter_tlvs(cls, data: Buffer) -> 'Iterator[tuple[int, Buffer]]':
@@ -273,7 +269,7 @@ class BGPLS(NLRI):
         path_info, data = NLRI.consume_path_information(data, addpath)
         # BGP-LS NLRI header: type(2) + length(2) = 4 bytes minimum
         if len(data) < 4:
-            raise Notify(3, 10, f'BGP-LS NLRI too short: need at least 4 bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'BGP-LS NLRI', 4, len(data))
         code, length = unpack('!HH', bytes(data[:4]))
 
         # the announced length covers the route distinguisher, so anything below its
@@ -285,7 +281,7 @@ class BGPLS(NLRI):
             raise Notify(3, 10, f'BGP-LS VPN NLRI announces {length} bytes, less than its route distinguisher')
 
         if len(data) < length + 4:
-            raise Notify(3, 10, f'BGP-LS NLRI truncated: need {length + 4} bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'BGP-LS NLRI', length + 4, len(data))
 
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:
@@ -294,7 +290,7 @@ class BGPLS(NLRI):
                 # refused a short generic which the peer had framed correctly, and made the
                 # decoder refuse the four bytes such a generic packs back out.
                 if len(data) < 12:
-                    raise Notify(3, 10, f'BGP-LS VPN NLRI too short: need at least 12 bytes, got {len(data)}')
+                    raise Notify.short(3, 10, 'BGP-LS VPN NLRI', 12, len(data))
                 # Extract Route Distinguisher (between header and payload)
                 rd: RouteDistinguisher = RouteDistinguisher.unpack_routedistinguisher(bytes(data[4:12]))
                 # Reconstruct wire format without RD: [type(2)][length(2)][payload]

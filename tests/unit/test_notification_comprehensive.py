@@ -65,86 +65,85 @@ def test_notification_message_registration() -> None:
 # ==============================================================================
 
 
+# The names are the IANA "BGP Error (Notification) Codes" and "BGP Error Subcodes"
+# registries as updated 2026-09-09.  A deprecated value keeps the name it had before it
+# was deprecated, in brackets, so a NOTIFICATION from an older peer still reads usefully.
+IANA_CODES = {
+    1: 'Message Header Error',
+    2: 'OPEN Message Error',
+    3: 'UPDATE Message Error',
+    4: 'Hold Timer Expired',
+    5: 'Finite State Machine Error',
+    6: 'Cease',
+    7: 'ROUTE-REFRESH Message Error',
+    8: 'Send Hold Timer Expired',
+    9: 'Loss of LSDB Synchronization',
+}
+
+IANA_SUBCODES = {
+    (1, 0): 'Unspecific',
+    (1, 1): 'Connection Not Synchronized',
+    (1, 2): 'Bad Message Length',
+    (1, 3): 'Bad Message Type',
+    (2, 0): 'Unspecific',
+    (2, 1): 'Unsupported Version Number',
+    (2, 2): 'Bad Peer AS',
+    (2, 3): 'Bad BGP Identifier',
+    (2, 4): 'Unsupported Optional Parameter',
+    (2, 5): '[Deprecated] Authentication Failure',
+    (2, 6): 'Unacceptable Hold Time',
+    (2, 7): 'Unsupported Capability',
+    (2, 8): '[Deprecated] Grouping Conflict',
+    (2, 9): '[Deprecated] Grouping Required',
+    (2, 10): '[Deprecated] Capability Value Mismatch',
+    (2, 11): 'Role Mismatch',
+    (3, 0): 'Unspecific',
+    (3, 1): 'Malformed Attribute List',
+    (3, 2): 'Unrecognized Well-known Attribute',
+    (3, 3): 'Missing Well-known Attribute',
+    (3, 4): 'Attribute Flags Error',
+    (3, 5): 'Attribute Length Error',
+    (3, 6): 'Invalid ORIGIN Attribute',
+    (3, 7): '[Deprecated] AS Routing Loop',
+    (3, 8): 'Invalid NEXT_HOP Attribute',
+    (3, 9): 'Optional Attribute Error',
+    (3, 10): 'Invalid Network Field',
+    (3, 11): 'Malformed AS_PATH',
+    (4, 0): 'Unspecific',
+    (5, 0): 'Unspecified Error',
+    (5, 1): 'Receive Unexpected Message in OpenSent State',
+    (5, 2): 'Receive Unexpected Message in OpenConfirm State',
+    (5, 3): 'Receive Unexpected Message in Established State',
+    (6, 0): 'Reserved',
+    (6, 1): 'Maximum Number of Prefixes Reached',
+    (6, 2): 'Administrative Shutdown',
+    (6, 3): 'Peer De-configured',
+    (6, 4): 'Administrative Reset',
+    (6, 5): 'Connection Rejected',
+    (6, 6): 'Other Configuration Change',
+    (6, 7): 'Connection Collision Resolution',
+    (6, 8): 'Out of Resources',
+    (6, 9): 'Hard Reset',
+    (6, 10): 'BFD Down',
+    (7, 0): 'Reserved',
+    (7, 1): 'Invalid Message Length',
+    (8, 0): 'Unspecific',
+    (9, 0): 'Unspecific',
+}
+
+
 def test_notification_error_code_strings() -> None:
-    """Test error code string representations.
+    """Every error code carries its IANA name, and no name IANA does not list."""
+    assert Notification._str_code == IANA_CODES
 
-    RFC 4271 defines 6 main error codes.
+
+def test_notification_error_subcode_strings() -> None:
+    """Every subcode carries its IANA name.
+
+    (7, 2) "Malformed Message Subtype" came from an expired draft; IANA lists ROUTE-REFRESH
+    subcodes 2 to 255 as unassigned, and RFC 7313 says an unknown subtype is ignored.
     """
-    assert Notification._str_code[1] == 'Message header error'
-    assert Notification._str_code[2] == 'OPEN message error'
-    assert Notification._str_code[3] == 'UPDATE message error'
-    assert Notification._str_code[4] == 'Hold timer expired'
-    assert Notification._str_code[5] == 'State machine error'
-    assert Notification._str_code[6] == 'Cease'
-
-
-def test_notification_message_header_error_subcodes() -> None:
-    """Test Message Header Error (code 1) subcodes."""
-    assert Notification._str_subcode[(1, 0)] == 'Unspecific'
-    assert Notification._str_subcode[(1, 1)] == 'Connection Not Synchronized'
-    assert Notification._str_subcode[(1, 2)] == 'Bad Message Length'
-    assert Notification._str_subcode[(1, 3)] == 'Bad Message Type'
-
-
-def test_notification_open_message_error_subcodes() -> None:
-    """Test OPEN Message Error (code 2) subcodes."""
-    assert Notification._str_subcode[(2, 0)] == 'Unspecific'
-    assert Notification._str_subcode[(2, 1)] == 'Unsupported Version Number'
-    assert Notification._str_subcode[(2, 2)] == 'Bad Peer AS'
-    assert Notification._str_subcode[(2, 3)] == 'Bad BGP Identifier'
-    assert Notification._str_subcode[(2, 4)] == 'Unsupported Optional Parameter'
-    assert Notification._str_subcode[(2, 5)] == 'Authentication Notification (Deprecated)'
-    assert Notification._str_subcode[(2, 6)] == 'Unacceptable Hold Time'
-    assert Notification._str_subcode[(2, 7)] == 'Unsupported Capability'
-
-
-def test_notification_update_message_error_subcodes() -> None:
-    """Test UPDATE Message Error (code 3) subcodes."""
-    assert Notification._str_subcode[(3, 0)] == 'Unspecific'
-    assert Notification._str_subcode[(3, 1)] == 'Malformed Attribute List'
-    assert Notification._str_subcode[(3, 2)] == 'Unrecognized Well-known Attribute'
-    assert Notification._str_subcode[(3, 3)] == 'Missing Well-known Attribute'
-    assert Notification._str_subcode[(3, 4)] == 'Attribute Flags Error'
-    assert Notification._str_subcode[(3, 5)] == 'Attribute Length Error'
-    assert Notification._str_subcode[(3, 6)] == 'Invalid ORIGIN Attribute'
-    assert Notification._str_subcode[(3, 7)] == 'AS Routing Loop'
-    assert Notification._str_subcode[(3, 8)] == 'Invalid NEXT_HOP Attribute'
-    assert Notification._str_subcode[(3, 9)] == 'Optional Attribute Error'
-    assert Notification._str_subcode[(3, 10)] == 'Invalid Network Field'
-    assert Notification._str_subcode[(3, 11)] == 'Malformed AS_PATH'
-
-
-def test_notification_state_machine_error_subcodes() -> None:
-    """Test State Machine Error (code 5) subcodes.
-
-    RFC 6608: Additional subcodes for state machine errors.
-    """
-    assert Notification._str_subcode[(5, 0)] == 'Unspecific'
-    assert Notification._str_subcode[(5, 1)] == 'Receive Unexpected Message in OpenSent State'
-    assert Notification._str_subcode[(5, 2)] == 'Receive Unexpected Message in OpenConfirm State'
-    assert Notification._str_subcode[(5, 3)] == 'Receive Unexpected Message in Established State'
-
-
-def test_notification_cease_subcodes() -> None:
-    """Test Cease (code 6) subcodes.
-
-    RFC 4486: Subcodes for Cease notification.
-    """
-    assert Notification._str_subcode[(6, 0)] == 'Unspecific'
-    assert Notification._str_subcode[(6, 1)] == 'Maximum Number of Prefixes Reached'
-    assert Notification._str_subcode[(6, 2)] == 'Administrative Shutdown'
-    assert Notification._str_subcode[(6, 3)] == 'Peer De-configured'
-    assert Notification._str_subcode[(6, 4)] == 'Administrative Reset'
-    assert Notification._str_subcode[(6, 5)] == 'Connection Rejected'
-    assert Notification._str_subcode[(6, 6)] == 'Other Configuration Change'
-    assert Notification._str_subcode[(6, 7)] == 'Connection Collision Resolution'
-    assert Notification._str_subcode[(6, 8)] == 'Out of Resources'
-
-
-def test_notification_enhanced_route_refresh_subcodes() -> None:
-    """Test Enhanced Route Refresh (code 7) subcodes."""
-    assert Notification._str_subcode[(7, 1)] == 'Invalid Message Length'
-    assert Notification._str_subcode[(7, 2)] == 'Malformed Message Subtype'
+    assert Notification._str_subcode == IANA_SUBCODES
 
 
 # ==============================================================================
@@ -212,13 +211,17 @@ def test_notify_outgoing_creation_basic() -> None:
 
 
 def test_notify_outgoing_creation_default_data() -> None:
-    """Test Notify with default data (uses subcode description)."""
+    """With no detail the names are the text, and the peer's Data field stays empty.
+
+    It used to carry the subcode name, which only told the peer what the subcode octet it
+    had just read already said.
+    """
     notify = Notify(2, 2)
 
     assert notify.code == 2
     assert notify.subcode == 2
-    # Should use default message from _str_subcode
-    assert b'Bad Peer AS' in notify.data
+    assert notify.data == b''
+    assert str(notify) == 'OPEN Message Error / Bad Peer AS'
 
 
 def test_notify_outgoing_creation_various_errors() -> None:
@@ -239,7 +242,7 @@ def test_notify_outgoing_creation_various_errors() -> None:
 
 
 # ==============================================================================
-# Part 5: Administrative Shutdown Communication (RFC 8203)
+# Part 5: Administrative Shutdown Communication (RFC 9003, which obsoletes RFC 8203)
 # ==============================================================================
 
 
@@ -295,18 +298,14 @@ def test_notification_shutdown_max_length_communication() -> None:
     assert b'Shutdown Communication:' in notif.data
 
 
-def test_notification_shutdown_too_large_communication() -> None:
-    """Test shutdown with oversized communication (> 128 bytes).
-
-    Should produce error message.
-    """
+def test_notification_shutdown_longer_than_rfc8203_allowed() -> None:
+    """RFC 9003 raised the limit from RFC 8203's 128 octets to 255, all one octet can say."""
     message = 'A' * 150
-    length = 150
-    data = bytes([length]) + message.encode('utf-8')
+    data = bytes([len(message)]) + message.encode('utf-8')
 
     notif = Notification.make_notification(6, 2, data)
 
-    assert b'invalid Shutdown Communication (too large)' in notif.data
+    assert notif.data == b'Shutdown Communication: "' + message.encode() + b'"'
 
 
 def test_notification_shutdown_buffer_underrun() -> None:
@@ -562,7 +561,7 @@ def test_notification_str_representation_basic() -> None:
     notif = Notification.make_notification(2, 1, b'Test')
 
     str_repr = str(notif)
-    assert 'OPEN message error' in str_repr
+    assert 'OPEN Message Error' in str_repr
     assert 'Unsupported Version Number' in str_repr
     assert 'Test' in str_repr
 
@@ -572,7 +571,7 @@ def test_notification_str_representation_no_data() -> None:
     notif = Notification.make_notification(4, 0)
 
     str_repr = str(notif)
-    assert 'Hold timer expired' in str_repr
+    assert 'Hold Timer Expired' in str_repr
     assert 'Unspecific' in str_repr
 
 
@@ -587,9 +586,9 @@ def test_notification_str_representation_unknown_code() -> None:
 def test_notification_str_representation_various_errors() -> None:
     """Test string representations for various error types."""
     test_cases = [
-        (1, 2, 'Message header error', 'Bad Message Length'),
-        (2, 7, 'OPEN message error', 'Unsupported Capability'),
-        (3, 11, 'UPDATE message error', 'Malformed AS_PATH'),
+        (1, 2, 'Message Header Error', 'Bad Message Length'),
+        (2, 7, 'OPEN Message Error', 'Unsupported Capability'),
+        (3, 11, 'UPDATE Message Error', 'Malformed AS_PATH'),
         (6, 2, 'Cease', 'Administrative Shutdown'),
     ]
 
@@ -771,7 +770,7 @@ def test_notification_hold_timer_expired() -> None:
     """
     notif = Notification.make_notification(4, 0)
 
-    assert str(notif) == 'Hold timer expired / Unspecific'
+    assert str(notif) == 'Hold Timer Expired / Unspecific'
 
 
 # ==============================================================================

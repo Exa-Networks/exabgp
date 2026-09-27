@@ -138,11 +138,12 @@ class Open(Message):
         if len(data) < cls.MINIMUM_BODY_SIZE:
             # RFC 4271 6.1: "The Data field MUST contain the erroneous Length field", which
             # is the two octet Length from the message header, not a sentence describing it
-            raise Notify(1, 2, pack('!H', Message.HEADER_LEN + len(data)))
+            raise Notify(1, 2, f'OPEN body of {len(data)} octets', data=pack('!H', Message.HEADER_LEN + len(data)))
 
         version = data[0]
         if version != Version.BGP_4:
-            # Only version 4 is supported nowadays
-            raise Notify(2, 1, f'unsupported version: {version}')
+            # RFC 4271 6.2: the Data field is the largest version we support below the bid,
+            # or failing that the smallest.  We support one, so it is always 4
+            raise Notify(2, 1, f'version {version}', data=pack('!H', Version.BGP_4))
 
         return cls(data[0:9], Capabilities.unpack(data[9:]))

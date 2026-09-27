@@ -43,12 +43,12 @@ class TestNotifyException(unittest.TestCase):
         with self.assertRaises(Notify) as cm:
             Message.klass(unknown_code)
         notify_exc = cm.exception
-        # Default error for unhandled message
-        self.assertEqual(notify_exc.code, 2)
-        self.assertEqual(notify_exc.subcode, 4)
-        # The payload data should include the unknown message code
-        expected_data = f'can not handle message {unknown_code}'.encode('ascii')
-        self.assertEqual(notify_exc.data, expected_data)
+        # RFC 4271 6.1: an unrecognised Type field is Bad Message Type.  This used to be
+        # 2/4, Unsupported Optional Parameter, which is an OPEN error about something else
+        self.assertEqual(notify_exc.code, 1)
+        self.assertEqual(notify_exc.subcode, 3)
+        # RFC 4271 6.1: the Data field MUST contain the erroneous Type field
+        self.assertEqual(notify_exc.data, bytes([unknown_code]))
 
 
 if __name__ == '__main__':

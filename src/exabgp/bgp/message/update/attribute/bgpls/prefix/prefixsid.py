@@ -98,7 +98,7 @@ class PrefixSid(FlagLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> PrefixSid:
         if len(data) < SRPREFIX_MIN_LENGTH:
-            raise Notify(3, 5, f'SR Prefix SID: data too short, need {SRPREFIX_MIN_LENGTH} bytes, got {len(data)}')
+            raise Notify.short(3, 5, 'SR Prefix SID', SRPREFIX_MIN_LENGTH, len(data))
         # Validation for V/L flags and SID length
         flags = cls.unpack_flags(data[0:1])
         sid_data = data[4:]

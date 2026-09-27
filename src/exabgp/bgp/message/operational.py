@@ -151,7 +151,7 @@ class Operational(Message):
 
         # the header the peer must have sent: a two byte type and a two byte length
         if len(data) < 4:
-            raise Notify(5, 0, f'operational message too short: need 4 bytes for the header, got {len(data)}')
+            raise Notify.short(5, 0, 'operational message header', 4, len(data))
         what = Type(unpack('!H', data[0:2])[0])
         length = unpack('!H', data[2:4])[0]
         if len(data) < length + 4:

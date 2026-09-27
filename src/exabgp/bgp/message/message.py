@@ -204,7 +204,9 @@ class Message:
             return cls.registered_message[what]
         from exabgp.bgp.message.notification import Notify
 
-        raise Notify(2, 4, f'can not handle message {what}')
+        # RFC 4271 6.1: an unrecognised Type field is Bad Message Type, the same answer
+        # unpack gives below.  This was 2/4, Unsupported Optional Parameter, an OPEN error
+        raise Notify(1, 3, f'type {what}', data=bytes([what]))
 
     @classmethod
     def unpack(cls, message: int, data: Buffer, negotiated: Negotiated) -> Message:
@@ -227,7 +229,7 @@ class Message:
         # unrecognised Type field is Bad Message Type
         from exabgp.bgp.message.notification import Notify
 
-        raise Notify(1, 3, f'unknown message type {message}')
+        raise Notify(1, 3, f'type {message}', data=bytes([message]))
 
     @classmethod
     def code_from_name(cls, name: str) -> _MessageCode:

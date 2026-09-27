@@ -56,10 +56,10 @@ class IgpMetric(BaseLS):
             return wide_value
 
         # Shouldn't reach here if unpack_bgpls validated
-        raise Notify(3, 5, 'Incorrect IGP Metric Size')
+        raise Notify(3, 5, f'IGP Metric TLV is {len(data)} octets, expected 1, 2 or 3')
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> IgpMetric:
         if len(data) not in (IGP_METRIC_SIZE_ISIS_SMALL, IGP_METRIC_SIZE_OSPF, IGP_METRIC_SIZE_ISIS_WIDE):
-            raise Notify(3, 5, 'Incorrect IGP Metric Size')
+            raise Notify(3, 5, f'IGP Metric TLV is {len(data)} octets, expected 1, 2 or 3')
         return cls(data)

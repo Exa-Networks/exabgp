@@ -35,5 +35,5 @@ class RemoteRouterId(BaseLS):
     def unpack_bgpls(cls, data: Buffer) -> RemoteRouterId:
         length = len(data)
         if length not in (4, 16):
-            raise Notify(3, 5, 'Invalid remote-te size')
+            raise Notify(3, 5, f'Remote TE Router-ID TLV is {length} octets, expected 4 or 16')
         return cls(data)

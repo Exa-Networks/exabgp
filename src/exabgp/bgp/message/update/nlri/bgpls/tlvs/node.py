@@ -86,7 +86,7 @@ class NodeDescriptor:
     @classmethod
     def unpack_node(cls, data: Buffer, igp: int) -> tuple['NodeDescriptor', Buffer]:
         if len(data) < 4:
-            raise Notify(3, 10, f'BGP-LS node descriptor is too short: need 4 bytes of header, got {len(data)}')
+            raise Notify.short(3, 10, 'BGP-LS node descriptor header', 4, len(data))
         node_type, length = unpack('!HH', bytes(data[0:4]))
         if len(data) < 4 + length:
             raise Notify(

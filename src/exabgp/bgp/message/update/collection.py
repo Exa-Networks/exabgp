@@ -310,7 +310,7 @@ class UpdateCollection(Message):
             # Length which disagrees with a message long enough to hold them, which is the
             # gate below rather than this one
             # RFC 4271 6.1: the Data field carries the erroneous Length field itself
-            raise Notify(1, 2, pack('!H', Message.HEADER_LEN + length))
+            raise Notify(1, 2, f'UPDATE body of {length} octets', data=pack('!H', Message.HEADER_LEN + length))
 
         len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
 

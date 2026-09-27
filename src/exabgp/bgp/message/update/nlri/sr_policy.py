@@ -167,7 +167,7 @@ class SRPolicyNLRI(NLRI):
 
         # Check we have enough data
         if len(data) < 1 + nlri_bytes:
-            raise Notify(3, 10, f'SR Policy NLRI too short: need {1 + nlri_bytes} bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'SR Policy NLRI', 1 + nlri_bytes, len(data))
 
         # Skip length byte, extract NLRI data
         nlri = cls(afi, data[1 : 1 + nlri_bytes])

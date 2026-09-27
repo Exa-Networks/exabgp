@@ -103,7 +103,7 @@ class AdjacencySid(FlagLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> AdjacencySid:
         if len(data) < SRADJ_MIN_LENGTH:
-            raise Notify(3, 5, f'SR Adjacency SID: data too short, need {SRADJ_MIN_LENGTH} bytes, got {len(data)}')
+            raise Notify.short(3, 5, 'SR Adjacency SID', SRADJ_MIN_LENGTH, len(data))
         return cls(data)
 
     @classmethod

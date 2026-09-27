@@ -82,6 +82,21 @@ NOTHING: _NOTHING = _NOTHING()
 # =================================================================== AttributeCollection
 
 
+# RFC 4271 6.3: for these subcodes "The Data field MUST contain the ... attribute (type,
+# length, and value)".  3/3 is not here: its Data field is only the missing type code
+_DATA_IS_THE_ATTRIBUTE: frozenset[tuple[int, int]] = frozenset({(3, 2), (3, 4), (3, 5), (3, 6), (3, 8), (3, 9)})
+
+
+def _with_the_attribute(notify: Notify, header: Buffer, value: Buffer) -> Notify:
+    """The same Notify, carrying the attribute it is about as its Data field.
+
+    The per-attribute decoders only see the value, so they cannot fill it themselves.
+    """
+    if notify.has_defined_data or (notify.code, notify.subcode) not in _DATA_IS_THE_ATTRIBUTE:
+        return notify
+    return Notify(notify.code, notify.subcode, notify.detail, data=bytes(header) + bytes(value))
+
+
 class AttributeCollection(MutableMapping[int, Attribute]):
     """Semantic container for BGP path attributes (dict-like).
 
@@ -516,6 +531,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 self.add(TreatAsWithdraw(aid))
                 return self
 
+            header = data[:offset]
             data = data[offset:]
 
             # RFC 7606 section 4: an Attribute Length past the end of the section is an error
@@ -591,7 +607,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                     if kls and kls.DISCARD:
                         self.add(Discard())
                         continue
-                    raise exc
+                    raise _with_the_attribute(exc, header, attribute) from None
 
                 self.add(decoded)
                 continue
@@ -618,6 +634,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                         'invalid flag 0x{:02X} for {}, RFC 4760 makes it optional non-transitive'.format(
                             flag, Attribute.CODE.name(aid)
                         ),
+                        data=bytes(header) + bytes(attribute),
                     )
                 if kls and kls.TREAT_AS_WITHDRAW:
                     log.debug(

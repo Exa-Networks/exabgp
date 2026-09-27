@@ -97,13 +97,13 @@ class PrefixSid(Attribute):
         while data:
             # TLV header: Type(1) + Length(2) = 3 bytes minimum
             if len(data) < 3:
-                raise Notify(3, 1, f'SR Prefix-SID TLV header truncated: need 3 bytes, got {len(data)}')
+                raise Notify.short(3, 1, 'SR Prefix-SID TLV header', 3, len(data))
             # Type = 1 octet
             scode: int = data[0]
             # L = 2 octet  :|
             length: int = unpack('!H', data[1:3])[0]
             if len(data) < length + 3:
-                raise Notify(3, 1, f'SR Prefix-SID TLV truncated: need {length + 3} bytes, got {len(data)}')
+                raise Notify.short(3, 1, 'SR Prefix-SID TLV', length + 3, len(data))
             if scode in SR_SINGLE_OCCURRENCE_TLVS:
                 if scode in single_seen:
                     # Discarded, and not carried onwards either.  RFC 9012 section 13 asks

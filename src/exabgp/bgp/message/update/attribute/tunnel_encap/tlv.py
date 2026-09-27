@@ -184,17 +184,17 @@ class SubTLV:
             # 128 and above carries two.
             if subtype < 128:
                 if len(data) < 2:
-                    raise Notify(3, 1, f'Sub-TLV header truncated: need 2 bytes for type {subtype}, got {len(data)}')
+                    raise Notify.short(3, 1, f'Sub-TLV header of type {subtype}', 2, len(data))
                 length: int = data[1]
                 header_size = 2
             else:
                 if len(data) < 3:
-                    raise Notify(3, 1, f'Sub-TLV header truncated: need 3 bytes for type {subtype}, got {len(data)}')
+                    raise Notify.short(3, 1, f'Sub-TLV header of type {subtype}', 3, len(data))
                 length = unpack('!H', data[1:3])[0]
                 header_size = 3
 
             if len(data) < header_size + length:
-                raise Notify(3, 1, f'Sub-TLV truncated: need {header_size + length}, got {len(data)}')
+                raise Notify.short(3, 1, 'Sub-TLV', header_size + length, len(data))
             framed.append((subtype, data[header_size : header_size + length]))
             data = data[header_size + length :]
         return framed

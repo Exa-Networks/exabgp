@@ -1549,7 +1549,7 @@ def _unpack_segment_subsubtlvs(
         sub_len = data[1]
         header_size = 2
         if len(data) < header_size + sub_len:
-            raise Notify(3, 1, f'Segment List sub-sub-TLV truncated: need {header_size + sub_len}, got {len(data)}')
+            raise Notify.short(3, 1, 'Segment List sub-sub-TLV', header_size + sub_len, len(data))
         value = data[header_size : header_size + sub_len]
         if sub_type == WeightSubSubTLV.SUBTYPE:
             weight = WeightSubSubTLV.unpack(value)

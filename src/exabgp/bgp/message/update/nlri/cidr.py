@@ -259,7 +259,7 @@ class CIDR:
         size = CIDR.size(mask)
 
         if len(bgp) < size + 1:
-            raise Notify(3, 10, 'could not decode CIDR')
+            raise Notify(3, 10, f'CIDR with a /{mask} mask needs {size} octets, got {len(bgp) - 1}')
 
         return bytes(bgp[1 : size + 1]) + bytes(IP.length(afi) - size), mask
 

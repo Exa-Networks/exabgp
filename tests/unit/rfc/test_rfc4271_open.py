@@ -140,6 +140,19 @@ def test_a_version_we_do_not_support_is_refused_as_such(version: int) -> None:
     assert caught.value.subcode == UNSUPPORTED_VERSION_NUMBER
 
 
+@pytest.mark.parametrize('version', [0, 3, 5, 255], ids=lambda value: f'version {value}')
+def test_an_unsupported_version_is_answered_with_the_version_we_support(version: int) -> None:
+    """Unmarked, because 6.2 states it without a keyword: "The Data field is a 2-octet
+    unsigned integer, which indicates the largest, locally-supported version number less
+    than the version the remote BGP peer bid", or failing that the smallest.  We support
+    one version, so both halves of the rule name 4.  The field held 'unsupported version: N'.
+    """
+    with pytest.raises(Notify) as caught:
+        Message.unpack(int(Message.CODE.OPEN), open_body(version=version), Negotiated.UNSET)
+
+    assert caught.value.data == pack('!H', 4)
+
+
 @pytest.mark.rfc('rfc4271#6.2-unsupported-version-number', polarity='negative')
 def test_version_four_is_accepted() -> None:
     """Without this a decoder which refused every OPEN would pass the test above."""

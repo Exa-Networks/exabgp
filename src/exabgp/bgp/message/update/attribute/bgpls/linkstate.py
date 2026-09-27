@@ -92,12 +92,10 @@ class LinkState(Attribute):
 
         while data:
             if len(data) < 4:
-                raise Notify(3, 5, f'BGP-LS: TLV header too short, need 4 bytes, got {len(data)}')
+                raise Notify.short(3, 5, 'BGP-LS TLV header', 4, len(data))
             scode, length = unpack('!HH', data[:4])
             if len(data) < length + 4:
-                raise Notify(
-                    3, 5, f'BGP-LS: TLV data too short for type {scode}, need {length + 4} bytes, got {len(data)}'
-                )
+                raise Notify.short(3, 5, f'BGP-LS TLV of type {scode}', length + 4, len(data))
             payload = data[4 : length + 4]
             BaseLS.check_length(payload, length)
 

@@ -85,7 +85,7 @@ class Srv6Locator(FlagLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> Srv6Locator:
         if len(data) < SRV6_LOCATOR_MIN_LENGTH:
-            raise Notify(3, 5, f'SRv6 Locator: data too short, need {SRV6_LOCATOR_MIN_LENGTH} bytes, got {len(data)}')
+            raise Notify.short(3, 5, 'SRv6 Locator', SRV6_LOCATOR_MIN_LENGTH, len(data))
         return cls(data)
 
     @property

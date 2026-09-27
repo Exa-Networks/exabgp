@@ -223,7 +223,10 @@ class Capability:
             return cls.registered_capability[what]
         if cls.unknown_capability:
             return cls.unknown_capability
-        raise Notify(2, 4, 'can not handle capability {}'.format(what))
+        # RFC 5492 3 forbids a NOTIFICATION for a capability we do not support, and
+        # UnknownCapability is registered by importing this package, so reaching here
+        # means our registry is broken, not that the peer did anything wrong
+        raise RuntimeError(f'no class and no fallback registered for capability {what}')
 
     @classmethod
     def unpack(cls, capability: CapabilityCode, capabilities: Any, data: Buffer) -> Capability:

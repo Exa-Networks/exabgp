@@ -241,7 +241,7 @@ class Protocol:
             # is what reader_async read out of the header and refused.  The three in-parser
             # length checks (Open, KeepAlive, UpdateCollection.split) already send it.
             if (notify.code, notify.subcode) == (MESSAGE_HEADER_ERROR, BAD_MESSAGE_LENGTH):
-                notify_msg = Notify(notify.code, notify.subcode, length.to_bytes(2, 'big'))
+                notify_msg = Notify(notify.code, notify.subcode, str(notify), data=length.to_bytes(2, 'big'))
             else:
                 notify_msg = Notify(notify.code, notify.subcode, str(notify))
             if self._api.get(code, False):
@@ -265,7 +265,8 @@ class Protocol:
         # so the answer has to be given here.  It used to be 1/0, which names neither the
         # right error nor the right message.
         if msg_id not in Message.CODE.MESSAGES:
-            raise Notify(MESSAGE_HEADER_ERROR, BAD_MESSAGE_TYPE, 'unknown message type {}'.format(msg_id))
+            # and the Data field MUST contain the erroneous Type field, the octet itself
+            raise Notify(MESSAGE_HEADER_ERROR, BAD_MESSAGE_TYPE, f'type {msg_id}', data=bytes([msg_id]))
 
         if not length:
             return _NOP
@@ -358,11 +359,7 @@ class Protocol:
                 break
 
         if received_open.TYPE != Open.TYPE:
-            raise Notify(
-                5,
-                1,
-                'The first packet received is not an open message ({})'.format(received_open),
-            )
+            raise Notify(5, 1, f'{received_open} where the OPEN was expected')
 
         log.debug(lazymsg('open.received message={m}', m=received_open), self._session())
         return cast(Open, received_open)
@@ -430,10 +427,12 @@ class Protocol:
         await self.write(notification, self.negotiated)
         log.debug(
             lazymsg(
-                'notification.sent code={c} subcode={sc} data={d}',
+                'notification.sent code={c} subcode={sc} {d}',
                 c=notification.code,
                 sc=notification.subcode,
-                d=notification.data.decode('utf-8'),
+                # str(), not the Data field decoded: RFC 7313 puts a whole message, marker
+                # of 0xFF octets included, in the Data field of an Invalid Message Length
+                d=str(notification),
             ),
             self._session(),
         )

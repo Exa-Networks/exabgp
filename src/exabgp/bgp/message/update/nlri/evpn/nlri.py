@@ -153,11 +153,7 @@ class EVPN(NLRI):
             Notify: If the data is shorter than the minimum
         """
         if len(packed) < minimum:
-            raise Notify(
-                3,
-                10,
-                '{} EVPN NLRI is too short: need at least {} bytes, got {}'.format(cls.NAME, minimum, len(packed)),
-            )
+            raise Notify.short(3, 10, f'{cls.NAME} EVPN NLRI', minimum, len(packed))
 
     @classmethod
     def unpack_nlri(
@@ -169,13 +165,13 @@ class EVPN(NLRI):
         path_info, data = NLRI.consume_path_information(data, addpath)
         # EVPN NLRI: route_type(1) + length(1) + route_data(length)
         if len(data) < 2:
-            raise Notify(3, 10, f'EVPN NLRI too short: need at least 2 bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'EVPN NLRI', 2, len(data))
         code = data[0]
         length = data[1]
         total_length = 2 + length  # header (2) + payload
 
         if len(data) < total_length:
-            raise Notify(3, 10, f'EVPN NLRI truncated: need {total_length} bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'EVPN NLRI', total_length, len(data))
 
         # Store COMPLETE wire format including type + length header
         packed = bytes(data[0:total_length])

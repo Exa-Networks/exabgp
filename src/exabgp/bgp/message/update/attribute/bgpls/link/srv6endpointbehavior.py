@@ -70,11 +70,7 @@ class Srv6EndpointBehavior(BaseLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> Srv6EndpointBehavior:
         if len(data) < SRV6_ENDPOINT_BEHAVIOR_LEN:
-            raise Notify(
-                3,
-                5,
-                f'SRv6 Endpoint Behavior: data too short, need {SRV6_ENDPOINT_BEHAVIOR_LEN} bytes, got {len(data)}',
-            )
+            raise Notify.short(3, 5, 'SRv6 Endpoint Behavior', SRV6_ENDPOINT_BEHAVIOR_LEN, len(data))
         return cls(data)
 
     def __str__(self) -> str:

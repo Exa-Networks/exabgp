@@ -102,7 +102,7 @@ class MPURNLRI(Attribute):
         """
         # MP_UNREACH_NLRI minimum: AFI(2) + SAFI(1) = 3 bytes
         if len(data) < 3:
-            raise Notify(3, 9, f'MP_UNREACH_NLRI too short: need at least 3 bytes, got {len(data)}')
+            raise Notify.short(3, 9, 'MP_UNREACH_NLRI', 3, len(data))
 
         # -- Reading AFI/SAFI for validation
         _afi, _safi = unpack('!HB', data[:3])

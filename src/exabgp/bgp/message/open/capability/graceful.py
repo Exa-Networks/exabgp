@@ -82,7 +82,7 @@ class Graceful(Capability, dict[FamilyTuple, int]):
             instance.clear()
         # Graceful Restart: restart_flags/time(2) + families(4 each)
         if len(data) < 2:
-            raise Notify(2, 0, f'Graceful Restart capability too short: need 2 bytes minimum, got {len(data)}')
+            raise Notify.short(2, 0, 'Graceful Restart capability', 2, len(data))
         restart = unpack('!H', data[:2])[0]
         restart_flag = restart >> 12
         restart_time = restart & Graceful.TIME_MASK

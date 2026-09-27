@@ -208,7 +208,7 @@ class MPRNLRI(Attribute, Family):
 
         # MP_REACH_NLRI minimum: AFI(2) + SAFI(1) + NH_len(1) + reserved(1) = 5 bytes
         if len(data) < 5:
-            raise Notify(3, 9, f'MP_REACH_NLRI too short: need at least 5 bytes, got {len(data)}')
+            raise Notify.short(3, 9, 'MP_REACH_NLRI', 5, len(data))
 
         # -- Reading AFI/SAFI for validation
         _afi, _safi = unpack('!HB', data[:3])
@@ -225,7 +225,7 @@ class MPRNLRI(Attribute, Family):
 
         # Validate we have enough data for next-hop + reserved byte
         if len(data) < offset + len_nh + 1:
-            raise Notify(3, 9, f'MP_REACH_NLRI truncated: need {offset + len_nh + 1} bytes, got {len(data)}')
+            raise Notify.short(3, 9, 'MP_REACH_NLRI', offset + len_nh + 1, len(data))
 
         if (afi, safi) not in Family.size:
             raise Notify(3, 9, 'unsupported {} {}'.format(afi, safi))

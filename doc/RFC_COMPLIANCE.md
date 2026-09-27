@@ -10,7 +10,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | draft-ietf-idr-bgp-multisession-07 | 10 | 1 | 0 | 11 | 6 | 13 | 91% |
 | rfc1997 | 1 | 0 | 0 | 1 | 4 | 3 | 100% |
-| rfc4271 | 29 | 0 | 0 | 29 | 8 | 4 | 100% |
+| rfc4271 | 31 | 0 | 0 | 31 | 8 | 4 | 100% |
 | rfc4360 | 0 | 0 | 0 | 0 | 2 | 3 | - |
 | rfc4364 | 0 | 0 | 0 | 0 | 7 | 0 | - |
 | rfc4456 | 0 | 0 | 0 | 0 | 2 | 6 | - |
@@ -31,6 +31,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc8669 | 9 | 2 | 0 | 11 | 0 | 0 | 82% |
 | rfc8955 | 17 | 1 | 0 | 18 | 4 | 9 | 94% |
 | rfc8956 | 5 | 0 | 0 | 5 | 0 | 4 | 100% |
+| rfc9003 | 4 | 0 | 0 | 4 | 0 | 6 | 100% |
 | rfc9012 | 6 | 0 | 0 | 6 | 1 | 0 | 100% |
 | rfc9234 | 12 | 0 | 0 | 12 | 4 | 1 | 100% |
 | rfc9552 | 12 | 0 | 0 | 12 | 2 | 0 | 100% |
@@ -362,6 +363,12 @@ field is answered Unspecific, and called an update.  The positive test drives a 
 Connection and a real Protocol and demonstrates it.
   - `tests/unit/rfc/test_rfc4271_message_header.py::test_an_unrecognised_message_type_is_a_bad_message_type`
   - `tests/unit/rfc/test_rfc4271_message_header.py::test_a_recognised_message_type_is_never_called_a_bad_type`
+- **6.1** (MUST) `rfc4271#6.1-bad-message-type-data-field` - proven
+  > The Data field MUST contain the erroneous Type field.
+  Positive only: an obligation about what we put in the Data field has no peer input which
+violates it.  Until 2026-09-27 the Data field carried "unknown message type N" in ASCII;
+the text is now the local detail of the Notify and the octet goes to the peer.
+  - `tests/unit/rfc/test_rfc4271_message_header.py::test_a_bad_message_type_carries_the_erroneous_type`
 - **6.1** (MUST) `rfc4271#6.1-errors-use-the-message-header-error-code` - proven
   > All errors detected while processing the Message Header MUST be indicated by sending the NOTIFICATION message with the Error Code Message Header Error.
   - `tests/unit/rfc/test_rfc4271_message_header.py::test_a_header_error_is_reported_as_a_message_header_error`
@@ -521,6 +528,13 @@ cannot be parsed far enough to locate the NLRI, and that is the case exabgp answ
 3/9.
   - `tests/unit/rfc/test_rfc4271_update.py::test_an_mp_reach_which_cannot_be_read_is_an_optional_attribute_error`
   - `tests/unit/rfc/test_rfc4271_update.py::test_a_well_formed_mp_reach_is_accepted`
+- **6.3** (MUST) `rfc4271#6.3-optional-attribute-error-data-field` - proven
+  > The Data field MUST contain the attribute (type, length, and value).
+  Positive only: this constrains our own NOTIFICATION.  AttributeCollection.parse attaches
+the attribute, header as received included, to any 3/9 raised while decoding it or by the
+flag check, since the decoders themselves only see the value.  Until 2026-09-27 the Data
+field carried the decoder's English sentence, which is now the Notify's local detail.
+  - `tests/unit/rfc/test_rfc4271_update.py::test_an_optional_attribute_error_carries_the_attribute`
 - **6.3** (MUST) `rfc4271#6.3-unrecognized-well-known-attribute` - not-applicable
   > If any of the well-known mandatory attributes are not recognized, then the Error Subcode MUST be set to Unrecognized Well-known Attribute.
   The antecedent is empty for exabgp, as a matter of fact rather than of wording.  "Well-
@@ -2738,6 +2752,60 @@ sentence asks for.  A flow label is a 20 bit field, so the width exabgp chooses 
 the value an operator happened to pick, which is exactly the inconsistency a fixed width
 avoids.  The decoder reads all four widths, so this costs interoperability only with a
 receiver strict about the SHOULD.
+
+## rfc9003
+
+- **2** (MUST) `rfc9003#2-communication-is-utf8` - proven
+  > To support international characters, the Shutdown Communication field MUST be encoded using UTF-8.
+  Positive only: this constrains what we send.  The receiving side is the next entry.
+Notify encoded the text as ASCII, so a communication with one accented letter raised
+UnicodeEncodeError rather than being sent.
+  - `tests/unit/rfc/test_rfc9003_shutdown_communication.py::test_the_communication_is_encoded_in_utf8`
+- **2** (MAY) `rfc9003#2-may-include-a-communication` - untested (missing: positive)
+  > If a BGP speaker decides to terminate its session with a BGP neighbor, and it sends a NOTIFICATION message with the Error Code "Cease" and Error Subcode "Administrative Shutdown" or "Administrative Reset" [RFC4486], it MAY include a UTF-8-encoded string.
+  Notify(6, 2, text) and Notify(6, 4, text) carry the text as the communication.  exabgp's
+own teardown sends none, which the RFC allows and which every receiver understands.
+- **2** (MUST NOT) `rfc9003#2-must-not-interpret-invalid-utf8` - proven
+  > A receiving BGP speaker MUST NOT interpret invalid UTF-8 sequences.
+  Notification.data reports an invalid sequence as invalid, with the octets in hex, rather
+than decoding it with replacement characters.
+  - `tests/unit/rfc/test_rfc9003_shutdown_communication.py::test_valid_utf8_is_interpreted`
+  - `tests/unit/rfc/test_rfc9003_shutdown_communication.py::test_invalid_utf8_is_reported_and_not_interpreted`
+- **2** (SHOULD) `rfc9003#2-report-the-communication` - untested (missing: positive)
+  > Mechanisms concerning the reporting of information contained in the Shutdown Communication are implementation specific but SHOULD include methods such as syslog [RFC5424].
+  A received NOTIFICATION goes to the log, which can be syslog, and to the API as
+`notification` with the decoded communication.
+- **2** (REQUIRED) `rfc9003#2-shortest-form-required` - proven
+  > UTF-8 "Shortest Form" encoding is REQUIRED to guard against the technical issues outlined in [UTR36].
+  Python's UTF-8 codec produces the shortest form and refuses an overlong one, so both sides
+come from the codec; the tests pin that it is the strict codec in use.
+  - `tests/unit/rfc/test_rfc9003_shutdown_communication.py::test_what_we_send_is_shortest_form`
+  - `tests/unit/rfc/test_rfc9003_shutdown_communication.py::test_an_overlong_encoding_is_not_accepted`
+- **2** (MUST) `rfc9003#2-subcode-is-shutdown-or-reset` - proven
+  > Subcode: The Error Subcode value MUST be one of the following values: 2 ("Administrative Shutdown") or 4 ("Administrative Reset").
+  Only (6, 2) and (6, 4) get the length octet on send, and only those are parsed as a
+communication on receipt.  The negative test is another Cease subcode, whose text goes out
+as it is.
+  - `tests/unit/rfc/test_rfc9003_shutdown_communication.py::test_shutdown_and_reset_carry_a_length_prefixed_communication`
+  - `tests/unit/rfc/test_rfc9003_shutdown_communication.py::test_another_cease_subcode_carries_no_length_octet`
+- **3** (SHOULD NOT) `rfc9003#3-no-longer-than-128-octets-unless-known` - proven
+  > Otherwise, a Shutdown Communication MAY be sent, but it SHOULD NOT be longer than 128 octets.
+  Notify cuts the communication to 128 octets, on a character boundary so what is sent is
+still valid UTF-8.
+  - `tests/unit/rfc/test_rfc9003_shutdown_communication.py::test_a_long_communication_is_cut_to_128_octets_on_a_character_boundary`
+- **3** (MAY) `rfc9003#3-up-to-255-octets-may-be-sent` - proven
+  > If it is known that the peer BGP speaker supports this specification, then a Shutdown Communication that is not longer than 255 octets MAY be sent.
+  exabgp cannot know it, so it never sends more than 128.  What this obliges is the other
+side: a peer which knows we support RFC 9003 may send 255, and we must read it.  We read
+anything up to the 255 the one octet Length field can say.
+  - `tests/unit/rfc/test_rfc9003_shutdown_communication.py::test_a_communication_longer_than_128_octets_is_accepted`
+- **4** (MAY) `rfc9003#4-hexdump-malformed` - untested (missing: positive)
+  > An erroneous or malformed Shutdown Communication itself MAY be logged in a hexdump format.
+  The invalid rendering carries the octets in hex after the reason.
+- **4** (SHOULD) `rfc9003#4-log-invalid-utf8` - untested (missing: positive)
+  > If a Shutdown Communication with an invalid UTF-8 sequence is received, a message indicating this event SHOULD be logged for the attention of the operator.
+  The rendering says "invalid Shutdown Communication (invalid UTF-8)", and that rendering is
+what the received NOTIFICATION is logged as.
 
 ## rfc9012
 

@@ -1421,7 +1421,7 @@ class Flow(NLRI):
             length = ((length & FLOW_LENGTH_LOWER_MASK) << FLOW_LENGTH_EXTENDED_SHIFT) + extra
 
         if length > len(data):
-            raise Notify(3, 10, f'Flow NLRI truncated: need {length} bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'Flow NLRI', length, len(data))
 
         over = data[length:]
         packed = bytes(data[:length])

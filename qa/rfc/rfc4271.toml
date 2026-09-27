@@ -324,6 +324,22 @@ field is answered Unspecific, and called an update.  The positive test drives a 
 Connection and a real Protocol and demonstrates it.
 """
 
+[[requirement]]
+id = "rfc4271#6.1-bad-message-type-data-field"
+section = "6.1"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+The Data field MUST
+contain the erroneous Type field.
+"""
+note = """
+Positive only: an obligation about what we put in the Data field has no peer input which
+violates it.  Until 2026-09-27 the Data field carried "unknown message type N" in ASCII;
+the text is now the local detail of the Notify and the octet goes to the peer.
+"""
+
 
 # ============================================================ 6.2 OPEN Message Error Handling
 
@@ -687,6 +703,23 @@ RFC 7606 section 7 replaces this for the optional attributes it names, but not f
 MP_REACH_NLRI framing: section 5.3 keeps a session reset for an MP_REACH_NLRI which
 cannot be parsed far enough to locate the NLRI, and that is the case exabgp answers with
 3/9.
+"""
+
+[[requirement]]
+id = "rfc4271#6.3-optional-attribute-error-data-field"
+section = "6.3"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+The Data field MUST contain the attribute (type,
+length, and value).
+"""
+note = """
+Positive only: this constrains our own NOTIFICATION.  AttributeCollection.parse attaches
+the attribute, header as received included, to any 3/9 raised while decoding it or by the
+flag check, since the decoders themselves only see the value.  Until 2026-09-27 the Data
+field carried the decoder's English sentence, which is now the Notify's local detail.
 """
 
 [[requirement]]

@@ -89,7 +89,7 @@ class Srv6EndX(FlagLS):
     def _unpack_data(cls, data: Buffer) -> dict[str, object]:
         """Parse SRv6 End.X SID TLV data into dict."""
         if len(data) < SRV6_ENDX_MIN_LENGTH:
-            raise Notify(3, 5, f'SRv6 End.X SID: data too short, need {SRV6_ENDX_MIN_LENGTH} bytes, got {len(data)}')
+            raise Notify.short(3, 5, 'SRv6 End.X SID', SRV6_ENDX_MIN_LENGTH, len(data))
         behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]

@@ -96,7 +96,7 @@ class SrCapabilities(FlagLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> SrCapabilities:
         if len(data) < SRCAP_MIN_LENGTH:
-            raise Notify(3, 5, f'SR Capabilities: data too short, need {SRCAP_MIN_LENGTH} bytes, got {len(data)}')
+            raise Notify.short(3, 5, 'SR Capabilities', SRCAP_MIN_LENGTH, len(data))
         # Validate structure before storing
         offset = SRCAP_FLAGS_RESERVED_SIZE
         while offset < len(data):

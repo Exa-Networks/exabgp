@@ -4,6 +4,20 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: the Data field of the NOTIFICATIONs we send holds what the RFCs define. A Bad
+   Message Type carries the type octet, an Unsupported Version Number carries the version
+   we support, an Invalid Message Length for a ROUTE-REFRESH carries the whole message, and
+   an UPDATE error about an attribute carries the attribute as it was received. They all
+   carried an English sentence, which is now in our log and the API only. When no RFC
+   defines the field, the peer still gets the sentence. With no sentence the field is
+   empty, where it used to repeat the name of the subcode the peer had just read.
+ * Fix: a Shutdown Communication of up to 255 octets is read. RFC 9003 raised the limit
+   from the 128 octets of RFC 8203 and anything longer was reported as invalid. The one we
+   send is UTF-8, cut to 128 octets on a character boundary; one accented letter made it
+   raise instead of being sent.
+ * Change: the names of NOTIFICATION codes and subcodes in the log and the API follow the
+   IANA registry, e.g. "Finite State Machine Error" rather than "State machine error", and
+   the codes and subcodes added since RFC 4486 are named.
  * Incompatible: a flow route which redirects to an address now sends the community of
    draft-ietf-idr-flowspec-redirect-ip, which carries the address itself, instead of the
    one from draft-simpson-idr-flowspec-redirect-ip, which carries none and takes the target

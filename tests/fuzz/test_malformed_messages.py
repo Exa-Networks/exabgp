@@ -440,8 +440,11 @@ def test_notification_all_codes(code: int, subcode: int) -> None:
 @pytest.mark.fuzz
 @given(shutdown_len=st.integers(min_value=129, max_value=255))
 @settings(deadline=None, max_examples=50)
-def test_notification_shutdown_too_long(shutdown_len: int) -> None:
-    """Test NOTIFICATION shutdown communication with excessive length."""
+def test_notification_shutdown_longer_than_rfc8203_allowed(shutdown_len: int) -> None:
+    """RFC 9003 raised the limit from RFC 8203's 128 octets to 255, all one octet can say.
+
+    This test used to require 129 to 255 to be reported invalid.
+    """
     from exabgp.bgp.message.notification import Notification
 
     # Code 6, Subcode 2 = Administrative Shutdown
@@ -450,9 +453,7 @@ def test_notification_shutdown_too_long(shutdown_len: int) -> None:
 
     notification = Notification(notification_data)
 
-    # Should detect invalid length
-    data = notification.data
-    assert b'invalid' in data.lower() or b'too large' in data.lower()
+    assert notification.data == b'Shutdown Communication: "' + b'x' * shutdown_len + b'"'
 
 
 # =============================================================================

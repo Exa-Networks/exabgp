@@ -305,3 +305,15 @@ def test_a_second_parameter_which_overruns_the_field_is_refused() -> None:
 
     with pytest.raises(Notify):
         Capabilities.unpack(optional_parameters(good, overrunning))
+
+
+def test_an_unknown_capability_without_its_fallback_is_our_bug_not_the_peers(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Capability.klass ended in Notify(2, 4), Unsupported Optional Parameter.
+
+    That would have been the NOTIFICATION section 3 forbids, under a subcode naming the
+    wrong thing.  It is only reached if UnknownCapability failed to register, which the
+    package import guarantees, so it is our invariant broken and says so.
+    """
+    monkeypatch.setattr(Capability, 'unknown_capability', None)
+    with pytest.raises(RuntimeError):
+        Capability.klass(0xFE)

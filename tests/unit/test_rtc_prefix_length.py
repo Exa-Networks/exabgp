@@ -106,7 +106,7 @@ def test_the_full_and_default_forms_are_unchanged() -> None:
 @pytest.mark.parametrize(
     'data,why',
     [
-        (bytes([64]) + ORIGIN + TARGET[:3], 'truncated'),  # says 64 bits, carries 56
+        (bytes([64]) + ORIGIN + TARGET[:3], 'needs 9 octets, got 8'),  # says 64 bits, carries 56
         (bytes([31]) + ORIGIN, 'length'),  # between the default and the origin AS
         (bytes([97]) + ORIGIN + TARGET + b'\x00', 'length'),  # past origin AS and target
     ],

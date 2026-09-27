@@ -165,13 +165,13 @@ class MVPN(NLRI):
         path_info, data = NLRI.consume_path_information(data, addpath)
         # MVPN NLRI: route_type(1) + length(1) + route_data(length)
         if len(data) < 2:
-            raise Notify(3, 10, f'MVPN NLRI too short: need at least 2 bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'MVPN NLRI', 2, len(data))
         code = data[0]
         length = data[1]
         total_length = length + 2  # header + payload
 
         if len(data) < total_length:
-            raise Notify(3, 10, f'MVPN NLRI truncated: need {total_length} bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'MVPN NLRI', total_length, len(data))
 
         # Store COMPLETE wire format including type + length header
         packed = bytes(data[0:total_length])

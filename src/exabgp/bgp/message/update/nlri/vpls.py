@@ -223,7 +223,7 @@ class VPLSBase(NLRI):
         path_info, data = NLRI.consume_path_information(data, addpath)
         # Wire format: length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3) = 19 bytes
         if len(data) < 2:
-            raise Notify(3, 10, f'VPLS NLRI too short: need at least 2 bytes, got {len(data)}')
+            raise Notify.short(3, 10, 'VPLS NLRI', 2, len(data))
         (length,) = unpack('!H', bytes(data[0:2]))
         # every accessor reads a fixed offset inside the first VPLS_PAYLOAD_SIZE bytes, so
         # what has to hold is that they are there. Demanding the length be exactly that

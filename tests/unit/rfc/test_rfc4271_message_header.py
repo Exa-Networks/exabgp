@@ -285,6 +285,25 @@ def test_an_unrecognised_message_type_is_a_bad_message_type(message_type: int) -
     assert notification.subcode == BAD_MESSAGE_TYPE
 
 
+@pytest.mark.parametrize('message_type', [0, 7, 8, 100, 255], ids=lambda value: f'type {value}')
+@pytest.mark.rfc('rfc4271#6.1-bad-message-type-data-field')
+def test_a_bad_message_type_carries_the_erroneous_type(message_type: int) -> None:
+    """The Data field held 'unknown message type N' in ASCII, not the octet N."""
+    notification = refused(header(19, message_type))
+
+    assert notification.data == bytes([message_type])
+
+
+def test_the_decoder_also_carries_the_erroneous_type() -> None:
+    """Unmarked: Message.unpack and Message.klass give the same answer as the reactor gate."""
+    unused: Any = Negotiated.UNSET
+    with pytest.raises(Notify) as unpacked:
+        Message.unpack(7, b'', unused)
+    with pytest.raises(Notify) as looked_up:
+        Message.klass(7)
+    assert unpacked.value.data == looked_up.value.data == bytes([7])
+
+
 @pytest.mark.parametrize(
     'length,message_type',
     [(length, message_type) for length, message_type, _ in SMALLEST_LEGAL],

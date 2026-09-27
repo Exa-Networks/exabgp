@@ -236,11 +236,7 @@ class RTCBase(NLRI):
         # prefix shorter than 96 bits is shorter than 13 octets and the next NLRI follows it
         size = 1 + (length + 7) // 8
         if len(data) < size:
-            raise Notify(
-                3,
-                10,
-                'RTC NLRI truncated: need %d bytes, got %d' % (size, len(data)),
-            )
+            raise Notify.short(3, 10, 'RTC NLRI', size, len(data))
 
         # Store the wire format with the flags reset on the first octet of the route target,
         # when the prefix reaches it: [length(1)][origin(4)][rt(0 to 8)]

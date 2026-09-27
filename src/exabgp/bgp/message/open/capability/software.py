@@ -45,6 +45,6 @@ class Software(Capability):
             raise Notify(2, 0, 'Software capability too short: need at least 1 byte')
         l1 = data[0]
         if len(data) < l1 + 1:
-            raise Notify(2, 0, f'Software capability truncated: need {l1 + 1} bytes, got {len(data)}')
+            raise Notify.short(2, 0, 'Software capability', l1 + 1, len(data))
         instance.software_version = _decode_utf8(data[1 : l1 + 1], 'software version')
         return instance

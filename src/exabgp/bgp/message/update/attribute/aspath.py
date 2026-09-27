@@ -227,7 +227,7 @@ class ASPath(Attribute):
                 slen = data[1]
 
                 if stype not in cls._DISPATCH:
-                    raise Notify(3, 11, 'invalid AS Path type sent %d' % stype)
+                    raise Notify(3, 11, f'unknown segment type {stype}')
 
                 # RFC 7606 7.2 and RFC 6793 6 both make a Path Segment Length of zero
                 # malformed. It used to be read as an empty segment, so `02 00` announced
