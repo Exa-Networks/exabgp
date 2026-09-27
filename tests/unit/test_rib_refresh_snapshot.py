@@ -195,6 +195,8 @@ def test_a_refresh_does_not_consume_another_prefix_redefinition(rib: OutgoingRIB
 # ============================================= the enhanced refresh markers around it
 
 
+@pytest.mark.rfc('rfc7313#4-send-borr-before-a-refresh')
+@pytest.mark.rfc('rfc7313#4-send-eorr-after-a-refresh')
 def test_the_markers_wrap_only_the_replayed_routes(rib: OutgoingRIB, grouped: bool) -> None:
     """RFC 7313: a route announced in the same cycle belongs outside the BoRR/EoRR pair."""
     seed(rib, grouped)

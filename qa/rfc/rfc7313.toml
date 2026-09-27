@@ -4,15 +4,241 @@
 # Every `text` below is quoted verbatim from qa/rfc/text/rfc7313.txt and is checked
 # against it on every run of ./qa/bin/check_rfc_compliance.
 #
-# Scope of this file: section 5, the error handling.  Sections 3 and 4 (the capability,
-# and what a speaker does on sending and receiving BoRR and EoRR) are not recorded here.
-# Their absence is not a claim about them: at the time of enrolment the route refresh
-# handler resends on a received BoRR or EoRR as if it were a request, which section 4 does
-# not describe, and that belongs in its own entries with its own fix.
+# Scope of this file: sections 4 (Operation) and 5 (Error Handling), which hold every RFC
+# 2119 keyword in the document.  Section 3 defines the capability code and the subtype
+# values without one; both are what refresh.py and capability/refresh.py encode.
+#
+# exabgp's record of what a peer sent is the adj-rib-in (rib/incoming.py).  Where section
+# 4 says to mark or remove "routes from that peer", that is what is marked and removed.
+# The API processes keep their own view of the peer's routes; they are sent every
+# ROUTE-REFRESH received, with its subtype, and apply the rule to that view themselves.
 
 rfc = "rfc7313"
 title = "Enhanced Route Refresh Capability for BGP-4"
 url = "https://www.rfc-editor.org/rfc/rfc7313"
+
+
+# ============================================================ 4 Operation
+
+[[requirement]]
+id = "rfc7313#4-advertise-the-capability"
+section = "4"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+A BGP speaker that supports the message subtypes for the ROUTE-
+REFRESH message and the related procedures SHOULD advertise the
+"Enhanced Route Refresh Capability".
+"""
+note = """
+Capabilities._refresh advertises Enhanced Route Refresh whenever route refresh is enabled
+for the neighbour, which is the only configuration under which exabgp handles the subtypes.
+"""
+
+[[requirement]]
+id = "rfc7313#4-send-borr-before-a-refresh"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Before the speaker starts a route refresh that is either initiated
+locally, or in response to a "normal route refresh request" from the
+peer, the speaker MUST send a BoRR message.
+"""
+note = """
+OutgoingRIB brackets the replay (tests/unit/test_rib_refresh_snapshot.py).  The negative
+side is the condition the section opens with, "applicable only if a BGP speaker has
+received" the capability: the operator's `rib flush out` decided from our own configuration
+and bracketed a refresh for a peer which never advertised it.
+"""
+
+[[requirement]]
+id = "rfc7313#4-send-eorr-after-a-refresh"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+After the speaker
+completes the re-advertisement of the entire Adj-RIB-Out to the peer,
+it MUST send an EoRR message.
+"""
+note = """
+The same bracketing and the same condition as the BoRR entry.
+"""
+
+[[requirement]]
+id = "rfc7313#4-examine-the-subtype"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+In processing a ROUTE-REFRESH message from a peer, the BGP speaker
+MUST examine the "message subtype" field of the message and take the
+appropriate actions.
+"""
+note = """
+RouteRefreshHandler answered a BoRR and an EoRR as it answers a request, by replaying our
+whole Adj-RIB-Out at the peer.
+"""
+
+[[requirement]]
+id = "rfc7313#4-borr-marks-routes-stale"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When a BGP speaker receives a BoRR message from a peer, it MUST mark
+all the routes with the given Address Family Identifier and
+Subsequent Address Family Identifier, <AFI, SAFI> [RFC2918], from
+that peer as stale.
+"""
+note = """
+IncomingRIB.mark_stale records the adj-rib-in entries of the family, and a route received
+again before the EoRR stops being stale.  With adj-rib-in disabled exabgp holds no route
+from the peer, and there is nothing to mark.
+"""
+
+[[requirement]]
+id = "rfc7313#4-eorr-removes-stale-routes"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When a BGP speaker receives an EoRR message from a peer, it
+MUST immediately remove any routes from the peer that are still
+marked as stale for that <AFI, SAFI>.
+"""
+
+[[requirement]]
+id = "rfc7313#4-purged-routes-may-be-logged"
+section = "4"
+level = "MAY"
+status = "required"
+polarity = "positive-only"
+text = """
+Such purged routes MAY be
+logged for future analysis.
+"""
+note = """
+One line per EoRR with the count; the routes themselves are in the debug log of the
+UPDATEs which announced them.
+"""
+
+[[requirement]]
+id = "rfc7313#4-may-ignore-eorr-without-borr"
+section = "4"
+level = "MAY"
+status = "required"
+polarity = "positive-only"
+text = """
+A BGP speaker MAY ignore any EoRR
+message received without a prior receipt of an associated BoRR
+message.
+"""
+note = """
+Followed: with no BoRR nothing was marked, so nothing is removed.
+"""
+
+[[requirement]]
+id = "rfc7313#4-eorr-without-borr-may-be-logged"
+section = "4"
+level = "MAY"
+status = "required"
+polarity = "positive-only"
+text = """
+Such messages MAY be logged for future analysis.
+"""
+note = """
+Positive only: logging is something we do, not something a peer can get wrong.
+"""
+
+[[requirement]]
+id = "rfc7313#4-stale-routes-upper-bound"
+section = "4"
+level = "MAY"
+status = "not-applicable"
+polarity = "positive-only"
+text = """
+An implementation MAY impose a locally configurable upper bound on
+how long it would retain any stale routes.
+"""
+note = """
+Declined.  exabgp installs nothing and forwards nothing, so a stale entry in the adj-rib-in
+misleads no forwarding decision; it is reported by `show adj-rib in` until the EoRR, the
+next BoRR, or the end of the session, which clears the adj-rib-in.
+"""
+
+[[requirement]]
+id = "rfc7313#4-remove-at-the-upper-bound"
+section = "4"
+level = "MAY"
+status = "not-applicable"
+polarity = "positive-only"
+text = """
+Once the upper bound is
+reached, the implementation MAY remove any routes from the peer that
+are still marked as stale for that <AFI, SAFI> without waiting for an
+EoRR message.
+"""
+note = """
+Follows from declining the upper bound above.
+"""
+
+[[requirement]]
+id = "rfc7313#4-no-borr-before-our-eor"
+section = "4"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+For a BGP
+speaker that supports the BGP Graceful Restart, it MUST NOT send a
+BoRR for an <AFI, SAFI> to a neighbor before it sends the EoR for the
+<AFI, SAFI> to the neighbor.
+"""
+note = """
+"Supports" is read as having advertised the Graceful Restart capability on this session.
+A refresh asked for before our End-of-RIB for the family is replayed without BoRR and
+EoRR, as a plain refresh, which is what the peer would get without the capability.
+"""
+
+[[requirement]]
+id = "rfc7313#4-ignore-borr-before-their-eor"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A BGP speaker that has received the
+Graceful Restart Capability from its neighbor MUST ignore any BoRRs
+for an <AFI, SAFI> from the neighbor before the speaker receives the
+EoR for the given <AFI, SAFI> from the neighbor.
+"""
+note = """
+The received End-of-RIB is recorded per family in the adj-rib-in.  Recording it first
+needed a fix: an End-of-RIB reached UpdateHandler, which read it as an UPDATE, raised
+AttributeError and reset the session.
+"""
+
+[[requirement]]
+id = "rfc7313#4-log-borr-before-eor"
+section = "4"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+The BGP speaker
+SHOULD log an error of the condition for further analysis.
+"""
+note = """
+Positive only: logging is something we do, not something a peer can get wrong.
+"""
 
 
 # ============================================================ 5 Error Handling

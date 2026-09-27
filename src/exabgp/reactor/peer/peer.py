@@ -219,6 +219,8 @@ class Peer:
         # The NOTIFICATION to close the session with, once one is asked for.  It was the
         # Cease subcode as an int, which made a subcode of 0 look like no teardown at all
         self._teardown: Notify | None = None
+        # the families our End-of-RIB went out for on this session (RFC 7313 4)
+        self._end_of_rib_sent: set[FamilyTuple] = set()
 
         self._delay: Delay = Delay()
         self.recv_timer: ReceiveTimer | None = None
@@ -346,8 +348,29 @@ class Peer:
 
     def resend(self, enhanced: bool, family: FamilyTuple | None = None) -> None:
         if self.neighbor.rib:
-            self.neighbor.rib.outgoing.resend(enhanced, family)
+            outgoing = self.neighbor.rib.outgoing
+            held_back = self._borr_held_back(enhanced, family)
+            if not held_back:
+                outgoing.resend(enhanced, family)
+            else:
+                requested = set(outgoing.families) if family is None else {family}
+                for each in requested:
+                    outgoing.resend(each not in held_back, each)
         self._delay.reset()
+
+    def _borr_held_back(self, enhanced: bool, family: FamilyTuple | None) -> set[FamilyTuple]:
+        """The families a BoRR may not be sent for yet.
+
+        RFC 7313 4: a speaker doing Graceful Restart "MUST NOT send a BoRR for an <AFI, SAFI>
+        to a neighbor before it sends the EoR".  Those families are replayed without the
+        markers, as a plain refresh.
+        """
+        if not enhanced or self.proto is None or self.proto.negotiated.sent_open is None:
+            return set()
+        if not self.proto.negotiated.sent_open.capabilities.announced(Capability.CODE.GRACEFUL_RESTART):
+            return set()
+        requested = set(self.neighbor.rib.outgoing.families) if family is None else {family}
+        return requested - self._end_of_rib_sent
 
     def reestablish(self, restart_neighbor: 'Neighbor' | None = None) -> None:
         # we want to tear down the session and re-establish it
@@ -658,12 +681,14 @@ class Peer:
         if not new_routes and send_eor:
             send_eor = False
             await self.proto.new_eors()
+            self._end_of_rib_sent.update(self.proto.negotiated.families)
             log.debug(lazymsg('eor.sent.all'), self.id())
 
         # Manual EOR from API commands
         elif self.neighbor.eor:
             new_eor = self.neighbor.eor.popleft()
             await self.proto.new_eors(new_eor.afi, new_eor.safi)
+            self._end_of_rib_sent.add((new_eor.afi, new_eor.safi))
 
         return send_eor
 
@@ -695,6 +720,7 @@ class Peer:
 
         # Initialize session state
         self.neighbor.rib.incoming.clear()
+        self._end_of_rib_sent = set()
         include_withdraw = False
         send_eor = not self.neighbor.manual_eor
         new_routes: AsyncGenerator[None, None] | None = None

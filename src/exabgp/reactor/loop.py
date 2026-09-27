@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.bgp.fsm import FSM
+from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.configuration.process import API_PREFIX
 from exabgp.environment import getenv
 from exabgp.logger import lazyexc, lazymsg, log
@@ -401,7 +402,10 @@ class Reactor:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=rib_resend', p=peer_name), 'reactor')
             return
-        peer.resend(bool(peer.neighbor.capability.route_refresh))
+        # RFC 7313 4 applies "only if a BGP speaker has received" Enhanced Route Refresh,
+        # which the negotiation says; our own configuration only says we would offer it
+        enhanced = peer.proto is not None and peer.proto.negotiated.refresh == REFRESH.ENHANCED
+        peer.resend(enhanced)
 
     def neighbor_rib_out_withdraw(self, peer_name: str) -> None:
         if not (peer := self._peers.get(peer_name, None)):

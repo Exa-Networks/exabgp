@@ -14,6 +14,7 @@ from exabgp.rib.cache import Cache
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.update.nlri.nlri import NLRI
+    from exabgp.rib.route import Route
 
 
 class IncomingRIB(Cache):
@@ -26,6 +27,9 @@ class IncomingRIB(Cache):
     _path_sets: dict[FamilyTuple, dict[bytes, set[bytes]]]
     _path_warned: set[tuple[FamilyTuple, bytes]]
     _end_of_rib: set[FamilyTuple]
+    # RFC 7313 4: per family, the routes a BoRR marked stale and nothing has re-sent since.
+    # A subset of what the cache holds, so the cache bounds it
+    _stale: dict[FamilyTuple, set[bytes]]
     # RFC 4486 4: per limited family, the routes the peer holds with us.  Kept apart from
     # the cache, which adj-rib-in can turn off, and bounded by the limit: the route which
     # takes a family past it ends the session
@@ -36,6 +40,7 @@ class IncomingRIB(Cache):
         self._path_sets = {}
         self._path_warned = set()
         self._end_of_rib = set()
+        self._stale = {}
         self._prefixes = {}
 
     # back to square one, all the routes are removed
@@ -44,7 +49,38 @@ class IncomingRIB(Cache):
         self._path_sets = {}
         self._path_warned = set()
         self._end_of_rib = set()
+        self._stale = {}
         self._prefixes = {}
+
+    def update_cache(self, route: Route) -> None:
+        Cache.update_cache(self, route)
+        stale = self._stale.get(route.nlri.family().afi_safi())
+        if stale:
+            stale.discard(route.index())
+
+    def update_cache_withdraw(self, nlri: NLRI) -> None:
+        Cache.update_cache_withdraw(self, nlri)
+        stale = self._stale.get(nlri.family().afi_safi())
+        if stale:
+            stale.discard(self._make_index(nlri))
+
+    def mark_stale(self, family: FamilyTuple) -> None:
+        """A BoRR: every route of the family held now is stale until the peer sends it again."""
+        self._stale[family] = set(self._seen.get(family, {}))
+
+    def purge_stale(self, family: FamilyTuple) -> list[Route] | None:
+        """An EoRR: remove what is still stale, or None when no BoRR came before it."""
+        stale = self._stale.pop(family, None)
+        if stale is None:
+            return None
+        held = self._seen.get(family, {})
+        purged = [held.pop(index) for index in stale if index in held]
+        assert len(purged) <= len(stale)
+        # the peer no longer holds these with us, so the prefix-limit stops counting them
+        counted = self._prefixes.get(family)
+        if counted:
+            counted.difference_update(stale)
+        return purged
 
     def record_end_of_rib(self, family: FamilyTuple) -> None:
         # bounded by the families negotiated, a peer cannot grow it past those

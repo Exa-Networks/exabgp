@@ -14,16 +14,17 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc4360 | 0 | 0 | 0 | 0 | 2 | 3 | - |
 | rfc4364 | 0 | 0 | 0 | 0 | 7 | 0 | - |
 | rfc4456 | 0 | 0 | 0 | 0 | 2 | 6 | - |
+| rfc4486 | 1 | 0 | 0 | 1 | 0 | 1 | 100% |
 | rfc4659 | 3 | 0 | 0 | 3 | 2 | 0 | 100% |
 | rfc4684 | 0 | 0 | 0 | 0 | 1 | 3 | - |
 | rfc4724 | 6 | 0 | 0 | 6 | 7 | 0 | 100% |
 | rfc4760 | 5 | 0 | 0 | 5 | 0 | 8 | 100% |
 | rfc5082 | 2 | 0 | 0 | 2 | 2 | 2 | 100% |
-| rfc5492 | 5 | 0 | 0 | 5 | 3 | 5 | 100% |
+| rfc5492 | 7 | 0 | 0 | 7 | 1 | 6 | 100% |
 | rfc5668 | 0 | 0 | 0 | 0 | 0 | 1 | - |
 | rfc6514 | 1 | 0 | 0 | 1 | 5 | 2 | 100% |
 | rfc6793 | 23 | 1 | 0 | 24 | 0 | 0 | 96% |
-| rfc7313 | 3 | 0 | 0 | 3 | 0 | 1 | 100% |
+| rfc7313 | 10 | 0 | 0 | 10 | 0 | 8 | 100% |
 | rfc7432 | 4 | 0 | 0 | 4 | 13 | 0 | 100% |
 | rfc7606 | 46 | 1 | 0 | 47 | 7 | 2 | 98% |
 | rfc7911 | 4 | 0 | 1 | 5 | 1 | 3 | 80% |
@@ -722,6 +723,21 @@ there is no comparison between two paths for this rule to modify.
 decision process, and exabgp has no decision process to insert it into.  Nothing in
 exabgp compares two paths to the same prefix and picks one.
 
+## rfc4486
+
+- **4** (MAY) `rfc4486#4-data-may-carry-the-family-and-the-bound` - proven
+  > The message MAY optionally include the Address Family information [BGP-MP] and the upper bound in the "Data" field, as shown in Figure 1, where the meaning and use of the <AFI, SAFI> tuple is the same as defined in [BGP-MP], Section 7.
+  Always included: AFI in two octets, SAFI in one, the configured limit in four.  It is
+what we send, not something a peer can get wrong, so there is no negative side.
+  - `tests/unit/rfc/test_rfc4486_prefix_limit.py::test_the_prefix_past_the_limit_ends_the_session_with_subcode_one`
+- **4** (MUST) `rfc4486#4-maximum-prefixes-must-send-subcode-one` - proven
+  > If a BGP speaker decides to terminate its peering with a neighbor because the number of address prefixes received from the neighbor exceeds a locally configured upper bound (as described in [BGP-4]), then the speaker MUST send to the neighbor a NOTIFICATION message with the Error Code Cease and the Error Subcode "Maximum Number of Prefixes Reached".
+  The UPDATE handler raises Notify(6, 1) on the route which takes a family past its
+prefix-limit.  The count is of distinct routes the peer holds with us, kept in
+IncomingRIB whether or not adj-rib-in is on.
+  - `tests/unit/rfc/test_rfc4486_prefix_limit.py::test_the_prefix_past_the_limit_ends_the_session_with_subcode_one`
+  - `tests/unit/rfc/test_rfc4486_prefix_limit.py::test_a_peer_at_its_limit_is_not_cut_off`
+
 ## rfc4659
 
 - **3.2** (MUST) `rfc4659#3.2-afi-and-safi-values` - proven
@@ -1070,6 +1086,15 @@ the platform the daemon runs on, and exabgp can neither cause nor prevent it.
 
 ## rfc5492
 
+- **3** (MAY) `rfc5492#3-may-refuse-a-peer-without-a-capability` - proven
+  > If a BGP speaker that supports a certain capability determines that its peer doesn't support this capability, the speaker MAY send a NOTIFICATION message to the peer and terminate peering
+  Taken where the operator asks for it, with `require` in place of `enable` on a capability
+(asn4, route-refresh, extended-message, operational, software-version, nexthop,
+link-local-nexthop).  Negotiated.unsupported_capability() builds the (2, 7).  Without
+`require` a capability the peer lacks is not grounds for refusal, and a family the peer
+did not advertise is still only recorded in Negotiated.mismatch and logged.
+  - `tests/unit/rfc/test_rfc5492_unsupported_capability.py::test_a_missing_required_capability_is_refused_with_its_tlv_in_the_data`
+  - `tests/unit/rfc/test_rfc5492_unsupported_capability.py::test_a_capability_enabled_but_not_required_is_not_grounds_for_refusal`
 - **3** (MUST NOT) `rfc5492#3-no-notification-for-an-unknown-capability` - proven
   > In particular, the Unsupported Capability NOTIFICATION message MUST NOT be generated and the BGP session MUST NOT be terminated in response to reception of a capability that is not supported by the local speaker.
   The positive side is compliance: an OPEN carrying a code we have no decoder for parses
@@ -1078,13 +1103,12 @@ capability whose length field runs past the end of its parameter still ends the 
 because that is a framing error rather than an unknown capability.
   - `tests/unit/rfc/test_rfc5492_capabilities.py::test_an_unknown_capability_raises_nothing_and_ends_no_session`
   - `tests/unit/rfc/test_rfc5492_capabilities.py::test_a_capability_whose_length_disagrees_with_its_contents_is_still_refused`
-- **3** (MUST) `rfc5492#3-notification-must-name-the-capabilities` - not-applicable
+- **3** (MUST) `rfc5492#3-notification-must-name-the-capabilities` - proven
   > The message MUST contain the capability or capabilities that cause the speaker to send the message.
-  Conditional on the MAY in the sentence before it, which exabgp declines. Nothing in the
-tree raises Notify(2, 7): subcode 7 appears only as a name in the table in
-notification.py, so exabgp never sends an Unsupported Capability NOTIFICATION and never
-has a set of capabilities to put in one. A family the peer did not advertise is recorded
-in Negotiated.mismatch, logged, and the session runs without that family.
+  Every required capability the peer's OPEN lacks, and only those, in the order of our OPEN.
+  - `tests/unit/rfc/test_rfc5492_unsupported_capability.py::test_a_missing_required_capability_is_refused_with_its_tlv_in_the_data`
+  - `tests/unit/rfc/test_rfc5492_unsupported_capability.py::test_every_missing_capability_is_listed_and_only_those`
+  - `tests/unit/rfc/test_rfc5492_unsupported_capability.py::test_a_peer_advertising_every_required_capability_is_accepted`
 - **3** (MAY) `rfc5492#3-open-may-carry-capabilities` - proven
   > When a BGP speaker [RFC4271] that supports capabilities advertisement sends an OPEN message to its BGP peer, the message MAY include an Optional Parameter, called Capabilities.
   Positive only: a permission has no side a peer can catch us out on, and what is worth
@@ -1100,12 +1124,13 @@ configuration on every attempt, so a peer which answers our OPEN with Unsupporte
 Optional Parameter is retried identically for ever and the session never comes up. The
 peer this protects against is a pre-RFC-2842 speaker, which is why it has not bitten,
 but the fallback is not there.
-- **3** (SHOULD NOT) `rfc5492#3-terminated-peering-not-re-established` - not-applicable
+- **3** (SHOULD NOT) `rfc5492#3-terminated-peering-not-re-established` - proven
   > If terminated, such peering SHOULD NOT be re-established automatically.
-  "Such peering" is one terminated by the Unsupported Capability NOTIFICATION of the
-previous sentences, which exabgp never sends. Sessions exabgp does tear down are torn
-down for other reasons and are retried by the reactor's delay loop, which is what an
-operator asks for; this sentence is not about those.
+  After sending (2, 7) the peer is stopped, as the stop command does, and comes back on a
+configuration reload.  Sessions torn down for any other reason are retried by the
+reactor's delay loop as before; this sentence is not about those.
+  - `tests/unit/rfc/test_rfc5492_unsupported_capability.py::test_a_peering_refused_for_a_capability_is_not_restarted`
+  - `tests/unit/rfc/test_rfc5492_unsupported_capability.py::test_a_peering_ended_for_another_reason_is_still_restarted`
 - **3** (MUST) `rfc5492#3-unknown-capability-must-be-ignored` - proven
   > If a BGP speaker receives from its peer a capability that it does not itself support or recognize, it MUST ignore that capability.
   exabgp implements this with a registered fallback: Capability.klass returns
@@ -1154,12 +1179,14 @@ with a non-zero Capability Length.
 our own OPEN. What we do with a peer's duplicates is the MUST in the next sentence,
 recorded separately.
   - `tests/unit/rfc/test_rfc5492_capabilities.py::test_our_own_open_repeats_no_capability_triple`
-- **5** (MUST) `rfc5492#5-data-field-lists-the-capabilities` - not-applicable
+- **5** (MUST) `rfc5492#5-data-field-lists-the-capabilities` - proven
   > The Data field in the NOTIFICATION message MUST list the set of capabilities that causes the speaker to send the message.
-  The encoding rule for a message exabgp cannot produce. Notify carries a code, a subcode
-and a text reason, and no caller anywhere raises subcode 7, so there is no Data field of
-an Unsupported Capability NOTIFICATION for this to describe. This is the encoding half
-of the decision recorded at rfc5492#3-notification-must-name-the-capabilities.
+  Each is Capabilities.tlvs() of our own OPEN, so it is encoded "in the same way as it would
+be encoded in the OPEN message", the sentence which follows.  This is why `require` is
+only accepted where it also advertises: what we do not send we cannot list.
+  - `tests/unit/rfc/test_rfc5492_unsupported_capability.py::test_a_missing_required_capability_is_refused_with_its_tlv_in_the_data`
+  - `tests/unit/rfc/test_rfc5492_unsupported_capability.py::test_every_missing_capability_is_listed_and_only_those`
+  - `tests/unit/rfc/test_rfc5492_unsupported_capability.py::test_a_peer_advertising_every_required_capability_is_accepted`
 - **5** (MUST NOT) `rfc5492#5-unsupported-capability-not-for-unknown-codes` - proven
   > It MUST NOT be used when a BGP speaker receives a capability that it does not understand; such capabilities MUST be ignored.
   The same rule as section 3 states, restated where the subcode is defined. It is tested
@@ -1450,6 +1477,82 @@ quoted here because section 6 is where an implementer looks for it.
 
 ## rfc7313
 
+- **4** (SHOULD) `rfc7313#4-advertise-the-capability` - proven
+  > A BGP speaker that supports the message subtypes for the ROUTE- REFRESH message and the related procedures SHOULD advertise the "Enhanced Route Refresh Capability".
+  Capabilities._refresh advertises Enhanced Route Refresh whenever route refresh is enabled
+for the neighbour, which is the only configuration under which exabgp handles the subtypes.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_route_refresh_enabled_advertises_the_enhanced_capability_too`
+- **4** (MUST) `rfc7313#4-borr-marks-routes-stale` - proven
+  > When a BGP speaker receives a BoRR message from a peer, it MUST mark all the routes with the given Address Family Identifier and Subsequent Address Family Identifier, <AFI, SAFI> [RFC2918], from that peer as stale.
+  IncomingRIB.mark_stale records the adj-rib-in entries of the family, and a route received
+again before the EoRR stops being stale.  With adj-rib-in disabled exabgp holds no route
+from the peer, and there is nothing to mark.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_what_the_peer_did_not_repeat_is_removed_at_the_eorr`
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_route_re_sent_after_the_borr_is_no_longer_stale`
+- **4** (MUST) `rfc7313#4-eorr-removes-stale-routes` - proven
+  > When a BGP speaker receives an EoRR message from a peer, it MUST immediately remove any routes from the peer that are still marked as stale for that <AFI, SAFI>.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_what_the_peer_did_not_repeat_is_removed_at_the_eorr`
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_only_the_family_of_the_borr_is_marked`
+- **4** (MAY) `rfc7313#4-eorr-without-borr-may-be-logged` - proven
+  > Such messages MAY be logged for future analysis.
+  Positive only: logging is something we do, not something a peer can get wrong.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_an_eorr_without_a_borr_is_logged`
+- **4** (MUST) `rfc7313#4-examine-the-subtype` - proven
+  > In processing a ROUTE-REFRESH message from a peer, the BGP speaker MUST examine the "message subtype" field of the message and take the appropriate actions.
+  RouteRefreshHandler answered a BoRR and an EoRR as it answers a request, by replaying our
+whole Adj-RIB-Out at the peer.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_normal_request_is_answered_with_an_enhanced_refresh`
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_borr_or_an_eorr_is_not_a_request`
+- **4** (MUST) `rfc7313#4-ignore-borr-before-their-eor` - proven
+  > A BGP speaker that has received the Graceful Restart Capability from its neighbor MUST ignore any BoRRs for an <AFI, SAFI> from the neighbor before the speaker receives the EoR for the given <AFI, SAFI> from the neighbor.
+  The received End-of-RIB is recorded per family in the adj-rib-in.  Recording it first
+needed a fix: an End-of-RIB reached UpdateHandler, which read it as an UPDATE, raised
+AttributeError and reset the session.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_borr_before_the_peers_end_of_rib_is_ignored`
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_borr_after_the_peers_end_of_rib_is_honoured`
+- **4** (SHOULD) `rfc7313#4-log-borr-before-eor` - proven
+  > The BGP speaker SHOULD log an error of the condition for further analysis.
+  Positive only: logging is something we do, not something a peer can get wrong.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_borr_before_the_peers_end_of_rib_is_logged`
+- **4** (MAY) `rfc7313#4-may-ignore-eorr-without-borr` - proven
+  > A BGP speaker MAY ignore any EoRR message received without a prior receipt of an associated BoRR message.
+  Followed: with no BoRR nothing was marked, so nothing is removed.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_an_eorr_without_a_borr_removes_nothing`
+- **4** (MUST NOT) `rfc7313#4-no-borr-before-our-eor` - proven
+  > For a BGP speaker that supports the BGP Graceful Restart, it MUST NOT send a BoRR for an <AFI, SAFI> to a neighbor before it sends the EoR for the <AFI, SAFI> to the neighbor.
+  "Supports" is read as having advertised the Graceful Restart capability on this session.
+A refresh asked for before our End-of-RIB for the family is replayed without BoRR and
+EoRR, as a plain refresh, which is what the peer would get without the capability.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_no_borr_before_our_end_of_rib_when_we_do_graceful_restart`
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_borr_once_our_end_of_rib_is_out`
+- **4** (MAY) `rfc7313#4-purged-routes-may-be-logged` - proven
+  > Such purged routes MAY be logged for future analysis.
+  One line per EoRR with the count; the routes themselves are in the debug log of the
+UPDATEs which announced them.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_purged_routes_are_logged`
+- **4** (MAY) `rfc7313#4-remove-at-the-upper-bound` - not-applicable
+  > Once the upper bound is reached, the implementation MAY remove any routes from the peer that are still marked as stale for that <AFI, SAFI> without waiting for an EoRR message.
+  Follows from declining the upper bound above.
+- **4** (MUST) `rfc7313#4-send-borr-before-a-refresh` - proven
+  > Before the speaker starts a route refresh that is either initiated locally, or in response to a "normal route refresh request" from the peer, the speaker MUST send a BoRR message.
+  OutgoingRIB brackets the replay (tests/unit/test_rib_refresh_snapshot.py).  The negative
+side is the condition the section opens with, "applicable only if a BGP speaker has
+received" the capability: the operator's `rib flush out` decided from our own configuration
+and bracketed a refresh for a peer which never advertised it.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_refresh_we_start_is_bracketed_when_the_peer_advertised_it`
+  - `tests/unit/test_rib_refresh_snapshot.py::test_the_markers_wrap_only_the_replayed_routes`
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_refresh_we_start_is_not_bracketed_unless_the_peer_advertised_the_capability`
+- **4** (MUST) `rfc7313#4-send-eorr-after-a-refresh` - proven
+  > After the speaker completes the re-advertisement of the entire Adj-RIB-Out to the peer, it MUST send an EoRR message.
+  The same bracketing and the same condition as the BoRR entry.
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_refresh_we_start_is_bracketed_when_the_peer_advertised_it`
+  - `tests/unit/test_rib_refresh_snapshot.py::test_the_markers_wrap_only_the_replayed_routes`
+  - `tests/unit/rfc/test_rfc7313_operation.py::test_a_refresh_we_start_is_not_bracketed_unless_the_peer_advertised_the_capability`
+- **4** (MAY) `rfc7313#4-stale-routes-upper-bound` - not-applicable
+  > An implementation MAY impose a locally configurable upper bound on how long it would retain any stale routes.
+  Declined.  exabgp installs nothing and forwards nothing, so a stale entry in the adj-rib-in
+misleads no forwarding decision; it is reported by `show adj-rib in` until the EoRR, the
+next BoRR, or the end of the session, which clears the adj-rib-in.
 - **5** (MUST) `rfc7313#5-invalid-message-length` - proven
   > If the length, excluding the fixed-size message header, of the received ROUTE-REFRESH message with Message Subtype 1 and 2 is not 4, then the BGP speaker MUST send a NOTIFICATION message with the Error Code of "ROUTE-REFRESH Message Error" and the subcode of "Invalid Message Length".
   exabgp applies the check to every ROUTE-REFRESH, whatever the subtype and whether or not

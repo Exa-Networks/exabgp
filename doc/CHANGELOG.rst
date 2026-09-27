@@ -9,6 +9,13 @@ Version 6.0.0:
    closed the session without a NOTIFICATION. adj-rib-in is on by default, so the default
    configuration met it with any peer which sends one, which most do. The test peer never
    sent an End-of-RIB, and does now.
+ * Fix: a BoRR or EoRR received from a peer is handled as RFC 7313 section 4 describes. Both
+   were taken for a refresh request and answered by replaying every route we send. A BoRR
+   now marks the peer's routes for that family stale in the adj-rib-in, and the EoRR
+   removes those it did not send again. With Graceful Restart from the peer, a BoRR before
+   its End-of-RIB is ignored, and we no longer send a BoRR before our own End-of-RIB. "rib
+   flush out" only brackets the refresh with BoRR and EoRR when the peer advertised
+   Enhanced Route Refresh, where it went by our own configuration.
  * Incompatible: "teardown" takes a code as well as a subcode. The documentation said the
    number was the error code, while the code always sent Cease with the number as the
    subcode, so "teardown 6" sent Cease / Other Configuration Change. One number keeps that
