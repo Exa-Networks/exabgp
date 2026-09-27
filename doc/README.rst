@@ -29,7 +29,11 @@ ExaBGP allows engineers to control their network from commodity servers. Think o
 It can be used to announce ipv4, ipv6, vpn or flow routes (for DDOS protection) from its configuration file(s).
 ExaBGP can also transform BGP messages into friendly plain text or JSON which can be easily manipulate by scripts and report peer announcements.
 
-It supports IPv4, IPv6, mpls, vpls, bgp-ls, flowspec and more.
+It does not manipulate the FIB: it speaks BGP and hands what it hears to your programs.
+
+Twenty three address families are implemented: ipv4 and ipv6 unicast, multicast, mpls-vpn,
+nlri-mpls, flow, flow-vpn, mcast-vpn, mup and sr-policy, ipv4 rtc, l2vpn evpn and vpls, and
+bgp-ls with its vpn variant.
 
 Installation
 ============
@@ -37,26 +41,37 @@ Installation
 Prerequisites
 -------------
 
-ExaBGP requires a recent python 3 version (3.7 or later recommended). It includes/vendors its dependencies.
+The branch you are reading, ``main``, requires Python 3.12 or later, which is what
+``pyproject.toml`` declares. The released ``5.0`` branch runs on Python 3.8 or later.
+ExaBGP includes/vendors its dependencies.
 
 Using pip
 ---------
 
-#. Use pip to install the packages:
+``pip`` installs the latest tagged release, which comes from the ``5.0`` branch:
 
 ::
 
     pip install -U exabgp
     exabgp --help
 
-
 Without installation
 --------------------
 
+Nothing on ``main`` is tagged, so there is no tarball for it. Clone the branch and run it
+from the checkout:
+
 ::
 
-    curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.0.tar.gz | tar zx
-    ./exabgp-5.0.0/sbin/exabgp --help
+    git clone https://github.com/Exa-Networks/exabgp.git
+    ./exabgp/sbin/exabgp --help
+
+For a released version, a tarball of the tag works without installing anything:
+
+::
+
+    curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.13.tar.gz | tar zx
+    ./exabgp-5.0.13/sbin/exabgp --help
 
 Feedback and getting involved
 =============================
@@ -70,3 +85,7 @@ Feedback and getting involved
 
 Versions
 ========
+
+``README.md`` in the root of the repository carries the version notice: which branch is
+released, which is in development, and what each requires. It is the maintained one, and
+this file is the short form of it.

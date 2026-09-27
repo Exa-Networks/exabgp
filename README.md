@@ -116,7 +116,7 @@ See [Installation](#installation) for detailed options and [Documentation](#docu
 
 Two branches are maintained and both are supported:
 
-- **`5.0` is the stable branch.** It is the released version (currently 5.0.9), it is what `pip`/`pipx` and most OS packages install, and it runs on Python 3.8 or later. Pick it if you want a tagged release, or if you are not on Python 3.12 yet.
+- **`5.0` is the stable branch.** It is the released version (currently 5.0.13), it is what `pip`/`pipx` and most OS packages install, and it runs on Python 3.8 or later. Pick it if you want a tagged release, or if you are not on Python 3.12 yet.
 - **`main` is the development branch**, and the default branch of the repository. It will become 6.0, but it is not 6.0 yet and nothing is tagged: expect the odd rough edge, even though the full unit and functional test suites run on every commit. It requires Python 3.12 or later. Pick it if you want the features being built for 6.0: asyncio engine, the interactive CLI with shell completion, and health monitoring API commands.
 
 If you have no preference, use the stable branch:
