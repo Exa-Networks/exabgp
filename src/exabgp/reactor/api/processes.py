@@ -136,6 +136,10 @@ class Processes:
 
     _dispatch: dict[int, Any] = {}
 
+    # queued in place of a command when a helper exits, so its routes are withdrawn after
+    # the commands it sent before dying: lines are split on newlines, none can be this
+    EXITED: str = '\nexited'
+
     def __init__(self) -> None:
         self.clean()
         self.silence: bool = False
@@ -173,9 +177,22 @@ class Processes:
         """The helpers which are gone for good: never started, or ended and not respawned."""
         return sorted(set(self._broken) | set(self._ended))
 
+    def _queue_exit(self, process: str) -> None:
+        """Tell the reactor a helper has exited, unless its routes are to be kept.
+
+        The internal CLI helper never owns routes: its name changes on every start and a
+        route typed at the CLI is meant to stay.
+        """
+        if process.startswith(API_PREFIX):
+            return
+        if self._configuration.get(process, {}).get('on-exit', 'withdraw') != 'withdraw':
+            return
+        self._command_queue.append((process, self.EXITED))
+
     def _handle_problem(self, process: str) -> None:
         if process not in self._process:
             return
+        self._queue_exit(process)
         # api.terminate asks for the daemon to stop when a helper dies, so a helper which
         # would have been respawned is not: the reactor sees it in lost() and shuts down
         if self.respawn_number and self._restart[process] and not self.terminate_on_error:

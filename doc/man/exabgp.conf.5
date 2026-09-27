@@ -251,9 +251,20 @@ neighbor <ip-address> {
 process <process-name> {
     run <command>;
     encoding <text | json>;
+    on-exit <withdraw | keep>;
 }
 
 .Ed
+.Pp
+When a process exits, the routes it announced are withdrawn from every
+neighbor, and a route which replaced one from the configuration gives the
+configured one back.
+This happens even when the process is respawned: the new process starts
+with nothing announced.
+.Cm on-exit keep
+leaves the routes announced, as releases before 6.0 did.
+The default is
+.Cm withdraw .
 .Pp
 Please note that multi-line sections really do need to be written as
 multiple lines: the first one ending in "{", and ending with a line

@@ -121,12 +121,13 @@ class _Configuration:
         """
         return self._routes.get(index)
 
-    def announce_route(self, peers: list[str], route: 'Route') -> bool:
+    def announce_route(self, peers: list[str], route: 'Route', owner: str = '') -> bool:
         """Announce route to matching peers.
 
         Args:
             peers: List of peer names to announce to
             route: Route to announce
+            owner: the API helper announcing it, whose death withdraws it
 
         Returns:
             True if route was announced to at least one peer
@@ -137,7 +138,7 @@ class _Configuration:
                 neighbor = self.neighbors[neighbor_name]
                 if route.nlri.family().afi_safi() in neighbor.families():
                     # resolve_self creates a copy with resolved nexthop
-                    neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route))
+                    neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route), owner=owner)
                     result = True
                 else:
                     log.error(
@@ -179,12 +180,13 @@ class _Configuration:
                     )
         return result
 
-    def announce_route_indexed(self, peers: list[str], route: 'Route') -> tuple[bytes, bool]:
+    def announce_route_indexed(self, peers: list[str], route: 'Route', owner: str = '') -> tuple[bytes, bool]:
         """Announce route and store in global index for API access.
 
         Args:
             peers: List of peer names to announce to
             route: Route to announce
+            owner: the API helper announcing it, whose death withdraws it
 
         Returns:
             Tuple of (route_index, success) where success is True if
@@ -193,7 +195,7 @@ class _Configuration:
         # Store in global store for index-based lookup
         index = self.store_route(route)
         # Announce to peers
-        success = self.announce_route(peers, route)
+        success = self.announce_route(peers, route, owner)
         return index, success
 
     def withdraw_route_by_index(self, peers: list[str], index: bytes) -> bool:

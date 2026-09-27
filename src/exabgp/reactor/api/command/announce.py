@@ -124,7 +124,7 @@ def announce_route(
                     await reactor.processes.answer_error(service, error)
                     return
 
-                reactor.configuration.announce_route(peers, route)
+                reactor.configuration.announce_route(peers, route, service)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -222,7 +222,7 @@ def announce_vpls(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                reactor.configuration.announce_route(peers, route)
+                reactor.configuration.announce_route(peers, route, service)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'vpls added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -304,7 +304,7 @@ def announce_attributes(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                reactor.configuration.announce_route(peers, route)
+                reactor.configuration.announce_route(peers, route, service)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -398,7 +398,7 @@ def announce_flow(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                reactor.configuration.announce_route(peers, route)
+                reactor.configuration.announce_route(peers, route, service)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'flow added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -605,7 +605,7 @@ def announce_ipv4(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                reactor.configuration.announce_route(peers, route)
+                reactor.configuration.announce_route(peers, route, service)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'ipv4 added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)
@@ -687,7 +687,7 @@ def announce_ipv6(
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
             for route in routes:
-                reactor.configuration.announce_route(peers, route)
+                reactor.configuration.announce_route(peers, route, service)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'ipv6 added to {peer_list} : {route.extensive()}')
                 await asyncio.sleep(0)

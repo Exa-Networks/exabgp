@@ -56,10 +56,22 @@ class ParseProcess(Section):
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
             ),
+            'on-exit': Leaf(
+                type=ValueType.ENUMERATION,
+                description='What happens to the routes the process announced when it exits',
+                choices=['withdraw', 'keep'],
+                default='withdraw',
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+            ),
         },
     )
 
-    syntax = 'process name-of-process {\n   run /path/to/command with its args;\n   encoder text|json;\n}'
+    syntax = (
+        'process name-of-process {\n   run /path/to/command with its args;\n   encoder text|json;\n'
+        '   on-exit withdraw|keep;\n}'
+    )
     # run must stay in known - it returns list[str] and does file validation
     known = {
         'run': run,

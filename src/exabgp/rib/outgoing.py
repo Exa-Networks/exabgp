@@ -66,6 +66,12 @@ class OutgoingRIB(Cache):
         self._watchdog = {}
         self.families = families
 
+        # which API helper announced a route, so its routes can go when it dies (issue #304)
+        # _owned[helper][route-index] = route, and _owner[route-index] = helper
+        # a route from the configuration, or re-announced by it, has no owner
+        self._owned: dict[str, dict[bytes, Route]] = {}
+        self._owner: dict[bytes, str] = {}
+
         # using route-index and not nlri-index as it is cached as same us memory
         # even if it is a few bytes longer
         self._new_nlri = {}  # self._new_nlri[route-index] = route
@@ -123,6 +129,48 @@ class OutgoingRIB(Cache):
     def clear(self) -> None:
         self.clear_cache()
         self.reset()
+        self._owned.clear()
+        self._owner.clear()
+
+    def _own(self, route_index: bytes, route: Route, owner: str) -> None:
+        """Record who announced a route: an API helper, or nobody ('') for the configuration."""
+        previous = self._owner.pop(route_index, None)
+        if previous is not None:
+            routes = self._owned[previous]
+            del routes[route_index]
+            if not routes:
+                del self._owned[previous]
+        if owner:
+            self._owner[route_index] = owner
+            self._owned.setdefault(owner, {})[route_index] = route
+        assert (route_index in self._owner) == bool(owner)
+
+    def owned(self, owner: str) -> list[Route]:
+        return list(self._owned.get(owner, {}).values())
+
+    def _watchdog_withdrawn(self, route_index: bytes) -> bool:
+        return any(route_index in routes.get('-', {}) for routes in self._watchdog.values())
+
+    def withdraw_owner(self, owner: str, configured: list[Route]) -> int:
+        """Withdraw every route an API helper announced, as it is gone.
+
+        A route which replaced one from the configuration gives it back rather than
+        leaving the prefix unannounced, unless a watchdog is holding that one withdrawn.
+        Returns how many routes the helper owned.
+        """
+        routes = self._owned.get(owner, {})
+        if not self.enabled or not routes:
+            return 0
+        restore = {route.index(): route for route in configured}
+        count = len(routes)
+        for route_index, route in list(routes.items()):
+            original = restore.get(route_index)
+            if original is not None and not self._watchdog_withdrawn(route_index):
+                self.add_to_rib(original, True, owner='')
+            else:
+                self.del_from_rib(route)
+        assert owner not in self._owned
+        return count
 
     def delete_cached_family(self, families: set[FamilyTuple]) -> None:
         super().delete_cached_family(families)
@@ -226,7 +274,7 @@ class OutgoingRIB(Cache):
 
         for route in new:
             if indexed.pop(route.index(), None) is None:
-                self.add_to_rib(route, True)
+                self.add_to_rib(route, True, owner='')
                 continue
 
         for index in list(indexed):
@@ -243,7 +291,7 @@ class OutgoingRIB(Cache):
                 self._watchdog.setdefault(name, {}).setdefault('-', {})[route.index()] = route
                 return True
             self._watchdog.setdefault(name, {}).setdefault('+', {})[route.index()] = route
-        self.add_to_rib(route)
+        self.add_to_rib(route, owner='')
         return True
 
     def announce_watchdog(self, watchdog: str) -> None:
@@ -253,7 +301,7 @@ class OutgoingRIB(Cache):
             for route in list(self._watchdog[watchdog].get('-', {}).values()):
                 old_index = route.index()
                 # add_to_rib handles announces - no need to set action on route
-                self.add_to_rib(route)
+                self.add_to_rib(route, owner='')
                 self._watchdog[watchdog].setdefault('+', {})[route.index()] = route
                 self._watchdog[watchdog]['-'].pop(old_index)
 
@@ -278,6 +326,7 @@ class OutgoingRIB(Cache):
         nlri = route.nlri
         attrs = route.attributes
         route_index = route.index()
+        self._own(route_index, route, '')
         self._del_from_rib_impl(nlri, attrs, route_index)
 
     def del_nlri_from_rib(self, nlri: 'NLRI', attributes: 'AttributeCollection | None' = None) -> None:
@@ -291,6 +340,8 @@ class OutgoingRIB(Cache):
             return
 
         route_index = self._make_index(nlri)
+        if route_index in self._owner:
+            self._own(route_index, self._owned[self._owner[route_index]][route_index], '')
         self._del_from_rib_impl(nlri, attributes, route_index)
 
     def _del_from_rib_impl(self, nlri: 'NLRI', attrs: 'AttributeCollection | None', route_index: bytes) -> None:
@@ -330,17 +381,22 @@ class OutgoingRIB(Cache):
             return
         self._refresh_routes.append(route)
 
-    def add_to_rib(self, route: 'Route', force: bool = False) -> None:
+    def add_to_rib(self, route: 'Route', force: bool = False, owner: str | None = None) -> None:
         """Add a route to the RIB.
 
         Args:
             route: The Route to add (must have resolved nexthop)
             force: If True, add even if already in cache
+            owner: the API helper announcing it, '' for the configuration,
+                None to leave whoever owns it (a replay of what is already there)
         """
         if not self.enabled:
             return
 
         log.debug(lazymsg('rib.insert route={route}', route=route), 'rib')
+
+        if owner is not None:
+            self._own(route.index(), route, owner)
 
         if not force and self.in_cache(route):
             return

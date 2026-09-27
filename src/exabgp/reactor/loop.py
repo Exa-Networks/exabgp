@@ -122,6 +122,27 @@ class Reactor:
         # the same way out as a SIGTERM, which closes every session and leaves the loop
         self.signal.received = Signal.SHUTDOWN
 
+    def _withdraw_helper_routes(self, service: str) -> None:
+        """Withdraw every route a helper which exited had announced (issue #304).
+
+        It is scheduled like a command, so it runs after the commands the helper sent
+        before it died, and before any from its respawned successor.
+        """
+
+        async def callback() -> None:
+            for name, neighbor in self.configuration.neighbors.items():
+                routes = [neighbor.resolve_self(route) for route in neighbor.routes]
+                count = neighbor.rib.outgoing.withdraw_owner(service, routes)
+                if count:
+                    log.warning(
+                        lazymsg(
+                            'process.exited.withdraw process={p} neighbor={n} routes={c}', p=service, n=name, c=count
+                        ),
+                        'processes',
+                    )
+
+        self.asynchronous.schedule(service, 'withdraw routes of exited helper', callback())
+
     def _prevent_spin(self) -> bool:
         second: int = int(time.time())
         if second not in self._busyspin:
@@ -287,6 +308,9 @@ class Reactor:
                 # Process API commands (matches sync mode line 600-602)
                 # Read at least one message per process if there is some and parse it
                 for service, command in self.processes.received_async():
+                    if command == Processes.EXITED:
+                        self._withdraw_helper_routes(service)
+                        continue
                     self.api.process(self, service, command)
 
                 # Run async scheduled tasks (matches sync mode line 604)

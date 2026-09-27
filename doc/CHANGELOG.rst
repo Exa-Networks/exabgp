@@ -4,6 +4,12 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Incompatible: the routes an API process announced are withdrawn when it exits, issue
+   #304. They used to stay announced with nothing left to withdraw them, so a crashed
+   DDoS detector kept its blackholes up. A route which replaced one from the configuration
+   gives the configured route back. A respawned process starts with nothing announced and
+   has to announce its routes again. "on-exit keep;" in the process block keeps the old
+   behaviour. Routes sent from the CLI are never withdrawn this way.
  * Fix: "api.terminate" stops exabgp when a helper process dies, issue #304. It had stopped
    working with the move to asyncio, and a helper which exited, rather than failing a write,
    was never noticed at all, so its routes stayed announced with nobody left to withdraw

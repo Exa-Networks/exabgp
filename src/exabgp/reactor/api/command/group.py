@@ -290,7 +290,7 @@ async def _process_group(
                     errors.append(f'invalid route: {error}')
                     continue
 
-                reactor.configuration.announce_route(cmd_peers, route)
+                reactor.configuration.announce_route(cmd_peers, route, service)
                 all_peers.update(cmd_peers)
                 routes_added += 1
                 await asyncio.sleep(0)

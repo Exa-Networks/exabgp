@@ -213,7 +213,7 @@ def routes_add(
                     continue
 
                 # Use indexed injection to get index
-                index, success = reactor.configuration.announce_route_indexed(peers, route)
+                index, success = reactor.configuration.announce_route_indexed(peers, route, service)
 
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 if success:

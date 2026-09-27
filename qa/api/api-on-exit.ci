@@ -1,0 +1,9 @@
+option:file:api-on-exit.conf
+1:cmd:announce eor ipv4 unicast
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
+1:cmd:announce route 1.1.1.1/32 next-hop 11.11.11.11 origin igp local-preference 100
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0031:02:00000015400101004002004003040B0B0B0B400504000000642001010101
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"11.11.11.11":[{"nlri":"1.1.1.1/32"}]}}}}}}
+1:cmd:withdraw route 1.1.1.1/32
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001C:02:000520010101010000
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"withdraw":{"ipv4 unicast":[{"nlri":"1.1.1.1/32"}]}}}}}
