@@ -2114,11 +2114,15 @@ than not-applicable because a future route-server mode would owe it.
 2026-09-24: they never took the four octets off, so every NLRI after the first in the
 same UPDATE was read from the wrong offset. The negative side, that the field is absent
 when ADD-PATH was not negotiated, is what makes the positive side mean anything.
+FlowSpec decoded the field but never encoded it, and was left out of the capability so it
+could not be negotiated, until issue #1140.
   - `tests/unit/test_addpath_path_identifier_is_consumed.py::test_the_path_identifier_is_consumed`
   - `tests/unit/test_addpath_path_identifier_is_consumed.py::test_the_nlri_parses_the_same_with_and_without_a_path_identifier`
   - `tests/unit/test_addpath_path_identifier_is_consumed.py::test_the_identifier_is_kept_as_path_information`
+  - `tests/unit/test_flow_addpath.py::test_the_path_identifier_is_prepended_once_negotiated`
   - `tests/unit/test_addpath_path_identifier_is_consumed.py::test_without_addpath_nothing_is_consumed`
   - `tests/unit/test_addpath_path_identifier_is_consumed.py::test_a_truncated_path_identifier_is_refused`
+  - `tests/unit/test_flow_addpath.py::test_it_is_not_sent_when_add_path_was_not_negotiated`
 - **4** (MUST) `rfc7911#4-single-capability-instance` - untested (missing: negative)
   > A BGP speaker that wishes to indicate support for multiple AFI/SAFIs MUST do so by including the information in a single instance of the ADD-PATH Capability.
   - `tests/unit/rfc/test_rfc7911_negotiation.py::test_every_family_travels_in_one_capability`

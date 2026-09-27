@@ -46,6 +46,12 @@ Version 6.0.0:
  * Change: the names of NOTIFICATION codes and subcodes in the log and the API follow the
    IANA registry, e.g. "Finite State Machine Error" rather than "State machine error", and
    the codes and subcodes added since RFC 4486 are named.
+ * Feature: ADD-PATH (RFC 7911) for FlowSpec, issue #1140. "add-path { ipv4 flow; }" and the
+   other flow families were accepted and then left out of the capability, so it was never
+   negotiated. A flow route now takes "path-information <id>", in a route block, in the one
+   line form and on the API, and sends it in front of the NLRI once ADD-PATH is negotiated.
+   Two routes with the same match and different identifiers are two paths, where one used
+   to replace the other.
  * Feature: a neighbour can be disabled and enabled, issue #1013. "neighbor <ip> disable
    [<text>]" closes the session with Cease / Administrative Shutdown, the text being the
    RFC 9003 Shutdown Communication, and ExaBGP does not open another until "neighbor <ip>

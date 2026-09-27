@@ -70,6 +70,7 @@ class ParseFlow(Section):
         **ParseFlowScope.schema.children,
         'rd': ParseFlowRoute.schema.children['rd'],
         'route-distinguisher': ParseFlowRoute.schema.children['route-distinguisher'],
+        'path-information': ParseFlowRoute.schema.children['path-information'],
     }
 
     @classmethod
@@ -124,7 +125,7 @@ def route(tokeniser: Any) -> list[Route]:
         if target == ActionTarget.NLRI:
             handler = cast(Callable[[Any], Any], ParseFlow.known[command])
             if operation == ActionOperation.SET:
-                # Direct field assignment (e.g., rd/route-distinguisher)
+                # Direct field assignment (rd/route-distinguisher, path-information)
                 setattr(flow_nlri, field_name or command, handler(tokeniser))
             else:
                 # Flow rules that need iteration and add()
@@ -154,6 +155,7 @@ def route(tokeniser: Any) -> list[Route]:
         new_nlri._rd_override = flow_nlri._rd_override
         new_nlri._rules_cache = flow_nlri._rules_cache
         new_nlri._packed_stale = True
+        new_nlri.addpath = flow_nlri.addpath
         flow_nlri = new_nlri
 
     # Create Route at the end with explicit nexthop

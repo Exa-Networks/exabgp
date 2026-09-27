@@ -175,6 +175,7 @@ class FlowSettings:
         nexthop: Next-hop IP address
         rules: FlowSpec rules dict (keyed by rule type ID)
         rd: Route Distinguisher (for flow_vpn)
+        path_info: ADD-PATH path identifier (RFC 7911)
     """
 
     afi: AFI | None = None
@@ -183,6 +184,7 @@ class FlowSettings:
     nexthop: IP = field(default_factory=lambda: IP.NoNextHop)
     rules: dict[int, list[Any]] = field(default_factory=dict)  # dict[int, list[FlowRule]]
     rd: 'RouteDistinguisher | None' = None
+    path_info: PathInfo = field(default_factory=lambda: PathInfo.DISABLED)
 
     def set(self, name: str, value: Any) -> None:
         """Set a field with validation.

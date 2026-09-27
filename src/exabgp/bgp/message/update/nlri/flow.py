@@ -57,7 +57,7 @@ from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.nlri import NLRI
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.qualifier import PathInfo, RouteDistinguisher
 from exabgp.protocol import Protocol
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
@@ -1039,6 +1039,7 @@ class Flow(NLRI):
             instance._rd_override = settings.rd
             instance._packed_stale = True
 
+        instance.addpath = settings.path_info
         return instance
 
     @property
@@ -1295,19 +1296,30 @@ class Flow(NLRI):
 
         return self._encode_length(components)
 
+    def _path_identifier(self, negotiated: Negotiated) -> bytes:
+        """RFC 7911 3: with ADD-PATH send negotiated, the four octets before every NLRI.
+
+        A route configured without `path-information` is sent with 0, as INET does.
+        """
+        if not negotiated.addpath.send(self.afi, self.safi):
+            return b''
+        path = PathInfo.NOPATH if self.addpath is PathInfo.DISABLED else self.addpath
+        return bytes(path.pack_path())
+
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
-        # RFC 7911 ADD-PATH is possible for FlowSpec but not yet implemented
-        # TODO: implement addpath support when negotiated.addpath.send(self.afi, self.safi)
         if not self._packed_stale and self._packed:
-            return self._encode_length(self._packed)
-        return self._pack_from_rules()
+            return self._path_identifier(negotiated) + bytes(self._encode_length(self._packed))
+        return self._path_identifier(negotiated) + bytes(self._pack_from_rules())
 
     def index(self) -> bytes:
         if not self._packed_stale and self._packed:
             packed = self._encode_length(self._packed)
         else:
             packed = self._pack_from_rules()
-        return bytes(Family.index(self)) + packed
+        # the path identifier is part of the route: two flows with one match and two
+        # identifiers are two paths, and one must not replace the other in the RIB
+        path = b'disabled' if self.addpath is PathInfo.DISABLED else bytes(self.addpath.pack_path())
+        return bytes(Family.index(self)) + path + bytes(packed)
 
     def _rules(self) -> str:
         string: list[str] = []
@@ -1330,7 +1342,7 @@ class Flow(NLRI):
 
     def extensive(self) -> str:
         rd = '' if self.rd is RouteDistinguisher.NORD else str(self.rd)
-        return 'flow' + self._rules() + rd
+        return 'flow' + self._rules() + rd + repr(self.addpath)
 
     def __str__(self) -> str:
         return self.extensive()
@@ -1384,6 +1396,8 @@ class Flow(NLRI):
             members.append('"{}": [ {} ]'.format(rules[0].NAME, ', '.join(json.dumps(e) for e in elements)))
         if self.rd is not RouteDistinguisher.NORD:
             members.append(self.rd.json())
+        if self.addpath is not PathInfo.DISABLED:
+            members.append(self.addpath.json())
         return members
 
     def json(self, announced: bool = True, compact: bool = False) -> str:

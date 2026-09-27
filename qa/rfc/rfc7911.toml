@@ -24,6 +24,8 @@ The decode side of this was broken for EVPN, BGP-LS, MVPN, MUP and SR-Policy unt
 2026-09-24: they never took the four octets off, so every NLRI after the first in the
 same UPDATE was read from the wrong offset. The negative side, that the field is absent
 when ADD-PATH was not negotiated, is what makes the positive side mean anything.
+FlowSpec decoded the field but never encoded it, and was left out of the capability so it
+could not be negotiated, until issue #1140.
 """
 
 [[requirement]]

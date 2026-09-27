@@ -157,6 +157,7 @@ neighbor <ip-address> {
     flow {
         route <route-name> {
             rd <route-distinguisher>;
+            path-information <path-id>; // RFC 7911, with add-path negotiated for the family
             next-hop <ip-address>; // for the -simpson redirect forms
             match {
                 // one or more match terms

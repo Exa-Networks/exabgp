@@ -82,6 +82,11 @@ class Capabilities(dict[int, Capability]):
         (AFI.ipv6, SAFI.nlri_mpls),
         (AFI.ipv4, SAFI.mpls_vpn),
         (AFI.ipv6, SAFI.mpls_vpn),
+        # FlowSpec packs its path identifier since issue #1140
+        (AFI.ipv4, SAFI.flow_ip),
+        (AFI.ipv6, SAFI.flow_ip),
+        (AFI.ipv4, SAFI.flow_vpn),
+        (AFI.ipv6, SAFI.flow_vpn),
         # MUP is not here, though it was: MUP.pack_nlri writes no path identifier, so
         # offering ADD-PATH for it told a peer to expect four octets ahead of every MUP
         # NLRI which were never sent, and the peer mis-framed the rest of the field.

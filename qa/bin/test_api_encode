@@ -362,6 +362,9 @@ neighbor {neighbor_ip} {{
                     has_rd = True
                     config_parts.append(f"rd {parts[i + 1]}")
                     i += 2
+                elif token == "path-information":
+                    config_parts.append(f"path-information {parts[i + 1]}")
+                    i += 2
                 elif token in ("next-hop", "extended-community", "community"):
                     # Skip these for withdraw - attributes come from group
                     if token == "next-hop":
@@ -405,7 +408,11 @@ neighbor {neighbor_ip} {{
             capability_parts = []
             if asn4_disabled:
                 capability_parts.append("asn4 disable;")
+            needs_addpath = "path-information" in flow_config
+            if needs_addpath:
+                capability_parts.append("add-path send/receive;")
             capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+            addpath_section = f"add-path {{ {family}; }}" if needs_addpath else ""
 
             conf = f"""
 neighbor {neighbor_ip} {{
@@ -415,6 +422,7 @@ neighbor {neighbor_ip} {{
     peer-as {peer_as};
     {capability_section}
     family {{ {family}; }}
+    {addpath_section}
     announce {{ {afi} {{ {safi} {flow_config}; }} }}
 }}
 """
@@ -1020,6 +1028,10 @@ neighbor {neighbor_ip} {{
                     has_rd = True
                     config_parts.append(f"rd {parts[i + 1]}")
                     i += 2
+                elif token == "path-information":
+                    # RFC 7911 path identifier: only packed once add-path is negotiated
+                    config_parts.append(f"path-information {parts[i + 1]}")
+                    i += 2
                 elif token == "next-hop":
                     next_hop = parts[i + 1]
                     # Skip placeholder 0.0.0.0 next-hop (used in withdraws)
@@ -1189,7 +1201,11 @@ neighbor {neighbor_ip} {{
             capability_parts = []
             if asn4_disabled:
                 capability_parts.append("asn4 disable;")
+            needs_addpath = "path-information" in flow_config
+            if needs_addpath:
+                capability_parts.append("add-path send/receive;")
             capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
+            addpath_section = f"add-path {{ {family}; }}" if needs_addpath else ""
 
             # Configuration template for FlowSpec
             conf = f"""
@@ -1200,6 +1216,7 @@ neighbor {neighbor_ip} {{
     peer-as {peer_as};
     {capability_section}
     family {{ {family}; }}
+    {addpath_section}
     announce {{ {afi} {{ {safi} {flow_config}; }} }}
 }}
 """

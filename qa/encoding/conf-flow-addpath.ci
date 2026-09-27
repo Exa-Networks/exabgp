@@ -1,0 +1,16 @@
+option:file:conf-flow-addpath.conf
+# issue #1140: RFC 7911 ADD-PATH for FlowSpec.  The first two routes share one match and are
+# two paths, told apart by the four octet path identifier in front of each NLRI.
+1:cmd:announce ipv4 flow destination-ipv4 10.0.0.0/24 path-information 0.0.0.1 extended-community [rate-limit:0]
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0042:02:0000002B800E0F0001850000000000010501180A00004001010040020040050400000064C010088006000000000000
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060886715039744,"string":"rate-limit:0"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"destination-ipv4":["10.0.0.0/24"],"path-information":"0.0.0.1","string":"flow destination-ipv4 10.0.0.0/24 path-information 0.0.0.1"}]}}}}}}
+1:cmd:announce ipv4 flow destination-ipv4 10.0.0.0/24 path-information 0.0.0.2 extended-community [rate-limit:9600]
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0042:02:0000002B800E0F0001850000000000020501180A00004001010040020040050400000064C010088006000046160000
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060887890886656,"string":"rate-limit:9600"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"destination-ipv4":["10.0.0.0/24"],"path-information":"0.0.0.2","string":"flow destination-ipv4 10.0.0.0/24 path-information 0.0.0.2"}]}}}}}}
+1:cmd:announce ipv4 flow destination-ipv4 10.0.1.0/24 rd 65000:1 path-information 0.0.0.3 extended-community [rate-limit:0]
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004A:02:00000033800E170001860000000000030D0000FDE80000000101180A00014001010040020040050400000064C010088006000000000000
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060886715039744,"string":"rate-limit:0"}]},"announce":{"ipv4 flow-vpn":{"no-nexthop":[{"destination-ipv4":["10.0.1.0/24"],"rd":"65000:1","path-information":"0.0.0.3","string":"flow destination-ipv4 10.0.1.0/24 rd 65000:1 path-information 0.0.0.3"}]}}}}}}
+1:cmd:announce eor ipv4 flow
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000185
+1:cmd:announce eor ipv4 flow-vpn
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001E:02:00000007900F0003000186

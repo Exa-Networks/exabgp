@@ -23,6 +23,7 @@ from exabgp.configuration.flow.then import ParseFlowThen
 from exabgp.configuration.flow.scope import ParseFlowScope
 
 from exabgp.configuration.static.mpls import route_distinguisher
+from exabgp.configuration.static.parser import path_information
 
 __all__ = ['ParseFlowRoute', 'ParseFlowMatch', 'ParseFlowThen', 'ParseFlowScope']
 
@@ -52,6 +53,14 @@ class ParseFlowRoute(Section):
                 operation=ActionOperation.SET,
                 key=ActionKey.FIELD,
             ),
+            'path-information': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Path identifier for ADD-PATH (RFC 7911)',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.SET,
+                key=ActionKey.FIELD,
+                field_name='addpath',
+            ),
             'next-hop': Leaf(
                 type=ValueType.NEXT_HOP,
                 description='Next-hop, used by the -simpson redirect forms',
@@ -67,6 +76,7 @@ class ParseFlowRoute(Section):
     syntax: str = (
         'route give-me-a-name {{\n'
         '  (optional) rd 255.255.255.255:65535|65535:65536|65536:65535;\n'
+        '  (optional) path-information 0.0.0.1|1; (with add-path negotiated)\n'
         '  next-hop 1.2.3.4; (to use with the -simpson redirect forms)\n'
         '  {}\n'
         '  {}\n'
@@ -81,6 +91,7 @@ class ParseFlowRoute(Section):
     known: dict[str | tuple[Any, ...], Callable[[Any], Any]] = {
         'rd': route_distinguisher,
         'route-distinguisher': route_distinguisher,
+        'path-information': path_information,
         'next-hop': next_hop,
     }
 
@@ -89,6 +100,7 @@ class ParseFlowRoute(Section):
     assign: dict[str, str] = {
         'rd': 'rd',
         'route-distinguisher': 'rd',
+        'path-information': 'addpath',
     }
 
     name: str = 'flow/route'
@@ -127,6 +139,7 @@ class ParseFlowRoute(Section):
             new_nlri._rd_override = old_nlri._rd_override
             new_nlri._rules_cache = old_nlri._rules_cache
             new_nlri._packed_stale = True
+            new_nlri.addpath = old_nlri.addpath
             route.nlri = new_nlri
         return True
 

@@ -722,6 +722,11 @@ Announce FlowSpec rule.
 announce flow route <match_conditions> then <actions>
 ```
 
+**Route options:**
+- `rd <value>` - Route distinguisher, makes it a flow-vpn route
+- `path-information <id>` - RFC 7911 path identifier (`0.0.0.1` or `1`), sent when add-path is
+  negotiated for the family; one match with two identifiers is two paths
+
 **Match conditions:**
 - `destination <prefix>` - Destination prefix
 - `source <prefix>` - Source prefix
@@ -739,6 +744,7 @@ announce flow route <match_conditions> then <actions>
 ```bash
 exabgp> announce flow route destination 10.0.0.0/24 protocol tcp port =80 then discard
 exabgp> announce flow route source 192.168.0.0/16 then rate-limit 1000000
+exabgp> announce flow route { path-information 2; match { destination 10.0.0.0/24; } then { discard; } }
 ```
 
 ---

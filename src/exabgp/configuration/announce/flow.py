@@ -67,6 +67,7 @@ from exabgp.configuration.static.parser import community
 from exabgp.configuration.static.parser import large_community
 from exabgp.configuration.static.parser import extended_community
 from exabgp.configuration.static.mpls import route_distinguisher
+from exabgp.configuration.static.parser import path_information
 
 from exabgp.configuration.flow.parser import interface_set
 
@@ -80,7 +81,7 @@ class AnnounceFlow(ParseAnnounce):
         settings_class=FlowSettings,
         prefix_parser=None,  # FlowSpec has no prefix
         factory_with_afi=True,  # Factory needs (afi, safi, action)
-        assign={'rd': 'rd'},  # Map rd command to rd field in settings
+        assign={'rd': 'rd', 'path-information': 'path_info'},  # command to FlowSettings field
         children={
             # Route Distinguisher (for flow-vpn)
             'rd': Leaf(
@@ -90,6 +91,14 @@ class AnnounceFlow(ParseAnnounce):
                 operation=ActionOperation.SET,
                 key=ActionKey.FIELD,
                 validator=LegacyParserValidator(parser_func=route_distinguisher, name='rd'),
+            ),
+            'path-information': Leaf(
+                type=ValueType.IP_ADDRESS,
+                description='Path identifier for ADD-PATH (RFC 7911)',
+                target=ActionTarget.NLRI,
+                operation=ActionOperation.SET,
+                key=ActionKey.FIELD,
+                validator=LegacyParserValidator(parser_func=path_information, name='path-information'),
             ),
             # Match components (NLRI APPEND FIELD)
             'source': LeafList(

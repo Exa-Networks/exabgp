@@ -17,6 +17,7 @@ import pytest
 from exabgp.bgp.message.open.capability.capabilities import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.flow import Flow, Flow4Destination, Flow6Destination
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.label import Label
@@ -50,6 +51,13 @@ def build_nlri(family: FamilyTuple) -> NLRI:
         )
     if safi == SAFI.mup:
         return MUP(afi)
+    if safi in (SAFI.flow_ip, SAFI.flow_vpn):
+        flow = Flow.make_flow(afi, safi)
+        if afi == AFI.ipv4:
+            flow.add(Flow4Destination.make_prefix4(IP.pton(address), mask))
+        else:
+            flow.add(Flow6Destination.make_prefix6(IP.pton(address), mask, 0))
+        return flow
     raise AssertionError(f'no NLRI builder for {afi}/{safi}; add one rather than skipping the family')
 
 
