@@ -98,11 +98,29 @@ class Reactor:
         self._dynamic_peers: set[str] = set()  # Dynamic peers created via API
 
         self._saved_pid: bool = False
+        # set once api.terminate has stopped the daemon because a helper was lost
+        self._helper_lost: bool = False
 
     def _termination(self, reason: str, exit_code: int) -> None:
         self.exit_code = exit_code
         self.signal.received = Signal.SHUTDOWN
         log.critical(lazymsg('reactor.termination reason={r}', r=reason), 'reactor')
+
+    def _terminate_on_lost_helper(self) -> None:
+        """With api.terminate set, shut down once any helper is gone for good.
+
+        The sessions are closed, so the peers drop every route the helper announced
+        rather than keep them with nobody left to withdraw them (issue #304).
+        """
+        if self._helper_lost or not self.processes.terminate_on_error:
+            return
+        lost = self.processes.lost()
+        if not lost:
+            return
+        self._helper_lost = True
+        log.critical(lazymsg('process.lost processes={p} action=terminate', p=','.join(lost)), 'reactor')
+        # the same way out as a SIGTERM, which closes every session and leaves the loop
+        self.signal.received = Signal.SHUTDOWN
 
     def _prevent_spin(self) -> bool:
         second: int = int(time.time())
@@ -230,7 +248,7 @@ class Reactor:
 
                     # Handle SHUTDOWN
                     if signaled == Signal.SHUTDOWN:
-                        self.exit_code = self.Exit.normal
+                        self.exit_code = self.Exit.process if self._helper_lost else self.Exit.normal
                         self.shutdown()
                         break
 
@@ -278,6 +296,8 @@ class Reactor:
 
                 # Flush API process write queue (send ACKs and responses)
                 await self.processes.flush_write_queue()
+
+                self._terminate_on_lost_helper()
 
                 # Yield control to peer tasks (minimal sleep)
                 # asyncio event loop handles I/O waiting automatically

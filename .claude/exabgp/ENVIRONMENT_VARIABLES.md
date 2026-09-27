@@ -230,7 +230,9 @@ Automatically respawn API processes if they die.
 **Default:** `false`
 **Type:** boolean
 
-Terminate ExaBGP if any API process dies.
+Terminate ExaBGP if any API process dies, with exit code 1. Every session is closed, so
+the peers drop the routes the helper announced. Takes precedence over `api.respawn`: a
+helper which dies is not respawned when this is set.
 
 ### api.cli
 **Default:** `true`

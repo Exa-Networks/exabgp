@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import asyncio
 import collections
-import contextlib
 import errno
 import fcntl
 import os
@@ -166,12 +165,20 @@ class Processes:
         self._ack: dict[str, bool] = {}
         self._sync: dict[str, bool] = {}  # Per-service sync mode (default: False)
         self._broken: list[str] = []
+        # helpers which exited and will not be started again
+        self._ended: list[str] = []
         self._respawning: dict[str, dict[int, int]] = {}
+
+    def lost(self) -> list[str]:
+        """The helpers which are gone for good: never started, or ended and not respawned."""
+        return sorted(set(self._broken) | set(self._ended))
 
     def _handle_problem(self, process: str) -> None:
         if process not in self._process:
             return
-        if self.respawn_number and self._restart[process]:
+        # api.terminate asks for the daemon to stop when a helper dies, so a helper which
+        # would have been respawned is not: the reactor sees it in lost() and shuts down
+        if self.respawn_number and self._restart[process] and not self.terminate_on_error:
             log.debug(lazymsg('process.ended.restarting process={p}', p=process), 'processes')
             self._terminate(process)
             # This is the only path which may count against the respawn limit. It is also
@@ -179,12 +186,16 @@ class Processes:
             # critical, so there is nothing left to say and nothing left to start. It is
             # caught because this runs as an asyncio callback, where an escaping exception
             # takes down more than the one process it is about.
-            with contextlib.suppress(ProcessError):
+            try:
                 self._record_respawn(process)
-                self._start(process)
+            except ProcessError:
+                self._ended.append(process)
+                return
+            self._start(process)
         else:
             log.debug(lazymsg('process.ended process={p}', p=process), 'processes')
             self._terminate(process)
+            self._ended.append(process)
 
     def _remove_reader(self, fd: int, process_name: str, reason: str) -> None:
         """Take an API process' stdout back off the event loop.
@@ -461,6 +472,9 @@ class Processes:
                 self._ack[process] = configuration.get('ack', self._default_ack)
 
                 self._spawn(process, run, self._child_environment(process, configuration))
+                # a reload may start again a helper which had ended
+                if process in self._ended:
+                    self._ended.remove(process)
 
                 log.debug(lazymsg('process.forked process={p}', p=process), 'processes')
 

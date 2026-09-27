@@ -4,6 +4,11 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: "api.terminate" stops exabgp when a helper process dies, issue #304. It had stopped
+   working with the move to asyncio, and a helper which exited, rather than failing a write,
+   was never noticed at all, so its routes stayed announced with nobody left to withdraw
+   them. exabgp now shuts down, closing every session, and exits with 1. A helper which
+   dies is no longer respawned when "api.terminate" is set.
  * Incompatible: "teardown" takes a code as well as a subcode. The documentation said the
    number was the error code, while the code always sent Cease with the number as the
    subcode, so "teardown 6" sent Cease / Other Configuration Change. One number keeps that

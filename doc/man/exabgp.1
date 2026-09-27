@@ -214,9 +214,11 @@ pipe for the CLI interface.
 Default: exabgp.
 .It exabgp.api.respawn
 Controls whether to respawn a helper process if it dies.
-Default: false.
+Default: true.
 .It exabgp.api.terminate
-Controls whether to exit if any helper process dies.
+Controls whether to exit if any helper process dies, closing every session so
+the peers drop the routes the helper announced. A helper which dies is then not
+respawned, whatever exabgp.api.respawn says.
 Default: false.
 .It exabgp.bgp.openwait
 Controls how many seconds we should wait for a BGP open message once
