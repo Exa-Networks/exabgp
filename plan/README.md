@@ -47,7 +47,6 @@
 | `plan-api-v6-nexthop-removal.md` | Remove nexthop from NLRI JSON |
 | `plan-documentation-review.md` | Documentation review |
 | `plan-llgr.md` | Long-Lived Graceful Restart (RFC 9494, issue #292) |
-| `plan-unsent-notifications.md` | Handover: what (2,7) and (6,1) owe when a feature needs them |
 
 ### Completed (done-) and Directories
 
@@ -127,6 +126,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-unsent-notifications.md` | 2026-09-27 | (2,7) via `capability require`, (6,1) via `family prefix-limit`, RFC 4486 enrolled |
 | `done-notification-text.md` | 2026-09-27 | NOTIFICATION names per IANA, RFC-defined Data field, wrong subcodes, API teardown |
 | `done-paths-limit.md` | 2026-09-09 | PATHS-LIMIT capability (#1218): enforcement across batches, bounded audit, wire test |
 | `done-attribute-cache-per-session.md` | 2026-08-22 | Attribute cache was process-wide and ignored negotiated state; scoped to the session |

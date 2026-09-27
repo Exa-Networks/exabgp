@@ -62,6 +62,7 @@ class Neighbor:
     _families: list[FamilyTuple]
     _nexthop: list[tuple[AFI, SAFI, AFI]]
     _addpath: list[FamilyTuple]
+    prefix_limit: dict[FamilyTuple, int]
     rib: RIB
     routes: list['Route']
     previous: 'Neighbor' | None
@@ -102,6 +103,9 @@ class Neighbor:
         self._families = []
         self._nexthop = []
         self._addpath = []
+        # RFC 4486 4: per family, the most routes the peer may hold with us before (6, 1).
+        # Not in __eq__: the peer never learns it, so a reload applies it without a reset
+        self.prefix_limit = {}
         # Create disabled RIB with placeholder name - will be enabled by make_rib()
         self.rib = RIB(
             name=f'disabled-{self._GLOBAL["uid"]}',
@@ -489,7 +493,9 @@ Neighbor {peer-address}
 
         families = ''
         for afi, safi in neighbor.families():
-            families += f'\n\t\t{afi.name()} {safi.name()};'
+            limit = neighbor.prefix_limit.get((afi, safi), 0)
+            prefix_limit = f' prefix-limit {limit}' if limit else ''
+            families += f'\n\t\t{afi.name()} {safi.name()}{prefix_limit};'
 
         nexthops = ''
         for afi, safi, nexthop in neighbor.nexthops():

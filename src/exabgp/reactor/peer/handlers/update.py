@@ -5,9 +5,11 @@ This handler processes UPDATE messages and stores NLRIs in the incoming RIB.
 
 from __future__ import annotations
 
+from struct import pack
 from typing import TYPE_CHECKING, Generator, cast
 
 from exabgp.bgp.message import Message, Update
+from exabgp.bgp.message.notification import Notify
 from exabgp.environment import getenv
 from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.reactor.peer.handlers.base import MessageHandler
@@ -62,6 +64,30 @@ class UpdateHandler(MessageHandler):
                 'rib',
             )
 
+    def _limit_announce(self, ctx: PeerContext, nlri: NLRI) -> None:
+        """RFC 4486 4: past the family's prefix-limit, end the session with Cease (6, 1)."""
+        limits = ctx.neighbor.prefix_limit
+        if not limits:
+            return
+        family = nlri.family().afi_safi()
+        limit = limits.get(family)
+        if limit is None:
+            return
+        count = ctx.neighbor.rib.incoming.count_prefix(nlri)
+        # Not only one past: a reload applies a lower limit live, to a peer already over it
+        if count <= limit:
+            return
+        raise Notify(
+            *Notify.MAXIMUM_NUMBER_OF_PREFIXES_REACHED,
+            f'more than {limit} routes received for {family[0]} {family[1]}',
+            # the MAY of section 4: <AFI, SAFI> and the upper bound, as in its Figure 1
+            data=pack('!HBI', family[0], family[1], limit),
+        )
+
+    def _limit_withdraw(self, ctx: PeerContext, nlri: NLRI) -> None:
+        if ctx.neighbor.prefix_limit:
+            ctx.neighbor.rib.incoming.uncount_prefix(nlri)
+
     def _audit_withdraw(self, ctx: PeerContext, nlri: NLRI) -> None:
         if not ctx.negotiated.advertised_paths_limit:
             return
@@ -86,6 +112,7 @@ class UpdateHandler(MessageHandler):
         # parsed.announces contains RoutedNLRI objects; extract the bare NLRI for RIB
         for routed in parsed.announces:
             nlri = routed.nlri
+            self._limit_announce(ctx, nlri)
             route = Route(nlri, parsed.attributes, nexthop=routed.nexthop)
             ctx.neighbor.rib.incoming.update_cache(route)
             self._audit_announce(ctx, nlri)
@@ -99,6 +126,7 @@ class UpdateHandler(MessageHandler):
         for nlri in parsed.withdraws:
             ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
             self._audit_withdraw(ctx, nlri)
+            self._limit_withdraw(ctx, nlri)
             ctx.stats['receive-withdraws'] += 1
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
@@ -123,6 +151,7 @@ class UpdateHandler(MessageHandler):
         # parsed.announces contains RoutedNLRI objects; extract the bare NLRI for RIB
         for routed in parsed.announces:
             nlri = routed.nlri
+            self._limit_announce(ctx, nlri)
             route = Route(nlri, parsed.attributes, nexthop=routed.nexthop)
             ctx.neighbor.rib.incoming.update_cache(route)
             self._audit_announce(ctx, nlri)
@@ -136,6 +165,7 @@ class UpdateHandler(MessageHandler):
         for nlri in parsed.withdraws:
             ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
             self._audit_withdraw(ctx, nlri)
+            self._limit_withdraw(ctx, nlri)
             ctx.stats['receive-withdraws'] += 1
             log.debug(
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),

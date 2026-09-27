@@ -1,6 +1,6 @@
 # NOTIFICATIONs exabgp never sends: (2, 7) and (6, 1)
 
-**Status:** 📋 Planning (handover, nothing started)
+**Status:** ✅ Completed 2026-09-27
 **Created:** 2026-09-27
 **Follows:** `plan/done-notification-text.md` (commits `3434e5323`, `cbacb1b61`, `ecfa3bf52`)
 
@@ -95,3 +95,79 @@ Corrections:
   `rfc5492#5-data-field-lists-the-capabilities` and
   `rfc5492#3-terminated-peering-not-re-established` together.  The Data field test can
   carry both of the first two markers.
+
+## Implementation (2026-09-27)
+
+Thomas asked for both subcodes to be built.  Decisions, from him:
+
+- (2, 7) syntax: a third value on the capability leaf, `asn4 require;`, not a separate
+  `require [...]` list.  Accepted for asn4, route-refresh, extended-message, operational,
+  software-version, nexthop, link-local-nexthop.  Refused (config error) for add-path,
+  graceful-restart, multi-session (has (2, 9)), aigp, link-local-prefer.
+- (6, 1) syntax: `ipv4 unicast prefix-limit N;` on the family line, N in 1..2^32-1.
+- After (2, 7) the peer is stopped (no automatic restart, back on reload).  After (6, 1)
+  the normal reconnect backoff applies.
+- Worked in the main tree, alongside the uncommitted BoRR work of another session.
+
+What was built:
+
+| Piece | Where |
+|---|---|
+| `RequirableValidator` (enable, disable, require) | `configuration/validator.py` |
+| `ParseCapability.requirable` name to code map, schema leaves | `configuration/capability.py` |
+| `NeighborCapability.required: frozenset[int]` (in copy and `__eq__`) | `bgp/neighbor/capability.py` |
+| `_post_capa_required` turns require into enabled + required | `configuration/neighbor/__init__.py` |
+| `Capabilities.tlvs(code)` | `open/capability/capabilities.py` |
+| `Negotiated.unsupported_capability()` builds (2, 7), Data = our TLVs in OPEN order | `open/capability/negotiated.py` |
+| `validate_open` raises it after `validate()` | `reactor/protocol.py` |
+| peer `stop()` on (2, 7) | `reactor/peer/peer.py` |
+| `Notify.UNSUPPORTED_CAPABILITY`, `MAXIMUM_NUMBER_OF_PREFIXES_REACHED` | `bgp/message/notification.py` |
+| `prefix-limit` parsing (`FamilyLineValidator`), stored as a list of pairs in scope | `configuration/neighbor/family.py` |
+| `Neighbor.prefix_limit` (not in `__eq__`: a reload applies it live), dump | `bgp/neighbor/neighbor.py` |
+| `IncomingRIB.count_prefix` / `uncount_prefix`, independent of adj-rib-in | `rib/incoming.py` |
+| `_limit_announce` / `_limit_withdraw` raise (6, 1), Data = `!HBI` | `reactor/peer/handlers/update.py` |
+| Ledger: rfc5492 3 entries flipped + new MAY entry; rfc4486 enrolled (MUST + MAY) | `qa/rfc/` |
+| Tests | `tests/unit/rfc/test_rfc5492_unsupported_capability.py`, `tests/unit/rfc/test_rfc4486_prefix_limit.py` |
+
+Side effects worth knowing:
+
+- A family line with a trailing token (`ipv4 unicast foo;`) used to be accepted silently.
+  It is now refused, since the only thing allowed after a family is `prefix-limit N`.
+- `validate()` still returns a tuple; the (2, 7) check is a separate method so the
+  existing callers and tests of `validate()` did not change.  Three mocks in
+  `test_protocol_handler.py` now also mock `unsupported_capability`.
+- RFC 4486 is enrolled for section 4's subcode 1 sentences only.  The SHOULDs for the
+  other Cease subcodes are not recorded yet.
+- No functional (qa/encoding) test was added; the peer simulator is being edited by the
+  BoRR session.
+
+## Recent Failures
+
+### 2026-09-27 Review finding: assert in `_limit_announce`
+
+**Error:** `assert count == limit + 1` fails when a reload lowers a family's limit below
+what the peer already holds: the neighbor is replaced live, the count is already past it.
+**Cause:** the assertion assumed the limit never changes during a session.
+**Status:** ✅ Fixed, assertion removed; any count past the limit raises (6, 1).
+Test: `test_a_limit_lowered_by_a_reload_below_what_the_peer_holds_ends_the_session_cleanly`,
+which failed with AssertionError before the fix.
+
+## Resume point (2026-09-27)
+
+`./qa/bin/test_everything`: all 25 steps pass (run outside the sandbox, which cannot bind
+127.0.0.2).  Nothing committed.  The tree also holds the BoRR session's uncommitted work,
+so a commit of this plan must stage only its own hunks: `peer.py`, `update.py`,
+`incoming.py`, `plan/README.md` and `qa/rfc_compliance.json` carry both.  Suggested
+split: one commit for (2, 7), one for (6, 1).  Then `git mv` this file to `done-`.
+
+## Completed (2026-09-27)
+
+Committed as two commits on main: `132f476c9` for (2, 7), and the (6, 1) commit after it.
+Staged hunk by hunk, the BoRR session's changes to `peer.py`, `update.py`, `incoming.py`
+and `plan/README.md` were left in the working tree.  Commit 1 was checked on its own in a
+temporary worktree: unit tests, ruff and the RFC ledger pass.
+
+Left for later, none of it owed by this plan:
+- a functional (qa/encoding) test for either NOTIFICATION
+- the RFC 4486 SHOULDs for the other Cease subcodes
+- `doc/RFC_COMPLIANCE.md` regeneration, which the BoRR session also touches

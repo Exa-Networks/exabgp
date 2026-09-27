@@ -19,6 +19,7 @@ class TestUpdateHandler:
     def mock_context(self) -> PeerContext:
         ctx = Mock(spec=PeerContext)
         ctx.neighbor = Mock()
+        ctx.neighbor.prefix_limit = {}
         ctx.neighbor.rib = Mock()
         ctx.neighbor.rib.incoming = Mock()
         ctx.negotiated = Mock()
@@ -131,6 +132,7 @@ class TestUpdateHandlerAsync:
     def mock_context(self) -> PeerContext:
         ctx = Mock(spec=PeerContext)
         ctx.neighbor = Mock()
+        ctx.neighbor.prefix_limit = {}
         ctx.neighbor.rib = Mock()
         ctx.neighbor.rib.incoming = Mock()
         ctx.negotiated = Mock()
@@ -230,6 +232,7 @@ class TestUpdateHandlerPathsLimitAudit:
     def ctx_with_real_rib(self):
         ctx = Mock(spec=PeerContext)
         ctx.neighbor = Mock()
+        ctx.neighbor.prefix_limit = {}
         ctx.neighbor.session = Mock()
         ctx.neighbor.session.peer_address = '192.0.2.99'
         ctx.neighbor.rib = Mock()

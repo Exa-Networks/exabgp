@@ -7,8 +7,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from exabgp.protocol.family import FamilyTuple
 from exabgp.rib.cache import Cache
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 
 class IncomingRIB(Cache):
@@ -20,17 +25,23 @@ class IncomingRIB(Cache):
 
     _path_sets: dict[FamilyTuple, dict[bytes, set[bytes]]]
     _path_warned: set[tuple[FamilyTuple, bytes]]
+    # RFC 4486 4: per limited family, the routes the peer holds with us.  Kept apart from
+    # the cache, which adj-rib-in can turn off, and bounded by the limit: the route which
+    # takes a family past it ends the session
+    _prefixes: dict[FamilyTuple, set[bytes]]
 
     def __init__(self, cache: bool, families: set[FamilyTuple], enabled: bool = True) -> None:
         Cache.__init__(self, cache, families, enabled)
         self._path_sets = {}
         self._path_warned = set()
+        self._prefixes = {}
 
     # back to square one, all the routes are removed
     def clear(self) -> None:
         self.clear_cache()
         self._path_sets = {}
         self._path_warned = set()
+        self._prefixes = {}
 
     def reset(self) -> None:
         pass
@@ -91,3 +102,14 @@ class IncomingRIB(Cache):
             return False
         self._path_warned.add(key)
         return True
+
+    def count_prefix(self, nlri: NLRI) -> int:
+        """Record a route the peer announced, and return how many its family now holds."""
+        prefixes = self._prefixes.setdefault(nlri.family().afi_safi(), set())
+        prefixes.add(self._make_index(nlri))
+        return len(prefixes)
+
+    def uncount_prefix(self, nlri: NLRI) -> None:
+        prefixes = self._prefixes.get(nlri.family().afi_safi())
+        if prefixes:
+            prefixes.discard(self._make_index(nlri))

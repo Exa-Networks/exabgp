@@ -435,6 +435,11 @@ class ParseNeighbor(Section):
         neighbor.capability.required = frozenset(required)
         return {name: True if value == RequirableValidator.REQUIRE else value for name, value in configured.items()}
 
+    @staticmethod
+    def _post_prefix_limit(local: dict[str, Any], families: list[FamilyTuple]) -> dict[FamilyTuple, int]:
+        configured = local.get('family', {}).get('prefix-limit', [])
+        return {family: limit for family, limit in configured if family in families}
+
     def _post_capa_default(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
         capability = self._post_capa_required(neighbor, local.get('capability', {}))
         cap = neighbor.capability
@@ -669,6 +674,7 @@ class ParseNeighbor(Section):
 
         self._post_capa_default(neighbor, local)
         self._post_capa_addpath(neighbor, local, families)
+        neighbor.prefix_limit = self._post_prefix_limit(local, families)
         self._post_capa_nexthop(neighbor, local)
         self._post_capa_rr(neighbor)
 

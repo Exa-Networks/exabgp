@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from functools import partial
 from typing import Any
 
@@ -20,6 +21,62 @@ from exabgp.configuration.core import Error
 from exabgp.configuration.core import Tokeniser
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType, TupleLeaf
 from exabgp.configuration.validator import TupleValidator, StatefulValidator, Validator
+
+# RFC 4486 4: the Data field carries the upper bound in four octets
+PREFIX_LIMIT_MAX = 0xFFFFFFFF
+
+
+def family_name(family: FamilyTuple) -> str:
+    return f'{family[0].name()} {family[1].name()}'
+
+
+def prefix_limit(tokeniser: Tokeniser, family: FamilyTuple) -> int:
+    """The `prefix-limit N` which may follow a family, or 0 when it does not."""
+    keyword = tokeniser()
+    if not keyword:
+        return 0
+    if keyword != 'prefix-limit':
+        raise ValueError(
+            f'unexpected token after {family_name(family)}: {keyword}\n'
+            f'  Did you mean: {family_name(family)} prefix-limit <number>'
+        )
+    value = tokeniser()
+    if not value:
+        raise ValueError(f'prefix-limit requires a number\n  Example: {family_name(family)} prefix-limit 10000')
+    if not value.isdigit():
+        raise ValueError(f'prefix-limit must be a number, got: {value}')
+    limit = int(value)
+    if not 1 <= limit <= PREFIX_LIMIT_MAX:
+        raise ValueError(f'prefix-limit must be 1-{PREFIX_LIMIT_MAX}, got {limit}')
+    trailing = tokeniser()
+    if trailing:
+        raise ValueError(f'unexpected token after the prefix-limit of {family_name(family)}: {trailing}')
+    return limit
+
+
+@dataclass
+class FamilyLineValidator(Validator[tuple[Any, ...]]):
+    """A family, and the prefix-limit which may follow it, recorded on the side."""
+
+    name: str = 'family'
+    inner: Validator[tuple[Any, ...]] | None = None
+    limits: dict[FamilyTuple, int] = field(default_factory=dict)
+
+    def _parse(self, value: str) -> tuple[Any, ...]:
+        assert self.inner is not None, 'FamilyLineValidator wraps the family validator'
+        return self.inner._parse(value)
+
+    def validate(self, tokeniser: Tokeniser) -> tuple[Any, ...]:
+        assert self.inner is not None, 'FamilyLineValidator wraps the family validator'
+        family = self.inner.validate(tokeniser)
+        limit = prefix_limit(tokeniser, (family[0], family[1]))
+        if limit:
+            self.limits[(family[0], family[1])] = limit
+        return family
+
+    def to_schema(self) -> dict[str, Any]:
+        assert self.inner is not None, 'FamilyLineValidator wraps the family validator'
+        return self.inner.to_schema()
 
 
 class ParseFamily(Section):
@@ -171,6 +228,8 @@ class ParseFamily(Section):
         '   ipv6 flow-vpn;\n'
         '   l2vpn vpls;\n'
         '   l2vpn evpn;\n'
+        '   \n'
+        '   ipv4 unicast prefix-limit 10000;  # Cease (6,1) past 10000 routes\n'
         '}'
     )
 
@@ -184,16 +243,22 @@ class ParseFamily(Section):
         }
         self._all: bool = False
         self._seen: set[FamilyTuple] = set()
+        self._prefix_limit: dict[FamilyTuple, int] = {}
 
     def clear(self) -> None:
         self._all = False
         self._seen = set()
+        self._prefix_limit = {}
 
     def pre(self) -> bool:
         self.clear()
         return True
 
     def post(self) -> bool:
+        # A list of pairs rather than a dict: the scope is exported as JSON, which has no
+        # tuple keys
+        if self._prefix_limit:
+            self.scope.set_value('prefix-limit', list(self._prefix_limit.items()))
         return True
 
     def _get_stateful_validator(self, command: str) -> 'Validator[Any] | None':
@@ -222,7 +287,7 @@ class ParseFamily(Section):
         )
 
         # Wrap with StatefulValidator for deduplication using instance's _seen
-        return StatefulValidator(inner=inner, seen=self._seen)
+        return FamilyLineValidator(inner=StatefulValidator(inner=inner, seen=self._seen), limits=self._prefix_limit)
 
     def all(self, tokeniser: Tokeniser) -> None:
         """Handle 'all' command - enable all known address families."""
