@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from struct import error, unpack
+from struct import pack, unpack
 from typing import TYPE_CHECKING, Generator
 
 from exabgp.util.types import Buffer
@@ -50,9 +50,11 @@ class RouteRefresh(Message):
     start = 1
     end = 2
 
+    LENGTH = 4  # RFC 2918 3: AFI, Reserved (the RFC 7313 Message Subtype) and SAFI
+
     def __init__(self, packed: Buffer) -> None:
-        if len(packed) != 4:
-            raise ValueError(f'RouteRefresh requires exactly 4 bytes, got {len(packed)}')
+        if len(packed) != self.LENGTH:
+            raise ValueError(f'RouteRefresh requires exactly {self.LENGTH} bytes, got {len(packed)}')
         self._packed = packed
 
     @classmethod
@@ -88,12 +90,13 @@ class RouteRefresh(Message):
 
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> RouteRefresh:
-        try:
-            afi, reserved, safi = unpack('!HBB', data)
-        except error:
-            raise Notify(7, 1, 'invalid route-refresh message') from None
-        if reserved not in (0, 1, 2):
-            raise Notify(7, 2, 'invalid route-refresh message subtype')
+        # RFC 7313 5: the Data field "MUST contain the complete ROUTE-REFRESH message",
+        # and the header held nothing the body does not give back: marker, length, type.
+        # An unknown subtype is not an error here, the RFC says it is ignored, which is
+        # RouteRefreshHandler's decision since only it knows what was negotiated
+        if len(data) != cls.LENGTH:
+            message = cls.MARKER + pack('!H', cls.HEADER_LEN + len(data)) + cls.TYPE + bytes(data)
+            raise Notify(7, 1, f'ROUTE-REFRESH body of {len(data)} octets', data=message)
         return cls(data)
 
     def __eq__(self, other: object) -> bool:

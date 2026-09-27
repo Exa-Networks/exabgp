@@ -289,7 +289,7 @@ def test_route_refresh_unpack_invalid_data_length() -> None:
     with pytest.raises(Notify) as exc_info:
         RouteRefresh.unpack_message(data, create_negotiated())
 
-    assert 'invalid route-refresh message' in str(exc_info.value)
+    assert (exc_info.value.code, exc_info.value.subcode) == (7, 1)
 
 
 def test_route_refresh_unpack_empty_data() -> None:
@@ -300,29 +300,16 @@ def test_route_refresh_unpack_empty_data() -> None:
         RouteRefresh.unpack_message(data, create_negotiated())
 
 
-def test_route_refresh_unpack_invalid_reserved_field() -> None:
-    """Test that invalid reserved field raises Notify error.
+def test_route_refresh_unpack_unknown_subtype_decodes() -> None:
+    """RFC 7313 5: an unknown Message Subtype is ignored, not notified.
 
-    RFC 7313: Reserved field must be 0, 1, or 2.
+    The decoder hands it to RouteRefreshHandler, which knows whether the capability was
+    negotiated and so whether the octet is a subtype or RFC 2918's ignored Reserved field.
+    This used to raise Notify(7, 2), a subcode IANA never assigned.
     """
-    # AFI=1, Reserved=99 (invalid), SAFI=1
-    data = struct.pack('!HBB', 1, 99, 1)
-
-    with pytest.raises(Notify) as exc_info:
-        RouteRefresh.unpack_message(data, create_negotiated())
-
-    assert 'invalid route-refresh message subtype' in str(exc_info.value)
-
-
-def test_route_refresh_unpack_various_invalid_reserved() -> None:
-    """Test various invalid reserved values."""
-    invalid_reserved = [3, 4, 5, 10, 99, 255]
-
-    for reserved in invalid_reserved:
+    for reserved in [3, 4, 5, 10, 99, 255]:
         data = struct.pack('!HBB', 1, reserved, 1)
-
-        with pytest.raises(Notify):
-            RouteRefresh.unpack_message(data, create_negotiated())
+        assert RouteRefresh.unpack_message(data, create_negotiated()).reserved == reserved
 
 
 # ==============================================================================

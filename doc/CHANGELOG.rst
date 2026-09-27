@@ -11,6 +11,9 @@ Version 6.0.0:
    carried an English sentence, which is now in our log and the API only. When no RFC
    defines the field, the peer still gets the sentence. With no sentence the field is
    empty, where it used to repeat the name of the subcode the peer had just read.
+ * Fix: a ROUTE-REFRESH with a Message Subtype other than 0, 1 or 2 is ignored and logged,
+   as RFC 7313 section 5 requires. It was answered with subcode 2 of error code 7, which
+   came from an expired draft, was never assigned by IANA, and closed the session.
  * Fix: a Shutdown Communication of up to 255 octets is read. RFC 9003 raised the limit
    from the 128 octets of RFC 8203 and anything longer was reported as invalid. The one we
    send is UTF-8, cut to 128 octets on a character boundary; one accented letter made it

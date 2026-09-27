@@ -1,0 +1,85 @@
+# RFC 7313 - Enhanced Route Refresh Capability for BGP-4
+# https://www.rfc-editor.org/rfc/rfc7313
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc7313.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Scope of this file: section 5, the error handling.  Sections 3 and 4 (the capability,
+# and what a speaker does on sending and receiving BoRR and EoRR) are not recorded here.
+# Their absence is not a claim about them: at the time of enrolment the route refresh
+# handler resends on a received BoRR or EoRR as if it were a request, which section 4 does
+# not describe, and that belongs in its own entries with its own fix.
+
+rfc = "rfc7313"
+title = "Enhanced Route Refresh Capability for BGP-4"
+url = "https://www.rfc-editor.org/rfc/rfc7313"
+
+
+# ============================================================ 5 Error Handling
+
+[[requirement]]
+id = "rfc7313#5-invalid-message-length"
+section = "5"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the length, excluding the fixed-size message header, of the
+received ROUTE-REFRESH message with Message Subtype 1 and 2 is not 4,
+then the BGP speaker MUST send a NOTIFICATION message with the Error
+Code of "ROUTE-REFRESH Message Error" and the subcode of "Invalid
+Message Length".
+"""
+note = """
+exabgp applies the check to every ROUTE-REFRESH, whatever the subtype and whether or not
+the capability was received.  A body which is not four octets has no subtype which can be
+trusted to decide otherwise, and RFC 2918 defines the message as exactly four.
+"""
+
+[[requirement]]
+id = "rfc7313#5-invalid-message-length-data"
+section = "5"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+The Data field of the NOTIFICATION message MUST
+contain the complete ROUTE-REFRESH message.
+"""
+note = """
+Positive only: this constrains what we put in our own NOTIFICATION, there is no peer input
+which violates it.  "Complete" is read as including the nineteen octet header, which the
+decoder rebuilds from the body it was given, since the header held nothing but the marker,
+that length and the type.
+"""
+
+[[requirement]]
+id = "rfc7313#5-unknown-subtype-ignored"
+section = "5"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When the BGP speaker receives a ROUTE-REFRESH message with a "Message
+Subtype" field other than 0, 1, or 2, it MUST ignore the received
+ROUTE-REFRESH message.
+"""
+note = """
+exabgp answered it with Notify(7, 2) "Malformed Message Subtype", a subcode from an expired
+draft which IANA lists as unassigned, and closed the session.  Section 5 applies only once
+the capability was received; without it the octet is RFC 2918's Reserved field, which the
+receiver ignores, so the message stays a plain refresh request.
+"""
+
+[[requirement]]
+id = "rfc7313#5-unknown-subtype-logged"
+section = "5"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+It SHOULD log an error for further analysis.
+"""
+note = """
+Positive only: logging is something we do, not something a peer can get wrong.
+"""

@@ -23,6 +23,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc5668 | 0 | 0 | 0 | 0 | 0 | 1 | - |
 | rfc6514 | 1 | 0 | 0 | 1 | 5 | 2 | 100% |
 | rfc6793 | 23 | 1 | 0 | 24 | 0 | 0 | 96% |
+| rfc7313 | 3 | 0 | 0 | 3 | 0 | 1 | 100% |
 | rfc7432 | 4 | 0 | 0 | 4 | 13 | 0 | 100% |
 | rfc7606 | 46 | 1 | 0 | 47 | 7 | 2 | 98% |
 | rfc7911 | 4 | 0 | 1 | 5 | 1 | 3 | 80% |
@@ -1446,6 +1447,35 @@ rfc6793#4.2.2-exclude-confed-segments-from-as4-path seen from the error handling
 section. The receiving half is the next sentence. One test covers the sending rule,
 quoted here because section 6 is where an implementer looks for it.
   - `tests/unit/rfc/test_rfc6793_four_octet_as.py::test_no_as4_path_we_send_carries_a_confederation_segment`
+
+## rfc7313
+
+- **5** (MUST) `rfc7313#5-invalid-message-length` - proven
+  > If the length, excluding the fixed-size message header, of the received ROUTE-REFRESH message with Message Subtype 1 and 2 is not 4, then the BGP speaker MUST send a NOTIFICATION message with the Error Code of "ROUTE-REFRESH Message Error" and the subcode of "Invalid Message Length".
+  exabgp applies the check to every ROUTE-REFRESH, whatever the subtype and whether or not
+the capability was received.  A body which is not four octets has no subtype which can be
+trusted to decide otherwise, and RFC 2918 defines the message as exactly four.
+  - `tests/unit/rfc/test_rfc7313_route_refresh_errors.py::test_a_four_octet_route_refresh_is_accepted`
+  - `tests/unit/rfc/test_rfc7313_route_refresh_errors.py::test_a_route_refresh_which_is_not_four_octets_is_invalid_message_length`
+- **5** (MUST) `rfc7313#5-invalid-message-length-data` - proven
+  > The Data field of the NOTIFICATION message MUST contain the complete ROUTE-REFRESH message.
+  Positive only: this constrains what we put in our own NOTIFICATION, there is no peer input
+which violates it.  "Complete" is read as including the nineteen octet header, which the
+decoder rebuilds from the body it was given, since the header held nothing but the marker,
+that length and the type.
+  - `tests/unit/rfc/test_rfc7313_route_refresh_errors.py::test_the_notification_carries_the_complete_route_refresh_message`
+- **5** (MUST) `rfc7313#5-unknown-subtype-ignored` - proven
+  > When the BGP speaker receives a ROUTE-REFRESH message with a "Message Subtype" field other than 0, 1, or 2, it MUST ignore the received ROUTE-REFRESH message.
+  exabgp answered it with Notify(7, 2) "Malformed Message Subtype", a subcode from an expired
+draft which IANA lists as unassigned, and closed the session.  Section 5 applies only once
+the capability was received; without it the octet is RFC 2918's Reserved field, which the
+receiver ignores, so the message stays a plain refresh request.
+  - `tests/unit/rfc/test_rfc7313_route_refresh_errors.py::test_a_defined_subtype_decodes`
+  - `tests/unit/rfc/test_rfc7313_route_refresh_errors.py::test_an_unknown_subtype_is_ignored_rather_than_notified`
+- **5** (SHOULD) `rfc7313#5-unknown-subtype-logged` - proven
+  > It SHOULD log an error for further analysis.
+  Positive only: logging is something we do, not something a peer can get wrong.
+  - `tests/unit/rfc/test_rfc7313_route_refresh_errors.py::test_an_unknown_subtype_is_logged`
 
 ## rfc7432
 
