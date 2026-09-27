@@ -110,6 +110,12 @@ class Parser:
         self.error: Error = error
         self.finished = False
         self.number = 0
+        # the physical line of the statement last returned, for error messages
+        self.statement_line = 0
+        self._next_line = 0
+        self._produced_line = 0
+        # the first physical line of each logical line, when continuations join lines
+        self._physical: list[int] = []
         self.line: list[str] = []
         self.tokeniser: Tokeniser = Tokeniser()
         self.end = ''
@@ -125,6 +131,10 @@ class Parser:
     def clear(self) -> None:
         self.finished = False
         self.number = 0
+        self.statement_line = 0
+        self._next_line = 0
+        self._produced_line = 0
+        self._physical = []
         self.line = []
         self.tokeniser.clear()
         self.end = ''
@@ -147,6 +157,8 @@ class Parser:
     def _tokenise(self, iterator: Iterable[str]) -> Generator[list[str], None, None]:
         for parsed in tokens(iterator):
             words = [word for y, x, word in parsed]
+            logical = parsed[0][0]
+            self._produced_line = self._physical[logical - 1] if logical <= len(self._physical) else logical
             self.line = words  # Store the word list, not a joined string
             # ignore # lines
             # set Location information
@@ -156,6 +168,7 @@ class Parser:
         try:
             self._tokens = function
             self._next = next(self._tokens)
+            self._next_line = self._produced_line
         except OSError as exc:
             error = str(exc)
             if error.count(']'):
@@ -177,18 +190,27 @@ class Parser:
 
                 def formated() -> Generator[str, None, None]:
                     line = ''
+                    joining = False
+                    start = 0
+                    self._physical = []
                     for current in fileobject:
                         self.index_line += 1
+                        if not joining:
+                            start = self.index_line
                         current = current.rstrip()
                         if current.endswith('\\'):
                             line += current[:-1]  # strip trailing backslash before concatenating
+                            joining = True
                             continue
+                        joining = False
+                        self._physical.append(start)
                         if line:
                             yield line + current
                             line = ''
                             continue
                         yield current
                     if line:
+                        self._physical.append(start)
                         yield line + current
 
                 for _ in self._tokenise(formated()):
@@ -216,8 +238,10 @@ class Parser:
 
     def __call__(self) -> list[str]:
         self.number += 1
+        self.statement_line = self._next_line
         try:
             self.line, self._next = self._next, next(self._tokens)
+            self._next_line = self._produced_line
             # an empty line has no last token.  The file readers reject an empty or blank
             # configuration before the parser is built, so this is reached by calling the
             # parser directly rather than by any production path, but a bare [-1] over a

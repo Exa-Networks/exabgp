@@ -599,7 +599,7 @@ class Configuration(_Configuration):
             self._rollback_reload()
             line_str = ' '.join(self.parser.line)
             return self.error.set(
-                f'\nsyntax error in section {self.scope.location()}\nline {self.parser.number}: {line_str}\n\n{self.error!s}',
+                f'\nsyntax error in section {self.scope.location()}\nline {self.parser.statement_line}: {line_str}\n\n{self.error!s}',
             )
 
         self._commit_reload()
@@ -680,7 +680,7 @@ class Configuration(_Configuration):
             error_msg = (
                 f'\n'
                 f'syntax error in api command {self.scope.location()}\n'
-                f'line {self.parser.number}: {line_str}\n'
+                f'line {self.parser.statement_line}: {line_str}\n'
                 f'\n{self.error}'
             )
             log.debug(lazymsg('configuration.parse.error message={error_msg}', error_msg=error_msg), 'configuration')
