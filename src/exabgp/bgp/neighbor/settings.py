@@ -136,6 +136,7 @@ class NeighborSettings:
         adj_rib_in: Maintain adjacency RIB in
         adj_rib_out: Maintain adjacency RIB out
         manual_eor: Manual end-of-RIB handling
+        shutdown: Start with the session administratively disabled
         capability: BGP capabilities
         families: Address families to negotiate
         nexthops: Next-hop address families
@@ -158,6 +159,7 @@ class NeighborSettings:
     adj_rib_in: bool = True
     adj_rib_out: bool = True
     manual_eor: bool = False
+    shutdown: bool = False
 
     # Capability
     capability: 'NeighborCapability' = field(default_factory=_default_capability)

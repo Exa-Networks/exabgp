@@ -1,0 +1,13 @@
+option:file:api-disable.conf
+option:tcp_connections:2
+# nothing until the API process enables the peer, then its route and the inet4 unicast EOR
+A1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003040101010140050400000064100101
+A1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.1.1.1":[{"nlri":"1.1.0.0/16"}]}}}}}}
+A1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
+# Cease, Administrative Shutdown, "back soon"
+A2:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:001F:03:0602096261636B20736F6F6E
+
+# enabled again: the route is replayed
+B1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:002F:02:00000015400101004002004003040101010140050400000064100101
+B1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"1.1.1.1":[{"nlri":"1.1.0.0/16"}]}}}}}}
+B1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000

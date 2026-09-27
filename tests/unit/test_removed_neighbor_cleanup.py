@@ -67,6 +67,7 @@ def passive_peer(reactor: Any, uid: str = '1') -> Peer:
     neighbor.api = {'neighbor-changes': False, 'fsm': False}
     neighbor.rib = Mock()
     neighbor.session.passive = True
+    neighbor.shutdown = False
     return Peer(neighbor, reactor)
 
 

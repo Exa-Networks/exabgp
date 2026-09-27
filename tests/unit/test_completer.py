@@ -787,6 +787,8 @@ class TestNeighborTargetedCommandCompletion:
         assert 'withdraw' in matches
         assert 'show' in matches
         assert 'teardown' in matches
+        assert 'disable' in matches
+        assert 'enable' in matches
         # Should NOT have adj-rib (use "rib show in/out" instead)
         assert 'adj-rib' not in matches
         # Should NOT have other commands
@@ -797,8 +799,8 @@ class TestNeighborTargetedCommandCompletion:
         assert 'local-as' not in matches
         assert 'peer-as' not in matches
         assert 'id' not in matches
-        # Should be exactly 4 items
-        assert len(matches) == 4
+        # Should be exactly 6 items
+        assert len(matches) == 6
 
 
 class TestCompleterExceptionHandling:

@@ -53,6 +53,7 @@ class Neighbor:
     adj_rib_in: bool
     adj_rib_out: bool
     manual_eor: bool
+    shutdown: bool
 
     # Other instance attributes
     api: dict[str, Any]
@@ -88,6 +89,8 @@ class Neighbor:
         self.adj_rib_in = True
         self.adj_rib_out = True
         self.manual_eor = False
+        # start administratively disabled, until `peer <ip> enable` (issue #1013)
+        self.shutdown = False
 
         # API configuration
         self.api: dict[str, Any] = {}
@@ -181,6 +184,7 @@ class Neighbor:
         neighbor.adj_rib_in = settings.adj_rib_in
         neighbor.adj_rib_out = settings.adj_rib_out
         neighbor.manual_eor = settings.manual_eor
+        neighbor.shutdown = settings.shutdown
 
         # Set capability (copy to avoid sharing mutable object)
         neighbor.capability = settings.capability.copy()
@@ -614,6 +618,7 @@ Neighbor {peer-address}
             f'\thold-time {neighbor.hold_time};\n'
             f'\trate-limit {"disable" if neighbor.rate_limit == 0 else neighbor.rate_limit};\n'
             f'\tmanual-eor {"true" if neighbor.manual_eor else "false"};\n'
+            f'\tshutdown {"true" if neighbor.shutdown else "false"};\n'
             f'\n\tpassive {"true" if neighbor.session.passive else "false"};\n'
             + (f'\n\tlisten {neighbor.session.listen};\n' if neighbor.session.listen else '')
             + (f'\n\tconnect {neighbor.session.connect};\n' if neighbor.session.connect else '')

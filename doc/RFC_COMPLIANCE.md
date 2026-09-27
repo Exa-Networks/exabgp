@@ -14,7 +14,7 @@ run, so a requirement that is not in the document cannot appear in this table.
 | rfc4360 | 0 | 0 | 0 | 0 | 2 | 3 | - |
 | rfc4364 | 0 | 0 | 0 | 0 | 7 | 0 | - |
 | rfc4456 | 0 | 0 | 0 | 0 | 2 | 6 | - |
-| rfc4486 | 1 | 0 | 0 | 1 | 0 | 1 | 100% |
+| rfc4486 | 1 | 0 | 0 | 1 | 0 | 2 | 100% |
 | rfc4659 | 3 | 0 | 0 | 3 | 2 | 0 | 100% |
 | rfc4684 | 0 | 0 | 0 | 0 | 1 | 3 | - |
 | rfc4724 | 6 | 0 | 0 | 6 | 7 | 0 | 100% |
@@ -726,6 +726,12 @@ exabgp compares two paths to the same prefix and picks one.
 
 ## rfc4486
 
+- **4** (SHOULD) `rfc4486#4-administrative-shutdown` - proven
+  > If a BGP speaker decides to administratively shut down its peering with a neighbor, then the speaker SHOULD send a NOTIFICATION message with the Error Code Cease and the Error Subcode "Administrative Shutdown".
+  `peer <selector> disable` and `shutdown true` set by a reload close the session with
+Notify(6, 2), and keep it closed until `enable`.  Positive only: it constrains what we
+send, there is no peer input which violates it.
+  - `tests/unit/test_peer_disable.py::test_disable_closes_the_session_with_an_administrative_shutdown`
 - **4** (MAY) `rfc4486#4-data-may-carry-the-family-and-the-bound` - proven
   > The message MAY optionally include the Address Family information [BGP-MP] and the upper bound in the "Data" field, as shown in Figure 1, where the meaning and use of the <AFI, SAFI> tuple is the same as defined in [BGP-MP], Section 7.
   Always included: AFI in two octets, SAFI in one, the configured limit in four.  It is

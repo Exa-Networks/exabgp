@@ -5,9 +5,9 @@
 # against it on every run of ./qa/bin/check_rfc_compliance.
 #
 # Enrolled with the received prefix limit, `prefix-limit N` after a family, which is what
-# makes exabgp send Maximum Number of Prefixes Reached.  Only section 4's rules for that
-# subcode are recorded here.  The SHOULDs for the other Cease subcodes, which the teardown
-# command and the reactor send, are not yet in this ledger.
+# makes exabgp send Maximum Number of Prefixes Reached, and extended with the operator's
+# `disable`, which sends Administrative Shutdown.  The SHOULDs for the other Cease
+# subcodes, which the teardown command and the reactor send, are not yet in this ledger.
 
 rfc = "rfc4486"
 title = "Subcodes for BGP Cease Notification Message"
@@ -51,4 +51,22 @@ tuple is the same as defined in [BGP-MP], Section 7.
 note = """
 Always included: AFI in two octets, SAFI in one, the configured limit in four.  It is
 what we send, not something a peer can get wrong, so there is no negative side.
+"""
+
+[[requirement]]
+id = "rfc4486#4-administrative-shutdown"
+section = "4"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+If a BGP speaker decides to administratively shut down its peering
+with a neighbor, then the speaker SHOULD send a NOTIFICATION message
+with the Error Code Cease and the Error Subcode "Administrative
+Shutdown".
+"""
+note = """
+`peer <selector> disable` and `shutdown true` set by a reload close the session with
+Notify(6, 2), and keep it closed until `enable`.  Positive only: it constrains what we
+send, there is no peer input which violates it.
 """

@@ -109,7 +109,8 @@
           "value": "1.2.3.4"
         },
         "source_interface": null
-      }
+      },
+      "shutdown": false
     }
   },
   "processes": {

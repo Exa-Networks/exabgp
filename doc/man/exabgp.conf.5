@@ -38,6 +38,7 @@ neighbor <ip-address> {
     hold-time <seconds>;
     rate-limit <enable | disable>;
     manual-eor <truthvalue>;
+    shutdown <truthvalue>;  // start disabled, until `peer <ip> enable`
 
     passive <truthvalue>;
     listen <port>;   // local TCP port, default 179

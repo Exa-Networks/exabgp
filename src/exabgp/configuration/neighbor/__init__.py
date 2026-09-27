@@ -252,6 +252,14 @@ class ParseNeighbor(Section):
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
             ),
+            'shutdown': Leaf(
+                type=ValueType.BOOLEAN,
+                description='Start with the session administratively disabled',
+                default=False,
+                target=ActionTarget.SCOPE,
+                operation=ActionOperation.SET,
+                key=ActionKey.COMMAND,
+            ),
             'inherit': Leaf(
                 type=ValueType.STRING,
                 description='Inherit from template',
@@ -291,7 +299,7 @@ class ParseNeighbor(Section):
         # Migrated to schema validators:
         # description, host-name, domain-name, source-interface, md5-password,
         # passive, listen, connect, group-updates, auto-flush, adj-rib-out,
-        # adj-rib-in, manual-eor, peer-address, md5-ip, rate-limit
+        # adj-rib-in, manual-eor, shutdown, peer-address, md5-ip, rate-limit
     }
 
     # action dict removed - schema provides action enums via get_action_enums()
@@ -305,6 +313,7 @@ class ParseNeighbor(Section):
         'adj-rib-out': False,
         'adj-rib-in': False,
         'manual-eor': False,
+        'shutdown': False,
     }
 
     name = 'neighbor'
@@ -340,6 +349,7 @@ class ParseNeighbor(Section):
         'adj-rib-in': 'adj_rib_in',
         'adj-rib-out': 'adj_rib_out',
         'manual-eor': 'manual_eor',
+        'shutdown': 'shutdown',
     }
 
     # Map config keys to Session attributes (connection config)

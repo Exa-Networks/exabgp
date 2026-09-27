@@ -221,6 +221,9 @@ class Peer:
         self._teardown: Notify | None = None
         # the families our End-of-RIB went out for on this session (RFC 7313 4)
         self._end_of_rib_sent: set[FamilyTuple] = set()
+        # The Cease the operator disabled the session with, None while it is enabled.  It is
+        # also the teardown disable() asked for, so enable() can tell that one from any other.
+        self._disable: Notify | None = Notify(6, 2) if neighbor.shutdown else None
 
         self._delay: Delay = Delay()
         self.recv_timer: ReceiveTimer | None = None
@@ -413,6 +416,38 @@ class Peer:
         self._teardown = notify
         self._delay.reset()
 
+    def disabled(self) -> bool:
+        return self._disable is not None
+
+    def disable(self, notify: Notify) -> None:
+        """Close the session with `notify` and do not open another until enable().
+
+        The peer stays in the reactor, so its RIB, and what the API announces to it while it
+        is down, is sent once it is enabled again (issue #1013).
+        """
+        self._disable = notify
+        self.teardown(notify)
+
+    def enable(self) -> None:
+        # a disable the session has not acted on yet is withdrawn, not carried out later
+        # against the next session
+        if self._teardown is not None and self._teardown is self._disable:
+            self._teardown = None
+        self._disable = None
+        self._delay.reset()
+
+    def _park(self) -> None:
+        """What _reset would do, for a disabled peer which has no session to reset.
+
+        A teardown asked for meanwhile, by disable() or by a reload's reestablish(), has
+        nothing to close, and left pending it would close the first session after enable().
+        The neighbour a reload handed over is taken now, not after that session.
+        """
+        self._teardown = None
+        if self._neighbor:
+            self.neighbor = self._neighbor
+            self._neighbor = None
+
     def socket(self) -> int:
         if self.proto:
             return self.proto.fd()
@@ -430,6 +465,14 @@ class Peer:
                 self.id(),
             )
             return connection.notification(6, 3, b'no session configured for the peer')
+
+        # RFC 4486 4: a connection the speaker "decides to disallow" is Connection Rejected
+        if self._disable is not None:
+            log.debug(
+                lazymsg('peer.connection.rejected connection={c} reason=disabled', c=connection.name()),
+                self.id(),
+            )
+            return connection.notification(6, 5, b'the session is administratively disabled')
 
         # if the other side fails, we go back to idle
         if self.fsm == FSM.ESTABLISHED:
@@ -943,6 +986,13 @@ class Peer:
                 await asyncio.sleep(0.1)  # Wait a bit before checking again
                 continue
 
+            # a disabled peer waits here, with no session.  A stop() still ends the loop, and
+            # a connection accepted just before the disable runs on, to be sent its Cease
+            if self._disable is not None and self._restart and self.proto is None:
+                self._park()
+                await asyncio.sleep(0.1)
+                continue
+
             if self._delay.backoff():
                 await asyncio.sleep(0.1)  # Backoff delay
                 continue
@@ -1074,7 +1124,7 @@ class Peer:
             'peer-id': None if peer['peer-id'] is None else str(peer['peer-id']),
             'local-hold': int(self.neighbor.hold_time),
             'peer-hold': None if peer['hold-time'] is None else int(peer['hold-time']),
-            'state': self.fsm.name(),
+            'state': 'DISABLED' if self._disable is not None and self.fsm == FSM.IDLE else self.fsm.name(),
             'capabilities': capabilities,
             'families': families,
             'messages': messages,

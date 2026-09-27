@@ -524,6 +524,37 @@ Resources, 9 Hard Reset, 10 BFD Down.
 
 ---
 
+#### disable / enable
+
+Shut a neighbor down and keep it down, then let it connect again (issue #1013).
+
+**Syntax:**
+```bash
+neighbor <selector> disable [<text>]      # Cease / Administrative Shutdown (6, 2), then stay down
+neighbor <selector> enable                # connect again, straight away
+peer <selector> disable [<text>]          # v6 API
+peer <selector> enable                    # v6 API
+```
+
+**Behaviour:**
+- `disable` closes an established session with (6, 2), `text` being the RFC 9003 Shutdown
+  Communication; a peer which is not established is disabled too
+- while disabled the peer does not connect, and a connection from it is refused with
+  (6, 5) Connection Rejected; `show neighbor` reports its state as `disabled`
+- the peer keeps its routes; what the API announces to it while it is disabled is sent
+  once it is enabled
+- `shutdown true;` in the neighbor section starts the peer disabled.  A reload acts on
+  `shutdown` only when its value changed, so it does not undo `disable` or `enable`
+
+**Examples:**
+```bash
+exabgp> neighbor 10.0.0.1 disable "[TICKET-1] upgrade, back in 2h"
+exabgp> neighbor 10.0.0.1 enable
+exabgp> peer * disable
+```
+
+---
+
 #### create
 
 Create peer dynamically (API-style).

@@ -28,10 +28,10 @@ import uuid
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from exabgp.bgp.message.notification import Notify
     from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.bgp.fsm import FSM
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.configuration.process import API_PREFIX
 from exabgp.environment import getenv
@@ -330,6 +330,10 @@ class Reactor:
                 continue
             if peer.neighbor.session.passive and not peer.proto:
                 continue
+            # nor does a disabled one with no session: its routes wait for it, and a reload
+            # waiting for them to be sent would wait for as long as it stays disabled
+            if peer.disabled() and not peer.proto:
+                continue
             peers.add(key)
         return peers
 
@@ -537,6 +541,12 @@ class Reactor:
     def teardown_peer(self, name: str, notify: Notify) -> None:
         self._peers[name].teardown(notify)
 
+    def disable_peer(self, name: str, notify: Notify) -> None:
+        self._peers[name].disable(notify)
+
+    def enable_peer(self, name: str) -> None:
+        self._peers[name].enable()
+
     def shutdown(self) -> None:
         """Terminate all the current BGP connections"""
         log.critical(lazymsg('reactor.shutdown'), 'reactor')
@@ -614,6 +624,8 @@ class Reactor:
                 peer.remove()
 
         for key, neighbor in self.configuration.neighbors.items():
+            if key in self._peers:
+                self._reload_shutdown(self._peers[key], neighbor)
             # new peer
             if key not in self._peers:
                 log.debug(lazymsg('peer.adding name={name}', name=neighbor.name()), 'reactor')
@@ -647,6 +659,21 @@ class Reactor:
         log.info(lazymsg('config.loaded'), 'reactor')
 
         return True
+
+    @staticmethod
+    def _reload_shutdown(peer: Peer, neighbor: 'Neighbor') -> None:
+        """Apply `shutdown` if the reload changed it, and otherwise leave the peer be.
+
+        `peer <ip> disable` and `enable` change the state without changing the file, so a
+        reload which kept `shutdown` as it was must not undo them.  It is not part of
+        Neighbor.__eq__ either: reestablishing the session would send (6, 3) first.
+        """
+        if peer.neighbor.shutdown == neighbor.shutdown:
+            return
+        if neighbor.shutdown:
+            peer.disable(Notify(6, 2, 'disabled by a configuration reload'))
+        else:
+            peer.enable()
 
     def restart(self) -> None:
         """Kill the BGP session and restart it"""

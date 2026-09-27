@@ -95,6 +95,8 @@ COMMANDS: list[tuple[str, bool, list[str] | None]] = [
     ('peer list', False, None),
     ('peer show', False, ['summary', 'extensive', 'configuration']),
     ('peer teardown', True, None),
+    ('peer disable', True, None),
+    ('peer enable', True, None),
     ('peer create', False, None),
     ('peer delete', False, None),
     # Announce commands

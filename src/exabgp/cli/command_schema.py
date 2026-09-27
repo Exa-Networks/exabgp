@@ -278,6 +278,23 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
             ),
         },
     ),
+    # Administrative shutdown (v6 API, issue #1013)
+    'peer * disable': CLICommandSpec(
+        name='peer * disable',
+        description='Close the session with Administrative Shutdown and keep it down',
+        options={
+            'text': CLIValueSpec(
+                value_type=ValueType.STRING,
+                description='Shutdown Communication sent to the peer (RFC 9003)',
+                examples=['"maintenance until 18:00"'],
+                required=False,
+            ),
+        },
+    ),
+    'peer * enable': CLICommandSpec(
+        name='peer * enable',
+        description='Let a disabled session connect again',
+    ),
     # Group commands for batching multiple announcements
     'group start': CLICommandSpec(
         name='group start',

@@ -413,7 +413,7 @@ def generate_neighbor_example() -> str:
                 lines.append('')
 
     # Behavior options
-    behavior_keys = ['group-updates', 'auto-flush', 'adj-rib-out', 'adj-rib-in', 'manual-eor']
+    behavior_keys = ['group-updates', 'auto-flush', 'adj-rib-out', 'adj-rib-in', 'manual-eor', 'shutdown']
     for key in behavior_keys:
         if key in schema.children:
             child = schema.children[key]

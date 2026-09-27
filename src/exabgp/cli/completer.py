@@ -497,7 +497,7 @@ class CommandCompleter:
             'session': ['ack', 'sync', 'reset', 'ping', 'bye'],
             'system': ['help', 'version', 'crash', 'queue-status', 'api'],
             'rib': ['show', 'flush', 'clear'],
-            'peer': ['announce', 'withdraw', 'teardown', 'show'],
+            'peer': ['announce', 'withdraw', 'teardown', 'disable', 'enable', 'show'],
         }
 
         # Try to match first character(s) to a top-level command
@@ -762,7 +762,7 @@ class CommandCompleter:
 
                 # "peer <ip>" - suggest show and actions
                 if self._is_ip_address(second):
-                    actions = ['show', 'announce', 'withdraw', 'teardown']
+                    actions = ['show', 'announce', 'withdraw', 'teardown', 'disable', 'enable']
                     matches = self._filter_candidates(actions, text)
                     for match in matches:
                         desc = {
@@ -770,13 +770,15 @@ class CommandCompleter:
                             'announce': 'Announce routes to peer',
                             'withdraw': 'Withdraw routes from peer',
                             'teardown': 'Tear down BGP session',
+                            'disable': 'Shut the session down until enabled',
+                            'enable': 'Let a disabled session connect again',
                         }.get(match, '')
                         self._add_completion_metadata(match, desc, 'command')
                     return matches
 
                 # "peer *" - suggest actions (including show for all peers)
                 if second == '*':
-                    actions = ['announce', 'withdraw', 'show', 'teardown']
+                    actions = ['announce', 'withdraw', 'show', 'teardown', 'disable', 'enable']
                     matches = self._filter_candidates(actions, text)
                     for match in matches:
                         desc = {
@@ -784,6 +786,8 @@ class CommandCompleter:
                             'withdraw': 'Withdraw routes from all peers',
                             'show': 'Show all peers information',
                             'teardown': 'Tear down all BGP sessions',
+                            'disable': 'Shut all sessions down until enabled',
+                            'enable': 'Let all disabled sessions connect again',
                         }.get(match, '')
                         self._add_completion_metadata(match, desc, 'command')
                     return matches
@@ -1132,7 +1136,7 @@ class CommandCompleter:
             matches = []
 
             # Commands valid after "peer <selector>"
-            allowed_commands = ['announce', 'withdraw', 'show', 'teardown']
+            allowed_commands = ['announce', 'withdraw', 'show', 'teardown', 'disable', 'enable']
 
             for cmd in allowed_commands:
                 if cmd.startswith(text):
@@ -1142,6 +1146,8 @@ class CommandCompleter:
                         'withdraw': 'Withdraw routes from peer(s)',
                         'show': 'Show peer information',
                         'teardown': 'Tear down BGP session',
+                        'disable': 'Shut the session down until enabled',
+                        'enable': 'Let a disabled session connect again',
                     }.get(cmd, '')
                     self._add_completion_metadata(cmd, desc, 'command')
 

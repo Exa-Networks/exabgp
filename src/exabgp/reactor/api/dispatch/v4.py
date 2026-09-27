@@ -258,6 +258,11 @@ def _dispatch_neighbor_v4(
             raise NoMatchingPeers(command)
         return neighbor_cmd.teardown, peers, action_args
 
+    if action in ('disable', 'enable'):
+        if not peers:
+            raise NoMatchingPeers(command)
+        return (neighbor_cmd.disable if action == 'disable' else neighbor_cmd.enable), peers, action_args
+
     if action == 'announce':
         if not peers:
             raise NoMatchingPeers(command)

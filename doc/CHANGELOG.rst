@@ -43,6 +43,14 @@ Version 6.0.0:
  * Change: the names of NOTIFICATION codes and subcodes in the log and the API follow the
    IANA registry, e.g. "Finite State Machine Error" rather than "State machine error", and
    the codes and subcodes added since RFC 4486 are named.
+ * Feature: a neighbour can be disabled and enabled, issue #1013. "neighbor <ip> disable
+   [<text>]" closes the session with Cease / Administrative Shutdown, the text being the
+   RFC 9003 Shutdown Communication, and ExaBGP does not open another until "neighbor <ip>
+   enable". A connection from the peer meanwhile is refused with Connection Rejected. The
+   peer keeps its routes, and what the API announces to it while it is down is sent when
+   it comes back. "shutdown true;" in the neighbor section starts it disabled, so an API
+   process can load its routes before the session exists. A reload only acts on
+   "shutdown" when its value changed, so it does not undo what the API did.
  * Feature: "require" as the value of a capability refuses a peer which does not advertise
    it. "asn4 require;" advertises ASN4 and closes the session with Unsupported Capability,
    as RFC 5492 describes, when the peer's OPEN does not carry it; the Data field lists our

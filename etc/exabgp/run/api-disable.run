@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+
+import os
+
+from exabgp_api import counters, send, trace, wait_for_ack, wait_for_shutdown
+
+BARRIER_TIMEOUT = 20.0
+# how long a disabled peer is watched for a session it should not open
+QUIET = 2.0
+
+
+def barrier(what: str, expected_count: int = 1, **events) -> None:
+    if wait_for_ack(expected_count=expected_count, timeout=BARRIER_TIMEOUT, **events):
+        trace(f'{what} ok')
+        return
+    raise SystemExit(f'{what} never happened, saw {counters()}')
+
+
+def stays_down(what: str, sessions: int) -> None:
+    if wait_for_ack(expected_count=0, timeout=QUIET, state=(('up', sessions + 1),)):
+        raise SystemExit(f'{what}: a session came up, saw {counters()}')
+    trace(f'{what} ok')
+
+
+def main() -> None:
+    trace('start api-disable.run ppid=' + str(os.getppid()))
+    try:
+        # `shutdown true`: the route is accepted while no session exists
+        send('announce route 1.1.0.0/16 next-hop 1.1.1.1')
+        barrier('the route queued')
+        stays_down('disabled by the configuration', sessions=0)
+
+        send('neighbor 127.0.0.1 enable')
+        barrier('the first session with its route', state=(('up', 1),), announce=(('1.1.0.0/16', 1),))
+
+        # Administrative Shutdown with its RFC 9003 communication, and no reconnection
+        send('neighbor 127.0.0.1 disable "back soon"')
+        barrier('the disable', state=(('down', 1),))
+        stays_down('disabled by the API', sessions=1)
+
+        send('neighbor 127.0.0.1 enable')
+        barrier('the second session with the replay', state=(('up', 2),), announce=(('1.1.0.0/16', 2),))
+
+        trace('work done')
+        wait_for_shutdown(timeout=5.0)
+        trace('finished')
+    except IOError:
+        pass
+
+
+if __name__ == '__main__':
+    main()

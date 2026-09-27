@@ -215,6 +215,7 @@ class TestPeerCollisionDetection:
         """Test collision detection rejects connection when established"""
         neighbor = Mock()
         neighbor.uid = '1'
+        neighbor.shutdown = False
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         reactor = Mock()
 
@@ -234,6 +235,7 @@ class TestPeerCollisionDetection:
         """Test collision detection in OPENCONFIRM with higher local router-id"""
         neighbor = Mock()
         neighbor.uid = '1'
+        neighbor.shutdown = False
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         # Neighbor now uses session for connection-related config
         neighbor.session = Mock()
@@ -263,6 +265,7 @@ class TestPeerCollisionDetection:
         """Test collision detection in OPENCONFIRM with lower local router-id"""
         neighbor = Mock()
         neighbor.uid = '1'
+        neighbor.shutdown = False
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         # Neighbor now uses session for connection-related config
         neighbor.session = Mock()
@@ -296,6 +299,7 @@ class TestPeerCollisionDetection:
         """Test accepting collision replaces existing protocol"""
         neighbor = Mock()
         neighbor.uid = '1'
+        neighbor.shutdown = False
         neighbor.api = {'neighbor-changes': False, 'fsm': False}
         reactor = Mock()
 

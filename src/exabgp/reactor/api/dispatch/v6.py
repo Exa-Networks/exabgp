@@ -45,6 +45,8 @@ def _build_v6_tree() -> DispatchTree:
     peer_selector_tree: DispatchTree = {
         'show': neighbor_cmd.show_neighbor,
         'teardown': neighbor_cmd.teardown,
+        'disable': neighbor_cmd.disable,
+        'enable': neighbor_cmd.enable,
         'announce': announce_cmd.v6_announce,
         'withdraw': announce_cmd.v6_withdraw,
         'group': group_cmd.group_inline,
@@ -134,6 +136,8 @@ def _v6_needs_peers() -> set[Handler]:
         announce_cmd.v6_announce,
         announce_cmd.v6_withdraw,
         neighbor_cmd.teardown,
+        neighbor_cmd.disable,
+        neighbor_cmd.enable,
         rib_cmd.flush_adj_rib_out,
         rib_cmd.clear_adj_rib,
     }

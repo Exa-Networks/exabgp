@@ -121,6 +121,36 @@ def teardown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], co
     return True
 
 
+def disable(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+    """`disable [<text>]`: close the session with Administrative Shutdown and keep it closed.
+
+    The text is the RFC 9003 Shutdown Communication.  Unlike teardown, a peer which is not
+    established is disabled too, so it does not connect until `enable` (issue #1013).
+    """
+    try:
+        text = ' '.join(shlex.split(command))  # raises ValueError on an unbalanced quote
+    except ValueError as exc:
+        reactor.processes.answer_error_sync(service, str(exc))
+        return False
+    for peer_key in peers:
+        reactor.disable_peer(peer_key, Notify(*_TEARDOWN_DEFAULT, text))
+        self.log_message(f'disabled {peer_key}')
+    reactor.processes.answer_done_sync(service)
+    return True
+
+
+def enable(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+    """`enable`: let a disabled peer connect again, straight away."""
+    if command.strip():
+        reactor.processes.answer_error_sync(service, f'enable takes no argument, got {command.strip()!r}')
+        return False
+    for peer_key in peers:
+        reactor.enable_peer(peer_key)
+        self.log_message(f'enabled {peer_key}')
+    reactor.processes.answer_done_sync(service)
+    return True
+
+
 def show_neighbor(
     self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
 ) -> bool:

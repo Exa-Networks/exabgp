@@ -853,6 +853,7 @@ class Configuration(_Configuration):
             'adj_rib_in': neighbor.adj_rib_in,
             'adj_rib_out': neighbor.adj_rib_out,
             'manual_eor': neighbor.manual_eor,
+            'shutdown': neighbor.shutdown,
             'session': neighbor.session,
             'capability': neighbor.capability,
             'api': neighbor.api,
