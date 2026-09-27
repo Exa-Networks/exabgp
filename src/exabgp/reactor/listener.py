@@ -375,10 +375,13 @@ class Listener:
                     return
                 if not matched:
                     log.debug(lazymsg('no session configured for {name}', name=connection.name()), 'network')
+                    # RFC 4486 4 names this case for Connection Rejected: "the peer is not
+                    # configured locally".  It sent (6, 3) Peer De-configured, which is for a
+                    # peering the speaker had and decided to remove
                     reactor.asynchronous.schedule(
                         str(uuid.uuid1()),
-                        'sending notification (6,3)',
-                        connection.notification(6, 3, b'no session configured for the peer'),
+                        'sending notification (6,5)',
+                        connection.notification(6, 5, b'no session configured for the peer'),
                     )
                     return
 

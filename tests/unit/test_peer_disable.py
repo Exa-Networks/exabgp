@@ -86,6 +86,7 @@ def test_enable_leaves_any_other_teardown_alone() -> None:
     assert reset._teardown is notify
 
 
+@pytest.mark.rfc('rfc4486#4-connection-rejected')
 def test_an_incoming_connection_is_rejected_while_disabled() -> None:
     connection = Mock()
     connection.notification = Mock(return_value='rejected')

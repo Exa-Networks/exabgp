@@ -31,6 +31,9 @@ Version 6.0.0:
  * Fix: a ROUTE-REFRESH with a Message Subtype other than 0, 1 or 2 is ignored and logged,
    as RFC 7313 section 5 requires. It was answered with subcode 2 of error code 7, which
    came from an expired draft, was never assigned by IANA, and closed the session.
+ * Fix: a connection from a peer no neighbour matches is refused with Cease / Connection
+   Rejected, the subcode RFC 4486 section 4 gives for a peer "not configured locally". It
+   was sent Peer De-configured, which is for a peering which existed and was removed.
  * Fix: waiting too long for the OPEN sends Hold Timer Expired, which is what RFC 4271
    section 8 asks for in OpenSent. It sent the RFC 6608 subcode for an unexpected message,
    when no message had arrived at all.

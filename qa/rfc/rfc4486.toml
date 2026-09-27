@@ -6,8 +6,9 @@
 #
 # Enrolled with the received prefix limit, `prefix-limit N` after a family, which is what
 # makes exabgp send Maximum Number of Prefixes Reached, and extended with the operator's
-# `disable`, which sends Administrative Shutdown.  The SHOULDs for the other Cease
-# subcodes, which the teardown command and the reactor send, are not yet in this ledger.
+# `disable`, which sends Administrative Shutdown and refuses connections with Connection
+# Rejected.  The SHOULDs for the other Cease subcodes, which the teardown command and the
+# reactor send, are not yet in this ledger.
 
 rfc = "rfc4486"
 title = "Subcodes for BGP Cease Notification Message"
@@ -69,4 +70,24 @@ note = """
 `peer <selector> disable` and `shutdown true` set by a reload close the session with
 Notify(6, 2), and keep it closed until `enable`.  Positive only: it constrains what we
 send, there is no peer input which violates it.
+"""
+
+[[requirement]]
+id = "rfc4486#4-connection-rejected"
+section = "4"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+If a BGP speaker decides to disallow a BGP connection (e.g., the peer
+is not configured locally) after the speaker accepts a transport
+protocol connection, then the BGP speaker SHOULD send a NOTIFICATION
+message with the Error Code Cease and the Error Subcode "Connection
+Rejected".
+"""
+note = """
+Sent to a peer no neighbour matches, and to a disabled neighbour.  The listener sent
+(6, 3) Peer De-configured to the first.  A connection from a neighbour a reload has just
+removed still gets (6, 3): the peering existed and was de-configured.  Positive only: it
+constrains what we send.
 """
