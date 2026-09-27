@@ -1340,6 +1340,7 @@ class BGPProtocol(asyncio.Protocol):
         option_default = self.service.options['send-default-route']
         option_open = self.service.options['inspect-open-message']
         option_unknown = self.service.options['send-unknown-message']
+        option_eor = self.service.options['send-eor']
 
         open = msg.open(option_asn, option_capa66)
         # Log OPEN sent
@@ -1351,6 +1352,9 @@ class BGPProtocol(asyncio.Protocol):
             # send an invalid/unknown BGP message type to exercise error handling
             unknown = b'\xff' * 16 + pack('!H', 19) + bytes([255])
             self.writer.write(unknown)
+        if option_eor:
+            # real peers send an End-of-RIB once their initial table is out
+            self.writer.write(Message.eor())
 
         if option_open:
             if not self.service.checker.expected(self.writer, msg):
@@ -1452,6 +1456,7 @@ def parse_cmdline():
         'send-default-route': False,       # send a default route to the peer
         'inspect-open-message': False,     # check for received OPEN message
         'send-unknown-message': False,     # send an unknown message type to the peer
+        'send-eor': False,                 # send an IPv4 unicast End-of-RIB after the OPEN
         'asn': None,                       # Don't modify the local AS per default.
         'sink': False,                     # just accept whatever is sent
         'echo': False,                     # just accept whatever is sent
@@ -1498,6 +1503,9 @@ def parse_cmdline():
             continue
         if message.strip() == 'option:open:send-unknown-message':
             options['send-unknown-message'] = True
+            continue
+        if message.strip() == 'option:open:send-eor':
+            options['send-eor'] = True
             continue
         if message.strip().startswith('option:tcp_connections:'):
             options['tcp_connections'] = int(message.strip().split(':')[-1])

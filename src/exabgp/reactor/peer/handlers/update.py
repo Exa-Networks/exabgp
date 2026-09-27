@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Generator, cast
 
 from exabgp.bgp.message import Message, Update
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.eor import EOR
 from exabgp.environment import getenv
 from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.reactor.peer.handlers.base import MessageHandler
@@ -97,11 +98,22 @@ class UpdateHandler(MessageHandler):
         family = nlri.family().afi_safi()
         incoming.untrack_path(family, nlri.prefix_index(), nlri.index())
 
+    def _end_of_rib(self, ctx: PeerContext, eor: EOR) -> None:
+        # An End-of-RIB decodes to EOR, whose TYPE is UPDATE, so it arrives here.  Reading
+        # it as an Update raised AttributeError and reset the session.  RFC 7313 section 4
+        # needs to know it was received, per family, for the Graceful Restart rule on BoRR
+        family = (eor.nlris[0].afi, eor.nlris[0].safi)
+        ctx.neighbor.rib.incoming.record_end_of_rib(family)
+        log.debug(lazymsg('eor.received afi={a} safi={s}', a=family[0], s=family[1]), ctx.peer_id)
+
     def handle(self, ctx: PeerContext, message: Message) -> Generator[Message, None, None]:
         """Process the UPDATE message synchronously.
 
         Stores all NLRIs in the incoming RIB cache.
         """
+        if isinstance(message, EOR):
+            self._end_of_rib(ctx, message)
+            return
         update = cast(Update, message)
         parsed = update.data  # Already parsed by unpack_message
         self._number += 1
@@ -141,6 +153,9 @@ class UpdateHandler(MessageHandler):
 
         Same logic as sync - no async I/O needed for inbound processing.
         """
+        if isinstance(message, EOR):
+            self._end_of_rib(ctx, message)
+            return
         update = cast(Update, message)
         parsed = update.data  # Already parsed by unpack_message
         self._number += 1

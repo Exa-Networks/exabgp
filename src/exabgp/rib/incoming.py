@@ -25,6 +25,7 @@ class IncomingRIB(Cache):
 
     _path_sets: dict[FamilyTuple, dict[bytes, set[bytes]]]
     _path_warned: set[tuple[FamilyTuple, bytes]]
+    _end_of_rib: set[FamilyTuple]
     # RFC 4486 4: per limited family, the routes the peer holds with us.  Kept apart from
     # the cache, which adj-rib-in can turn off, and bounded by the limit: the route which
     # takes a family past it ends the session
@@ -34,6 +35,7 @@ class IncomingRIB(Cache):
         Cache.__init__(self, cache, families, enabled)
         self._path_sets = {}
         self._path_warned = set()
+        self._end_of_rib = set()
         self._prefixes = {}
 
     # back to square one, all the routes are removed
@@ -41,7 +43,15 @@ class IncomingRIB(Cache):
         self.clear_cache()
         self._path_sets = {}
         self._path_warned = set()
+        self._end_of_rib = set()
         self._prefixes = {}
+
+    def record_end_of_rib(self, family: FamilyTuple) -> None:
+        # bounded by the families negotiated, a peer cannot grow it past those
+        self._end_of_rib.add(family)
+
+    def has_end_of_rib(self, family: FamilyTuple) -> bool:
+        return family in self._end_of_rib
 
     def reset(self) -> None:
         pass

@@ -4,6 +4,11 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: a peer sending an End-of-RIB reset the session. The End-of-RIB decodes to its own
+   message class, which the handler for received UPDATEs read as an UPDATE, and the error
+   closed the session without a NOTIFICATION. adj-rib-in is on by default, so the default
+   configuration met it with any peer which sends one, which most do. The test peer never
+   sent an End-of-RIB, and does now.
  * Incompatible: "teardown" takes a code as well as a subcode. The documentation said the
    number was the error code, while the code always sent Cease with the number as the
    subcode, so "teardown 6" sent Cease / Other Configuration Change. One number keeps that
