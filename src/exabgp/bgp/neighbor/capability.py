@@ -85,6 +85,8 @@ class NeighborCapability:
     link_local_nexthop: TriState = TriState.UNSET
     link_local_prefer: bool = False  # Prefer link-local over global when both present
     software_version: str | None = None
+    # Codes the peer must advertise back, or be refused with (2, 7) (RFC 5492 3)
+    required: frozenset[int] = frozenset()
 
     def copy(self) -> 'NeighborCapability':
         """Create a copy of this capability configuration."""
@@ -105,6 +107,7 @@ class NeighborCapability:
             link_local_nexthop=self.link_local_nexthop,
             link_local_prefer=self.link_local_prefer,
             software_version=self.software_version,
+            required=self.required,
         )
 
     def __eq__(self, other: object) -> bool:
@@ -125,4 +128,5 @@ class NeighborCapability:
             and self.link_local_nexthop == other.link_local_nexthop
             and self.link_local_prefer == other.link_local_prefer
             and self.software_version == other.software_version
+            and self.required == other.required
         )

@@ -38,6 +38,7 @@ class Notification(Message, Exception):
     SHUTDOWN_SUBCODES: ClassVar[tuple[tuple[int, int], ...]] = ((6, 2), (6, 4))
     SHUTDOWN_COMM_MAX_LEGACY: ClassVar[int] = 128  # RFC 9003 3: most we send to a peer not known to support it
     SHUTDOWN_COMM_MAX_EXTENDED: ClassVar[int] = 255  # RFC 9003 2: what the one octet Length can say
+    UNSUPPORTED_CAPABILITY: ClassVar[tuple[int, int]] = (2, 7)  # RFC 5492 5
 
     # The IANA "BGP Error (Notification) Codes" and "BGP Error Subcodes" registries,
     # https://www.iana.org/assignments/bgp-parameters (updated 2026-09-09).  These names

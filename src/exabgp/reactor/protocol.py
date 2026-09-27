@@ -331,6 +331,10 @@ class Protocol:
         if error is not None:
             raise Notify(*error)
 
+        unsupported = self.negotiated.unsupported_capability()
+        if unsupported is not None:
+            raise unsupported
+
         if self._api['negotiated']:
             self.peer.reactor.processes.negotiated(self.peer.neighbor, self.negotiated)
 

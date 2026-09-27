@@ -247,14 +247,17 @@ class Capabilities(dict[int, Capability]):
         self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
         return self
 
+    def tlvs(self, code: int) -> bytes:
+        """One capability we advertise, as the <code, length, value> triples of our OPEN."""
+        tlvs = b''
+        for value in self[code].extract_capability_bytes():
+            # Zero-length capabilities (e.g., RouteRefresh, LinkLocalNextHop) are valid
+            tlvs += bytes([code, len(value)]) + value
+        return tlvs
+
     def _capability_tlvs(self) -> bytes:
         """Every capability we advertise, back to back, as <code, length, value> triples."""
-        tlvs = b''
-        for code, capability in self.items():
-            for value in capability.extract_capability_bytes():
-                # Zero-length capabilities (e.g., RouteRefresh, LinkLocalNextHop) are valid
-                tlvs += bytes([code, len(value)]) + value
-        return tlvs
+        return b''.join(self.tlvs(code) for code in self)
 
     def pack_capabilities(self) -> bytes:
         # RFC 5492 section 4: "The Capabilities Optional Parameter (OPEN Optional Parameter

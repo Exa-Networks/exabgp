@@ -34,7 +34,8 @@ from exabgp.configuration.parser import auto_asn, md5_base64
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
 from exabgp.configuration.tcpao import ParseTCPAO
 from exabgp.configuration.role import ParseRole
-from exabgp.configuration.validator import IntValidators
+from exabgp.configuration.capability import ParseCapability
+from exabgp.configuration.validator import IntValidators, RequirableValidator
 
 # Removed imports migrated to schema validators: ip, peer_ip, port
 from exabgp.environment import getenv
@@ -419,8 +420,23 @@ class ParseNeighbor(Section):
 
         return families or ParseFamily.default_families()
 
+    @staticmethod
+    def _post_capa_required(neighbor: Neighbor, configured: dict[str, Any]) -> dict[str, Any]:
+        """Record what `require` asked of the peer, and return the block with it as enabled.
+
+        Required is enabled and then some: the capability goes in our OPEN, which is also
+        what lets the (2, 7) Data field carry it as we encoded it.
+        """
+        required = {
+            code
+            for name, code in ParseCapability.requirable.items()
+            if configured.get(name) == RequirableValidator.REQUIRE
+        }
+        neighbor.capability.required = frozenset(required)
+        return {name: True if value == RequirableValidator.REQUIRE else value for name, value in configured.items()}
+
     def _post_capa_default(self, neighbor: Neighbor, local: dict[str, Any]) -> None:
-        capability = local.get('capability', {})
+        capability = self._post_capa_required(neighbor, local.get('capability', {}))
         cap = neighbor.capability
 
         # Map config keys to typed attributes

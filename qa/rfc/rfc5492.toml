@@ -27,10 +27,29 @@ optional capability turned off sends one.
 """
 
 [[requirement]]
+id = "rfc5492#3-may-refuse-a-peer-without-a-capability"
+section = "3"
+level = "MAY"
+status = "required"
+polarity = "both"
+text = """
+If a BGP speaker that supports a certain capability determines that
+its peer doesn't support this capability, the speaker MAY send a
+NOTIFICATION message to the peer and terminate peering
+"""
+note = """
+Taken where the operator asks for it, with `require` in place of `enable` on a capability
+(asn4, route-refresh, extended-message, operational, software-version, nexthop,
+link-local-nexthop).  Negotiated.unsupported_capability() builds the (2, 7).  Without
+`require` a capability the peer lacks is not grounds for refusal, and a family the peer
+did not advertise is still only recorded in Negotiated.mismatch and logged.
+"""
+
+[[requirement]]
 id = "rfc5492#3-notification-must-name-the-capabilities"
 section = "3"
 level = "MUST"
-status = "not-applicable"
+status = "required"
 polarity = "both"
 text = """
 The
@@ -38,28 +57,23 @@ message MUST contain the capability or capabilities that cause the
 speaker to send the message.
 """
 note = """
-Conditional on the MAY in the sentence before it, which exabgp declines. Nothing in the
-tree raises Notify(2, 7): subcode 7 appears only as a name in the table in
-notification.py, so exabgp never sends an Unsupported Capability NOTIFICATION and never
-has a set of capabilities to put in one. A family the peer did not advertise is recorded
-in Negotiated.mismatch, logged, and the session runs without that family.
+Every required capability the peer's OPEN lacks, and only those, in the order of our OPEN.
 """
 
 [[requirement]]
 id = "rfc5492#3-terminated-peering-not-re-established"
 section = "3"
 level = "SHOULD NOT"
-status = "not-applicable"
+status = "required"
 polarity = "both"
 text = """
 If terminated, such
 peering SHOULD NOT be re-established automatically.
 """
 note = """
-"Such peering" is one terminated by the Unsupported Capability NOTIFICATION of the
-previous sentences, which exabgp never sends. Sessions exabgp does tear down are torn
-down for other reasons and are retried by the reactor's delay loop, which is what an
-operator asks for; this sentence is not about those.
+After sending (2, 7) the peer is stopped, as the stop command does, and comes back on a
+configuration reload.  Sessions torn down for any other reason are retried by the
+reactor's delay loop as before; this sentence is not about those.
 """
 
 [[requirement]]
@@ -214,7 +228,7 @@ Parameters, each of which contains one or more capabilities TLVs.
 id = "rfc5492#5-data-field-lists-the-capabilities"
 section = "5"
 level = "MUST"
-status = "not-applicable"
+status = "required"
 polarity = "both"
 text = """
 The Data field in the NOTIFICATION
@@ -222,10 +236,9 @@ message MUST list the set of capabilities that causes the speaker to
 send the message.
 """
 note = """
-The encoding rule for a message exabgp cannot produce. Notify carries a code, a subcode
-and a text reason, and no caller anywhere raises subcode 7, so there is no Data field of
-an Unsupported Capability NOTIFICATION for this to describe. This is the encoding half
-of the decision recorded at rfc5492#3-notification-must-name-the-capabilities.
+Each is Capabilities.tlvs() of our own OPEN, so it is encoded "in the same way as it would
+be encoded in the OPEN message", the sentence which follows.  This is why `require` is
+only accepted where it also advertises: what we do not send we cannot list.
 """
 
 [[requirement]]

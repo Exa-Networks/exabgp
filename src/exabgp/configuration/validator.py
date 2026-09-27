@@ -342,6 +342,39 @@ class BooleanValidator(Validator[bool]):
 
 
 @dataclass
+class RequirableValidator(Validator[bool | str]):
+    """A capability which may be enabled, disabled, or required of the peer.
+
+    `require` advertises the capability and refuses a peer which does not advertise it
+    back, with an Unsupported Capability NOTIFICATION (RFC 5492 3).  The other values are
+    the booleans BooleanValidator takes, and mean what they always did.
+    """
+
+    name: str = 'requirable'
+    default: bool | None = None
+
+    REQUIRE = 'require'
+
+    def _parse(self, value: str) -> bool | str:
+        lower = value.lower()
+        if lower == self.REQUIRE:
+            return self.REQUIRE
+        if lower in BooleanValidator.TRUE_VALUES:
+            return True
+        if lower in BooleanValidator.FALSE_VALUES:
+            return False
+        if not lower and self.default is not None:
+            return self.default
+        raise ValueError(f"'{value}' is not valid\n  Valid options: enable, disable, require")
+
+    def to_schema(self) -> dict[str, Any]:
+        schema: dict[str, Any] = {'oneOf': [{'type': 'boolean'}, {'const': self.REQUIRE}]}
+        if self.default is not None:
+            schema['default'] = self.default
+        return schema
+
+
+@dataclass
 class FlagValidator(Validator[bool]):
     """Validates presence-only flags that don't require a value.
 

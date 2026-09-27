@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.operational import Operational
@@ -589,6 +590,11 @@ Neighbor {peer-address}
         add_path_str = AddPath().named(cap.add_path) if cap.add_path else 'disable'
         graceful_str = str(cap.graceful_restart.time) if cap.graceful_restart.is_enabled() else 'disable'
 
+        def state(enabled: bool, code: int) -> str:
+            if code in cap.required:
+                return 'require'
+            return 'enable' if enabled else 'disable'
+
         returned = (
             f'neighbor {neighbor.session.peer_address} {{\n'
             f'\tdescription "{neighbor.description}";\n'
@@ -616,16 +622,17 @@ Neighbor {peer-address}
             + (f'\tincoming-ttl {neighbor.session.incoming_ttl};\n' if neighbor.session.incoming_ttl else '')
             + cls._configuration_role(neighbor)
             + f'\tcapability {{\n'
-            f'\t\tasn4 {"enable" if cap.asn4.is_enabled() else "disable"};\n'
-            f'\t\troute-refresh {"enable" if cap.route_refresh else "disable"};\n'
+            f'\t\tasn4 {state(cap.asn4.is_enabled(), CapabilityCode.FOUR_BYTES_ASN)};\n'
+            f'\t\troute-refresh {state(bool(cap.route_refresh), CapabilityCode.ROUTE_REFRESH)};\n'
             f'\t\tgraceful-restart {graceful_str};\n'
-            f'\t\tsoftware-version {"enable" if cap.software_version else "disable"};\n'
-            f'\t\tnexthop {"enable" if cap.nexthop.is_enabled() else "disable"};\n'
+            f'\t\tsoftware-version {state(bool(cap.software_version), CapabilityCode.SOFTWARE_VERSION)};\n'
+            f'\t\tnexthop {state(cap.nexthop.is_enabled(), CapabilityCode.NEXTHOP)};\n'
             f'\t\tadd-path {add_path_str};\n'
             f'\t\tmulti-session {"enable" if cap.multi_session.is_enabled() else "disable"};\n'
-            f'\t\toperational {"enable" if cap.operational.is_enabled() else "disable"};\n'
+            f'\t\toperational {state(cap.operational.is_enabled(), CapabilityCode.OPERATIONAL)};\n'
             f'\t\taigp {"enable" if cap.aigp.is_enabled() else "disable"};\n'
-            f'\t}}\n'
+            + cls._configuration_required_only(cap)
+            + f'\t}}\n'
             f'\tfamily {{{families}\n'
             f'\t}}\n'
             f'\tnexthop {{{nexthops}\n'
@@ -638,6 +645,16 @@ Neighbor {peer-address}
         # '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
         # '\t\tsend {\n%s\t\t}\n' % send if send else '',
         return returned.replace('\t', '  ')
+
+    @staticmethod
+    def _configuration_required_only(cap: NeighborCapability) -> str:
+        # not otherwise in the dump, so only written when leaving them out would lose a require
+        lines = ''
+        if CapabilityCode.EXTENDED_MESSAGE in cap.required:
+            lines += '\t\textended-message require;\n'
+        if CapabilityCode.LINK_LOCAL_NEXTHOP in cap.required:
+            lines += '\t\tlink-local-nexthop require;\n'
+        return lines
 
     @staticmethod
     def _configuration_role(neighbor: Neighbor) -> str:

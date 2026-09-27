@@ -830,6 +830,7 @@ def test_protocol_validate_open_success(mock_peer: Any) -> None:
 
     # Mock negotiated.validate to return None (success)
     protocol.negotiated.validate = Mock(return_value=None)
+    protocol.negotiated.unsupported_capability = Mock(return_value=None)
     protocol.negotiated.mismatch = []
 
     # Should not raise
@@ -861,6 +862,7 @@ def test_protocol_validate_open_with_api_negotiated(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     protocol.negotiated.validate = Mock(return_value=None)
+    protocol.negotiated.unsupported_capability = Mock(return_value=None)
     protocol.negotiated.mismatch = []
 
     protocol.validate_open()
@@ -881,6 +883,7 @@ def test_protocol_validate_open_with_family_mismatch(mock_peer: Any) -> None:
     protocol.connection = mock_connection
 
     protocol.negotiated.validate = Mock(return_value=None)
+    protocol.negotiated.unsupported_capability = Mock(return_value=None)
     protocol.negotiated.mismatch = [
         ('local', (AFI.ipv4, SAFI.mpls_vpn)),
         ('remote', (AFI.ipv6, SAFI.unicast)),

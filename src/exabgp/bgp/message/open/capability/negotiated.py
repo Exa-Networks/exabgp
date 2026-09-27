@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message.open.asn import AS_TRANS, ASN
-from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.ms import MultiSession
@@ -27,6 +27,7 @@ from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
+from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 
 
@@ -319,6 +320,28 @@ class Negotiated:
             self.mismatch.append(('exabgp' if family in r else 'peer', family))
 
         return None
+
+    def unsupported_capability(self) -> Notify | None:
+        """The (2, 7) refusing a peer which left out a capability we require, if it did.
+
+        RFC 5492 3: the message "MUST contain the capability or capabilities that cause the
+        speaker to send the message", and 5: each "encoded in the same way as it would be
+        encoded in the OPEN message".  So the Data field is our own TLVs for what is missing.
+        """
+        assert self.sent_open is not None
+        assert self.received_open is not None
+        sent = self.sent_open.capabilities
+        received = self.received_open.capabilities
+        required = self.neighbor.capability.required
+        # configuration turns require into enabled, so what we require we also advertised
+        assert required <= sent.keys(), 'a required capability was not in our OPEN'
+        # in the order of our OPEN, so the Data field reads as a cut of what we sent
+        missing = [code for code in sent if code in required and code not in received]
+        if not missing:
+            return None
+        names = ', '.join(str(CapabilityCode(code)) for code in missing)
+        data = b''.join(sent.tlvs(code) for code in missing)
+        return Notify(2, 7, f'the peer did not advertise the required capabilities: {names}', data=data)
 
     def nexthopself(self, afi: AFI) -> 'IP':
         return self.neighbor.ip_self(afi)

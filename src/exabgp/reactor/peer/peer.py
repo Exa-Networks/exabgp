@@ -843,6 +843,10 @@ class Peer:
 
         # NOTIFY THE PEER OF AN ERROR
         except Notify as notify:
+            # RFC 5492 3: a peering refused for want of a capability "SHOULD NOT be
+            # re-established automatically", the peer would only be refused again
+            if (notify.code, notify.subcode) == Notify.UNSUPPORTED_CAPABILITY:
+                self.stop()
             if self.proto:
                 try:
                     await self.proto.new_notification(notify)

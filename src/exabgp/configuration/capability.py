@@ -18,7 +18,8 @@ if TYPE_CHECKING:
 from exabgp.configuration.core import Section
 from exabgp.configuration.parser import string
 from exabgp.configuration.schema import ActionKey, ActionOperation, ActionTarget, Container, Leaf, ValueType
-from exabgp.configuration.validator import IntValidators
+from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.configuration.validator import IntValidators, RequirableValidator
 
 
 def addpath(tokeniser: 'Tokeniser') -> int:
@@ -47,6 +48,22 @@ def addpath(tokeniser: 'Tokeniser') -> int:
 class ParseCapability(Section):
     TTL_SECURITY = 255
 
+    # The capabilities `require` is accepted for, and the code each is advertised under.
+    # Only those whose leaf is a plain on or off, and which put a capability in our OPEN
+    # when on: RFC 5492 5 has the Data field carry it "encoded in the same way as it would
+    # be encoded in the OPEN message", so what we do not send we cannot list.  Route
+    # refresh is the base capability, code 2: Enhanced Route Refresh goes out beside it but
+    # a peer without it still refreshes.  multi-session refuses on its own, with (2, 9).
+    requirable: dict[str, int] = {
+        'asn4': Capability.CODE.FOUR_BYTES_ASN,
+        'route-refresh': Capability.CODE.ROUTE_REFRESH,
+        'extended-message': Capability.CODE.EXTENDED_MESSAGE,
+        'operational': Capability.CODE.OPERATIONAL,
+        'software-version': Capability.CODE.SOFTWARE_VERSION,
+        'nexthop': Capability.CODE.NEXTHOP,
+        'link-local-nexthop': Capability.CODE.LINK_LOCAL_NEXTHOP,
+    }
+
     # Schema definition for BGP capabilities
     schema = Container(
         description='BGP capabilities to negotiate with the peer',
@@ -55,6 +72,7 @@ class ParseCapability(Section):
                 type=ValueType.BOOLEAN,
                 description='Extended next-hop capability',
                 default=True,
+                validator=RequirableValidator(default=True),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -71,6 +89,7 @@ class ParseCapability(Section):
                 type=ValueType.BOOLEAN,
                 description='4-byte AS number capability',
                 default=True,
+                validator=RequirableValidator(default=True),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -96,6 +115,7 @@ class ParseCapability(Section):
                 type=ValueType.BOOLEAN,
                 description='Operational capability for advisory messages',
                 default=True,
+                validator=RequirableValidator(default=True),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -104,6 +124,7 @@ class ParseCapability(Section):
                 type=ValueType.BOOLEAN,
                 description='Route refresh capability',
                 default=True,
+                validator=RequirableValidator(default=True),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -120,6 +141,7 @@ class ParseCapability(Section):
                 type=ValueType.BOOLEAN,
                 description='Extended message capability (>4096 bytes)',
                 default=True,
+                validator=RequirableValidator(default=True),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -128,6 +150,7 @@ class ParseCapability(Section):
                 type=ValueType.BOOLEAN,
                 description='Software version capability',
                 default=False,
+                validator=RequirableValidator(default=False),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -136,6 +159,7 @@ class ParseCapability(Section):
                 type=ValueType.BOOLEAN,
                 description='Link-local next-hop capability (RFC draft-ietf-idr-linklocal-capability)',
                 default=None,
+                validator=RequirableValidator(default=None),
                 target=ActionTarget.SCOPE,
                 operation=ActionOperation.SET,
                 key=ActionKey.COMMAND,
@@ -154,16 +178,18 @@ class ParseCapability(Section):
     syntax = (
         'capability {\n'
         '   add-path disable|send|receive|send/receive;\n'
-        '   asn4 enable|disable;\n'
+        '   asn4 enable|disable|require;\n'
         '   graceful-restart <time in second>;\n'
         '   multi-session enable|disable;\n'
-        '   operational enable|disable;\n'
-        '   refresh enable|disable;\n'
-        '   extended-message enable|disable;\n'
-        '   software-version enable|disable;\n'
-        '   link-local-nexthop enable|disable;\n'
+        '   operational enable|disable|require;\n'
+        '   route-refresh enable|disable|require;\n'
+        '   extended-message enable|disable|require;\n'
+        '   software-version enable|disable|require;\n'
+        '   nexthop enable|disable|require;\n'
+        '   link-local-nexthop enable|disable|require;\n'
         '   link-local-prefer enable|disable;\n'
         '}\n'
+        '# require: advertise it, and refuse a peer which does not (Unsupported Capability)\n'
     )
 
     # Schema validators handle BOOLEAN entries and graceful-restart.
