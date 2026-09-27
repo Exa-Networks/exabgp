@@ -301,8 +301,9 @@ turned that string into the Data field.  protocol.py now packs the length for a 
 NotifyError and leaves every other one carrying its sentence.  The three in-parser paths
 (Open, KeepAlive, UpdateCollection.split) always did send pack('!H', length).
 
-The tidier home for this is connection.py, where the "# MUST send the faulty length back"
-comment sits, but NotifyError.__init__ takes a str.  Giving it bytes is the follow-up.
+Since 2026-09-27 connection.py fills it itself: NotifyError carries a Data field, set to
+the two octets of the header it refused, and protocol.py passes it on rather than rebuild
+it.
 """
 
 [[requirement]]

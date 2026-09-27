@@ -471,14 +471,14 @@ class Connection:
 
         if length < Message.HEADER_LEN or length > self.msg_size:
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-            yield length, 0, header, memoryview(b''), NotifyError(1, 2, report)
+            yield length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
             return
 
         validator = Message.Length.get(msg, _default_length_validator)
         if not validator(length):
-            # MUST send the faulty length back
+            # RFC 4271 6.1: the Data field MUST contain the erroneous Length field
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-            yield length, 0, header, memoryview(b''), NotifyError(1, 2, report)
+            yield length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
             return
 
         number = length - Message.HEADER_LEN
@@ -520,13 +520,13 @@ class Connection:
 
             if length < Message.HEADER_LEN or length > self.msg_size:
                 report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-                return length, 0, header, memoryview(b''), NotifyError(1, 2, report)
+                return length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
 
             validator = Message.Length.get(msg, _default_length_validator)
             if not validator(length):
-                # MUST send the faulty length back
+                # RFC 4271 6.1: the Data field MUST contain the erroneous Length field
                 report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-                return length, 0, header, memoryview(b''), NotifyError(1, 2, report)
+                return length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
 
             if length == Message.HEADER_LEN:
                 return length, msg, header, memoryview(b''), None

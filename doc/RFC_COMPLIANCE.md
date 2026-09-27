@@ -352,8 +352,9 @@ turned that string into the Data field.  protocol.py now packs the length for a 
 NotifyError and leaves every other one carrying its sentence.  The three in-parser paths
 (Open, KeepAlive, UpdateCollection.split) always did send pack('!H', length).
 
-The tidier home for this is connection.py, where the "# MUST send the faulty length back"
-comment sits, but NotifyError.__init__ takes a str.  Giving it bytes is the follow-up.
+Since 2026-09-27 connection.py fills it itself: NotifyError carries a Data field, set to
+the two octets of the header it refused, and protocol.py passes it on rather than rebuild
+it.
   - `tests/unit/rfc/test_rfc4271_message_header.py::test_a_bad_message_length_carries_the_erroneous_length`
 - **6.1** (MUST) `rfc4271#6.1-bad-message-type` - proven
   > If the Type field of the message header is not recognized, then the Error Subcode MUST be set to Bad Message Type.

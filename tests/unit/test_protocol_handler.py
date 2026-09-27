@@ -711,10 +711,9 @@ async def test_protocol_read_internal_notification(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     # Mock a notify object from reader
-    mock_notify = Mock()
-    mock_notify.code = 1
-    mock_notify.subcode = 3
-    mock_notify.__str__ = Mock(return_value='test error')
+    from exabgp.reactor.network.error import NotifyError
+
+    mock_notify = NotifyError(1, 3, 'test error')
 
     mock_connection = Mock()
     mock_connection.reader_async = AsyncMock(return_value=(0, Message.CODE.KEEPALIVE, b'', b'', mock_notify))
@@ -739,10 +738,9 @@ async def test_protocol_read_notification_with_api_consolidated(mock_peer: Any) 
 
     protocol = Protocol(mock_peer)
 
-    mock_notify = Mock()
-    mock_notify.code = 2
-    mock_notify.subcode = 1
-    mock_notify.__str__ = Mock(return_value='test notification')
+    from exabgp.reactor.network.error import NotifyError
+
+    mock_notify = NotifyError(2, 1, 'test notification')
 
     mock_connection = Mock()
     header = b'\xff' * 19

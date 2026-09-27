@@ -127,7 +127,13 @@ class SizeError(NetworkError):
 
 
 class NotifyError(Exception):
-    def __init__(self, code: int, subcode: int, msg: str) -> None:
+    """An error found reading the header, before there is a message to hand it to.
+
+    `data` is the NOTIFICATION Data field where an RFC defines it, empty otherwise.
+    """
+
+    def __init__(self, code: int, subcode: int, msg: str, data: bytes = b'') -> None:
         self.code: int = code
         self.subcode: int = subcode
+        self.data: bytes = data
         Exception.__init__(self, msg)

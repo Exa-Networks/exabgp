@@ -437,6 +437,8 @@ class TestBGPHeaderValidation:
         assert isinstance(error, NotifyError)
         assert error.code == 1  # Message Header Error
         assert error.subcode == 2  # Bad Message Length
+        # RFC 4271 6.1: the Data field "MUST contain the erroneous Length field"
+        assert error.data == struct.pack('!H', 18)
 
     def test_reader_validates_length_maximum(self) -> None:
         """Test reader() rejects length > msg_size"""
