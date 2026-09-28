@@ -18,6 +18,8 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute import AttributeCollection, NextHopSelf
 from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.nlri.settings import VPLSSettings
+from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.tree.static import (
@@ -28,9 +30,10 @@ from exabgp.configuration.grammar.tree.static import (
     action,
     attribute_words,
     store_routes,
+    value_fields,
 )
 from exabgp.configuration.grammar.types.base import Type
-from exabgp.configuration.grammar.types.word import Word
+from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
@@ -40,14 +43,14 @@ VPLS_PARAM_MAX = 0xFFFF  # endpoint, size, offset and label base are sixteen bit
 OPS = 'vpls-ops'  # the values of the vpls block being read
 
 
-def _vpls_number(name: str) -> Word[int]:
+def _vpls_number(name: str) -> Number[int]:
     def convert(word: str) -> int:
         number = int(word)
         if not 0 <= number <= VPLS_PARAM_MAX:
             raise ValueError(f'invalid l2vpn vpls {name}')
         return number
 
-    return Word(name, f'<0-{VPLS_PARAM_MAX}>', convert, ['0', '5', str(VPLS_PARAM_MAX)])
+    return Number(name, ((0, VPLS_PARAM_MAX),), convert=convert, examples=['0', '5', str(VPLS_PARAM_MAX)])
 
 
 def _nexthop(word: str) -> NextHopSelf | IP:
@@ -57,12 +60,24 @@ def _nexthop(word: str) -> NextHopSelf | IP:
 
 
 VPLS_NLRI: dict[str, RouteValue] = {
-    'next-hop': RouteValue(Word('next-hop', '<ip>|self', _nexthop, ['10.0.0.1', 'self']), 'nlri', 'nexthop'),
+    'next-hop': RouteValue(
+        Word(
+            'next-hop',
+            '<ip>|self',
+            _nexthop,
+            ['10.0.0.1', 'self'],
+            shape=shape.union(shape.IP_ADDRESS, shape.enumeration('self')),
+        ),
+        'nlri',
+        'nexthop',
+        'the next-hop, or self for the IPv4 local address',
+    ),
     'rd': RouteValue(ROUTE_VALUES['rd'].type, 'nlri', 'rd'),
-    'endpoint': RouteValue(_vpls_number('endpoint'), 'nlri', 'endpoint'),
-    'offset': RouteValue(_vpls_number('block-offset'), 'nlri', 'offset'),
-    'size': RouteValue(_vpls_number('block-size'), 'nlri', 'size'),
-    'base': RouteValue(_vpls_number('label'), 'nlri', 'base'),
+    # RFC 4761 3.2.2
+    'endpoint': RouteValue(_vpls_number('endpoint'), 'nlri', 'endpoint', 'the VE ID of the site'),
+    'offset': RouteValue(_vpls_number('block-offset'), 'nlri', 'offset', 'the VE block offset'),
+    'size': RouteValue(_vpls_number('block-size'), 'nlri', 'size', 'the VE block size'),
+    'base': RouteValue(_vpls_number('label'), 'nlri', 'base', 'the label base'),
 }
 VPLS_ATTRIBUTES = (
     'attribute',
@@ -130,6 +145,9 @@ class VPLSLine(Type[list[Route]]):
 
     def examples(self) -> list[str]:
         return ['endpoint 5 base 10702 offset 1 size 8 rd 1:1 next-hop 10.0.0.1']
+
+    def shape(self) -> Shape:
+        return shape.container(*value_fields(VPLS_VALUES))
 
 
 def vpls_words(route: Route) -> list[str]:
@@ -208,6 +226,9 @@ class _NoSetter(Type[Any]):
     def examples(self) -> list[str]:
         return []
 
+    def shape(self) -> Shape:
+        return shape.REFUSED
+
 
 def _l2vpn(name: Any, values: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
     # legacy: the section takes every route not yet taken, those read before it included
@@ -221,10 +242,12 @@ VPLS_BLOCK = Block(
     build=_vpls,
     keep=Keep.EXTEND,
     name=_Ignored(),
+    key='label',  # the name is read and ignored
     opened=_opened,
     doc='a VPLS route, its values one per statement',
     children=tuple(
-        Leaf(keyword, spec.type, field=f'_{keyword}', store=_store_op(spec)) for keyword, spec in VPLS_VALUES.items()
+        Leaf(keyword, spec.type, field=f'_{keyword}', store=_store_op(spec), doc=spec.doc)
+        for keyword, spec in VPLS_VALUES.items()
     ),
 )
 
@@ -234,7 +257,7 @@ L2VPN_SECTION = Block(
     build=_l2vpn,
     doc='VPLS routes',
     children=(
-        Leaf('vpls', VPLSLine(), field='_line', store=store_routes, doc='a VPLS route, on one line'),
+        Leaf('vpls', VPLSLine(), field='_line', store=store_routes, doc='a VPLS route, on one line', multiple=True),
         VPLS_BLOCK,
         *(Leaf(keyword, _NoSetter(keyword), field=f'_{keyword}') for keyword in VPLS_NLRI),
         *(

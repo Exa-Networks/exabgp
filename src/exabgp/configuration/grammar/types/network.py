@@ -12,7 +12,8 @@ from __future__ import annotations
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.configuration.grammar.types.word import Word
+from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.protocol.ip import IP, IPRange
 
 PORT_MAX = 65535
@@ -98,13 +99,14 @@ def _ttl(word: str) -> int | None:
     return ttl
 
 
-IP_ADDRESS = Word('ip-address', '<ip>', _ip, ['192.0.2.1', '2001:db8::1'])
+IP_ADDRESS = Word('ip-address', '<ip>', _ip, ['192.0.2.1', '2001:db8::1'], shape=shape.IP_ADDRESS)
 IP_OR_AUTO = Word(
     'ip-address',
     '<ip>|auto',
     _ip_or_auto,
     ['192.0.2.1', '2001:db8::1', 'auto'],
     render=lambda value: ['auto' if value is None else str(value)],
+    shape=shape.union(shape.IP_ADDRESS, shape.enumeration('auto')),
 )
 IP_RANGE = Word(
     'ip-range',
@@ -112,6 +114,7 @@ IP_RANGE = Word(
     _ip_range,
     ['127.0.0.1', '127.0.0.0/8', '::1', '2001:db8::/64'],
     render=lambda value: [repr(value)],
+    shape=shape.union(shape.IP_ADDRESS, shape.IP_PREFIX),
 )
 ASN_OR_AUTO = Word(
     'as-number',
@@ -119,15 +122,29 @@ ASN_OR_AUTO = Word(
     _asn_or_auto,
     ['65000', '4200000000', '1.1', 'auto'],
     render=lambda value: ['auto' if value is None else str(value)],
+    shape=shape.union(shape.AS_NUMBER, shape.enumeration('auto')),
 )
-ASN_WORD = Word('as-number', '<asn>', _asn, ['65000', '4200000000', '1.1'])
-ROUTER_ID = Word('router-id', '<ipv4>', _router_id, ['192.0.2.1'])
-HOLD_TIME = Word('hold-time', '0|<3-65535>', _hold_time, ['0', '3', '180', '65535'])
-PORT = Word('port', '<1-65535>', _port, ['1', '179', '65535'])
+ASN_WORD: Number[ASN] = Number(
+    'as-number',
+    ((0, shape.UINT32_MAX),),
+    convert=_asn,
+    examples=['65000', '4200000000', '1.1'],
+    hint='<asn>',
+    typedef='inet:as-number',
+)
+ROUTER_ID = Word('router-id', '<ipv4>', _router_id, ['192.0.2.1'], shape=shape.IPV4_ADDRESS)
+HOLD_TIME: Number[HoldTime] = Number(
+    'hold-time',
+    ((0, 0), (HOLD_TIME_MIN_NONZERO, HoldTime.MAX)),
+    convert=_hold_time,
+    examples=['0', '3', '180', '65535'],
+)
+PORT: Number[int] = Number('port', ((1, PORT_MAX),), convert=_port, examples=['1', '179', '65535'])
 TTL = Word(
     'ttl',
     '<0-255>|disable',
     _ttl,
     ['0', '1', '255', 'false', 'disable', 'disabled'],
     render=lambda value: ['disable' if value is None else str(value)],
+    shape=shape.union(shape.integer(0, TTL_MAX), shape.enumeration('disable')),
 )

@@ -52,11 +52,20 @@ def digest(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:DIGEST]
 
 
+def _portable(processes: dict[str, Any]) -> dict[str, Any]:
+    """The processes with the program as named, not where this machine's PATH finds it."""
+    found = {}
+    for name, process in processes.items():
+        run = process.get('run') or []
+        found[name] = {**process, 'run': [os.path.basename(run[0]), *run[1:]] if run else run}
+    return found
+
+
 def outcome_digest(outcome: Outcome | list[Any] | str) -> str:
     """A configuration's Accepted or Rejected, or an API command's routes or `rejected`."""
     reduced: Any = 'rejected'
     if isinstance(outcome, Accepted):
-        reduced = [canonical(outcome.processes), canonical(outcome.neighbors)]
+        reduced = [canonical(_portable(outcome.processes)), canonical(outcome.neighbors)]
     elif isinstance(outcome, (list, str)):
         reduced = canonical(outcome)
     return digest(json.dumps(reduced, sort_keys=True))

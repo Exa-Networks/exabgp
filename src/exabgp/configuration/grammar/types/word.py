@@ -12,9 +12,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Callable, Generic, TypeVar, cast
 
 from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.shape import INT64_MAX, INT64_MIN, TEXT, Shape, boolean, enumeration, integer_ranges
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.words import Words
 
@@ -30,7 +31,8 @@ class Word(Type[T], Generic[T]):
         examples: list[str],
         render: Callable[[T], list[str]] | None = None,
         choices: list[str] | None = None,
-        schema: dict[str, Any] | None = None,
+        shape: Shape = TEXT,
+        doc: str = '',
     ) -> None:
         self.name = name
         self._hint = hint
@@ -38,7 +40,7 @@ class Word(Type[T], Generic[T]):
         self._examples = examples
         self._render = render or (lambda value: [str(value)])
         self._choices = choices or []
-        self._schema = schema or {'type': 'string'}
+        self._shape = shape.described(doc)
 
     def parse(self, words: Words) -> T:
         where = words.where()
@@ -60,8 +62,60 @@ class Word(Type[T], Generic[T]):
     def choices(self, partial: str) -> list[str]:
         return [choice for choice in self._choices if choice.startswith(partial.lower())]
 
-    def json_schema(self) -> dict[str, Any]:
-        return dict(self._schema)
+    def shape(self) -> Shape:
+        return self._shape
+
+
+Ranges = tuple[tuple[int, int], ...]
+
+
+class Number(Word[T], Generic[T]):
+    """A number within declared ranges, the constraint written once.
+
+    The ranges give the check, the hint, the examples and the shape. `make` turns the number
+    into the value kept (a MED attribute). A `convert` of its own, for the spellings the
+    legacy parser took (`0x64`, `1.1`), must refuse what the ranges refuse: the tests check
+    it at every bound.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        ranges: Ranges,
+        make: Callable[[int], T] | None = None,
+        convert: Callable[[str], T] | None = None,
+        examples: list[str] | None = None,
+        render: Callable[[T], list[str]] | None = None,
+        hint: str = '',
+        typedef: str = '',
+        doc: str = '',
+    ) -> None:
+        self.ranges = ranges
+        self._make = make
+        bounds = [str(bound) for low, high in ranges for bound in dict.fromkeys((low, high))]
+        super().__init__(
+            name,
+            hint or '|'.join(str(low) if low == high else f'<{low}-{high}>' for low, high in ranges),
+            convert or self._number,
+            examples if examples is not None else bounds,
+            render=render,
+            shape=_replace_typedef(integer_ranges(*ranges), typedef),
+            doc=doc,
+        )
+
+    def _number(self, word: str) -> T:
+        try:
+            number = int(word)
+        except ValueError:
+            raise ValueError(f"'{word}' is not a valid {self.name}") from None
+        if not any(low <= number <= high for low, high in self.ranges):
+            raise ValueError(f'{self.name} {number} is invalid, it is {self._hint}')
+        value: Any = number if self._make is None else self._make(number)
+        return cast(T, value)
+
+
+def _replace_typedef(shape: Shape, typedef: str) -> Shape:
+    return Shape(shape.kind, ranges=shape.ranges, typedef=typedef) if typedef else shape
 
 
 def spelled(
@@ -89,7 +143,7 @@ def spelled(
         examples,
         render=lambda value: [true[0] if value else false[0]],
         choices=[*true, *false],
-        schema={'type': 'boolean'},
+        shape=boolean(),
     )
 
 
@@ -104,28 +158,14 @@ def choice(name: str, choices: list[str], lower: bool = True) -> Word[str]:
         raise ValueError(f"'{word}' is not a valid {name}")
 
     examples = list(choices) + ([choices[0].upper()] if lower else [])
-    return Word(name, '|'.join(choices), convert, examples, choices=list(choices), schema={'enum': list(choices)})
+    return Word(name, '|'.join(choices), convert, examples, choices=list(choices), shape=enumeration(*choices))
 
 
-def integer(name: str, low: int | None = None, high: int | None = None) -> Word[int]:
-    def convert(word: str) -> int:
-        try:
-            number = int(word)
-        except ValueError:
-            raise ValueError(f"'{word}' is not a valid {name}") from None
-        if low is not None and number < low:
-            raise ValueError(f'{name} {number} is below {low}')
-        if high is not None and number > high:
-            raise ValueError(f'{name} {number} is above {high}')
-        return number
-
-    examples = [str(low if low is not None else 0), str(high if high is not None else 1)]
-    schema: dict[str, Any] = {'type': 'integer'}
-    if low is not None:
-        schema['minimum'] = low
-    if high is not None:
-        schema['maximum'] = high
-    return Word(name, '<number>' if low is None else f'<{low}-{high}>', convert, examples, schema=schema)
+def integer(name: str, low: int | None = None, high: int | None = None) -> Number[int]:
+    """A plain number; with no bounds any integer, a negative one included."""
+    if low is None or high is None:
+        return Number(name, ((INT64_MIN, INT64_MAX),), hint='<number>', examples=['0', '1'])
+    return Number(name, ((low, high),))
 
 
 def text(name: str, examples: list[str] | None = None) -> Word[str]:

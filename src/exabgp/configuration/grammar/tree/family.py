@@ -19,7 +19,9 @@ from __future__ import annotations
 from typing import Any
 
 from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.words import Words
@@ -131,6 +133,15 @@ class FamilyLine(Type[tuple[FamilyTuple, int]]):
     def examples(self) -> list[str]:
         return list(SAFIS[self.afi_keyword]) + [f'{next(iter(SAFIS[self.afi_keyword]))} prefix-limit 10']
 
+    def shape(self) -> Shape:
+        return shape.container(
+            ('safi', shape.enumeration(*SAFIS[self.afi_keyword]).described('the subsequent address family')),
+            (
+                'prefix-limit',
+                shape.integer(1, PREFIX_LIMIT_MAX).described('RFC 4486, the most prefixes the peer may send'),
+            ),
+        )
+
     def choices(self, partial: str) -> list[str]:
         return [safi for safi in SAFIS[self.afi_keyword] if safi.startswith(partial.lower())]
 
@@ -188,6 +199,12 @@ class AddPathLine(Type[tuple[FamilyTuple, int]]):
     def examples(self) -> list[str]:
         return list(SAFIS[self.afi_keyword]) + [f'{next(iter(SAFIS[self.afi_keyword]))} limit 10']
 
+    def shape(self) -> Shape:
+        return shape.container(
+            ('safi', shape.enumeration(*SAFIS[self.afi_keyword]).described('the subsequent address family')),
+            ('limit', shape.integer(1, PATHS_LIMIT_MAX).described('the most paths per prefix')),
+        )
+
 
 class NextHopLine(Type[tuple[AFI, SAFI, AFI]]):
     """`<safi> <next-hop afi>` after an AFI keyword, in any case."""
@@ -220,6 +237,15 @@ class NextHopLine(Type[tuple[AFI, SAFI, AFI]]):
             f'UNICAST {NEXTHOP_AFIS[self.afi_keyword][0].upper()}'
         ]
 
+    def shape(self) -> Shape:
+        return shape.container(
+            ('safi', shape.enumeration(*NEXTHOP_SAFIS).described('the subsequent address family')),
+            (
+                'nexthop-afi',
+                shape.enumeration(*NEXTHOP_AFIS[self.afi_keyword]).described('the address family of the next-hop'),
+            ),
+        )
+
 
 class Nothing(Type[None]):
     """A keyword with no value: what follows it is ignored."""
@@ -237,6 +263,9 @@ class Nothing(Type[None]):
 
     def examples(self) -> list[str]:
         return ['']
+
+    def shape(self) -> Shape:
+        return shape.empty()
 
 
 def _seen(values: dict[str, Any]) -> set[Any]:
@@ -307,7 +336,14 @@ FAMILY = Block(
     finish=_finish,
     children=(
         *(
-            Leaf(afi_keyword, FamilyLine(afi_keyword), field=afi_keyword, store=_store_family(afi_keyword))
+            Leaf(
+                afi_keyword,
+                FamilyLine(afi_keyword),
+                field=afi_keyword,
+                store=_store_family(afi_keyword),
+                multiple=True,
+                doc=f'a {afi_keyword} family to negotiate',
+            )
             for afi_keyword in SAFIS
         ),
         Leaf('all', Nothing(), field='all', store=_store_all, doc='every family exabgp knows'),
@@ -321,10 +357,17 @@ ADD_PATH = Block(
     finish=_finish,
     children=(
         *(
-            Leaf(afi_keyword, AddPathLine(afi_keyword), field=afi_keyword, store=_store_add_path(afi_keyword))
+            Leaf(
+                afi_keyword,
+                AddPathLine(afi_keyword),
+                field=afi_keyword,
+                store=_store_add_path(afi_keyword),
+                multiple=True,
+                doc=f'an {afi_keyword} family to negotiate ADD-PATH for',
+            )
             for afi_keyword in SAFIS
         ),
-        Leaf('all', Nothing(), field='all', store=_store_all),
+        Leaf('all', Nothing(), field='all', store=_store_all, doc='no family, ADD-PATH is negotiated for none'),
     ),
 )
 
@@ -334,7 +377,14 @@ NEXTHOP = Block(
     doc='the families whose next-hop may be of the other address family (RFC 8950)',
     finish=_finish,
     children=tuple(
-        Leaf(afi_keyword, NextHopLine(afi_keyword), field=afi_keyword, store=_store_nexthop(afi_keyword))
+        Leaf(
+            afi_keyword,
+            NextHopLine(afi_keyword),
+            field=afi_keyword,
+            store=_store_nexthop(afi_keyword),
+            multiple=True,
+            doc=f'an {afi_keyword} family whose next-hop may be of the other address family',
+        )
         for afi_keyword in NEXTHOP_AFIS
     ),
 )

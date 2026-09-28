@@ -5,16 +5,23 @@ from __future__ import annotations
 import pytest
 
 from config_grammar.forms import declared_leaves
-from exabgp.configuration.grammar.describe import find, json_schema, route_help, syntax
+from exabgp.configuration.grammar.describe import find, json_document, route_help, syntax
 from exabgp.configuration.grammar.nodes import Block
+from exabgp.configuration.grammar.shape import Kind
 from exabgp.configuration.grammar.tree.root import ROOT
 
 
 def _schema_at(path: tuple[str, ...]) -> dict:
-    schema = json_schema(ROOT)
+    document = json_document(ROOT, 'ExaBGP configuration')
+    schema = document
     for keyword in path:
+        if '$ref' in str(schema.get('allOf', '')):
+            schema = document['$defs'][schema['allOf'][0]['$ref'].removeprefix('#/$defs/')]
         schema = schema['properties'][keyword]
-        schema = schema.get('items', schema.get('additionalProperties', schema))
+        inner = schema.get('additionalProperties')
+        schema = schema.get('items', inner if isinstance(inner, dict) else schema)
+    if 'allOf' in schema:
+        schema = document['$defs'][schema['allOf'][0]['$ref'].removeprefix('#/$defs/')]
     return schema
 
 
@@ -33,6 +40,8 @@ def test_a_template_neighbor_refers_to_the_neighbor() -> None:
 
 def test_every_leaf_is_in_the_json_schema() -> None:
     for path, leaf in declared_leaves():
+        if leaf.type.shape().kind == Kind.REFUSED:
+            continue  # only there to be refused, it holds no data
         assert leaf.keyword in _schema_at(path)['properties'], f'{"/".join(path)} {leaf.keyword}'
 
 
@@ -56,8 +65,8 @@ def test_the_command_prints_a_section(capsys) -> None:
 
     from exabgp.application.syntax import cmdline
 
-    assert cmdline(Namespace(section=['process'], json=False)) == 0
+    assert cmdline(Namespace(section=['process'], json=False, yang=False)) == 0
     out = capsys.readouterr().out
     assert out.startswith('process <name> {\n')
     assert '\trun <program>' in out
-    assert cmdline(Namespace(section=['nothing'], json=False)) == 1
+    assert cmdline(Namespace(section=['nothing'], json=False, yang=False)) == 1

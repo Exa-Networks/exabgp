@@ -635,17 +635,38 @@ that could not be avoided. It decides the phase 6 gate.
   `/32` prefix makes the IPv4 peer's `/32` count 2**96 addresses: an IPv4 neighbor with an
   IPv6 `/32` route is refused "can only use ip ranges for the peer address with passive
   neighbors". The host-bit check of prefixes can be wrong the same way. Both parsers go
-  through it; pinned as NETMASK_DOCUMENT_BODY in the forms. To fix on its own, with its test.
+  through it; pinned as NETMASK_DOCUMENT_BODY in the forms. Fixed in 01e92cdf9, with
+  `tests/unit/test_netmask_family.py`.
 - configuration errors: the grammar positions an error as `<file>:<line>:<column>: <message>`
   (`line <line>:<column>:` for text), where the legacy parser wrote `line <line>: <the
   statement>` and named the section (`neighbor/flow/route`). Some messages are worded
   differently too (`'jsn' is not a valid encoder`). Tests which checked the legacy form now
-  accept either (`test_configuration_error_line.py` checks each parser's own)
+  accept either (`test_configuration_error_line.py` checks each parser's own).
+  Thomas: the error text is not an API we provide, the change stands. Idea for later: a
+  JSON output for configuration errors (position, message, expected words), which
+  `ConfigError` already holds
 - `exabgp schema export` still prints the legacy schema; `exabgp configuration syntax --json`
-  prints the grammar's. Switching `schema export` changes its output
+  prints the grammar's. Switching `schema export` changes its output. The differences:
+  - layout: the legacy schema lists every section at the top (`capability`, `family`,
+    `static`, `flow`, ... beside `neighbor`), flattens a flow route (`match`/`then` values
+    straight under `route`) and puts route values straight under `static`; the grammar
+    nests each section where it is written, `neighbor` a list, `process` by name
+  - coverage: the grammar has 155 paths the legacy schema lacks (the `announce` families,
+    `api` send/receive, `add-path`, `tcp-ao`, `nexthop`, `l2vpn` values, `match`/`then`/
+    `scope`, sr-policy, mup, mcast-vpn); nothing of the legacy one is missing
+  - leaf types: the legacy schema is richer. It gives integers with ranges (`hold-time`
+    0-65535, `med`), formats (`ip-address`), enums, booleans, defaults, `required` and
+    `additionalProperties: false`. The grammar types mostly fall back to `{"type": "string"}`
+    (only `Choice` and a few override `json_schema()`), give no default or `required`, and
+    a route value written through a `store` callback shows as an array
+  - header: no `$schema`, `$id` or `title` in the grammar's
+  Before `schema export` switches: `json_schema()` on every type (ranges, enums, formats),
+  defaults and mandatory leaves from the Leaf, `additionalProperties: false`, the header,
+  and a repeated-or-not flag that is not inferred from `store`
 - candidate, not done: `str(neighbor)` from `render()` would change the text of
   `show neighbor configuration`. Today's printer writes `rate-limit disable`, which neither
   parser reads back.
+- man pages: updated from `exabgp configuration syntax` once the work is done (Thomas)
 
 ---
 
@@ -705,6 +726,17 @@ that could not be avoided. It decides the phase 6 gate.
   `INDENT`). Conventions written in `.claude/exabgp/CONFIGURATION_GRAMMAR.md`. Left as
   they are: `Statement.words` (tokens, not words), the `...Type` suffix of some value
   types in `types/bgp.py`, the context key constants (no common scheme yet)
+
+- 2026-09-28: data model (asked by Thomas: typed JSON Schema, a base class carrying the
+  constraint, exposable as YANG). `grammar/shape.py` is a YANG-aligned model every type
+  returns from `shape()`; `json_schema.py` and `yang.py` print it; `describe.model()` builds
+  it from the tree (a statement and a section of one keyword are one list node; the section
+  shared by neighbor and template neighbor is one grouping / `$defs` entry). `Number`
+  declares a range once. `UnsignedAttribute` (MED, LOCAL_PREF) derives its range from its
+  width. `exabgp configuration syntax --yang`. Bug found and fixed: `PathInfo.make_from_integer`
+  kept the low 32 bits, `path-information 4294967296` was path 0 (both parsers);
+  `tests/unit/test_path_info_range.py`. Open: the JSON Schema is 395 KB, the route values are
+  repeated for each announce family; identical containers could share one `$defs` entry
 
 ## Failures
 

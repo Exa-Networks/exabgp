@@ -21,7 +21,10 @@ from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.types.lists import OneOrList
-from exabgp.configuration.grammar.types.word import Word, choice, integer, spelled, text
+from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.shape import Shape
+from exabgp.configuration.grammar.types.network import ASN_WORD
+from exabgp.configuration.grammar.types.word import Number, Word, choice, integer, spelled, text
 from exabgp.configuration.grammar.words import Words
 
 # the spellings of the boolean validator, and of the older boolean helper some sections use
@@ -75,6 +78,8 @@ def requirable(bare: bool | None) -> Word[bool | str]:
         examples,
         render=lambda value: [value if isinstance(value, str) else 'enable' if value else 'disable'],
         choices=['enable', 'disable', REQUIRE],
+        # advertised or not, or advertised and required of the peer
+        shape=shape.union(shape.boolean(), shape.enumeration(REQUIRE)),
     )
 
 
@@ -98,6 +103,7 @@ GRACEFUL_RESTART = Word(
     _graceful_restart,
     ['', '0', '120', str(GRACEFUL_RESTART_MAX), 'disable', 'disabled', 'DISABLE'],
     render=lambda value: ['disable' if value is False else str(value)],
+    shape=shape.union(shape.integer(0, GRACEFUL_RESTART_MAX), shape.enumeration('disable')),
 )
 
 ADD_PATH_MODES = {'disable': 0, 'disabled': 0, 'receive': 1, 'send': 2, 'send/receive': 3}
@@ -117,6 +123,7 @@ ADD_PATH_MODE = Word(
     [*ADD_PATH_MODES, 'SEND'],
     render=lambda value: [{0: 'disable', 1: 'receive', 2: 'send', 3: 'send/receive'}[value]],
     choices=list(ADD_PATH_MODES),
+    shape=shape.enumeration('disable', 'receive', 'send', 'send/receive'),
 )
 
 CAPABILITY = Block(
@@ -124,18 +131,58 @@ CAPABILITY = Block(
     field='capability',
     doc='the capabilities to negotiate',
     children=(
-        Leaf('nexthop', requirable(True), field='nexthop'),
-        Leaf('add-path', ADD_PATH_MODE, field='add-path'),
-        Leaf('asn4', requirable(True), field='asn4'),
-        Leaf('graceful-restart', GRACEFUL_RESTART, field='graceful-restart'),
-        Leaf('multi-session', boolean(True), field='multi-session'),
-        Leaf('operational', requirable(True), field='operational'),
-        Leaf('route-refresh', requirable(True), field='route-refresh'),
-        Leaf('aigp', boolean(True), field='aigp'),
-        Leaf('extended-message', requirable(True), field='extended-message'),
-        Leaf('software-version', requirable(False), field='software-version'),
-        Leaf('link-local-nexthop', requirable(None), field='link-local-nexthop'),
-        Leaf('link-local-prefer', boolean(False), field='link-local-prefer'),
+        Leaf('nexthop', requirable(True), field='nexthop', doc='Extended Next Hop Encoding, RFC 8950'),
+        Leaf('add-path', ADD_PATH_MODE, field='add-path', doc='ADD-PATH, RFC 7911: receive, send or both'),
+        Leaf('asn4', requirable(True), field='asn4', doc='four-octet AS numbers, RFC 6793'),
+        Leaf(
+            'graceful-restart',
+            GRACEFUL_RESTART,
+            field='graceful-restart',
+            doc='Graceful Restart, RFC 4724: the restart time in seconds, 0 for the hold time',
+        ),
+        Leaf(
+            'multi-session',
+            boolean(True),
+            field='multi-session',
+            doc='Multisession, draft-ietf-idr-bgp-multisession: a session per family',
+        ),
+        Leaf(
+            'operational',
+            requirable(True),
+            field='operational',
+            doc='Operational messages, draft-ietf-idr-operational-message',
+        ),
+        Leaf(
+            'route-refresh',
+            requirable(True),
+            field='route-refresh',
+            doc='Route Refresh, RFC 2918 and Enhanced Route Refresh, RFC 7313',
+        ),
+        Leaf('aigp', boolean(True), field='aigp', doc='accept and send the AIGP attribute, RFC 7311'),
+        Leaf(
+            'extended-message',
+            requirable(True),
+            field='extended-message',
+            doc='Extended Messages, RFC 8654: messages up to 65535 octets',
+        ),
+        Leaf(
+            'software-version',
+            requirable(False),
+            field='software-version',
+            doc='Software Version, draft-ietf-idr-software-version',
+        ),
+        Leaf(
+            'link-local-nexthop',
+            requirable(None),
+            field='link-local-nexthop',
+            doc='Link-Local Next Hop, draft-ietf-idr-linklocal-capability',
+        ),
+        Leaf(
+            'link-local-prefer',
+            boolean(False),
+            field='link-local-prefer',
+            doc='use the link-local IPv6 next-hop when a route has both',
+        ),
     ),
 )
 
@@ -149,22 +196,22 @@ def _regular_expression(word: str) -> str:
 
 
 def _direction(keyword: str) -> Block:
-    names = (
-        'parsed',
-        'packets',
-        'consolidate',
-        'open',
-        'update',
-        'notification',
-        'keepalive',
-        'refresh',
-        'operational',
-    )
+    names = {
+        'parsed': 'the messages decoded',
+        'packets': 'the messages as their bytes',
+        'consolidate': 'the decoded and raw forms of a message together',
+        'open': 'the OPEN messages',
+        'update': 'the UPDATE messages',
+        'notification': 'the NOTIFICATION messages',
+        'keepalive': 'the KEEPALIVE messages',
+        'refresh': 'the ROUTE-REFRESH messages',
+        'operational': 'the OPERATIONAL messages',
+    }
     return Block(
         keyword,
         field=keyword,
         doc=f'the messages {keyword == "send" and "sent" or "received"} which are given to the program',
-        children=tuple(Leaf(name, boolean(True), field=name) for name in names),
+        children=tuple(Leaf(name, boolean(True), field=name, doc=doc) for name, doc in names.items()),
     )
 
 
@@ -207,7 +254,12 @@ API = Block(
     name=APIName(),
     doc='which API programs hear about this neighbor, and what they hear',
     children=(
-        Leaf('processes', OneOrList(text('process'), 'processes', single=False), field='processes'),
+        Leaf(
+            'processes',
+            OneOrList(text('process'), 'processes', single=False),
+            field='processes',
+            doc='the programs, by name, which hear about the neighbor',
+        ),
         Leaf(
             'processes-match',
             OneOrList(
@@ -216,11 +268,19 @@ API = Block(
                 single=False,
             ),
             field='processes-match',
+            doc='the programs whose name matches one of these regular expressions',
         ),
-        Leaf('neighbor-changes', enabled(True), field='neighbor-changes'),
-        Leaf('negotiated', enabled(True), field='negotiated'),
-        Leaf('fsm', enabled(True), field='fsm'),
-        Leaf('signal', enabled(True), field='signal'),
+        Leaf(
+            'neighbor-changes',
+            enabled(True),
+            field='neighbor-changes',
+            doc='tell the programs when the session goes up or down',
+        ),
+        Leaf(
+            'negotiated', enabled(True), field='negotiated', doc='tell the programs what the OPEN messages negotiated'
+        ),
+        Leaf('fsm', enabled(True), field='fsm', doc='tell the programs each change of the state machine'),
+        Leaf('signal', enabled(True), field='signal', doc='tell the programs about the signals exabgp receives'),
         _direction('send'),
         _direction('receive'),
     ),
@@ -231,10 +291,10 @@ TCP_AO = Block(
     field='tcp-ao',
     doc='TCP-AO (RFC 5925) authentication',
     children=(
-        Leaf('keyid', integer('keyid', 0, TCP_AO_KEYID_MAX), field='keyid'),
-        Leaf('algorithm', choice('algorithm', TCP_AO_ALGORITHMS), field='algorithm'),
-        Leaf('password', text('password'), field='password'),
-        Leaf('base64', boolean(False), field='base64'),
+        Leaf('keyid', integer('keyid', 0, TCP_AO_KEYID_MAX), field='keyid', doc='the key identifier'),
+        Leaf('algorithm', choice('algorithm', TCP_AO_ALGORITHMS), field='algorithm', doc='the MAC algorithm, RFC 5926'),
+        Leaf('password', text('password'), field='password', doc='the master key'),
+        Leaf('base64', boolean(False), field='base64', doc='the password is base64 encoded'),
     ),
 )
 
@@ -256,6 +316,7 @@ ROLE_SWITCH = Word(
     ['enable', 'disable'],
     render=lambda value: ['enable' if value else 'disable'],
     choices=['enable', 'disable'],
+    shape=shape.boolean(),
 )
 
 
@@ -275,12 +336,14 @@ ROLE = Block(
                 '|'.join(str(role) for role in RoleValue.assigned()),
                 _role,
                 [str(role) for role in RoleValue.assigned()],
+                shape=shape.enumeration(*(str(role) for role in RoleValue.assigned())),
             ),
             field='local',
+            doc='our role on the session',
         ),
-        Leaf('strict', ROLE_SWITCH, field='strict'),
-        Leaf('add-meta', ROLE_SWITCH, field='add-meta'),
-        Leaf('otc', Word('otc', '', _removed, []), field='otc'),
+        Leaf('strict', ROLE_SWITCH, field='strict', doc='refuse a peer which does not send its role'),
+        Leaf('add-meta', ROLE_SWITCH, field='add-meta', doc='give the roles to the API programs with the routes'),
+        Leaf('otc', Word('otc', '', _removed, [], shape=shape.REFUSED), field='otc'),
     ),
 )
 
@@ -303,7 +366,7 @@ class Members(Type[tuple[ASN, ...]]):
 
     def __init__(self) -> None:
         self._list = OneOrList(
-            Word('as-number', '<asn>', ASN.from_string, ['65001', '65002']),
+            ASN_WORD,
             'confederation members',
             max_items=MAX_CONFEDERATION_MEMBERS,
         )
@@ -320,13 +383,28 @@ class Members(Type[tuple[ASN, ...]]):
     def examples(self) -> list[str]:
         return self._list.examples()
 
+    def shape(self) -> Shape:
+        return self._list.shape()
+
 
 CONFEDERATION = Block(
     'confederation',
     field='confederation',
     doc='RFC 5065 BGP confederation',
     children=(
-        Leaf('identifier', Word('as-number', '<asn>', _identifier, ['65000', '1.1']), field='identifier'),
-        Leaf('members', Members(), field='members'),
+        Leaf(
+            'identifier',
+            Number(
+                'as-number',
+                ((1, shape.UINT32_MAX),),
+                convert=_identifier,
+                examples=['65000', '1.1'],
+                hint='<asn>',
+                typedef='inet:as-number',
+            ),
+            field='identifier',
+            doc='the AS Confederation Identifier, the AS the world outside sees',
+        ),
+        Leaf('members', Members(), field='members', doc='the Member-AS numbers of the confederation, but our own'),
     ),
 )

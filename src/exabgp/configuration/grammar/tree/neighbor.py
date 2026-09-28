@@ -19,7 +19,9 @@ from typing import Any
 
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.settings import NeighborSettings
+from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.nodes import Block, Collect, Keep, Leaf
 from exabgp.configuration.grammar.tree.family import ADD_PATH, FAMILY, NEXTHOP
 from exabgp.configuration.grammar.tree.resolve import inherit, neighbor_settings
@@ -85,7 +87,12 @@ MD5_BASE64 = Word(
     ['true', 'enable', 'enabled', 'false', 'disable', 'disabled', '', 'TRUE'],
     render=lambda value: ['true' if value else 'false'],
     choices=['true', 'false'],
+    shape=shape.boolean(),
 )
+
+
+# legacy: inherit takes any word, a template is only named with these characters
+TEMPLATE_NAME_SHAPE = shape.string(pattern=r'[a-zA-Z0-9._-]+')
 
 
 class Inherit(Type[list[str]]):
@@ -115,6 +122,9 @@ class Inherit(Type[list[str]]):
     def examples(self) -> list[str]:
         return ['t', '[ t ]', '[ t u ]', '[ t, u ]']
 
+    def shape(self) -> Shape:
+        return shape.leaf_list(TEMPLATE_NAME_SHAPE, min_items=1)
+
 
 class TemplateName(Type[str]):
     """The name of a template: letters, digits and `.-_`; with no name the `{` is the name, and refused."""
@@ -137,6 +147,9 @@ class TemplateName(Type[str]):
     def examples(self) -> list[str]:
         return ['t', 'a.b-c_d']
 
+    def shape(self) -> Shape:
+        return TEMPLATE_NAME_SHAPE
+
 
 LEAVES = (
     Leaf('peer-address', IP_RANGE, field='peer-address', doc='the peer, or the peers of a range'),
@@ -145,7 +158,7 @@ LEAVES = (
     Leaf('local-as', ASN_OR_AUTO, field='local-as', doc='our AS, auto to use the peer AS'),
     Leaf('peer-as', ASN_OR_AUTO, field='peer-as', doc='the peer AS, auto to use ours'),
     Leaf('router-id', ROUTER_ID, field='router-id', doc='the BGP identifier, the local address by default'),
-    Leaf('description', text('description'), field='description'),
+    Leaf('description', text('description'), field='description', doc='free text about the neighbor'),
     Leaf('host-name', text('host-name'), field='host-name', doc='sent in the hostname capability'),
     Leaf('domain-name', text('domain-name'), field='domain-name', doc='sent in the hostname capability'),
     Leaf('hold-time', HOLD_TIME, field='hold-time', doc='seconds, 0 disables the hold timer'),
@@ -153,25 +166,58 @@ LEAVES = (
     Leaf('passive', boolean(True), field='passive', doc='wait for the peer to connect'),
     Leaf('listen', PORT, field='listen', doc='the port to listen on'),
     Leaf('connect', PORT, field='connect', doc='the port to connect to'),
-    Leaf('source-interface', text('source-interface'), field='source-interface'),
-    Leaf('outgoing-ttl', TTL, field='outgoing-ttl'),
+    Leaf(
+        'source-interface',
+        text('source-interface'),
+        field='source-interface',
+        doc='the interface the session is bound to',
+    ),
+    Leaf('outgoing-ttl', TTL, field='outgoing-ttl', doc='the TTL of the packets sent, for a multihop session or GTSM'),
     Leaf('incoming-ttl', TTL, field='incoming-ttl', doc='the lowest TTL accepted (GTSM)'),
-    Leaf('md5-password', text('md5-password'), field='md5-password'),
-    Leaf('md5-base64', MD5_BASE64, field='md5-base64'),
-    Leaf('md5-ip', IP_ADDRESS, field='md5-ip'),
+    Leaf('md5-password', text('md5-password'), field='md5-password', doc='the TCP MD5 signature key, RFC 2385'),
+    Leaf('md5-base64', MD5_BASE64, field='md5-base64', doc='the md5-password is base64 encoded'),
+    Leaf(
+        'md5-ip',
+        IP_ADDRESS,
+        field='md5-ip',
+        doc='the local address the TCP MD5 key is set on, the local-address by default',
+    ),
     Leaf(
         'as-set',
         choice('as-set', ['withdraw', 'accept']),
         field='as-set',
         doc='RFC 9774, what to do with a route with an AS_SET',
     ),
-    Leaf('group-updates', boolean(True), field='group-updates'),
-    Leaf('auto-flush', boolean(True), field='auto-flush'),
-    Leaf('adj-rib-out', boolean(False), field='adj-rib-out'),
-    Leaf('adj-rib-in', boolean(False), field='adj-rib-in'),
-    Leaf('manual-eor', boolean(False), field='manual-eor'),
+    Leaf(
+        'group-updates', boolean(True), field='group-updates', doc='send routes with the same attributes in one UPDATE'
+    ),
+    Leaf(
+        'auto-flush',
+        boolean(True),
+        field='auto-flush',
+        doc='send the routes an API command changes without waiting for a flush',
+    ),
+    Leaf(
+        'adj-rib-out',
+        boolean(False),
+        field='adj-rib-out',
+        doc='keep the routes sent, to send them again on a route refresh or a new session',
+    ),
+    Leaf('adj-rib-in', boolean(False), field='adj-rib-in', doc='keep the routes received'),
+    Leaf(
+        'manual-eor',
+        boolean(False),
+        field='manual-eor',
+        doc='send the End-of-RIB markers only when the API asks for them',
+    ),
     Leaf('shutdown', boolean(False), field='shutdown', doc='start with the session administratively down'),
-    Leaf('inherit', Inherit(), field='inherit', collect=Collect.EXTEND),
+    Leaf(
+        'inherit',
+        Inherit(),
+        field='inherit',
+        collect=Collect.EXTEND,
+        doc='the templates whose statements the neighbor takes',
+    ),
 )
 
 SECTIONS = (
@@ -312,6 +358,7 @@ TEMPLATE = Block(
             build=_template,
             keep=Keep.NAMED,
             name=TemplateName(),
+            doc='a template, the statements of a neighbor which inherits it',
             children=LEAVES + SECTIONS,
         ),
     ),

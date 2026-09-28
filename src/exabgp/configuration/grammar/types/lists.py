@@ -16,9 +16,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.shape import Shape, leaf_list
 from exabgp.configuration.grammar.types.base import Syntax, Type
 from exabgp.configuration.grammar.words import Words
 
@@ -107,9 +108,6 @@ class OneOrList(Type[list[T]], Generic[T]):
     def choices(self, partial: str) -> list[str]:
         return self.item.choices(partial)
 
-    def json_schema(self) -> dict[str, Any]:
-        items = self.item.json_schema()
-        schema: dict[str, Any] = {'type': 'array', 'items': items, 'maxItems': self.max_items}
-        if not self.empty:
-            schema['minItems'] = 1
-        return {'oneOf': [items, schema]} if self.single else schema
+    def shape(self) -> Shape:
+        # one item without brackets is a way of writing a list of one, not another value
+        return leaf_list(self.item.shape(), min_items=0 if self.empty else 1, max_items=self.max_items)

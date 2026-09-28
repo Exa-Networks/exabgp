@@ -76,11 +76,19 @@ class Leaf:
     doc: str = ''
     collect: Collect = Collect.SET
     store: Store | None = None
+    # the statement may be given several times, each adding an entry (a route, a family):
+    # what a data model makes a list. A store callback alone says nothing about it
+    multiple: bool = False
 
     @property
     def repeated(self) -> bool:
         """Whether the printer writes one statement per entry of the value."""
         return self.store is not None or self.collect == Collect.APPEND
+
+    @property
+    def many(self) -> bool:
+        """Whether the value is a list of entries, in the data model."""
+        return self.multiple or self.collect != Collect.SET
 
     def keep(self, values: dict[str, Any], value: Any, context: dict[str, Any]) -> None:
         if self.store is not None:
@@ -111,6 +119,8 @@ class Block:
     keep: Keep = Keep.SINGLE
     # the type of the word(s) naming the block (`process <name> {`, `neighbor <ip> {`)
     name: Type[Any] | None = None
+    # in the data model, the member holding that name: the key of the list of such blocks
+    key: str = 'name'
     doc: str = ''
     # the message when a mandatory leaf is missing, per section, as the legacy parser words it
     missing: str = 'missing {names}'

@@ -49,6 +49,8 @@ from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.segment_list imp
     WeightSubSubTLV,
 )
 from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
+from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.error import ROUTE_ERRORS, ConfigError
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.words import Words
@@ -328,6 +330,87 @@ class SRPolicyLine(Type[list[Route]]):
 
     def examples(self) -> list[str]:
         return []
+
+    def shape(self) -> Shape:
+        return SR_POLICY
+
+
+# --------------------------------------------------------------------------- the data model
+
+_LABEL = shape.integer(0, MPLS_LABEL_MAX)
+_ALGORITHM = ('algorithm', shape.UINT8.described('the SR algorithm, RFC 8402'))
+_BEHAVIOUR = (
+    'endpoint-behavior',
+    shape.container(
+        ('behavior', shape.UINT16.described('the endpoint behaviour, RFC 8986')),
+        ('locator-block', shape.UINT8.described('the length of the locator block, in bits')),
+        ('locator-node', shape.UINT8.described('the length of the locator node, in bits')),
+        ('function', shape.UINT8.described('the length of the function, in bits')),
+        ('argument', shape.UINT8.described('the length of the argument, in bits')),
+    ).described('the SRv6 endpoint behaviour and SID structure'),
+)
+_INTERFACES = (
+    ('local-if-id', shape.UINT32.described('the local interface identifier')),
+    ('local-ipv6', shape.IPV6_ADDRESS.described('the local IPv6 address')),
+    ('remote-if-id', shape.UINT32.described('the remote interface identifier')),
+    ('remote-ipv6', shape.IPV6_ADDRESS.described('the remote IPv6 address')),
+)
+_MPLS_SID = ('sid', _LABEL.described('the MPLS label of the segment'))
+_NUMBER_SID = ('sid', shape.UINT32.described('the MPLS label of the segment'))
+_SRV6_TAIL = (_ALGORITHM, ('sid', shape.IPV6_ADDRESS.described('the SRv6 SID of the segment')), _BEHAVIOUR)
+_LOCAL4 = ('local', shape.IPV4_ADDRESS.described('the local IPv4 address'))
+_REMOTE4 = ('remote', shape.IPV4_ADDRESS.described('the remote IPv4 address'))
+_LOCAL6 = ('local', shape.IPV6_ADDRESS.described('the local IPv6 address'))
+_REMOTE6 = ('remote', shape.IPV6_ADDRESS.described('the remote IPv6 address'))
+_NODE4 = ('ipv4', shape.IPV4_ADDRESS.described('the IPv4 node address'))
+_NODE6 = ('ipv6', shape.IPV6_ADDRESS.described('the IPv6 node address'))
+_VERIFICATION = ('verification', shape.empty().described('verify the SID, the V-flag, RFC 9830 2.4.4.2.3'))
+# each segment type, what it is and the fields it reads, RFC 9830 2.4.4.2 and RFC 9831
+SEGMENT_FIELDS: dict[str, tuple[str, tuple[tuple[str, Shape], ...]]] = {
+    'type-a': ('an MPLS label', (('mpls', _LABEL.described('the MPLS label')),)),
+    'type-b': ('an SRv6 SID', (('srv6', shape.IPV6_ADDRESS.described('the SRv6 SID')), _BEHAVIOUR)),
+    'type-c': ('an IPv4 node, with an optional MPLS SID', (_NODE4, _ALGORITHM, _MPLS_SID)),
+    'type-d': ('an IPv6 node, with an optional MPLS SID', (_NODE6, _ALGORITHM, _MPLS_SID)),
+    'type-e': (
+        'an IPv4 node and a local interface, with an optional MPLS SID',
+        (('local-if-id', shape.UINT32.described('the local interface identifier')), _NODE4, _MPLS_SID),
+    ),
+    'type-f': ('an IPv4 adjacency, with an optional MPLS SID', (_LOCAL4, _REMOTE4, _NUMBER_SID)),
+    'type-g': ('an IPv6 adjacency by interface, with an optional MPLS SID', (*_INTERFACES, _NUMBER_SID)),
+    'type-h': ('an IPv6 adjacency, with an optional MPLS SID', (_LOCAL6, _REMOTE6, _NUMBER_SID)),
+    'type-i': ('an IPv6 node, with an optional SRv6 SID', (_NODE6, *_SRV6_TAIL)),
+    'type-j': ('an IPv6 adjacency by interface, with an optional SRv6 SID', (*_INTERFACES, *_SRV6_TAIL)),
+    'type-k': ('an IPv6 adjacency, with an optional SRv6 SID', (_LOCAL6, _REMOTE6, *_SRV6_TAIL)),
+}
+_SEGMENT = shape.choice(
+    *((kind, shape.container(*fields, _VERIFICATION).described(doc)) for kind, (doc, fields) in SEGMENT_FIELDS.items())
+)
+_SEGMENT_LIST = shape.container(
+    ('weight', shape.UINT32.described('the weight of the list, among the lists of the path')),
+    ('segment', shape.leaf_list(_SEGMENT).described('the segments, in order')),
+)
+SR_POLICY = shape.container(
+    ('distinguisher', shape.UINT32.described('makes the NLRI unique, RFC 9830 2.1')),
+    ('color', shape.UINT32.described('the color of the policy')),
+    ('endpoint', shape.IP_ADDRESS.described('the endpoint of the policy')),
+    ('next-hop', shape.IP_ADDRESS.described('the next-hop of the route')),
+    ('preference', shape.UINT32.described('the preference of the candidate path')),
+    ('priority', shape.UINT8.described('the order in which the policy is recomputed')),
+    (
+        'enlp',
+        shape.union(shape.enumeration(*ENLP_VALUES), shape.integer(1, ENLP_MAX)).described(
+            'the explicit null label policy, RFC 9830 2.4.5'
+        ),
+    ),
+    (
+        'binding-sid',
+        shape.union(_LABEL, shape.enumeration('null')).described('the MPLS binding SID, or null for none'),
+    ),
+    ('srv6-binding-sid', shape.IPV6_ADDRESS.described('the SRv6 binding SID')),
+    ('policy-name', shape.TEXT.described('the name of the policy')),
+    ('candidate-path-name', shape.TEXT.described('the name of the candidate path')),
+    ('segment-list', shape.leaf_list(_SEGMENT_LIST).described('the segment lists of the candidate path')),
+).described('an SR policy, RFC 9830')
 
 
 # --------------------------------------------------------------------------- printing

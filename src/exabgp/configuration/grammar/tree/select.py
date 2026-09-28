@@ -24,8 +24,16 @@ from exabgp.bgp.message.update.nlri.mup import (
     Type2SessionTransformedRoute,
 )
 from exabgp.bgp.message.update.nlri.mvpn import SharedJoin, SourceAD, SourceJoin
+from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.error import ROUTE_ERRORS, ConfigError
-from exabgp.configuration.grammar.tree.static import MAX_ROUTE_VALUES, ROUTE_VALUES, RouteValue, attribute_words
+from exabgp.configuration.grammar.tree.static import (
+    MAX_ROUTE_VALUES,
+    ROUTE_VALUES,
+    RouteValue,
+    attribute_words,
+    value_fields,
+)
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.types.bgp import AFI_CONTEXT
 from exabgp.configuration.grammar.words import Words
@@ -174,6 +182,43 @@ MVPN_TYPES: dict[str, Callable[[Words, AFI], Any]] = {
     'shared-join': mvpn_shared_join,
 }
 
+_RD = ('rd', ROUTE_VALUES['rd'].type.shape())
+_TEID = ('teid', shape.integer(0, TEID_MAX).described('the GTP tunnel endpoint identifier, 3GPP TS 29.281'))
+_PREFIX = ('prefix', shape.IP_PREFIX.described('the prefix of the user equipment'))
+_ENDPOINT = ('endpoint', shape.IP_ADDRESS.described('the tunnel endpoint'))
+_GROUP = ('group', shape.IP_ADDRESS.described('the multicast group'))
+_SOURCE_AS = ('source-as', shape.AS_NUMBER.described('the AS of the source'))
+# the fields each route type reads, in their order, for the data model
+TYPE_FIELDS: dict[str, tuple[tuple[str, Shape], ...]] = {
+    'mup-isd': (_PREFIX, _RD),
+    'mup-dsd': (('address', shape.IP_ADDRESS.described('the address of the direct segment')), _RD),
+    'mup-t1st': (
+        _PREFIX,
+        _RD,
+        _TEID,
+        ('qfi', shape.integer(0, QFI_MAX).described('the QoS flow identifier, 3GPP TS 24.501')),
+        _ENDPOINT,
+        ('source', shape.IP_ADDRESS.described('the source of the tunnel')),
+    ),
+    'mup-t2st': (
+        _ENDPOINT,
+        _RD,
+        ('teid', shape.string(pattern=r'\d+/\d+').described('the TEID and its length in bits')),
+    ),
+    'source-ad': (('source', shape.IP_ADDRESS.described('the multicast source')), _GROUP, _RD),
+    'source-join': (('source', shape.IP_ADDRESS.described('the multicast source')), _GROUP, _RD, _SOURCE_AS),
+    'shared-join': (('rp', shape.IP_ADDRESS.described('the rendezvous point')), _GROUP, _RD, _SOURCE_AS),
+}
+TYPE_DOCS = {
+    'mup-isd': 'Interwork Segment Discovery route',
+    'mup-dsd': 'Direct Segment Discovery route',
+    'mup-t1st': 'Type 1 Session Transformed route',
+    'mup-t2st': 'Type 2 Session Transformed route',
+    'source-ad': 'Source Active A-D route, RFC 6514 type 5',
+    'source-join': 'Source Tree Join C-multicast route, RFC 6514 type 7',
+    'shared-join': 'Shared Tree Join C-multicast route, RFC 6514 type 6',
+}
+
 
 class MupNextHop(Type[tuple[Any, Any]]):
     """The next-hop of a MUP route: an IPv4 address is mapped into IPv6 for an IPv6 route.
@@ -206,13 +251,16 @@ class MupNextHop(Type[tuple[Any, Any]]):
     def examples(self) -> list[str]:
         return ['10.0.0.1', '2001:db8::1', 'self']
 
+    def shape(self) -> Shape:
+        return shape.union(shape.IP_ADDRESS, shape.enumeration('self'))
+
 
 _AFI = 'select-afi'  # the address family of the route being read, for the MUP next-hop
 
 
 def mup_values() -> dict[str, RouteValue]:
     return {
-        'next-hop': RouteValue(MupNextHop(), 'nexthop'),
+        'next-hop': RouteValue(MupNextHop(), 'nexthop', doc='the next-hop, IPv4 mapped into IPv6 for an IPv6 route'),
         'bgp-prefix-sid-srv6': ROUTE_VALUES['bgp-prefix-sid-srv6'],
         'extended-community': ROUTE_VALUES['extended-community'],
     }
@@ -273,6 +321,11 @@ class SelectLine(Type[list[Route]]):
 
     def examples(self) -> list[str]:
         return []
+
+    def shape(self) -> Shape:
+        values = value_fields(self.values)
+        cases = ((kind, shape.container(*TYPE_FIELDS[kind], *values).described(TYPE_DOCS[kind])) for kind in self.types)
+        return shape.choice(*cases)
 
 
 def select_words(nlri: Any) -> list[str]:

@@ -19,7 +19,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterator, cast
+from typing import Any, Iterator, Mapping, cast
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
@@ -28,7 +28,9 @@ from exabgp.bgp.message.update.nlri.empty import Empty
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.settings import INETSettings
+from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.lexer import lex_command
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.types import bgp
@@ -134,6 +136,12 @@ def action(words: Words) -> Action:
     return Action.ANNOUNCE if words.context.get(ANNOUNCE, True) else Action.WITHDRAW
 
 
+def value_fields(values: Mapping[str, Any]) -> tuple[tuple[str, Shape], ...]:
+    """The members of a route, from the table of the values its statement reads."""
+    fields = ((keyword, spec.type.shape().described(getattr(spec, 'doc', ''))) for keyword, spec in values.items())
+    return tuple((keyword, value) for keyword, value in fields if value.kind != shape.Kind.REFUSED)
+
+
 class RouteLine(Type[list[Route]]):
     """`<prefix> <keyword> <value> ...`: one route, or its more specifics when split."""
 
@@ -159,6 +167,9 @@ class RouteLine(Type[list[Route]]):
 
     def examples(self) -> list[str]:
         return ['10.0.0.0/24 next-hop 10.0.0.1', '10.0.0.0/24 next-hop self']
+
+    def shape(self) -> Shape:
+        return shape.container(('prefix', bgp.Prefix().shape()), *value_fields(ROUTE_VALUES))
 
 
 class AttributesLine(Type[list[Route]]):
@@ -199,6 +210,10 @@ class AttributesLine(Type[list[Route]]):
 
     def examples(self) -> list[str]:
         return ['next-hop 10.0.0.1 nlri 10.0.0.0/24 10.0.1.0/24', 'origin igp']
+
+    def shape(self) -> Shape:
+        prefixes = shape.leaf_list(shape.IP_PREFIX).described('the prefixes the attributes are announced with')
+        return shape.container(*value_fields(ROUTE_VALUES), ('nlri', prefixes))
 
 
 def _last_prefix(statement: list[str]) -> list[IPRange]:
@@ -434,6 +449,9 @@ class NestedPrefix(Type[IPRange]):
     def examples(self) -> list[str]:
         return ['10.0.0.0/24']
 
+    def shape(self) -> Shape:
+        return shape.IP_PREFIX
+
 
 def _nested(prefix: IPRange, values: dict[str, Any], context: dict[str, Any]) -> list[Route]:
     settings = INETSettings()
@@ -462,6 +480,7 @@ NESTED_ROUTE = Block(
     build=_nested,
     keep=Keep.EXTEND,
     name=NestedPrefix(),
+    key='prefix',
     doc='a route, its values one per statement',
     children=tuple(
         Leaf(keyword, spec.type, field=keyword, store=_store_value(keyword), doc=spec.doc)
@@ -481,9 +500,23 @@ def static_block(extra: tuple[Leaf, ...]) -> Block:
 
 
 STATIC_CHILDREN = (
-    Leaf('route', RouteLine(), field='_routes', store=store_routes, doc='a route, on one line'),
-    Leaf('attributes', AttributesLine(), field='_attributes', store=store_routes),
+    Leaf('route', RouteLine(), field='_routes', store=store_routes, doc='a route, on one line', multiple=True),
+    Leaf(
+        'attributes',
+        AttributesLine(),
+        field='_attributes',
+        store=store_routes,
+        multiple=True,
+        doc='the same attributes for several prefixes',
+    ),
     # legacy: 3.4 wrote `attribute`, still read as `attributes`
-    Leaf('attribute', AttributesLine(), field='_attribute', store=store_routes),
+    Leaf(
+        'attribute',
+        AttributesLine(),
+        field='_attribute',
+        store=store_routes,
+        multiple=True,
+        doc='the same attributes for several prefixes, as attributes',
+    ),
     NESTED_ROUTE,
 )

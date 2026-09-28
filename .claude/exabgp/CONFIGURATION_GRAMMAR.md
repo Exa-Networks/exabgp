@@ -24,7 +24,9 @@ beside it; `exabgp_debug_parser=legacy` selects it. The grammar is the default. 
 | `nodes.py` | `Leaf` (keyword value;) and `Block` (keyword [name] { ... }) |
 | `engine.py` | reads statements into a tree of values, calls each block's `build` |
 | `render.py` | prints built values back as configuration (the inverse of `engine`) |
-| `describe.py` | syntax lines, keyword help, JSON schema |
+| `shape.py` | the data model: what a value is once read (a MED is a uint32), YANG-aligned |
+| `json_schema.py`, `yang.py` | the JSON Schema and the YANG module, printed from the model |
+| `describe.py` | syntax lines, keyword help, the model of the tree (`model()`) |
 | `read.py` | `read_text`, `read_file`, `read_command` (API route commands) |
 | `install.py` | makes the Neighbor objects from `NeighborSettings`, as the legacy post did |
 | `tree/` | the declaration: `root`, `process`, `neighbor`, `family`, `session`, `static`, `announce`, `flow`, `l2vpn`, `select` (MUP, MVPN), `sr_policy`, `operational` |
@@ -57,7 +59,21 @@ builder is named after its keyword (`_flow`, `_vpls`); a `store` callback is
 `static.action`, `static.store_routes`, `static.MAX_ROUTE_VALUES`, `error.ROUTE_ERRORS`,
 `render.INDENT`.
 
-## Adding a keyword
+## The data model
+
+Every type says what its value is with `shape()`: the value exabgp keeps and prints, not the
+spellings it accepts (`1.1` is the AS number 65537, `enable` is `true`). The model follows
+YANG, so both `exabgp configuration syntax --json` and `--yang` are printed from it.
+
+A number is a `Number` (`types/word.py`) declaring its ranges once; the check, the hint, the
+examples and the model come from them. Where the range belongs to the wire format it is taken
+from the class which packs it: `MED.MAX` and `LocalPreference.MAX` come from `WIDTH = 4` of
+`UnsignedAttribute`, `PathInfo.MAX` from its four octets. `test_model.py` checks every
+`Number` reads its bounds and refuses what is past them.
+
+A statement given several times (a route, a family) says so with `Leaf(multiple=True)`; a
+`store` callback alone does not make a value a list.
+
 
 1. Find the `Block` it belongs to (`exabgp configuration syntax <section>` shows it).
 2. Give it a type: reuse one of `types/` or write a `Type` with `parse` (raise

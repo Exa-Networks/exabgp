@@ -42,7 +42,9 @@ from exabgp.bgp.message.update.nlri.flow import (
     FlowIPv6,
     NumericOperator,
 )
+from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Printed, Type
 from exabgp.configuration.grammar.types.bgp import AFI_CONTEXT
 from exabgp.configuration.grammar.words import Words
@@ -89,8 +91,11 @@ class Operation(Type[list[Any]]):
     `read(words)` returns the value or raises ValueError; the type positions the error.
     """
 
-    def __init__(self, name: str, read: Callable[[Words], Any], hint: str, examples: list[str]) -> None:
+    def __init__(
+        self, name: str, read: Callable[[Words], Any], hint: str, examples: list[str], value: Shape = shape.TEXT
+    ) -> None:
         self.name = name
+        self._shape = value
         self._read = read
         self._hint = hint
         self._examples = examples
@@ -113,6 +118,9 @@ class Operation(Type[list[Any]]):
 
     def examples(self) -> list[str]:
         return list(self._examples)
+
+    def shape(self) -> Shape:
+        return self._shape
 
 
 # --------------------------------------------------------------------------- prefixes
@@ -157,14 +165,24 @@ def _offset(offset: str, netmask: int) -> int:
     return value
 
 
+# a prefix, and for IPv6 the offset of the bits compared (RFC 8956)
+FLOW_PREFIX = shape.string(pattern=rf'{shape.IP_PREFIX.pattern}(/\d{{1,3}})?')
+# numeric and bitmask conditions: an operator and a value, joined by & (RFC 8955 4.2.1)
+FLOW_CONDITIONS = shape.leaf_list(shape.string(pattern=r'[=<>!]*[0-9a-z-]+(&[=<>!]*[0-9a-z-]+)*'), min_items=1)
+
 SOURCE = Operation(
-    'source', _prefix('source', Flow4Source, Flow6Source), '<ip>/<mask>[/<offset>]', ['10.0.0.0/24', '2001:db8::/32']
+    'source',
+    _prefix('source', Flow4Source, Flow6Source),
+    '<ip>/<mask>[/<offset>]',
+    ['10.0.0.0/24', '2001:db8::/32'],
+    FLOW_PREFIX,
 )
 DESTINATION = Operation(
     'destination',
     _prefix('destination', Flow4Destination, Flow6Destination),
     '<ip>/<mask>[/<offset>]',
     ['10.0.0.0/24', '2001:db8::/32/8'],
+    FLOW_PREFIX,
 )
 
 # --------------------------------------------------------------------------- conditions
@@ -262,7 +280,7 @@ def _bracketed(words: Words, klass: Any, operator: Any) -> list[Any]:
 
 
 def condition(name: str, klass: Any, examples: list[str]) -> Operation:
-    return Operation(name, _condition(klass), '<op><value>[&...] | [ ... ]', examples)
+    return Operation(name, _condition(klass), '<op><value>[&...] | [ ... ]', examples, FLOW_CONDITIONS)
 
 
 # --------------------------------------------------------------------------- actions
@@ -447,16 +465,43 @@ def _nothing(words: Words) -> None:
     return None
 
 
-ACCEPT = Operation('accept', _nothing, '', [''])
-DISCARD = Operation('discard', _discard, '', [''])
-RATE_LIMIT = Operation('rate-limit', _rate_limit, '<number> [bytes|packets]', ['0', '9600', '100 packets'])
-REDIRECT = Operation('redirect', _redirect, '<asn>:<nn>|<ip>|[<ipv6>]:<nn>', ['65000:1', '10.0.0.1'])
-REDIRECT_TO_NEXTHOP = Operation('redirect-to-nexthop', _redirect_to_nexthop, '[<ip>]', ['', '10.0.0.1'])
-REDIRECT_TO_NEXTHOP_IETF = Operation(
-    'redirect-to-nexthop-ietf', lambda words: _nexthop_ietf(IP.from_string(words.word()), False), '<ip>', ['10.0.0.1']
+ACCEPT = Operation('accept', _nothing, '', [''], shape.empty())
+DISCARD = Operation('discard', _discard, '', [''], shape.empty())
+RATE_LIMIT = Operation(
+    'rate-limit',
+    _rate_limit,
+    '<number> [bytes|packets]',
+    ['0', '9600', '100 packets'],
+    shape.container(
+        ('rate', shape.integer(0, RATE_LIMIT_BPS_MAX).described('a larger rate in bytes is capped')),
+        ('unit', shape.enumeration('bytes', 'packets').described('what the rate counts, bytes by default')),
+    ),
 )
-REDIRECT_TO_NEXTHOP_SIMPSON = Operation('redirect-to-nexthop-simpson', lambda words: _simpson(False), '', [''])
-REDIRECT_SIMPSON = Operation('redirect-simpson', _redirect_simpson, '<ip>', ['10.0.0.1'])
+REDIRECT = Operation(
+    'redirect',
+    _redirect,
+    '<asn>:<nn>|<ip>|[<ipv6>]:<nn>',
+    ['65000:1', '10.0.0.1'],
+    shape.union(shape.string(pattern=r'\d+:\d+|\[[0-9a-fA-F:.]+\]:\d+'), shape.IP_ADDRESS),
+)
+REDIRECT_TO_NEXTHOP = Operation(
+    'redirect-to-nexthop',
+    _redirect_to_nexthop,
+    '[<ip>]',
+    ['', '10.0.0.1'],
+    shape.union(shape.empty(), shape.IP_ADDRESS),
+)
+REDIRECT_TO_NEXTHOP_IETF = Operation(
+    'redirect-to-nexthop-ietf',
+    lambda words: _nexthop_ietf(IP.from_string(words.word()), False),
+    '<ip>',
+    ['10.0.0.1'],
+    shape.IP_ADDRESS,
+)
+REDIRECT_TO_NEXTHOP_SIMPSON = Operation(
+    'redirect-to-nexthop-simpson', lambda words: _simpson(False), '', [''], shape.empty()
+)
+REDIRECT_SIMPSON = Operation('redirect-simpson', _redirect_simpson, '<ip>', ['10.0.0.1'], shape.IP_ADDRESS)
 
 
 def _copy(words: Words) -> tuple[IP, Any]:
@@ -464,11 +509,29 @@ def _copy(words: Words) -> tuple[IP, Any]:
     return IP.NoNextHop, _nexthop_ietf(IP.from_string(words.word()), True)
 
 
-COPY = Operation('copy', _copy, '<ip>', ['10.0.0.1'])
+COPY = Operation('copy', _copy, '<ip>', ['10.0.0.1'], shape.IP_ADDRESS)
 COPY_SIMPSON = Operation(
-    'copy-simpson', lambda words: (IP.from_string(words.word()), _simpson(True)), '<ip>', ['10.0.0.1']
+    'copy-simpson', lambda words: (IP.from_string(words.word()), _simpson(True)), '<ip>', ['10.0.0.1'], shape.IP_ADDRESS
 )
-MARK = Operation('mark', _mark, '<0-63>', ['0', '63'])
-ACTION = Operation('action', _action, 'sample|terminal|sample-terminal', ['sample', 'terminal', 'sample-terminal'])
-INTERFACE_SET = Operation('interface-set', _interface_set, '<transitive>:<direction>:<asn>:<group>', ['input:1:1'])
-FLOW_NEXTHOP = Operation('next-hop', _flow_nexthop, '<ip>|self', ['10.0.0.1', 'self'])
+MARK = Operation('mark', _mark, '<0-63>', ['0', '63'], shape.integer(0, DSCP_MAX))
+ACTION = Operation(
+    'action',
+    _action,
+    'sample|terminal|sample-terminal',
+    ['sample', 'terminal', 'sample-terminal'],
+    shape.enumeration('sample', 'terminal', 'sample-terminal'),
+)
+INTERFACE_SET = Operation(
+    'interface-set',
+    _interface_set,
+    '<transitive>:<direction>:<asn>:<group>',
+    ['input:1:1'],
+    shape.leaf_list(shape.string(pattern=r'([a-z-]+:)?(input|output|input-output):\d+:\d+'), min_items=1),
+)
+FLOW_NEXTHOP = Operation(
+    'next-hop',
+    _flow_nexthop,
+    '<ip>|self',
+    ['10.0.0.1', 'self'],
+    shape.union(shape.IP_ADDRESS, shape.enumeration('self')),
+)

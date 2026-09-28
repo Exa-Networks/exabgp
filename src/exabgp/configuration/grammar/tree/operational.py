@@ -23,6 +23,8 @@ from typing import Any, Callable
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.operational import Advisory, OperationalFamily, Query, Response
+from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.types.base import Type
@@ -67,6 +69,17 @@ CONVERT: dict[str, Callable[[str], Any]] = {
     'counter': _bounded('counter', U64_MAX),
     # legacy: the advisory is not checked against MAX_ADVISORY
     'advisory': lambda word: word.encode('utf-8'),
+}
+
+
+# what each value of a message is, for the data model
+PARAMETER_SHAPES: dict[str, Shape] = {
+    'afi': shape.enumeration(*AFI.codes).described('the address family the message is about'),
+    'safi': shape.enumeration(*SAFI.codes).described('the subsequent address family the message is about'),
+    'advisory': shape.TEXT.described('the text of the advisory'),
+    'sequence': shape.UINT32.described('the sequence number, which pairs a reply with its query'),
+    # legacy: U64_MAX is checked, and the four octets it is packed in refuse more than U32_MAX
+    'counter': shape.UINT32.described('the number of prefixes'),
 }
 
 
@@ -129,6 +142,9 @@ class OperationalLine(Type[OperationalFamily]):
         values = {'afi': 'ipv4', 'safi': 'unicast', 'advisory': '"text"', 'sequence': '1', 'counter': '10'}
         return [' '.join(f'{parameter} {values[parameter]}' for parameter in self.parameters)]
 
+    def shape(self) -> Shape:
+        return shape.container(*((parameter, PARAMETER_SHAPES[parameter]) for parameter in self.parameters))
+
 
 ADVISORY = ('afi', 'safi', 'advisory')
 QUERY = ('afi', 'safi', 'sequence')
@@ -177,7 +193,14 @@ OPERATIONAL = Block(
     opened=_opened,
     doc='the operational messages sent to the peer',
     children=tuple(
-        Leaf(keyword, OperationalLine(keyword, klass, parameters), field=f'_{keyword}', store=_store_message, doc=doc)
+        Leaf(
+            keyword,
+            OperationalLine(keyword, klass, parameters),
+            field=f'_{keyword}',
+            store=_store_message,
+            doc=doc,
+            multiple=True,
+        )
         for keyword, (klass, parameters, doc) in KINDS.items()
     ),
 )

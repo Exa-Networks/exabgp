@@ -21,12 +21,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import LocalPreference, MED, NextHop, NextHopSelf
 from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, RTC, Label
 from exabgp.bgp.message.update.nlri.settings import INETSettings, RTCSettings
+from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.tree.l2vpn import VPLSLine
 from exabgp.configuration.grammar.tree.sr_policy import SRPolicyLine
@@ -42,10 +43,12 @@ from exabgp.configuration.grammar.tree.static import (
     route_words,
     static_block,
     store_routes,
+    value_fields,
 )
 from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Type
-from exabgp.configuration.grammar.types.word import Word
+from exabgp.configuration.grammar.types.network import ASN_WORD
+from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPSelf
@@ -79,6 +82,9 @@ class Refused(Type[Any]):
     def examples(self) -> list[str]:
         return []
 
+    def shape(self) -> Shape:
+        return shape.REFUSED
+
 
 class AnnounceNextHop(Type[tuple[IP | IPSelf, NextHop | NextHopSelf]]):
     """An address, or `self`, which is the IPv4 local address whatever the family of the route."""
@@ -104,6 +110,9 @@ class AnnounceNextHop(Type[tuple[IP | IPSelf, NextHop | NextHopSelf]]):
 
     def examples(self) -> list[str]:
         return ['10.0.0.2', 'self']
+
+    def shape(self) -> Shape:
+        return shape.union(shape.IP_ADDRESS, shape.enumeration('self'))
 
 
 def _capped(name: str, make: Any) -> Any:
@@ -131,14 +140,24 @@ REFUSED = (
 
 # the values of an IP route in an announce family, before the per family additions
 IP_VALUES: dict[str, RouteValue] = {
-    'next-hop': RouteValue(AnnounceNextHop(), 'nexthop'),
+    'next-hop': RouteValue(AnnounceNextHop(), 'nexthop', doc='the next-hop, or self for the IPv4 local address'),
     'origin': ROUTE_VALUES['origin'],
     'otc': ROUTE_VALUES['otc'],
-    'med': RouteValue(Word('med', '<number>', _capped('MED', MED.from_int), ['0', '100']), 'attribute'),
+    'med': RouteValue(
+        Number('med', ((0, MED.MAX),), convert=_capped('MED', MED.from_int), examples=['0', '100']),
+        'attribute',
+        doc=ROUTE_VALUES['med'].type.shape().description,
+    ),
     'as-path': ROUTE_VALUES['as-path'],
     'local-preference': RouteValue(
-        Word('local-preference', '<number>', _capped('local-preference', LocalPreference.from_int), ['100']),
+        Number(
+            'local-preference',
+            ((0, LocalPreference.MAX),),
+            convert=_capped('local-preference', LocalPreference.from_int),
+            examples=['100'],
+        ),
         'attribute',
+        doc=ROUTE_VALUES['local-preference'].type.shape().description,
     ),
     'aggregator': ROUTE_VALUES['aggregator'],
     'community': ROUTE_VALUES['community'],
@@ -175,6 +194,13 @@ class _RTCNextHop(Type[Any]):
     def examples(self) -> list[str]:
         return ['10.0.0.2', 'self']
 
+    def shape(self) -> Shape:
+        return shape.union(shape.IP_ADDRESS, shape.enumeration('self'))
+
+
+# a route target as exabgp prints it
+ROUTE_TARGET = shape.string(pattern=r'target:[^:\s]+:\d+')
+
 
 def _route_target(word: str) -> Any:
     from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
@@ -205,14 +231,20 @@ class _Default(Type[bool]):
     def examples(self) -> list[str]:
         return ['']
 
+    def shape(self) -> Shape:
+        return shape.empty()
+
 
 RTC_VALUES: dict[str, RouteValue] = {
-    'next-hop': RouteValue(_RTCNextHop(), 'nlri', 'nexthop'),
-    'origin-as': RouteValue(Word('as-number', '<asn>', ASN.from_string, ['65000', '1.1']), 'nlri', 'origin_as'),
+    'next-hop': RouteValue(_RTCNextHop(), 'nlri', 'nexthop', 'the next-hop, or self for the IPv4 local address'),
+    'origin-as': RouteValue(ASN_WORD, 'nlri', 'origin_as', 'the AS of the route target membership, RFC 4684'),
     'route-target': RouteValue(
-        Word('route-target', '<asn>:<n>|<ip>:<n>', _route_target, ['65000:1']), 'nlri', 'route_target'
+        Word('route-target', '<asn>:<n>|<ip>:<n>', _route_target, ['65000:1'], shape=ROUTE_TARGET),
+        'nlri',
+        'route_target',
+        'the route target the membership is for',
     ),
-    'default': RouteValue(_Default(), 'nlri', 'default'),
+    'default': RouteValue(_Default(), 'nlri', 'default', 'the default route target membership, every route target'),
     **{keyword: value for keyword, value in IP_VALUES.items() if keyword not in ('split', 'aigp', 'otc', 'next-hop')},
 }
 
@@ -277,6 +309,14 @@ class AnnounceLine(Type[list[Route]]):
     def examples(self) -> list[str]:
         return []
 
+    def shape(self) -> Shape:
+        fields = value_fields(self.announce_safi.values)
+        return (
+            shape.container(('prefix', bgp.Prefix().shape()), *fields)
+            if self.announce_safi.prefix
+            else shape.container(*fields)
+        )
+
 
 def _apply(settings: Any, attributes: AttributeCollection, spec: RouteValue, value: Any) -> None:
     if spec.target == 'nlri':
@@ -314,6 +354,7 @@ def _address_block(keyword: str, afi: AFI, safi_keywords: tuple[str, ...]) -> Bl
         keyword,
         field=keyword,
         build=_address_family,
+        doc=f'the {keyword} routes, by subsequent address family',
         children=(
             *(
                 Leaf(
@@ -321,6 +362,8 @@ def _address_block(keyword: str, afi: AFI, safi_keywords: tuple[str, ...]) -> Bl
                     AnnounceLine(afi, SAFI.from_string(safi_keyword), ANNOUNCE_SAFIS[safi_keyword]),
                     field=f'_{safi_keyword}',
                     store=_store_announced,
+                    multiple=True,
+                    doc=f'a {keyword} {safi_keyword} route',
                 )
                 for safi_keyword in safi_keywords
             ),
@@ -330,17 +373,35 @@ def _address_block(keyword: str, afi: AFI, safi_keywords: tuple[str, ...]) -> Bl
                     AnnounceFlowLine(afi, SAFI.from_string(safi_keyword)),
                     field=f'_{safi_keyword}',
                     store=_store_announced,
+                    multiple=True,
+                    doc=f'a {keyword} {safi_keyword} rule, RFC 8955',
                 )
                 for safi_keyword in ('flow', 'flow-vpn')
             ),
-            Leaf('mup', SelectLine(afi, SAFI.mup, MUP_TYPES, mup_values()), field='_mup', store=_store_announced),
+            Leaf(
+                'mup',
+                SelectLine(afi, SAFI.mup, MUP_TYPES, mup_values()),
+                field='_mup',
+                store=_store_announced,
+                multiple=True,
+                doc='a Mobile User Plane route, draft-mpmz-bess-mup-safi',
+            ),
             Leaf(
                 'mcast-vpn',
                 SelectLine(afi, SAFI.mcast_vpn, MVPN_TYPES, IP_VALUES),
                 field='_mcast-vpn',
                 store=_store_announced,
+                multiple=True,
+                doc='a multicast VPN route, RFC 6514',
             ),
-            Leaf('sr-policy', SRPolicyLine(afi), field='_sr-policy', store=_store_announced),
+            Leaf(
+                'sr-policy',
+                SRPolicyLine(afi),
+                field='_sr-policy',
+                store=_store_announced,
+                multiple=True,
+                doc='an SR policy route, RFC 9830',
+            ),
             _refused_family('labeled-unicast'),
         ),
     )
@@ -360,7 +421,10 @@ L2VPN = Block(
     'l2vpn',
     field='l2vpn',
     build=_address_family,
-    children=(Leaf('vpls', VPLSLine(), field='_vpls', store=_store_announced),),
+    doc='the l2vpn routes',
+    children=(
+        Leaf('vpls', VPLSLine(), field='_vpls', store=_store_announced, multiple=True, doc='a VPLS route, RFC 4761'),
+    ),
 )
 
 ANNOUNCE_BLOCK = Block('announce', field='announce', doc='routes by address family', children=(IPV4, IPV6, L2VPN))
@@ -406,7 +470,21 @@ def announce_family(route: Route) -> tuple[str, str] | None:
 
 STATIC = static_block(
     (
-        Leaf('rtc', AnnounceLine(AFI.ipv4, SAFI.rtc, ANNOUNCE_SAFIS['rtc']), field='_rtc', store=store_routes),
-        Leaf('sr-policy', SRPolicyLine(None), field='_sr-policy', store=store_routes, doc='an SR policy route'),
+        Leaf(
+            'rtc',
+            AnnounceLine(AFI.ipv4, SAFI.rtc, ANNOUNCE_SAFIS['rtc']),
+            field='_rtc',
+            store=store_routes,
+            multiple=True,
+            doc='a route target membership route, RFC 4684',
+        ),
+        Leaf(
+            'sr-policy',
+            SRPolicyLine(None),
+            field='_sr-policy',
+            store=store_routes,
+            multiple=True,
+            doc='an SR policy route',
+        ),
     )
 )

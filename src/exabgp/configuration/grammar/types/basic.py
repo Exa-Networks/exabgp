@@ -9,9 +9,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.shape import TEXT, Shape, boolean, enumeration, leaf_list
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.words import Words
 from exabgp.util.program import resolve_program, validate_executable
@@ -61,8 +62,8 @@ class Bool(Type[bool]):
     def choices(self, partial: str) -> list[str]:
         return [word for word in ('true', 'false') if word.startswith(partial.lower())]
 
-    def json_schema(self) -> dict[str, Any]:
-        return {'type': 'boolean'}
+    def shape(self) -> Shape:
+        return boolean()
 
 
 class Choice(Type[E], Generic[E]):
@@ -95,8 +96,8 @@ class Choice(Type[E], Generic[E]):
     def choices(self, partial: str) -> list[str]:
         return [value for value in self._values() if value.startswith(partial.lower())]
 
-    def json_schema(self) -> dict[str, Any]:
-        return {'type': 'string', 'enum': self._values()}
+    def shape(self) -> Shape:
+        return enumeration(*self._values())
 
 
 class LegacyName(Type[str]):
@@ -152,5 +153,5 @@ class Program(Type[list[str]]):
     def examples(self) -> list[str]:
         return ['/bin/cat', '/bin/cat --flag', '/bin/cat "with space"', 'cat']
 
-    def json_schema(self) -> dict[str, Any]:
-        return {'type': 'array', 'items': {'type': 'string'}, 'minItems': 1}
+    def shape(self) -> Shape:
+        return leaf_list(TEXT, min_items=1)

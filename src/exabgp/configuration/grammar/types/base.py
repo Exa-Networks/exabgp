@@ -13,9 +13,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Generic, TypeVar
 
 from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.shape import TEXT, Shape
 from exabgp.configuration.grammar.words import Words
 
 T = TypeVar('T')
@@ -54,8 +55,9 @@ class Type(ABC, Generic[T]):
         """Completions of `partial`, for the types with a closed set of words."""
         return []
 
-    def json_schema(self) -> dict[str, Any]:
-        return {'type': 'string'}
+    def shape(self) -> Shape:
+        """What the value is once read (grammar/shape.py): the data model, for JSON Schema and YANG."""
+        return TEXT
 
     def fail(self, words: Words, message: str, expected: list[str] | None = None) -> ConfigError:
         return ConfigError(words.where(), message, expected=expected if expected is not None else [self.hint()])

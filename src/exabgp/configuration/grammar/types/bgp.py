@@ -50,7 +50,9 @@ from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.types.base import Syntax, Type
-from exabgp.configuration.grammar.types.word import Word
+from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.shape import Shape
+from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP, IPRange, IPSelf, IPv4, IPv6
@@ -62,6 +64,10 @@ MAX_SEGMENT_ASNS = 255  # RFC 4271 4.3: a path segment counts its AS numbers in 
 MAX_LIST_ITEMS = 1024  # a list of values is written by hand
 COMMUNITY_HALF_MAX = 0xFFFF  # RFC 1997: an AS number and a value of two octets each
 LARGE_COMMUNITY_FIELD_MAX = 0xFFFFFFFF  # RFC 8092: three four-octet fields
+IPV6_MASK = 128
+HEX_DATA = shape.string(pattern=r'0x([0-9a-fA-F]{2})*')
+# an extended community as exabgp prints it: <kind>:<value>..., or eight octets in hexadecimal
+EXTENDED_COMMUNITY = shape.string(pattern=r'0x[0-9a-fA-F]{16}|[a-z0-9-]+(:[^:\s]+)+')
 IPV4_OCTETS = 4
 RD_TYPE_1_OCTETS = 4
 
@@ -100,6 +106,9 @@ class Prefix(Type[IPRange]):
     def examples(self) -> list[str]:
         return ['10.0.0.0/24', '10.0.0.1', '2001:db8::/32', '2001:db8::1']
 
+    def shape(self) -> Shape:
+        return shape.IP_PREFIX.described('an IP prefix, <address>/<length>')
+
 
 def _path_information(word: str) -> PathInfo:
     if word.isdigit():
@@ -107,7 +116,14 @@ def _path_information(word: str) -> PathInfo:
     return PathInfo.make_from_ip(word)
 
 
-PATH_INFORMATION = Word('path-information', '<number>|<ipv4>', _path_information, ['1', '0.0.0.1'])
+PATH_INFORMATION: Number[PathInfo] = Number(
+    'path-information',
+    ((0, PathInfo.MAX),),
+    convert=_path_information,
+    examples=['1', '0.0.0.1'],
+    hint='<number>|<ipv4>',
+    doc='the ADD-PATH path identifier, RFC 7911, a number or a dotted quad',
+)
 
 
 class NextHopType(Type[tuple[IP | IPSelf, NextHop | NextHopSelf]]):
@@ -136,6 +152,11 @@ class NextHopType(Type[tuple[IP | IPSelf, NextHop | NextHopSelf]]):
 
     def examples(self) -> list[str]:
         return ['10.0.0.1', 'self', 'SELF']
+
+    def shape(self) -> Shape:
+        return shape.union(shape.IP_ADDRESS, shape.enumeration('self')).described(
+            'the next-hop address, or self for the local address of the session'
+        )
 
 
 class HexAttribute(Type[GenericAttribute]):
@@ -183,6 +204,13 @@ class HexAttribute(Type[GenericAttribute]):
     def examples(self) -> list[str]:
         return ['[ 0x20 0xc0 0x00000001 ]']
 
+    def shape(self) -> Shape:
+        return shape.container(
+            ('code', shape.UINT8.described('the attribute type code')),
+            ('flag', shape.UINT8.described('the attribute flags')),
+            ('data', HEX_DATA.described('the attribute value, 0x and its bytes')),
+        ).described('an attribute given as its wire bytes, for one exabgp does not know')
+
 
 def _aigp(word: str) -> AIGP:
     base = 16 if word.lower().startswith('0x') else 10
@@ -195,7 +223,14 @@ def _aigp(word: str) -> AIGP:
     return AIGP.from_int(number)
 
 
-AIGP_VALUE = Word('aigp', '<number>|0x<hex>', _aigp, ['100', '0x64', '0'])
+AIGP_VALUE: Number[AIGP] = Number(
+    'aigp',
+    ((0, AIGP_MAX),),
+    convert=_aigp,
+    examples=['100', '0x64', '0'],
+    hint='<number>|0x<hex>',
+    doc='AIGP, RFC 7311: the accumulated IGP metric',
+)
 
 _ORIGINS = {'igp': Origin.IGP, 'egp': Origin.EGP, 'incomplete': Origin.INCOMPLETE}
 
@@ -214,6 +249,8 @@ ORIGIN = Word(
     ['igp', 'egp', 'incomplete', 'IGP'],
     render=lambda value: [{Origin.IGP: 'igp', Origin.EGP: 'egp', Origin.INCOMPLETE: 'incomplete'}[int(value.origin)]],
     choices=list(_ORIGINS),
+    shape=shape.enumeration(*_ORIGINS),
+    doc='ORIGIN, RFC 4271 5.1.1',
 )
 
 OTC_NONE_REMOVED = (
@@ -237,7 +274,14 @@ def _otc(word: str) -> OTC | OTCSelf:
     return OTCSelf(role)
 
 
-OTC_VALUE = Word('otc', '<asn>|self|<role>', _otc, ['65000', 'self', 'provider', 'customer'])
+OTC_VALUE = Word(
+    'otc',
+    '<asn>|self|<role>',
+    _otc,
+    ['65000', 'self', 'provider', 'customer'],
+    shape=shape.union(shape.AS_NUMBER, shape.enumeration('self', *(str(role) for role in RoleValue.assigned()))),
+    doc='Only-to-Customer, RFC 9234: an AS number, self for our AS, or the role which gives it',
+)
 
 
 def _digits(name: str, make: Any) -> Any:
@@ -249,18 +293,30 @@ def _digits(name: str, make: Any) -> Any:
     return convert
 
 
-MED_VALUE = Word('med', '<number>', _digits('MED', MED.from_int), ['0', '100'])
-LOCAL_PREFERENCE = Word(
-    'local-preference', '<number>', _digits('local-preference', LocalPreference.from_int), ['0', '100']
+# the range is the attribute's own, from its width on the wire
+MED_VALUE: Number[MED] = Number(
+    'med',
+    ((0, MED.MAX),),
+    convert=_digits('MED', MED.from_int),
+    examples=['0', '100'],
+    doc='MULTI_EXIT_DISC, RFC 4271 5.1.4: the lower is preferred',
+)
+LOCAL_PREFERENCE: Number[LocalPreference] = Number(
+    'local-preference',
+    ((0, LocalPreference.MAX),),
+    convert=_digits('local-preference', LocalPreference.from_int),
+    examples=['0', '100'],
+    doc='LOCAL_PREF, RFC 4271 5.1.5: the higher is preferred',
 )
 
 
 class Flag(Type[Any]):
     """A keyword with no value, what follows ignored: `atomic-aggregate;`."""
 
-    def __init__(self, name: str, make: Any) -> None:
+    def __init__(self, name: str, make: Any, doc: str) -> None:
         self.name = name
         self._make = make
+        self._doc = doc
 
     def parse(self, words: Words) -> Any:
         return self._make()
@@ -274,8 +330,15 @@ class Flag(Type[Any]):
     def examples(self) -> list[str]:
         return ['']
 
+    def shape(self) -> Shape:
+        return shape.empty().described(self._doc)
 
-ATOMIC_AGGREGATE = Flag('atomic-aggregate', AtomicAggregate.make_atomic_aggregate)
+
+ATOMIC_AGGREGATE = Flag(
+    'atomic-aggregate',
+    AtomicAggregate.make_atomic_aggregate,
+    'ATOMIC_AGGREGATE, RFC 4271 5.1.6: a less specific route was selected',
+)
 
 
 class AggregatorType(Type[Aggregator]):
@@ -311,6 +374,12 @@ class AggregatorType(Type[Aggregator]):
     def examples(self) -> list[str]:
         return ['( 65000:10.0.0.1 )', '(65000:10.0.0.1)', '65000:10.0.0.1', '( 65000:10.0.0.1)']
 
+    def shape(self) -> Shape:
+        return shape.container(
+            ('as-number', shape.AS_NUMBER.described('the AS of the speaker which aggregated')),
+            ('address', shape.IPV4_ADDRESS.described('its BGP identifier')),
+        ).described('AGGREGATOR, RFC 4271 5.1.7')
+
 
 def _originator_id(word: str) -> OriginatorID:
     if word.count('.') != IPv4.DOT_COUNT or not all(part.isdigit() for part in word.split('.')):
@@ -318,7 +387,14 @@ def _originator_id(word: str) -> OriginatorID:
     return OriginatorID.from_string(word)
 
 
-ORIGINATOR_ID = Word('originator-id', '<ipv4>', _originator_id, ['10.0.0.1'])
+ORIGINATOR_ID = Word(
+    'originator-id',
+    '<ipv4>',
+    _originator_id,
+    ['10.0.0.1'],
+    shape=shape.IPV4_ADDRESS,
+    doc='ORIGINATOR_ID, RFC 4456: the router-id of the client of the route reflector which originated the route',
+)
 
 
 class ClusterListType(Type[ClusterList]):
@@ -355,6 +431,11 @@ class ClusterListType(Type[ClusterList]):
 
     def examples(self) -> list[str]:
         return ['10.0.0.1', '[ 10.0.0.1 ]', '[ 10.0.0.1 10.0.0.2 ]']
+
+    def shape(self) -> Shape:
+        return shape.leaf_list(shape.IPV4_ADDRESS).described(
+            'CLUSTER_LIST, RFC 4456: the clusters the route was reflected through'
+        )
 
 
 # --------------------------------------------------------------------------- as-path
@@ -439,6 +520,14 @@ class ASPathType(Type[AS2Path]):
     def examples(self) -> list[str]:
         return ['65001', '[ 1 2 ]', '( 3 4 )', '[ 1 , 2 ]', '[ ]', 'confed-sequence [ 5 ] [ 1 ]', 'confed-set ( 7 8 )']
 
+    def shape(self) -> Shape:
+        kinds = shape.enumeration('sequence', 'set', 'confed-sequence', 'confed-set')
+        segment = shape.container(
+            ('type', kinds.described('an AS_SEQUENCE or AS_SET, or their confederation forms, RFC 5065')),
+            ('as-numbers', shape.leaf_list(shape.AS_NUMBER, max_items=MAX_SEGMENT_ASNS).described('its AS numbers')),
+        )
+        return shape.leaf_list(segment).described('AS_PATH, RFC 4271 5.1.2: its segments in order')
+
 
 # --------------------------------------------------------------------------- communities
 
@@ -505,8 +594,20 @@ def large_community(word: str) -> LargeCommunity:
 class CommunitiesType(Type[Any]):
     """One community, or several in brackets; a comma is read as a community, and refused."""
 
-    def __init__(self, name: str, make: Any, container: Any, unique: bool, hint: str, examples: list[str]) -> None:
+    def __init__(
+        self,
+        name: str,
+        make: Any,
+        container: Any,
+        unique: bool,
+        hint: str,
+        examples: list[str],
+        item: Shape,
+        doc: str,
+    ) -> None:
         self.name = name
+        self._shape = item
+        self._doc = doc
         self._make = make
         self._container = container
         self._unique = unique  # a large community given twice is kept once
@@ -543,6 +644,9 @@ class CommunitiesType(Type[Any]):
     def examples(self) -> list[str]:
         return self._examples
 
+    def shape(self) -> Shape:
+        return shape.leaf_list(self._shape).described(self._doc)
+
 
 COMMUNITIES = CommunitiesType(
     'community',
@@ -551,6 +655,11 @@ COMMUNITIES = CommunitiesType(
     False,
     '<asn>:<value>',
     ['1:1', '[ 1:1 2:2 ]', 'no-export', '[ no-advertise nopeer blackhole ]', '0x10001', '65537', '[ ]'],
+    shape.union(
+        shape.string(pattern=r'\d+:\d+'),
+        shape.enumeration('no-export', 'no-advertise', 'no-export-subconfed', 'no-peer', 'blackhole'),
+    ),
+    'COMMUNITIES, RFC 1997: <asn>:<value>, or a well-known name',
 )
 LARGE_COMMUNITIES = CommunitiesType(
     'large-community',
@@ -559,6 +668,8 @@ LARGE_COMMUNITIES = CommunitiesType(
     True,
     '<asn>:<value>:<value>',
     ['1:2:3', '[ 1:2:3 4:5:6 ]', '[ 1:2:3 1:2:3 ]', '0x1', '1'],
+    shape.string(pattern=r'\d+:\d+:\d+'),
+    'LARGE_COMMUNITY, RFC 8092: <asn>:<value>:<value>',
 )
 
 # --------------------------------------------------------------------------- extended communities
@@ -721,6 +832,11 @@ class ExtendedCommunitiesType(Type[ExtendedCommunities]):
             '[ redirect-to-nexthop-ietf 10.0.0.1 target:1:1 ]',
         ]
 
+    def shape(self) -> Shape:
+        return shape.leaf_list(EXTENDED_COMMUNITY).described(
+            'EXTENDED_COMMUNITIES, RFC 4360: route targets, route origins, flow actions and others'
+        )
+
 
 # --------------------------------------------------------------------------- MPLS
 
@@ -764,6 +880,9 @@ class LabelsType(Type[Labels]):
     def examples(self) -> list[str]:
         return ['100', '[ 100 ]', '[ 100 200 ]', '1048575']
 
+    def shape(self) -> Shape:
+        return shape.leaf_list(shape.integer(0, Labels.MAX), min_items=1).described('the MPLS label stack, RFC 8277')
+
 
 def _route_distinguisher(word: str) -> RouteDistinguisher:
     separator = word.find(':')
@@ -801,6 +920,8 @@ ROUTE_DISTINGUISHER = Word(
     '<asn>:<n>|<ipv4>:<n>',
     _route_distinguisher,
     ['65000:1', '10.0.0.1:1', '4200000000:1'],
+    shape=shape.string(pattern=r'(\d+|(\d{1,3}\.){3}\d{1,3}):\d+'),
+    doc='the route distinguisher, RFC 4364: <asn>:<number> or <ipv4>:<number>',
 )
 
 # --------------------------------------------------------------------------- configuration only
@@ -813,8 +934,19 @@ class Internal(Type[Any]):
     them: a `str` or `int` subclass carrying the code as `ID`.
     """
 
-    def __init__(self, name: str, code: int, base: type, convert: Any, hint: str, examples: list[str]) -> None:
+    def __init__(
+        self,
+        name: str,
+        code: int,
+        base: type,
+        convert: Any,
+        hint: str,
+        examples: list[str],
+        doc: str,
+        value: Shape = shape.TEXT,
+    ) -> None:
         self.name = name
+        self._shape = value.described(doc)
         self._class = type(name.title().replace('-', ''), (base,), {'ID': code})
         self._convert = convert
         self._hint = hint
@@ -836,6 +968,9 @@ class Internal(Type[Any]):
     def examples(self) -> list[str]:
         return self._examples
 
+    def shape(self) -> Shape:
+        return self._shape
+
 
 def _split(word: str) -> int:
     if not word or word[0] != '/' or not word[1:].isdigit():
@@ -849,16 +984,42 @@ def _watchdog(word: str) -> str:
     return word
 
 
-NAME = Internal('name', Attribute.CODE.INTERNAL_NAME, str, str, '<name>', ['route-name', ''])
-SPLIT = Internal('split', Attribute.CODE.INTERNAL_SPLIT, int, _split, '/<length>', ['/24', '/32'])
-WATCHDOG = Internal('watchdog', Attribute.CODE.INTERNAL_WATCHDOG, str, _watchdog, '<name>', ['dog', ''])
+NAME = Internal(
+    'name',
+    Attribute.CODE.INTERNAL_NAME,
+    str,
+    str,
+    '<name>',
+    ['route-name', ''],
+    'a name for the route, kept by exabgp and never sent',
+)
+# the length of the more specifics to announce, written /<length>
+SPLIT = Internal(
+    'split',
+    Attribute.CODE.INTERNAL_SPLIT,
+    int,
+    _split,
+    '/<length>',
+    ['/24', '/32'],
+    'announce the prefix as its more specifics of this length',
+    value=shape.integer(0, IPV6_MASK),
+)
+WATCHDOG = Internal(
+    'watchdog',
+    Attribute.CODE.INTERNAL_WATCHDOG,
+    str,
+    _watchdog,
+    '<name>',
+    ['dog', ''],
+    'the watchdog whose API commands announce and withdraw the route',
+)
 
 
 class Withdrawn:
     ID = Attribute.CODE.INTERNAL_WITHDRAW
 
 
-WITHDRAW = Flag('withdraw', Withdrawn)
+WITHDRAW = Flag('withdraw', Withdrawn, 'start with the route withdrawn')
 
 
 # --------------------------------------------------------------------------- segment routing
@@ -964,6 +1125,16 @@ class PrefixSidType(Type[Any]):
     def examples(self) -> list[str]:
         return ['[ 300 ]', '[ 300, [ ( 800000,100 ) ] ]', '[ 300, [ ( 800000,100 ), ( 1000000,5000 ) ] ]']
 
+    def shape(self) -> Shape:
+        srgb = shape.container(
+            ('base', shape.integer(0, SRGB_MAX - 1).described('the first label of the range')),
+            ('range', shape.integer(0, SRGB_MAX - 1).described('the number of labels')),
+        )
+        return shape.container(
+            ('label-index', shape.integer(0, LABEL_INDEX_MAX - 1).described('the label index')),
+            ('srgb', shape.leaf_list(srgb).described('the SRGB of the originator')),
+        ).described('BGP Prefix-SID, RFC 8669')
+
 
 class PrefixSidSrv6Type(Type[Any]):
     """`( l3-service|l2-service <sid> [<behavior> [ [ <LBL>,<LNL>,<FL>,<AL>,<Tpose-len>,<Tpose-offset> ] ]] )`."""
@@ -1030,3 +1201,21 @@ class PrefixSidSrv6Type(Type[Any]):
             '( l2-service 2001:db8::1 0x48 )',
             '( l3-service 2001:db8::1 0x48 [ 64, 24, 16, 0, 16, 64 ] )',
         ]
+
+    def shape(self) -> Shape:
+        # RFC 9252 3.2.1, each a length in bits
+        fields = (
+            ('locator-block', 'the length of the locator block'),
+            ('locator-node', 'the length of the locator node'),
+            ('function', 'the length of the function'),
+            ('argument', 'the length of the argument'),
+            ('transposition-length', 'the number of bits transposed into the label'),
+            ('transposition-offset', 'the position of the first bit transposed'),
+        )
+        structure = shape.container(*((name, shape.UINT8.described(doc)) for name, doc in fields))
+        return shape.container(
+            ('service', shape.enumeration('l3-service', 'l2-service').described('an L3 or an L2 service')),
+            ('sid', shape.IPV6_ADDRESS.described('the SRv6 SID')),
+            ('behavior', shape.UINT16.described('the endpoint behaviour, RFC 8986')),
+            ('structure', structure.described('the SID structure, in bits')),
+        ).described('SRv6 services, RFC 9252')
