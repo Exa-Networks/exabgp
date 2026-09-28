@@ -434,7 +434,7 @@ def test_notification_all_codes(code: int, subcode: int) -> None:
 
     assert notification.code == code
     assert notification.subcode == subcode
-    assert notification.raw_data == b'test data'
+    assert notification.data == b'test data'
 
 
 @pytest.mark.fuzz
@@ -453,7 +453,7 @@ def test_notification_shutdown_longer_than_rfc8203_allowed(shutdown_len: int) ->
 
     notification = Notification(notification_data)
 
-    assert notification.data == b'Shutdown Communication: "' + b'x' * shutdown_len + b'"'
+    assert notification.text == b'Shutdown Communication: "' + b'x' * shutdown_len + b'"'
 
 
 # =============================================================================

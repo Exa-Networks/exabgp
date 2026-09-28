@@ -19,8 +19,7 @@ from exabgp.bgp.message.message import Message
 from exabgp.util import hexbytes, hexstring
 
 # ================================================================== Notification
-# A Notification received from our peer.
-# RFC 4271 Section 4.5
+# The NOTIFICATION message, RFC 4271 Section 4.5: what we send, and what a peer sends us.
 
 # 0                   1                   2                   3
 # 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -30,7 +29,13 @@ from exabgp.util import hexbytes, hexstring
 
 
 @Message.register
-class Notification(Message, Exception):
+class Notification(Message):
+    """The NOTIFICATION message, whichever way it goes: a message, never an exception.
+
+    Notify is the exception we raise to send one; NotificationReceived the one the reactor
+    raises when a peer sent one.  Neither is a Notification: each holds one.
+    """
+
     ID: ClassVar[int] = Message.CODE.NOTIFICATION
 
     # RFC 9003 - Shutdown Communication, carried by these two Cease subcodes only
@@ -121,7 +126,6 @@ class Notification(Message, Exception):
         # with a NOTIFICATION and RFC 4271 6.5 forbids that
         if len(packed) < self.FIXED_SIZE:
             raise ValueError(f'Notification requires at least {self.FIXED_SIZE} bytes, got {len(packed)}')
-        Exception.__init__(self)
         self._packed = packed
 
     def pack_body(self, negotiated: Negotiated) -> Buffer:
@@ -145,13 +149,14 @@ class Notification(Message, Exception):
         return self._packed[1]
 
     @property
-    def raw_data(self) -> bytes:
-        return bytes(self._packed[2:])
+    def data(self) -> bytes:
+        """The Data field, as it is on the wire."""
+        return bytes(self._packed[self.FIXED_SIZE :])
 
     @property
-    def data(self) -> bytes:
-        """Parse raw_data into human-readable form for display."""
-        raw = self.raw_data
+    def text(self) -> bytes:
+        """The Data field made readable: an RFC 9003 Shutdown Communication decoded, else hex."""
+        raw = self.data
         code = self.code
         subcode = self.subcode
 
@@ -186,10 +191,11 @@ class Notification(Message, Exception):
     def __str__(self) -> str:
         code_str = self._str_code.get(self.code, 'unknown error')
         subcode_str = self._str_subcode.get((self.code, self.subcode), 'unknow reason')
+        text = self.text
         try:
-            data_str = f' / {self.data.decode("ascii")}' if self.data else ''
+            data_str = f' / {text.decode("ascii")}' if text else ''
         except UnicodeDecodeError:
-            data_str = f' / {hexstring(self.data)}'
+            data_str = f' / {hexstring(text)}'
         return f'{code_str} / {subcode_str}{data_str}'
 
     @classmethod
@@ -205,8 +211,8 @@ class Notification(Message, Exception):
 
         and sent the peer exactly the message the RFC forbids, naming the wrong error.
 
-        Returning a Notification instead lets protocol.py raise it, and the reactor closes
-        the session without replying, which is what the RFC asks for.  A body too short to
+        Returning a Notification instead lets protocol.py raise NotificationReceived, and
+        the reactor closes the session without replying, which is what the RFC asks for.  A body too short to
         hold a code renders as "unknown error / unknow reason", which is accurate: the peer
         did not say.
         """
@@ -215,12 +221,39 @@ class Notification(Message, Exception):
         return cls(data)
 
 
+# ========================================================== NotificationReceived
+# A peer told us it is closing the session.
+
+
+class NotificationReceived(Exception):
+    """The peer sent a NOTIFICATION: the session ends and nothing is sent back (RFC 4271 6.5).
+
+    Raised by the reactor when it reads one.  It is not a Notify, so no handler meant for the
+    errors we report can catch it by accident, whatever order the handlers are in.
+    """
+
+    def __init__(self, notification: Notification) -> None:
+        super().__init__(str(notification))
+        self.notification = notification
+
+    @property
+    def code(self) -> int:
+        return self.notification.code
+
+    @property
+    def subcode(self) -> int:
+        return self.notification.subcode
+
+    def __str__(self) -> str:
+        return str(self.notification)
+
+
 # =================================================================== Notify
 # A Notification we need to inform our peer of.
 
 
-class Notify(Notification):
-    """A NOTIFICATION we send.
+class Notify(Exception):
+    """An error we tell the peer about: raising it sends `notification`, then resets.
 
     `detail` is our explanation, for str() and so for the log.  It is appended to the
     IANA names of the code and subcode, so a caller writes only what the names do not say.
@@ -234,6 +267,9 @@ class Notify(Notification):
     (6, 2) and (6, 4) are the exception: their detail is an RFC 9003 Shutdown Communication.
     """
 
+    UNSUPPORTED_CAPABILITY: ClassVar[tuple[int, int]] = Notification.UNSUPPORTED_CAPABILITY
+    MAXIMUM_NUMBER_OF_PREFIXES_REACHED: ClassVar[tuple[int, int]] = Notification.MAXIMUM_NUMBER_OF_PREFIXES_REACHED
+
     # RFC 4271 4.1: a message is at most 4096 octets, header 19, code and subcode 2.  An
     # attribute with an extended length can be larger than that, and is cut to fit
     DATA_MAX_OCTETS: ClassVar[int] = Message.STANDARD_MAX - Message.HEADER_LEN - Notification.FIXED_SIZE
@@ -243,11 +279,12 @@ class Notify(Notification):
         self.has_defined_data = data is not None
         if data is None:
             data = self._wire_text(code, subcode, detail)
-        Notification.__init__(self, bytes([code, subcode]) + bytes(data[: self.DATA_MAX_OCTETS]))
+        self.notification = Notification(bytes([code, subcode]) + bytes(data[: self.DATA_MAX_OCTETS]))
+        super().__init__(str(self))
 
     @classmethod
     def _wire_text(cls, code: int, subcode: int, detail: str) -> bytes:
-        if (code, subcode) not in cls.SHUTDOWN_SUBCODES:
+        if (code, subcode) not in Notification.SHUTDOWN_SUBCODES:
             # A Notify is raised while handling an error, so its own text must not raise:
             # a character ASCII cannot hold goes out escaped rather than failing the send
             return detail.encode('ascii', 'backslashreplace')
@@ -255,9 +292,9 @@ class Notify(Notification):
             return b''
         # RFC 9003 2: UTF-8, and 3: at most 128 octets as we cannot know the peer takes 255.
         # Cut on a character boundary, so what is sent still decodes
-        communication = detail.encode('utf-8')[: cls.SHUTDOWN_COMM_MAX_LEGACY]
+        communication = detail.encode('utf-8')[: Notification.SHUTDOWN_COMM_MAX_LEGACY]
         communication = communication.decode('utf-8', 'ignore').encode('utf-8')
-        assert len(communication) <= cls.SHUTDOWN_COMM_MAX_LEGACY
+        assert len(communication) <= Notification.SHUTDOWN_COMM_MAX_LEGACY
         return bytes([len(communication)]) + communication
 
     @classmethod
@@ -270,14 +307,26 @@ class Notify(Notification):
     def make_notify(cls, code: int, subcode: int, detail: str = '') -> 'Notify':
         return cls(code, subcode, detail)
 
-    def __str__(self) -> str:
-        code_name = self._str_code.get(self.code, f'unknown error code {self.code}')
-        subcode_name = self._str_subcode.get((self.code, self.subcode), f'unknown subcode {self.subcode}')
-        # Subcode 0 is "Unspecific" (RFC 4271 4.5): it names nothing the code does not
-        names = code_name if self.subcode == 0 else f'{code_name} / {subcode_name}'
-        return f'{names}: {self.detail}' if self.detail else names
+    @classmethod
+    def is_assigned(cls, code: int, subcode: int) -> bool:
+        return Notification.is_assigned(code, subcode)
+
+    @property
+    def code(self) -> int:
+        return self.notification.code
+
+    @property
+    def subcode(self) -> int:
+        return self.notification.subcode
 
     @property
     def data(self) -> bytes:
-        """For Notify (sending), data is the raw wire-format data, not parsed."""
-        return self.raw_data
+        """The Data field sent to the peer."""
+        return self.notification.data
+
+    def __str__(self) -> str:
+        code_name = Notification._str_code.get(self.code, f'unknown error code {self.code}')
+        subcode_name = Notification._str_subcode.get((self.code, self.subcode), f'unknown subcode {self.subcode}')
+        # Subcode 0 is "Unspecific" (RFC 4271 4.5): it names nothing the code does not
+        names = code_name if self.subcode == 0 else f'{code_name} / {subcode_name}'
+        return f'{names}: {self.detail}' if self.detail else names

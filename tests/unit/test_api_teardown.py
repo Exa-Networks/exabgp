@@ -29,7 +29,7 @@ ADMINISTRATIVE_RESET = 4
 
 def wire(arguments: str) -> tuple[int, int, bytes]:
     notify = teardown_notification(arguments)
-    return notify.code, notify.subcode, notify.raw_data
+    return notify.code, notify.subcode, notify.data
 
 
 def test_no_argument_is_an_administrative_shutdown() -> None:
@@ -99,7 +99,7 @@ def test_the_peer_is_handed_the_notification_the_client_asked_for() -> None:
     assert answered is True
     (name, notify), _ = reactor.teardown_peer.call_args
     assert name == 'peer'
-    assert (notify.code, notify.subcode, notify.raw_data) == (3, 1, b'testing')
+    assert (notify.code, notify.subcode, notify.data) == (3, 1, b'testing')
 
 
 def test_the_peer_raises_the_notification_it_was_handed() -> None:

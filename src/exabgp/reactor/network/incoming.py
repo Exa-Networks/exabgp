@@ -39,10 +39,10 @@ class Incoming(Connection):
 
     def notification(self, code: int, subcode: int, message: bytes) -> Iterator[bool]:
         try:
-            # Notify.pack_message() doesn't use negotiated, but it's required by the signature
+            # packing a NOTIFICATION does not use negotiated, but it's required by the signature
             # Create a minimal Negotiated object for this early connection stage
             negotiated = Negotiated.make_negotiated(Neighbor.EMPTY, Direction.IN)
-            notification = Notify(code, subcode, message.decode('ascii')).pack_message(negotiated)
+            notification = Notify(code, subcode, message.decode('ascii')).notification.pack_message(negotiated)
             for boolean in self.writer(notification):
                 yield False
             self.close()

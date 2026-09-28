@@ -21,6 +21,7 @@ from exabgp.bgp.message.update import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notification
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import NotificationReceived
 from exabgp.bgp.message.operational import Operational
 
 __all__ = [
@@ -33,5 +34,6 @@ __all__ = [
     'KeepAlive',
     'Notification',
     'Notify',
+    'NotificationReceived',
     'Operational',
 ]

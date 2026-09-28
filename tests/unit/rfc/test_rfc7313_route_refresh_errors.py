@@ -66,7 +66,7 @@ def test_the_notification_carries_the_complete_route_refresh_message(size: int) 
     with pytest.raises(Notify) as raised:
         RouteRefresh.unpack_message(payload, Mock())
     header = Message.MARKER + pack('!H', Message.HEADER_LEN + size) + RouteRefresh.TYPE
-    assert raised.value.raw_data == header + payload
+    assert raised.value.data == header + payload
 
 
 @pytest.mark.rfc('rfc7313#5-unknown-subtype-ignored')

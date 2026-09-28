@@ -679,6 +679,23 @@ class TestPeerStringEscaping:
         assert notification_json['data'] == '0x79222C2022696E6A65637465642D6E6F746966223A20226F776E656432'
         assert 'injected-notif' not in notification_json
 
+    def test_a_received_shutdown_communication_is_reported_as_the_peer_sent_it(
+        self, json_encoder: JSON, api_neighbor: Mock
+    ) -> None:
+        """`data` is the Data field as it came off the wire, the RFC 9003 length octet included.
+
+        It was the decoded display text, `Shutdown Communication: "bye"`, for a received
+        notification only, while a sent one reported its raw bytes: the same key meant two
+        things.  Notification.data is now the Data field both ways, and .text is the display.
+        """
+        notification = Notification.make_notification(6, 2, b'\x03bye')
+
+        event = json.loads(json_encoder.notification(api_neighbor, 'receive', notification, b'', b'', Negotiated.UNSET))
+        notification_json = event['neighbor']['notification']
+
+        assert notification_json['data'] == '0x03627965'
+        assert notification.text == b'Shutdown Communication: "bye"'
+
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

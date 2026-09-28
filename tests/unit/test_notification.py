@@ -10,6 +10,7 @@ import unittest
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify, Notification
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 class TestNotifyException(unittest.TestCase):
@@ -17,7 +18,7 @@ class TestNotifyException(unittest.TestCase):
         # Build a Notify exception and generate its wire-format packet
         code, subcode, data = 2, 1, 'AB'
         notify_exc = Notify(code, subcode, data)
-        packet = notify_exc.pack_message(negotiated=None)
+        packet = notify_exc.notification.pack_message(Negotiated.UNSET)
 
         # Marker: 16 bytes of 0xFF
         self.assertEqual(packet[:16], Message.MARKER)

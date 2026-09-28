@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 # import traceback
 from exabgp.bgp.fsm import FSM
-from exabgp.bgp.message import Message, Notification, Notify, Open
+from exabgp.bgp.message import Message, NotificationReceived, Notify, Open
 from exabgp.bgp.message.open.capability import REFRESH, Capability
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.debug.report import format_exception
@@ -933,7 +933,7 @@ class Peer:
             return
 
         # THE PEER NOTIFIED US OF AN ERROR
-        except Notification as notification:
+        except NotificationReceived as notification:
             # Check if maximum connection attempts reached
             if not self.can_reconnect():
                 log.debug(

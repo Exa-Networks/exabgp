@@ -1,20 +1,18 @@
-"""`Notify` goes out, `Notification` comes in, and the difference is silent to get wrong.
+"""`Notify` goes out, `NotificationReceived` comes in, and `Notification` is only the message.
 
-    Notify        we tell the PEER its data is malformed. The reactor sends a NOTIFICATION
-                  on the wire, then resets.
-    Notification  the PEER told US it is tearing down. The reactor resets and sends
-                  NOTHING, because the far end is already closing.
+    Notify                we tell the PEER its data is malformed. The reactor sends the
+                          NOTIFICATION it holds, then resets.
+    NotificationReceived  the PEER told US it is tearing down. The reactor resets and sends
+                          NOTHING, because the far end is already closing.
+    Notification          the message itself, either way.  Not an exception.
 
-Raising `Notification` from a decoder therefore closes the session WITHOUT telling the
-peer why: the message never reaches the wire and the operator on the other side sees an
-unexplained reset. It is one word away from correct and nothing about it looks wrong at
-the call site, so the check has to be a sweep over the source rather than a review habit.
+This used to be one hierarchy: `Notify` subclassed `Notification`, which was an exception.
+Raising `Notification` from a decoder closed the session WITHOUT telling the peer why, and
+`except Notification` placed first in `Peer._main` bound every outbound notification too.
+Both traps are gone with the hierarchy (plan/wip-message-interface.md); the sweep below
+stays, as `raise Notification(...)` now fails only when it runs.
 
-`Notify` subclasses `Notification`, so the handler order in `Peer._main` matters for the
-same reason: `except Notification` placed first would bind every outbound notification
-too, and none would ever be put on the wire.
-
-Neither property is held by anything else in this tree. Ported from the 5.0 branch.
+Ported from the 5.0 branch.
 """
 
 from __future__ import annotations
@@ -25,7 +23,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from exabgp.bgp.message.notification import Notification, Notify
+from exabgp.bgp.message.notification import Notification, NotificationReceived, Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 SOURCE = pathlib.Path(__file__).resolve().parent.parent.parent / 'src' / 'exabgp'
@@ -96,38 +94,40 @@ def test_the_walk_can_see_a_raise_of_the_class_it_is_looking_for() -> None:
     assert [name for _line, name in raised_names(tree)] == ['Notification']
 
 
-# ============================================== the handler order in the reactor
-
-
-def test_notify_is_caught_before_notification() -> None:
-    source = REACTOR_PEER.read_text(encoding='utf-8')
-
-    notify = source.index('except Notify')
-    notification = source.index('except Notification')
-
-    assert notify < notification, (
-        'except Notification comes first, so it binds Notify too and no outbound notification is ever put on the wire'
-    )
+# ============================================== the reactor handles both, in any order
 
 
 def test_the_reactor_really_handles_both() -> None:
-    """A file holding neither handler would satisfy the ordering test by raising instead."""
     source = REACTOR_PEER.read_text(encoding='utf-8')
 
     assert 'except Notify' in source
-    assert 'except Notification' in source
+    assert 'except NotificationReceived' in source
 
 
 # ============================================== the classes mean what they claim
 
 
-def test_notify_is_a_notification() -> None:
-    """Which is why the handler order above is load bearing."""
-    assert issubclass(Notify, Notification)
+def test_neither_exception_is_the_other() -> None:
+    """Which is why the order of the two handlers in Peer no longer matters."""
+    assert not issubclass(Notify, NotificationReceived)
+    assert not issubclass(NotificationReceived, Notify)
+
+
+def test_the_message_is_not_an_exception() -> None:
+    """So `raise Notification(...)` is a TypeError, never a reset the peer is not told about."""
+    assert not issubclass(Notification, BaseException)
+
+
+def test_each_exception_holds_the_message() -> None:
+    notify = Notify(6, 2, 'maintenance')
+    received = NotificationReceived(Notification.make_notification(6, 2))
+
+    assert (notify.notification.code, notify.notification.subcode) == (6, 2)
+    assert (received.notification.code, received.notification.subcode) == (6, 2)
 
 
 @pytest.mark.parametrize('code,subcode', [(3, 10), (2, 0), (6, 2)])
 def test_a_notify_carries_its_code_to_the_wire(code: int, subcode: int) -> None:
-    packed = Notify(code, subcode).pack_message(Negotiated.UNSET)
+    packed = Notify(code, subcode).notification.pack_message(Negotiated.UNSET)
 
     assert packed[HEADER_LEN_BYTES : HEADER_LEN_BYTES + 2] == bytes([code, subcode])

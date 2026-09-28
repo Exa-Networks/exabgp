@@ -682,7 +682,8 @@ async def test_protocol_read_update_decode_error(mock_peer: Any) -> None:
 async def test_protocol_read_notification_from_peer(mock_peer: Any) -> None:
     """Test reading a NOTIFICATION message from peer raises it."""
     from exabgp.reactor.protocol import Protocol
-    from exabgp.bgp.message import Message, Notification
+    from exabgp.bgp.message import NotificationReceived
+    from exabgp.bgp.message import Message
     import struct
 
     protocol = Protocol(mock_peer)
@@ -698,7 +699,7 @@ async def test_protocol_read_notification_from_peer(mock_peer: Any) -> None:
     protocol.connection = mock_connection
 
     # Reading NOTIFICATION should raise the notification
-    with pytest.raises(Notification):
+    with pytest.raises(NotificationReceived):
         await protocol.read_message()
 
 
@@ -1263,15 +1264,9 @@ async def test_protocol_new_notification_message(mock_peer: Any) -> None:
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    # Mock notification object
-    mock_notification = Mock()
-    mock_notification.message = Mock(return_value=b'\xff' * 16 + b'\x00\x15\x03' + b'\x06\x02test')
-    mock_notification.code = 6
-    mock_notification.subcode = 2
-    mock_notification.data = b'test error'
-    mock_notification.ID = 3  # NOTIFICATION
+    from exabgp.bgp.message import Notify
 
-    await protocol.new_notification(mock_notification)
+    await protocol.new_notification(Notify(6, 2, 'test error'))
 
     assert mock_connection.writer_async.called
 

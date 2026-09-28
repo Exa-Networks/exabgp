@@ -51,9 +51,9 @@ Message
 |---|------|--------------|--------|
 | 1 | Contract test `tests/unit/bgp/message/test_message_contract.py`, failing | pytest on it | ✅ fails at collection, as it should |
 | 2 | Signals: remove NOP/AWAKE/DONE/Scheduling; `read_message() -> Message \| None`; fix `_UPDATE` fast path | unit + functional | ✅ |
-| 3 | Base: TYPE derived, LENGTH_MIN/MAX, `pack_body` + final `pack_message`, eq/hash | unit + functional | ⏳ |
-| 4 | Open bytes-first (`_packed` is the whole body) | unit + functional | ⏳ |
-| 5 | EOR(Update), UpdateCollection out of Message, EOR marker as a field | unit + functional | ⏳ |
+| 3 | Base: TYPE derived, LENGTH_MIN/MAX, `pack_body` + final `pack_message`, eq/hash | unit + functional | ✅ |
+| 4 | Open bytes-first (`_packed` is the whole body) | unit + functional | ✅ |
+| 5 | EOR(Update), UpdateCollection out of Message, EOR marker as a field | unit + functional | ✅ |
 | 6 | Notification / Notify | unit + functional | ⏳ |
 | 7 | Operational bytes-first, UPPER constants, registry raises on duplicate, sequence bug | unit + functional | ⏳ |
 | 8 | Spec: `doc/` table per message, contract test green | `./qa/bin/test_everything` | ⏳ |
@@ -82,6 +82,28 @@ Message
   `Scheduling` comparisons left with the class. Flag it to Thomas.
 - `scheduling.py` deleted with Thomas's permission.
 
+## Notes from steps 3 to 5
+
+- `FIXED_SIZE` is the part of the body every message of a type has; `LENGTH_MIN` is derived
+  from it like `TYPE` from `ID`. It replaces `Open.HEADER_SIZE`/`MINIMUM_BODY_SIZE` (the pair
+  whose confusion was an earlier bug), `Notification.HEADER_SIZE` and `RouteRefresh.LENGTH`.
+- `Message.Length` (a table of lambdas) is gone: `Message.length_valid(code, length)` asks the
+  registered class. OPERATIONAL now has a minimum (23): a shorter one is refused at the header
+  with 1/2 rather than by the decoder with 5/0. OPEN has a maximum of 4096 (RFC 8654 3).
+- Found, not changed: the header check refuses a ROUTE-REFRESH which is not 23 octets with 1/2,
+  so `RouteRefresh.unpack_message`'s 7/1 (RFC 7313 5) can never be reached from the wire.
+- Open keeps its whole body. `make_open` packs the capabilities once, so tests which stored a
+  bare list or int in `Capabilities` (never valid, never packed before) now use real
+  `MultiProtocol`/`ASN4` objects.
+- `Update(packed)` only: `parse(negotiated)` decodes, `data` reads. `EOR(Update)` stores one of
+  the two RFC 4724 bodies; a received EOR in another form is stored in the canonical one.
+- `UpdateCollection` is not a Message. Its End-of-RIB mark is a field (`make_eor`), not the
+  identity of a cached singleton; its `nlris` then holds the `EOR_NLRI`, as `EOR.nlris` does.
+- Thomas: "do not use isinstance if you can use another way", "better have interface and
+  class fields instead". Written into EXA_STYLE.md ("Ask the object, not its class"),
+  CODING_STANDARDS.md, ESSENTIAL_PROTOCOLS.md and CLAUDE.md. Message dispatch uses `ID`,
+  `IS_EOR` and a `cast` after the check.
+
 ## Recent Failures
 
 ### 2026-09-28 baseline: 22 unit failures
@@ -91,4 +113,4 @@ Message
 
 ## Resume Point
 
-Step 3.
+Step 6.

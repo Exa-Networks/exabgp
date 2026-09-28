@@ -20,7 +20,17 @@ if TYPE_CHECKING:
 # ================================================================ Registration
 #
 
-from exabgp.bgp.message import EOR, KeepAlive, Message, Notification, Notify, Open, Operational, Update
+from exabgp.bgp.message import (
+    EOR,
+    KeepAlive,
+    Message,
+    Notification,
+    NotificationReceived,
+    Notify,
+    Open,
+    Operational,
+    Update,
+)
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import ASN, RouterID, Version
 from exabgp.bgp.message.open.asn import AS_TRANS
@@ -231,11 +241,16 @@ class Protocol:
             if self._api.get(code, False):
                 if consolidate:
                     self.peer.reactor.processes.notification(
-                        self.peer.neighbor, 'receive', notify_msg, bytes(header), bytes(body), self.negotiated
+                        self.peer.neighbor,
+                        'receive',
+                        notify_msg.notification,
+                        bytes(header),
+                        bytes(body),
+                        self.negotiated,
                     )
                 elif parsed:
                     self.peer.reactor.processes.notification(
-                        self.peer.neighbor, 'receive', notify_msg, b'', b'', self.negotiated
+                        self.peer.neighbor, 'receive', notify_msg.notification, b'', b'', self.negotiated
                     )
                 elif packets:
                     self.peer.reactor.processes.packets(
@@ -296,8 +311,8 @@ class Protocol:
             elif parsed:
                 self.peer.reactor.processes.message(msg_id, self.peer, 'receive', message, b'', b'', self.negotiated)
 
-        if message.TYPE == Notification.TYPE:
-            raise cast(Notification, message)
+        if message.ID == Message.CODE.NOTIFICATION:
+            raise NotificationReceived(cast(Notification, message))
 
         if update is not None and Attribute.CODE.INTERNAL_DISCARD in update.data.attributes:
             return None
@@ -405,7 +420,7 @@ class Protocol:
     async def new_notification(self, notification: Notify) -> Notify:
         """Send BGP NOTIFICATION message."""
         assert self.connection is not None
-        await self.write(notification, self.negotiated)
+        await self.write(notification.notification, self.negotiated)
         log.debug(
             lazymsg(
                 'notification.sent code={c} subcode={sc} {d}',

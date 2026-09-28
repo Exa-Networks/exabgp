@@ -24,7 +24,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import KeepAlive, Message, Notification, Notify, Open
+from exabgp.bgp.message import KeepAlive, Message, NotificationReceived, Notify, Open
 from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, RouterID, Version
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.neighbor import Neighbor
@@ -86,11 +86,11 @@ def _read(wire: bytes) -> Message:
     return asyncio.run(run())
 
 
-def refused(wire: bytes) -> Notification:
+def refused(wire: bytes) -> Notify:
     """The NOTIFICATION a peer would be sent for `wire`, or a failure if it was accepted."""
     try:
         message = _read(wire)
-    except Notification as notification:
+    except Notify as notification:
         return notification
     pytest.fail(f'{wire.hex()} was accepted and decoded as {message}')
 
@@ -99,7 +99,7 @@ def accepted(wire: bytes) -> Message:
     """The message `wire` decoded to, or a failure if it was refused."""
     try:
         return _read(wire)
-    except Notification as notification:
+    except Notify as notification:
         pytest.fail(f'{wire.hex()} was refused with {notification.code}/{notification.subcode}: {notification}')
 
 
@@ -107,7 +107,7 @@ def our_messages() -> list[Message]:
     """One of each message we generate ourselves, packed the way we would send it."""
     return [
         KeepAlive.make_keepalive(),
-        Notify(6, 2, 'administrative shutdown'),
+        Notify(6, 2, 'administrative shutdown').notification,
         Open.make_open(Version(4), ASN(65000), HoldTime(180), RouterID('192.0.2.1'), Capabilities()),
     ]
 
@@ -245,7 +245,9 @@ def test_the_smallest_legal_length_is_not_a_bad_message_length(length: int, mess
     wire = header(length, message_type) + bytes(length - 19)
     try:
         _read(wire)
-    except Notification as notification:
+    except NotificationReceived:
+        return  # a well formed NOTIFICATION, read as one: not refused
+    except Notify as notification:
         assert not (notification.code == MESSAGE_HEADER_ERROR and notification.subcode == BAD_MESSAGE_LENGTH), (
             f'a {length} octet message of type {message_type} was called a bad message length'
         )
@@ -315,7 +317,9 @@ def test_a_recognised_message_type_is_never_called_a_bad_type(length: int, messa
     wire = header(length, message_type) + bytes(length - 19)
     try:
         _read(wire)
-    except Notification as notification:
+    except NotificationReceived:
+        return  # a well formed NOTIFICATION, read as one: not refused
+    except Notify as notification:
         assert not (notification.code == MESSAGE_HEADER_ERROR and notification.subcode == BAD_MESSAGE_TYPE), (
             f'type {message_type} has a decoder but was refused as unrecognised'
         )
