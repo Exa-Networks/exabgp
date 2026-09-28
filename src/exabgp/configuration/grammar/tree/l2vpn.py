@@ -12,6 +12,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import ReadContext
 from typing import Any
 
 from exabgp.bgp.message import Action
@@ -25,7 +26,6 @@ from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.tree.static import (
     MAX_ROUTE_VALUES,
     ROUTE_VALUES,
-    ROUTES,
     RouteValue,
     action,
     attribute_words,
@@ -40,7 +40,6 @@ from exabgp.protocol.ip import IP
 from exabgp.rib.route import Route
 
 VPLS_PARAM_MAX = 0xFFFF  # endpoint, size, offset and label base are sixteen bits
-OPS = 'vpls-ops'  # the values of the vpls block being read
 
 
 def _vpls_number(name: str) -> Number[int]:
@@ -159,13 +158,13 @@ def vpls_words(route: Route) -> list[str]:
 # --------------------------------------------------------------------------- the l2vpn section
 
 
-def _opened(context: dict[str, Any]) -> None:
-    context[OPS] = []
+def _opened(context: ReadContext) -> None:
+    context.vpls_values = []
 
 
 def _store_op(spec: RouteValue) -> Any:
-    def store(values: dict[str, Any], value: Any, context: dict[str, Any]) -> None:
-        context.setdefault(OPS, []).append((spec, value))
+    def store(values: dict[str, Any], value: Any, context: ReadContext) -> None:
+        context.vpls_values.append((spec, value))
 
     return store
 
@@ -188,21 +187,22 @@ class _Ignored(Type[str]):
         return ['', 'site']
 
 
-def _vpls(name: Any, values: dict[str, Any], context: dict[str, Any]) -> list[Route]:
+def _vpls(name: Any, values: dict[str, Any], context: ReadContext) -> list[Route]:
     settings = VPLSSettings()
     settings.action = Action.ANNOUNCE
     attributes = AttributeCollection()
-    for spec, value in context.pop(OPS, []):
+    taken, context.vpls_values = context.vpls_values, []
+    for spec, value in taken:
         _apply(settings, attributes, spec, value)
     route = _vpls_route(settings, attributes, '')
-    context.setdefault(ROUTES, []).append(route)
+    context.routes.append(route)
     return [route]
 
 
-def _store_on_last_route(values: dict[str, Any], value: Any, context: dict[str, Any]) -> None:
+def _store_on_last_route(values: dict[str, Any], value: Any, context: ReadContext) -> None:
     # legacy: an attribute given in the l2vpn section goes to the last route read, a static
     # one included, and fails when there is none
-    routes = context.get(ROUTES, [])
+    routes = context.routes
     if not routes:
         raise ValueError('there is no route for this attribute to be added to')
     routes[-1].attributes.add(value)
@@ -230,9 +230,9 @@ class _NoSetter(Type[Any]):
         return shape.REFUSED
 
 
-def _l2vpn(name: Any, values: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+def _l2vpn(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
     # legacy: the section takes every route not yet taken, those read before it included
-    values.setdefault('routes', []).extend(context.pop(ROUTES, []))
+    values.setdefault('routes', []).extend(context.take_routes())
     return values
 
 

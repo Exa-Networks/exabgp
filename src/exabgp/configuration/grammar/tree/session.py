@@ -11,6 +11,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import ReadContext
 import re
 import time
 from typing import Any
@@ -250,12 +251,11 @@ class APIName(Type[str]):
         return ['', 'name', 'a.b-c_d']
 
 
-def _api(name: str, values: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+def _api(name: str, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
     # legacy: api names are unique across the whole configuration, not per neighbor
-    used: set[str] = context.setdefault('api-names', set())
-    if name in used:
+    if name in context.api_names:
         raise ValueError(f'the name "{name}" already exists in api')
-    used.add(name)
+    context.api_names.add(name)
     return values
 
 

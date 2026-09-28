@@ -54,10 +54,8 @@ from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
-from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP, IPRange, IPSelf, IPv4, IPv6
 
-AFI_CONTEXT = 'afi'  # the address family of the prefix, set by PREFIX and read by NEXT_HOP
 
 AIGP_MAX = 0xFFFFFFFFFFFFFFFF  # RFC 7311: a 64 bit metric
 MAX_SEGMENT_ASNS = 255  # RFC 4271 4.3: a path segment counts its AS numbers in one octet
@@ -89,7 +87,7 @@ class Prefix(Type[IPRange]):
         except ValueError:
             mask = 128 if ':' in ip else 32
         try:
-            words.context[AFI_CONTEXT] = IP.toafi(ip)
+            words.context.afi = IP.toafi(ip)
             iprange = IPRange.make_range(ip, mask)
         except (OSError, ValueError):
             raise ConfigError(where, f"'{ip}/{mask}' is not a valid prefix", expected=['<ip>/<mask>']) from None
@@ -134,7 +132,7 @@ class NextHopType(Type[tuple[IP | IPSelf, NextHop | NextHopSelf]]):
     def parse(self, words: Words) -> tuple[IP | IPSelf, NextHop | NextHopSelf]:
         where = words.where()
         word = words.word()
-        afi = words.context.get(AFI_CONTEXT, AFI.undefined)
+        afi = words.context.afi
         if word.lower() == 'self':
             return IPSelf(afi), NextHopSelf(afi)
         try:

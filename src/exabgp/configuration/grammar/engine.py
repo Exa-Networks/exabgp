@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.error import ConfigError, suggest
 from exabgp.configuration.grammar.lexer import Statement, Token
 from exabgp.configuration.grammar.nodes import MISSING, Block, Keep
@@ -36,10 +37,10 @@ class _Frame:
 
 
 class Engine:
-    def __init__(self, root: Block) -> None:
+    def __init__(self, root: Block, context: ReadContext | None = None) -> None:
         self.root = root
         # shared by the builders of one read: templates, names already used, ...
-        self.context: dict[str, Any] = {}
+        self.context = context if context is not None else ReadContext()
 
     def read(self, statements: list[Statement]) -> Any:
         if not statements:
@@ -100,7 +101,7 @@ class Engine:
         The context lasts across statements, as the legacy tokeniser's state did: the address
         family of `route <prefix> {` is what `next-hop self;` inside the block refers to.
         """
-        self.context['statement'] = statement.words
+        self.context.statement = statement.words
         return Words(statement.words[start:], statement.tokens[-1], self.context)
 
     def _close(self, stack: list[_Frame]) -> None:

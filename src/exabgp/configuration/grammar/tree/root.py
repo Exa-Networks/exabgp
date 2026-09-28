@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import ReadContext
 from typing import Any
 
 from exabgp.bgp.neighbor.settings import NeighborSettings
@@ -17,7 +18,7 @@ from exabgp.configuration.grammar.tree.process import PROCESS
 from exabgp.configuration.settings import ConfigurationSettings, ProcessSettings
 
 
-def _configuration(name: str, values: dict[str, Any], context: dict[str, Any]) -> ConfigurationSettings:
+def _configuration(name: str, values: dict[str, Any], context: ReadContext) -> ConfigurationSettings:
     processes: dict[str, ProcessSettings] = values.get('processes', {})
     neighbors: list[NeighborSettings] = values.get('neighbors', [])
     return ConfigurationSettings(neighbors=neighbors, processes=processes)

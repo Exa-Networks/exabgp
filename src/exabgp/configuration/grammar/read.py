@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.engine import Engine
 from exabgp.configuration.grammar.lexer import Statement, lex_command, lex_file, lex_text
 from exabgp.configuration.settings import ConfigurationSettings
@@ -44,16 +45,12 @@ def read_command(section: str, text: str, announce: bool) -> tuple[list[Any], in
     """The routes of one API command, read as a statement of `section` (Configuration.partial),
     and how many of the sections it opens it leaves open.
     """
-    from exabgp.configuration.grammar.tree.static import ANNOUNCE, ROUTES
-
     block = _command_sections().get(section)
     assert block is not None, f'partial() reads no section {section}'
-    engine = Engine(block)
-    engine.context[ANNOUNCE] = announce
+    engine = Engine(block, ReadContext(announce=announce))
     statements = lex_command(text if text.endswith(';') or text.endswith('}') else text + ' ;')
     engine.read(statements)
-    routes: list[Any] = engine.context.get(ROUTES, [])
-    return routes, left_open(statements)
+    return list(engine.context.routes), left_open(statements)
 
 
 def left_open(statements: list[Statement]) -> int:

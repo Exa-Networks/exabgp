@@ -51,7 +51,7 @@ _ROUTE_HEAD = ['distinguisher', '1', 'color', '1', 'endpoint', '10.0.0.1', 'next
 def _parse_sr_policy_subtlvs(tokens: list[str]) -> list:
     """The sub-TLVs of an sr-policy route read by the grammar, `tokens` following its next-hop."""
     statement = lex_text(' '.join(['route', *_ROUTE_HEAD, *tokens, ';']))[0]
-    (route,) = SRPolicyLine(AFI.ipv4).parse(Words(tuple(statement.words[1:]), statement.tokens[-1], {}))
+    (route,) = SRPolicyLine(AFI.ipv4).parse(Words(tuple(statement.words[1:]), statement.tokens[-1]))
     (encap,) = route.attributes.values()
     assert isinstance(encap, TunnelEncap)
     (tunnel,) = encap.tunnel_tlvs

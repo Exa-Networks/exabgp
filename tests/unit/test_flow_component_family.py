@@ -64,7 +64,7 @@ traffic_class = MATCH['traffic-class'].type
 
 def component(parser: Operation, text: str):
     statement = lex_text(f'{parser.name} {text};')[0]
-    (parsed,) = parser.parse(Words(tuple(statement.words[1:]), statement.tokens[-1], {}))
+    (parsed,) = parser.parse(Words(tuple(statement.words[1:]), statement.tokens[-1]))
     return parsed
 
 

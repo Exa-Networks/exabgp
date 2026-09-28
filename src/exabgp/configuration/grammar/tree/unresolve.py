@@ -12,8 +12,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import PrintContext
 from collections import Counter
-from itertools import count
 from typing import Any, Iterator
 
 from exabgp.bgp.message.open.capability.role import RoleValue
@@ -212,13 +212,13 @@ def _routes(routes: list[Any]) -> dict[str, Any]:
     return printed
 
 
-def neighbor_values(settings: NeighborSettings, context: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
+def neighbor_values(settings: NeighborSettings, context: PrintContext) -> tuple[Any, dict[str, Any]]:
     """The name and the statements of the neighbor block which reads back as `settings`.
 
     api blocks are named when printed, counting through the configuration printed: one left
     unnamed is named for the microsecond it is read in, and two could share it.
     """
-    names: Iterator[int] = context.setdefault('api-names', count(1))
+    names = context.api_names
     values = _session(settings.session)
     values.update(
         {

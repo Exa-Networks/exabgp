@@ -35,7 +35,6 @@ from exabgp.configuration.grammar.tree.static import (
     value_fields,
 )
 from exabgp.configuration.grammar.types.base import Type
-from exabgp.configuration.grammar.types.bgp import AFI_CONTEXT
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPSelf, IPv4, IPv6
@@ -231,12 +230,12 @@ class MupNextHop(Type[tuple[Any, Any]]):
     def parse(self, words: Words) -> tuple[Any, Any]:
         where = words.where()
         word = words.word()
-        afi = words.context.get(AFI_CONTEXT, AFI.undefined)
+        afi = words.context.afi
         if word.lower() == 'self':
             return IPSelf(afi), NextHopSelf(afi)
         try:
             ip = IP.from_string(word)
-            if ip.afi == AFI.ipv4 and words.context.get(_AFI) == AFI.ipv6:
+            if ip.afi == AFI.ipv4 and words.context.mup_afi == AFI.ipv6:
                 ip = IP.from_string(f'::ffff:{ip}')
             return ip, NextHop.from_string(ip.top())
         except ROUTE_ERRORS:
@@ -253,9 +252,6 @@ class MupNextHop(Type[tuple[Any, Any]]):
 
     def shape(self) -> Shape:
         return shape.union(shape.IP_ADDRESS, shape.enumeration('self'))
-
-
-_AFI = 'select-afi'  # the address family of the route being read, for the MUP next-hop
 
 
 def mup_values() -> dict[str, RouteValue]:
@@ -284,7 +280,7 @@ class SelectLine(Type[list[Route]]):
         factory = self.types.get(kind)
         if factory is None:
             raise ConfigError(where, f"Unknown route type '{kind}'", expected=sorted(self.types))
-        words.context[_AFI] = self.afi
+        words.context.mup_afi = self.afi
         try:
             nlri = factory(words, self.afi)
         except ConfigError:

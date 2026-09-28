@@ -42,7 +42,7 @@ from exabgp.bgp.message.update.nlri.flow import (
 
 def tokeniser_for(token: str) -> Words:
     statement = lex_text(f'keyword {token};')[0]
-    return Words(tuple(statement.words[1:]), statement.tokens[-1], {})
+    return Words(tuple(statement.words[1:]), statement.tokens[-1])
 
 
 def _reader(operation: Operation) -> Any:

@@ -18,6 +18,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import ReadContext
 import struct
 from typing import Any, Callable
 
@@ -35,7 +36,6 @@ from exabgp.util.ip import isipv4
 U32_MAX = 0xFFFFFFFF
 U64_MAX = 0xFFFFFFFFFFFFFFFF
 MESSAGES = 'routes'  # legacy: the section keeps its messages as its routes
-OPENED = 'operational-messages'  # the messages of the block being read
 
 
 def _afi(word: str) -> AFI:
@@ -164,17 +164,17 @@ KINDS: dict[str, tuple[type[OperationalFamily], tuple[str, ...], str]] = {
 }
 
 
-def _opened(context: dict[str, Any]) -> None:
-    context[OPENED] = []
+def _opened(context: ReadContext) -> None:
+    context.messages = []
 
 
-def _store_message(values: dict[str, Any], message: OperationalFamily, context: dict[str, Any]) -> None:
-    context.setdefault(OPENED, []).append(message)
+def _store_message(values: dict[str, Any], message: OperationalFamily, context: ReadContext) -> None:
+    context.messages.append(message)
 
 
-def _operational(name: Any, values: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+def _operational(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
     # legacy: the messages of a block replace those of a block before it, unless it has none
-    messages = context.pop(OPENED, [])
+    messages, context.messages = context.messages, []
     if messages:
         values[MESSAGES] = messages
     return values

@@ -13,6 +13,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import ReadContext
 from typing import Any
 
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
@@ -20,7 +21,7 @@ from exabgp.configuration.grammar.types.basic import Bool, Choice, LegacyName, P
 from exabgp.configuration.settings import Encoder, OnExit, ProcessSettings
 
 
-def _process(name: str, values: dict[str, Any], context: dict[str, Any]) -> ProcessSettings:
+def _process(name: str, values: dict[str, Any], context: ReadContext) -> ProcessSettings:
     return ProcessSettings(**values)
 
 

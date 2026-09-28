@@ -8,8 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any
-
+from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.lexer import Token
 
 
@@ -21,13 +20,13 @@ class Words:
     the value should have been.
     """
 
-    def __init__(self, tokens: tuple[Token, ...], end: Token, context: dict[str, Any] | None = None) -> None:
+    def __init__(self, tokens: tuple[Token, ...], end: Token, context: ReadContext | None = None) -> None:
         self._tokens = tokens
         self._end = end
         self._index = 0
         # what the values of one statement tell each other: the address family of the prefix
         # a route line starts with decides what `next-hop self` means
-        self.context: dict[str, Any] = context if context is not None else {}
+        self.context = context if context is not None else ReadContext()
 
     @property
     def source(self) -> str:

@@ -13,6 +13,7 @@ from __future__ import annotations
 import dataclasses
 from typing import Any
 
+from exabgp.configuration.grammar.context import PrintContext
 from exabgp.configuration.grammar.lexer import COMMENT, QUOTES, SEPARATORS, SPACES, TERMINATORS
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.types.base import Printed, Syntax
@@ -54,7 +55,7 @@ def _leaf(leaf: Leaf, value: Any) -> str:
     return f'{leaf.keyword} {words};' if words else f'{leaf.keyword};'
 
 
-def _block(block: Block, name: Any, built: Any, depth: int, context: dict[str, Any]) -> list[str]:
+def _block(block: Block, name: Any, built: Any, depth: int, context: PrintContext) -> list[str]:
     if block.unbuild is not None:
         name, values = block.unbuild(built, context)
     else:
@@ -69,7 +70,7 @@ def _block(block: Block, name: Any, built: Any, depth: int, context: dict[str, A
     return lines
 
 
-def _children(block: Block, values: dict[str, Any], depth: int, context: dict[str, Any]) -> list[str]:
+def _children(block: Block, values: dict[str, Any], depth: int, context: PrintContext) -> list[str]:
     leaves = {child.keyword: child for child in block.children if isinstance(child, Leaf)}
     lines = [INDENT * depth + _leaf(leaves[keyword], value) for keyword, value in values.get(STATEMENTS, [])]
     for child in block.children:
@@ -94,4 +95,4 @@ def _children(block: Block, values: dict[str, Any], depth: int, context: dict[st
 
 
 def render(root: Block, settings: Any) -> str:
-    return '\n'.join(_block(root, '', settings, 0, {})) + '\n'
+    return '\n'.join(_block(root, '', settings, 0, PrintContext())) + '\n'

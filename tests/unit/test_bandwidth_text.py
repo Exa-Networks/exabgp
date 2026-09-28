@@ -27,7 +27,7 @@ def test_bandwidth_prints_its_name() -> None:
 def test_what_bandwidth_prints_reads_back_as_the_same_community() -> None:
     community = Bandwidth.make_bandwidth(65000, 1000.0)
     statement = lex_text(f'extended-community {community};')[0]
-    words = Words(tuple(statement.words[1:]), statement.tokens[-1], {})
+    words = Words(tuple(statement.words[1:]), statement.tokens[-1])
 
     read = ExtendedCommunitiesType().parse(words).communities[0]
 

@@ -52,7 +52,7 @@ neighbor 127.0.0.1 {
 
 def tokens(*content: str) -> Words:
     statement = lex_text(' '.join(['redirect', *content, ';']))[0]
-    return Words(tuple(statement.words[1:]), statement.tokens[-1], {})
+    return Words(tuple(statement.words[1:]), statement.tokens[-1])
 
 
 def redirect(words: Words):

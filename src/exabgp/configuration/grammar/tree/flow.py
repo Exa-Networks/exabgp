@@ -20,6 +20,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import ReadContext
 from dataclasses import dataclass
 from typing import Any
 
@@ -49,7 +50,6 @@ from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.tree.static import (
     MAX_ROUTE_VALUES,
     ROUTE_VALUES,
-    ROUTES,
     action,
     store_routes,
     value_fields,
@@ -60,8 +60,6 @@ from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.rib.route import Route
-
-OPS = 'flow-ops'  # the values of the flow route block being read, in their order
 
 
 @dataclass(frozen=True)
@@ -375,13 +373,13 @@ def announce_flow_words(route: Route) -> list[str]:
 # --------------------------------------------------------------------------- the route block
 
 
-def _opened(context: dict[str, Any]) -> None:
-    context[OPS] = []
+def _opened(context: ReadContext) -> None:
+    context.flow_values = []
 
 
 def _store_op(spec: FlowValue) -> Any:
-    def store(values: dict[str, Any], value: Any, context: dict[str, Any]) -> None:
-        context.setdefault(OPS, []).append((spec, value))
+    def store(values: dict[str, Any], value: Any, context: ReadContext) -> None:
+        context.flow_values.append((spec, value))
 
     return store
 
@@ -411,21 +409,22 @@ class _Ignored(Type[str]):
         return ['', 'name']
 
 
-def _route(name: Any, values: dict[str, Any], context: dict[str, Any]) -> list[Route]:
+def _route(name: Any, values: dict[str, Any], context: ReadContext) -> list[Route]:
     built = FlowRoute()
-    for spec, value in context.pop(OPS, []):
+    taken, context.flow_values = context.flow_values, []
+    for spec, value in taken:
         built.apply(spec, value, line=False)
     if not built.nlri.rules:
         raise ValueError('a flow route needs at least one match, or it matches every packet')
     route = built.route()
-    context.setdefault(ROUTES, []).append(route)
+    context.routes.append(route)
     return [route]
 
 
-def _flow(name: Any, values: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+def _flow(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
     # legacy: the flow section keeps the very list of the routes not yet taken, and the
     # neighbor adds them from it after taking them: each is announced twice
-    values['routes'] = context.setdefault(ROUTES, [])
+    values['routes'] = context.routes
     return values
 
 

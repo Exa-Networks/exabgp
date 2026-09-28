@@ -17,6 +17,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import ReadContext
 from dataclasses import dataclass
 from typing import Any
 
@@ -33,7 +34,6 @@ from exabgp.configuration.grammar.tree.l2vpn import VPLSLine
 from exabgp.configuration.grammar.tree.sr_policy import SRPolicyLine
 from exabgp.configuration.grammar.tree.static import (
     MAX_ROUTE_VALUES,
-    ROUTES,
     ROUTE_VALUES,
     RouteValue,
     Unprintable,
@@ -331,13 +331,13 @@ def _apply(settings: Any, attributes: AttributeCollection, spec: RouteValue, val
         attributes.add(value)
 
 
-def _store_announced(values: dict[str, Any], routes: list[Route], context: dict[str, Any]) -> None:
+def _store_announced(values: dict[str, Any], routes: list[Route], context: ReadContext) -> None:
     values.setdefault(ANNOUNCED, []).extend(routes)
 
 
-def _address_family(name: Any, values: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+def _address_family(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
     # legacy: the routes of an address family join the others when its block closes
-    context.setdefault(ROUTES, []).extend(values.pop(ANNOUNCED, []))
+    context.routes.extend(values.pop(ANNOUNCED, []))
     return values
 
 

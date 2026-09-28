@@ -15,6 +15,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import ReadContext
 from typing import Any
 
 from exabgp.bgp.neighbor import Neighbor
@@ -29,7 +30,6 @@ from exabgp.configuration.grammar.tree.announce import ANNOUNCE_BLOCK, STATIC
 from exabgp.configuration.grammar.tree.flow import FLOW
 from exabgp.configuration.grammar.tree.l2vpn import L2VPN_SECTION
 from exabgp.configuration.grammar.tree.operational import OPERATIONAL
-from exabgp.configuration.grammar.tree.static import ROUTES
 from exabgp.configuration.grammar.tree.unresolve import neighbor_values
 from exabgp.configuration.grammar.tree.session import (
     API,
@@ -237,7 +237,7 @@ SECTIONS = (
 )
 
 
-def _check(neighbor: Neighbor, context: dict[str, Any]) -> None:
+def _check(neighbor: Neighbor, context: ReadContext) -> None:
     """The checks the legacy parser made on the Neighbor it built."""
     interface = neighbor.session.source_interface
     if interface and len(interface) > MAX_INTERFACE_NAME:
@@ -266,22 +266,21 @@ def _check(neighbor: Neighbor, context: dict[str, Any]) -> None:
     if size > 1 and not (session.passive or getenv().bgp.passive):
         raise ValueError('can only use ip ranges for the peer address with passive neighbors')
     index = neighbor.index()
-    seen: list[bytes] = context.setdefault('neighbor-index', [])
-    if index in seen:
+    if index in context.neighbor_indexes:
         raise ValueError(f'duplicate peer definition {session.peer_address}')
-    seen.append(index)
+    context.neighbor_indexes.append(index)
 
 
 # Linux caps an interface name at IFNAMSIZ, which leaves fifteen characters
 MAX_INTERFACE_NAME = 15
 
 
-def _neighbor(name: Any, values: dict[str, Any], context: dict[str, Any]) -> NeighborSettings:
+def _neighbor(name: Any, values: dict[str, Any], context: ReadContext) -> NeighborSettings:
     # the name is the peer-address, a peer-address statement in the block replaces it
     values.setdefault('peer-address', name)
     # legacy: the routes read since the last neighbor or template closed are this neighbor's
-    routes = context.pop(ROUTES, [])
-    inherit(values, context.setdefault('templates', {}))
+    routes = context.take_routes()
+    inherit(values, context.templates)
     settings = neighbor_settings(values)
     settings.routes = routes + [
         route for section in ('static', 'l2vpn', 'flow') for route in values.get(section, {}).get('routes', [])
@@ -327,11 +326,11 @@ def _check_routes(neighbor: Neighbor) -> None:
             )
 
 
-def _template(name: Any, values: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
-    templates: dict[str, dict[str, Any]] = context.setdefault('templates', {})
+def _template(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
+    templates = context.templates
     if name in templates:
         raise ValueError(f'the name "{name}" already exists in template-neighbor')
-    values.setdefault('routes', []).extend(context.pop(ROUTES, []))
+    values.setdefault('routes', []).extend(context.take_routes())
     templates[name] = values
     return values
 

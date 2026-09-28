@@ -10,7 +10,7 @@ A route line is a prefix followed by keyword and value pairs in any order: the k
 their types are declared once, in ROUTE_VALUES, and read the same in a line and in a block.
 
 The routes are kept, as the legacy parser kept them, in one list for the whole read, which
-the next neighbor or template to close takes (resolve.py): `context['routes']`.
+the next neighbor or template to close takes (resolve.py): `ReadContext.routes`.
 
 Copyright (c) 2009-2026 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
@@ -18,6 +18,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import ReadContext
 from dataclasses import dataclass
 from typing import Any, Iterator, Mapping, cast
 
@@ -40,8 +41,6 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPRange
 from exabgp.rib.route import Route
 
-ROUTES = 'routes'  # the key in the read context holding the routes not yet taken by a neighbor
-ANNOUNCE = 'announce'  # the key in the read context saying whether an API command announces
 # a route line holds a handful of attributes, each given once or a few times
 MAX_ROUTE_VALUES = 256
 
@@ -117,7 +116,7 @@ def read_values(words: Words, collected: Collected, stop: str = '') -> None:
 
 def _mentions(words: Words, *keywords: str) -> bool:
     """legacy: whether a word of the statement is one of `keywords`, wherever it is, a value included."""
-    return any(token.word in keywords for token in words.context.get('statement', ()))
+    return any(token.word in keywords for token in words.context.statement)
 
 
 def _nlri_class(words: Words, settings: INETSettings, prefix: IPRange | None) -> type[INET]:
@@ -133,7 +132,7 @@ def _nlri_class(words: Words, settings: INETSettings, prefix: IPRange | None) ->
 
 def action(words: Words) -> Action:
     """Whether the route read is announced or withdrawn, as the API command said."""
-    return Action.ANNOUNCE if words.context.get(ANNOUNCE, True) else Action.WITHDRAW
+    return Action.ANNOUNCE if words.context.announce else Action.WITHDRAW
 
 
 def value_fields(values: Mapping[str, Any]) -> tuple[tuple[str, Shape], ...]:
@@ -178,11 +177,11 @@ class AttributesLine(Type[list[Route]]):
     name = 'attributes'
 
     def parse(self, words: Words) -> list[Route]:
-        statement = [token.word for token in words.context.get('statement', ())]
+        statement = [token.word for token in words.context.statement]
         has_nlri = 'nlri' in statement
         found = _last_prefix(statement) if has_nlri else []
         prefix = found[0] if found else None
-        words.context[bgp.AFI_CONTEXT] = prefix.afi if prefix is not None else AFI.ipv4
+        words.context.afi = prefix.afi if prefix is not None else AFI.ipv4
         settings = INETSettings()
         settings.afi = IP.toafi(prefix.top()) if prefix is not None else AFI.ipv4
         settings.action = action(words)
@@ -423,12 +422,12 @@ def finish(routes: list[Route]) -> list[Route]:
 # --------------------------------------------------------------------------- the blocks
 
 
-def store_routes(values: dict[str, Any], routes: list[Route], context: dict[str, Any]) -> None:
-    context.setdefault(ROUTES, []).extend(routes)
+def store_routes(values: dict[str, Any], routes: list[Route], context: ReadContext) -> None:
+    context.routes.extend(routes)
 
 
 def _store_value(keyword: str) -> Any:
-    def store(values: dict[str, Any], value: Any, context: dict[str, Any]) -> None:
+    def store(values: dict[str, Any], value: Any, context: ReadContext) -> None:
         values.setdefault('_values', []).append((keyword, value))
 
     return store
@@ -453,7 +452,7 @@ class NestedPrefix(Type[IPRange]):
         return shape.IP_PREFIX
 
 
-def _nested(prefix: IPRange, values: dict[str, Any], context: dict[str, Any]) -> list[Route]:
+def _nested(prefix: IPRange, values: dict[str, Any], context: ReadContext) -> list[Route]:
     settings = INETSettings()
     settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask)
     settings.afi = IP.toafi(prefix.top())
@@ -470,7 +469,7 @@ def _nested(prefix: IPRange, values: dict[str, Any], context: dict[str, Any]) ->
     else:
         klass, settings.safi = INET, IP.tosafi(settings.cidr.prefix().split('/')[0])
     routes = finish([Route(klass.from_settings(settings), collected.attributes, nexthop=settings.nexthop)])
-    context.setdefault(ROUTES, []).extend(routes)
+    context.routes.extend(routes)
     return routes
 
 

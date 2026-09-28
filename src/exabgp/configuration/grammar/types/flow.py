@@ -46,7 +46,6 @@ from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Printed, Type
-from exabgp.configuration.grammar.types.bgp import AFI_CONTEXT
 from exabgp.configuration.grammar.words import Words
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI
@@ -236,7 +235,7 @@ def _condition(klass: Any) -> Callable[[Words], list[Any]]:
     """`<op><value>[&<op><value>...]`, or several in brackets, of one component type."""
 
     def read(words: Words) -> list[Any]:
-        afi = words.context.get(AFI_CONTEXT, AFI.undefined)
+        afi = words.context.afi
         if afi == AFI.ipv4 and not issubclass(klass, FlowIPv4):
             raise ValueError(f"'{klass.__name__}' is not valid for IPv4 flow routes (IPv6-only component)")
         if afi == AFI.ipv6 and not issubclass(klass, FlowIPv6):

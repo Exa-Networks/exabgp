@@ -30,7 +30,7 @@ from exabgp.configuration.grammar.words import Words
 
 def parse(text: str) -> ASPath:
     statement = lex_text(f'as-path {text};')[0]
-    return ASPathType().parse(Words(tuple(statement.words[1:]), statement.tokens[-1], {}))
+    return ASPathType().parse(Words(tuple(statement.words[1:]), statement.tokens[-1]))
 
 
 def shape(path: ASPath) -> list[tuple[str, list[int]]]:

@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import PrintContext
 from collections import Counter
 from dataclasses import dataclass, field, replace
 from typing import Any
@@ -132,7 +133,7 @@ def neighbor_defaults() -> dict[str, Any]:
     from exabgp.configuration.grammar.read import read_text
     from exabgp.configuration.grammar.tree.unresolve import neighbor_values
 
-    _, values = neighbor_values(read_text(MINIMAL_NEIGHBOR).neighbors[0], {})
+    _, values = neighbor_values(read_text(MINIMAL_NEIGHBOR).neighbors[0], PrintContext())
     return {keyword: value for keyword, value in values.items() if keyword not in GIVEN}
 
 

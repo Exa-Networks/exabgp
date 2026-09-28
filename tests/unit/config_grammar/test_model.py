@@ -34,7 +34,7 @@ def _numbers() -> list[Number[Any]]:
 
 def _words(text: str) -> Words:
     statement = lex_text(f'keyword {text};')[0]
-    return Words(tuple(statement.words[1:]), statement.tokens[-1], {})
+    return Words(tuple(statement.words[1:]), statement.tokens[-1])
 
 
 def _reads(number: Number[Any], value: int) -> bool:

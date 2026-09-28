@@ -16,7 +16,7 @@ from exabgp.configuration.grammar.words import Words
 
 def _words(text: str) -> Words:
     statement = lex_text(f'rd {text};')[0]
-    return Words(tuple(statement.words[1:]), statement.tokens[-1], {})
+    return Words(tuple(statement.words[1:]), statement.tokens[-1])
 
 
 @pytest.mark.parametrize(

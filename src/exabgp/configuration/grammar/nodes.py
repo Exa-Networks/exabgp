@@ -24,6 +24,7 @@ from dataclasses import field as dataclass_field
 from enum import Enum
 from typing import Any, Callable
 
+from exabgp.configuration.grammar.context import PrintContext, ReadContext
 from exabgp.configuration.grammar.types.base import Type
 
 
@@ -63,7 +64,7 @@ class Keep(Enum):
 
 # (values, value, context of the read) -> None, for a leaf whose value is not simply set or
 # added to a list
-Store = Callable[[dict[str, Any], Any, dict[str, Any]], None]
+Store = Callable[[dict[str, Any], Any, ReadContext], None]
 
 
 @dataclass(frozen=True)
@@ -93,7 +94,7 @@ class Leaf:
         """Whether the value is a list of entries, in the data model."""
         return self.multiple or self.collect != Collect.SET
 
-    def keep(self, values: dict[str, Any], value: Any, context: dict[str, Any]) -> None:
+    def keep(self, values: dict[str, Any], value: Any, context: ReadContext) -> None:
         if self.store is not None:
             self.store(values, value, context)
         elif self.collect == Collect.APPEND:
@@ -105,10 +106,10 @@ class Leaf:
 
 
 # (name, values by field, context of the whole read) -> what the block stands for
-Builder = Callable[[Any, dict[str, Any], dict[str, Any]], Any]
+Builder = Callable[[Any, dict[str, Any], ReadContext], Any]
 
 
-def raw(name: Any, values: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+def raw(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
     """The builder of a block whose values are used as they are, by the block around it."""
     return values
 
@@ -132,10 +133,10 @@ class Block:
     # checks and rewrites once every statement of the block is read, raises ValueError
     finish: Callable[[dict[str, Any]], None] | None = None
     # called with the read context when the block opens, before any of its statements
-    opened: Callable[[dict[str, Any]], None] | None = None
+    opened: Callable[[ReadContext], None] | None = None
     # for printing: (what was built, context of the whole print) -> (name, values by field,
     # as the statements give them)
-    unbuild: Callable[[Any, dict[str, Any]], tuple[Any, dict[str, Any]]] | None = None
+    unbuild: Callable[[Any, PrintContext], tuple[Any, dict[str, Any]]] | None = None
     # a statement and a section may share a keyword: `route <prefix> ...;` and `route <prefix> { }`
     _leaves: dict[str, Leaf] = dataclass_field(default_factory=dict, init=False, repr=False, compare=False)
     _blocks: dict[str, 'Block'] = dataclass_field(default_factory=dict, init=False, repr=False, compare=False)

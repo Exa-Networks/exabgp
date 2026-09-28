@@ -16,6 +16,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.configuration.grammar.context import ReadContext
 from typing import Any
 
 from exabgp.bgp.message.update.nlri import NLRI
@@ -274,7 +275,7 @@ def _seen(values: dict[str, Any]) -> set[Any]:
 
 
 def _store_family(afi_keyword: str) -> Any:
-    def store(values: dict[str, Any], value: tuple[FamilyTuple, int], context: dict[str, Any]) -> None:
+    def store(values: dict[str, Any], value: tuple[FamilyTuple, int], context: ReadContext) -> None:
         if values.get('_all'):
             raise ValueError('cannot add any family once family all is set')
         family, limit = value
@@ -289,7 +290,7 @@ def _store_family(afi_keyword: str) -> Any:
 
 
 def _store_add_path(afi_keyword: str) -> Any:
-    def store(values: dict[str, Any], value: tuple[FamilyTuple, int], context: dict[str, Any]) -> None:
+    def store(values: dict[str, Any], value: tuple[FamilyTuple, int], context: ReadContext) -> None:
         if values.get('_all'):
             raise ValueError('cannot add specific families after "all"')
         family, _ = value
@@ -301,7 +302,7 @@ def _store_add_path(afi_keyword: str) -> Any:
     return store
 
 
-def _store_all(values: dict[str, Any], value: None, context: dict[str, Any]) -> None:
+def _store_all(values: dict[str, Any], value: None, context: ReadContext) -> None:
     # legacy: `all` after a family is reported but not refused, and still asks for every family
     if not (values.get('_all') or _seen(values)):
         values['_all'] = True
@@ -310,7 +311,7 @@ def _store_all(values: dict[str, Any], value: None, context: dict[str, Any]) -> 
 
 
 def _store_nexthop(afi_keyword: str) -> Any:
-    def store(values: dict[str, Any], value: tuple[AFI, SAFI, AFI], context: dict[str, Any]) -> None:
+    def store(values: dict[str, Any], value: tuple[AFI, SAFI, AFI], context: ReadContext) -> None:
         if value in _seen(values):
             raise ValueError(f'Duplicate entry: {value}')
         _seen(values).add(value)

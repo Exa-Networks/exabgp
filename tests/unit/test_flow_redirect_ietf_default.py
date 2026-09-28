@@ -47,7 +47,7 @@ COPY_BIT = 0x01
 def parsed(operation, *words):
     """Read one flow value the way the grammar does: the words after its keyword, before the `;`."""
     statement = lex_text(' '.join([operation.name, *words, ';']))[0]
-    outcome = operation.parse(Words(tuple(statement.words[1:]), statement.tokens[-1], {}))
+    outcome = operation.parse(Words(tuple(statement.words[1:]), statement.tokens[-1]))
     if isinstance(outcome, tuple):
         nexthop, communities = outcome
     else:
