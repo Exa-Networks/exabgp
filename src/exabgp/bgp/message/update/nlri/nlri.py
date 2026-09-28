@@ -203,6 +203,14 @@ class NLRI(Family):
         """
         return None
 
+    def carries_path_info(self) -> bool:
+        """The route holds an ADD-PATH Path Identifier (RFC 7911) its sender chose."""
+        return False
+
+    def with_path_info(self, path_info: PathInfo) -> 'NLRI':
+        """A copy identified by `path_info`, for a route which carries a Path Identifier."""
+        raise RuntimeError(f'{type(self).__name__} carries no Path Identifier to replace')
+
     def index(self) -> bytes:
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
 

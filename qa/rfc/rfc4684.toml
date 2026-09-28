@@ -25,7 +25,7 @@ url = "https://www.rfc-editor.org/rfc/rfc4684"
 id = "rfc4684#5-participate-without-output-filtering"
 section = "5"
 level = "MAY"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 A BGP speaker MAY participate in the distribution of Route Target
@@ -33,13 +33,14 @@ information without using the learned information for purposes of VPN
 NLRI output route filtering, although this is discouraged.
 """
 note = """
-This is what exabgp does, and the RFC discourages it. RT membership can be announced and
-withdrawn from the configuration and the API, and what a peer sends is decoded and handed
-to the API as JSON, but the VPN routes exabgp sends are not filtered by the membership its
-peer advertised (section 6). Agreed for issue #1109 as "signal only": an API program which
-wants the filtering has the peer's membership and decides what to announce. Doing it in
-exabgp means keeping each peer's membership and re-evaluating the adj-rib-out whenever it
-changes, which is what keeps this a gap rather than a decision.
+Both options are there, and the one the RFC permits stays the default so nothing changes
+for an existing configuration (issue #1109, "signal only"): RT membership is announced,
+withdrawn and decoded, and the VPN routes are not filtered by it. `route-target-filter
+true` on a neighbour takes the encouraged option: when RT-Constraint was negotiated, the
+IPv4/IPv6 VPN and EVPN routes it is sent are those carrying a Route Target covered by the
+membership it advertised (held in its adj-rib-in), and a change of membership offers them
+again, sending what is now covered and withdrawing what no longer is. The negative test is
+the filtering, the positive one the default without it.
 """
 
 # ============================================================ section 6, operation

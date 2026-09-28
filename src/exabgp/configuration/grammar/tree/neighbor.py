@@ -196,6 +196,12 @@ LEAVES = (
         doc='RFC 9012 11, a received Tunnel Encapsulation attribute: auto filters it on EBGP only',
     ),
     Leaf(
+        'route-target-filter',
+        boolean(True),
+        field='route-target-filter',
+        doc='RFC 4684 5, send VPN routes only for the Route Targets the peer is a member of',
+    ),
+    Leaf(
         'group-updates', boolean(True), field='group-updates', doc='send routes with the same attributes in one UPDATE'
     ),
     Leaf(

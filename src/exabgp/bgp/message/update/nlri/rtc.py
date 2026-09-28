@@ -34,6 +34,7 @@ RTC_PREFIX_MIN_BITS = 32
 RTC_PREFIX_MAX_BITS = 96
 # the origin AS ends at octet 5 of the packed form, and the route target starts there
 RTC_ROUTE_TARGET_OFFSET = 5
+RTC_ROUTE_TARGET_SIZE = 8
 
 
 class RTCBase(NLRI):
@@ -186,6 +187,26 @@ class RTCBase(NLRI):
         self._deepcopy_nlri_slots(new, memo)
         new._packed = self._packed  # bytes - immutable
         return new
+
+    def admits(self, target: Buffer) -> bool:
+        """This membership covers `target`, a Route Target of eight octets with its flags reset.
+
+        RFC 4684 4: the prefix is the origin AS then as much of the Route Target as the
+        member chose to carry, so its first prefix_length - 32 bits are compared. The default
+        route target, length 0, and an origin alone, length 32, cover every Route Target.
+        """
+        assert len(target) == RTC_ROUTE_TARGET_SIZE, 'a Route Target is eight octets'
+        length = self.prefix_length
+        if length <= RTC_PREFIX_MIN_BITS:
+            return True
+        whole, rest = divmod(length - RTC_PREFIX_MIN_BITS, 8)
+        carried = self._packed[RTC_ROUTE_TARGET_OFFSET:]
+        if bytes(carried[:whole]) != bytes(target[:whole]):
+            return False
+        if not rest:
+            return True
+        mask = (0xFF << (8 - rest)) & 0xFF
+        return (carried[whole] & mask) == (target[whole] & mask)
 
     @staticmethod
     def resetFlags(char: int) -> int:

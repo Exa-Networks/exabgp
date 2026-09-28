@@ -142,6 +142,8 @@ class NeighborSettings:
         as_set: 'withdraw' or 'accept' a received AS_SET / AS_CONFED_SET (RFC 9774)
         tunnel_encapsulation: 'auto', 'filter' or 'accept' a received Tunnel Encapsulation
             attribute (RFC 9012 11); 'auto' filters it from an EBGP neighbour only
+        route_target_filter: send the VPN routes only for the Route Targets the peer is a
+            member of (RFC 4684 5), off by default
         auto_flush: Auto flush routes
         adj_rib_in: Maintain adjacency RIB in
         adj_rib_out: Maintain adjacency RIB out
@@ -167,6 +169,7 @@ class NeighborSettings:
     group_updates: bool = True
     as_set: str = 'withdraw'
     tunnel_encapsulation: str = 'auto'
+    route_target_filter: bool = False
     auto_flush: bool = True
     adj_rib_in: bool = True
     adj_rib_out: bool = True
@@ -206,5 +209,9 @@ class NeighborSettings:
             return 'neighbor hold-time must be 0-65535'
         if self.hold_time > 0 and self.hold_time < 3:
             return 'neighbor hold-time must be 0 (disabled) or >= 3'
+
+        # the membership is read from the adj-rib-in, and a change of it replays the adj-rib-out
+        if self.route_target_filter and not (self.adj_rib_in and self.adj_rib_out):
+            return 'route-target-filter requires adj-rib-in and adj-rib-out'
 
         return ''

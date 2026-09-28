@@ -136,6 +136,23 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         packed = b''.join(c.pack_attribute(Negotiated.UNSET) for c in sorted_communities)
         return cls(packed)
 
+    def transitive_only(self) -> 'ExtendedCommunities | None':
+        """These communities without the ones whose T bit is set, None when nothing is left.
+
+        RFC 4360 6: a non-transitive community is removed before the route crosses into
+        another AS. Self when every community is transitive, so the common case allocates
+        nothing.
+        """
+        communities = self.communities
+        kept = [community for community in communities if community.transitive()]
+        if len(kept) == len(communities):
+            return self
+        if not kept:
+            return None
+        stripped = ExtendedCommunities.make_extended_communities(kept)
+        assert len(stripped.communities) < len(communities), 'a stripped set is smaller than its original'
+        return stripped
+
     def add(self, data: ExtendedCommunityBase) -> 'ExtendedCommunities':
         """Add an extended community and return self (builder pattern).
 

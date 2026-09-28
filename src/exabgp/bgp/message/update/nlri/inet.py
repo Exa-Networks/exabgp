@@ -69,6 +69,8 @@ Class Hierarchy:
 
 from __future__ import annotations
 
+from copy import copy
+
 from struct import unpack
 from typing import Any, Self, TYPE_CHECKING
 
@@ -154,6 +156,17 @@ class INETBase(NLRI):
         if path_bytes == b'\x00\x00\x00\x00':
             return PathInfo.NOPATH
         return PathInfo(path_bytes)
+
+    def carries_path_info(self) -> bool:
+        return self._has_addpath
+
+    def with_path_info(self, path_info: PathInfo) -> Self:
+        assert self._has_addpath, 'only a route holding a Path Identifier has one to replace'
+        assert path_info is not PathInfo.DISABLED, 'a replacement is a Path Identifier'
+        new = copy(self)
+        new._packed = bytes(path_info.pack_path()) + bytes(self._packed[PATH_INFO_SIZE:])
+        assert new.cidr == self.cidr, 'only the Path Identifier changes'
+        return new
 
     @property
     def cidr(self) -> CIDR:

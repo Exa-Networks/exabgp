@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Iterator, cast
 
 from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.refresh import RouteRefresh
@@ -16,19 +16,31 @@ from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.otc import OTCSelf
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.message.update.nlri.rtc import RTC
 from exabgp.protocol.ip import IP
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.rib.cache import Cache
+from exabgp.rib.route import Route
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.update.nlri.nlri import NLRI
-    from exabgp.rib.route import Route
 
 # This is needs to be an ordered dict
 RIBdict = dict
+
+
+# RFC 4684 5: the families whose routes the peer's Route Target membership filters
+MEMBERSHIP_FILTERED_FAMILIES: frozenset[FamilyTuple] = frozenset(
+    {(AFI.ipv4, SAFI.mpls_vpn), (AFI.ipv6, SAFI.mpls_vpn), (AFI.l2vpn, SAFI.evpn)}
+)
+RTC_FAMILY: FamilyTuple = (AFI.ipv4, SAFI.rtc)
+
+# RFC 7911 3: the Path Identifier is four octets
+PATH_IDENTIFIER_MAX = 0xFFFFFFFF
 
 
 class _PathSelection:
@@ -72,6 +84,16 @@ class OutgoingRIB(Cache):
         self._owned: dict[str, dict[bytes, Route]] = {}
         self._owner: dict[bytes, str] = {}
 
+        # RFC 4684 5: the adj-rib-in of the same neighbour, where its membership is held
+        self.membership: Cache | None = None
+
+        # RFC 7911 2: a route received from a peer and re-advertised is sent under a Path
+        # Identifier we chose, since the sender's was only unique on its own session.
+        # (peer, route-index as received) -> ours, one entry per such route in the RIB.
+        self._path_identifiers: dict[tuple[str, bytes], PathInfo] = {}
+        self._path_identifiers_free: list[int] = []
+        self._path_identifier_next = 1
+
         # using route-index and not nlri-index as it is cached as same us memory
         # even if it is a few bytes longer
         self._new_nlri = {}  # self._new_nlri[route-index] = route
@@ -95,8 +117,9 @@ class OutgoingRIB(Cache):
         self._refresh_families = set()
         self._refresh_routes = []
         self._path_selection: dict[FamilyTuple, dict[bytes, _PathSelection]] = {}
-        # Only indexes, not replay copies: one entry per unrestricted advertised route.
-        self._otc_advertised: dict[FamilyTuple, set[bytes]] = {}
+        # Only indexes, not replay copies: one entry per advertised route an egress policy
+        # (RFC 9234 OTC, RFC 4684 membership) may refuse later, so the refusal withdraws it.
+        self._policy_advertised: dict[FamilyTuple, set[bytes]] = {}
         self._session_epoch = 0
 
         # Flush callbacks for sync mode - fire when updates() exhausts
@@ -113,6 +136,8 @@ class OutgoingRIB(Cache):
         # for has gone. Clearing the queues here does the same job, and the epoch is how
         # the loop still running finds out it is generating for a session which has ended.
         self._session_epoch += 1
+        # a new session is sent the whole adj-rib-out, filtered by the membership it then has
+        self._membership_replay = False
         self._refresh_families = set()
         self._refresh_routes = []
         self._new_nlri = {}
@@ -122,7 +147,7 @@ class OutgoingRIB(Cache):
 
     def session_reset(self) -> None:
         self._path_selection.clear()
-        self._otc_advertised.clear()
+        self._policy_advertised.clear()
         self.reset()
 
     # back to square one, all the routes are removed
@@ -131,6 +156,9 @@ class OutgoingRIB(Cache):
         self.reset()
         self._owned.clear()
         self._owner.clear()
+        self._path_identifiers.clear()
+        self._path_identifiers_free.clear()
+        self._path_identifier_next = 1
 
     def _own(self, route_index: bytes, route: Route, owner: str) -> None:
         """Record who announced a route: an API helper, or nobody ('') for the configuration."""
@@ -177,14 +205,19 @@ class OutgoingRIB(Cache):
         for family in list(self._path_selection):
             if family not in families:
                 del self._path_selection[family]
-        for family in list(self._otc_advertised):
+        for family in list(self._policy_advertised):
             if family not in families:
-                del self._otc_advertised[family]
+                del self._policy_advertised[family]
 
     def pending(self) -> bool:
         if not self.enabled:
             return False
-        return len(self._new_nlri) != 0 or len(self._refresh_routes) != 0 or len(self._pending_withdraws) != 0
+        return (
+            len(self._new_nlri) != 0
+            or len(self._refresh_routes) != 0
+            or len(self._pending_withdraws) != 0
+            or self._membership_replay
+        )
 
     def register_flush_callback(self) -> asyncio.Event:
         """Register callback to be fired when RIB is flushed to wire.
@@ -323,8 +356,10 @@ class OutgoingRIB(Cache):
         if not self.enabled:
             return
 
-        nlri = route.nlri
         attrs = route.attributes
+        nlri = self._readvertised(route.nlri, attrs, withdraw=True)
+        if nlri is not route.nlri:
+            route = Route(nlri, attrs, route.nexthop)
         route_index = route.index()
         self._own(route_index, route, '')
         self._del_from_rib_impl(nlri, attrs, route_index)
@@ -339,10 +374,45 @@ class OutgoingRIB(Cache):
         if not self.enabled:
             return
 
+        nlri = self._readvertised(nlri, attributes, withdraw=True)
         route_index = self._make_index(nlri)
         if route_index in self._owner:
             self._own(route_index, self._owned[self._owner[route_index]][route_index], '')
         self._del_from_rib_impl(nlri, attributes, route_index)
+
+    def _readvertised(self, nlri: NLRI, attributes: AttributeCollection | None, withdraw: bool) -> NLRI:
+        """The NLRI a received route is sent as: the same prefix under a Path Identifier of ours.
+
+        Routes we originate, and routes without an identifier, are sent as they are. The
+        identifier is kept for as long as the route is in the RIB, so an update of the
+        route replaces the path the peer holds rather than adding one.
+        """
+        if attributes is None or not attributes.learned_from or not nlri.carries_path_info():
+            return nlri
+        key = (attributes.learned_from, nlri.index())
+        if withdraw:
+            path_info = self._path_identifiers.pop(key, None)
+            if path_info is None:
+                # never announced here, so the peer holds nothing under any identifier of ours
+                return nlri
+            self._path_identifiers_free.append(int.from_bytes(bytes(path_info.pack_path()), 'big'))
+            return nlri.with_path_info(path_info)
+        path_info = self._path_identifiers.get(key)
+        if path_info is None:
+            path_info = PathInfo.make_from_integer(self._allocate_path_identifier())
+            self._path_identifiers[key] = path_info
+        return nlri.with_path_info(path_info)
+
+    def _allocate_path_identifier(self) -> int:
+        if self._path_identifiers_free:
+            return self._path_identifiers_free.pop()
+        identifier = self._path_identifier_next
+        # one identifier per route in the RIB: four billion routes is not a state we reach
+        if identifier > PATH_IDENTIFIER_MAX:
+            raise RuntimeError('every ADD-PATH Path Identifier is in use')
+        self._path_identifier_next += 1
+        assert len(self._path_identifiers) < identifier, 'an identifier is allocated only once'
+        return identifier
 
     def _del_from_rib_impl(self, nlri: 'NLRI', attrs: 'AttributeCollection | None', route_index: bytes) -> None:
         """Shared implementation for route removal."""
@@ -395,6 +465,10 @@ class OutgoingRIB(Cache):
 
         log.debug(lazymsg('rib.insert route={route}', route=route), 'rib')
 
+        nlri = self._readvertised(route.nlri, route.attributes, withdraw=False)
+        if nlri is not route.nlri:
+            route = Route(nlri, route.attributes, route.nexthop)
+
         if owner is not None:
             self._own(route.index(), route, owner)
 
@@ -413,8 +487,6 @@ class OutgoingRIB(Cache):
             attributes: The attributes for the route
             force: If True, add even if already in cache
         """
-        from exabgp.rib.route import Route
-
         route = Route(nlri, attributes, nexthop=IP.NoNextHop)
         self.add_to_rib(route, force)
 
@@ -506,7 +578,7 @@ class OutgoingRIB(Cache):
         family = nlri.family().afi_safi()
         prefixes = self._path_selection.get(family)
         if prefixes is None:
-            advertised_indices = self._otc_advertised.get(family)
+            advertised_indices = self._policy_advertised.get(family)
             if advertised_indices is None:
                 return not advertised_only
             index = self._make_index(nlri)
@@ -545,7 +617,7 @@ class OutgoingRIB(Cache):
             for index, route in list(selection.candidates.items()):
                 if limit and admitted >= limit:
                     break
-                if not self._otc_allowed(route, negotiated):
+                if not self._export_allowed(route, negotiated):
                     del selection.candidates[index]
                     continue
                 admitted += 1
@@ -587,9 +659,8 @@ class OutgoingRIB(Cache):
         pending_withdraws = self._pending_withdraws
         self._pending_withdraws = {}
         refresh_families = self._refresh_families
-        refresh_routes = {route.index(): route for route in self._refresh_routes}
+        refresh_routes = self._take_refresh_routes()
         self._refresh_families = set()
-        self._refresh_routes = []
 
         changed: dict[tuple[FamilyTuple, bytes], None] = {}
         # Route refresh goes first: the flush which asked for it comes, to the operator,
@@ -642,6 +713,77 @@ class OutgoingRIB(Cache):
         # Only prefixes touched by withdrawals need candidate promotion.
         yield from self._promote_paths(changed, paths_limit, grouped, negotiated)
 
+    def _take_refresh_routes(self) -> dict[bytes, Route]:
+        """The routes to replay in this batch, once each, the queue left empty for the next."""
+        if self._membership_replay:
+            self._membership_replay = False
+            self._refresh_routes.extend(self.cached_routes(list(MEMBERSHIP_FILTERED_FAMILIES)))
+        refresh_routes = {route.index(): route for route in self._refresh_routes}
+        self._refresh_routes = []
+        return refresh_routes
+
+    def _export_allowed(self, route: Route, negotiated: Negotiated | None) -> bool:
+        """Egress policy: what may leave towards this peer, checked as each route goes out."""
+        return (
+            self._community_allowed(route, negotiated)
+            and self._otc_allowed(route, negotiated)
+            and self._membership_allowed(route, negotiated)
+        )
+
+    def _membership_allowed(self, route: Route, negotiated: Negotiated | None) -> bool:
+        """RFC 4684 5: a VPN route goes out only for a Route Target the peer is a member of."""
+        if negotiated is None or not negotiated.filters_by_route_target:
+            return True
+        if route.nlri.family().afi_safi() not in MEMBERSHIP_FILTERED_FAMILIES:
+            return True
+        targets = route.attributes.route_targets()
+        if self.membership is not None:
+            for member in self.membership.cached_routes([RTC_FAMILY]):
+                # the cache holds only RTC NLRI under the RTC family
+                rtc = cast(RTC, member.nlri)
+                if any(rtc.admits(target) for target in targets):
+                    return True
+        log.debug(
+            lazymsg(
+                'rib.route-target.refused neighbor={neighbor} family="{family}" prefix={prefix}',
+                neighbor=negotiated.peer_address,
+                family=route.nlri.family(),
+                prefix=route.nlri,
+            ),
+            'rib',
+        )
+        return False
+
+    def membership_changed(self) -> None:
+        """The peer's membership changed: offer it the VPN routes again, admitted or withdrawn.
+
+        A flag, not a resend: a peer sends its membership in as many UPDATEs as it likes, and
+        each resend would queue the whole VPN table again before the next batch is built.
+        """
+        if self.enabled:
+            self._membership_replay = True
+
+    @staticmethod
+    def _community_allowed(route: Route, negotiated: Negotiated | None) -> bool:
+        if negotiated is None:
+            return True
+        community = route.attributes.community_forbids(negotiated)
+        if not community:
+            return True
+        log.info(
+            lazymsg(
+                'rib.community.refused reason={community} neighbor={neighbor} learned-from={source} '
+                'family="{family}" prefix={prefix}',
+                community=community,
+                neighbor=negotiated.peer_address,
+                source=route.attributes.learned_from,
+                family=route.nlri.family(),
+                prefix=route.nlri,
+            ),
+            'rib',
+        )
+        return False
+
     @staticmethod
     def _otc_allowed(route: Route, negotiated: Negotiated | None) -> bool:
         if negotiated is None or route.attributes.otc_allowed(negotiated, route.nlri.family().afi_safi()):
@@ -691,7 +833,7 @@ class OutgoingRIB(Cache):
         eligible = []
         refused: list[NLRI] = []
         for route in routes:
-            if not self._otc_allowed(route, negotiated):
+            if not self._export_allowed(route, negotiated):
                 # Invalidate held candidates as well as advertisements. Otherwise a
                 # later withdrawal could promote a superseded, OTC-free candidate.
                 if self._withdraw_path(route.nlri, advertised_only=True):
@@ -712,19 +854,26 @@ class OutgoingRIB(Cache):
         for route in eligible:
             if not self._admit_path(route, limit, refresh):
                 continue
-            if (
-                not limit
-                and negotiated is not None
-                and negotiated.role in (RoleValue.CUSTOMER, RoleValue.RS_CLIENT, RoleValue.PEER)
-                and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
-            ):
-                self._otc_advertised.setdefault(family, set()).add(route.index())
+            if not limit and self._policy_may_refuse(family, negotiated):
+                self._policy_advertised.setdefault(family, set()).add(route.index())
             if grouped:
                 selected.append(route)
             else:
                 yield from self._announce_updates([route], attributes, family, False)
         if selected:
             yield from self._announce_updates(selected, attributes, family, grouped)
+
+    @staticmethod
+    def _policy_may_refuse(family: FamilyTuple, negotiated: Negotiated | None) -> bool:
+        """A route of this family sent now may be refused later, and must then be withdrawn."""
+        if negotiated is None:
+            return False
+        if negotiated.filters_by_route_target and family in MEMBERSHIP_FILTERED_FAMILIES:
+            return True
+        return negotiated.role in (RoleValue.CUSTOMER, RoleValue.RS_CLIENT, RoleValue.PEER) and family in (
+            (AFI.ipv4, SAFI.unicast),
+            (AFI.ipv6, SAFI.unicast),
+        )
 
     def _withdraw_updates(
         self,

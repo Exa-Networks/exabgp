@@ -49,17 +49,21 @@ which violates it, so there is nothing for a negative test to feed us.
 id = "rfc7911#2-readvertise-generates-own-identifier"
 section = "2"
 level = "MUST"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
 A
 BGP speaker that re-advertises a route MUST generate its own Path
 Identifier to be associated with the re-advertised route.
 """
 note = """
-exabgp does not re-advertise: it is not a route server and has no path selection between
-peers, so no route it sends was learned from another session. Recorded as a gap rather
-than not-applicable because a future route-server mode would owe it.
+exabgp runs no path selection between peers, but a route decoded off one session records
+the peer it came from (`AttributeCollection.learned_from`). When it is handed to another
+neighbour's outgoing RIB, `OutgoingRIB._readvertised` sends it under a Path Identifier the
+RIB allocates, kept for as long as the route is held so an update replaces the path and
+the withdrawal names it, and freed after. A route the configuration or the API gives us is
+originated and keeps the `path-information` the operator chose. Positive only: this binds
+the identifiers we send, and no input from a peer can violate it.
 """
 
 [[requirement]]

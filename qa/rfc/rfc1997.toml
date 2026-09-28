@@ -26,8 +26,8 @@ url = "https://www.rfc-editor.org/rfc/rfc1997"
 id = "rfc1997#wellknown-no-export"
 section = "Well-known Communities"
 level = "MUST NOT"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
 All routes received carrying a communities attribute
 containing this value MUST NOT be advertised outside a BGP
@@ -36,41 +36,39 @@ is not part of a confederation should be considered a
 confederation itself).
 """
 note = """
-The obligation is on a speaker which re-advertises a route it received.  exabgp never
-does: it announces what its configuration and its API tell it to announce, it runs no
-decision process, and no route it sends to one peer was learned from another.  Recorded
-as a gap rather than not-applicable because the day exabgp grows a route-server mode it
-owes this, and because nothing in the code reads the value: `Community.NO_EXPORT` is a
-name the configuration parser accepts and the renderer prints, and that is all.  Grep for
-NO_EXPORT outside community/initial/community.py and configuration/static/parser.py
-returns nothing.
+A route decoded off one session records the peer it came from
+(`AttributeCollection.learned_from`), and the outgoing RIB of every other neighbour refuses
+it when it carries NO_EXPORT and that neighbour is outside the confederation boundary
+(`OutgoingRIB._community_allowed`, logged as `rib.community.refused`). iBGP and a
+neighbouring Member-AS are inside it and still get the route. A route the configuration or
+the API gives us is originated, not received, and goes out: `community no-export` towards
+a transit is how an operator asks it to keep a route to itself. Positive only: this binds
+what we send, and no input from a peer can violate it.
 """
 
 [[requirement]]
 id = "rfc1997#wellknown-no-advertise"
 section = "Well-known Communities"
 level = "MUST NOT"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
 All routes received carrying a communities attribute
 containing this value MUST NOT be advertised to other BGP
 peers.
 """
 note = """
-Same shape as NO_EXPORT and the same answer, but this is the weakest of the three as a
-not-applicable, which is why it is a gap: NO_ADVERTISE forbids passing the route to any
-other BGP peer, and exabgp does hold several sessions at once.  It happens not to
-propagate between them, so the rule is satisfied by accident of architecture rather than
-by code, and an accident is not a compliance claim.
+As NO_EXPORT, with no neighbour exempt: a received route carrying NO_ADVERTISE is refused
+by the outgoing RIB of every other neighbour, iBGP included. Routes we originate are not
+touched. Positive only: this binds what we send, and no input from a peer can violate it.
 """
 
 [[requirement]]
 id = "rfc1997#wellknown-no-export-subconfed"
 section = "Well-known Communities"
 level = "MUST NOT"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
 All routes received carrying a communities attribute
 containing this value MUST NOT be advertised to external BGP
@@ -78,17 +76,18 @@ peers (this includes peers in other members autonomous
 systems inside a BGP confederation).
 """
 note = """
-As NO_EXPORT: it binds re-advertisement, which exabgp does not do.  exabgp now knows its
-confederation (RFC 5065, the neighbour `confederation` block) and so where this boundary
-lies, but as it propagates nothing across it the rule has nothing to act on.
+A received route carrying NO_EXPORT_SUBCONFED reaches only a neighbour in our own AS: every
+EBGP neighbour, a neighbouring Member-AS of the confederation included, is refused it by
+the outgoing RIB. Routes we originate are not touched. Positive only: this binds what we
+send, and no input from a peer can violate it.
 """
 
 [[requirement]]
 id = "rfc1997#wellknown-operations-implemented"
 section = "Well-known Communities"
 level = "SHALL"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
 The following communities have global significance and their
 operations shall be implemented in any community-attribute-aware BGP
@@ -96,9 +95,9 @@ speaker.
 """
 note = """
 Lowercase "shall" in the source, which is the 1996 spelling of the keyword; RFC 1997
-predates the RFC 2119 boilerplate.  The "operations" are the three MUST NOTs above, so
-this entry stands or falls with them, and they are gaps: exabgp parses, stores, renders
-and re-encodes all five well-known values it knows, but acts on none of them.
+predates the RFC 2119 boilerplate.  The "operations" are the three MUST NOTs above, and
+the outgoing RIB carries out all three on every received route handed to another
+neighbour. Positive only, as they are.
 """
 
 [[requirement]]

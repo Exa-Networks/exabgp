@@ -53,8 +53,11 @@ from exabgp.bgp.message.update.attribute.attribute import (
 )
 
 # For bagpipe
-from exabgp.bgp.message.update.attribute.community import Communities
-from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesBase
+from exabgp.bgp.message.update.attribute.community import Communities, Community
+from exabgp.bgp.message.update.attribute.community.extended.communities import (
+    ExtendedCommunities,
+    ExtendedCommunitiesBase,
+)
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
@@ -67,6 +70,13 @@ from exabgp.logger import lazyattribute, lazymsg, log
 # or a digit which is not zero followed by any digits. No plus, no leading zero, no
 # separator, all three of which Python's int() would accept.
 _JSON_INTEGER = re.compile(r'-?(?:0|[1-9][0-9]*)')
+
+
+# RFC 4684 4 compares a Route Target with the IANA and transitive bits of its type cleared
+ROUTE_TARGET_TYPE_MASK = 0x3F
+ROUTE_TARGET_SUBTYPE = 0x02
+# two-octet AS, IPv4 address, four-octet AS
+ROUTE_TARGET_TYPES = (0x00, 0x01, 0x02)
 
 
 class _NOTHING:
@@ -290,6 +300,10 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         self._json = ''
         # The parsed attributes have no mp routes and/or those are last
         self.cacheable = True
+        # The address of the peer these attributes were decoded from, '' for a route we
+        # originate. RFC 1997, RFC 4360 and RFC 7911 bind a route received from a peer and
+        # re-advertised, never one the configuration or the API gave us.
+        self.learned_from = ''
         # Note: Attribute.caching is set in application/server.py at startup
 
     # MutableMapping abstract methods
@@ -348,6 +362,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         duplicate = AttributeCollection()
         duplicate._data = dict(self._data)
         duplicate.cacheable = self.cacheable
+        duplicate.learned_from = self.learned_from
         assert len(duplicate) == len(self), 'a copy holds every attribute of its original'
         return duplicate
 
@@ -372,6 +387,45 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             and negotiated.role in (RoleValue.CUSTOMER, RoleValue.RS_CLIENT, RoleValue.PEER)
             and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
         )
+
+    def route_targets(self) -> list[bytes]:
+        """The Route Targets carried, eight octets each, flags reset as RFC 4684 compares them."""
+        if Attribute.CODE.EXTENDED_COMMUNITY not in self:
+            return []
+        # the attribute stored under EXTENDED_COMMUNITY is the EXTENDED_COMMUNITY attribute
+        communities = cast(ExtendedCommunities, self[Attribute.CODE.EXTENDED_COMMUNITY])
+        targets = []
+        for community in communities.communities:
+            packed = bytes(community.pack())
+            kind = packed[0] & ROUTE_TARGET_TYPE_MASK
+            # RFC 4360 4, RFC 5668: the three Route Targets share sub-type 0x02
+            if packed[1] == ROUTE_TARGET_SUBTYPE and kind in ROUTE_TARGET_TYPES:
+                targets.append(bytes([kind]) + packed[1:])
+        return targets
+
+    def community_forbids(self, negotiated: Negotiated) -> str:
+        """The RFC 1997 well-known community keeping this route from the peer, '' if none.
+
+        Only a received route is bound: the RFC speaks of "routes received carrying" the
+        value. A route we originate with no-export towards a transit is how an operator
+        asks that transit not to propagate it (RTBH, traffic engineering), and must go out.
+        """
+        if not self.learned_from:
+            return ''
+        if Attribute.CODE.COMMUNITY not in self:
+            return ''
+        # the attribute stored under COMMUNITY is the COMMUNITY attribute
+        communities = cast(Communities, self[Attribute.CODE.COMMUNITY])
+        carried = {bytes(community.community) for community in communities.communities}
+        if Community.NO_ADVERTISE in carried:
+            return 'no-advertise'
+        # NO_EXPORT stops at the confederation boundary, a neighbouring Member-AS is inside it
+        if Community.NO_EXPORT in carried and not negotiated.is_internal_neighbor:
+            return 'no-export'
+        # NO_EXPORT_SUBCONFED stops at our own Member-AS, so every EBGP neighbour is outside
+        if Community.NO_EXPORT_SUBCONFED in carried and not negotiated.is_ibgp:
+            return 'no-export-subconfed'
+        return ''
 
     @staticmethod
     def _default_attributes(negotiated: Negotiated) -> dict[int, Callable[[], Attribute | _NOTHING]]:
@@ -444,6 +498,14 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             if outside and isinstance(attribute, ASPath) and attribute.has_confed():
                 attribute = attribute.without_confed()
 
+            # RFC 4360 6, for a route we re-advertise only: an extended community the
+            # operator configured non-transitive (link bandwidth) is meant for this peer.
+            if code == Attribute.CODE.EXTENDED_COMMUNITY and external and self.learned_from:
+                transitive = cast(ExtendedCommunities, attribute).transitive_only()
+                if transitive is None:
+                    continue
+                attribute = transitive
+
             message += attribute.pack_attribute(negotiated)
 
         return message
@@ -484,6 +546,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             return negotiated.attribute_cache
 
         attributes = cls().parse(data, negotiated)
+        attributes.learned_from = negotiated.peer_address
 
         if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes:
             return attributes

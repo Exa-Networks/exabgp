@@ -39,6 +39,7 @@ class RIB:
         if name not in self._cache:
             self.incoming = IncomingRIB(adj_rib_in, families, enabled)
             self.outgoing = OutgoingRIB(adj_rib_out, families, enabled)
+            self.outgoing.membership = self.incoming
             self._cache[name] = self
             return
 
@@ -105,3 +106,4 @@ class RIB:
         families = self._cache[self.name].incoming.families
         self._cache[self.name].incoming = IncomingRIB(self.incoming.cache, families, self.enabled)
         self._cache[self.name].outgoing = OutgoingRIB(self.outgoing.cache, families, self.enabled)
+        self._cache[self.name].outgoing.membership = self._cache[self.name].incoming

@@ -14,9 +14,11 @@ Community is encoded as an 8-octet quantity" flatly, with no keyword, exactly as
 states the four octet one.  The normative form is RFC 7606 section 7.14 for the IPv4
 attribute and 7.15 for the IPv6 one, which live in qa/rfc/rfc7606.toml.
 
-The one marker is on the gap: nothing in the sending path strips a non-transitive
-community at the AS boundary, and the xfail at the end of the file shows what doing so
-would mean, beside the unmarked test which pins what must not be stripped.
+The one marker is on the SHOULD at the AS boundary.  A route received from a peer and
+handed to another neighbour loses its non-transitive communities when that neighbour is in
+another AS, and keeps them inside the AS and the confederation.  A route we originate is
+left alone: a non-transitive community an operator configures, link bandwidth being the
+usual one, is meant for the EBGP neighbour it is sent to.
 
 Otherwise the tests below are ordinary regression tests for the decoder, held here
 because this is where a reader looking for RFC 4360 coverage will come.  They cover the two things
@@ -39,6 +41,7 @@ from exabgp.bgp.message.update.attribute.community.extended.communities import E
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.protocol.ip import IP
 
 from rfc import rfc7606_wire
 from rfc.community_wire import parse, withdrawn
@@ -138,14 +141,24 @@ def test_a_registered_type_and_subtype_reaches_its_own_class() -> None:
 
 CONFEDERATION_IDENTIFIER = 65000
 OTHER_MEMBER = 65002
+LEARNED_FROM = '192.0.2.1'
 
 
-def extended_communities_sent(negotiated: Negotiated) -> list[bytes]:
-    """The extended communities a peer decodes from a route carrying both Route Targets."""
+def extended_communities_sent(negotiated: Negotiated, received: bool = True) -> list[bytes]:
+    """The extended communities a peer decodes from a route carrying both Route Targets.
+
+    `received` decodes the route off an EBGP session first, as a route re-advertised would
+    be; otherwise it is built the way the configuration builds one, originated by us.
+    """
     attributes = AttributeCollection()
     attributes.add(ExtendedCommunities.from_packet(ROUTE_TARGET + ROUTE_TARGET_NON_TRANSITIVE))
-    received = AttributeCollection.unpack(attributes.pack_attribute(negotiated), rfc7606_wire.session())
-    decoded = received.get(Attribute.CODE.EXTENDED_COMMUNITY)
+    if received:
+        source = rfc7606_wire.session()
+        source.neighbor.session.peer_address = IP.from_string(LEARNED_FROM)
+        attributes = AttributeCollection.unpack(attributes.pack_attribute(source), source)
+        assert attributes.learned_from == LEARNED_FROM, 'the decoded route did not record its peer'
+    sent = AttributeCollection.unpack(attributes.pack_attribute(negotiated), rfc7606_wire.session())
+    decoded = sent.get(Attribute.CODE.EXTENDED_COMMUNITY)
     if decoded is None:
         return []
     assert isinstance(decoded, ExtendedCommunities)
@@ -164,11 +177,6 @@ def confederation_member_session() -> Negotiated:
 
 
 @pytest.mark.rfc('rfc4360#6-non-transitive-removed-across-as-boundary')
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason='the sending path never reads the T bit: every configured extended community goes out on EBGP too',
-)
 def test_a_non_transitive_extended_community_is_not_sent_to_another_as() -> None:
     """The T bit set means the community stops at the edge of our AS.
 
@@ -185,15 +193,27 @@ def test_a_non_transitive_extended_community_is_not_sent_to_another_as() -> None
     [rfc7606_wire.internal_session, confederation_member_session],
     ids=['ibgp', 'confederation-member'],
 )
+@pytest.mark.rfc('rfc4360#6-non-transitive-removed-across-as-boundary')
 def test_a_non_transitive_extended_community_is_kept_inside_the_as_and_the_confederation(
     negotiated: Callable[[], Negotiated],
 ) -> None:
-    """Unmarked, the other half of the xfail above, and true today.
+    """The other half of the test above.
 
     Stripping every non-transitive community on every session would pass the test
     above, so this pins what must survive it: the SHOULD NOT for the confederation
     boundary, and IBGP, which is no boundary at all.
     """
     sent = extended_communities_sent(negotiated())
+
+    assert sorted(sent) == sorted([ROUTE_TARGET, ROUTE_TARGET_NON_TRANSITIVE]), [community.hex() for community in sent]
+
+
+def test_a_non_transitive_extended_community_we_originate_goes_to_another_as() -> None:
+    """Unmarked: the SHOULD is about re-advertising, and this route was configured.
+
+    Link bandwidth is non-transitive and made for the EBGP link it is sent over; an
+    operator configuring it on a route towards an EBGP neighbour means it to arrive.
+    """
+    sent = extended_communities_sent(rfc7606_wire.session(), received=False)
 
     assert sorted(sent) == sorted([ROUTE_TARGET, ROUTE_TARGET_NON_TRANSITIVE]), [community.hex() for community in sent]

@@ -2,9 +2,10 @@
 
 RFC 1997 is four pages and says less than its reputation suggests.  It has three
 capitalised MUST NOTs, all about not re-advertising a route carrying a well-known
-community.  exabgp re-advertises nothing on its own, but nothing in it reads those
-values either, so the ledger records them as gaps and the end of this file demonstrates
-them as strict xfails.  What it
+community.  exabgp re-advertises nothing on its own, but a route decoded off one session
+remembers the peer it came from (`AttributeCollection.learned_from`), and the outgoing
+RIB of any other neighbour honours the three values on it.  The end of this file proves
+it, and proves too that a route we originate is left alone.  What it
 does not have, anywhere, is the rule it is usually cited for: that the COMMUNITIES
 attribute length is a multiple of four.  The document states the encoding flatly - "The
 attribute consists of a set of four octet values" - with no keyword, so there is no
@@ -186,14 +187,15 @@ def test_a_length_which_is_not_a_whole_number_of_communities_withdraws_the_route
 # ---------------------------------------------------------------------------
 # The three well-known communities, and the SHALL which says they must be acted on.
 #
-# All four are gaps: exabgp does not re-advertise what it receives, so nothing in it
-# reads NO_EXPORT, NO_ADVERTISE or NO_EXPORT_SUBCONFED.  The tests below show what
-# honouring them would mean on the closest path exabgp really has.  A route is decoded
-# off the wire from one session, exactly as reactor/protocol.py does, and handed to the
-# outgoing RIB of another, which is what an API helper forwarding routes between two
-# neighbours amounts to.  The outgoing RIB is where egress policy already lives (RFC 9234
-# suppresses OTC routes there, in OutgoingRIB._otc_allowed), so it is where a well-known
-# community would have to stop the route, and today nothing does.
+# All three bind a route received and re-advertised.  The tests below take the closest
+# path exabgp has: a route is decoded off the wire from one session, exactly as
+# reactor/protocol.py does, and handed to the outgoing RIB of another.  The outgoing RIB
+# is where egress policy lives (RFC 9234 suppresses OTC routes there too), and
+# OutgoingRIB._community_allowed is where a well-known community stops the route.
+#
+# A route the configuration or the API gives us is originated by us, not received, and
+# the rule does not touch it: `community no-export` towards a transit is how an operator
+# asks that transit to keep a blackhole or a more specific to itself.
 
 LOCAL_AS = 65001
 CONFEDERATION_ID = 65000
@@ -212,11 +214,6 @@ PREFIX_10_0_0_0_24 = bytes([24, 10, 0, 0])
 
 # our Member-AS is LOCAL_AS, and the neighbour is in another member of the same confederation
 IN_CONFEDERATION = f'confederation {{ identifier {CONFEDERATION_ID}; members [ {OTHER_MEMBER_AS} ]; }}'
-
-READVERTISE_REASON = (
-    'exabgp never reads the well-known communities: OutgoingRIB has no egress check for them, '
-    'so a received route carrying one is sent to any peer it is handed to'
-)
 
 
 @pytest.fixture
@@ -297,18 +294,16 @@ def readvertised(communities: list[bytes], peer_as: int, extra: str = '') -> lis
     ids=['external', 'internal', 'other-member-as'],
 )
 def test_a_received_route_without_a_well_known_community_does_reach_another_peer(peer_as: int, extra: str) -> None:
-    """The control for the xfails below: the plumbing carries an ordinary route.
+    """The control for the tests below: the plumbing carries an ordinary route.
 
-    One case per kind of neighbour the xfails use.  Without it a strict xfail could be
-    failing because the route never left at all, and the day the well-known communities
-    were honoured nobody would be told.
+    One case per kind of neighbour they use.  Without it a test expecting nothing to be
+    sent would pass because the route never left at all.
     """
     assert readvertised([], peer_as, extra) == ['10.0.0.0/24']
 
 
 @pytest.mark.usefixtures('isolated_ribs')
 @pytest.mark.rfc('rfc1997#wellknown-no-export')
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=READVERTISE_REASON)
 def test_a_route_received_with_no_export_is_not_advertised_to_an_external_peer() -> None:
     """NO_EXPORT keeps the route inside the AS, and a plain eBGP neighbour is outside it."""
     sent = readvertised([Community.NO_EXPORT], EXTERNAL_AS)
@@ -318,7 +313,6 @@ def test_a_route_received_with_no_export_is_not_advertised_to_an_external_peer()
 
 @pytest.mark.usefixtures('isolated_ribs')
 @pytest.mark.rfc('rfc1997#wellknown-no-advertise')
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=READVERTISE_REASON)
 def test_a_route_received_with_no_advertise_is_not_advertised_even_to_an_internal_peer() -> None:
     """NO_ADVERTISE is the strictest of the three: no other BGP peer at all.
 
@@ -332,7 +326,6 @@ def test_a_route_received_with_no_advertise_is_not_advertised_even_to_an_interna
 
 @pytest.mark.usefixtures('isolated_ribs')
 @pytest.mark.rfc('rfc1997#wellknown-no-export-subconfed')
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=READVERTISE_REASON)
 def test_a_route_received_with_no_export_subconfed_stays_in_our_member_as() -> None:
     """The parenthesis is the point: another member AS of our own confederation counts as
     external here, where for NO_EXPORT it would be inside the boundary."""
@@ -343,7 +336,6 @@ def test_a_route_received_with_no_export_subconfed_stays_in_our_member_as() -> N
 
 @pytest.mark.usefixtures('isolated_ribs')
 @pytest.mark.rfc('rfc1997#wellknown-operations-implemented')
-@pytest.mark.xfail(strict=True, raises=AssertionError, reason=READVERTISE_REASON)
 @pytest.mark.parametrize(
     'name,community',
     WELL_KNOWN[:3],
@@ -355,3 +347,53 @@ def test_every_well_known_community_keeps_a_received_route_from_an_external_peer
     sent = readvertised([community], EXTERNAL_AS)
 
     assert sent == [], f'a route carrying {name} was sent to AS {EXTERNAL_AS}: {sent}'
+
+
+@pytest.mark.usefixtures('isolated_ribs')
+@pytest.mark.rfc('rfc1997#wellknown-no-export')
+@pytest.mark.parametrize(
+    'peer_as,extra',
+    [(LOCAL_AS, ''), (OTHER_MEMBER_AS, IN_CONFEDERATION)],
+    ids=['internal', 'other-member-as'],
+)
+def test_a_route_received_with_no_export_stays_inside_the_confederation_boundary(peer_as: int, extra: str) -> None:
+    """The boundary is the confederation, not the Member-AS: both of these are inside it.
+
+    A check which refused every neighbour would pass the tests above and fail this one.
+    """
+    assert readvertised([Community.NO_EXPORT], peer_as, extra) == ['10.0.0.0/24']
+
+
+@pytest.mark.usefixtures('isolated_ribs')
+@pytest.mark.rfc('rfc1997#wellknown-no-export-subconfed')
+def test_a_route_received_with_no_export_subconfed_reaches_an_internal_peer() -> None:
+    """Our own Member-AS is inside the boundary NO_EXPORT_SUBCONFED draws."""
+    assert readvertised([Community.NO_EXPORT_SUBCONFED], LOCAL_AS) == ['10.0.0.0/24']
+
+
+def originated(communities: str, peer_as: int) -> list[str]:
+    """The prefixes an external neighbour is sent for a route the configuration gave us."""
+    target = neighbour(READVERTISED_TO, peer_as)
+    session = established(target, peer_as)
+    configuration = Configuration([''], text=True)
+    line = f'route 10.0.0.0/24 next-hop {LEARNED_FROM} community [ {communities} ]'
+    assert configuration.partial('static', line, 'announce'), str(configuration.error)
+    for route in configuration.pop_routes():
+        target.rib.outgoing.add_to_rib(route)
+
+    sent: list[str] = []
+    for update in target.rib.outgoing.updates(True, None, session):
+        if isinstance(update, UpdateCollection):
+            sent.extend(str(routed.nlri) for routed in update.announces)
+    return sent
+
+
+@pytest.mark.usefixtures('isolated_ribs')
+@pytest.mark.parametrize('name', ['no-export', 'no-advertise', 'no-export-subconfed'])
+def test_a_route_we_originate_goes_out_whatever_well_known_community_it_carries(name: str) -> None:
+    """Unmarked: the RFC binds "routes received", and this one was configured.
+
+    The community is for the peer to act on.  Refusing to send it would take away the way
+    an operator tells a transit to keep a blackhole route to itself.
+    """
+    assert originated(name, EXTERNAL_AS) == ['10.0.0.0/24']

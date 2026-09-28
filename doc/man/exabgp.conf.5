@@ -56,6 +56,7 @@ neighbor <ip-address> {
     group-updates <truthvalue>;
     as-set <withdraw | accept>;  // received AS_SET / AS_CONFED_SET, RFC 9774
     tunnel-encapsulation <auto | filter | accept>;  // received attribute, RFC 9012
+    route-target-filter <truthvalue>;  // VPN routes by RT membership, RFC 4684
     auto-flush <truthvalue>;
     adj-rib-in <truthvalue>;
     adj-rib-out <truthvalue>;
@@ -417,6 +418,29 @@ removes it on any session, and
 .Dq tunnel-encapsulation accept
 keeps it on any session.
 The route itself is accepted either way.
+.Sh ROUTE TARGET CONSTRAINT
+With the rtc family negotiated, exabgp announces and withdraws Route Target
+membership and decodes what the peer sends, but by default sends every VPN
+route whatever that membership, which RFC 4684 permits.
+.Dq route-target-filter true
+sends an IPv4 or IPv6 VPN or EVPN route only when one of its Route Targets is
+covered by the membership the peer advertised, and offers the routes again
+whenever that membership changes, withdrawing those no longer covered.
+It needs
+.Dq adj-rib-in
+and
+.Dq adj-rib-out ,
+both on by default.
+.Sh RE-ADVERTISED ROUTES
+A route decoded from one peer and handed to another neighbor (only a test or an
+embedding program does this: the API re-reads text, which makes a route of our
+own) is re-advertised in the sense of RFC 1997, RFC 4360 and RFC 7911. It is not
+sent past the boundary a NO_EXPORT, NO_ADVERTISE or NO_EXPORT_SUBCONFED
+community draws, loses its non-transitive extended communities towards another
+AS, and goes out under an ADD-PATH identifier exabgp chooses.
+A route from the configuration or the API is ours and is sent as configured:
+.Dq community no-export
+towards a transit is left for the transit to act on.
 .Sh ATTRIBUTES FROM AN EXTERNAL NEIGHBOR
 As RFC 7606 requires, LOCAL_PREF, ORIGINATOR_ID and CLUSTER_LIST received from
 an EBGP neighbor outside the confederation are discarded and the rest of the

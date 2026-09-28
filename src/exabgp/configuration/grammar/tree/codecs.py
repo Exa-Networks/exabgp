@@ -92,6 +92,7 @@ POLICY = (
     'group-updates',
     'as-set',
     'tunnel-encapsulation',
+    'route-target-filter',
     'auto-flush',
     'adj-rib-in',
     'adj-rib-out',

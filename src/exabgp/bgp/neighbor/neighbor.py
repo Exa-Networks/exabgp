@@ -51,6 +51,7 @@ class Neighbor:
     group_updates: bool
     as_set: str
     tunnel_encapsulation: str
+    route_target_filter: bool
     auto_flush: bool
     adj_rib_in: bool
     adj_rib_out: bool
@@ -90,6 +91,8 @@ class Neighbor:
         self.as_set = 'withdraw'
         # RFC 9012 11: 'auto' filters a received Tunnel Encapsulation attribute on EBGP only
         self.tunnel_encapsulation = 'auto'
+        # RFC 4684 5: the VPN routes are not filtered by the peer's membership unless asked
+        self.route_target_filter = False
         self.auto_flush = True
         self.adj_rib_in = True
         self.adj_rib_out = True
@@ -188,6 +191,7 @@ class Neighbor:
         neighbor.group_updates = settings.group_updates
         neighbor.as_set = settings.as_set
         neighbor.tunnel_encapsulation = settings.tunnel_encapsulation
+        neighbor.route_target_filter = settings.route_target_filter
         neighbor.auto_flush = settings.auto_flush
         neighbor.adj_rib_in = settings.adj_rib_in
         neighbor.adj_rib_out = settings.adj_rib_out
@@ -361,6 +365,7 @@ class Neighbor:
             and self.group_updates == other.group_updates
             and self.as_set == other.as_set
             and self.tunnel_encapsulation == other.tunnel_encapsulation
+            and self.route_target_filter == other.route_target_filter
             and self.auto_flush == other.auto_flush
             and self.adj_rib_in == other.adj_rib_in
             and self.adj_rib_out == other.adj_rib_out
@@ -639,6 +644,7 @@ Neighbor {peer-address}
             + f'\tgroup-updates {"true" if neighbor.group_updates else "false"};\n'
             f'\tas-set {neighbor.as_set};\n'
             f'\ttunnel-encapsulation {neighbor.tunnel_encapsulation};\n'
+            f'\troute-target-filter {"true" if neighbor.route_target_filter else "false"};\n'
             f'\tauto-flush {"true" if neighbor.auto_flush else "false"};\n'
             f'\tadj-rib-in {"true" if neighbor.adj_rib_in else "false"};\n'
             f'\tadj-rib-out {"true" if neighbor.adj_rib_out else "false"};\n'

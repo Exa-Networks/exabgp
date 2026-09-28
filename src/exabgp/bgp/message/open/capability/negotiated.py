@@ -378,6 +378,26 @@ class Negotiated:
         return neighbor.session.confederation if neighbor is not None else ASN(0)
 
     @property
+    def peer_address(self) -> str:
+        """The address of the peer, '' for UNSET, which is a session with no neighbour."""
+        neighbor = getattr(self, 'neighbor', None)
+        if neighbor is None or neighbor.session.peer_address is None:
+            return ''
+        return str(neighbor.session.peer_address)
+
+    @property
+    def filters_by_route_target(self) -> bool:
+        """RFC 4684 5: the VPN routes sent are those the peer's membership asks for.
+
+        Only when the operator asked for it (`route-target-filter`) and the session
+        negotiated RT-Constraint, since without it the peer has no way to be a member.
+        """
+        neighbor = getattr(self, 'neighbor', None)
+        if neighbor is None or not neighbor.route_target_filter:
+            return False
+        return (AFI.ipv4, SAFI.rtc) in self.families
+
+    @property
     def confed_member(self) -> bool:
         """The peer is in another Member-AS of our confederation (RFC 5065)."""
         if not self.confederation or self.local_as == self.peer_as:

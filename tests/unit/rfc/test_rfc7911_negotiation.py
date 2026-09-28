@@ -246,12 +246,12 @@ def test_a_peer_which_splits_add_path_across_instances_loses_no_family(packed: b
 
 
 # ---------------------------------------------------------------------------
-# Section 2: re-advertisement.  A gap, because exabgp re-advertises nothing on its own.
+# Section 2: re-advertisement.  exabgp re-advertises nothing on its own.
 #
-# The closest real path is the one an API helper forwarding routes between neighbours
-# takes: a route decoded off one session, exactly as reactor/protocol.py decodes it, and
-# handed to the outgoing RIB of another.  That route keeps the Path Identifier its
-# original sender chose, which was only ever unique on the session it arrived on.
+# The closest path is a route decoded off one session, exactly as reactor/protocol.py
+# decodes it, and handed to the outgoing RIB of another.  Its Path Identifier was chosen by
+# its sender and only ever unique on the session it arrived on, so the outgoing RIB sends
+# it under one of its own (OutgoingRIB._readvertised).
 
 LOCAL_AS = 65001
 TARGET_AS = 64998
@@ -332,9 +332,9 @@ def readvertised_identifiers(path_ids: dict[str, int]) -> list[bytes]:
 
 @pytest.mark.usefixtures('isolated_ribs')
 def test_two_received_paths_with_different_identifiers_both_reach_the_target() -> None:
-    """The control for the xfail below: two paths do travel, when their senders happened
-    to pick different identifiers.  Without it the xfail could be failing for want of
-    plumbing, and the day identifiers were generated nobody would be told."""
+    """The control for the test below: two paths do travel, when their senders happened
+    to pick different identifiers.  Without it a failure there could be for want of
+    plumbing rather than for want of identifiers."""
     identifiers = readvertised_identifiers({'192.0.2.1': 1, '192.0.2.3': 2})
 
     assert sorted(identifiers) == [pack('!L', 1), pack('!L', 2)]
@@ -342,12 +342,6 @@ def test_two_received_paths_with_different_identifiers_both_reach_the_target() -
 
 @pytest.mark.usefixtures('isolated_ribs')
 @pytest.mark.rfc('rfc7911#2-readvertise-generates-own-identifier')
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason='a re-advertised route keeps the Path Identifier its sender chose, so two paths '
-    'from two peers which both picked 1 go out to the third as the same path',
-)
 def test_a_readvertised_path_carries_an_identifier_we_chose() -> None:
     """Identifiers are unique per session, not globally: two peers may both call their
     path 1.  Passed on as received, the second replaces the first at the peer we send
@@ -357,3 +351,53 @@ def test_a_readvertised_path_carries_an_identifier_we_chose() -> None:
 
     assert len(identifiers) == 2, f'expected two paths to be sent, got {len(identifiers)}'
     assert len(set(identifiers)) == 2, f'two different paths were sent under one identifier: {identifiers}'
+
+
+def sent_identifiers(target: Neighbor, session: Negotiated, announced: bool = True) -> list[bytes]:
+    """The Path Identifiers of what the target is sent next, announced or withdrawn."""
+    identifiers: list[bytes] = []
+    for update in target.rib.outgoing.updates(True, None, session):
+        if not isinstance(update, UpdateCollection):
+            continue
+        routes = [routed.nlri for routed in update.announces] if announced else list(update.withdraws)
+        identifiers.extend(bytes(nlri.path_info.pack_path()) for nlri in routes)
+    return identifiers
+
+
+@pytest.mark.usefixtures('isolated_ribs')
+@pytest.mark.rfc('rfc7911#2-readvertise-generates-own-identifier')
+def test_a_readvertised_path_keeps_our_identifier_through_an_update_and_its_withdrawal() -> None:
+    """The identifier is ours for as long as the route is: an update replaces the path the
+    peer holds instead of adding one, and the withdrawal names the path it was sent as."""
+    target = add_path_neighbour(TARGET, TARGET_AS)
+    session = established(target, TARGET_AS)
+    source = '192.0.2.1'
+
+    learned = received(source, SOURCES[source], 7)
+    for routed in learned.announces:
+        target.rib.outgoing.add_to_rib(Route(routed.nlri, learned.attributes, routed.nexthop))
+    (first,) = sent_identifiers(target, session)
+
+    again = received(source, SOURCES[source], 7)
+    for routed in again.announces:
+        target.rib.outgoing.add_to_rib(Route(routed.nlri, again.attributes, routed.nexthop), force=True)
+    assert sent_identifiers(target, session) == [first], 'an update of one path was sent as another'
+
+    for routed in again.announces:
+        target.rib.outgoing.del_from_rib(Route(routed.nlri, again.attributes, routed.nexthop))
+    assert sent_identifiers(target, session, announced=False) == [first], 'the withdrawal named another path'
+
+
+@pytest.mark.usefixtures('isolated_ribs')
+def test_a_route_we_originate_keeps_the_path_information_it_was_configured_with() -> None:
+    """Unmarked: an originated route is not re-advertised, and its identifier is the
+    operator's to choose (`path-information`)."""
+    target = add_path_neighbour(TARGET, TARGET_AS)
+    session = established(target, TARGET_AS)
+    configuration = Configuration([''], text=True)
+    line = 'route 10.0.0.0/24 next-hop 192.0.2.1 path-information 0.0.0.9'
+    assert configuration.partial('static', line, 'announce'), str(configuration.error)
+    for route in configuration.pop_routes():
+        target.rib.outgoing.add_to_rib(route)
+
+    assert sent_identifiers(target, session) == [pack('!L', 9)]

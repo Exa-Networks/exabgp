@@ -1,7 +1,9 @@
 # Closing the RFC ledger gaps
 
-🔄 **Status:** In progress, 2 of 8 areas done
-**Branch:** `claude/pensive-rubin-95pg84` (merged with main at `afe4003`)
+🔄 **Status:** In progress, 3 of 8 areas done (3 uncommitted, awaiting review)
+**Branch:** ~~`claude/pensive-rubin-95pg84` (merged with main at `afe4003`)~~ squash-merged as
+#1432 (`acbcf24`). From 2026-09-28 the work continues on the local machine, on `main`,
+uncommitted until Thomas asks.
 **Started:** 2026-09-28
 **Out of scope:** the multisession draft, handled elsewhere
 
@@ -52,7 +54,7 @@ env exabgp_log_enable=false uv run pytest tests/unit/rfc -q -rx | grep XFAIL
 | 0 | Test BGP server falls back to IPv4 without IPv6 | ✅ | `6968bfc` |
 | 1 | Received attributes | ✅ | `95dd8d8` |
 | 2 | Received NLRI | ✅ | `df87c44` |
-| 3 | Outgoing routes / adj-rib-out | ❌ todo | |
+| 3 | Outgoing routes / adj-rib-out | ✅ uncommitted on main | |
 | 4 | RFC 8277 Multiple Labels Capability | ❌ todo | |
 | 5 | FlowSpec | ❌ todo | |
 | 6 | Graceful Restart receiving procedures | ❌ todo | |
@@ -94,6 +96,55 @@ env exabgp_log_enable=false uv run pytest tests/unit/rfc -q -rx | grep XFAIL
 Each area below is independent. Do one per commit. The xfail tests named are the spec.
 
 ### 3. Outgoing routes / adj-rib-out
+
+**Session 2026-09-28 (2), decisions taken with Thomas:**
+- Found: no real code path puts received attributes into another neighbour's outgoing RIB.
+  Everything there comes from the configuration or from API text, which is re-parsed. Only
+  the tests hand `Update.parse()` output to `rib.outgoing`.
+- RFC 1997 and RFC 7911: `AttributeCollection` decoded off the wire records the peer it came
+  from (`learned_from`); the outgoing RIB applies the well-known communities and generates
+  its own Path Identifier only for those. Configured and API routes are originated by us and
+  unchanged (`community no-export` towards a transit stays usable for RTBH and TE).
+- RFC 4360 6: strip non-transitive extended communities at the AS boundary only on received
+  routes. Configured link-bandwidth (0x40/0x04, non-transitive, meant for the eBGP DMZ) keeps
+  going out. The xfail test built its route locally: rewrite it through a real decode.
+- RFC 4684 5: a neighbour option, default off, so behaviour is unchanged. When on and rtc is
+  negotiated, VPN routes are filtered by the peer's membership, and re-evaluated when the
+  membership changes.
+
+**Area 3 as implemented (uncommitted, 2026-09-28):**
+- `AttributeCollection.learned_from` (set in `unpack` from `Negotiated.peer_address`, kept by
+  `copy()`), `community_forbids()`, `route_targets()`.
+- `OutgoingRIB._export_allowed` = community + OTC + membership. `_otc_advertised` renamed
+  `_policy_advertised` (a route a policy may refuse later, so the refusal withdraws it);
+  `_policy_may_refuse` decides which families record there.
+- RFC 4360: `pack_attribute` strips non-transitive extended communities for a received
+  route towards EBGP outside the confederation (`ExtendedCommunities.transitive_only`).
+  IPv6 extended communities (RFC 5701) not touched.
+- RFC 7911: `OutgoingRIB._readvertised` maps (peer, received route index) to a Path
+  Identifier it allocates (free list, `PATH_IDENTIFIER_MAX`), on add and on withdraw;
+  `NLRI.carries_path_info()` / `with_path_info()`, implemented by INET.
+- RFC 4684: `route-target-filter <bool>` (grammar Leaf, POLICY, NeighborSettings, Neighbor,
+  printed config), refused without adj-rib-in and adj-rib-out. `RTC.admits()` does the
+  prefix match. Filtered families: IPv4/IPv6 mpls-vpn and EVPN
+  (`MEMBERSHIP_FILTERED_FAMILIES`). `UpdateHandler._membership` calls
+  `outgoing.membership_changed()` (a resend of those families) when an RTC NLRI arrives.
+- Ledger: rfc1997 x4 and rfc7911 and rfc4360 -> required, positive-only (binds what we
+  send, no peer input violates it). rfc4684#5 -> required.
+- Frozen outcomes regenerated in two passes: pass 1, with `route_target_filter` excluded,
+  added only the 26 new inputs (no line changed); pass 2 rewrote the neighbour digests.
+- Docs: CHANGELOG (Feature + Change), exabgp.conf.5 (ROUTE TARGET CONSTRAINT,
+  RE-ADVERTISED ROUTES).
+- Each new behaviour was mutated and the tests went red, then restored.
+- Found in self-review: `membership_changed()` first called `resend()` per RTC UPDATE, so a
+  peer sending N membership UPDATEs queued the VPN table N times (unbounded). Now a flag
+  (`_membership_replay`) replays the cached VPN routes once per generated batch; test
+  `test_many_membership_updates_replay_the_vpn_routes_once`.
+- Not done: matching is O(VPN routes x memberships) per batch; fine for now, an index by
+  Route Target would be the fix if a large RT table shows up.
+- Sandbox note: `test_storage` (/tmp) and listener tests (bind) fail inside the Claude
+  Code sandbox only; run them unsandboxed.
+
 - `tests/unit/rfc/test_rfc1997_communities.py`: the four well-known community tests
   (NO_EXPORT, NO_ADVERTISE, NO_EXPORT_SUBCONFED, operations-implemented). The tests hand a
   received route to another neighbour's `rib.outgoing` and expect it not to be sent.
@@ -194,11 +245,21 @@ Prove nothing else moved: first exclude the new field in `config_grammar/outcome
 - `main` squash-merges: #1431 merged only `91358c5`, so later commits need a new PR, and a
   merge of `main` into the branch (a rebase was refused as destructive).
 
+- 2026-09-28: two `test_everything` ran at once. The first had its `unit` step killed
+  (exit 143) and the script carried on, which looked like the whole run had died, so a
+  second was started. They share ports and functional servers and spoil each other. Before
+  starting one, check none is running (`ps -eo command | grep qa/bin/test_everything`).
+
 ## Blockers
 
 None.
 
 ## Resume point
 
-Branch `claude/pensive-rubin-95pg84` at `afe4003` or later, pushed. Next: area 3 (outgoing
-routes), or any of 3 to 8 in any order.
+**2026-09-28 (local):** on `main` after #1432, not on the web branch. Area 3 done and
+uncommitted, waiting for Thomas's review. `test_everything`: all 25 passed (one clean
+run, 10m29s). Next: area 4 (RFC 8277). Areas one after the
+other, stopping for review between each.
+
+~~Branch `claude/pensive-rubin-95pg84` at `afe4003` or later, pushed. Next: area 3 (outgoing
+routes), or any of 3 to 8 in any order.~~

@@ -14,9 +14,11 @@ from exabgp.bgp.message.update.eor import EOR
 from exabgp.environment import getenv
 from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.reactor.peer.handlers.base import MessageHandler
+from exabgp.protocol.family import SAFI
 from exabgp.rib.route import Route
 
 if TYPE_CHECKING:
+    from exabgp.bgp.message.update.collection import UpdateCollection
     from exabgp.bgp.message.update.nlri.nlri import NLRI
     from exabgp.reactor.peer.context import PeerContext
 
@@ -105,6 +107,16 @@ class UpdateHandler(MessageHandler):
         ctx.neighbor.rib.incoming.record_end_of_rib(family)
         log.debug(lazymsg('eor.received afi={a} safi={s}', a=family[0], s=family[1]), ctx.peer_id)
 
+    @staticmethod
+    def _membership(ctx: PeerContext, parsed: UpdateCollection) -> None:
+        # RFC 4684 5: the Route Target membership of the peer decides which VPN routes it is
+        # sent, so a change of it offers the peer those routes again
+        if not ctx.neighbor.route_target_filter:
+            return
+        changed = [routed.nlri for routed in parsed.announces] + list(parsed.withdraws)
+        if any(nlri.safi == SAFI.rtc for nlri in changed):
+            ctx.neighbor.rib.outgoing.membership_changed()
+
     def handle(self, ctx: PeerContext, message: Message) -> Generator[Message, None, None]:
         """Process the UPDATE message synchronously.
 
@@ -145,6 +157,8 @@ class UpdateHandler(MessageHandler):
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
             )
+
+        self._membership(ctx, parsed)
 
         return
         yield  # Make this a generator
@@ -189,3 +203,5 @@ class UpdateHandler(MessageHandler):
                 lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
                 ctx.peer_id,
             )
+
+        self._membership(ctx, parsed)

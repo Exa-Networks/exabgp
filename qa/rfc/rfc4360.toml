@@ -62,8 +62,8 @@ violate it; exabgp consumes the registry, it does not maintain it.
 id = "rfc4360#6-non-transitive-removed-across-as-boundary"
 section = "6"
 level = "SHOULD"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
 If a route has a non-transitivity extended community, then before
 advertising the route across the Autonomous System boundary the
@@ -72,15 +72,14 @@ SHOULD NOT be removed when advertising the route across the BGP
 Confederation boundary.
 """
 note = """
-exabgp sends exactly the extended communities its configuration or its API asked for, on
-an eBGP session as on an iBGP one, and strips nothing.  `ExtendedCommunityBase.transitive`
-reads the T bit correctly but the only caller in the tree is the FlowSpec redirect
-community's JSON rendering: nothing in the sending path consults it.  Recorded as a gap
-rather than not-applicable because unlike re-advertisement this one does reach exabgp,
-since an operator can configure a non-transitive extended community on an eBGP neighbour
-today and exabgp will put it on the wire.  The counter-argument, that an operator who
-writes a community into a neighbour's configuration has asked for it on that session by
-definition, is why this is a SHOULD we decline rather than a defect.
+A route decoded off one session records the peer it came from
+(`AttributeCollection.learned_from`). When it is re-advertised to a neighbour in another
+AS, `AttributeCollection.pack_attribute` drops every extended community whose T bit is set
+(`ExtendedCommunities.transitive_only`), and the attribute itself when none is left. iBGP
+and a neighbouring Member-AS of our confederation keep them, as the SHOULD NOT asks. A route
+the configuration or the API gives us is originated, not re-advertised, and keeps what the
+operator configured: link bandwidth is non-transitive and made for the EBGP link it is sent
+over. Positive only: this binds what we send, and no input from a peer can violate it.
 """
 
 [[requirement]]

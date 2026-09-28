@@ -4,6 +4,14 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Feature: "route-target-filter true;" on a neighbor sends its VPN and EVPN routes only for
+   the Route Targets the peer advertised membership of (RFC 4684), and offers them again
+   when the membership changes. Off by default, as before.
+ * Change: a route decoded from one peer and handed to another neighbor honours the
+   NO_EXPORT, NO_ADVERTISE and NO_EXPORT_SUBCONFED communities (RFC 1997), loses its
+   non-transitive extended communities towards another AS (RFC 4360), and is sent under
+   an ADD-PATH identifier of our own (RFC 7911). Routes from the configuration or the API
+   are unchanged: a configured "community no-export" still goes to an EBGP neighbor.
  * Incompatible: the "data" of a received notification, in the JSON and text API, is the
    Data field the peer sent, as for one we send. It was a display form for a received one
    only, so a Shutdown Communication showed as 'Shutdown Communication: "..."' rather than
