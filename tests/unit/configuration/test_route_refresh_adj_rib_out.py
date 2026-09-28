@@ -9,6 +9,8 @@ See: https://github.com/Exa-Networks/exabgp/issues/1151
 
 from __future__ import annotations
 
+from exabgp.util.enumeration import TriState
+
 from exabgp.bgp.neighbor.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
 
@@ -40,7 +42,7 @@ class TestRouteRefreshAdjRibOut:
         """When route-refresh is enabled and adj-rib-out is False, auto-enable it."""
         neighbor = _neighbor('false', 'enable')
 
-        assert neighbor.capability.route_refresh == 2  # REFRESH.NORMAL
+        assert neighbor.capability.route_refresh == TriState.TRUE
         assert neighbor.adj_rib_out is True
 
     def test_adj_rib_out_unchanged_when_already_enabled(self) -> None:
@@ -53,12 +55,12 @@ class TestRouteRefreshAdjRibOut:
         """When route-refresh is disabled, adj-rib-out is not changed."""
         neighbor = _neighbor('false', 'disable')
 
-        assert neighbor.capability.route_refresh == 0
+        assert neighbor.capability.route_refresh == TriState.FALSE
         assert neighbor.adj_rib_out is False
 
     def test_route_refresh_required_also_enables_adj_rib_out(self) -> None:
         """A required route-refresh is enabled too, so it also auto-enables adj-rib-out."""
         neighbor = _neighbor('false', 'require')
 
-        assert neighbor.capability.route_refresh == 2  # REFRESH.NORMAL
+        assert neighbor.capability.route_refresh == TriState.TRUE
         assert neighbor.adj_rib_out is True

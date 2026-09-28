@@ -229,8 +229,22 @@ NEIGHBOR_FORMS: list[tuple[tuple[str, ...], str, bool]] = [
     (('capability',), 'link-local-nexthop', False),
     *[
         (('capability',), f'{keyword} maybe', False)
-        for keyword in ('asn4', 'route-refresh', 'software-version', 'link-local-nexthop')
+        for keyword in (
+            'asn4',
+            'route-refresh',
+            'route-refresh-normal',
+            'route-refresh-enhanced',
+            'software-version',
+            'link-local-nexthop',
+        )
     ],
+    *[
+        (('capability',), f'route-refresh {value}; {keyword} {value}', True)
+        for keyword in ('route-refresh-normal', 'route-refresh-enhanced')
+        for value in ('enable', 'require', 'disable')
+    ],
+    (('capability',), 'route-refresh-normal enable', True),
+    (('capability',), 'route-refresh-enhanced enable', False),
     (('capability',), 'extended-message maybe', False),
     (('capability',), 'operational maybe', False),
     (('capability',), 'nexthop maybe', False),

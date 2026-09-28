@@ -88,7 +88,6 @@ def _capability(neighbor_capability: NeighborCapability) -> dict[str, Any]:
         'aigp': _tristate(neighbor_capability.aigp),
         'link-local-nexthop': _tristate(neighbor_capability.link_local_nexthop),
         'add-path': neighbor_capability.add_path,
-        'route-refresh': bool(neighbor_capability.route_refresh),
         'software-version': neighbor_capability.software_version is not None,
         'link-local-prefer': neighbor_capability.link_local_prefer,
         'graceful-restart': neighbor_capability.graceful_restart.time
@@ -98,6 +97,8 @@ def _capability(neighbor_capability: NeighborCapability) -> dict[str, Any]:
     for name, code in REQUIRABLE.items():
         if code in neighbor_capability.required:
             values[name] = REQUIRE
+    for keyword, word in neighbor_capability.route_refresh_statements():
+        values[keyword] = REQUIRE if word == REQUIRE else word == 'enable'
     return {keyword: value for keyword, value in values.items() if value is not None}
 
 

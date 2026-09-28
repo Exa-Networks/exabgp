@@ -106,6 +106,7 @@ GRACEFUL_RESTART = Word(
     shape=shape.union(shape.integer(0, GRACEFUL_RESTART_MAX), shape.enumeration('disable')),
 )
 
+
 ADD_PATH_MODES = {'disable': 0, 'disabled': 0, 'receive': 1, 'send': 2, 'send/receive': 3}
 
 
@@ -156,7 +157,19 @@ CAPABILITY = Block(
             'route-refresh',
             requirable(True),
             field='route-refresh',
-            doc='Route Refresh, RFC 2918 and Enhanced Route Refresh, RFC 7313',
+            doc='Route Refresh, RFC 2918, and Enhanced Route Refresh, RFC 7313, both',
+        ),
+        Leaf(
+            'route-refresh-normal',
+            requirable(True),
+            field='route-refresh-normal',
+            doc='Route Refresh, RFC 2918, alone: what route-refresh says of it, overridden',
+        ),
+        Leaf(
+            'route-refresh-enhanced',
+            requirable(True),
+            field='route-refresh-enhanced',
+            doc='Enhanced Route Refresh, RFC 7313, alone: what route-refresh says of it, overridden',
         ),
         Leaf('aigp', boolean(True), field='aigp', doc='accept and send the AIGP attribute, RFC 7311'),
         Leaf(

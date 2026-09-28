@@ -11,7 +11,7 @@ apply the same rule to it.
 
 from __future__ import annotations
 
-from typing import Iterator
+from typing import Any, Iterator
 from unittest.mock import Mock, patch
 
 import pytest
@@ -297,14 +297,47 @@ def test_a_refresh_we_start_is_bracketed_when_the_peer_advertised_it() -> None:
 
 
 @pytest.mark.rfc('rfc7313#4-advertise-the-capability')
-def test_route_refresh_enabled_advertises_the_enhanced_capability_too() -> None:
+@pytest.mark.parametrize(
+    'mode',
+    [
+        'route-refresh enable;',
+        'route-refresh require;',
+        'route-refresh enable; route-refresh-normal require;',
+        'route-refresh enable; route-refresh-enhanced require;',
+    ],
+)
+def test_route_refresh_enabled_advertises_the_enhanced_capability_too(mode: str) -> None:
     from exabgp.bgp.message.open.capability.capabilities import Capabilities
 
-    neighbor = Mock()
-    neighbor.capability.route_refresh = True
     capabilities = Capabilities()
-    capabilities._refresh(neighbor)
+    capabilities._refresh(_configured(mode))
+    assert Capability.CODE.ROUTE_REFRESH in capabilities
     assert Capability.CODE.ENHANCED_ROUTE_REFRESH in capabilities
+
+
+def test_enable_normal_advertises_route_refresh_alone() -> None:
+    """The SHOULD leaves the operator the choice, for a peer whose enhanced route refresh misbehaves."""
+    from exabgp.bgp.message.open.capability.capabilities import Capabilities
+
+    capabilities = Capabilities()
+    capabilities._refresh(_configured('route-refresh-normal enable;'))
+    assert Capability.CODE.ROUTE_REFRESH in capabilities
+    assert Capability.CODE.ENHANCED_ROUTE_REFRESH not in capabilities
+
+
+def _configured(mode: str) -> Any:
+    from exabgp.configuration.configuration import Configuration
+
+    configuration = Configuration(
+        [
+            'neighbor 192.0.2.1 { router-id 192.0.2.2; local-address 192.0.2.2; local-as 65001; peer-as 65002; '
+            f'capability {{ {mode} }} }}'
+        ],
+        text=True,
+    )
+    assert configuration.reload(), str(configuration.error)
+    (neighbor,) = configuration.neighbors.values()
+    return neighbor
 
 
 def test_a_purged_route_no_longer_counts_against_the_prefix_limit() -> None:

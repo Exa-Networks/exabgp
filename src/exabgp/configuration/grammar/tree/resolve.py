@@ -32,7 +32,6 @@ TCP_AO_MANDATORY = ('keyid', 'algorithm', 'password')
 REQUIRE = 'require'
 REQUIRABLE: dict[str, int] = {
     'asn4': Capability.CODE.FOUR_BYTES_ASN,
-    'route-refresh': Capability.CODE.ROUTE_REFRESH,
     'extended-message': Capability.CODE.EXTENDED_MESSAGE,
     'operational': Capability.CODE.OPERATIONAL,
     'software-version': Capability.CODE.SOFTWARE_VERSION,
@@ -180,6 +179,32 @@ def session(values: dict[str, Any]) -> SessionSettings:
     return settings
 
 
+# route-refresh configures both capabilities, route-refresh-normal and -enhanced each one
+ROUTE_REFRESH_KEYWORDS = {
+    'route-refresh-normal': Capability.CODE.ROUTE_REFRESH,
+    'route-refresh-enhanced': Capability.CODE.ENHANCED_ROUTE_REFRESH,
+}
+
+
+def route_refresh(neighbor_capability: NeighborCapability, configured: dict[str, Any]) -> None:
+    """What the route refresh statements advertise and require; the specific one wins over route-refresh."""
+    both = configured.get('route-refresh')
+    advertised: dict[str, bool] = {}
+    required: set[int] = set()
+    for keyword, code in ROUTE_REFRESH_KEYWORDS.items():
+        word = configured.get(keyword, both)
+        advertised[keyword] = bool(word)
+        if word == REQUIRE:
+            required.add(code)
+    if advertised['route-refresh-enhanced'] and not advertised['route-refresh-normal']:
+        raise ValueError(
+            'enhanced route refresh works on the ROUTE-REFRESH message, it is not advertised without route refresh'
+        )
+    neighbor_capability.route_refresh = TriState.from_bool(advertised['route-refresh-normal'])
+    neighbor_capability.enhanced_route_refresh = TriState.from_bool(advertised['route-refresh-enhanced'])
+    neighbor_capability.required = neighbor_capability.required | frozenset(required)
+
+
 def capability(values: dict[str, Any]) -> NeighborCapability:
     configured = values.get('capability', {})
     neighbor_capability = NeighborCapability()
@@ -192,8 +217,7 @@ def capability(values: dict[str, Any]) -> NeighborCapability:
             setattr(neighbor_capability, attribute, TriState.from_bool(given[name]))
     if 'add-path' in given:
         neighbor_capability.add_path = given['add-path']
-    if 'route-refresh' in given:
-        neighbor_capability.route_refresh = 2 if given['route-refresh'] else 0  # REFRESH.NORMAL or 0
+    route_refresh(neighbor_capability, configured)
     if 'software-version' in given:
         neighbor_capability.software_version = 'exabgp' if given['software-version'] else None
     if given.get('link-local-nexthop') is not None:
@@ -295,7 +319,7 @@ def neighbor_settings(values: dict[str, Any]) -> NeighborSettings:
     limits = values.get('family', {}).get('prefix-limit', [])
     settings.prefix_limit = {family: limit for family, limit in limits if family in negotiated}
     settings.nexthops = nexthops(values, neighbor_capability, negotiated)
-    if neighbor_capability.route_refresh and not settings.adj_rib_out:
+    if neighbor_capability.route_refresh.is_enabled() and not settings.adj_rib_out:
         log.warning(
             lazymsg(
                 'neighbor.route_refresh.adj_rib_out peer={peer} action=auto_enabled reason=route_refresh_requires_cache',

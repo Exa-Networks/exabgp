@@ -645,8 +645,8 @@ Neighbor {peer-address}
             + cls._configuration_confederation(neighbor)
             + f'\tcapability {{\n'
             f'\t\tasn4 {state(cap.asn4.is_enabled(), CapabilityCode.FOUR_BYTES_ASN)};\n'
-            f'\t\troute-refresh {state(bool(cap.route_refresh), CapabilityCode.ROUTE_REFRESH)};\n'
-            f'\t\tgraceful-restart {graceful_str};\n'
+            + ''.join(f'\t\t{keyword} {word};\n' for keyword, word in cap.route_refresh_statements())
+            + f'\t\tgraceful-restart {graceful_str};\n'
             f'\t\tsoftware-version {state(bool(cap.software_version), CapabilityCode.SOFTWARE_VERSION)};\n'
             f'\t\tnexthop {state(cap.nexthop.is_enabled(), CapabilityCode.NEXTHOP)};\n'
             f'\t\tadd-path {add_path_str};\n'

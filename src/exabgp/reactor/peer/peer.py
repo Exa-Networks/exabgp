@@ -675,7 +675,7 @@ class Peer:
     async def _send_refresh_messages(self) -> None:
         """Send route refresh messages from the neighbor's refresh queue."""
         assert self.proto is not None, 'Protocol must be established'
-        if self.neighbor.capability.route_refresh:
+        if self.neighbor.capability.route_refresh.is_enabled():
             new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
             if new_refresh:
                 await self.proto.new_refresh(new_refresh)
@@ -1055,10 +1055,7 @@ class Peer:
         cap = self.neighbor.capability
         capabilities: dict[str, tuple[TriState, TriState]] = {
             'asn4': (cap.asn4, TriState.from_bool(peer['asn4'])),
-            'route-refresh': (
-                TriState.from_bool(bool(cap.route_refresh)),
-                TriState.from_bool(peer['route-refresh']),
-            ),
+            'route-refresh': (cap.route_refresh, TriState.from_bool(peer['route-refresh'])),
             'multi-session': (
                 cap.multi_session,
                 TriState.from_bool(peer['multi-session']),

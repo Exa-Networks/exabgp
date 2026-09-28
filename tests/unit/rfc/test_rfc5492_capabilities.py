@@ -82,7 +82,8 @@ def advertising_neighbour() -> Neighbor:
     neighbor = Neighbor()
     neighbor.session.local_as = ASN(65001)
     neighbor.capability.asn4 = TriState.TRUE
-    neighbor.capability.route_refresh = True
+    neighbor.capability.route_refresh = TriState.TRUE
+    neighbor.capability.enhanced_route_refresh = TriState.TRUE
     neighbor.add_family(IPV4_UNICAST)
     neighbor.add_family(IPV6_UNICAST)
     return neighbor
