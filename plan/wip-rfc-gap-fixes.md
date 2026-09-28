@@ -1,6 +1,6 @@
 # Closing the RFC ledger gaps
 
-🔄 **Status:** In progress, 3 of 8 areas done (3 uncommitted, awaiting review)
+🔄 **Status:** In progress, 3 of 8 areas done
 **Branch:** ~~`claude/pensive-rubin-95pg84` (merged with main at `afe4003`)~~ squash-merged as
 #1432 (`acbcf24`). From 2026-09-28 the work continues on the local machine, on `main`,
 uncommitted until Thomas asks.
@@ -54,8 +54,8 @@ env exabgp_log_enable=false uv run pytest tests/unit/rfc -q -rx | grep XFAIL
 | 0 | Test BGP server falls back to IPv4 without IPv6 | ✅ | `6968bfc` |
 | 1 | Received attributes | ✅ | `95dd8d8` |
 | 2 | Received NLRI | ✅ | `df87c44` |
-| 3 | Outgoing routes / adj-rib-out | ✅ uncommitted on main | |
-| 4 | RFC 8277 Multiple Labels Capability | ❌ todo | |
+| 3 | Outgoing routes / adj-rib-out | ✅ | `e642645` |
+| 4 | RFC 8277 Multiple Labels Capability | 🔄 in progress | |
 | 5 | FlowSpec | ❌ todo | |
 | 6 | Graceful Restart receiving procedures | ❌ todo | |
 | 7 | EVPN and Prefix-SID | ❌ todo | |
@@ -112,7 +112,7 @@ Each area below is independent. Do one per commit. The xfail tests named are the
   negotiated, VPN routes are filtered by the peer's membership, and re-evaluated when the
   membership changes.
 
-**Area 3 as implemented (uncommitted, 2026-09-28):**
+**Area 3 as implemented (`e642645`, 2026-09-28):**
 - `AttributeCollection.learned_from` (set in `unpack` from `Negotiated.peer_address`, kept by
   `copy()`), `community_forbids()`, `route_targets()`.
 - `OutgoingRIB._export_allowed` = community + OTC + membership. `_otc_advertised` renamed
@@ -256,8 +256,8 @@ None.
 
 ## Resume point
 
-**2026-09-28 (local):** on `main` after #1432, not on the web branch. Area 3 done and
-uncommitted, waiting for Thomas's review. `test_everything`: all 25 passed (one clean
+**2026-09-28 (local):** on `main` after #1432, not on the web branch. Area 3 committed as
+`e642645` (not pushed). `test_everything`: all 25 passed (one clean
 run, 10m29s). Next: area 4 (RFC 8277). Areas one after the
 other, stopping for review between each.
 
