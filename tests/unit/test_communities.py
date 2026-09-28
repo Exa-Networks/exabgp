@@ -399,7 +399,7 @@ def test_bandwidth_community() -> None:
     bw = Bandwidth.make_bandwidth(asn, speed)
 
     # Verify representation
-    assert 'bandwith' in str(bw).lower()  # Note: typo in original code
+    assert 'bandwidth' in str(bw).lower()
     assert len(bw) == 8
 
     # Verify pack/unpack - now includes type/subtype prefix
