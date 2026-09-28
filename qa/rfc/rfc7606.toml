@@ -586,7 +586,7 @@ handled using the approach of "treat-as-withdraw".
 id = "rfc7606#7.5-local-pref-external-discard"
 section = "7.5"
 level = "SHALL"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 if the LOCAL_PREF attribute is received from an external neighbor,
@@ -594,14 +594,13 @@ it SHALL be discarded using the approach of "attribute discard";
 or
 """
 note = """
-We keep it.  Negotiated.is_ibgp exists and tells eBGP from iBGP, but the only caller is
-AIGP; nothing in the LOCAL_PREF decode path looks at it, so a LOCAL_PREF from an external
-peer is parsed, stored and reported like any other attribute.  For a router that is
-unsafe, because LOCAL_PREF from outside the AS would steer the decision process.  exabgp
-runs no decision process, and dropping the attribute would hide from an operator using it
-as a BGP monitor that the peer sent it at all.  Recorded as a gap rather than
-not-applicable because the RFC's answer is unambiguous and ours is a deliberate departure
-from it, which is exactly the thing that should stay on the ledger.
+`AttributeCollection.parse` drops a LOCAL_PREF from an external neighbour before decoding
+it, whatever its length, and processes the rest of the UPDATE: the route and every other
+attribute stay.  External is `not Negotiated.is_internal_neighbor`, which counts a peer
+in another Member-AS of our confederation as internal, because RFC 5065 5.2 lifts the
+restriction on sending LOCAL_PREF across that boundary.  The attribute is removed rather
+than replaced by a Discard marker, which would make the reactor ignore the whole UPDATE.
+The negative tests are an IBGP neighbour and a confederation member, both of which keep it.
 """
 
 [[requirement]]
@@ -623,9 +622,9 @@ o  if received from an internal neighbor, it SHALL be considered
 note = """
 The quote is both bullets because the second one on its own is word for word identical to
 the second bullet of section 7.9, and a ledger entry has to be readable without the
-section number.  This entry is about the internal half, which we do get right: LOCAL_PREF
+section number.  This entry is about the internal half: LOCAL_PREF
 at any length but 4 is treat-as-withdraw.  The external half is the separate entry
-rfc7606#7.5-local-pref-external-discard, recorded as a gap.
+rfc7606#7.5-local-pref-external-discard.
 """
 
 [[requirement]]
@@ -709,7 +708,7 @@ handled using the approach of "treat-as-withdraw".
 id = "rfc7606#7.9-originator-id-external-discard"
 section = "7.9"
 level = "SHALL"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 if the ORIGINATOR_ID attribute is received from an external
@@ -717,11 +716,12 @@ neighbor, it SHALL be discarded using the approach of "attribute
 discard"; or
 """
 note = """
-Same shape as rfc7606#7.5-local-pref-external-discard and the same cause: nothing in the
-ORIGINATOR_ID decode path consults Negotiated.is_ibgp, so the attribute is kept whichever
-side of the AS boundary it arrived from.  ORIGINATOR_ID from an external peer is a
-reflector leak and worth reporting to an operator, which is what we do with it, but the
-RFC says discard and we do not.
+Same shape as rfc7606#7.5-local-pref-external-discard and the same code: an ORIGINATOR_ID
+from an external neighbour is dropped before it is decoded, at any length, and the rest
+of the UPDATE is processed.  A confederation member counts as internal, as RFC 5065 5.3
+selects its routes by the rules for a peer inside the AS, so route reflection across
+Member-ASes keeps its loop detection.  An IBGP neighbour and a confederation member keep
+the attribute, which is the negative test.
 """
 
 [[requirement]]
@@ -742,15 +742,15 @@ o  if received from an internal neighbor, it SHALL be considered
 """
 note = """
 Quoted as both bullets because the second one alone is identical to section 7.5's.  This
-entry is the internal half, which we do get right; the external half is
-rfc7606#7.9-originator-id-external-discard, recorded as a gap.
+entry is the internal half; the external half is
+rfc7606#7.9-originator-id-external-discard.
 """
 
 [[requirement]]
 id = "rfc7606#7.10-cluster-list-external-discard"
 section = "7.10"
 level = "SHALL"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 if the CLUSTER_LIST attribute is received from an external
@@ -758,11 +758,10 @@ neighbor, it SHALL be discarded using the approach of "attribute
 discard"; or
 """
 note = """
-The third of the three external-neighbour discard rows we do not implement, for the one
-reason they share: the decode path does not know which side of the AS boundary the UPDATE
-came from.  CLUSTER_LIST is the route reflector loop check, so one arriving over an eBGP
-session is a misconfiguration an operator wants to see rather than have silently removed,
-but the RFC's instruction is to discard it.
+The third of the three external-neighbour discard rows, done where the other two are: a
+CLUSTER_LIST from an external neighbour is dropped before it is decoded, at any length,
+and the UPDATE is processed without it.  An IBGP neighbour and a confederation member
+keep it, which is the negative test.
 """
 
 [[requirement]]

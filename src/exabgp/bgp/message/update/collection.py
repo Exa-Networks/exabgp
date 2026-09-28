@@ -172,8 +172,14 @@ class UpdateCollection(Message):
         self.route_leaks: dict[FamilyTuple, RouteLeak] | None = None
 
     def classify_otc(self, negotiated: Negotiated) -> None:
-        """Annotate wire observations without modifying cached attributes or NLRI."""
+        """Apply the ingress procedures of RFC 9234 5 to a received UPDATE.
+
+        A route leak is recorded, not acted on. A route which should have arrived marked
+        and did not is marked, on a copy of the attributes: the collection itself may be
+        the one the session's attribute cache hands to the next UPDATE.
+        """
         self.route_leaks = None
+        self._mark_otc_on_ingress(negotiated)
         otc = self.attributes.get(Attribute.CODE.OTC)
         role = negotiated.peer_role
         if negotiated.role == RoleValue.NO_ROLE or not isinstance(otc, OTC):
@@ -207,6 +213,25 @@ class UpdateCollection(Message):
                 ),
                 'reactor',
             )
+
+    def _mark_otc_on_ingress(self, negotiated: Negotiated) -> None:
+        """RFC 9234 5 ingress rule 3: add the OTC a Provider, Peer or RS left off.
+
+        "If a route is received from a Provider, a Peer, or an RS and the OTC Attribute is
+        not present, then it MUST be added with a value equal to the AS number of the
+        remote AS." Section 5 only covers IPv4 and IPv6 unicast, so an UPDATE announcing
+        nothing in those families is left as it came.
+        """
+        if negotiated.role == RoleValue.NO_ROLE or Attribute.CODE.OTC in self._attributes:
+            return
+        if negotiated.peer_role not in (RoleValue.PROVIDER, RoleValue.PEER, RoleValue.RS):
+            return
+        unicast = ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
+        if not any(routed.nlri.family().afi_safi() in unicast for routed in self._announces):
+            return
+        marked = self._attributes.copy()
+        marked.add(OTC.make_otc(int(negotiated.peer_as)))
+        self._attributes = marked
 
     @classmethod
     def _get_eor(cls, afi: AFI, safi: SAFI) -> 'UpdateCollection':

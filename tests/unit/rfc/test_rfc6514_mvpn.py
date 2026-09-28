@@ -317,24 +317,24 @@ def test_an_unimplemented_or_unknown_route_type_is_kept_as_opaque_bytes(route_ty
 # ========================================== section 5, a malformed PMSI must be logged
 
 
-@pytest.mark.rfc('rfc6514#5-log-malformed-pmsi')
-@pytest.mark.xfail(
-    strict=True,
-    reason='AttributeCollection.parse withdraws on the ValueError a short PMSI raises without logging why',
-)
-def test_a_malformed_pmsi_is_logged_as_an_error(monkeypatch: pytest.MonkeyPatch, caplog: Any) -> None:
-    """Every level and every source is switched on, so silence is the parser's own.
-
-    The per attribute debug line the parser writes before decoding names the PMSI too,
-    as "type 0x16", so naming the attribute is not enough: the record has to say that
-    what arrived was wrong.
-    """
+def enable_every_log(monkeypatch: pytest.MonkeyPatch, caplog: Any) -> None:
+    """Every level and every source switched on, so silence is the parser's own."""
     monkeypatch.setattr(log, 'logger', staticmethod(ENABLED_LOG_DISPATCH))
     monkeypatch.setattr(option, 'logger', logging.getLogger('test.rfc6514.pmsi'))
     monkeypatch.setattr(option, 'formater', echo)
     monkeypatch.setattr(option, 'option', {})
     monkeypatch.setattr(option, 'logit', {level: True for level in LOG_LEVELS})
     caplog.set_level(logging.DEBUG, logger='test.rfc6514.pmsi')
+
+
+@pytest.mark.rfc('rfc6514#5-log-malformed-pmsi')
+def test_a_malformed_pmsi_is_logged_as_an_error(monkeypatch: pytest.MonkeyPatch, caplog: Any) -> None:
+    """The record has to say that what arrived was wrong, and say it as an error.
+
+    The per attribute debug line the parser writes before decoding names the PMSI too,
+    as "type 0x16", so naming the attribute is not enough.
+    """
+    enable_every_log(monkeypatch, caplog)
 
     collection = parse_pmsi(bytes(PMSI_HEADER_SIZE_BYTES - 2))
     assert withdrawn(collection)
@@ -346,6 +346,21 @@ def test_a_malformed_pmsi_is_logged_as_an_error(monkeypatch: pytest.MonkeyPatch,
         and any(word in message for word in ('malformed', 'invalid', 'withdraw', 'error'))
         for message in messages
     ), messages
+    assert any(record.levelno >= logging.ERROR for record in caplog.records), 'the malformed PMSI was not an error'
+
+
+@pytest.mark.rfc('rfc6514#5-log-malformed-pmsi', polarity='negative')
+def test_a_well_formed_pmsi_logs_no_error(monkeypatch: pytest.MonkeyPatch, caplog: Any) -> None:
+    """An error logged for every PMSI would pass the test above and bury the real ones."""
+    enable_every_log(monkeypatch, caplog)
+
+    collection = parse_pmsi(pmsi_value(TUNNEL_TYPE_INGRESS_REPLICATION, bytes([10, 0, 0, 1])))
+    assert not withdrawn(collection)
+    assert PMSI_TUNNEL in collection
+
+    assert caplog.records, 'the parser logged nothing at all, so the capture itself is broken'
+    errors = [record.getMessage() for record in caplog.records if record.levelno >= logging.ERROR]
+    assert errors == [], errors
 
 
 # ================================ section 4.5, Source Active routes in the SSM range

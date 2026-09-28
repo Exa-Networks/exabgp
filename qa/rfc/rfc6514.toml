@@ -179,7 +179,7 @@ and destroy every MVPN route on the session.
 id = "rfc6514#5-log-malformed-pmsi"
 section = "5"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 An implementation MUST provide debugging facilities to permit issues
@@ -188,15 +188,11 @@ minimum, such facilities MUST include logging an error when such an
 attribute is detected.
 """
 note = """
-exabgp detects the malformed attribute and acts on it, but says nothing.  In
-`AttributeCollection.parse` the `except (IndexError, ValueError)` arm adds a
-`TreatAsWithdraw` and continues with no log call at all - and the ValueError branch is
-the one a short PMSI takes, because `PMSI.from_packet` raises ValueError rather than
-Notify.  The neighbouring arms are better behaved: the bad-flag path a few lines below
-calls `log.debug` before doing the same thing.  So the routes vanish from the API with no
-record of why, which is precisely the diagnosis problem this paragraph exists to prevent.
-A one line `log.debug` in that arm naming the attribute code would close it, and would
-close it for every other TREAT_AS_WITHDRAW attribute at the same time.
+`AttributeCollection.parse` logs an error naming the attribute, the action taken and the
+reason whenever it treats an UPDATE as withdrawn or discards an attribute because the
+attribute was malformed, which covers a short PMSI Tunnel attribute along with every
+other attribute RFC 7606 handles that way.  The negative test is that a well formed PMSI
+logs no error at all, so the log is not an error per PMSI.
 """
 
 [[requirement]]

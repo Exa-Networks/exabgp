@@ -101,24 +101,25 @@ def test_an_update_without_an_originator_id_does_not_gain_one() -> None:
 
 
 @pytest.mark.rfc('rfc4456#8-no-second-originator-id', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='the parser keeps the first ORIGINATOR_ID and drops the second in silence, no treat-as-withdraw',
-)
-def test_two_originator_ids_in_one_update_are_not_merged_into_one() -> None:
-    """A peer sending the attribute twice must not leave us picking one silently.
+@pytest.mark.rfc('rfc7606#3g-duplicate-attribute-keeps-the-first')
+def test_a_second_originator_id_in_one_update_is_discarded_and_the_first_kept() -> None:
+    """A peer sending the attribute twice does not get the second one to replace the first.
 
-    RFC 7606 section 3 (g) makes a repeated attribute treat-as-withdraw.  What happens
-    instead is that `AttributeCollection.add` keeps whichever came first, so the route is
-    reported with one of the two identifiers and nothing says the other existed.  The
-    'multiple attribute' Notify in collection.py is not on this path.
+    RFC 7606 section 3 (g) settles what a repeated attribute other than MP_REACH_NLRI and
+    MP_UNREACH_NLRI means: "all the occurrences of the attribute other than the first one
+    SHALL be discarded and the UPDATE message will continue to be processed".  So the route
+    is not withdrawn, and the identifier reported is the first one, never the second and
+    never one of our own.
     """
     first = attribute(ORIGINATOR_ID, bytes([10, 1, 2, 3]))
     second = attribute(ORIGINATOR_ID, bytes([10, 9, 9, 9]))
 
     collection = parse(first + second)
 
-    assert withdrawn(collection)
+    assert not withdrawn(collection), 'a repeated ORIGINATOR_ID withdrew the route, RFC 7606 3 (g) keeps it'
+    decoded = collection[ORIGINATOR_ID]
+    assert isinstance(decoded, OriginatorID)
+    assert decoded.top() == '10.1.2.3', 'the second ORIGINATOR_ID replaced the first'
 
 
 # ==================================== section 8, the lengths RFC 4456 never made normative

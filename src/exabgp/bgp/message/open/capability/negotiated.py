@@ -389,6 +389,31 @@ class Negotiated:
         """We are in a confederation and the peer is not (RFC 5065)."""
         return bool(self.confederation) and not self.neighbor.session.in_confederation(self.peer_as)
 
+    @property
+    def is_internal_neighbor(self) -> bool:
+        """The peer is inside our AS, or in another Member-AS of our confederation.
+
+        RFC 7606 7.5, 7.9 and 7.10 discard LOCAL_PREF, ORIGINATOR_ID and CLUSTER_LIST from
+        an external neighbour. A neighbouring Member-AS is not external in that sense:
+        RFC 5065 5.2 lifts the restriction on sending it LOCAL_PREF, and 5.3 has what it
+        sends selected by the rules for a peer inside the AS.
+        """
+        return self.is_ibgp or self.confed_member
+
+    @property
+    def accepts_tunnel_encapsulation(self) -> bool:
+        """Whether a received Tunnel Encapsulation attribute is kept (RFC 9012 11).
+
+        `tunnel-encapsulation auto`, the default, filters it from every external neighbour,
+        which RFC 9012 11 requires, and keeps it inside the AS and the confederation: the
+        scope the attribute is meant for is a set of ASes run by one administration.
+        """
+        neighbor = getattr(self, 'neighbor', None)
+        setting = neighbor.tunnel_encapsulation if neighbor is not None else 'auto'
+        if setting == 'auto':
+            return self.is_internal_neighbor
+        return setting == 'accept'
+
     def required(self, afi: AFI, safi: SAFI) -> bool:
         """Get addpath status based on internal direction - if IN use receive, else use send"""
         from exabgp.bgp.message.direction import Direction

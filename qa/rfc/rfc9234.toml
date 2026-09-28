@@ -142,7 +142,7 @@ text = """
 id = "rfc9234#5-ingress-add-otc-when-absent"
 section = "5"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 3.  If a route is received from a Provider, a Peer, or an RS and the
@@ -150,13 +150,13 @@ text = """
     equal to the AS number of the remote AS.
 """
 note = """
-Not implemented. A route arriving from a Provider, a Peer or an RS without an OTC
-attribute is passed to the API exactly as it came off the wire. Until 6.0.0 the
-configuration said so out loud, `role { otc receive; }` being refused with "OTC ingress
-marking is not implemented"; the whole `role otc` sub-option has since gone, so the
-refusal now reads as a removal instead. A gap rather than not-applicable: the attribute is
-what a downstream API client would need to apply the rest of Section 5, and the day exabgp
-marks on ingress the same value would be the one it sends back out.
+`UpdateCollection.classify_otc`, the ingress step the reactor runs on every received
+UPDATE, adds an OTC equal to the remote AS when the session has a role, the peer is a
+Provider, a Peer or an RS, the UPDATE announces IPv4 or IPv6 unicast, and no OTC arrived.
+The marking goes on a copy of the attributes, so the session's attribute cache is not
+changed.  The negative tests are a route from a Customer, from an RS-Client and on a
+session without a role, none of which is marked, and an OTC which arrived, which is kept
+rather than replaced.
 """
 
 [[requirement]]

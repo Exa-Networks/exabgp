@@ -95,14 +95,18 @@ def decoded(wire: bytes) -> TunnelEncap:
     return attr
 
 
-def ebgp_session() -> Negotiated:
-    """An EBGP neighbour built by the real configuration parser, and its negotiated OPEN."""
+def configured_session(peer_as: int = PEER_AS, option: str = '') -> Negotiated:
+    """A neighbour built by the real configuration parser, and its negotiated OPEN.
+
+    EBGP unless `peer_as` is our own AS; `option` is a line added to the neighbour block.
+    """
     text = f"""
 neighbor 192.0.2.1 {{
     router-id 192.0.2.2;
     local-address 192.0.2.2;
     local-as {LOCAL_AS};
-    peer-as {PEER_AS};
+    peer-as {peer_as};
+    {option}
     family {{ ipv4 unicast; }}
 }}
 """
@@ -113,8 +117,27 @@ neighbor 192.0.2.1 {{
     capabilities = Capabilities().new(neighbor, False, local_as=ASN(LOCAL_AS))
     negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
     negotiated.sent(Open.make_open(Version(4), ASN(LOCAL_AS), HoldTime(180), RouterID('192.0.2.2'), capabilities))
-    negotiated.received(Open.make_open(Version(4), ASN(PEER_AS), HoldTime(180), RouterID('192.0.2.1'), capabilities))
+    negotiated.received(Open.make_open(Version(4), ASN(peer_as), HoldTime(180), RouterID('192.0.2.1'), capabilities))
     return negotiated
+
+
+def ebgp_session() -> Negotiated:
+    """An EBGP neighbour configured with nothing but its ASes."""
+    return configured_session()
+
+
+def received_with_tunnel_encapsulation(negotiated: Negotiated) -> AttributeCollection:
+    """The attributes of an UPDATE carrying a Tunnel Encapsulation attribute, as decoded."""
+    encap = attribute(tunnel(SR_POLICY_TUNNEL, preference(100)))
+    attributes = ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP + encap
+    payload = pack('!H', 0) + pack('!H', len(attributes)) + attributes + PREFIX_10_0_0_0_24
+
+    message = Update.unpack_message(payload, negotiated)
+    assert isinstance(message, Update)
+    collection = message.parse(negotiated)
+
+    assert len(collection.announces) == 1, 'the route itself must still be accepted'
+    return collection.attributes
 
 
 # --------------------------------------------------------------------------------------
@@ -329,27 +352,40 @@ def test_a_run_of_zero_length_tlvs_and_subtlvs_terminates() -> None:
 
 
 @pytest.mark.rfc('rfc9012#11-must-be-able-to-filter-incoming')
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason='gap: no neighbour knob filters the Tunnel Encapsulation attribute on receipt, and none is on for EBGP',
-)
 def test_an_ebgp_session_filters_the_tunnel_encapsulation_attribute_from_an_incoming_update() -> None:
     """Being able to filter is only visible once a filter exists and is turned on.
 
     The same section asks for the filter to be on by default for every EBGP session, so a
-    neighbour configured with nothing but its ASes is where it shows without guessing the
-    name of a knob that has not been written.  Filtered means "neither processed nor
-    distributed": the route arrives and the attribute is not in what the API is handed.
+    neighbour configured with nothing but its ASes is where it shows.  Filtered means
+    "neither processed nor distributed": the route arrives and the attribute is not in
+    what the API is handed.
     """
-    negotiated = ebgp_session()
-    encap = attribute(tunnel(SR_POLICY_TUNNEL, preference(100)))
-    attributes = ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP + encap
-    payload = pack('!H', 0) + pack('!H', len(attributes)) + attributes + PREFIX_10_0_0_0_24
+    attributes = received_with_tunnel_encapsulation(ebgp_session())
 
-    message = Update.unpack_message(payload, negotiated)
-    assert isinstance(message, Update)
-    collection = message.parse(negotiated)
+    assert TUNNEL_ENCAP not in attributes, 'an EBGP peer delivered a Tunnel Encapsulation attribute'
 
-    assert len(collection.announces) == 1, 'the route itself must still be accepted'
-    assert TUNNEL_ENCAP not in collection.attributes, 'an EBGP peer delivered a Tunnel Encapsulation attribute'
+
+@pytest.mark.rfc('rfc9012#11-must-be-able-to-filter-incoming')
+def test_the_filter_can_be_turned_on_for_an_ibgp_session() -> None:
+    """Able to filter means on any session the operator chooses, not only on EBGP."""
+    negotiated = configured_session(peer_as=LOCAL_AS, option='tunnel-encapsulation filter;')
+
+    assert TUNNEL_ENCAP not in received_with_tunnel_encapsulation(negotiated), 'the filter was configured and ignored'
+
+
+@pytest.mark.rfc('rfc9012#11-must-be-able-to-filter-incoming', polarity='negative')
+@pytest.mark.parametrize(
+    'peer_as, option',
+    [(LOCAL_AS, ''), (LOCAL_AS, 'tunnel-encapsulation accept;'), (PEER_AS, 'tunnel-encapsulation accept;')],
+    ids=['ibgp-by-default', 'ibgp-accept', 'ebgp-accept'],
+)
+def test_the_tunnel_encapsulation_attribute_is_kept_where_it_is_not_filtered(peer_as: int, option: str) -> None:
+    """A filter which dropped the attribute everywhere would pass both tests above.
+
+    Inside the AS is the scope the attribute is meant for, and an operator who says accept
+    on an EBGP session is choosing to widen that scope, which RFC 9012 11 leaves to them.
+    """
+    attributes = received_with_tunnel_encapsulation(configured_session(peer_as=peer_as, option=option))
+
+    encap = attributes.get(TUNNEL_ENCAP)
+    assert isinstance(encap, TunnelEncap), f'the Tunnel Encapsulation attribute was filtered ({option or "default"})'
