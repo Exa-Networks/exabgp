@@ -33,3 +33,5 @@ from __future__ import annotations
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
 from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
+from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
+from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
