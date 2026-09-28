@@ -18,16 +18,17 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.configuration.grammar.context import ReadContext
 import struct
 from typing import Any, Callable
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.operational import Advisory, OperationalFamily, Query, Response
 from exabgp.configuration.grammar import shape
-from exabgp.configuration.grammar.shape import Shape
+from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Leaf
+from exabgp.configuration.grammar.section import Kept, Store, Values
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
@@ -164,20 +165,23 @@ KINDS: dict[str, tuple[type[OperationalFamily], tuple[str, ...], str]] = {
 }
 
 
-def _opened(context: ReadContext) -> None:
-    context.messages = []
+class MessageStore(Store):
+    """A message of the operational block being read."""
+
+    def keep(self, values: Values, value: OperationalFamily, context: ReadContext) -> None:
+        context.messages.append(value)
 
 
-def _store_message(values: dict[str, Any], message: OperationalFamily, context: ReadContext) -> None:
-    context.messages.append(message)
+class OperationalSection(Kept):
+    def opened(self, context: ReadContext) -> None:
+        context.messages = []
 
-
-def _operational(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
-    # legacy: the messages of a block replace those of a block before it, unless it has none
-    messages, context.messages = context.messages, []
-    if messages:
-        values[MESSAGES] = messages
-    return values
+    def build(self, name: Any, values: Values, context: ReadContext) -> Values:
+        # legacy: the messages of a block replace those of a block before it, unless it has none
+        messages, context.messages = context.messages, []
+        if messages:
+            values[MESSAGES] = messages
+        return values
 
 
 def kind(message: OperationalFamily) -> str:
@@ -191,15 +195,14 @@ def kind(message: OperationalFamily) -> str:
 OPERATIONAL = Block(
     'operational',
     field='operational',
-    build=_operational,
-    opened=_opened,
+    section=OperationalSection(),
     doc='the operational messages sent to the peer',
     children=tuple(
         Leaf(
             keyword,
             OperationalLine(keyword, klass, parameters),
             field=f'_{keyword}',
-            store=_store_message,
+            store=MessageStore(),
             doc=doc,
             multiple=True,
         )

@@ -17,24 +17,25 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.configuration.grammar.context import ReadContext
 from dataclasses import dataclass
 from typing import Any
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute import LocalPreference, MED, NextHop, NextHopSelf
-from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.bgp.message.update.attribute import MED, AttributeCollection, LocalPreference, NextHop, NextHopSelf
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, RTC, Label
 from exabgp.bgp.message.update.nlri.settings import INETSettings, RTCSettings
 from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.error import ConfigError
-from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.nodes import Block, Leaf
+from exabgp.configuration.grammar.section import Kept, Store, Values
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.l2vpn import VPLSLine
 from exabgp.configuration.grammar.tree.sr_policy import SRPolicyLine
 from exabgp.configuration.grammar.tree.static import (
     MAX_ROUTE_VALUES,
     ROUTE_VALUES,
+    ROUTES,
     RouteValue,
     Unprintable,
     action,
@@ -42,7 +43,6 @@ from exabgp.configuration.grammar.tree.static import (
     normalize,
     route_words,
     static_block,
-    store_routes,
     value_fields,
 )
 from exabgp.configuration.grammar.types import bgp
@@ -331,14 +331,23 @@ def _apply(settings: Any, attributes: AttributeCollection, spec: RouteValue, val
         attributes.add(value)
 
 
-def _store_announced(values: dict[str, Any], routes: list[Route], context: ReadContext) -> None:
-    values.setdefault(ANNOUNCED, []).extend(routes)
+class AnnouncedStore(Store):
+    """The routes of an address family, kept by its block until it closes."""
+
+    def keep(self, values: Values, value: list[Route], context: ReadContext) -> None:
+        values.setdefault(ANNOUNCED, []).extend(value)
 
 
-def _address_family(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
-    # legacy: the routes of an address family join the others when its block closes
-    context.routes.extend(values.pop(ANNOUNCED, []))
-    return values
+class AddressFamilySection(Kept):
+    """legacy: the routes of an address family join the others when its block closes."""
+
+    def build(self, name: Any, values: Values, context: ReadContext) -> Values:
+        context.routes.extend(values.pop(ANNOUNCED, []))
+        return values
+
+
+ANNOUNCED_STORE = AnnouncedStore()
+ADDRESS_FAMILY = AddressFamilySection()
 
 
 def _refused_family(keyword: str) -> Leaf:
@@ -353,7 +362,7 @@ def _address_block(keyword: str, afi: AFI, safi_keywords: tuple[str, ...]) -> Bl
     return Block(
         keyword,
         field=keyword,
-        build=_address_family,
+        section=ADDRESS_FAMILY,
         doc=f'the {keyword} routes, by subsequent address family',
         children=(
             *(
@@ -361,7 +370,7 @@ def _address_block(keyword: str, afi: AFI, safi_keywords: tuple[str, ...]) -> Bl
                     safi_keyword,
                     AnnounceLine(afi, SAFI.from_string(safi_keyword), ANNOUNCE_SAFIS[safi_keyword]),
                     field=f'_{safi_keyword}',
-                    store=_store_announced,
+                    store=ANNOUNCED_STORE,
                     multiple=True,
                     doc=f'a {keyword} {safi_keyword} route',
                 )
@@ -372,7 +381,7 @@ def _address_block(keyword: str, afi: AFI, safi_keywords: tuple[str, ...]) -> Bl
                     safi_keyword,
                     AnnounceFlowLine(afi, SAFI.from_string(safi_keyword)),
                     field=f'_{safi_keyword}',
-                    store=_store_announced,
+                    store=ANNOUNCED_STORE,
                     multiple=True,
                     doc=f'a {keyword} {safi_keyword} rule, RFC 8955',
                 )
@@ -382,7 +391,7 @@ def _address_block(keyword: str, afi: AFI, safi_keywords: tuple[str, ...]) -> Bl
                 'mup',
                 SelectLine(afi, SAFI.mup, MUP_TYPES, mup_values()),
                 field='_mup',
-                store=_store_announced,
+                store=ANNOUNCED_STORE,
                 multiple=True,
                 doc='a Mobile User Plane route, draft-mpmz-bess-mup-safi',
             ),
@@ -390,7 +399,7 @@ def _address_block(keyword: str, afi: AFI, safi_keywords: tuple[str, ...]) -> Bl
                 'mcast-vpn',
                 SelectLine(afi, SAFI.mcast_vpn, MVPN_TYPES, IP_VALUES),
                 field='_mcast-vpn',
-                store=_store_announced,
+                store=ANNOUNCED_STORE,
                 multiple=True,
                 doc='a multicast VPN route, RFC 6514',
             ),
@@ -398,7 +407,7 @@ def _address_block(keyword: str, afi: AFI, safi_keywords: tuple[str, ...]) -> Bl
                 'sr-policy',
                 SRPolicyLine(afi),
                 field='_sr-policy',
-                store=_store_announced,
+                store=ANNOUNCED_STORE,
                 multiple=True,
                 doc='an SR policy route, RFC 9830',
             ),
@@ -420,10 +429,10 @@ IPV6 = _address_block(
 L2VPN = Block(
     'l2vpn',
     field='l2vpn',
-    build=_address_family,
+    section=ADDRESS_FAMILY,
     doc='the l2vpn routes',
     children=(
-        Leaf('vpls', VPLSLine(), field='_vpls', store=_store_announced, multiple=True, doc='a VPLS route, RFC 4761'),
+        Leaf('vpls', VPLSLine(), field='_vpls', store=ANNOUNCED_STORE, multiple=True, doc='a VPLS route, RFC 4761'),
     ),
 )
 
@@ -474,7 +483,7 @@ STATIC = static_block(
             'rtc',
             AnnounceLine(AFI.ipv4, SAFI.rtc, ANNOUNCE_SAFIS['rtc']),
             field='_rtc',
-            store=store_routes,
+            store=ROUTES,
             multiple=True,
             doc='a route target membership route, RFC 4684',
         ),
@@ -482,7 +491,7 @@ STATIC = static_block(
             'sr-policy',
             SRPolicyLine(None),
             field='_sr-policy',
-            store=store_routes,
+            store=ROUTES,
             multiple=True,
             doc='an SR policy route',
         ),

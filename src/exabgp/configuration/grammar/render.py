@@ -10,7 +10,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import dataclasses
 from typing import Any
 
 from exabgp.configuration.grammar.context import PrintContext
@@ -40,15 +39,6 @@ def quote(word: str) -> str:
     return f'"{escaped}"'
 
 
-def fields(built: Any) -> dict[str, Any]:
-    """The values by field of a Settings object, the inverse of what a block builds."""
-    if isinstance(built, dict):
-        return built
-    if dataclasses.is_dataclass(built) and not isinstance(built, type):
-        return {each.name: getattr(built, each.name) for each in dataclasses.fields(built)}
-    raise TypeError(f'can not render {type(built).__name__}, it is not a dataclass')
-
-
 def _leaf(leaf: Leaf, value: Any) -> str:
     rendered = list(value) if isinstance(value, Printed) else leaf.type.render(value)
     words = ' '.join(quote(word) for word in rendered)
@@ -56,10 +46,7 @@ def _leaf(leaf: Leaf, value: Any) -> str:
 
 
 def _block(block: Block, name: Any, built: Any, depth: int, context: PrintContext) -> list[str]:
-    if block.unbuild is not None:
-        name, values = block.unbuild(built, context)
-    else:
-        values = fields(built)
+    name, values = block.section.unbuild(name, built, context)
     indent = INDENT * depth
     words = [quote(word) for word in block.name.render(name)] if block.name is not None else []
     lines = [indent + ' '.join([block.keyword, *words, '{'])] if block.keyword else []

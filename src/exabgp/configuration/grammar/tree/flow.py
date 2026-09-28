@@ -20,7 +20,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.configuration.grammar.context import ReadContext
 from dataclasses import dataclass
 from typing import Any
 
@@ -44,14 +43,16 @@ from exabgp.bgp.message.update.nlri.flow import (
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.settings import FlowSettings
 from exabgp.configuration.grammar import shape
-from exabgp.configuration.grammar.shape import Shape
+from exabgp.configuration.grammar.context import PrintContext, ReadContext
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
+from exabgp.configuration.grammar.section import Kept, Section, Store, Values
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
     MAX_ROUTE_VALUES,
     ROUTE_VALUES,
+    ROUTES,
     action,
-    store_routes,
     value_fields,
 )
 from exabgp.configuration.grammar.types import flow as types
@@ -298,8 +299,8 @@ def action_pairs(route: Route) -> list[tuple[str, list[str]]]:
     """The actions of a flow route, as keyword and words; ValueError when one has no statement."""
     from exabgp.bgp.message.update.attribute import Attribute, GenericAttribute
     from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHopIPv6IETF, TrafficRedirectIPv6
-    from exabgp.configuration.grammar.types.bgp import HexAttribute
     from exabgp.configuration.grammar.types.base import Syntax
+    from exabgp.configuration.grammar.types.bgp import HexAttribute
 
     actions: list[tuple[str, list[str]]] = []
     attribute: Any
@@ -373,20 +374,19 @@ def announce_flow_words(route: Route) -> list[str]:
 # --------------------------------------------------------------------------- the route block
 
 
-def _opened(context: ReadContext) -> None:
-    context.flow_values = []
+class FlowValueStore(Store):
+    """A value of the flow route block being read, kept in order: they apply one after the other."""
 
+    def __init__(self, spec: FlowValue) -> None:
+        self.spec = spec
 
-def _store_op(spec: FlowValue) -> Any:
-    def store(values: dict[str, Any], value: Any, context: ReadContext) -> None:
-        context.flow_values.append((spec, value))
-
-    return store
+    def keep(self, values: Values, value: Any, context: ReadContext) -> None:
+        context.flow_values.append((self.spec, value))
 
 
 def _leaves(values: dict[str, FlowValue]) -> tuple[Leaf, ...]:
     return tuple(
-        Leaf(keyword, spec.type, field=f'_{keyword}', store=_store_op(spec), doc=spec.doc)
+        Leaf(keyword, spec.type, field=f'_{keyword}', store=FlowValueStore(spec), doc=spec.doc)
         for keyword, spec in values.items()
     )
 
@@ -409,33 +409,42 @@ class _Ignored(Type[str]):
         return ['', 'name']
 
 
-def _route(name: Any, values: dict[str, Any], context: ReadContext) -> list[Route]:
-    built = FlowRoute()
-    taken, context.flow_values = context.flow_values, []
-    for spec, value in taken:
-        built.apply(spec, value, line=False)
-    if not built.nlri.rules:
-        raise ValueError('a flow route needs at least one match, or it matches every packet')
-    route = built.route()
-    context.routes.append(route)
-    return [route]
+class FlowRouteSection(Section[list[Route]]):
+    """`route [<name>] { match { } then { } scope { } }`: one flow route."""
+
+    def opened(self, context: ReadContext) -> None:
+        context.flow_values = []
+
+    def build(self, name: Any, values: Values, context: ReadContext) -> list[Route]:
+        built = FlowRoute()
+        taken, context.flow_values = context.flow_values, []
+        for spec, value in taken:
+            built.apply(spec, value, line=False)
+        if not built.nlri.rules:
+            raise ValueError('a flow route needs at least one match, or it matches every packet')
+        route = built.route()
+        context.routes.append(route)
+        return [route]
+
+    def unbuild(self, name: Any, built: Route, context: PrintContext) -> tuple[Any, Values]:
+        return route_values(built)
 
 
-def _flow(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
-    # legacy: the flow section keeps the very list of the routes not yet taken, and the
-    # neighbor adds them from it after taking them: each is announced twice
-    values['routes'] = context.routes
-    return values
+class FlowSection(Kept):
+    def build(self, name: Any, values: Values, context: ReadContext) -> Values:
+        # legacy: the flow section keeps the very list of the routes not yet taken, and the
+        # neighbor adds them from it after taking them: each is announced twice
+        values['routes'] = context.routes
+        return values
 
 
 ROUTE_BLOCK = Block(
     'route',
     field='_routes',
-    build=_route,
+    section=FlowRouteSection(),
     keep=Keep.EXTEND,
     name=_Ignored(),
     key='label',  # the name is read and ignored
-    opened=_opened,
     doc='a flow route, what it matches and what it does',
     # the blocks first: printed in this order, a redirect in `then` is read before `next-hop`
     children=(
@@ -444,15 +453,14 @@ ROUTE_BLOCK = Block(
         Block('scope', field='scope', children=_leaves(SCOPE), doc='where the route applies'),
         *_leaves(ROUTE),
     ),
-    unbuild=lambda route, context: route_values(route),
 )
 
 FLOW = Block(
     'flow',
     field='flow',
-    build=_flow,
+    section=FlowSection(),
     doc='FlowSpec routes (RFC 8955, RFC 8956)',
-    children=(Leaf('route', FlowLine(), field='_line', store=store_routes, multiple=True), ROUTE_BLOCK),
+    children=(Leaf('route', FlowLine(), field='_line', store=ROUTES, multiple=True), ROUTE_BLOCK),
 )
 
 # --------------------------------------------------------------------------- announce families

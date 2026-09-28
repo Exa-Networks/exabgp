@@ -75,8 +75,8 @@ def read_operational(kind: str, words: list[str]) -> Any:
     The words are the command as the API splits it, on spaces: a quote stays in the word,
     as it did when the legacy parser read them.
     """
-    from exabgp.configuration.grammar.tree.operational import KINDS, OperationalLine
     from exabgp.configuration.grammar.lexer import Token
+    from exabgp.configuration.grammar.tree.operational import KINDS, OperationalLine
     from exabgp.configuration.grammar.words import Words
 
     found = KINDS.get(kind)

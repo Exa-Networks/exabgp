@@ -12,7 +12,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.configuration.grammar.context import ReadContext
 from typing import Any
 
 from exabgp.bgp.message import Action
@@ -20,16 +19,18 @@ from exabgp.bgp.message.update.attribute import AttributeCollection, NextHopSelf
 from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.nlri.settings import VPLSSettings
 from exabgp.configuration.grammar import shape
-from exabgp.configuration.grammar.shape import Shape
+from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
+from exabgp.configuration.grammar.section import Kept, Section, Store, Values
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
     MAX_ROUTE_VALUES,
     ROUTE_VALUES,
+    ROUTES,
     RouteValue,
     action,
     attribute_words,
-    store_routes,
     value_fields,
 )
 from exabgp.configuration.grammar.types.base import Type
@@ -158,15 +159,14 @@ def vpls_words(route: Route) -> list[str]:
 # --------------------------------------------------------------------------- the l2vpn section
 
 
-def _opened(context: ReadContext) -> None:
-    context.vpls_values = []
+class VPLSValueStore(Store):
+    """A value of the vpls block being read, kept in order: they apply one after the other."""
 
+    def __init__(self, spec: RouteValue) -> None:
+        self.spec = spec
 
-def _store_op(spec: RouteValue) -> Any:
-    def store(values: dict[str, Any], value: Any, context: ReadContext) -> None:
-        context.vpls_values.append((spec, value))
-
-    return store
+    def keep(self, values: Values, value: Any, context: ReadContext) -> None:
+        context.vpls_values.append((self.spec, value))
 
 
 class _Ignored(Type[str]):
@@ -187,25 +187,33 @@ class _Ignored(Type[str]):
         return ['', 'site']
 
 
-def _vpls(name: Any, values: dict[str, Any], context: ReadContext) -> list[Route]:
-    settings = VPLSSettings()
-    settings.action = Action.ANNOUNCE
-    attributes = AttributeCollection()
-    taken, context.vpls_values = context.vpls_values, []
-    for spec, value in taken:
-        _apply(settings, attributes, spec, value)
-    route = _vpls_route(settings, attributes, '')
-    context.routes.append(route)
-    return [route]
+class VPLSSection(Section[list[Route]]):
+    """`vpls [<name>] { ... }`: one VPLS route, its values one per statement."""
+
+    def opened(self, context: ReadContext) -> None:
+        context.vpls_values = []
+
+    def build(self, name: Any, values: Values, context: ReadContext) -> list[Route]:
+        settings = VPLSSettings()
+        settings.action = Action.ANNOUNCE
+        attributes = AttributeCollection()
+        taken, context.vpls_values = context.vpls_values, []
+        for spec, value in taken:
+            _apply(settings, attributes, spec, value)
+        route = _vpls_route(settings, attributes, '')
+        context.routes.append(route)
+        return [route]
 
 
-def _store_on_last_route(values: dict[str, Any], value: Any, context: ReadContext) -> None:
-    # legacy: an attribute given in the l2vpn section goes to the last route read, a static
-    # one included, and fails when there is none
-    routes = context.routes
-    if not routes:
-        raise ValueError('there is no route for this attribute to be added to')
-    routes[-1].attributes.add(value)
+class LastRouteStore(Store):
+    """legacy: an attribute given in the l2vpn section goes to the last route read, a static
+    one included, and fails when there is none."""
+
+    def keep(self, values: Values, value: Any, context: ReadContext) -> None:
+        routes = context.routes
+        if not routes:
+            raise ValueError('there is no route for this attribute to be added to')
+        routes[-1].attributes.add(value)
 
 
 class _NoSetter(Type[Any]):
@@ -230,23 +238,23 @@ class _NoSetter(Type[Any]):
         return shape.REFUSED
 
 
-def _l2vpn(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
-    # legacy: the section takes every route not yet taken, those read before it included
-    values.setdefault('routes', []).extend(context.take_routes())
-    return values
+class L2VPNSection(Kept):
+    def build(self, name: Any, values: Values, context: ReadContext) -> Values:
+        # legacy: the section takes every route not yet taken, those read before it included
+        values.setdefault('routes', []).extend(context.take_routes())
+        return values
 
 
 VPLS_BLOCK = Block(
     'vpls',
     field='_blocks',
-    build=_vpls,
+    section=VPLSSection(),
     keep=Keep.EXTEND,
     name=_Ignored(),
     key='label',  # the name is read and ignored
-    opened=_opened,
     doc='a VPLS route, its values one per statement',
     children=tuple(
-        Leaf(keyword, spec.type, field=f'_{keyword}', store=_store_op(spec), doc=spec.doc)
+        Leaf(keyword, spec.type, field=f'_{keyword}', store=VPLSValueStore(spec), doc=spec.doc)
         for keyword, spec in VPLS_VALUES.items()
     ),
 )
@@ -254,14 +262,14 @@ VPLS_BLOCK = Block(
 L2VPN_SECTION = Block(
     'l2vpn',
     field='l2vpn',
-    build=_l2vpn,
+    section=L2VPNSection(),
     doc='VPLS routes',
     children=(
-        Leaf('vpls', VPLSLine(), field='_line', store=store_routes, doc='a VPLS route, on one line', multiple=True),
+        Leaf('vpls', VPLSLine(), field='_line', store=ROUTES, doc='a VPLS route, on one line', multiple=True),
         VPLS_BLOCK,
         *(Leaf(keyword, _NoSetter(keyword), field=f'_{keyword}') for keyword in VPLS_NLRI),
         *(
-            Leaf(keyword, ROUTE_VALUES[keyword].type, field=f'_{keyword}', store=_store_on_last_route)
+            Leaf(keyword, ROUTE_VALUES[keyword].type, field=f'_{keyword}', store=LastRouteStore())
             for keyword in VPLS_ATTRIBUTES
         ),
     ),

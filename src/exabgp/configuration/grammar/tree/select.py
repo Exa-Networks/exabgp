@@ -25,8 +25,8 @@ from exabgp.bgp.message.update.nlri.mup import (
 )
 from exabgp.bgp.message.update.nlri.mvpn import SharedJoin, SourceAD, SourceJoin
 from exabgp.configuration.grammar import shape
-from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.error import ROUTE_ERRORS, ConfigError
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
     MAX_ROUTE_VALUES,
     ROUTE_VALUES,

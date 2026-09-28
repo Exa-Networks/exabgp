@@ -19,10 +19,12 @@ removed once every configuration and API command read the same with both; see
 |---|---|
 | `lexer.py` | positioned tokens, the legacy quoting and continuation rules included |
 | `words.py` | `Words`: the words of one statement, `peek`/`word`/`rest`, and the read `context` |
+| `context.py` | `ReadContext`, `PrintContext`: what one read, or one print, keeps across its statements |
+| `section.py` | the base classes of the code a tree runs: `Section` (a block) and `Store` (a statement) |
 | `error.py` | `ConfigError(where, message, expected)`, `file:line:column: message` |
 | `types/` | value types: `parse`, `render`, `hint`, `examples`, `choices`, `json_schema` |
 | `nodes.py` | `Leaf` (keyword value;) and `Block` (keyword [name] { ... }) |
-| `engine.py` | reads statements into a tree of values, calls each block's `build` |
+| `engine.py` | reads statements into a tree of values, calls each block's `section` |
 | `render.py` | prints built values back as configuration (the inverse of `engine`) |
 | `shape.py` | the data model: what a value is once read (a MED is a uint32), YANG-aligned |
 | `json_schema.py`, `yang.py` | the JSON Schema and the YANG module, printed from the model |
@@ -44,7 +46,7 @@ One concept, one name, in every file of the package:
 | `where` | a position, from `words.where()` |
 | `keyword` | the first word of a statement |
 | `values` | the values of a block, by field (the neighbor ones too) |
-| `context` | the dict shared by the whole read |
+| `context` | the `ReadContext` shared by the whole read, or the `PrintContext` of a print |
 | `family` | an `(AFI, SAFI)` tuple, never anything else |
 | `afi`, `safi` | an `AFI`, a `SAFI` |
 | `afi_keyword`, `safi_keyword` | their configuration spelling, `ipv4`, `unicast` |
@@ -52,12 +54,27 @@ One concept, one name, in every file of the package:
 | `neighbor_capability` | a `NeighborCapability` |
 | `route`, `routes`, `nlri`, `attributes`, `settings` | as in the rest of exabgp |
 
-Helpers: a statement type is `<Thing>Line`; a printer is `<thing>_words(route)`; a block
-builder is named after its keyword (`_flow`, `_vpls`); a `store` callback is
-`_store_<what>` (`store_routes`, `_store_announced`, `_store_op`); a count bound is
+Helpers: a statement type is `<Thing>Line`; a printer is `<thing>_words(route)`; the
+section of a block is `<Keyword>Section` (`FlowSection`, `VPLSSection`); a store is
+`<What>Store` (`RoutesStore`, `AnnouncedStore`, `FlowValueStore`); a count bound is
 `MAX_<THINGS>`, a value ceiling `<THING>_MAX`. Shared helpers: `Words.expect`,
-`static.action`, `static.store_routes`, `static.MAX_ROUTE_VALUES`, `error.ROUTE_ERRORS`,
+`static.action`, `static.ROUTES`, `static.MAX_ROUTE_VALUES`, `error.ROUTE_ERRORS`,
 `render.INDENT`.
+
+## The code a tree runs
+
+A tree is declared, the little code it runs has a base class each (`section.py`), so every
+implementation is a subclass an editor or `__subclasses__()` finds:
+
+| Base | Runs | Default |
+|---|---|---|
+| `Type[T]` (`types/base.py`) | reads and prints the value of a statement | none, abstract |
+| `Section[T]` | `opened`, `finish`, `build` a block into a `T`, `unbuild` it to print | `KEPT`: the values as they are |
+| `Store` | `keep`s the value of a statement, when it is not simply set or added to a list | `Leaf.collect` |
+
+Sections and stores keep no state: what a statement tells another block goes through the
+`ReadContext`. `test_sections.py` holds the tree to it: every block runs a `Section`, every
+section and store is used, and a block building a Settings dataclass has a field for each leaf.
 
 ## The data model
 
@@ -72,16 +89,18 @@ from the class which packs it: `MED.MAX` and `LocalPreference.MAX` come from `WI
 `Number` reads its bounds and refuses what is past them.
 
 A statement given several times (a route, a family) says so with `Leaf(multiple=True)`; a
-`store` callback alone does not make a value a list.
+`Store` alone does not make a value a list.
 
+## Adding a keyword
 
 1. Find the `Block` it belongs to (`exabgp configuration syntax <section>` shows it).
 2. Give it a type: reuse one of `types/` or write a `Type` with `parse` (raise
    `ConfigError` at `words.where()`), `render` (the words `parse` reads back), `hint`,
    and `examples` (every spelling, used by the forms tests).
-3. Add the `Leaf(keyword, type, field=...)`; `collect` or `store` when it is not a plain
-   set; `default`, `mandatory`, `doc`.
-4. Make it reach the Settings: the block's `build`, or `tree/resolve.py` for a neighbor.
+3. Add the `Leaf(keyword, type, field=...)`; `collect`, or a `Store` subclass, when it is
+   not a plain set; `default`, `mandatory`, `doc`.
+4. Make it reach the Settings: the `build` of the block's `Section`, or `tree/resolve.py`
+   for a neighbor.
 5. Make it print back: `tree/unresolve.py` for a neighbor value.
 6. Add forms in `tests/unit/config_grammar/forms*.py`: one accepted and one refused per
    keyword are enforced by `test_forms.py`.

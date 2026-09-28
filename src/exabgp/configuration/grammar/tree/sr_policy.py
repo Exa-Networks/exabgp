@@ -50,8 +50,8 @@ from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.segment_list imp
 )
 from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
 from exabgp.configuration.grammar import shape
-from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.error import ROUTE_ERRORS, ConfigError
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI

@@ -12,15 +12,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.configuration.grammar.context import PrintContext
 from collections import Counter
 from typing import Any, Iterator
 
 from exabgp.bgp.message.open.capability.role import RoleValue
-from exabgp.bgp.neighbor.capability import NeighborCapability
-from exabgp.bgp.neighbor.settings import NeighborSettings, SessionSettings
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.empty import Empty
+from exabgp.bgp.neighbor.capability import NeighborCapability
+from exabgp.bgp.neighbor.settings import NeighborSettings, SessionSettings
+from exabgp.configuration.grammar.context import PrintContext
 from exabgp.configuration.grammar.render import STATEMENTS
 from exabgp.configuration.grammar.tree.family import SAFIS, default_families
 from exabgp.configuration.grammar.tree.operational import kind

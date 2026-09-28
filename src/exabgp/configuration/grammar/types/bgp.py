@@ -17,6 +17,7 @@ from struct import pack
 from typing import Any, cast
 
 from exabgp.bgp.message.open import ASN, RouterID
+from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.attribute import (
     AIGP,
     CONFED_SEQUENCE,
@@ -46,16 +47,14 @@ from exabgp.bgp.message.update.attribute.community import (
     LargeCommunity,
 )
 from exabgp.bgp.message.update.attribute.otc import OTC, OTCSelf
-from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
-from exabgp.configuration.grammar.error import ConfigError
-from exabgp.configuration.grammar.types.base import Syntax, Type
 from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import Shape
+from exabgp.configuration.grammar.types.base import Syntax, Type
 from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.ip import IP, IPRange, IPSelf, IPv4, IPv6
-
 
 AIGP_MAX = 0xFFFFFFFFFFFFFFFF  # RFC 7311: a 64 bit metric
 MAX_SEGMENT_ASNS = 255  # RFC 4271 4.3: a path segment counts its AS numbers in one octet

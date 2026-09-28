@@ -9,16 +9,16 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.configuration.grammar.context import PrintContext
 from collections import Counter
 from dataclasses import dataclass, field, replace
 from typing import Any
 
 from exabgp.configuration.grammar import json_schema, shape, yang
+from exabgp.configuration.grammar.context import PrintContext
 from exabgp.configuration.grammar.engine import MAX_DEPTH
 from exabgp.configuration.grammar.nodes import MISSING, Block, Collect, Keep, Leaf
-from exabgp.configuration.grammar.shape import Kind, Shape
 from exabgp.configuration.grammar.render import INDENT
+from exabgp.configuration.grammar.shape import Kind, Shape
 
 
 @dataclass(frozen=True)

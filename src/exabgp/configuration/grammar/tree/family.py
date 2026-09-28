@@ -16,14 +16,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.configuration.grammar.context import ReadContext
 from typing import Any
 
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.error import ConfigError
-from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.nodes import Block, Leaf
+from exabgp.configuration.grammar.section import Kept, Store, Values
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
@@ -274,80 +275,98 @@ def _seen(values: dict[str, Any]) -> set[Any]:
     return seen
 
 
-def _store_family(afi_keyword: str) -> Any:
-    def store(values: dict[str, Any], value: tuple[FamilyTuple, int], context: ReadContext) -> None:
+class FamilyStore(Store):
+    """A family to negotiate, once, and not after `all`."""
+
+    def __init__(self, afi_keyword: str) -> None:
+        self.afi_keyword = afi_keyword
+
+    def keep(self, values: Values, value: tuple[FamilyTuple, int], context: ReadContext) -> None:
         if values.get('_all'):
             raise ValueError('cannot add any family once family all is set')
         family, limit = value
         if family in _seen(values):
             raise ValueError(f'Duplicate entry: {family}')
         _seen(values).add(family)
-        values.setdefault(afi_keyword, []).append(family)
+        values.setdefault(self.afi_keyword, []).append(family)
         if limit:
             values.setdefault('_limits', {})[family] = limit
 
-    return store
 
+class AddPathStore(Store):
+    """A family to negotiate ADD-PATH for, once, and not after `all`."""
 
-def _store_add_path(afi_keyword: str) -> Any:
-    def store(values: dict[str, Any], value: tuple[FamilyTuple, int], context: ReadContext) -> None:
+    def __init__(self, afi_keyword: str) -> None:
+        self.afi_keyword = afi_keyword
+
+    def keep(self, values: Values, value: tuple[FamilyTuple, int], context: ReadContext) -> None:
         if values.get('_all'):
             raise ValueError('cannot add specific families after "all"')
         family, _ = value
         if family in _seen(values):
             raise ValueError(f'duplicate add-path entry for {family_name(family)}')
         _seen(values).add(family)
-        values.setdefault(afi_keyword, []).append(value)
-
-    return store
+        values.setdefault(self.afi_keyword, []).append(value)
 
 
-def _store_all(values: dict[str, Any], value: None, context: ReadContext) -> None:
-    # legacy: `all` after a family is reported but not refused, and still asks for every family
-    if not (values.get('_all') or _seen(values)):
-        values['_all'] = True
-        _seen(values).update(NLRI.known_families())
-    values.setdefault('all', []).append(None)
+class AllStore(Store):
+    """`all`: every family known."""
+
+    def keep(self, values: Values, value: None, context: ReadContext) -> None:
+        # legacy: `all` after a family is reported but not refused, and still asks for every family
+        if not (values.get('_all') or _seen(values)):
+            values['_all'] = True
+            _seen(values).update(NLRI.known_families())
+        values.setdefault('all', []).append(None)
 
 
-def _store_nexthop(afi_keyword: str) -> Any:
-    def store(values: dict[str, Any], value: tuple[AFI, SAFI, AFI], context: ReadContext) -> None:
+class NextHopStore(Store):
+    """A family whose next-hop may be of the other address family, once."""
+
+    def __init__(self, afi_keyword: str) -> None:
+        self.afi_keyword = afi_keyword
+
+    def keep(self, values: Values, value: tuple[AFI, SAFI, AFI], context: ReadContext) -> None:
         if value in _seen(values):
             raise ValueError(f'Duplicate entry: {value}')
         _seen(values).add(value)
-        values.setdefault(afi_keyword, []).append(value)
-
-    return store
+        values.setdefault(self.afi_keyword, []).append(value)
 
 
-def _finish(values: dict[str, Any]) -> None:
-    """What was seen is per block: a second `family { }` may name a family again."""
-    limits = values.pop('_limits', {})
-    if limits:
-        # legacy: the limits of the last block giving any replace those of the blocks before
-        values['prefix-limit'] = list(limits.items())
-    values.pop('_seen', None)
-    values.pop('_all', None)
+class FamiliesSection(Kept):
+    """A list of families: what was seen is per block, a second `family { }` may name a family again."""
+
+    def finish(self, values: Values) -> None:
+        limits = values.pop('_limits', {})
+        if limits:
+            # legacy: the limits of the last block giving any replace those of the blocks before
+            values['prefix-limit'] = list(limits.items())
+        values.pop('_seen', None)
+        values.pop('_all', None)
+
+
+FAMILIES = FamiliesSection()
+ALL = AllStore()
 
 
 FAMILY = Block(
     'family',
     field='family',
     doc='the address families to negotiate',
-    finish=_finish,
+    section=FAMILIES,
     children=(
         *(
             Leaf(
                 afi_keyword,
                 FamilyLine(afi_keyword),
                 field=afi_keyword,
-                store=_store_family(afi_keyword),
+                store=FamilyStore(afi_keyword),
                 multiple=True,
                 doc=f'a {afi_keyword} family to negotiate',
             )
             for afi_keyword in SAFIS
         ),
-        Leaf('all', Nothing(), field='all', store=_store_all, doc='every family exabgp knows'),
+        Leaf('all', Nothing(), field='all', store=ALL, doc='every family exabgp knows'),
     ),
 )
 
@@ -355,20 +374,20 @@ ADD_PATH = Block(
     'add-path',
     field='add-path',
     doc='the families ADD-PATH is negotiated for, with an optional PATHS-LIMIT',
-    finish=_finish,
+    section=FAMILIES,
     children=(
         *(
             Leaf(
                 afi_keyword,
                 AddPathLine(afi_keyword),
                 field=afi_keyword,
-                store=_store_add_path(afi_keyword),
+                store=AddPathStore(afi_keyword),
                 multiple=True,
                 doc=f'an {afi_keyword} family to negotiate ADD-PATH for',
             )
             for afi_keyword in SAFIS
         ),
-        Leaf('all', Nothing(), field='all', store=_store_all, doc='no family, ADD-PATH is negotiated for none'),
+        Leaf('all', Nothing(), field='all', store=ALL, doc='no family, ADD-PATH is negotiated for none'),
     ),
 )
 
@@ -376,13 +395,13 @@ NEXTHOP = Block(
     'nexthop',
     field='nexthop',
     doc='the families whose next-hop may be of the other address family (RFC 8950)',
-    finish=_finish,
+    section=FAMILIES,
     children=tuple(
         Leaf(
             afi_keyword,
             NextHopLine(afi_keyword),
             field=afi_keyword,
-            store=_store_nexthop(afi_keyword),
+            store=NextHopStore(afi_keyword),
             multiple=True,
             doc=f'an {afi_keyword} family whose next-hop may be of the other address family',
         )

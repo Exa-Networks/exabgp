@@ -11,19 +11,19 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.configuration.grammar.context import ReadContext
 import re
 import time
-from typing import Any
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.role import RoleValue
+from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
+from exabgp.configuration.grammar.section import Kept, Values
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.types.lists import OneOrList
-from exabgp.configuration.grammar import shape
-from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.network import ASN_WORD
 from exabgp.configuration.grammar.types.word import Number, Word, choice, integer, spelled, text
 from exabgp.configuration.grammar.words import Words
@@ -251,18 +251,19 @@ class APIName(Type[str]):
         return ['', 'name', 'a.b-c_d']
 
 
-def _api(name: str, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
-    # legacy: api names are unique across the whole configuration, not per neighbor
-    if name in context.api_names:
-        raise ValueError(f'the name "{name}" already exists in api')
-    context.api_names.add(name)
-    return values
+class APISection(Kept):
+    def build(self, name: str, values: Values, context: ReadContext) -> Values:
+        # legacy: api names are unique across the whole configuration, not per neighbor
+        if name in context.api_names:
+            raise ValueError(f'the name "{name}" already exists in api')
+        context.api_names.add(name)
+        return values
 
 
 API = Block(
     'api',
     field='api',
-    build=_api,
+    section=APISection(),
     keep=Keep.NAMED,
     name=APIName(),
     doc='which API programs hear about this neighbor, and what they hear',

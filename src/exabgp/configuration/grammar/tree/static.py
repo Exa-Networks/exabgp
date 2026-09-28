@@ -18,7 +18,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.configuration.grammar.context import ReadContext
 from dataclasses import dataclass
 from typing import Any, Iterator, Mapping, cast
 
@@ -30,10 +29,12 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.settings import INETSettings
 from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.error import ConfigError
-from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.lexer import lex_command
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
+from exabgp.configuration.grammar.section import Section, Store, Values
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Syntax, Type
 from exabgp.configuration.grammar.words import Words
@@ -422,15 +423,24 @@ def finish(routes: list[Route]) -> list[Route]:
 # --------------------------------------------------------------------------- the blocks
 
 
-def store_routes(values: dict[str, Any], routes: list[Route], context: ReadContext) -> None:
-    context.routes.extend(routes)
+class RoutesStore(Store):
+    """The routes of a statement join those not yet taken by a neighbor."""
+
+    def keep(self, values: Values, value: list[Route], context: ReadContext) -> None:
+        context.routes.extend(value)
 
 
-def _store_value(keyword: str) -> Any:
-    def store(values: dict[str, Any], value: Any, context: ReadContext) -> None:
-        values.setdefault('_values', []).append((keyword, value))
+ROUTES = RoutesStore()
 
-    return store
+
+class RouteValueStore(Store):
+    """A value of a route block, kept in order with its keyword: they apply one after the other."""
+
+    def __init__(self, keyword: str) -> None:
+        self.keyword = keyword
+
+    def keep(self, values: Values, value: Any, context: ReadContext) -> None:
+        values.setdefault('_values', []).append((self.keyword, value))
 
 
 class NestedPrefix(Type[IPRange]):
@@ -452,37 +462,40 @@ class NestedPrefix(Type[IPRange]):
         return shape.IP_PREFIX
 
 
-def _nested(prefix: IPRange, values: dict[str, Any], context: ReadContext) -> list[Route]:
-    settings = INETSettings()
-    settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask)
-    settings.afi = IP.toafi(prefix.top())
-    settings.safi = SAFI.mpls_vpn
-    settings.action = Action.ANNOUNCE
-    collected = Collected(settings)
-    for keyword, value in values.get('_values', []):
-        collected.apply(keyword, value)
-    klass: type[INET]
-    if settings.rd is not None:
-        klass, settings.safi = IPVPN, SAFI.mpls_vpn
-    elif settings.labels is not None:
-        klass, settings.safi = Label, SAFI.nlri_mpls
-    else:
-        klass, settings.safi = INET, IP.tosafi(settings.cidr.prefix().split('/')[0])
-    routes = finish([Route(klass.from_settings(settings), collected.attributes, nexthop=settings.nexthop)])
-    context.routes.extend(routes)
-    return routes
+class NestedRouteSection(Section[list[Route]]):
+    """`route <prefix> { ... }`: one route, its values one per statement."""
+
+    def build(self, name: IPRange, values: Values, context: ReadContext) -> list[Route]:
+        settings = INETSettings()
+        settings.cidr = CIDR.create_cidr(name.pack_ip(), name.mask)
+        settings.afi = IP.toafi(name.top())
+        settings.safi = SAFI.mpls_vpn
+        settings.action = Action.ANNOUNCE
+        collected = Collected(settings)
+        for keyword, value in values.get('_values', []):
+            collected.apply(keyword, value)
+        klass: type[INET]
+        if settings.rd is not None:
+            klass, settings.safi = IPVPN, SAFI.mpls_vpn
+        elif settings.labels is not None:
+            klass, settings.safi = Label, SAFI.nlri_mpls
+        else:
+            klass, settings.safi = INET, IP.tosafi(settings.cidr.prefix().split('/')[0])
+        routes = finish([Route(klass.from_settings(settings), collected.attributes, nexthop=settings.nexthop)])
+        context.routes.extend(routes)
+        return routes
 
 
 NESTED_ROUTE = Block(
     'route',
     field='_nested',
-    build=_nested,
+    section=NestedRouteSection(),
     keep=Keep.EXTEND,
     name=NestedPrefix(),
     key='prefix',
     doc='a route, its values one per statement',
     children=tuple(
-        Leaf(keyword, spec.type, field=keyword, store=_store_value(keyword), doc=spec.doc)
+        Leaf(keyword, spec.type, field=keyword, store=RouteValueStore(keyword), doc=spec.doc)
         for keyword, spec in ROUTE_VALUES.items()
     ),
 )
@@ -499,12 +512,12 @@ def static_block(extra: tuple[Leaf, ...]) -> Block:
 
 
 STATIC_CHILDREN = (
-    Leaf('route', RouteLine(), field='_routes', store=store_routes, doc='a route, on one line', multiple=True),
+    Leaf('route', RouteLine(), field='_routes', store=ROUTES, doc='a route, on one line', multiple=True),
     Leaf(
         'attributes',
         AttributesLine(),
         field='_attributes',
-        store=store_routes,
+        store=ROUTES,
         multiple=True,
         doc='the same attributes for several prefixes',
     ),
@@ -513,7 +526,7 @@ STATIC_CHILDREN = (
         'attribute',
         AttributesLine(),
         field='_attribute',
-        store=store_routes,
+        store=ROUTES,
         multiple=True,
         doc='the same attributes for several prefixes, as attributes',
     ),

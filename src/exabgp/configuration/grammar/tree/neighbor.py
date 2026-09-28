@@ -15,22 +15,22 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.configuration.grammar.context import ReadContext
 from typing import Any
 
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.settings import NeighborSettings
 from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.context import PrintContext, ReadContext
 from exabgp.configuration.grammar.error import ConfigError
-from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.nodes import Block, Collect, Keep, Leaf
-from exabgp.configuration.grammar.tree.family import ADD_PATH, FAMILY, NEXTHOP
-from exabgp.configuration.grammar.tree.resolve import inherit, neighbor_settings
+from exabgp.configuration.grammar.section import Kept, Section, Values
+from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.announce import ANNOUNCE_BLOCK, STATIC
+from exabgp.configuration.grammar.tree.family import ADD_PATH, FAMILY, NEXTHOP
 from exabgp.configuration.grammar.tree.flow import FLOW
 from exabgp.configuration.grammar.tree.l2vpn import L2VPN_SECTION
 from exabgp.configuration.grammar.tree.operational import OPERATIONAL
-from exabgp.configuration.grammar.tree.unresolve import neighbor_values
+from exabgp.configuration.grammar.tree.resolve import inherit, neighbor_settings
 from exabgp.configuration.grammar.tree.session import (
     API,
     CAPABILITY,
@@ -40,6 +40,7 @@ from exabgp.configuration.grammar.tree.session import (
     TCP_AO,
     boolean,
 )
+from exabgp.configuration.grammar.tree.unresolve import neighbor_values
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.types.network import (
     ASN_OR_AUTO,
@@ -275,7 +276,15 @@ def _check(neighbor: Neighbor, context: ReadContext) -> None:
 MAX_INTERFACE_NAME = 15
 
 
-def _neighbor(name: Any, values: dict[str, Any], context: ReadContext) -> NeighborSettings:
+class NeighborSection(Section[NeighborSettings]):
+    def build(self, name: Any, values: Values, context: ReadContext) -> NeighborSettings:
+        return _neighbor(name, values, context)
+
+    def unbuild(self, name: Any, built: NeighborSettings, context: PrintContext) -> tuple[Any, Values]:
+        return neighbor_values(built, context)
+
+
+def _neighbor(name: Any, values: Values, context: ReadContext) -> NeighborSettings:
     # the name is the peer-address, a peer-address statement in the block replaces it
     values.setdefault('peer-address', name)
     # legacy: the routes read since the last neighbor or template closed are this neighbor's
@@ -326,7 +335,12 @@ def _check_routes(neighbor: Neighbor) -> None:
             )
 
 
-def _template(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
+class TemplateSection(Kept):
+    def build(self, name: Any, values: Values, context: ReadContext) -> Values:
+        return _template(name, values, context)
+
+
+def _template(name: Any, values: Values, context: ReadContext) -> Values:
     templates = context.templates
     if name in templates:
         raise ValueError(f'the name "{name}" already exists in template-neighbor')
@@ -338,13 +352,12 @@ def _template(name: Any, values: dict[str, Any], context: ReadContext) -> dict[s
 NEIGHBOR = Block(
     'neighbor',
     field='neighbors',
-    build=_neighbor,
+    section=NeighborSection(),
     keep=Keep.LIST,
     name=IP_RANGE,
     doc='a BGP peer',
     complete=True,
     children=LEAVES + SECTIONS,
-    unbuild=neighbor_values,
 )
 
 TEMPLATE = Block(
@@ -355,7 +368,7 @@ TEMPLATE = Block(
         Block(
             'neighbor',
             field='neighbor',
-            build=_template,
+            section=TemplateSection(),
             keep=Keep.NAMED,
             name=TemplateName(),
             doc='a template, the statements of a neighbor which inherits it',

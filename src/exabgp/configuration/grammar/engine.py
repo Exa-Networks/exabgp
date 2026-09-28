@@ -86,8 +86,7 @@ class Engine:
         name = child.name.parse(self._words(statement, 1)) if child.name else ''
         if child.keep == Keep.NAMED and name in frame.values.get(child.field, {}):
             raise ConfigError(keyword.where(), f'a {child.keyword} section called "{name}" already exists')
-        if child.opened is not None:
-            child.opened(self.context)
+        child.section.opened(self.context)
         opened = _Frame(child, name, keyword)
         existing = frame.values.get(child.field)
         if child.keep == Keep.SINGLE and isinstance(existing, dict):
@@ -127,9 +126,8 @@ class Engine:
         if missing:
             raise ConfigError(frame.where(), frame.block.missing.format(names=', '.join(missing)))
         try:
-            if frame.block.finish is not None:
-                frame.block.finish(values)
-            return frame.block.build(frame.name, values, self.context)
+            frame.block.section.finish(values)
+            return frame.block.section.build(frame.name, values, self.context)
         except ConfigError:
             raise
         except ValueError as exc:

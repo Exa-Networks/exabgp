@@ -5,9 +5,9 @@ The shapes a configuration statement takes.
     Leaf     keyword value ;
     Block    keyword [name] { ... }
 
-A block builds what it stands for from the values of its statements: a Settings object,
-or for the sections read the legacy way (neighbor and what is inside it) the values
-themselves, merged and resolved by the block around them.
+A block builds what it stands for from the values of its statements, with its Section
+(section.py): a Settings object, or for the sections read the legacy way (neighbor and
+what is inside it) the values themselves, merged and resolved by the block around them.
 
 A block names the Settings it builds and the leaves name the fields they fill, so the
 tree read by the engine, printed by the renderer and described by the help is one and the
@@ -22,9 +22,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
-from exabgp.configuration.grammar.context import PrintContext, ReadContext
+from exabgp.configuration.grammar.context import ReadContext
+from exabgp.configuration.grammar.section import KEPT, Section, Store
 from exabgp.configuration.grammar.types.base import Type
 
 
@@ -62,11 +63,6 @@ class Keep(Enum):
     EXTEND = 'extend'  # a list, the entries each block builds added one after the other
 
 
-# (values, value, context of the read) -> None, for a leaf whose value is not simply set or
-# added to a list
-Store = Callable[[dict[str, Any], Any, ReadContext], None]
-
-
 @dataclass(frozen=True)
 class Leaf:
     keyword: str
@@ -96,7 +92,7 @@ class Leaf:
 
     def keep(self, values: dict[str, Any], value: Any, context: ReadContext) -> None:
         if self.store is not None:
-            self.store(values, value, context)
+            self.store.keep(values, value, context)
         elif self.collect == Collect.APPEND:
             values.setdefault(self.field, []).append(value)
         elif self.collect == Collect.EXTEND:
@@ -105,20 +101,11 @@ class Leaf:
             values[self.field] = value
 
 
-# (name, values by field, context of the whole read) -> what the block stands for
-Builder = Callable[[Any, dict[str, Any], ReadContext], Any]
-
-
-def raw(name: Any, values: dict[str, Any], context: ReadContext) -> dict[str, Any]:
-    """The builder of a block whose values are used as they are, by the block around it."""
-    return values
-
-
 @dataclass(frozen=True)
 class Block:
     keyword: str
     field: str
-    build: Builder = raw
+    section: Section[Any] = KEPT
     children: tuple['Leaf | Block', ...] = ()
     keep: Keep = Keep.SINGLE
     # the type of the word(s) naming the block (`process <name> {`, `neighbor <ip> {`)
@@ -130,13 +117,6 @@ class Block:
     doc: str = ''
     # the message when a mandatory leaf is missing, per section, as the legacy parser words it
     missing: str = 'missing {names}'
-    # checks and rewrites once every statement of the block is read, raises ValueError
-    finish: Callable[[dict[str, Any]], None] | None = None
-    # called with the read context when the block opens, before any of its statements
-    opened: Callable[[ReadContext], None] | None = None
-    # for printing: (what was built, context of the whole print) -> (name, values by field,
-    # as the statements give them)
-    unbuild: Callable[[Any, PrintContext], tuple[Any, dict[str, Any]]] | None = None
     # a statement and a section may share a keyword: `route <prefix> ...;` and `route <prefix> { }`
     _leaves: dict[str, Leaf] = dataclass_field(default_factory=dict, init=False, repr=False, compare=False)
     _blocks: dict[str, 'Block'] = dataclass_field(default_factory=dict, init=False, repr=False, compare=False)
