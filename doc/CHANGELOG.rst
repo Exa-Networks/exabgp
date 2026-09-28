@@ -4,6 +4,10 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Feature: the routes of a neighbor which advertised Graceful Restart are kept in the
+   adj-rib-in, stale, when its TCP session is lost (RFC 4724 4.2), instead of being cleared
+   when the session comes back. They go, with a withdrawal to the API, at its End-of-RIB,
+   when its new OPEN drops the family or its Forwarding State bit, or after its Restart Time.
  * Feature: "flow-validation <enable | relaxed>;" on a neighbor validates the flow routes it
    sends (RFC 8955 6): one without the longest matching unicast route from the same
    neighbor and originator is held back from the API and the adj-rib-in, and announced to

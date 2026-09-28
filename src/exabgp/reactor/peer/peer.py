@@ -28,7 +28,7 @@ import asyncio
 import time
 from collections import defaultdict
 from collections.abc import AsyncGenerator
-from typing import TYPE_CHECKING, Any, Generator, Iterator
+from typing import TYPE_CHECKING, Any, Generator, Iterator, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -38,7 +38,10 @@ if TYPE_CHECKING:
 # import traceback
 from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message import Message, NotificationReceived, Notify, Open
-from exabgp.bgp.message.open.capability import REFRESH, Capability
+from exabgp.bgp.message.open.capability import REFRESH, Capability, Negotiated
+from exabgp.bgp.message.open.capability.graceful import Graceful
+from exabgp.bgp.message.update import Update, UpdateCollection
+from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.debug.report import format_exception
 from exabgp.environment import getenv
@@ -50,6 +53,7 @@ from exabgp.reactor.keepalive import KA
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.protocol import Protocol
 from exabgp.reactor.timing import LoopTimer, timed_async
+from exabgp.rib.route import Route
 from exabgp.util.enumeration import TriState
 
 
@@ -227,6 +231,10 @@ class Peer:
 
         self._delay: Delay = Delay()
         self.recv_timer: ReceiveTimer | None = None
+        # RFC 4724 4.2: the peer's Restart Time, counting from the loss of its Graceful
+        # Restart session, and the session its stale routes were received on
+        self._restart_timer: asyncio.TimerHandle | None = None
+        self._restart_negotiated: Negotiated | None = None
 
     def id(self) -> str:
         return 'peer-{}'.format(self.neighbor.uid)
@@ -274,6 +282,10 @@ class Peer:
         self.proto = None
 
     def _reset(self, message: str = '', error: str | Exception = '') -> None:
+        # RFC 4724 4.2 is about the TCP session being lost; a NOTIFICATION ends the
+        # session without Graceful Restart
+        if isinstance(error, NetworkError):
+            self._retain_for_restart()
         self._close(message, error)
 
         if not self._restart or self.neighbor.ephemeral:
@@ -288,6 +300,72 @@ class Peer:
         if self._neighbor:
             self.neighbor = self._neighbor
             self._neighbor = None
+
+    def _retain_for_restart(self) -> None:
+        """RFC 4724 4.2: keep a Graceful Restart peer's routes as stale for its Restart Time."""
+        if self.proto is None or self.fsm != FSM.ESTABLISHED:
+            return
+        negotiated = self.proto.negotiated
+        received = negotiated.received_open
+        if received is None or not received.capabilities.announced(Capability.CODE.GRACEFUL_RESTART):
+            return
+        graceful = received.capabilities[Capability.CODE.GRACEFUL_RESTART]
+        # a mocked session answers every attribute; only the capability says it is the capability
+        if graceful.ID != Capability.CODE.GRACEFUL_RESTART:
+            return
+        restart = cast(Graceful, graceful)
+        self.neighbor.rib.incoming.retain_for_restart(list(restart.families()))
+        self._restart_negotiated = negotiated
+        self._cancel_restart_timer()
+        self._restart_timer = asyncio.get_running_loop().call_later(restart.restart_time, self._restart_time_expired)
+        log.info(lazymsg('graceful-restart.retained restart-time={t}', t=restart.restart_time), self.id())
+
+    def _cancel_restart_timer(self) -> None:
+        if self._restart_timer is not None:
+            self._restart_timer.cancel()
+            self._restart_timer = None
+
+    def _restart_time_expired(self) -> None:
+        """RFC 4724 4.2: no new session within the Restart Time, the stale routes go."""
+        self._restart_timer = None
+        expired = self.neighbor.rib.incoming.expire_restart()
+        log.info(lazymsg('graceful-restart.expired removed={n}', n=len(expired)), self.id())
+        self.tell_api_withdrawn(expired, self._restart_negotiated)
+
+    def _resume_incoming(self) -> None:
+        """A session starts: keep what a restart retained for the families its new OPEN allows.
+
+        RFC 4724 4.2: the stale routes of a family go at once when the new OPEN has no
+        Graceful Restart capability, does not name the family, or clears its Forwarding
+        State bit for it.
+        """
+        self._cancel_restart_timer()
+        incoming = self.neighbor.rib.incoming
+        assert self.proto is not None
+        received = self.proto.negotiated.received_open
+        graceful: Graceful | None = None
+        if received is not None and received.capabilities.announced(Capability.CODE.GRACEFUL_RESTART):
+            graceful = cast(Graceful, received.capabilities[Capability.CODE.GRACEFUL_RESTART])
+        kept: set[FamilyTuple] = set()
+        removed: list[Route] = []
+        for family in incoming.restarting_families():
+            if graceful is not None and graceful.get(family, 0) & Graceful.FORWARDING_STATE:
+                kept.add(family)
+                continue
+            removed.extend(incoming.end_restart(family))
+        incoming.start_session(kept)
+        self.tell_api_withdrawn(removed, self._restart_negotiated)
+
+    def tell_api_withdrawn(self, routes: list[Route], negotiated: Negotiated | None) -> None:
+        """Tell the API processes that routes the peer sent are gone, as a withdrawal would."""
+        if not routes or negotiated is None or not self.neighbor.api:
+            return
+        api = self.neighbor.api
+        if not api['receive-update'] or not (api['receive-parsed'] or api['receive-consolidate']):
+            return
+        collection = UpdateCollection([], [route.nlri for route in routes], AttributeCollection())
+        update = Update.from_collection(collection)
+        self.reactor.processes.message(Message.CODE.UPDATE, self, 'receive', update, b'', b'', negotiated)
 
     def _stop(self, message: str) -> None:
         self.fsm_runner.clear()
@@ -756,8 +834,8 @@ class Peer:
         if self._teardown is not None:
             raise self._teardown
 
-        # Initialize session state
-        self.neighbor.rib.incoming.clear()
+        # Initialize session state, keeping what a Graceful Restart retained (RFC 4724 4.2)
+        self._resume_incoming()
         self._end_of_rib_sent = set()
         include_withdraw = False
         send_eor = not self.neighbor.manual_eor

@@ -105,6 +105,11 @@ class UpdateHandler(MessageHandler):
         # Graceful Restart rule on BoRR
         family = (eor.afi, eor.safi)
         ctx.neighbor.rib.incoming.record_end_of_rib(family)
+        # RFC 4724 4.2: what a restarted peer did not send again goes with its End-of-RIB
+        stale = ctx.neighbor.rib.incoming.end_restart(family)
+        if stale:
+            log.info(lazymsg('graceful-restart.end-of-rib removed={n}', n=len(stale)), ctx.peer_id)
+            ctx.proto.peer.tell_api_withdrawn(stale, ctx.negotiated)
         log.debug(lazymsg('eor.received afi={a} safi={s}', a=family[0], s=family[1]), ctx.peer_id)
 
     @staticmethod

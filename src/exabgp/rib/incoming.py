@@ -39,6 +39,9 @@ class IncomingRIB(Cache):
     # takes a family past it ends the session
     _prefixes: dict[FamilyTuple, set[bytes]]
     _pending_flows: dict[FamilyTuple, dict[bytes, Route]]
+    # RFC 4724 4.2: the families whose routes are stale because the peer's Graceful Restart
+    # session was lost, until its End-of-RIB, its new OPEN or its Restart Time ends them
+    _restarting: set[FamilyTuple]
 
     def __init__(self, cache: bool, families: set[FamilyTuple], enabled: bool = True) -> None:
         Cache.__init__(self, cache, families, enabled)
@@ -48,11 +51,13 @@ class IncomingRIB(Cache):
         self._stale = {}
         self._prefixes = {}
         self._pending_flows = {}
+        self._restarting = set()
 
     # back to square one, all the routes are removed
     def clear(self) -> None:
         self.clear_cache()
         self._pending_flows = {}
+        self._restarting = set()
         self._path_sets = {}
         self._path_warned = set()
         self._end_of_rib = set()
@@ -190,3 +195,40 @@ class IncomingRIB(Cache):
     def pending_flows(self, family: FamilyTuple) -> list[Route]:
         """The flow specifications of the family held back as not feasible, a snapshot."""
         return list(self._pending_flows.get(family, {}).values())
+
+    def retain_for_restart(self, families: list[FamilyTuple]) -> None:
+        """RFC 4724 4.2: the peer's session was lost, keep its routes of these families as stale."""
+        for family in families:
+            self.mark_stale(family)
+            self._restarting.add(family)
+        assert self._restarting.issubset(self._stale.keys()), 'a restarting family is a stale one'
+
+    def restarting_families(self) -> set[FamilyTuple]:
+        return set(self._restarting)
+
+    def end_restart(self, family: FamilyTuple) -> list[Route]:
+        """The stale routes of a restarting family go: its End-of-RIB, or its new OPEN said so."""
+        if family not in self._restarting:
+            return []
+        self._restarting.discard(family)
+        return self.purge_stale(family) or []
+
+    def expire_restart(self) -> list[Route]:
+        """RFC 4724 4.2: the Restart Time passed with no new session, every stale route goes."""
+        expired: list[Route] = []
+        for family in list(self._restarting):
+            expired.extend(self.end_restart(family))
+        assert not self._restarting, 'every restarting family was ended'
+        return expired
+
+    def start_session(self, kept: set[FamilyTuple]) -> None:
+        """A new session: forget what the last one held, except the families a restart retains."""
+        assert kept.issubset(self._restarting), 'only a restarting family is kept into a new session'
+        self._seen = {family: routes for family, routes in self._seen.items() if family in kept}
+        self._stale = {family: stale for family, stale in self._stale.items() if family in kept}
+        self._prefixes = {family: counted for family, counted in self._prefixes.items() if family in kept}
+        self._restarting = set(kept)
+        self._pending_flows = {}
+        self._path_sets = {}
+        self._path_warned = set()
+        self._end_of_rib = set()

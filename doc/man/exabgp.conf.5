@@ -421,6 +421,16 @@ removes it on any session, and
 .Dq tunnel-encapsulation accept
 keeps it on any session.
 The route itself is accepted either way.
+.Sh GRACEFUL RESTART, RECEIVING
+When the TCP session of a neighbor which advertised Graceful Restart is lost,
+the routes it sent are kept in the adj-rib-in, marked stale (RFC 4724).
+They are removed, and the API told as for a withdrawal, when the neighbor's
+End-of-RIB for their family arrives, when its next OPEN no longer offers
+to keep forwarding for the family, or when its Restart Time passes with no
+new session.
+A NOTIFICATION ends the session without keeping anything.
+It needs
+.Dq adj-rib-in .
 .Sh ROUTE TARGET CONSTRAINT
 With the rtc family negotiated, exabgp announces and withdraws Route Target
 membership and decodes what the peer sends, but by default sends every VPN

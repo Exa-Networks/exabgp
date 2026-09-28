@@ -56,8 +56,8 @@ env exabgp_log_enable=false uv run pytest tests/unit/rfc -q -rx | grep XFAIL
 | 2 | Received NLRI | ✅ | `df87c44` |
 | 3 | Outgoing routes / adj-rib-out | ✅ | `e642645` |
 | 4 | RFC 8277 Multiple Labels Capability | ✅ | `9220b94` |
-| 5 | FlowSpec | ✅ part A `e778145`, part B (§6 validation) uncommitted | |
-| 6 | Graceful Restart receiving procedures | ❌ todo | |
+| 5 | FlowSpec | ✅ | `e778145`, `7a59c04` |
+| 6 | Graceful Restart receiving procedures | ✅ uncommitted | |
 | 7 | EVPN and Prefix-SID | ❌ todo | |
 | 8 | BGP-LS, capability retry, four-octet AS | ❌ todo | |
 
@@ -260,6 +260,21 @@ Each area below is independent. Do one per commit. The xfail tests named are the
   `record_end_of_rib`. Tell API processes when stale routes go (a withdrawal).
 - Related: `plan/plan-llgr.md` (RFC 9494) builds on this.
 
+**Area 6 as implemented (2026-09-29):** Thomas: "continue and commit until all is done".
+- `Peer._reset` with a NetworkError calls `_retain_for_restart`: families of the peer's GR
+  capability are marked stale (`IncomingRIB.retain_for_restart`, reusing the RFC 7313 stale
+  set) and a Restart Time timer (`loop.call_later`) is started. A NOTIFICATION retains
+  nothing (RFC 4724; RFC 8538 would change this, not in the ledger).
+- `_main` no longer clears the adj-RIB-in: `_resume_incoming` keeps retained families whose
+  new OPEN still has the F bit, removes the rest at once (RFC 4724 4.2, also a MUST), and
+  `IncomingRIB.start_session(kept)` resets everything else.
+- End-of-RIB: `UpdateHandler._end_of_rib` calls `end_restart(family)`; expiry calls
+  `expire_restart()`. Both tell the API via `Peer.tell_api_withdrawn`.
+- Test premise fixed: the fixture advertised F bit 0, which by the same section means
+  "remove at once"; the retention fixture now sets it and a test covers the clear bit.
+  The fixture's empty AS_PATH on EBGP also fell to the area 5 first-AS rule (hidden while
+  xfail); it now carries <PEER_AS>.
+
 ### 7. EVPN (RFC 7432) and Prefix-SID (RFC 8669)
 - `tests/unit/rfc/test_rfc7432_evpn.py`: ESI Label extended community (type 0x06 sub-type
   0x01), ES-Import Route Target (0x06/0x02), RD type 1 for type 4 routes (refuse in
@@ -332,7 +347,7 @@ None.
 
 **2026-09-28 (local):** on `main` after #1432, not on the web branch. Area 3 committed as
 `e642645`, area 4 `9220b94` (not pushed). Area 5 part A `e778145`; part B (§6 validation)
-done, uncommitted. Next: area 6 (Graceful Restart). `test_everything`: all 25 passed (one clean
+`7a59c04`; area 6 done. Next: area 7. `test_everything`: all 25 passed (one clean
 run, 10m29s). Next: area 4 (RFC 8277). Areas one after the
 other, stopping for review between each.
 
