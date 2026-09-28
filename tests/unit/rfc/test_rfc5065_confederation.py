@@ -34,6 +34,7 @@ from rfc.rfc7606_wire import (
     WELL_KNOWN_TRANSITIVE,
     announced,
     attribute,
+    internal_session,
     parse,
     session,
     update,
@@ -70,8 +71,13 @@ def as_path(*segments: bytes) -> bytes:
 
 
 def sent(attributes: AttributeCollection, negotiated: Negotiated) -> AttributeCollection:
-    """What the peer decodes from the attributes we pack for it."""
-    return AttributeCollection.unpack(attributes.pack_attribute(negotiated, with_default=True), session())
+    """What the peer decodes from the attributes we pack for it.
+
+    Decoded as an internal neighbour would, because RFC 7606 7.5 has a receiver outside the
+    AS discard LOCAL_PREF: decoded as an external one, a LOCAL_PREF we wrongly sent to a peer
+    outside the confederation would vanish on receipt and look like one we never sent.
+    """
+    return AttributeCollection.unpack(attributes.pack_attribute(negotiated, with_default=True), internal_session())
 
 
 def shape(path: ASPath) -> list[tuple[str, list[int]]]:

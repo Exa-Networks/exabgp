@@ -1,8 +1,8 @@
 """RFC 4360, and what is not in it.
 
-This file carries no `@pytest.mark.rfc()`, and that is the finding rather than an
-oversight.  RFC 4360 has exactly five sentences with an RFC 2119 keyword in them: one
-MUST NOT about best path selection, two MUST NOTs addressed to IANA about allocating
+This file carries one `@pytest.mark.rfc()`, on a strict xfail, and the scarcity is the
+finding rather than an oversight.  RFC 4360 has exactly five sentences with an RFC 2119
+keyword in them: one MUST NOT about best path selection, two MUST NOTs addressed to IANA about allocating
 codepoints, two MAYs about propagating a received route, and a SHOULD/SHOULD NOT pair
 about stripping non-transitive communities at an AS boundary.  Not one of them binds a
 decoder, and exabgp has neither a decision process nor a propagation path for four of the
@@ -14,14 +14,20 @@ Community is encoded as an 8-octet quantity" flatly, with no keyword, exactly as
 states the four octet one.  The normative form is RFC 7606 section 7.14 for the IPv4
 attribute and 7.15 for the IPv6 one, which live in qa/rfc/rfc7606.toml.
 
-So the tests below are ordinary regression tests for the decoder, held here because this
-is where a reader looking for RFC 4360 coverage will come.  They cover the two things
+The one marker is on the gap: nothing in the sending path strips a non-transitive
+community at the AS boundary, and the xfail at the end of the file shows what doing so
+would mean, beside the unmarked test which pins what must not be stripped.
+
+Otherwise the tests below are ordinary regression tests for the decoder, held here
+because this is where a reader looking for RFC 4360 coverage will come.  They cover the two things
 which would hurt: a length which is not a whole number of communities, and the eager walk
 in `from_packet` which decodes each community at the boundary rather than lazily in the
 API writer, where a Notify becomes a silently dropped session instead of a NOTIFICATION.
 """
 
 from __future__ import annotations
+
+from collections.abc import Callable
 
 import pytest
 
@@ -30,6 +36,11 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community import ExtendedCommunities, ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesIPv6
 
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update.attribute import AttributeCollection
+
+from rfc import rfc7606_wire
 from rfc.community_wire import parse, withdrawn
 
 EXTENDED_COMMUNITY = int(Attribute.CODE.EXTENDED_COMMUNITY)
@@ -121,3 +132,68 @@ def test_a_registered_type_and_subtype_reaches_its_own_class() -> None:
 
     assert type(transitive) is type(non_transitive)
     assert type(transitive) is not ExtendedCommunity, 'the Route Target fell through to the generic class'
+
+
+# ------------------------------------------------ 6 the T bit at the AS boundary
+
+CONFEDERATION_IDENTIFIER = 65000
+OTHER_MEMBER = 65002
+
+
+def extended_communities_sent(negotiated: Negotiated) -> list[bytes]:
+    """The extended communities a peer decodes from a route carrying both Route Targets."""
+    attributes = AttributeCollection()
+    attributes.add(ExtendedCommunities.from_packet(ROUTE_TARGET + ROUTE_TARGET_NON_TRANSITIVE))
+    received = AttributeCollection.unpack(attributes.pack_attribute(negotiated), rfc7606_wire.session())
+    decoded = received.get(Attribute.CODE.EXTENDED_COMMUNITY)
+    if decoded is None:
+        return []
+    assert isinstance(decoded, ExtendedCommunities)
+    return [bytes(community.pack_attribute(Negotiated.UNSET)) for community in decoded.communities]
+
+
+def confederation_member_session() -> Negotiated:
+    """An EBGP session to another Member-AS of our confederation, as RFC 5065 configures it."""
+    negotiated = rfc7606_wire.session(peer_as=OTHER_MEMBER)
+    configured = negotiated.neighbor.session
+    configured.local_as = ASN(rfc7606_wire.LOCAL_AS)
+    configured.peer_as = ASN(OTHER_MEMBER)
+    configured.confederation = ASN(CONFEDERATION_IDENTIFIER)
+    configured.confederation_members = (ASN(OTHER_MEMBER),)
+    return negotiated
+
+
+@pytest.mark.rfc('rfc4360#6-non-transitive-removed-across-as-boundary')
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason='the sending path never reads the T bit: every configured extended community goes out on EBGP too',
+)
+def test_a_non_transitive_extended_community_is_not_sent_to_another_as() -> None:
+    """The T bit set means the community stops at the edge of our AS.
+
+    The route goes out, and so does its transitive Route Target: it is only the
+    non-transitive one which is removed before the route crosses into the peer's AS.
+    """
+    sent = extended_communities_sent(rfc7606_wire.session())
+
+    assert sent == [ROUTE_TARGET], [community.hex() for community in sent]
+
+
+@pytest.mark.parametrize(
+    'negotiated',
+    [rfc7606_wire.internal_session, confederation_member_session],
+    ids=['ibgp', 'confederation-member'],
+)
+def test_a_non_transitive_extended_community_is_kept_inside_the_as_and_the_confederation(
+    negotiated: Callable[[], Negotiated],
+) -> None:
+    """Unmarked, the other half of the xfail above, and true today.
+
+    Stripping every non-transitive community on every session would pass the test
+    above, so this pins what must survive it: the SHOULD NOT for the confederation
+    boundary, and IBGP, which is no boundary at all.
+    """
+    sent = extended_communities_sent(negotiated())
+
+    assert sorted(sent) == sorted([ROUTE_TARGET, ROUTE_TARGET_NON_TRANSITIVE]), [community.hex() for community in sent]

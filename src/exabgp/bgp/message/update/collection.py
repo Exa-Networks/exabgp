@@ -27,6 +27,7 @@ from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, ASPath
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
 from exabgp.bgp.message.update.nlri.label import Label
+from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
 from exabgp.logger import lazymsg, log
@@ -62,6 +63,31 @@ def validate_announce_nlri(nlri: 'NLRI', nexthop: IP) -> str | None:
         if isinstance(nlri, IPVPN) and nlri.rd is RouteDistinguisher.NORD:
             return f'VPN route announce requires RD: {nlri}'
 
+    return None
+
+
+# RFC 4271 6.3 names "an unexpected multicast IP address" as a semantically incorrect
+# prefix, and 5.1.3 asks a NEXT_HOP to be an address a router can forward to: 224.0.0.0/4
+# is neither, and 0.0.0.0 is no address at all.
+MULTICAST_IPV4_FIRST_NIBBLE = 0xE
+MULTICAST_IPV4_MASK_BITS = 4
+UNSPECIFIED_IPV4 = bytes(4)
+
+
+def _semantic_error(routed: 'RoutedNLRI') -> str | None:
+    """What is semantically wrong with a route of the legacy NLRI field, or None."""
+    nexthop = routed.nexthop
+    if nexthop.afi == AFI.ipv4:
+        packed = bytes(nexthop.pack_ip())
+        if packed == UNSPECIFIED_IPV4:
+            return f'NEXT_HOP {nexthop} is the unspecified address (RFC 4271 6.3)'
+        if packed[0] >> 4 == MULTICAST_IPV4_FIRST_NIBBLE:
+            return f'NEXT_HOP {nexthop} is a multicast address (RFC 4271 6.3)'
+    nlri = routed.nlri
+    if isinstance(nlri, INET) and nlri.afi == AFI.ipv4:
+        cidr = nlri.cidr
+        if cidr.mask >= MULTICAST_IPV4_MASK_BITS and cidr.pack_ip()[0] >> 4 == MULTICAST_IPV4_FIRST_NIBBLE:
+            return f'prefix {nlri} is multicast (RFC 4271 6.3)'
     return None
 
 
@@ -164,8 +190,14 @@ class UpdateCollection:
         self.route_leaks: dict[FamilyTuple, RouteLeak] | None = None
 
     def classify_otc(self, negotiated: Negotiated) -> None:
-        """Annotate wire observations without modifying cached attributes or NLRI."""
+        """Apply the ingress procedures of RFC 9234 5 to a received UPDATE.
+
+        A route leak is recorded, not acted on. A route which should have arrived marked
+        and did not is marked, on a copy of the attributes: the collection itself may be
+        the one the session's attribute cache hands to the next UPDATE.
+        """
         self.route_leaks = None
+        self._mark_otc_on_ingress(negotiated)
         otc = self.attributes.get(Attribute.CODE.OTC)
         role = negotiated.peer_role
         if negotiated.role == RoleValue.NO_ROLE or not isinstance(otc, OTC):
@@ -199,6 +231,25 @@ class UpdateCollection:
                 ),
                 'reactor',
             )
+
+    def _mark_otc_on_ingress(self, negotiated: Negotiated) -> None:
+        """RFC 9234 5 ingress rule 3: add the OTC a Provider, Peer or RS left off.
+
+        "If a route is received from a Provider, a Peer, or an RS and the OTC Attribute is
+        not present, then it MUST be added with a value equal to the AS number of the
+        remote AS." Section 5 only covers IPv4 and IPv6 unicast, so an UPDATE announcing
+        nothing in those families is left as it came.
+        """
+        if negotiated.role == RoleValue.NO_ROLE or Attribute.CODE.OTC in self._attributes:
+            return
+        if negotiated.peer_role not in (RoleValue.PROVIDER, RoleValue.PEER, RoleValue.RS):
+            return
+        unicast = ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
+        if not any(routed.nlri.family().afi_safi() in unicast for routed in self._announces):
+            return
+        marked = self._attributes.copy()
+        marked.add(OTC.make_otc(int(negotiated.peer_as)))
+        self._attributes = marked
 
     @classmethod
     def make_eor(cls, afi: AFI, safi: SAFI) -> 'UpdateCollection':
@@ -734,71 +785,10 @@ class UpdateCollection:
 
         # empty string for IP.NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
         nexthop = attributes.get(Attribute.CODE.NEXT_HOP, IP.NoNextHop)
-        # nexthop = NextHop.unpack(_nexthop.ton())
+        cls._warn_next_hop_is_ours(nexthop, negotiated)
 
-        # RFC 4271 Section 5.1.3: NEXT_HOP MUST NOT be the IP address of the receiving speaker
-        # Log warning but don't kill session - peer may have misconfigured next-hop
-        neighbor = getattr(negotiated, 'neighbor', None)
-        if nexthop is not IP.NoNextHop and neighbor is not None:
-            try:
-                local_address = neighbor.session.local_address
-                nexthop_packed = getattr(nexthop, '_packed', b'')
-                local_packed = getattr(local_address, '_packed', b'')
-                if local_address is not None and nexthop_packed and local_packed:
-                    if nexthop_packed == local_packed:
-                        log.warning(
-                            lambda: 'received NEXT_HOP {} equals our local address (RFC 4271 violation)'.format(
-                                nexthop
-                            ),
-                            'parser',
-                        )
-            except (TypeError, KeyError) as exc:
-                # Every access above is already guarded, so reaching here means the
-                # neighbour is not shaped the way this check assumes. That is worth knowing
-                # about rather than passing over: the comment which used to be here said
-                # "may be a mock", which is a reason from the tests and not from production.
-                log.debug(
-                    lazymsg('update.nexthop.check.skipped error={error}', error=str(exc)),
-                    'parser',
-                )
-
-        announces: list[RoutedNLRI] = []
-        withdraws: list[NLRI] = []
-
-        while withdrawn_bytes:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, withdrawn_bytes, Action.WITHDRAW, addpath, negotiated)
-            log.debug(lazymsg('withdrawn NLRI {nlri}', nlri=nlri), 'routes')
-            withdrawn_bytes = left
-            if nlri is not NLRI.INVALID:
-                withdraws.append(nlri)
-
-        while announced_bytes:
-            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, announced_bytes, Action.ANNOUNCE, addpath, negotiated)
-            if nlri is not NLRI.INVALID:
-                # Wrap NLRI with nexthop in RoutedNLRI for UpdateCollection
-                # nexthop is NextHop attribute or IP.NoNextHop
-                if isinstance(nexthop, IP):
-                    routed = RoutedNLRI(nlri, nexthop)
-                elif isinstance(nexthop, NextHop):
-                    # NextHop attribute - convert packed bytes to IP
-                    packed = nexthop._packed
-                    if len(packed) == IPv4.BYTES:
-                        routed = RoutedNLRI(nlri, IPv4(packed))
-                    elif len(packed) == IPv6.BYTES:
-                        routed = RoutedNLRI(nlri, IPv6(packed))
-                    else:
-                        # the else used to be IPv6(packed) for every other length, and
-                        # NextHop.UNSET carries no address at all, so its empty bytes went
-                        # to inet_ntop and came back as a ValueError from here: past the
-                        # decoders, in the semantic transformation, where the TREAT_AS_WITHDRAW
-                        # flag on NextHop can no longer catch anything
-                        routed = RoutedNLRI(nlri, IP.NoNextHop)
-                else:
-                    # Should not happen, but use NoNextHop as fallback
-                    routed = RoutedNLRI(nlri, IP.NoNextHop)
-                log.debug(lazymsg('announced NLRI {nlri}', nlri=nlri), 'routes')
-                announces.append(routed)
-            announced_bytes = left
+        withdraws = cls._unpack_withdrawn(withdrawn_bytes, addpath, negotiated)
+        legacy = cls._unpack_announced(announced_bytes, cls._routed_next_hop(nexthop), addpath, negotiated)
 
         unreach = attributes.pop(MPURNLRI.ID, None)
         reach = attributes.pop(MPRNLRI.ID, None)
@@ -807,12 +797,16 @@ class UpdateCollection:
             # MPURNLRI implements __iter__ yielding NLRI
             withdraws.extend(unreach)
 
-        if reach is not None and isinstance(reach, MPRNLRI):
-            # MP_REACH_NLRI carries its own next hop; iter_routed() preserves it
-            # while converting each contained NLRI to the semantic routed form.
-            announces.extend(reach.iter_routed())
+        # RFC 7606 5.2 is decided on what the UPDATE encodes, before any route is dropped
+        # below for what it means rather than for how it was written.
+        has_reachable_nlri = bool(announced_view) or isinstance(reach, MPRNLRI)
+        cls._reset_without_reachable_nlri(attributes, has_reachable_nlri)
 
-        if announces and cls._withdrawn_in_context(attributes, bool(announced_view), negotiated):
+        # MP_REACH_NLRI carries its own next hop; iter_routed() preserves it while
+        # converting each contained NLRI to the semantic routed form.
+        mp_reach = list(reach.iter_routed()) if isinstance(reach, MPRNLRI) else []
+
+        if (legacy or mp_reach) and cls._withdrawn_in_context(attributes, bool(announced_view), negotiated):
             # AttributeCollection.unpack() may have returned the session's cached
             # collection. These reasons are UPDATE context, not an interpretation of
             # the attribute bytes, so adding the marker to that shared object would
@@ -822,12 +816,131 @@ class UpdateCollection:
 
         # Treat-as-withdraw is an action on every announced route, not merely a
         # diagnostic attribute. NLRI parsing has completed at this point, so all
-        # affected legacy and MP_REACH routes can be moved safely.
+        # affected legacy and MP_REACH routes can be moved safely. It comes before the
+        # RFC 4271 6.3 filter: a MUST to withdraw outranks a SHOULD to ignore.
         if Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes:
-            withdraws.extend(routed.nlri for routed in announces)
-            announces.clear()
+            withdraws.extend(routed.nlri for routed in legacy + mp_reach)
+            return cls([], withdraws, attributes)
 
-        return cls(announces, withdraws, attributes)
+        announces = [routed for routed in legacy if cls._semantically_correct(routed)] + mp_reach
+        return cls(announces, cls._not_announced(withdraws, announces), attributes)
+
+    @staticmethod
+    def _warn_next_hop_is_ours(nexthop: Attribute | IP, negotiated: Negotiated) -> None:
+        """RFC 4271 5.1.3: NEXT_HOP MUST NOT be the IP address of the receiving speaker.
+
+        Logged rather than acted on: the peer may simply have a misconfigured next hop.
+        """
+        neighbor = getattr(negotiated, 'neighbor', None)
+        if nexthop is IP.NoNextHop or neighbor is None:
+            return
+        try:
+            local_address = neighbor.session.local_address
+            nexthop_packed = getattr(nexthop, '_packed', b'')
+            local_packed = getattr(local_address, '_packed', b'')
+            if local_address is not None and nexthop_packed and local_packed and nexthop_packed == local_packed:
+                log.warning(
+                    lambda: 'received NEXT_HOP {} equals our local address (RFC 4271 violation)'.format(nexthop),
+                    'parser',
+                )
+        except (TypeError, KeyError) as exc:
+            # Every access above is already guarded, so reaching here means the
+            # neighbour is not shaped the way this check assumes. That is worth knowing
+            # about rather than passing over: the comment which used to be here said
+            # "may be a mock", which is a reason from the tests and not from production.
+            log.debug(lazymsg('update.nexthop.check.skipped error={error}', error=str(exc)), 'parser')
+
+    @staticmethod
+    def _routed_next_hop(nexthop: Attribute | IP) -> IP:
+        """The NEXT_HOP attribute as the IP a RoutedNLRI of the legacy NLRI field carries."""
+        if isinstance(nexthop, IP):
+            return nexthop
+        if isinstance(nexthop, NextHop):
+            packed = nexthop._packed
+            if len(packed) == IPv4.BYTES:
+                return IPv4(packed)
+            if len(packed) == IPv6.BYTES:
+                return IPv6(packed)
+            # the else used to be IPv6(packed) for every other length, and NextHop.UNSET
+            # carries no address at all, so its empty bytes went to inet_ntop and came
+            # back as a ValueError from here: past the decoders, in the semantic
+            # transformation, where the TREAT_AS_WITHDRAW flag on NextHop can no longer
+            # catch anything
+        return IP.NoNextHop
+
+    @staticmethod
+    def _unpack_withdrawn(field: Buffer, addpath: bool, negotiated: Negotiated) -> list[NLRI]:
+        """The prefixes of the WITHDRAWN ROUTES field.
+
+        Bounded by the field: NLRI.unpack_nlri consumes at least the mask octet of every
+        prefix, or raises.
+        """
+        withdraws: list[NLRI] = []
+        while field:
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, field, Action.WITHDRAW, addpath, negotiated)
+            assert len(left) < len(field), 'an NLRI decoder returned without consuming its input'
+            log.debug(lazymsg('withdrawn NLRI {nlri}', nlri=nlri), 'routes')
+            field = left
+            if nlri is not NLRI.INVALID:
+                withdraws.append(nlri)
+        return withdraws
+
+    @staticmethod
+    def _unpack_announced(field: Buffer, nexthop: IP, addpath: bool, negotiated: Negotiated) -> list[RoutedNLRI]:
+        """The prefixes of the NLRI field, each with the NEXT_HOP of the UPDATE."""
+        announces: list[RoutedNLRI] = []
+        while field:
+            nlri, left = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, field, Action.ANNOUNCE, addpath, negotiated)
+            assert len(left) < len(field), 'an NLRI decoder returned without consuming its input'
+            field = left
+            if nlri is not NLRI.INVALID:
+                log.debug(lazymsg('announced NLRI {nlri}', nlri=nlri), 'routes')
+                announces.append(RoutedNLRI(nlri, nexthop))
+        return announces
+
+    @staticmethod
+    def _reset_without_reachable_nlri(attributes: AttributeCollection, has_reachable_nlri: bool) -> None:
+        """RFC 7606 5.2: a treat-as-withdraw error in an UPDATE with no reachable NLRI resets.
+
+        Such an UPDATE carries attributes other than MP_UNREACH_NLRI (the one in error is
+        one), so there is no route to withdraw and no proof that the NLRI field was read
+        correctly. Attribute discard is exempt by name, and a Discard marker never gets
+        here as a TreatAsWithdraw. 3/1 Malformed Attribute List: the attribute list is
+        what could not be trusted.
+        """
+        if has_reachable_nlri:
+            return
+        marker = attributes.get(Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW, None)
+        if marker is None:
+            return
+        raise Notify(3, 1, f'{marker} in an UPDATE with no reachable NLRI (RFC 7606 5.2)')
+
+    @staticmethod
+    def _semantically_correct(routed: RoutedNLRI) -> bool:
+        """RFC 4271 6.3: log and ignore a route with a semantically incorrect value.
+
+        Only the legacy NLRI field and its NEXT_HOP, which is all RFC 4271 describes.
+        The route is ignored, not withdrawn, and the UPDATE is otherwise processed.
+        """
+        reason = _semantic_error(routed)
+        if reason is None:
+            return True
+        log.error(
+            lazymsg('update.route.ignored nlri={nlri} reason="{reason}"', nlri=routed.nlri, reason=reason), 'parser'
+        )
+        return False
+
+    @staticmethod
+    def _not_announced(withdraws: list[NLRI], announces: list[RoutedNLRI]) -> list[NLRI]:
+        """RFC 4271 4.3: act as though the withdrawals did not hold a prefix also announced.
+
+        Otherwise a consumer which applies withdrawals after announcements, or batches
+        them, removes the route the same UPDATE installs.
+        """
+        if not withdraws or not announces:
+            return withdraws
+        announced = {routed.nlri.index() for routed in announces}
+        return [nlri for nlri in withdraws if nlri.index() not in announced]
 
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> 'UpdateCollection':

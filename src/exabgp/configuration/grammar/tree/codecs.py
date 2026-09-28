@@ -91,6 +91,7 @@ POLICY = (
     'domain-name',
     'group-updates',
     'as-set',
+    'tunnel-encapsulation',
     'auto-flush',
     'adj-rib-in',
     'adj-rib-out',

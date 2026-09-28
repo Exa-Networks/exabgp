@@ -21,6 +21,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
 from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP, IPv6
 
@@ -46,6 +47,18 @@ class NextHopWithLinkLocal(IPv6):
     def __init__(self, packed: Buffer, link_local: IPv6) -> None:
         IPv6.__init__(self, packed)
         self.link_local = link_local
+
+
+def _log_discarded(nlri: NLRI, reason: str) -> None:
+    """Say which announced route was dropped on receipt and why.
+
+    The route vanishes with no NOTIFICATION and no withdrawal, so the log is the only
+    record an operator has that the peer sent it.
+    """
+    log.warning(
+        lazymsg('update.route.discarded nlri={nlri} reason="{reason}"', nlri=nlri, reason=reason),
+        'parser',
+    )
 
 
 # ==================================================== MP Reachable NLRI (14)
@@ -130,7 +143,11 @@ class MPRNLRI(Attribute, Family):
                 )
 
                 if nlri_result is not NLRI.INVALID:
-                    yield nlri_result
+                    reason = nlri_result.discard_on_receipt()
+                    if reason is None:
+                        yield nlri_result
+                    else:
+                        _log_discarded(nlri_result, reason)
 
                 if left_result == nlri_data:
                     raise RuntimeError('sub-calls should consume data')

@@ -190,6 +190,12 @@ LEAVES = (
         doc='RFC 9774, what to do with a route with an AS_SET',
     ),
     Leaf(
+        'tunnel-encapsulation',
+        choice('tunnel-encapsulation', ['auto', 'filter', 'accept']),
+        field='tunnel-encapsulation',
+        doc='RFC 9012 11, a received Tunnel Encapsulation attribute: auto filters it on EBGP only',
+    ),
+    Leaf(
         'group-updates', boolean(True), field='group-updates', doc='send routes with the same attributes in one UPDATE'
     ),
     Leaf(

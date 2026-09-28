@@ -16,6 +16,7 @@ from __future__ import annotations
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Any, Callable
 
+from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.update.attribute import AttributeCollection, NextHop, NextHopSelf
 from exabgp.bgp.message.update.nlri.mup import (
     DirectSegmentDiscoveryRoute,
@@ -24,12 +25,14 @@ from exabgp.bgp.message.update.nlri.mup import (
     Type2SessionTransformedRoute,
 )
 from exabgp.bgp.message.update.nlri.mvpn import SharedJoin, SourceAD, SourceJoin
+from exabgp.bgp.message.update.nlri.mvpn.sourcead import is_ssm_group
 from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ROUTE_ERRORS, ConfigError
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
     ROUTE_VALUES,
     RouteValue,
+    action,
     attribute_words,
     value_fields,
 )
@@ -166,6 +169,13 @@ def mvpn_source_join(words: Words, afi: AFI) -> Any:
 
 def mvpn_source_ad(words: Words, afi: AFI) -> Any:
     source, group, rd = _join(words, afi, 'source')
+    # RFC 6514 4.5: a Source Active A-D route for a group in the SSM range MUST NOT be
+    # advertised. A withdrawal is still accepted, it can only remove such a route.
+    if action(words) == Action.ANNOUNCE and is_ssm_group(group):
+        raise ValueError(
+            f'source-ad group {group} is in the Source Specific Multicast range, '
+            f'which RFC 6514 4.5 forbids advertising in a Source Active A-D route'
+        )
     return SourceAD.make_sourcead(rd=rd, afi=afi, source=source, group=group)
 
 

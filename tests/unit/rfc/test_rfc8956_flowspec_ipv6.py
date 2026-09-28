@@ -33,6 +33,7 @@ from exabgp.bgp.message.update.nlri.flow import (
     Flow,
     Flow6Destination,
     Flow6Source,
+    FlowFlowLabel,
     FlowFragment,
     FlowICMPCode,
     FlowICMPType,
@@ -304,6 +305,26 @@ def test_the_reserved_bits_of_an_ipv6_fragment_bitmask_are_ignored_on_decoding()
 
     assert nothing is not None and reserved is not None
     assert str(reserved) == str(nothing)
+
+
+# ==================================================== section 3.7, the flow label
+
+LEN_FOUR = 0x20  # numeric_op len=10
+
+
+@pytest.mark.rfc('rfc8956#3.7-flow-label-four-octets')
+@pytest.mark.xfail(
+    strict=True,
+    reason='FlowFlowLabel is an IOperationByteShortLong, whose encode picks the narrowest '
+    'width which fits, so only a label above 65535 gets four octets',
+)
+@pytest.mark.parametrize('value', [0, 5, 2013, 65535])
+def test_every_flow_label_we_encode_uses_four_octets(value: int) -> None:
+    """A flow label is a 20 bit field, so its width must not depend on the value chosen."""
+    packed = bytes(FlowFlowLabel(NumericOperator.EQ, NumericValue(value)).pack())
+
+    assert packed[0] & 0x30 == LEN_FOUR
+    assert packed[1:] == pack('!L', value)
 
 
 # ============================== section 3.1 and 3.8, the whole path an operator drives

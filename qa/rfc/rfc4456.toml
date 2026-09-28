@@ -47,9 +47,12 @@ that arrives is the attribute that `AttributeCollection.parse` stores, and
 `OriginatorID.pack_attribute` hands back the same four octets it was given.  The half
 worth testing is that the decoder is not quietly substituting a value of its own, so the
 positive test is that a received ORIGINATOR_ID survives a parse and re-pack byte for
-byte, and the negative test is the other direction: an UPDATE which carries no
+byte, and the negative tests are the other directions: an UPDATE which carries no
 ORIGINATOR_ID must come out of the parser with none, not with one exabgp invented from
-the peer's BGP Identifier.
+the peer's BGP Identifier, and an UPDATE which carries two must come out with the first.
+A repeated ORIGINATOR_ID is not a reason to withdraw the route: RFC 7606 section 3 (g)
+discards every occurrence of a repeated attribute but the first and processes the rest
+of the UPDATE, which is what `AttributeCollection.parse` does.
 """
 
 [[requirement]]

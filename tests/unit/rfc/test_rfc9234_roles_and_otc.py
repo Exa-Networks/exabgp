@@ -366,6 +366,67 @@ def test_an_otc_from_a_peer_naming_that_peer_is_not_a_leak() -> None:
     assert collection.route_leaks is None, "a Peer's own OTC value was treated as a leak"
 
 
+@pytest.mark.rfc('rfc9234#5-ingress-add-otc-when-absent')
+@pytest.mark.parametrize('local, peer', [('customer', 'a Provider'), ('peer', 'a Peer'), ('rs-client', 'an RS')])
+def test_a_route_without_otc_from_above_or_beside_us_is_marked_with_the_remote_as(local: str, peer: str) -> None:
+    """Ingress rule 3: the marking a well behaved neighbour would have added on egress.
+
+    Without it a route from a Provider which forgot to mark it looks to the API exactly
+    like one from a Customer, and the leak check downstream has nothing to go on.
+    """
+    neighbor = neighbour(local)
+    negotiated = negotiate(neighbor, None)
+
+    collection = received_update(negotiated, ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP)
+
+    otc = collection.attributes.get(Attribute.CODE.OTC)
+    assert isinstance(otc, OTC), f'a route from {peer} without OTC was not marked on ingress'
+    assert otc.asn == PEER_AS, 'the added OTC value must be the remote AS, not our own'
+
+
+@pytest.mark.rfc('rfc9234#5-ingress-add-otc-when-absent', polarity='negative')
+@pytest.mark.parametrize('local', ['provider', 'rs', None])
+def test_a_route_without_otc_from_below_us_or_without_a_role_is_not_marked(local: str | None) -> None:
+    """From a Customer or an RS-Client the route may go anywhere.
+
+    Marking it would stop it reaching our own providers and peers: the reachability half of
+    the rule.  Without a configured role there is no relationship to mark it by.
+    """
+    neighbor = neighbour(local)
+    negotiated = negotiate(neighbor, None)
+
+    collection = received_update(negotiated, ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP)
+
+    assert Attribute.CODE.OTC not in collection.attributes, f'a route received as {local} was marked with an OTC'
+
+
+@pytest.mark.rfc('rfc9234#5-ingress-add-otc-when-absent', polarity='negative')
+def test_an_otc_already_present_is_not_replaced_by_the_remote_as() -> None:
+    """The rule is "not present": an OTC a Provider passed on names who set it first."""
+    negotiated = negotiate(neighbour('customer'), None)
+
+    collection = received_update(negotiated, ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP + otc_attribute(OTHER_AS))
+
+    otc = collection.attributes.get(Attribute.CODE.OTC)
+    assert isinstance(otc, OTC)
+    assert otc.asn == OTHER_AS, 'the received OTC was overwritten on ingress'
+
+
+def test_the_ingress_marking_does_not_reach_the_attribute_cache() -> None:
+    """Two UPDATEs with the same attribute bytes share one decoded collection per session.
+
+    Marking that collection in place would leave the OTC on it for every later UPDATE the
+    cache answers, including one read without the ingress procedure.
+    """
+    negotiated = negotiate(neighbour('customer'), None)
+    received_update(negotiated, ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP)
+
+    message = Update.unpack_message(update_payload(ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP), negotiated)
+    assert isinstance(message, Update)
+
+    assert Attribute.CODE.OTC not in message.parse(negotiated).attributes, 'the cached attributes were marked'
+
+
 # ============================================================ 5 egress procedures
 
 

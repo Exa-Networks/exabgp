@@ -140,6 +140,8 @@ class NeighborSettings:
         domain_name: Domain name capability
         group_updates: Group UPDATE messages
         as_set: 'withdraw' or 'accept' a received AS_SET / AS_CONFED_SET (RFC 9774)
+        tunnel_encapsulation: 'auto', 'filter' or 'accept' a received Tunnel Encapsulation
+            attribute (RFC 9012 11); 'auto' filters it from an EBGP neighbour only
         auto_flush: Auto flush routes
         adj_rib_in: Maintain adjacency RIB in
         adj_rib_out: Maintain adjacency RIB out
@@ -164,6 +166,7 @@ class NeighborSettings:
     domain_name: str = ''
     group_updates: bool = True
     as_set: str = 'withdraw'
+    tunnel_encapsulation: str = 'auto'
     auto_flush: bool = True
     adj_rib_in: bool = True
     adj_rib_out: bool = True

@@ -18,6 +18,8 @@ worst bug in this file's subject matter and is at the top for that reason.
 from __future__ import annotations
 
 from struct import pack
+from typing import Any
+from unittest.mock import Mock
 
 import pytest
 
@@ -28,6 +30,8 @@ from exabgp.bgp.message.open import ASN, HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities, Capability
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended.traffic import (
     TrafficAction,
     TrafficMark,
@@ -50,11 +54,17 @@ from exabgp.bgp.message.update.nlri.flow import (
 )
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.neighbor import Neighbor
+from exabgp.configuration.check import _negotiated
+from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip.fragment import Fragment
 from exabgp.protocol.ip.tcp.flag import TCPFlag
 from exabgp.protocol.resource import NumericValue
+from exabgp.reactor.peer.context import PeerContext
+from exabgp.reactor.peer.handlers.update import UpdateHandler
+from exabgp.rib import RIB
+from exabgp.rib.incoming import IncomingRIB
 
 IPV4_UNICAST: FamilyTuple = (AFI.ipv4, SAFI.unicast)
 IPV4_FLOW: FamilyTuple = (AFI.ipv4, SAFI.flow_ip)
@@ -131,6 +141,97 @@ def packed_mp_reach(route: RoutedNLRI) -> bytes:
 def next_hop_length(attribute: bytes) -> int:
     """The Length of Next-Hop Network Address octet, past the 3 byte attribute header."""
     return attribute[3 + 3]
+
+
+# ---------------------------------------------- a whole UPDATE from an eBGP peer, section 6
+
+LOCAL_AS = 65001
+PEER_AS = 65002  # the neighbouring AS, which section 6 wants at the left of the AS_PATH
+OTHER_AS = 65003
+
+WELL_KNOWN = 0x40
+OPTIONAL = 0x80
+AS_SEQUENCE = 2
+
+# 192.0.2.0/24 as an IPv4 unicast NLRI, the prefix DESTINATION names
+UNICAST_PREFIX = bytes([24, 192, 0, 2])
+
+
+def path_attribute(flag: int, code: int, value: bytes) -> bytes:
+    """One path attribute in the short length encoding: flag, type, length, value."""
+    assert len(value) <= 0xFF, 'this helper only writes the one octet length'
+    return bytes([flag, code, len(value)]) + value
+
+
+def as_path(*asns: int) -> bytes:
+    """An AS_PATH of one AS_SEQUENCE, four octet ASNs as the session below negotiates."""
+    segment = bytes([AS_SEQUENCE, len(asns)]) + b''.join(pack('!L', asn) for asn in asns)
+    return path_attribute(WELL_KNOWN, Attribute.CODE.AS_PATH, segment)
+
+
+def flow_announce(components: bytes, path: tuple[int, ...] = (PEER_AS,)) -> bytes:
+    """An UPDATE payload announcing one IPv4 flow specification in MP_REACH_NLRI."""
+    reach = mp_reach(1, 133, b'', nlri(components))
+    attributes = path_attribute(WELL_KNOWN, Attribute.CODE.ORIGIN, bytes([0])) + as_path(*path)
+    attributes += path_attribute(OPTIONAL, Attribute.CODE.MP_REACH_NLRI, reach)
+    return pack('!H', 0) + pack('!H', len(attributes)) + attributes
+
+
+def unicast_announce(prefix: bytes = UNICAST_PREFIX) -> bytes:
+    """An UPDATE payload announcing one IPv4 unicast route, sent by the neighbouring AS."""
+    attributes = path_attribute(WELL_KNOWN, Attribute.CODE.ORIGIN, bytes([0])) + as_path(PEER_AS)
+    attributes += path_attribute(WELL_KNOWN, Attribute.CODE.NEXT_HOP, bytes([192, 0, 2, 254]))
+    return pack('!H', 0) + pack('!H', len(attributes)) + attributes + prefix
+
+
+def unicast_withdraw(prefix: bytes = UNICAST_PREFIX) -> bytes:
+    """An UPDATE payload withdrawing one IPv4 unicast route and carrying nothing else."""
+    return pack('!H', len(prefix)) + prefix + pack('!H', 0)
+
+
+def ebgp_session() -> Negotiated:
+    """An eBGP session carrying IPv4 unicast and IPv4 flow specifications."""
+    negotiated = Negotiated.make_negotiated(Neighbor(), Direction.IN)
+    negotiated.local_as = ASN(LOCAL_AS)
+    negotiated.peer_as = ASN(PEER_AS)
+    negotiated.asn4 = True
+    negotiated.families = [IPV4_UNICAST, IPV4_FLOW]
+    assert not negotiated.is_ibgp, 'section 6 is about routes received over eBGP'
+    return negotiated
+
+
+def received_update(payload: bytes, negotiated: Negotiated) -> Update:
+    """Decode an UPDATE the way the reactor does, before it reaches the peer's handler."""
+    message = Update.unpack_message(payload, negotiated)
+    assert isinstance(message, Update), f'expected an UPDATE, got {type(message).__name__}'
+    return message
+
+
+def peer_context() -> Any:
+    """What `UpdateHandler` reads of a peer: its neighbour's incoming RIB and counters."""
+    ctx = Mock(spec=PeerContext)
+    ctx.neighbor = Mock()
+    ctx.neighbor.prefix_limit = {}
+    ctx.neighbor.rib = Mock()
+    ctx.neighbor.rib.incoming = IncomingRIB(True, {IPV4_UNICAST, IPV4_FLOW})
+    ctx.negotiated = Mock()
+    ctx.negotiated.advertised_paths_limit = {}
+    ctx.peer_id = 'rfc8955-peer'
+    ctx.stats = {'receive-prefixes': 0, 'receive-withdraws': 0}
+    return ctx
+
+
+def receive(ctx: Any, *payloads: bytes) -> None:
+    """Hand each UPDATE, decoded on an eBGP session, to the handler a peer runs."""
+    negotiated = ebgp_session()
+    handler = UpdateHandler()
+    for payload in payloads:
+        list(handler.handle(ctx, received_update(payload, negotiated)))
+
+
+def held(ctx: Any, family: FamilyTuple) -> list[str]:
+    """The routes of one family the peer's incoming RIB holds, as the API prints them."""
+    return sorted(str(route.nlri) for route in ctx.neighbor.rib.incoming.cached_routes([family]))
 
 
 # ==================================================== the length field, section 4.1
@@ -320,6 +421,70 @@ def test_a_component_type_present_twice_is_refused() -> None:
     assert decoded(AFI.ipv4, PROTOCOL_TCP + bytes([0x03, 0x81, 0x11])) is None
 
 
+# ==================================================== section 4.2, combinations which match nothing
+
+FLOW_NEIGHBOR = """
+neighbor %s {
+    router-id 192.0.2.2;
+    local-address 192.0.2.2;
+    local-as 65001;
+    peer-as 65002;
+    family { ipv4 flow; }
+    flow {
+        route %s {
+            match {
+                destination 192.0.2.0/24;
+                %s
+            }
+            then { discard; }
+        }
+    }
+}
+"""
+
+
+@pytest.fixture
+def isolated_rib(monkeypatch: pytest.MonkeyPatch) -> None:
+    """`RIB` keys a process wide cache by neighbour name, and every test here uses one name."""
+    monkeypatch.setattr(RIB, '_cache', {})
+
+
+def propagated(peer: str, name: str, match: str) -> list[str]:
+    """The flow routes a configuration puts in the outgoing RIB; none if it is refused.
+
+    Each call names its own peer: the RIB is cached by neighbour, so a second
+    configuration of the same one would inherit the routes of the first.
+    """
+    configuration = Configuration([FLOW_NEIGHBOR % (peer, name, match)], text=True)
+    if not configuration.reload():
+        return []
+    (neighbor,) = configuration.neighbors.values()
+    _negotiated(neighbor)
+    for _ in neighbor.rib.outgoing.updates(False):
+        pass
+    return [str(route.nlri) for route in neighbor.rib.outgoing.cached_routes()]
+
+
+@pytest.mark.rfc('rfc8955#4.2-unmatchable-not-propagated')
+@pytest.mark.xfail(
+    strict=True,
+    reason='nothing in the flow configuration or in Flow.add looks at which components are '
+    'combined, so icmp-type AND port is configured and announced like any other filter',
+)
+def test_a_flow_specification_matching_icmp_type_and_port_is_not_propagated(isolated_rib: None) -> None:
+    """ICMP carries no ports, so a packet with an ICMP type never has a port to match.
+
+    The ICMP type alone is a filter which can match, and is propagated.  Adding the port
+    turns it into the section's own example of one which cannot.  Refusing it in the
+    configuration and leaving it out of the outgoing RIB are both compliant.
+    """
+    assert propagated('192.0.2.1', 'icmp-alone', 'icmp-type echo-request;') == [
+        'flow destination-ipv4 192.0.2.0/24 icmp-type =echo-request'
+    ]
+
+    assert propagated('192.0.2.3', 'icmp-and-port', 'icmp-type echo-request; port =80;') == []
+
+
 # ==================================================== section 4.2.1.1, the numeric operator
 
 
@@ -431,6 +596,22 @@ def test_a_dscp_which_would_not_fit_a_single_octet_is_refused_by_the_grammar(tex
         dscp_value(text)
 
 
+@pytest.mark.rfc('rfc8955#4.2.2.11-dscp-other-bits-zero', polarity='negative')
+@pytest.mark.xfail(
+    strict=True,
+    reason='FlowDSCP.decoder is _number, which returns the octet whole rather than masking '
+    'it with 0x3F, so 0xFF is reported as dscp =255',
+)
+def test_the_two_high_bits_of_a_dscp_octet_are_ignored_on_decoding() -> None:
+    """The two high bits of the IP header octet are ECN, not part of the DSCP."""
+    clean = decoded(AFI.ipv4, bytes([0x0B, EOL | NumericOperator.EQ, 0x3F]))
+    dirty = decoded(AFI.ipv4, bytes([0x0B, EOL | NumericOperator.EQ, 0xFF]))
+
+    assert clean is not None and dirty is not None
+    assert str(clean) == 'flow dscp =63'
+    assert str(dirty) == str(clean)
+
+
 @pytest.mark.rfc('rfc8955#4.2.2.12-fragment-single-octet')
 @pytest.mark.parametrize('name', sorted(Fragment.codes))
 def test_every_fragment_bitmask_we_encode_uses_a_single_octet(name: str) -> None:
@@ -467,6 +648,102 @@ def test_the_reserved_bits_of_a_fragment_bitmask_are_ignored_on_decoding() -> No
 
     assert clean is not None and dirty is not None
     assert str(dirty) == str(clean)
+
+
+# ==================================================== section 6, validation
+
+UPDATE_MESSAGE_ERROR = 3
+MALFORMED_AS_PATH = 11
+
+
+def announced_flows(payload: bytes) -> list[str]:
+    """The flow specifications an UPDATE from the eBGP peer announces once decoded.
+
+    RFC 4271 section 6.3 answers a leftmost AS which is not the peer's with Malformed
+    AS_PATH, and treating the route as withdrawn is the RFC 7606 answer to the same
+    error, so either counts as nothing announced.  Any other NOTIFICATION is a failure.
+    """
+    try:
+        parsed = received_update(payload, ebgp_session()).data
+    except Notify as notify:
+        assert (notify.code, notify.subcode) == (UPDATE_MESSAGE_ERROR, MALFORMED_AS_PATH), str(notify)
+        return []
+    return [str(routed.nlri) for routed in parsed.announces if routed.nlri.family().afi_safi() == IPV4_FLOW]
+
+
+@pytest.mark.rfc('rfc8955#6-validation-feasible-if-and-only-if', polarity='negative')
+@pytest.mark.xfail(
+    strict=True,
+    reason='nothing matches a received flow specification against the unicast routes of '
+    'its AFI, so one for a prefix the peer never announced is held like any other route',
+)
+def test_a_flow_specification_without_a_unicast_route_for_its_destination_is_not_feasible() -> None:
+    """Rule b: the originator of the flow must be the originator of the best unicast match.
+
+    The same flow from two peers.  The first announced 192.0.2.0/24 as unicast and so
+    passes; the second never did, so no unicast route exists for the flow to match and
+    it must not be held as feasible.
+    """
+    with_route = peer_context()
+    receive(with_route, unicast_announce(), flow_announce(DESTINATION))
+    assert held(with_route, IPV4_FLOW) == ['flow destination-ipv4 192.0.2.0/24']
+
+    without_route = peer_context()
+    receive(without_route, flow_announce(DESTINATION))
+
+    assert held(without_route, IPV4_UNICAST) == []
+    assert held(without_route, IPV4_FLOW) == []
+
+
+@pytest.mark.rfc('rfc8955#6-rules-b-and-c-disregarded')
+@pytest.mark.xfail(
+    strict=True,
+    reason='rules b and c are disregarded unconditionally, as if rule a had been relaxed '
+    'by configuration, and there is no configuration which relaxes it',
+)
+def test_rules_b_and_c_are_not_disregarded_without_explicit_configuration() -> None:
+    """Rule a, a destination prefix, is only relaxed by explicit configuration.
+
+    Only then may rules b and c be disregarded.  Nothing here configures that, so a flow
+    specification with no destination prefix component has no unicast route for rules b
+    and c to check it against, and must not be held as feasible.
+    """
+    ctx = peer_context()
+    receive(ctx, unicast_announce(), flow_announce(PROTOCOL_TCP + PORT_25))
+
+    assert held(ctx, IPV4_UNICAST) == ['192.0.2.0/24']
+    assert held(ctx, IPV4_FLOW) == []
+
+
+@pytest.mark.rfc('rfc8955#6-enforce-leftmost-as', polarity='negative')
+@pytest.mark.xfail(
+    strict=True,
+    reason='nothing compares the leftmost AS of an AS_PATH received over eBGP with the '
+    "peer's AS, so a path starting with another AS is accepted",
+)
+def test_an_ebgp_route_whose_as_path_does_not_start_with_the_peer_as_is_not_accepted() -> None:
+    assert announced_flows(flow_announce(DESTINATION, path=(PEER_AS, OTHER_AS))) == [
+        'flow destination-ipv4 192.0.2.0/24'
+    ]
+
+    assert announced_flows(flow_announce(DESTINATION, path=(OTHER_AS, PEER_AS))) == []
+
+
+@pytest.mark.rfc('rfc8955#6-revalidate-on-unicast-change')
+@pytest.mark.xfail(
+    strict=True,
+    reason='there is no validation to redo: the incoming RIB does not tell the flow '
+    'family when a unicast route goes, and nothing listens for it',
+)
+def test_a_flow_specification_is_no_longer_feasible_once_its_unicast_route_is_withdrawn() -> None:
+    ctx = peer_context()
+    receive(ctx, unicast_announce(), flow_announce(DESTINATION))
+    assert held(ctx, IPV4_FLOW) == ['flow destination-ipv4 192.0.2.0/24']
+
+    receive(ctx, unicast_withdraw())
+
+    assert held(ctx, IPV4_UNICAST) == []
+    assert held(ctx, IPV4_FLOW) == []
 
 
 # ==================================================== section 7.1, traffic-rate-bytes

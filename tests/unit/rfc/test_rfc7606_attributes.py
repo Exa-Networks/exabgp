@@ -11,25 +11,33 @@ Two rows fail and carry xfail:
   7.2  a Path Segment Length of zero is accepted instead of being treated as malformed
   7.3  a NEXT_HOP path attribute of sixteen bytes is accepted instead of being malformed
 
-Three more rows - the "if received from an external neighbor, discard it" halves of 7.5,
-7.9 and 7.10 - are recorded in qa/rfc/rfc7606.toml as gaps rather than tested, because the
-ledger does not let a test claim a requirement we have admitted we do not meet.
+The "if received from an external neighbor, discard it" halves of 7.5, 7.9 and 7.10 are
+tested against three sessions: an EBGP one, where the attribute goes whatever its length,
+and an IBGP one and one to another Member-AS of our confederation, where it stays.  RFC
+5065 5.2 and 5.3 make that Member-AS internal for these purposes.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from struct import pack
+
 import pytest
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 
 from rfc.rfc7606_wire import (
     EMPTY_AS_PATH,
+    LOCAL_AS,
     MANDATORY,
     NEXT_HOP,
     OPTIONAL,
     OPTIONAL_TRANSITIVE,
     ORIGIN_IGP,
+    PEER_AS,
     WELL_KNOWN_TRANSITIVE,
     announced,
     attribute,
@@ -42,6 +50,8 @@ from rfc.rfc7606_wire import (
 )
 
 CODE = Attribute.CODE
+CONFEDERATION_IDENTIFIER = 65000
+AS_CONFED_SEQUENCE = 3
 UPDATE_MESSAGE_ERROR = 3
 
 ROUTE = ['10.0.0.0/24']
@@ -62,6 +72,28 @@ def kept(code: int, attributes: bytes, asn4: bool = True) -> bool:
     parsed = parse(update(attributes), session(asn4=asn4))
     assert announced(parsed) == ROUTE, f'the route was withdrawn, so this says nothing about {code:#x}'
     return code in parsed.attributes
+
+
+def confederation_member_session() -> Negotiated:
+    """An EBGP session to another Member-AS of our confederation (RFC 5065)."""
+    negotiated = session()
+    configured = negotiated.neighbor.session
+    configured.local_as = ASN(LOCAL_AS)
+    configured.confederation = ASN(CONFEDERATION_IDENTIFIER)
+    configured.confederation_members = (ASN(PEER_AS),)
+    assert negotiated.confed_member and not negotiated.is_ibgp, 'the session is not the one the name says'
+    return negotiated
+
+
+def as_path_from(negotiated: Negotiated) -> bytes:
+    """The AS_PATH this neighbour would send, so the route is not withdrawn for its path.
+
+    RFC 5065 5 has another Member-AS start its path with an AS_CONFED_SEQUENCE naming
+    itself, and exabgp treats an UPDATE from a member without one as withdrawn.
+    """
+    if not negotiated.confed_member:
+        return EMPTY_AS_PATH
+    return attribute(WELL_KNOWN_TRANSITIVE, CODE.AS_PATH, bytes([AS_CONFED_SEQUENCE, 1]) + pack('!L', PEER_AS))
 
 
 # ------------------------------------------------------------------ 7.1 ORIGIN
@@ -184,6 +216,37 @@ def test_a_four_byte_local_pref_from_an_internal_neighbour_is_accepted() -> None
     assert CODE.LOCAL_PREF in parsed.attributes, 'a well formed LOCAL_PREF from an IBGP peer was dropped'
 
 
+@pytest.mark.rfc('rfc7606#7.5-local-pref-external-discard')
+@pytest.mark.parametrize('length', [4, 3])
+def test_a_local_pref_from_an_external_neighbour_is_discarded(length: int) -> None:
+    """Attribute discard: the attribute goes, the route and everything else in the UPDATE stay.
+
+    A length which would be malformed from an internal neighbour is discarded all the same:
+    the external rule comes first and does not look at the value.
+    """
+    attributes = MANDATORY + attribute(WELL_KNOWN_TRANSITIVE, CODE.LOCAL_PREF, bytes(length))
+    parsed = parse(update(attributes), session())
+
+    assert announced(parsed) == ROUTE, 'the route was withdrawn, attribute discard keeps it'
+    assert CODE.NEXT_HOP in parsed.attributes, 'the rest of the UPDATE was lost with the LOCAL_PREF'
+    assert CODE.LOCAL_PREF not in parsed.attributes, 'a LOCAL_PREF from an EBGP peer was kept'
+
+
+@pytest.mark.rfc('rfc7606#7.5-local-pref-external-discard', polarity='negative')
+@pytest.mark.parametrize('internal', [internal_session, confederation_member_session])
+def test_a_local_pref_from_an_internal_neighbour_is_not_discarded(internal: Callable[[], Negotiated]) -> None:
+    negotiated = internal()
+    attributes = (
+        ORIGIN_IGP + as_path_from(negotiated) + NEXT_HOP + attribute(WELL_KNOWN_TRANSITIVE, CODE.LOCAL_PREF, bytes(4))
+    )
+    parsed = parse(update(attributes), negotiated)
+
+    assert announced(parsed) == ROUTE
+    assert CODE.LOCAL_PREF in parsed.attributes, (
+        f'a LOCAL_PREF from an internal neighbour was discarded ({internal.__name__})'
+    )
+
+
 # ------------------------------------------------------------------ 7.6 ATOMIC_AGGREGATE
 
 
@@ -280,6 +343,35 @@ def test_a_four_byte_originator_id_from_an_internal_neighbour_is_accepted() -> N
     assert CODE.ORIGINATOR_ID in parsed.attributes, 'a well formed ORIGINATOR_ID from an IBGP peer was dropped'
 
 
+@pytest.mark.rfc('rfc7606#7.9-originator-id-external-discard')
+@pytest.mark.parametrize('length', [4, 3])
+def test_an_originator_id_from_an_external_neighbour_is_discarded(length: int) -> None:
+    """Attribute discard: the attribute goes, the route and everything else in the UPDATE stay.
+
+    A length which would be malformed from an internal neighbour is discarded all the same:
+    the external rule comes first and does not look at the value.
+    """
+    attributes = MANDATORY + attribute(OPTIONAL, CODE.ORIGINATOR_ID, bytes(length))
+    parsed = parse(update(attributes), session())
+
+    assert announced(parsed) == ROUTE, 'the route was withdrawn, attribute discard keeps it'
+    assert CODE.NEXT_HOP in parsed.attributes, 'the rest of the UPDATE was lost with the ORIGINATOR_ID'
+    assert CODE.ORIGINATOR_ID not in parsed.attributes, 'a ORIGINATOR_ID from an EBGP peer was kept'
+
+
+@pytest.mark.rfc('rfc7606#7.9-originator-id-external-discard', polarity='negative')
+@pytest.mark.parametrize('internal', [internal_session, confederation_member_session])
+def test_an_originator_id_from_an_internal_neighbour_is_not_discarded(internal: Callable[[], Negotiated]) -> None:
+    negotiated = internal()
+    attributes = ORIGIN_IGP + as_path_from(negotiated) + NEXT_HOP + attribute(OPTIONAL, CODE.ORIGINATOR_ID, bytes(4))
+    parsed = parse(update(attributes), negotiated)
+
+    assert announced(parsed) == ROUTE
+    assert CODE.ORIGINATOR_ID in parsed.attributes, (
+        f'a ORIGINATOR_ID from an internal neighbour was discarded ({internal.__name__})'
+    )
+
+
 # ------------------------------------------------------------------ 7.10 CLUSTER_LIST
 
 
@@ -299,6 +391,35 @@ def test_a_cluster_list_of_a_legal_length_from_an_internal_neighbour_is_accepted
 
     assert announced(parsed) == ROUTE
     assert CODE.CLUSTER_LIST in parsed.attributes, f'a {length} byte CLUSTER_LIST was dropped'
+
+
+@pytest.mark.rfc('rfc7606#7.10-cluster-list-external-discard')
+@pytest.mark.parametrize('length', [4, 5])
+def test_a_cluster_list_from_an_external_neighbour_is_discarded(length: int) -> None:
+    """Attribute discard: the attribute goes, the route and everything else in the UPDATE stay.
+
+    A length which would be malformed from an internal neighbour is discarded all the same:
+    the external rule comes first and does not look at the value.
+    """
+    attributes = MANDATORY + attribute(OPTIONAL, CODE.CLUSTER_LIST, bytes(length))
+    parsed = parse(update(attributes), session())
+
+    assert announced(parsed) == ROUTE, 'the route was withdrawn, attribute discard keeps it'
+    assert CODE.NEXT_HOP in parsed.attributes, 'the rest of the UPDATE was lost with the CLUSTER_LIST'
+    assert CODE.CLUSTER_LIST not in parsed.attributes, 'a CLUSTER_LIST from an EBGP peer was kept'
+
+
+@pytest.mark.rfc('rfc7606#7.10-cluster-list-external-discard', polarity='negative')
+@pytest.mark.parametrize('internal', [internal_session, confederation_member_session])
+def test_a_cluster_list_from_an_internal_neighbour_is_not_discarded(internal: Callable[[], Negotiated]) -> None:
+    negotiated = internal()
+    attributes = ORIGIN_IGP + as_path_from(negotiated) + NEXT_HOP + attribute(OPTIONAL, CODE.CLUSTER_LIST, bytes(4))
+    parsed = parse(update(attributes), negotiated)
+
+    assert announced(parsed) == ROUTE
+    assert CODE.CLUSTER_LIST in parsed.attributes, (
+        f'a CLUSTER_LIST from an internal neighbour was discarded ({internal.__name__})'
+    )
 
 
 # ------------------------------------------------------------------ 7.11 MP_REACH_NLRI

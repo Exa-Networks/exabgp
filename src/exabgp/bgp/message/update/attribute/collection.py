@@ -98,6 +98,32 @@ def _with_the_attribute(notify: Notify, header: Buffer, value: Buffer) -> Notify
     return Notify(notify.code, notify.subcode, notify.detail, data=bytes(header) + bytes(value))
 
 
+# RFC 7606 7.5, 7.9 and 7.10: the attributes discarded when they arrive from an external
+# neighbour, as they only have a meaning inside the AS (or the confederation).
+_INTERNAL_ONLY: frozenset[int] = frozenset(
+    {Attribute.CODE.LOCAL_PREF, Attribute.CODE.ORIGINATOR_ID, Attribute.CODE.CLUSTER_LIST}
+)
+
+
+def _log_malformed(aid: int, action: str, reason: str) -> None:
+    """Say which attribute a peer got wrong and what we did about it.
+
+    RFC 6514 5 requires an error to be logged for a malformed PMSI Tunnel attribute. It
+    is done for every attribute RFC 7606 has us withdraw or discard for, because in each
+    case the routes change with no NOTIFICATION, so the log is the only record of why.
+    """
+    log.error(
+        lazymsg(
+            'attribute.malformed name={name} aid=0x{aid:02X} action={action} reason="{reason}"',
+            name=Attribute.CODE.names.get(aid, 'unset'),
+            aid=aid,
+            action=action,
+            reason=reason,
+        ),
+        'parser',
+    )
+
+
 class AttributeCollection(MutableMapping[int, Attribute]):
     """Semantic container for BGP path attributes (dict-like).
 
@@ -515,6 +541,81 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         length = data[2]
         return flag, attr, data[3 : length + 3]
 
+    @staticmethod
+    def _dropped_on_receipt(negotiated: Negotiated) -> frozenset[int]:
+        """The attributes this session removes from an UPDATE before decoding them.
+
+        RFC 7606 7.5, 7.9 and 7.10: LOCAL_PREF, ORIGINATOR_ID and CLUSTER_LIST from an
+        external neighbour are discarded, whatever their length, and the rest of the
+        UPDATE is processed. RFC 9012 11: a filtered Tunnel Encapsulation attribute is
+        "neither processed nor distributed", so it is not decoded either. Dropping the
+        attribute, rather than adding a Discard marker, is what attribute discard means:
+        the marker makes the reactor ignore the whole UPDATE.
+        """
+        dropped: set[int] = set()
+        if not negotiated.is_internal_neighbor:
+            dropped.update(_INTERNAL_ONLY)
+        if not negotiated.accepts_tunnel_encapsulation:
+            dropped.add(Attribute.CODE.TUNNEL_ENCAP)
+        return frozenset(dropped)
+
+    def _add_registered(
+        self, aid: int, flag: int, kls: type[Attribute] | None, header: Buffer, value: Buffer, negotiated: Negotiated
+    ) -> None:
+        """Decode an attribute we have a class for, and apply RFC 7606 to what goes wrong."""
+        if len(value) == 0 and kls and not kls.VALID_ZERO:
+            # A zero length is one more wrong length, so an attribute whose RFC 7606 rule
+            # is attribute discard (AGGREGATOR, 7.7) is discarded rather than withdrawn.
+            # Withdrawing was harmless while treat-as-withdraw with no NLRI did nothing;
+            # RFC 7606 5.2 now makes it a session reset.
+            if kls.DISCARD and not kls.TREAT_AS_WITHDRAW:
+                _log_malformed(aid, 'attribute-discard', 'a length of zero')
+                self.add(Discard(aid))
+                return
+            _log_malformed(aid, 'treat-as-withdraw', 'a length of zero')
+            self.add(TreatAsWithdraw(aid))
+            return
+
+        # RFC 7606 7.3: a NEXT_HOP path attribute whose length is not four is
+        # malformed. The rule is applied here, where attribute 3 is known to be
+        # what is being read, because NextHop also decodes the next hop inside
+        # MP_REACH_NLRI, which RFC 4760 lets the family size: sixteen octets for
+        # IPv6. Sharing one length rule accepted a sixteen octet attribute 3.
+        if aid == Attribute.CODE.NEXT_HOP and len(value) != NextHop.ATTRIBUTE_SIZE_BYTES:
+            _log_malformed(aid, 'treat-as-withdraw', f'a length of {len(value)}')
+            self.add(TreatAsWithdraw(aid))
+            return
+
+        try:
+            decoded: Attribute = Attribute.unpack(aid, flag, value, negotiated)
+        except (IndexError, ValueError) as exc:
+            if kls and kls.TREAT_AS_WITHDRAW:
+                _log_malformed(aid, 'treat-as-withdraw', str(exc))
+                self.add(TreatAsWithdraw(aid))
+                return
+            # DISCARD was honoured for Notify below but not here, so an attribute
+            # RFC 7606 says to drop escaped as a raw ValueError instead: AGGREGATOR
+            # at any length but 0 or 6 came out of Update.unpack_message untyped,
+            # where the reactor's catch-all turned RFC 7606 7.7 attribute discard
+            # into a session reset
+            if kls and kls.DISCARD:
+                _log_malformed(aid, 'attribute-discard', str(exc))
+                self.add(Discard())
+                return
+            raise exc
+        except Notify as exc:
+            if kls and kls.TREAT_AS_WITHDRAW:
+                _log_malformed(aid, 'treat-as-withdraw', exc.detail)
+                self.add(TreatAsWithdraw())
+                return
+            if kls and kls.DISCARD:
+                _log_malformed(aid, 'attribute-discard', exc.detail)
+                self.add(Discard())
+                return
+            raise _with_the_attribute(exc, header, value) from None
+
+        self.add(decoded)
+
     # Iterative, not recursive: every branch used to end `return self.parse(left, negotiated)`,
     # costing one stack frame per attribute on peer-controlled input (see
     # tests/unit/test_attribute_parse_iterative.py for the measured RecursionError crossover).
@@ -523,6 +624,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
     # then `data[length:]`), so the loop runs at most `len(data) // 3` times, and `data` is
     # itself bounded by the negotiated message size checked upstream in Update.unpack_message.
     def parse(self, data: Buffer, negotiated: Negotiated) -> AttributeCollection:
+        dropped = self._dropped_on_receipt(negotiated)
         while data:
             try:
                 # We do not care if the attribute are transitive or not as we do not redistribute
@@ -564,6 +666,18 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 flag = Attribute.Flag(flag & Attribute.Flag.MASK_PARTIAL & 0xFF)
                 # flag &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
 
+            if aid in dropped:
+                log.debug(
+                    lazymsg(
+                        'attribute.filtered name={name} aid=0x{aid:02X} peer={peer} action=discard',
+                        name=Attribute.CODE.names.get(aid, 'unset'),
+                        aid=aid,
+                        peer='internal' if negotiated.is_internal_neighbor else 'external',
+                    ),
+                    'parser',
+                )
+                continue
+
             # Get the attribute class to check its behavior flags
             kls = Attribute.klass_by_id(aid)
 
@@ -584,44 +698,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
             # handle the attribute if we know it
             if Attribute.registered(aid, flag):
-                if length == 0 and kls and not kls.VALID_ZERO:
-                    self.add(TreatAsWithdraw(aid))
-                    continue
-
-                # RFC 7606 7.3: a NEXT_HOP path attribute whose length is not four is
-                # malformed. The rule is applied here, where attribute 3 is known to be
-                # what is being read, because NextHop also decodes the next hop inside
-                # MP_REACH_NLRI, which RFC 4760 lets the family size: sixteen octets for
-                # IPv6. Sharing one length rule accepted a sixteen octet attribute 3.
-                if aid == Attribute.CODE.NEXT_HOP and length != NextHop.ATTRIBUTE_SIZE_BYTES:
-                    self.add(TreatAsWithdraw(aid))
-                    continue
-
-                try:
-                    decoded: Attribute = Attribute.unpack(aid, flag, attribute, negotiated)
-                except (IndexError, ValueError) as exc:
-                    if kls and kls.TREAT_AS_WITHDRAW:
-                        self.add(TreatAsWithdraw(aid))
-                        continue
-                    # DISCARD was honoured for Notify below but not here, so an attribute
-                    # RFC 7606 says to drop escaped as a raw ValueError instead: AGGREGATOR
-                    # at any length but 0 or 6 came out of Update.unpack_message untyped,
-                    # where the reactor's catch-all turned RFC 7606 7.7 attribute discard
-                    # into a session reset
-                    if kls and kls.DISCARD:
-                        self.add(Discard())
-                        continue
-                    raise exc
-                except Notify as exc:
-                    if kls and kls.TREAT_AS_WITHDRAW:
-                        self.add(TreatAsWithdraw())
-                        continue
-                    if kls and kls.DISCARD:
-                        self.add(Discard())
-                        continue
-                    raise _with_the_attribute(exc, header, attribute) from None
-
-                self.add(decoded)
+                self._add_registered(aid, flag, kls, header, attribute, negotiated)
                 continue
 
             # Note: Unknown attributes are handled below via GenericAttribute for transitive

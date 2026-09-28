@@ -15,6 +15,10 @@ sentence the document never wrote as a rule.
 Everything drives `EVPN.unpack_nlri`, the real entry point the reactor uses, on bytes
 built here rather than on anything the encoder produced: an encoder and a decoder that
 agree with each other and disagree with the RFC pass every round-trip test ever written.
+
+The tests at the end carry a strict xfail as well as a marker.  Each names a requirement
+qa/rfc/rfc7432.toml records as a gap and shows what meeting it would look like; the day
+one passes, its status becomes required and the xfail comes off.
 """
 
 from __future__ import annotations
@@ -23,14 +27,24 @@ import pytest
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.open.routerid import RouterID
+from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity, RouteTarget
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.evpn.ethernetad import EthernetAD
 from exabgp.bgp.message.update.nlri.evpn.mac import MAC
 from exabgp.bgp.message.update.nlri.evpn.multicast import Multicast
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN, GenericEVPN
 from exabgp.bgp.message.update.nlri.evpn.segment import EthernetSegment
+from exabgp.bgp.message.update.nlri.qualifier import ESI as SegmentIdentifier
+from exabgp.bgp.message.update.nlri.qualifier import EthernetTag, RouteDistinguisher
+from exabgp.bgp.neighbor.neighbor import Neighbor
+from exabgp.bgp.neighbor.session import Session
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP, IPv4
+from exabgp.rib.route import Route
 
 # RFC 7432 section 7: "+ 1 - Ethernet Auto-Discovery (A-D) route", and so on.
 ETHERNET_AD = 1
@@ -328,3 +342,81 @@ def test_an_inclusive_multicast_route_checks_its_ip_length_against_its_size() ->
 
     with pytest.raises(Notify):
         decode(nlri(INCLUSIVE_MULTICAST, RD + ETAG + bytes([IPV4_BITS]) + IPV6))
+
+
+# ------------------------------------------------ the gaps, shown rather than described
+#
+# Each test below names a requirement the ledger records as a gap.  It asserts what the
+# RFC asks for and fails today for the reason its xfail gives.
+
+# Section 7.5: Type 0x06, Sub-Type 0x01, Flags (Single-Active set), two reserved octets
+# and the ESI Label.  Section 7.6: Type 0x06, Sub-Type 0x02 and the six octet ES-Import.
+ESI_LABEL_COMMUNITY = bytes([0x06, 0x01, 0x01, 0x00, 0x00]) + LABEL
+ES_IMPORT_ROUTE_TARGET = bytes([0x06, 0x02]) + MAC_ADDRESS
+
+# RFC 4364 section 4.2: Type 0 is a 2 octet ASN then 4 octets, Type 2 a 4 octet ASN then
+# 2 octets.  Section 8.1.1 of RFC 7432 allows neither for an Ethernet Segment route.
+RD_TYPE_0 = bytes.fromhex('0000fde800000001')
+RD_TYPE_2 = bytes.fromhex('000200000fde0001')
+
+LOCAL_ADDRESS = '192.0.2.1'
+PEER_ADDRESS = '192.0.2.254'
+SOMEONE_ELSES_ADDRESS = '198.51.100.7'
+
+
+@pytest.mark.rfc('rfc7432#8.2.1-esi-label-extended-community-included')
+@pytest.mark.xfail(
+    strict=True,
+    reason='no ESI Label class: type 0x06 sub-type 0x01 is not registered and decodes as a hex blob',
+)
+def test_an_esi_label_extended_community_is_recognised_with_its_label() -> None:
+    """A route can only carry an ESI Label exabgp knows how to read and write."""
+    decoded = ExtendedCommunity.unpack_attribute(ESI_LABEL_COMMUNITY, None)
+
+    assert bytes(decoded.pack_attribute(Negotiated.UNSET)) == ESI_LABEL_COMMUNITY
+    assert decoded.registered_klass is not None
+    assert repr(decoded) != '0x' + ESI_LABEL_COMMUNITY.hex().upper()
+    assert '100' in repr(decoded)
+
+
+@pytest.mark.rfc('rfc7432#8.1.1-es-import-route-target-carried')
+@pytest.mark.xfail(
+    strict=True,
+    reason='no ES-Import Route Target class: type 0x06 sub-type 0x02 decodes as a generic community',
+)
+def test_an_es_import_route_target_decodes_as_a_route_target_carrying_a_mac() -> None:
+    decoded = ExtendedCommunity.unpack_attribute(ES_IMPORT_ROUTE_TARGET, None)
+
+    assert bytes(decoded.pack_attribute(Negotiated.UNSET)) == ES_IMPORT_ROUTE_TARGET
+    assert isinstance(decoded, RouteTarget)
+    assert '00:11:22:33:44:55' in repr(decoded)
+
+
+@pytest.mark.rfc('rfc7432#8.1.1-rd-type-1', polarity='negative')
+@pytest.mark.xfail(strict=True, reason='make_ethernetsegment encodes whatever route distinguisher it is given')
+@pytest.mark.parametrize('rd', [RD_TYPE_0, RD_TYPE_2], ids=['type-0', 'type-2'])
+def test_an_ethernet_segment_route_with_an_rd_other_than_type_1_is_refused(rd: bytes) -> None:
+    """RD above is type 1, so the only difference from a route we do build is the RD type."""
+    with pytest.raises(ValueError):
+        EthernetSegment.make_ethernetsegment(
+            RouteDistinguisher(rd), SegmentIdentifier(ESI), IP.create_ip(IPV4), Action.ANNOUNCE
+        )
+
+
+@pytest.mark.rfc('rfc7432#11.1-next-hop-advertising-pe', polarity='negative')
+@pytest.mark.xfail(strict=True, reason='resolve_self only resolves `self`, any other next-hop is sent as written')
+def test_an_inclusive_multicast_route_with_another_routers_next_hop_is_refused() -> None:
+    """Section 11.1 is about the Inclusive Multicast route, so that is the route built here."""
+    neighbor = Neighbor()
+    neighbor.session = Session(
+        peer_address=IPv4.from_string(PEER_ADDRESS),
+        local_address=IPv4.from_string(LOCAL_ADDRESS),
+        local_as=ASN(65000),
+        peer_as=ASN(65000),
+        router_id=RouterID(LOCAL_ADDRESS),
+    )
+    multicast = Multicast.make_multicast(RouteDistinguisher(RD), EthernetTag(ETAG), IP.create_ip(IPV4), Action.ANNOUNCE)
+    route = Route(multicast, AttributeCollection(), nexthop=IPv4.from_string(SOMEONE_ELSES_ADDRESS))
+
+    with pytest.raises(ValueError):
+        neighbor.resolve_self(route)

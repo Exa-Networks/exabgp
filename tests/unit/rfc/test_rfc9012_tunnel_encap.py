@@ -23,10 +23,16 @@ from struct import pack
 
 import pytest
 
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
+from exabgp.configuration.configuration import Configuration
 
 pytestmark = pytest.mark.timeout(10)
 
@@ -47,6 +53,17 @@ PRIORITY_SUBTLV = 15
 # sub-TLV type numbers below 128 carry a one octet length, 128 and above carry two
 LOW_UNRECOGNISED_SUBTLV = 60
 HIGH_UNRECOGNISED_SUBTLV = 200
+
+# section 11 is about sessions, so its test needs one: two different ASes make it EBGP
+LOCAL_AS = 65001
+PEER_AS = 65002
+
+# the mandatory attributes of an UPDATE and one IPv4 prefix, so that the only thing the
+# decoder has to decide about is the Tunnel Encapsulation attribute beside them
+ORIGIN_IGP = bytes([0x40, 0x01, 0x01, 0x00])
+EMPTY_AS_PATH = bytes([0x40, 0x02, 0x00])
+NEXT_HOP = bytes([0x40, 0x03, 0x04, 192, 0, 2, 1])
+PREFIX_10_0_0_0_24 = bytes([24, 10, 0, 0])
 
 
 def subtlv(subtype: int, value: bytes) -> bytes:
@@ -76,6 +93,51 @@ def decoded(wire: bytes) -> TunnelEncap:
     attr = parse(wire)[TUNNEL_ENCAP]
     assert isinstance(attr, TunnelEncap)
     return attr
+
+
+def configured_session(peer_as: int = PEER_AS, option: str = '') -> Negotiated:
+    """A neighbour built by the real configuration parser, and its negotiated OPEN.
+
+    EBGP unless `peer_as` is our own AS; `option` is a line added to the neighbour block.
+    """
+    text = f"""
+neighbor 192.0.2.1 {{
+    router-id 192.0.2.2;
+    local-address 192.0.2.2;
+    local-as {LOCAL_AS};
+    peer-as {peer_as};
+    {option}
+    family {{ ipv4 unicast; }}
+}}
+"""
+    configuration = Configuration([text], text=True)
+    assert configuration.reload(), str(configuration.error)
+    neighbor = next(iter(configuration.neighbors.values()))
+
+    capabilities = Capabilities().new(neighbor, False, local_as=ASN(LOCAL_AS))
+    negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
+    negotiated.sent(Open.make_open(Version(4), ASN(LOCAL_AS), HoldTime(180), RouterID('192.0.2.2'), capabilities))
+    negotiated.received(Open.make_open(Version(4), ASN(peer_as), HoldTime(180), RouterID('192.0.2.1'), capabilities))
+    return negotiated
+
+
+def ebgp_session() -> Negotiated:
+    """An EBGP neighbour configured with nothing but its ASes."""
+    return configured_session()
+
+
+def received_with_tunnel_encapsulation(negotiated: Negotiated) -> AttributeCollection:
+    """The attributes of an UPDATE carrying a Tunnel Encapsulation attribute, as decoded."""
+    encap = attribute(tunnel(SR_POLICY_TUNNEL, preference(100)))
+    attributes = ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP + encap
+    payload = pack('!H', 0) + pack('!H', len(attributes)) + attributes + PREFIX_10_0_0_0_24
+
+    message = Update.unpack_message(payload, negotiated)
+    assert isinstance(message, Update)
+    collection = message.parse(negotiated)
+
+    assert len(collection.announces) == 1, 'the route itself must still be accepted'
+    return collection.attributes
 
 
 # --------------------------------------------------------------------------------------
@@ -283,3 +345,47 @@ def test_a_run_of_zero_length_tlvs_and_subtlvs_terminates() -> None:
     assert len(decoded(attribute(value)).tunnel_tlvs) == 4
     inner = subtlv(LOW_UNRECOGNISED_SUBTLV, b'') * 4
     assert len(decoded(attribute(tunnel(SR_POLICY_TUNNEL, inner))).tunnel_tlvs) == 1
+
+
+# --------------------------------------------------------------------------------------
+# 11 the attribute must be filterable on the way in
+
+
+@pytest.mark.rfc('rfc9012#11-must-be-able-to-filter-incoming')
+def test_an_ebgp_session_filters_the_tunnel_encapsulation_attribute_from_an_incoming_update() -> None:
+    """Being able to filter is only visible once a filter exists and is turned on.
+
+    The same section asks for the filter to be on by default for every EBGP session, so a
+    neighbour configured with nothing but its ASes is where it shows.  Filtered means
+    "neither processed nor distributed": the route arrives and the attribute is not in
+    what the API is handed.
+    """
+    attributes = received_with_tunnel_encapsulation(ebgp_session())
+
+    assert TUNNEL_ENCAP not in attributes, 'an EBGP peer delivered a Tunnel Encapsulation attribute'
+
+
+@pytest.mark.rfc('rfc9012#11-must-be-able-to-filter-incoming')
+def test_the_filter_can_be_turned_on_for_an_ibgp_session() -> None:
+    """Able to filter means on any session the operator chooses, not only on EBGP."""
+    negotiated = configured_session(peer_as=LOCAL_AS, option='tunnel-encapsulation filter;')
+
+    assert TUNNEL_ENCAP not in received_with_tunnel_encapsulation(negotiated), 'the filter was configured and ignored'
+
+
+@pytest.mark.rfc('rfc9012#11-must-be-able-to-filter-incoming', polarity='negative')
+@pytest.mark.parametrize(
+    'peer_as, option',
+    [(LOCAL_AS, ''), (LOCAL_AS, 'tunnel-encapsulation accept;'), (PEER_AS, 'tunnel-encapsulation accept;')],
+    ids=['ibgp-by-default', 'ibgp-accept', 'ebgp-accept'],
+)
+def test_the_tunnel_encapsulation_attribute_is_kept_where_it_is_not_filtered(peer_as: int, option: str) -> None:
+    """A filter which dropped the attribute everywhere would pass both tests above.
+
+    Inside the AS is the scope the attribute is meant for, and an operator who says accept
+    on an EBGP session is choosing to widen that scope, which RFC 9012 11 leaves to them.
+    """
+    attributes = received_with_tunnel_encapsulation(configured_session(peer_as=peer_as, option=option))
+
+    encap = attributes.get(TUNNEL_ENCAP)
+    assert isinstance(encap, TunnelEncap), f'the Tunnel Encapsulation attribute was filtered ({option or "default"})'

@@ -50,6 +50,7 @@ class Neighbor:
     domain_name: str
     group_updates: bool
     as_set: str
+    tunnel_encapsulation: str
     auto_flush: bool
     adj_rib_in: bool
     adj_rib_out: bool
@@ -87,6 +88,8 @@ class Neighbor:
         self.domain_name = ''
         self.group_updates = True
         self.as_set = 'withdraw'
+        # RFC 9012 11: 'auto' filters a received Tunnel Encapsulation attribute on EBGP only
+        self.tunnel_encapsulation = 'auto'
         self.auto_flush = True
         self.adj_rib_in = True
         self.adj_rib_out = True
@@ -184,6 +187,7 @@ class Neighbor:
         neighbor.domain_name = settings.domain_name
         neighbor.group_updates = settings.group_updates
         neighbor.as_set = settings.as_set
+        neighbor.tunnel_encapsulation = settings.tunnel_encapsulation
         neighbor.auto_flush = settings.auto_flush
         neighbor.adj_rib_in = settings.adj_rib_in
         neighbor.adj_rib_out = settings.adj_rib_out
@@ -356,6 +360,7 @@ class Neighbor:
             and self.session.confederation_members == other.session.confederation_members
             and self.group_updates == other.group_updates
             and self.as_set == other.as_set
+            and self.tunnel_encapsulation == other.tunnel_encapsulation
             and self.auto_flush == other.auto_flush
             and self.adj_rib_in == other.adj_rib_in
             and self.adj_rib_out == other.adj_rib_out
@@ -633,6 +638,7 @@ Neighbor {peer-address}
             + (f'\n\tconnect {neighbor.session.connect};\n' if neighbor.session.connect else '')
             + f'\tgroup-updates {"true" if neighbor.group_updates else "false"};\n'
             f'\tas-set {neighbor.as_set};\n'
+            f'\ttunnel-encapsulation {neighbor.tunnel_encapsulation};\n'
             f'\tauto-flush {"true" if neighbor.auto_flush else "false"};\n'
             f'\tadj-rib-in {"true" if neighbor.adj_rib_in else "false"};\n'
             f'\tadj-rib-out {"true" if neighbor.adj_rib_out else "false"};\n'

@@ -6,18 +6,25 @@ as not-applicable and this file does not test them.  What is left is the wire: t
 of section 4, which exabgp decodes for route types 5, 6 and 7 and keeps as opaque bytes
 for 1 to 4, and the PMSI Tunnel attribute of section 5.
 
-Only two pairs below carry an `rfc()` marker, and the reason is the same one which makes
-this RFC awkward: section 4 contains exactly one RFC 2119 keyword in its entirety, and
+Only two pairs below carry an `rfc()` marker as proof, and the reason is the same one
+which makes this RFC awkward: section 4 contains exactly one RFC 2119 keyword in its entirety, and
 section 5's format is described with none.  "The Length field indicates the length in
 octets of the Route Type specific field" is prose, not a MUST.  So the NLRI tests here
 are unmarked.  They are still worth having - a Length octet which disagrees with the
 payload is the classic way a peer walks a parser off the end of a buffer, and the test
 which proves exabgp raises Notify rather than IndexError is the test which proves the
 session ends politely rather than with a traceback.
+
+The one normative sentence of section 4, on Source Active A-D routes for an SSM group, is
+proven on both sides at the end of the file: such a route is discarded when received and
+refused by the configuration when asked to advertise it.
 """
 
 from __future__ import annotations
 
+import logging
+
+from struct import pack
 from typing import Any
 from unittest.mock import Mock
 
@@ -27,8 +34,12 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.pmsi import PMSI
 from exabgp.bgp.message.update.nlri.mvpn import MVPN, SourceAD
+from exabgp.configuration.configuration import Configuration
+from exabgp.logger import log
+from exabgp.logger.option import echo, option
 from exabgp.protocol.family import AFI, SAFI
 
 # RFC 6514 section 5: the PMSI Tunnel attribute is optional transitive, so 0xC0.
@@ -48,6 +59,10 @@ TUNNEL_TYPE_INGRESS_REPLICATION = 6
 SOURCE_ACTIVE_IPV4_PAYLOAD_SIZE_BYTES = 18
 ROUTE_TYPE_SOURCE_ACTIVE = 5
 IPV4_ADDRESS_LENGTH_BITS = 32
+
+# The real dispatcher, kept before any test can swap it for the no-op one.
+ENABLED_LOG_DISPATCH = log.logger
+LOG_LEVELS = ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
 
 
 def session() -> Any:
@@ -298,3 +313,131 @@ def test_an_unimplemented_or_unknown_route_type_is_kept_as_opaque_bytes(route_ty
     assert rest == b''
     assert nlri.route_code == route_type
     assert payload.hex() in str(nlri).lower()
+
+
+# ========================================== section 5, a malformed PMSI must be logged
+
+
+def enable_every_log(monkeypatch: pytest.MonkeyPatch, caplog: Any) -> None:
+    """Every level and every source switched on, so silence is the parser's own."""
+    monkeypatch.setattr(log, 'logger', staticmethod(ENABLED_LOG_DISPATCH))
+    monkeypatch.setattr(option, 'logger', logging.getLogger('test.rfc6514.pmsi'))
+    monkeypatch.setattr(option, 'formater', echo)
+    monkeypatch.setattr(option, 'option', {})
+    monkeypatch.setattr(option, 'logit', {level: True for level in LOG_LEVELS})
+    caplog.set_level(logging.DEBUG, logger='test.rfc6514.pmsi')
+
+
+@pytest.mark.rfc('rfc6514#5-log-malformed-pmsi')
+def test_a_malformed_pmsi_is_logged_as_an_error(monkeypatch: pytest.MonkeyPatch, caplog: Any) -> None:
+    """The record has to say that what arrived was wrong, and say it as an error.
+
+    The per attribute debug line the parser writes before decoding names the PMSI too,
+    as "type 0x16", so naming the attribute is not enough.
+    """
+    enable_every_log(monkeypatch, caplog)
+
+    collection = parse_pmsi(bytes(PMSI_HEADER_SIZE_BYTES - 2))
+    assert withdrawn(collection)
+
+    messages = [record.getMessage().lower() for record in caplog.records]
+    assert messages, 'the parser logged nothing at all, so the capture itself is broken'
+    assert any(
+        ('pmsi' in message or '0x16' in message)
+        and any(word in message for word in ('malformed', 'invalid', 'withdraw', 'error'))
+        for message in messages
+    ), messages
+    assert any(record.levelno >= logging.ERROR for record in caplog.records), 'the malformed PMSI was not an error'
+
+
+@pytest.mark.rfc('rfc6514#5-log-malformed-pmsi', polarity='negative')
+def test_a_well_formed_pmsi_logs_no_error(monkeypatch: pytest.MonkeyPatch, caplog: Any) -> None:
+    """An error logged for every PMSI would pass the test above and bury the real ones."""
+    enable_every_log(monkeypatch, caplog)
+
+    collection = parse_pmsi(pmsi_value(TUNNEL_TYPE_INGRESS_REPLICATION, bytes([10, 0, 0, 1])))
+    assert not withdrawn(collection)
+    assert PMSI_TUNNEL in collection
+
+    assert caplog.records, 'the parser logged nothing at all, so the capture itself is broken'
+    errors = [record.getMessage() for record in caplog.records if record.levelno >= logging.ERROR]
+    assert errors == [], errors
+
+
+# ================================ section 4.5, Source Active routes in the SSM range
+
+
+def mcast_vpn_reach(*routes: bytes) -> MPRNLRI:
+    """An MP_REACH_NLRI for IPv4 MCAST-VPN carrying these routes, iterated as the reactor does."""
+    nexthop = bytes([10, 0, 0, 1])
+    value = pack('!HB', int(AFI.ipv4), int(SAFI.mcast_vpn)) + bytes([len(nexthop)]) + nexthop + bytes(1)
+    return MPRNLRI(value + b''.join(routes), False)
+
+
+@pytest.mark.rfc('rfc6514#4.5-ssm-range-not-advertised-and-discarded', polarity='negative')
+def test_a_received_source_active_route_for_an_ssm_group_is_discarded() -> None:
+    """The route beside it is outside 232/8 and must survive, so discarding all does not pass."""
+    source = bytes([10, 0, 0, 1])
+    announced = mcast_vpn_reach(
+        source_active(source, bytes([239, 1, 1, 1])),
+        source_active(source, bytes([232, 1, 1, 1])),
+    )
+
+    groups = [str(route.group) for route in announced if isinstance(route, SourceAD)]
+
+    assert groups == ['239.1.1.1']
+
+
+def mcast_vpn6_reach(*routes: bytes) -> MPRNLRI:
+    """The IPv6 MCAST-VPN twin of mcast_vpn_reach, with an IPv4 next hop as RFC 6515 allows."""
+    nexthop = bytes([10, 0, 0, 1])
+    value = pack('!HB', int(AFI.ipv6), int(SAFI.mcast_vpn)) + bytes([len(nexthop)]) + nexthop + bytes(1)
+    return MPRNLRI(value + b''.join(routes), False)
+
+
+@pytest.mark.rfc('rfc6514#4.5-ssm-range-not-advertised-and-discarded', polarity='negative')
+def test_a_received_ipv6_source_active_route_for_an_ssm_group_is_discarded() -> None:
+    """FF3x::/32 for every scope x; ff0e::1 and ff3e:1::1 are outside it and survive."""
+    source = bytes(15) + bytes([1])
+    groups = [
+        bytes([0xFF, 0x0E]) + bytes(13) + bytes([1]),
+        bytes([0xFF, 0x3E]) + bytes(13) + bytes([1]),
+        bytes([0xFF, 0x35]) + bytes(13) + bytes([2]),
+        bytes([0xFF, 0x3E, 0, 1]) + bytes(11) + bytes([1]),
+    ]
+    announced = mcast_vpn6_reach(*(source_active(source, group) for group in groups))
+
+    kept = [str(route.group) for route in announced if isinstance(route, SourceAD)]
+
+    assert kept == ['ff0e::1', 'ff3e:1::1']
+
+
+def configured_source_ad(group: str, action: Action) -> SourceAD:
+    """A Source Active A-D route as the API parses one, through Configuration.partial."""
+    configuration = Configuration([''], text=True)
+    verb = 'announce' if action == Action.ANNOUNCE else 'withdraw'
+    line = f'mcast-vpn source-ad source 10.0.0.1 group {group} rd 65000:1'
+    if not configuration.partial('ipv4', line, verb):
+        raise ValueError(str(configuration.error))
+    (route,) = configuration.pop_routes()
+    assert isinstance(route.nlri, SourceAD)
+    return route.nlri
+
+
+@pytest.mark.rfc('rfc6514#4.5-ssm-range-not-advertised-and-discarded')
+def test_we_refuse_to_advertise_a_source_active_route_for_an_ssm_group() -> None:
+    with pytest.raises(ValueError, match='Source Specific Multicast'):
+        configured_source_ad('232.1.1.1', Action.ANNOUNCE)
+
+
+@pytest.mark.rfc('rfc6514#4.5-ssm-range-not-advertised-and-discarded')
+def test_we_advertise_a_source_active_route_outside_the_ssm_range() -> None:
+    """231.255.255.255 and 233.0.0.0 bracket 232/8: refusing every group fails here."""
+    for group in ('231.255.255.255', '233.0.0.0', '239.1.1.1'):
+        assert str(configured_source_ad(group, Action.ANNOUNCE).group) == group
+
+
+@pytest.mark.rfc('rfc6514#4.5-ssm-range-not-advertised-and-discarded')
+def test_we_may_still_withdraw_a_source_active_route_for_an_ssm_group() -> None:
+    """Only advertising is forbidden: a withdrawal can remove such a route, never add one."""
+    assert str(configured_source_ad('232.1.1.1', Action.WITHDRAW).group) == '232.1.1.1'

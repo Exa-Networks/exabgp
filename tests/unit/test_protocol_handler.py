@@ -1396,3 +1396,48 @@ async def test_protocol_read_keepalive_with_nop(mock_peer: Any) -> None:
         result = await protocol.read_keepalive()
 
         assert result.TYPE == KeepAlive.TYPE
+
+
+@pytest.mark.asyncio
+async def test_protocol_read_update_with_an_attribute_discard_keeps_the_rest(mock_peer: Any) -> None:
+    """RFC 7606 2: attribute discard drops the attribute, and the UPDATE is still processed.
+
+    A malformed AGGREGATOR (7.7) leaves a Discard marker in the collection, and read_message
+    used to answer None for any UPDATE carrying one, so the route beside it was never seen.
+    """
+    import struct
+
+    from exabgp.bgp.message import Message, Update
+    from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.reactor.protocol import Protocol
+
+    protocol = Protocol(mock_peer)
+    protocol.negotiated.local_as = ASN(65000)
+    protocol.negotiated.peer_as = ASN(65000)
+    protocol.negotiated.asn4 = True
+    protocol.negotiated.families = [(AFI.ipv4, SAFI.unicast)]
+    protocol.neighbor.adj_rib_in = True
+
+    mandatory = bytes([0x40, 1, 1, 0]) + bytes([0x40, 2, 0]) + bytes([0x40, 3, 4, 10, 0, 0, 1])
+    malformed_aggregator = bytes([0xC0, 7, 3, 0, 0, 1])
+    attributes = mandatory + malformed_aggregator
+    body = struct.pack('!H', 0) + struct.pack('!H', len(attributes)) + attributes + bytes([24, 10, 0, 0])
+
+    mock_connection = Mock()
+    mock_connection.reader_async = AsyncMock(
+        return_value=(19 + len(body), Message.CODE.UPDATE, b'\xff' * 19, body, None)
+    )
+    mock_connection.session = Mock(return_value='test-session')
+    protocol.connection = mock_connection
+
+    message = await protocol.read_message()
+
+    assert message is not None, 'the UPDATE was dropped whole because one attribute was discarded'
+    assert isinstance(message, Update)
+    assert Attribute.CODE.INTERNAL_DISCARD in message.data.attributes, (
+        'the discard did not happen, so this proves nothing'
+    )
+    assert Attribute.CODE.AGGREGATOR not in message.data.attributes
+    assert [str(routed.nlri) for routed in message.data.announces] == ['10.0.0.0/24']

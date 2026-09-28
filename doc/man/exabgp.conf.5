@@ -55,6 +55,7 @@ neighbor <ip-address> {
 
     group-updates <truthvalue>;
     as-set <withdraw | accept>;  // received AS_SET / AS_CONFED_SET, RFC 9774
+    tunnel-encapsulation <auto | filter | accept>;  // received attribute, RFC 9012
     auto-flush <truthvalue>;
     adj-rib-in <truthvalue>;
     adj-rib-out <truthvalue>;
@@ -404,6 +405,22 @@ wants to see them.
 .Pp
 Routes we send are not checked: a set only reaches the wire when a route was
 written with one, and the RFC leaves that to the operator.
+.Sh TUNNEL ENCAPSULATION
+RFC 9012 asks for the Tunnel Encapsulation attribute to be filtered from the
+UPDATEs received on every EBGP session unless told otherwise.
+.Dq tunnel-encapsulation auto ,
+the default, removes it from what an EBGP neighbor sends, before it is decoded,
+and keeps it from a neighbor inside the AS or in another Member-AS of the
+confederation.
+.Dq tunnel-encapsulation filter
+removes it on any session, and
+.Dq tunnel-encapsulation accept
+keeps it on any session.
+The route itself is accepted either way.
+.Sh ATTRIBUTES FROM AN EXTERNAL NEIGHBOR
+As RFC 7606 requires, LOCAL_PREF, ORIGINATOR_ID and CLUSTER_LIST received from
+an EBGP neighbor outside the confederation are discarded and the rest of the
+UPDATE is processed.
 .Sh SEE ALSO
 .Xr exabgp 1 .
 .Sh CAVEATS

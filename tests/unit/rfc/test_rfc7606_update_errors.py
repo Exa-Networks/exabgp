@@ -30,6 +30,7 @@ from rfc.rfc7606_wire import (
     WELL_KNOWN_TRANSITIVE,
     announced,
     attribute,
+    internal_session,
     mp_reach_ipv6,
     mp_unreach_ipv6,
     parse,
@@ -182,8 +183,12 @@ def test_an_update_carrying_all_of_them_is_advertised() -> None:
     ],
 )
 def test_the_five_named_attributes_withdraw_instead_of_resetting(name: str, attributes: bytes) -> None:
-    """Each of these was a NOTIFICATION under RFC 4271, and is a withdrawal now."""
-    parsed = parse(update(attributes), session())
+    """Each of these was a NOTIFICATION under RFC 4271, and is a withdrawal now.
+
+    Over an internal session, because 7.5 only makes LOCAL_PREF treat-as-withdraw from an
+    internal neighbour: from an external one it is discarded, whatever its length.
+    """
+    parsed = parse(update(attributes), internal_session())
 
     assert announced(parsed) == [], f'a malformed {name} left the route advertised'
     assert withdrawn_routes(parsed) == ['10.0.0.0/24'], f'a malformed {name} was not treated as withdraw'
@@ -194,7 +199,8 @@ def test_the_five_named_attributes_are_kept_when_they_are_well_formed() -> None:
     attributes = MANDATORY
     attributes += attribute(OPTIONAL, CODE.MED, bytes(4))
     attributes += attribute(WELL_KNOWN_TRANSITIVE, CODE.LOCAL_PREF, bytes(4))
-    parsed = parse(update(attributes), session())
+    # internal, as LOCAL_PREF from an external neighbour is discarded by RFC 7606 7.5
+    parsed = parse(update(attributes), internal_session())
 
     assert announced(parsed) == ['10.0.0.0/24']
     for code in (CODE.ORIGIN, CODE.AS_PATH, CODE.NEXT_HOP, CODE.MED, CODE.LOCAL_PREF):

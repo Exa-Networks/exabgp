@@ -108,7 +108,7 @@ that receives the message SHOULD ignore this attribute.
 id = "rfc4760#3-no-duplicate-prefix-across-fields"
 section = "3"
 level = "SHOULD NOT"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 An UPDATE message SHOULD NOT include the same address prefix (of the
@@ -117,11 +117,9 @@ ROUTES field, Network Reachability Information fields, MP_REACH_NLRI
 field, and MP_UNREACH_NLRI field.
 """
 note = """
-exabgp announces and withdraws what its configuration and its API tell it to, and
-UpdateCollection.messages packs the announces and the withdrawals it was handed into as
-few messages as will hold them. Nothing compares a prefix against the other three fields
-of the message being built, so an API client which announces and withdraws the same
-prefix before a flush gets both in one UPDATE.
+UpdateCollection.messages never fills more than one of the four fields in one UPDATE (the
+RFC 7606 5.1 split), so a prefix it is handed both to announce and to withdraw goes out in
+two messages, the withdrawal first.
 """
 
 [[requirement]]

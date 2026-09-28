@@ -18,6 +18,17 @@ Version 6.0.0:
    when it tried to send the query. It is refused when the configuration is read.
  * Change: an OPERATIONAL message too short for its own type and length fields is refused
    by the header check with Bad Message Length (1/2), rather than by the decoder with 5/0.
+ * Incompatible: LOCAL_PREF, ORIGINATOR_ID and CLUSTER_LIST received from an EBGP
+   neighbor are discarded, as RFC 7606 7.5, 7.9 and 7.10 require, and the rest of the
+   UPDATE is processed. A neighbor in another Member-AS of our confederation keeps them.
+ * Incompatible: the Tunnel Encapsulation attribute is filtered from the UPDATEs an EBGP
+   neighbor sends, as RFC 9012 11 requires. "tunnel-encapsulation accept;" on a neighbor
+   keeps it, "tunnel-encapsulation filter;" also removes it inside the AS.
+ * Feature: a route received from a Provider, a Peer or an RS without an OTC attribute is
+   given one with the remote AS, as RFC 9234 5 requires.
+ * Fix: an attribute RFC 7606 makes an UPDATE withdrawn or discarded for is logged as an
+   error, naming the attribute and why, as RFC 6514 5 requires for the PMSI Tunnel attribute.
+   Those routes used to change with nothing in the log.
  * Feature: BGP confederations (RFC 5065), issue #96. A neighbor "confederation {
    identifier <asn>; members [ <asn> ... ]; }" block makes local-as our Member-AS. The
    OPEN carries the identifier to a peer outside the confederation and the Member-AS to a

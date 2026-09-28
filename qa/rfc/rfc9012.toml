@@ -177,7 +177,7 @@ that sub-TLV, so it can never find one malformed.
 id = "rfc9012#11-must-be-able-to-filter-incoming"
 section = "11"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 To prevent the Tunnel Encapsulation attribute from being distributed
@@ -187,10 +187,13 @@ UPDATE messages.  When the attribute is filtered from an incoming
 UPDATE, the attribute is neither processed nor distributed.
 """
 note = """
-exabgp has no per-neighbour filter for this attribute in either direction, and no
-default-on filtering for EBGP sessions as the rest of section 11 requires.  The
-attribute is decoded and handed to the API for every session.  Recorded as a gap rather
-than not-applicable: exabgp does understand the attribute, which is the condition the
-sentence attaches to, and the configuration language is the natural place for the
-filter.
+The neighbour option `tunnel-encapsulation <auto | filter | accept>;` filters the
+attribute from incoming UPDATEs per session.  `auto`, the default, filters it from every
+EBGP neighbour, as the rest of section 11 requires, and keeps it from a neighbour inside
+the AS or the confederation.  A filtered attribute is removed by `AttributeCollection.parse`
+before it is decoded, so it is neither processed nor handed to the API, and the route
+itself is still accepted.  The tests turn the filter on by default for EBGP and by option
+for IBGP, and show the attribute kept over IBGP by default and wherever `accept` is set.
+Filtering on the way out, and filtering the Encapsulation Extended Community, are not
+done; neither is in this ledger entry.
 """
