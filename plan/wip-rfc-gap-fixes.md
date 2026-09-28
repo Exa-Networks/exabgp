@@ -55,7 +55,7 @@ env exabgp_log_enable=false uv run pytest tests/unit/rfc -q -rx | grep XFAIL
 | 1 | Received attributes | ✅ | `95dd8d8` |
 | 2 | Received NLRI | ✅ | `df87c44` |
 | 3 | Outgoing routes / adj-rib-out | ✅ | `e642645` |
-| 4 | RFC 8277 Multiple Labels Capability | 🔄 in progress | |
+| 4 | RFC 8277 Multiple Labels Capability | ✅ uncommitted on main | |
 | 5 | FlowSpec | ❌ todo | |
 | 6 | Graceful Restart receiving procedures | ❌ todo | |
 | 7 | EVPN and Prefix-SID | ❌ todo | |
@@ -168,6 +168,27 @@ Each area below is independent. Do one per commit. The xfail tests named are the
   negotiated count per family in `Negotiated`, and trim label stacks on send (one label
   without the capability). The tests expect `label [100 200]` to go out as `[[100]]`.
 
+**Area 4 as implemented (uncommitted, 2026-09-28):**
+- `capability/labels.py` `MultipleLabels` (code 8, `Capability.CODE.MULTIPLE_LABELS`):
+  length not a multiple of 4 -> Notify(2, 0); first triple per family wins, an ignored one
+  (Count 0 or 1) included, also across two instances in one OPEN.
+- Knob `capability { multiple-labels <2-255 | disable>; }`, default disable: OPENs stay
+  byte-identical. When set, one triple per labelled family (SAFI 4 and 128) of the
+  neighbour (`Capabilities._multiple_labels`). `NeighborCapability.multiple_labels`,
+  resolve/unresolve, printed by `Neighbor._configuration_capability_optional` (renamed
+  from `_configuration_required_only`, it now holds more than requires).
+- `Negotiated.multiple_labels` / `labels_limit(afi, safi)`: the peer's counts only when our
+  OPEN carried code 8 too; 1 otherwise for SAFI 4/128; `LABELS_UNLIMITED` for UNSET (no
+  session: index, comparisons) and other families.
+- `LabelBase._within_labels_limit` from both `pack_nlri` (label.py, ipvpn.py): keep the
+  top labels, set the S bit on the last kept, take the dropped bits off the length.
+- Ledger: the five gaps plus the two not-applicable entries (2.1 supports-two-labels, 2.1
+  count-zero-or-one) are required; they were n/a only because we could not send code 8.
+- Four older unit tests (test_ipvpn x3, test_label x1) packed a 3-label stack on a session
+  with no capability and expected it whole; they now pack with `Negotiated.UNSET`.
+- Frozen outcomes: pass 1 (field excluded) added 18 lines only; pass 2 moved the digests.
+- Every rule mutated and caught.
+
 ### 5. FlowSpec (RFC 8955, RFC 8956)
 - `tests/unit/rfc/test_rfc8955_flowspec.py`: next-hop length 0 (§4, beware the redirect-to-IP
   use of the next-hop), DSCP masked with 0x3F on decode, eBGP leftmost AS (§6), feasibility
@@ -257,7 +278,7 @@ None.
 ## Resume point
 
 **2026-09-28 (local):** on `main` after #1432, not on the web branch. Area 3 committed as
-`e642645` (not pushed). `test_everything`: all 25 passed (one clean
+`e642645` (not pushed). Area 4 done, uncommitted. `test_everything`: all 25 passed (one clean
 run, 10m29s). Next: area 4 (RFC 8277). Areas one after the
 other, stopping for review between each.
 

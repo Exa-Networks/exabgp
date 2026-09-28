@@ -223,6 +223,8 @@ def capability(values: dict[str, Any]) -> NeighborCapability:
         neighbor_capability.link_local_nexthop = TriState.from_bool(given['link-local-nexthop'])
     if 'link-local-prefer' in given:
         neighbor_capability.link_local_prefer = given['link-local-prefer']
+    if 'multiple-labels' in given:
+        neighbor_capability.multiple_labels = given['multiple-labels']
     graceful = given.get('graceful-restart', None)
     if graceful is False:
         neighbor_capability.graceful_restart = GracefulRestartConfig.disabled()

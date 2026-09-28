@@ -665,7 +665,7 @@ Neighbor {peer-address}
             f'\t\tmulti-session {"enable" if cap.multi_session.is_enabled() else "disable"};\n'
             f'\t\toperational {state(cap.operational.is_enabled(), CapabilityCode.OPERATIONAL)};\n'
             f'\t\taigp {"enable" if cap.aigp.is_enabled() else "disable"};\n'
-            + cls._configuration_required_only(cap)
+            + cls._configuration_capability_optional(cap)
             + f'\t}}\n'
             f'\tfamily {{{families}\n'
             f'\t}}\n'
@@ -681,13 +681,15 @@ Neighbor {peer-address}
         return returned.replace('\t', '  ')
 
     @staticmethod
-    def _configuration_required_only(cap: NeighborCapability) -> str:
-        # not otherwise in the dump, so only written when leaving them out would lose a require
+    def _configuration_capability_optional(cap: NeighborCapability) -> str:
+        # not otherwise in the dump, so only written when leaving them out would lose something
         lines = ''
         if CapabilityCode.EXTENDED_MESSAGE in cap.required:
             lines += '\t\textended-message require;\n'
         if CapabilityCode.LINK_LOCAL_NEXTHOP in cap.required:
             lines += '\t\tlink-local-nexthop require;\n'
+        if cap.multiple_labels:
+            lines += f'\t\tmultiple-labels {cap.multiple_labels};\n'
         return lines
 
     @staticmethod

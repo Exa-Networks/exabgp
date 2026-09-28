@@ -162,7 +162,9 @@ class TestIPVPNPackUnpack:
             RouteDistinguisher.make_from_elements('172.16.0.1', 50),
         )
 
-        packed = nlri.pack_nlri(create_negotiated())
+        packed = nlri.pack_nlri(
+            Negotiated.UNSET
+        )  # no session: RFC 8277 cuts a stack to one label on a session without the capability
         unpacked, _ = IPVPN.unpack_nlri(
             AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
@@ -847,7 +849,9 @@ class TestIPVPNMultipleLabelEdgeCases:
             RouteDistinguisher.make_from_elements('10.0.0.1', 1),
         )
 
-        packed = nlri.pack_nlri(create_negotiated())
+        packed = nlri.pack_nlri(
+            Negotiated.UNSET
+        )  # no session: RFC 8277 cuts a stack to one label on a session without the capability
         unpacked, _ = IPVPN.unpack_nlri(
             AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
         )
@@ -936,7 +940,9 @@ class TestIPVPNHighMaskValues:
         assert nlri.labels.labels == [100, 200, 300]
 
         # Pack and verify mask is 160 (72 + 64 + 24)
-        packed = nlri.pack_nlri(create_negotiated())
+        packed = nlri.pack_nlri(
+            Negotiated.UNSET
+        )  # no session: RFC 8277 cuts a stack to one label on a session without the capability
         assert packed[0] == 160  # 72 (3 labels) + 64 (RD) + 24 (prefix)
 
         # Unpack and verify round-trip

@@ -88,6 +88,7 @@ def capability(neighbor_capability: NeighborCapability) -> dict[str, Any]:
         'add-path': neighbor_capability.add_path,
         'software-version': neighbor_capability.software_version is not None,
         'link-local-prefer': neighbor_capability.link_local_prefer,
+        'multiple-labels': neighbor_capability.multiple_labels or None,
         'graceful-restart': neighbor_capability.graceful_restart.time
         if neighbor_capability.graceful_restart.is_enabled()
         else False,

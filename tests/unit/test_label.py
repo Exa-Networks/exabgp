@@ -237,7 +237,9 @@ class TestLabelPack:
         cidr = CIDR.create_cidr(IP.pton('192.168.1.0'), 24)
         label = Label.from_cidr(cidr, AFI.ipv4, SAFI.nlri_mpls, labels=Labels.make_labels([100, 200, 300], True))
 
-        packed = label.pack_nlri(create_negotiated())
+        packed = label.pack_nlri(
+            Negotiated.UNSET
+        )  # no session: RFC 8277 cuts a stack to one label on a session without the capability
         # Should include 3 labels
         assert len(packed) >= 9  # 3 labels * 3 bytes
 

@@ -183,6 +183,30 @@ class LabelBase(INET):
             'so the end of the label stack cannot be found: use a factory method'
         )
 
+    def _within_labels_limit(self, limit: int) -> Buffer:
+        """The wire bytes with no more than `limit` labels, the top of the stack kept.
+
+        RFC 8277 2 and 3.2.3: without the Multiple Labels Capability both ways a prefix is
+        bound to one label, and never to more than the peer said it takes. The last label
+        kept becomes the bottom of the stack, and the length loses the bits dropped.
+        """
+        assert limit >= 1, 'a labelled route keeps at least one label'
+        if not self._has_labels or self._label_size <= limit * LABEL_SIZE_BYTES:
+            return self._packed
+        mask_at = self._mask_offset
+        start = mask_at + 1
+        kept = bytearray(self._packed[start : start + limit * LABEL_SIZE_BYTES])
+        kept[-1] |= LABEL_BOS_MASK
+        dropped_bits = (self._label_size - limit * LABEL_SIZE_BYTES) * 8
+        mask = self._packed[mask_at] - dropped_bits
+        assert mask >= 0, 'the length counted the labels it is now losing'
+        return (
+            bytes(self._packed[:mask_at])
+            + bytes([mask])
+            + bytes(kept)
+            + bytes(self._packed[start + self._label_size :])
+        )
+
     @property
     def labels(self) -> Labels:
         """Get Labels from wire bytes by scanning for BOS bit."""
@@ -371,17 +395,18 @@ class LabelBase(INET):
         Wire format: [addpath:4?][mask:1][labels:3n][prefix:var]
         """
         send_addpath = negotiated.addpath.send(self.afi, self.safi)
+        packed = self._within_labels_limit(negotiated.labels_limit(self.afi, self.safi))
 
         if send_addpath:
             if self._has_addpath:
-                return self._packed  # Zero-copy: return directly
+                return packed  # Zero-copy: return directly
             # Need to prepend NOPATH (4 zero bytes)
-            return bytes(PathInfo.NOPATH.pack_path()) + self._packed
+            return bytes(PathInfo.NOPATH.pack_path()) + packed
         else:
             if self._has_addpath:
                 # Strip AddPath bytes (first 4 bytes)
-                return self._packed[PATH_INFO_SIZE:]
-            return self._packed  # Zero-copy: return directly
+                return packed[PATH_INFO_SIZE:]
+            return packed  # Zero-copy: return directly
 
     def index(self) -> bytes:
         """Generate unique index for RIB lookup.

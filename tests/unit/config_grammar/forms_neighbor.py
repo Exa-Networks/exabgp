@@ -274,6 +274,15 @@ NEIGHBOR_FORMS: list[tuple[tuple[str, ...], str, bool]] = [
     (('capability',), 'graceful-restart 4096', False),
     (('capability',), 'graceful-restart -1', False),
     (('capability',), 'graceful-restart enable', False),
+    (('capability',), 'multiple-labels 2', True),
+    (('capability',), 'multiple-labels 255', True),
+    (('capability',), 'multiple-labels disable', True),
+    (('capability',), 'multiple-labels DISABLE', True),
+    (('capability',), 'multiple-labels 1', False),
+    (('capability',), 'multiple-labels 0', False),
+    (('capability',), 'multiple-labels 256', False),
+    (('capability',), 'multiple-labels enable', False),
+    (('capability',), 'multiple-labels', False),
     *[
         (('capability',), f'add-path {mode}', True)
         for mode in ('disable', 'disabled', 'receive', 'send', 'send/receive', 'SEND')

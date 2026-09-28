@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 import time
 
+from exabgp.bgp.message.open.capability.labels import MULTIPLE_LABELS_MAX, MULTIPLE_LABELS_MIN
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.configuration.grammar import shape
@@ -108,6 +109,31 @@ GRACEFUL_RESTART = Word(
 )
 
 
+def _multiple_labels(word: str) -> int:
+    if word.lower() in ('disable', 'disabled'):
+        return 0
+    try:
+        count = int(word)
+    except ValueError:
+        raise ValueError(
+            f"'{word}' is not valid, it is {MULTIPLE_LABELS_MIN}-{MULTIPLE_LABELS_MAX} or disable"
+        ) from None
+    # RFC 8277 2.1: a Count of 0 or 1 must not be sent
+    if not MULTIPLE_LABELS_MIN <= count <= MULTIPLE_LABELS_MAX:
+        raise ValueError(f'multiple-labels {count} is invalid, it is {MULTIPLE_LABELS_MIN}-{MULTIPLE_LABELS_MAX}')
+    return count
+
+
+MULTIPLE_LABELS = Word(
+    'multiple-labels',
+    f'<{MULTIPLE_LABELS_MIN}-{MULTIPLE_LABELS_MAX}>|disable',
+    _multiple_labels,
+    ['2', str(MULTIPLE_LABELS_MAX), 'disable', 'DISABLE'],
+    render=lambda value: ['disable' if not value else str(value)],
+    shape=shape.union(shape.integer(MULTIPLE_LABELS_MIN, MULTIPLE_LABELS_MAX), shape.enumeration('disable')),
+)
+
+
 ADD_PATH_MODES = {'disable': 0, 'disabled': 0, 'receive': 1, 'send': 2, 'send/receive': 3}
 
 
@@ -190,6 +216,12 @@ CAPABILITY = Block(
             requirable(None),
             field='link-local-nexthop',
             doc='Link-Local Next Hop, draft-ietf-idr-linklocal-capability',
+        ),
+        Leaf(
+            'multiple-labels',
+            MULTIPLE_LABELS,
+            field='multiple-labels',
+            doc='Multiple Labels, RFC 8277: how many labels on one prefix we take, per labelled family',
         ),
         Leaf(
             'link-local-prefer',

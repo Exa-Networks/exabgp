@@ -47,6 +47,7 @@ class CapabilityCode(int):
     MULTIPLE_ROUTES: ClassVar[int] = 0x04  # [RFC3107]
     NEXTHOP: ClassVar[int] = 0x05  # [RFC5549]
     EXTENDED_MESSAGE: ClassVar[int] = 0x06  # https://tools.ietf.org/html/draft-ietf-idr-bgp-extended-messages-24
+    MULTIPLE_LABELS: ClassVar[int] = 0x08  # [RFC8277]
     ROLE: ClassVar[int] = 0x09  # [RFC9234]
 
     # 6-63      Unassigned
@@ -91,6 +92,7 @@ class CapabilityCode(int):
         ADD_PATH: 'add-path',
         ENHANCED_ROUTE_REFRESH: 'enhanced-route-refresh',
         PATHS_LIMIT: 'paths-limit',
+        MULTIPLE_LABELS: 'multiple-labels',
         LINK_LOCAL_NEXTHOP: 'link-local-nexthop',
         OPERATIONAL: 'operational',
         ROUTE_REFRESH_CISCO: 'cisco-route-refresh',
@@ -142,6 +144,7 @@ class Capability:
         ADD_PATH: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.ADD_PATH)
         ENHANCED_ROUTE_REFRESH: ClassVar[CapabilityCode] =   CapabilityCode(CapabilityCode.ENHANCED_ROUTE_REFRESH)
         PATHS_LIMIT: ClassVar[CapabilityCode] =              CapabilityCode(CapabilityCode.PATHS_LIMIT)
+        MULTIPLE_LABELS: ClassVar[CapabilityCode] =          CapabilityCode(CapabilityCode.MULTIPLE_LABELS)
         LINK_LOCAL_NEXTHOP: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.LINK_LOCAL_NEXTHOP)
         ROUTE_REFRESH_CISCO: ClassVar[CapabilityCode] =      CapabilityCode(CapabilityCode.ROUTE_REFRESH_CISCO)
         MULTISESSION_CISCO: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.MULTISESSION_CISCO)

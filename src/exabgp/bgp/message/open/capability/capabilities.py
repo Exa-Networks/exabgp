@@ -18,6 +18,7 @@ from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
+from exabgp.bgp.message.open.capability.labels import MultipleLabels
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
@@ -223,6 +224,15 @@ class Capabilities(dict[int, Capability]):
         if families_with_limit:
             self[Capability.CODE.PATHS_LIMIT] = PathsLimit(families_with_limit)
 
+    def _multiple_labels(self, neighbor: Neighbor) -> None:
+        """RFC 8277 2.1: one triple per labelled family, only when the operator asked."""
+        count = neighbor.capability.multiple_labels
+        if not count:
+            return
+        families = {family: count for family in neighbor.families() if family[1] in (SAFI.nlri_mpls, SAFI.mpls_vpn)}
+        if families:
+            self[Capability.CODE.MULTIPLE_LABELS] = MultipleLabels(families)
+
     def _linklocal(self, neighbor: Neighbor) -> None:
         if not neighbor.capability.link_local_nexthop.is_enabled():
             return
@@ -244,6 +254,7 @@ class Capabilities(dict[int, Capability]):
         self._nexthop(neighbor)
         self._addpath(neighbor)
         self._pathslimit(neighbor)
+        self._multiple_labels(neighbor)
         self._graceful(neighbor, restarted)
         self._refresh(neighbor)
         self._operational(neighbor)

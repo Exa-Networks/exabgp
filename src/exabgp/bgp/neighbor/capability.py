@@ -90,6 +90,7 @@ class NeighborCapability:
     aigp: TriState = TriState.UNSET
     link_local_nexthop: TriState = TriState.UNSET
     link_local_prefer: bool = False  # Prefer link-local over global when both present
+    multiple_labels: int = 0  # RFC 8277 2.1: the Count we send for each labelled family, 0 for none
     software_version: str | None = None
     # Codes the peer must advertise back, or be refused with (2, 7) (RFC 5492 3)
     required: frozenset[int] = frozenset()
@@ -113,6 +114,7 @@ class NeighborCapability:
             aigp=self.aigp,
             link_local_nexthop=self.link_local_nexthop,
             link_local_prefer=self.link_local_prefer,
+            multiple_labels=self.multiple_labels,
             software_version=self.software_version,
             required=self.required,
         )
@@ -135,6 +137,7 @@ class NeighborCapability:
             and self.aigp == other.aigp
             and self.link_local_nexthop == other.link_local_nexthop
             and self.link_local_prefer == other.link_local_prefer
+            and self.multiple_labels == other.multiple_labels
             and self.software_version == other.software_version
             and self.required == other.required
         )

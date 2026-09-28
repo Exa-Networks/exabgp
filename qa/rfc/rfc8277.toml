@@ -40,8 +40,8 @@ url = "https://www.rfc-editor.org/rfc/rfc8277"
 id = "rfc8277#2-single-label-without-capability"
 section = "2"
 level = "MUST"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
    o  Unless this Capability is sent on a given BGP session by both of
       that session's BGP speakers, a SAFI-4 or SAFI-128 UPDATE message
@@ -49,21 +49,20 @@ text = """
       only a single label and MUST use the encoding of Section 2.2.
 """
 note = """
-exabgp never sends the Multiple Labels Capability, so this sentence binds every session
-it ever forms, and it does not hold it.  `label` in
-src/exabgp/configuration/static/mpls.py accepts `label [ 100 200 ]` and hands the list
-straight to `Labels.make_labels`, which packs both; nothing between the parser and
-`pack_nlri` consults a capability.  A configuration with two labels therefore puts a two
-label NLRI on a session where the peer has every right to read the second label as the
-first three octets of the prefix.
+Capability code 8 is sent only when `capability { multiple-labels <count>; }` asks for it
+(`Capabilities._multiple_labels`), and `Negotiated.labels_limit` is 1 for SAFI 4 and SAFI
+128 unless both OPENs carried it. `LabelBase._within_labels_limit`, called from
+`pack_nlri`, keeps the top of a configured stack down to that limit, sets the S bit on the
+last label kept and takes the dropped bits off the length, so `label [ 100 200 ]` goes out
+as `[ 100 ]` on every session where the capability did not go both ways. Positive only: this binds what we send, and no input from a peer can violate it.
 """
 
 [[requirement]]
 id = "rfc8277#2.1-must-not-send-multiple-labels-uncapable"
 section = "2.1"
 level = "MUST NOT"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
    If a BGP speaker has not sent the Multiple Labels Capability in its
    BGP OPEN message on a particular BGP session, or if it has not
@@ -73,53 +72,49 @@ text = """
    given prefix.
 """
 note = """
-The same gap as rfc8277#2-single-label-without-capability seen from the capability's
-side, and recorded separately because it is a separate sentence with a separate keyword.
-There is no gate at all: the capability code 8 is not in `CapabilityCode`, so there is no
-state for a check to read even if someone wrote one.
+The same gate as rfc8277#2-single-label-without-capability: `Negotiated.labels_limit`
+records the peer's counts only when our own OPEN carried code 8 as well, so a peer offering
+it alone, or us offering it alone, leaves every prefix with one label. Positive only: this binds what we send, and no input from a peer can violate it.
 """
 
 [[requirement]]
 id = "rfc8277#2.1-capability-supports-two-labels"
 section = "2.1"
 level = "MUST"
-status = "not-applicable"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
    Any implementation that sends a Multiple Labels Capability MUST be
    able to support at least two labels in the NLRI.
 """
 note = """
-Conditioned on sending the capability, and exabgp never sends it: capability code 8 does
-not exist in src/exabgp/bgp/message/open/capability/capability.py, so no OPEN exabgp
-builds can carry it.  The obligation has no session to attach to.  (Had it, exabgp would
-meet it: the decoder loop in INETBase.unpack_nlri has no depth limit at all.)
+Conditioned on sending the capability, which exabgp does when configured to. The decoder
+in INETBase.unpack_nlri reads a stack to its S bit with no depth limit, so a peer may bind
+two labels or more to a prefix once code 8 went both ways. Positive only: it asks what we
+can accept, and no input a peer may send should fail it.
 """
 
 [[requirement]]
 id = "rfc8277#2.1-duplicate-triple-ignored"
 section = "2.1"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
    If the Capability contains more than one triple with a given AFI/
    SAFI, all but the first MUST be ignored.
 """
 note = """
-This one binds a receiver, and exabgp is a receiver.  A Multiple Labels Capability which
-arrives is parsed by `UnknownCapability` (capabilities.py falls back to it for any code
-not in the registry), which keeps the bytes and interprets none of them, so exabgp
-neither honours the first triple nor the duplicates.  Ignoring everything is not the same
-as ignoring all but the first; the behaviour is indistinguishable here only because
-exabgp acts on no triple.
+`MultipleLabels.unpack_capability` records every family it has seen, a triple it ignores
+included, and skips any later triple for one of them, also across two instances of the
+capability in one OPEN.
 """
 
 [[requirement]]
 id = "rfc8277#2.1-count-zero-or-one-not-sent"
 section = "2.1"
 level = "MUST NOT"
-status = "not-applicable"
+status = "required"
 polarity = "both"
 text = """
    A triple of the form <AFI=x, SAFI=y, Count=0> or
@@ -127,27 +122,25 @@ text = """
    received, it MUST be ignored.
 """
 note = """
-The MUST NOT half is conditioned on sending a capability exabgp cannot build, and the
-reception half asks for a triple to be ignored inside a capability of which exabgp
-already ignores every byte.  Neither has anything in exabgp to bind.
+Sending: the configuration refuses `multiple-labels` below 2 (and above 255, the most one
+octet holds). Receiving: `MultipleLabels.unpack_capability` does not record a triple with a
+Count of 0 or 1, so the family stays at one label, and the triple still counts as the
+first for its family.
 """
 
 [[requirement]]
 id = "rfc8277#2.1-capability-length-multiple-of-four"
 section = "2.1"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
    A Multiple Labels Capability whose length is not a multiple of four
    MUST be considered to be malformed.
 """
 note = """
-A length check on peer input, so it binds the receiver.  `Capabilities.unpack_capability`
-hands code 8 to `UnknownCapability`, which stores the value and checks nothing, so a
-Multiple Labels Capability of length 5 is accepted as well formed.  Nothing downstream
-reads it, so the consequence today is cosmetic rather than a decoding error, but the
-sentence is not met.
+`MultipleLabels.unpack_capability` raises Notify(2, 0) for a value whose length is not a
+multiple of four, before reading a triple.
 """
 
 [[requirement]]
@@ -369,8 +362,8 @@ not-applicable.
 id = "rfc8277#3.2.3-must-not-send-more-labels-than-peer-handles"
 section = "3.2.3"
 level = "MUST NOT"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
    A BGP speaker MUST NOT send multiple
    labels to a peer with which it has not exchanged the Multiple Labels
@@ -379,9 +372,7 @@ text = """
    handle.
 """
 note = """
-Recorded as a gap rather than not-applicable even though it sits in the propagation
-section, because its first half does not depend on propagation: it forbids SENDING
-multiple labels on an uncapable session, and exabgp originates such NLRIs from
-configuration.  The second half, the per peer count, is unreachable for us since no peer
-count is ever recorded, but a sentence is not met in half.
+`Negotiated.labels_limit` is the Count the peer's first triple for the family gave, when
+both OPENs carried code 8, and 1 otherwise; `pack_nlri` never sends more labels than that.
+A stack within the count goes out whole. Positive only: this binds what we send, and no input from a peer can violate it.
 """

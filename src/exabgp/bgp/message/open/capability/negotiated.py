@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, TYPE_CHECKING
+from typing import Any, ClassVar, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message import Open
@@ -29,6 +29,10 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
+
+
+# what labels_limit answers where no capability binds the number of labels
+LABELS_UNLIMITED = 0xFFFF
 
 
 class Negotiated:
@@ -79,6 +83,8 @@ class Negotiated:
         self.linklocal_nexthop: bool = False
         self.paths_limit: dict[FamilyTuple, int] = {}
         self.advertised_paths_limit: dict[FamilyTuple, int] = {}
+        # RFC 8277 2.1: the labels the peer can take on one prefix, when both sent code 8
+        self.multiple_labels: dict[FamilyTuple, int] = {}
         self.mismatch: list[tuple[str, FamilyTuple]] = []
 
     @classmethod
@@ -109,6 +115,7 @@ class Negotiated:
         instance.linklocal_nexthop = False
         instance.paths_limit = {}
         instance.advertised_paths_limit = {}
+        instance.multiple_labels = {}
         instance.mismatch = []
         instance.sent_open = None
         instance.received_open = None
@@ -211,6 +218,8 @@ class Negotiated:
                     afi, safi = family
                     if self.addpath.receive(afi, safi):
                         self.advertised_paths_limit[family] = limit
+
+        self._negotiate_multiple_labels(sent_capa, recv_capa)
 
         rfc_multisession = sent_capa.announced(Capability.CODE.MULTISESSION) and recv_capa.announced(
             Capability.CODE.MULTISESSION,
@@ -376,6 +385,31 @@ class Negotiated:
         """
         neighbor = getattr(self, 'neighbor', None)
         return neighbor.session.confederation if neighbor is not None else ASN(0)
+
+    def _negotiate_multiple_labels(self, sent_capa: Capabilities, recv_capa: Capabilities) -> None:
+        """RFC 8277 2.1 and 3.2.3: more than one label only when both OPENs carried code 8,
+        and never more than the Count the peer gave for the family."""
+        from exabgp.bgp.message.open.capability.labels import MultipleLabels
+
+        self.multiple_labels = {}
+        if not sent_capa.announced(Capability.CODE.MULTIPLE_LABELS):
+            return
+        received = recv_capa.get(Capability.CODE.MULTIPLE_LABELS, None)
+        if received is None:
+            return
+        # the registry decodes code 8 as MultipleLabels
+        self.multiple_labels = dict(cast(MultipleLabels, received))
+
+    def labels_limit(self, afi: AFI, safi: SAFI) -> int:
+        """The most labels we may bind to one prefix of this family on this session.
+
+        RFC 8277 2 binds SAFI 4 and SAFI 128: one label unless the Multiple Labels
+        Capability went both ways. UNSET is no session at all and packs what it is given,
+        which is what an index or a comparison of two routes needs.
+        """
+        if getattr(self, 'neighbor', None) is None or safi not in (SAFI.nlri_mpls, SAFI.mpls_vpn):
+            return LABELS_UNLIMITED
+        return self.multiple_labels.get((afi, safi), 1)
 
     @property
     def peer_address(self) -> str:

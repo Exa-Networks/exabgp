@@ -73,6 +73,7 @@ neighbor <ip-address> {
         operational <enable | disable>;
         route-refresh <enable | disable>;
         extended-message <enable | disable>;
+        multiple-labels <2-255 | disable>;  // RFC 8277, default disable
     }
 
     role {
@@ -431,6 +432,17 @@ It needs
 and
 .Dq adj-rib-out ,
 both on by default.
+.Sh MULTIPLE LABELS
+RFC 8277 lets a labelled unicast or VPN route (SAFI 4 or 128) carry more than
+one label only when both speakers sent the Multiple Labels Capability, and never
+more than the number the peer said it can take.
+exabgp does not send the capability unless
+.Dq capability { multiple-labels <count>; }
+asks for it, with the number of labels it accepts on one prefix.
+Where the capability did not go both ways, a route configured with
+.Dq label [ 100 200 ]
+is sent with its first label only; where it did, the stack is cut to the
+number the peer announced.
 .Sh RE-ADVERTISED ROUTES
 A route decoded from one peer and handed to another neighbor (only a test or an
 embedding program does this: the API re-reads text, which makes a route of our

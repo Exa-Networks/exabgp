@@ -4,6 +4,13 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Incompatible: a labelled unicast or VPN route configured with more than one label is
+   sent with its first label only, unless both ends sent the Multiple Labels Capability,
+   and never with more labels than the peer announced (RFC 8277). The stack used to go
+   out whole, which a peer without the capability reads as part of the prefix.
+ * Feature: "capability { multiple-labels <2-255>; }" sends the Multiple Labels
+   Capability (RFC 8277) for every labelled family of the neighbor. Off by default. A
+   received one is decoded, a length which is not a multiple of four refused.
  * Feature: "route-target-filter true;" on a neighbor sends its VPN and EVPN routes only for
    the Route Targets the peer advertised membership of (RFC 4684), and offers them again
    when the membership changes. Off by default, as before.
