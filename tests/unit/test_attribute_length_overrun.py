@@ -81,15 +81,14 @@ def negotiated(families: list[tuple[AFI, SAFI]] | None = None) -> Any:
     return session
 
 
-def update_carrying(attributes: bytes) -> bytes:
-    """An UPDATE with no withdrawn routes, no NLRI, and the attribute section given."""
-    return pack('!H', 0) + pack('!H', len(attributes)) + attributes
-
-
 def parsed(attributes: bytes) -> Any:
-    """The semantic attributes the reactor would see for that attribute section."""
-    session = negotiated()
-    return Update.unpack_message(update_carrying(attributes), session).parse(session).attributes
+    """The semantic attributes the reactor would see for that attribute section.
+
+    The three mandatory attributes go first and one route follows, so the marker can only
+    come from the overrun: with no route at all, RFC 7606 5.2 makes treat-as-withdraw a
+    session reset, and the missing mandatory attributes would withdraw the route anyway.
+    """
+    return parsed_update(MANDATORY_ATTRIBUTES + attributes).attributes
 
 
 def parsed_update(
@@ -126,7 +125,7 @@ def test_an_attribute_longer_than_the_section_is_treated_as_withdraw(present_len
 
 def test_a_preceding_attribute_does_not_excuse_the_overrun() -> None:
     """The overrun is found wherever in the section it sits, not only as the first attribute."""
-    attributes = parsed(ORIGIN_IGP + truncated_community(COMMUNITY_SIZE_BYTES))
+    attributes = parsed(truncated_community(COMMUNITY_SIZE_BYTES))
 
     assert TREAT_AS_WITHDRAW in attributes, 'an overrun after a valid attribute was accepted'
 
@@ -213,8 +212,9 @@ def test_an_attribute_which_exactly_fills_the_section_still_parses() -> None:
 
 def test_two_well_formed_attributes_still_parse() -> None:
     """The other half of the negative space: the ordinary two attribute case is untouched."""
-    attributes = parsed(ORIGIN_IGP + truncated_community(DECLARED_LENGTH_BYTES))
+    med = bytes([0x80, int(Attribute.CODE.MED), 4, 0, 0, 0, 1])
+    attributes = parsed(med + truncated_community(DECLARED_LENGTH_BYTES))
 
     assert TREAT_AS_WITHDRAW not in attributes, 'a well formed UPDATE was treated as withdraw'
-    assert ORIGIN in attributes, 'ORIGIN was lost from a well formed UPDATE'
+    assert Attribute.CODE.MED in attributes, 'MED was lost from a well formed UPDATE'
     assert COMMUNITY in attributes, 'COMMUNITY was lost from a well formed UPDATE'

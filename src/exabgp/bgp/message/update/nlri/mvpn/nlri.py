@@ -29,6 +29,10 @@ from exabgp.protocol.ip import IPv4, IPv6
 # document".
 MVPN_ADDRESS_LENGTH_BITS: tuple[int, int] = (IPv4.BITS, IPv6.BITS)
 
+# RFC 6514 4: the seven route types the MCAST-VPN specification defines. 5, 6 and 7 are
+# decoded, 1 to 4 are kept as the bytes the peer sent. Any other type is unrecognised.
+RFC6514_ROUTE_TYPES: frozenset[int] = frozenset(range(1, 8))
+
 
 def check_source_and_group(packed: Buffer, cursor: int, name: str) -> None:
     """Check the Multicast Source and Multicast Group of a route which carries both.
@@ -215,6 +219,15 @@ class GenericMVPN(MVPN):
         Base classes use CODE set by decorator; GenericMVPN extracts dynamically.
         """
         return self._packed[0]
+
+    def discard_on_receipt(self) -> str | None:
+        # RFC 7606 5.4, the same rule as GenericEVPN: an announced route of a type we do
+        # not recognise is discarded, a withdrawn one is reported. Types 1 to 4 are
+        # recognised: RFC 6514 defines them, and we keep them as opaque bytes rather than
+        # decode them, so dropping them would lose most of what an MVPN peer sends.
+        if self.route_code in RFC6514_ROUTE_TYPES:
+            return None
+        return f'unrecognised MCAST-VPN route type {self.route_code} (RFC 7606 5.4)'
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.route_code, self._raw())

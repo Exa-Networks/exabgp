@@ -564,6 +564,14 @@ class AttributeCollection(MutableMapping[int, Attribute]):
     ) -> None:
         """Decode an attribute we have a class for, and apply RFC 7606 to what goes wrong."""
         if len(value) == 0 and kls and not kls.VALID_ZERO:
+            # A zero length is one more wrong length, so an attribute whose RFC 7606 rule
+            # is attribute discard (AGGREGATOR, 7.7) is discarded rather than withdrawn.
+            # Withdrawing was harmless while treat-as-withdraw with no NLRI did nothing;
+            # RFC 7606 5.2 now makes it a session reset.
+            if kls.DISCARD and not kls.TREAT_AS_WITHDRAW:
+                _log_malformed(aid, 'attribute-discard', 'a length of zero')
+                self.add(Discard(aid))
+                return
             _log_malformed(aid, 'treat-as-withdraw', 'a length of zero')
             self.add(TreatAsWithdraw(aid))
             return

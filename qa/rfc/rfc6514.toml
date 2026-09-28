@@ -44,7 +44,7 @@ url = "https://www.rfc-editor.org/rfc/rfc6514"
 id = "rfc6514#4.5-ssm-range-not-advertised-and-discarded"
 section = "4.5"
 level = "MUST NOT"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 Source Active A-D routes with a Multicast group belonging to the
@@ -53,16 +53,13 @@ potentially extended locally on a router) MUST NOT be advertised by a
 router and MUST be discarded if received.
 """
 note = """
-The one normative sentence in the whole of section 4, and exabgp honours neither half.
-`SourceAD.unpack_mvpn` checks the route length and the two address length octets and
-nothing else: a Source Active A-D route whose Multicast Group is in 232/8 or ff3x::/32 is
-decoded, reported to the JSON API and kept in the adj-rib-in like any other.  The send
-side is the same - the configuration parser will encode whatever group the operator
-writes.  Nothing in the tree knows what the SSM range is; grep finds no 232 and no RFC
-4607 anywhere near the MVPN code.  This is a gap and not not-applicable because the
-sentence binds any router which advertises or receives these routes, and exabgp does
-both.  Closing it needs an SSM range check in `SourceAD.unpack_mvpn` and in
-`make_sourcead`, plus a way to configure the local extension the sentence allows for.
+The one normative sentence in the whole of section 4.  Received: SourceAD's
+discard_on_receipt() names a group in 232.0.0.0/8 or FF3x::/32 (RFC 4607), and MPRNLRI
+drops the announced route with a warning, the other routes of the attribute kept.
+Advertised: the configuration and the API refuse "source-ad ... group" in the SSM range
+for an announcement with a ValueError; a withdrawal is still accepted, as it can only
+remove such a route.  The local extension of the range the sentence allows is not
+configurable, so the range is exactly RFC 4607's.
 """
 
 [[requirement]]

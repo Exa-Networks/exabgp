@@ -24,7 +24,9 @@ from exabgp.bgp.message.update.nlri.mup import (
     Type1SessionTransformedRoute,
     Type2SessionTransformedRoute,
 )
+from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.update.nlri.mvpn import SharedJoin, SourceAD, SourceJoin
+from exabgp.bgp.message.update.nlri.mvpn.sourcead import is_ssm_group
 from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IPv4, IPv6
@@ -341,6 +343,14 @@ def mvpn_sourcead(tokeniser: Any, afi: AFI, action: Any) -> SourceAD:
 
     tokeniser.consume('rd')
     rd = route_distinguisher(tokeniser)
+
+    # RFC 6514 4.5: a Source Active A-D route for a group in the SSM range MUST NOT be
+    # advertised. A withdrawal is still accepted, it can only remove such a route.
+    if action == Action.ANNOUNCE and is_ssm_group(groupip):
+        raise ValueError(
+            f'source-ad group {groupip} is in the Source Specific Multicast range, '
+            f'which RFC 6514 4.5 forbids advertising in a Source Active A-D route'
+        )
 
     nlri = SourceAD.make_sourcead(rd=rd, afi=afi, source=sourceip, group=groupip)
     return nlri

@@ -214,5 +214,11 @@ class GenericEVPN(EVPN):
         """
         return self._packed[0]
 
+    def discard_on_receipt(self) -> str | None:
+        # RFC 7606 5.4: a speaker advertising a typed family MUST discard the routes of a
+        # type it does not recognise. A withdrawal of one is still reported, as it can
+        # remove nothing we hold and shows the operator what the peer sent.
+        return f'unrecognised EVPN route type {self.route_code} (RFC 7606 5.4)'
+
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
         return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.route_code, self._raw())

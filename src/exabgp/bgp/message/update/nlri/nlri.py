@@ -192,6 +192,17 @@ class NLRI(Family):
         """Why add() refuses data, or '' when it would not. Only implemented by Flow NLRI."""
         raise NotImplementedError('family_conflict() only implemented by Flow NLRI')
 
+    def discard_on_receipt(self) -> str | None:
+        """Why a received announcement of this route is dropped, or None to keep it.
+
+        A route which decodes cleanly can still be one a specification tells a receiver
+        to discard, alone, without treat-as-withdraw and without a NOTIFICATION: an
+        EVPN or MCAST-VPN route of an unrecognised type (RFC 7606 5.4), or a Source
+        Active A-D route for an SSM group (RFC 6514 4.5). MPRNLRI asks every route it
+        yields, so the rule lives with the route type which knows it.
+        """
+        return None
+
     def index(self) -> bytes:
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
 

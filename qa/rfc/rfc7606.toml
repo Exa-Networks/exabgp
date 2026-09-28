@@ -361,9 +361,13 @@ note = """
 and encodes no reachable NLRI: there is then nothing to treat as withdrawn, and no way to
 know the NLRI field was read correctly, so the RFC escalates to a reset.
 
-We do not do this: the marker is added and the UPDATE parses to nothing.  The positive
-test carries xfail.  The negative half - that an attribute-discard-only error on such an
-UPDATE does NOT reset the session - we do get right.
+UpdateCollection._reset_without_reachable_nlri raises 3/1 when an attribute decoder left
+a treat-as-withdraw marker and neither the NLRI field nor an MP_REACH_NLRI encodes a route,
+withdrawn routes beside it or not.  Reachability is judged on what the UPDATE encodes,
+before any route is dropped for its meaning (RFC 4271 6.3, RFC 7606 5.4).  The reasons
+treat-as-withdraw is applied for context (a missing mandatory attribute, an AS_SET) are
+only evaluated for an UPDATE which has routes, so they never reach this.  An attribute
+discard error, AGGREGATOR at any wrong length including zero, does not reset.
 """
 
 [[requirement]]
@@ -454,7 +458,7 @@ AFI, a SAFI and, for MP_REACH, a next hop length and the reserved octet.
 id = "rfc7606#5.4-unrecognised-typed-nlri-discarded"
 section = "5.4"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 A BGP speaker advertising support for such a typed address family
@@ -463,13 +467,13 @@ family by discarding them, unless the relevant specification for that
 address family specifies otherwise.
 """
 note = """
-An EVPN or MVPN route of an unregistered type decodes to GenericEVPN or GenericMVPN,
-which is kept and reported to the API rather than discarded.  That is deliberate for a
-tool whose job is to show an operator what a peer sent, and it is safe here because
-exabgp installs nothing and re-advertises nothing, so a route it cannot interpret reaches
-no forwarding plane.  It is recorded as a gap rather than not-applicable because we do
-advertise support for those families, so the obligation does bind us: the day exabgp
-grows a route-server mode, keeping the route becomes wrong rather than merely verbose.
+An EVPN or MVPN route of an unregistered type still decodes to GenericEVPN or
+GenericMVPN, and MPRNLRI drops every announced one whose discard_on_receipt() gives a
+reason, logging it as a warning with its raw bytes.  EVPN recognises types 1 to 5.
+MCAST-VPN recognises the seven RFC 6514 defines: 5, 6 and 7 are decoded, 1 to 4 are kept
+as opaque bytes, and discarding those would lose most of what an MVPN peer sends, so they
+are not "unrecognized".  A withdrawal of an unknown type is still reported, because it can
+remove nothing we hold and shows the operator what the peer sent.
 """
 
 # ================================ 7. Error-Handling Procedures for Existing Attributes

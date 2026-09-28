@@ -22,6 +22,8 @@ pins the behaviour the decision keeps.
 
 from __future__ import annotations
 
+import logging
+
 from struct import pack
 from typing import Any
 from unittest.mock import Mock
@@ -36,6 +38,8 @@ from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, ASPath
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.origin import Origin
+from exabgp.logger import log
+from exabgp.logger.option import echo, option
 from exabgp.protocol.family import AFI, SAFI
 
 UPDATE_MESSAGE_ERROR = 3
@@ -217,30 +221,38 @@ def test_the_four_unused_flag_bits_are_ignored(bits: int) -> None:
 
 @pytest.mark.rfc('rfc4271#4.3-process-a-prefix-in-both-fields')
 def test_the_same_prefix_withdrawn_and_announced_is_processed() -> None:
-    """The RFC says a speaker SHOULD NOT send this, and MUST cope when one does."""
+    """The RFC says a speaker SHOULD NOT send this, and MUST cope when one does.
+
+    Coping is parsing it into the announcement.  The withdrawal is dropped, as the SHOULD
+    below asks, so the count of withdrawals is zero rather than one.
+    """
     parsed = parse(body(withdrawn=IPV4_PREFIX, nlri=IPV4_PREFIX))
 
     assert len(parsed.announces) == 1, 'the announcement was lost'
-    assert len(parsed.withdraws) == 1, 'the withdrawal was lost'
+    assert len(parsed.withdraws) == 0, 'the withdrawal of an announced prefix was kept'
 
 
 @pytest.mark.rfc('rfc4271#4.3-ignore-a-prefix-in-both-fields')
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason='the withdrawal is kept beside the announcement, in wire order, and left to the consumer to apply in order',
-)
 def test_the_same_prefix_withdrawn_and_announced_is_only_announced() -> None:
     """The SHOULD which follows the MUST above: act as if the withdrawal was not there.
 
     A consumer which batches, or sorts withdrawals ahead of announcements, would otherwise
-    remove the route the same UPDATE installs.  When this passes, the withdraw count in
-    `test_the_same_prefix_withdrawn_and_announced_is_processed` has to become zero too.
+    remove the route the same UPDATE installs.
     """
     parsed = parse(body(withdrawn=IPV4_PREFIX, nlri=IPV4_PREFIX))
 
     assert [str(routed.nlri) for routed in parsed.announces] == ['10.0.0.0/24'], 'the announcement was lost'
     assert not parsed.withdraws, f'the prefix was withdrawn as well: {parsed.withdraws}'
+
+
+@pytest.mark.rfc('rfc4271#4.3-ignore-a-prefix-in-both-fields', polarity='negative')
+def test_a_withdrawn_prefix_which_is_not_announced_is_still_withdrawn() -> None:
+    """Only the prefix in both fields loses its withdrawal: dropping them all passes the test above."""
+    other = bytes([24, 10, 0, 1])
+    parsed = parse(body(withdrawn=IPV4_PREFIX + other, nlri=IPV4_PREFIX))
+
+    assert [str(routed.nlri) for routed in parsed.announces] == ['10.0.0.0/24']
+    assert [str(nlri) for nlri in parsed.withdraws] == ['10.0.1.0/24'], 'a withdrawal of another prefix was lost'
 
 
 # ------------------------------------------------------------ 6.3 the two length fields
@@ -331,6 +343,20 @@ def test_an_invalid_prefix_in_the_withdrawn_routes_is_refused_too(prefix: bytes)
 
 # ------------------------------------------------------- 6.3 semantically incorrect values
 
+# The real dispatcher, kept before any test can swap it for the no-op one.
+ENABLED_LOG_DISPATCH = log.logger
+LOG_LEVELS = ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
+
+
+def enable_every_log(monkeypatch: pytest.MonkeyPatch, caplog: Any) -> None:
+    """Every level and every source switched on, so silence is the parser's own."""
+    monkeypatch.setattr(log, 'logger', staticmethod(ENABLED_LOG_DISPATCH))
+    monkeypatch.setattr(option, 'logger', logging.getLogger('test.rfc4271.update'))
+    monkeypatch.setattr(option, 'formater', echo)
+    monkeypatch.setattr(option, 'option', {})
+    monkeypatch.setattr(option, 'logit', {level: True for level in LOG_LEVELS})
+    caplog.set_level(logging.DEBUG, logger='test.rfc4271.update')
+
 
 @pytest.mark.parametrize(
     'address',
@@ -338,11 +364,6 @@ def test_an_invalid_prefix_in_the_withdrawn_routes_is_refused_too(prefix: bytes)
     ids=['unspecified', 'multicast'],
 )
 @pytest.mark.rfc('rfc4271#6.3-next-hop-semantically-incorrect', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason='no semantic check on a received NEXT_HOP: 0.0.0.0 and multicast are kept',
-)
 def test_a_route_with_a_semantically_incorrect_next_hop_is_ignored(address: bytes) -> None:
     """Syntactically a NEXT_HOP is four octets, and these are four octets.
 
@@ -354,6 +375,35 @@ def test_a_route_with_a_semantically_incorrect_next_hop_is_ignored(address: byte
     parsed = parse(body(attributes=ORIGIN_IGP + EMPTY_AS_PATH + next_hop))
 
     assert not parsed.announces, f'a route with next hop {".".join(map(str, address))} was kept: {parsed.announces}'
+    assert not parsed.withdraws, 'an ignored route is not a withdrawn one'
+    assert Attribute.CODE.ORIGIN in parsed.attributes, 'the rest of the UPDATE was not processed'
+
+
+@pytest.mark.parametrize(
+    'address',
+    [bytes([10, 0, 0, 1]), bytes([223, 255, 255, 255]), bytes([240, 0, 0, 1])],
+    ids=['private', 'last of class C', 'class E'],
+)
+@pytest.mark.rfc('rfc4271#6.3-next-hop-semantically-incorrect')
+def test_a_route_with_a_unicast_next_hop_is_kept(address: bytes) -> None:
+    """The boundary of 224.0.0.0/4 on both sides: an ignore of every next hop fails here."""
+    next_hop = bytes([WELL_KNOWN_TRANSITIVE, Attribute.CODE.NEXT_HOP, 4]) + address
+    parsed = parse(body(attributes=ORIGIN_IGP + EMPTY_AS_PATH + next_hop))
+
+    assert [str(routed.nlri) for routed in parsed.announces] == ['10.0.0.0/24']
+    assert [str(routed.nexthop) for routed in parsed.announces] == ['.'.join(map(str, address))]
+
+
+@pytest.mark.rfc('rfc4271#6.3-next-hop-semantically-incorrect', polarity='negative')
+def test_a_semantically_incorrect_next_hop_is_logged(monkeypatch: pytest.MonkeyPatch, caplog: Any) -> None:
+    """The first half of the SHOULD: the error is logged, not only acted on."""
+    next_hop = bytes([WELL_KNOWN_TRANSITIVE, Attribute.CODE.NEXT_HOP, 4]) + bytes([224, 0, 0, 1])
+    enable_every_log(monkeypatch, caplog)
+    parse(body(attributes=ORIGIN_IGP + EMPTY_AS_PATH + next_hop))
+
+    assert any('224.0.0.1' in record.getMessage() and record.levelno >= logging.ERROR for record in caplog.records), [
+        record.getMessage() for record in caplog.records
+    ]
 
 
 @pytest.mark.parametrize(
@@ -362,9 +412,6 @@ def test_a_route_with_a_semantically_incorrect_next_hop_is_ignored(address: byte
     ids=['224.0.0.0/4', '239.1.1.0/24'],
 )
 @pytest.mark.rfc('rfc4271#6.3-nlri-semantically-incorrect', polarity='negative')
-@pytest.mark.xfail(
-    strict=True, raises=AssertionError, reason='no semantic filter on a received prefix: a multicast prefix is kept'
-)
 def test_a_multicast_prefix_in_the_nlri_is_ignored(prefix: bytes) -> None:
     """The RFC's own example of a semantically incorrect prefix, in the unicast NLRI field.
 
@@ -374,6 +421,30 @@ def test_a_multicast_prefix_in_the_nlri_is_ignored(prefix: bytes) -> None:
     parsed = parse(body(nlri=prefix + IPV4_PREFIX))
 
     assert [str(routed.nlri) for routed in parsed.announces] == ['10.0.0.0/24']
+    assert not parsed.withdraws, 'an ignored prefix is not a withdrawn one'
+
+
+@pytest.mark.parametrize(
+    'prefix',
+    [bytes([0]), bytes([3, 224]), bytes([24, 223, 255, 255]), bytes([4, 240])],
+    ids=['0.0.0.0/0', '224.0.0.0/3', '223.255.255.0/24', '240.0.0.0/4'],
+)
+@pytest.mark.rfc('rfc4271#6.3-nlri-semantically-incorrect')
+def test_a_unicast_prefix_in_the_nlri_is_kept(prefix: bytes) -> None:
+    """Around 224.0.0.0/4: a covering /3 and the default route are not multicast addresses."""
+    parsed = parse(body(nlri=prefix))
+
+    assert len(parsed.announces) == 1, f'{prefix.hex()} was ignored'
+
+
+@pytest.mark.rfc('rfc4271#6.3-nlri-semantically-incorrect', polarity='negative')
+def test_a_multicast_prefix_in_the_nlri_is_logged(monkeypatch: pytest.MonkeyPatch, caplog: Any) -> None:
+    enable_every_log(monkeypatch, caplog)
+    parse(body(nlri=bytes([24, 239, 1, 1])))
+
+    assert any(
+        '239.1.1.0/24' in record.getMessage() and record.levelno >= logging.ERROR for record in caplog.records
+    ), [record.getMessage() for record in caplog.records]
 
 
 # ----------------------------------------------------------- 6.3 an optional attribute error

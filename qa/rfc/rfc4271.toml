@@ -145,24 +145,26 @@ note = """
 "This form" is an UPDATE carrying the same address prefix in both the WITHDRAWN ROUTES
 and the NLRI field, which the sentence before this one says a speaker SHOULD NOT send.
 Positive only: the obligation is that we cope, so the test is that such an UPDATE parses
-and yields both entries.  There is nothing to reject, which is the whole point of it.
+and yields the announcement (the withdrawal is dropped, see 4.3-ignore-a-prefix-in-both-fields).
+There is nothing to reject, which is the whole point of it.
 """
 
 [[requirement]]
 id = "rfc4271#4.3-ignore-a-prefix-in-both-fields"
 section = "4.3"
 level = "SHOULD"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 A BGP speaker SHOULD treat an UPDATE message of this form
 as though the WITHDRAWN ROUTES do not contain the address prefix.
 """
 note = """
-exabgp hands both the withdrawal and the announcement to the API and to the adj-RIB-in,
-in the order they appeared on the wire, and does not drop the withdrawal.  A consumer
-which applies them in order ends up with the announcement, which is the same answer, but
-one which sorts or batches them does not, and that is what the SHOULD exists to prevent.
+UpdateCollection._not_announced drops from the withdrawals every NLRI the same UPDATE
+still announces once treat-as-withdraw and the RFC 4271 6.3 filter have run, so a
+consumer which sorts or batches withdrawals ahead of announcements cannot remove the route
+the UPDATE installs.  It applies to MP_UNREACH_NLRI beside MP_REACH_NLRI the same way.  An
+announcement which was itself ignored does not cancel its withdrawal.
 """
 
 
@@ -634,17 +636,19 @@ for the RFC 5549 case) and treats a bad one as withdraw.  It never sends 3/8.
 id = "rfc4271#6.3-next-hop-semantically-incorrect"
 section = "6.3"
 level = "SHOULD"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 If the NEXT_HOP attribute is semantically incorrect, the error SHOULD
 be logged, and the route SHOULD be ignored.
 """
 note = """
-exabgp does half of it.  A NEXT_HOP equal to our own address is logged as a warning in
-update/collection.py and the route is then kept and handed to the API, rather than
-ignored.  The other semantic case the RFC names, the EBGP one-hop subnet check, is not
-tested at all, and 0.0.0.0 and multicast next hops are accepted.
+A route of the NLRI field whose NEXT_HOP is 0.0.0.0 or in 224.0.0.0/4 is logged as an
+error and ignored: not announced, not withdrawn, the rest of the UPDATE processed.  Not
+covered: a NEXT_HOP equal to our own address is still only logged as a warning and kept,
+and the EBGP one-hop subnet check is not done.  MP_REACH_NLRI next hops are not filtered,
+where RFC 4760 and the families using it (FlowSpec with none, IPv6 link-local, ::) make
+other rules.
 """
 
 [[requirement]]
@@ -763,7 +767,7 @@ the attribute layer's try/except, so it does reach the peer.
 id = "rfc4271#6.3-nlri-semantically-incorrect"
 section = "6.3"
 level = "SHOULD"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 If a prefix in the NLRI field is semantically incorrect (e.g., an
@@ -771,10 +775,11 @@ unexpected multicast IP address), an error SHOULD be logged locally,
 and the prefix SHOULD be ignored.
 """
 note = """
-exabgp applies no semantic filter to a received prefix: 224.0.0.0/4, 127.0.0.0/8 and
-0.0.0.0/0 are all parsed and handed on.  Deliberate to the extent that exabgp exists to
-show an operator what a peer sent, and installs nothing, but it is still the SHOULD
-undone rather than a case which does not arise, so it is a gap and not not-applicable.
+A prefix of the NLRI field inside 224.0.0.0/4, the RFC's own example, is logged as an
+error and ignored, and the rest of the UPDATE processed.  A covering prefix such as
+224.0.0.0/3, the default route and 240.0.0.0/4 are kept: they are not multicast
+addresses.  Other ranges an operator may consider wrong (127.0.0.0/8) are not filtered,
+as exabgp exists to show what a peer sent and installs nothing.
 """
 
 [[requirement]]

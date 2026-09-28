@@ -8,10 +8,10 @@ them findable.  It has two halves, and they pull in opposite directions on purpo
       next sentence that we MUST accept a peer which ignores all of it.
   5.2, 5.3 and 5.4 constrain what we do with what we RECEIVE.
 
-Two requirements here are not met and carry xfail, both on the receiving side: an UPDATE
-with no reachable NLRI and a treat-as-withdraw error does not escalate to a session reset,
-and an EVPN or MVPN route of an unknown type is kept as GenericEVPN / GenericMVPN rather
-than discarded (a `gap` in qa/rfc/rfc7606.toml, demonstrated here).
+Both receiving side requirements which used to carry xfail are met: an UPDATE with no
+reachable NLRI and a treat-as-withdraw error now resets the session, and an announced EVPN
+or MVPN route of an unknown type is discarded (and logged) rather than kept as a
+GenericEVPN / GenericMVPN.  A withdrawal of one is still decoded and reported.
 """
 
 from __future__ import annotations
@@ -35,6 +35,7 @@ from rfc.rfc7606_wire import (
     EMPTY_AS_PATH,
     IPV4_PREFIX,
     MANDATORY,
+    NEXT_HOP,
     OPTIONAL,
     OPTIONAL_TRANSITIVE,
     ORIGIN_IGP,
@@ -201,12 +202,6 @@ def test_we_accept_an_mp_reach_and_an_mp_unreach_in_one_update() -> None:
 
 
 @pytest.mark.rfc('rfc7606#5.2-session-reset-when-no-reachable-nlri')
-@pytest.mark.xfail(
-    strict=True,
-    reason='an UPDATE with attributes other than MP_UNREACH_NLRI, no reachable NLRI and a '
-    'treat-as-withdraw error parses to an empty UpdateCollection: the marker is added, there is '
-    'nothing to move into the withdraw set, and no NOTIFICATION is sent',
-)
 def test_a_treat_as_withdraw_error_with_no_reachable_nlri_resets_the_session() -> None:
     """There are no routes to withdraw, and no proof the NLRI field was read correctly."""
     payload = update(attribute(WELL_KNOWN_TRANSITIVE, CODE.ORIGIN, bytes(2)) + EMPTY_AS_PATH, nlri=b'')
@@ -217,9 +212,33 @@ def test_a_treat_as_withdraw_error_with_no_reachable_nlri_resets_the_session() -
     assert raised.value.code == UPDATE_MESSAGE_ERROR
 
 
+@pytest.mark.rfc('rfc7606#5.2-session-reset-when-no-reachable-nlri')
+def test_a_treat_as_withdraw_error_beside_only_withdrawn_routes_resets_the_session() -> None:
+    """Withdrawn routes are not reachable NLRI, so they do not make the UPDATE safe to process."""
+    payload = update(
+        attribute(WELL_KNOWN_TRANSITIVE, CODE.ORIGIN, bytes(2)) + EMPTY_AS_PATH, nlri=b'', withdrawn=IPV4_PREFIX
+    )
+
+    with pytest.raises(Notify) as raised:
+        parse(payload, session())
+
+    assert raised.value.code == UPDATE_MESSAGE_ERROR
+
+
+@pytest.mark.rfc('rfc7606#5.2-session-reset-when-no-reachable-nlri', polarity='negative')
+def test_a_treat_as_withdraw_error_with_reachable_nlri_does_not_reset_the_session() -> None:
+    """The reset is for an UPDATE with nothing to withdraw: with a route, the route is withdrawn."""
+    parsed = parse(
+        update(attribute(WELL_KNOWN_TRANSITIVE, CODE.ORIGIN, bytes(2)) + EMPTY_AS_PATH + NEXT_HOP), session()
+    )
+
+    assert announced(parsed) == []
+    assert withdrawn_routes(parsed) == ['10.0.0.0/24']
+
+
 @pytest.mark.rfc('rfc7606#5.2-session-reset-when-no-reachable-nlri', polarity='negative')
 def test_an_attribute_discard_error_with_no_reachable_nlri_does_not_reset_the_session() -> None:
-    """The RFC exempts attribute discard by name, and we get that half right."""
+    """The RFC exempts attribute discard by name: the UPDATE is processed, no reset."""
     parsed = parse(update(ORIGIN_IGP + EMPTY_AS_PATH + MALFORMED_ATOMIC, nlri=b''), session())
 
     assert CODE.ATOMIC_AGGREGATE not in parsed.attributes, 'the malformed attribute was kept'
@@ -336,12 +355,6 @@ def test_mp_attributes_at_or_above_their_minimum_are_accepted() -> None:
 
 
 @pytest.mark.rfc('rfc7606#5.4-unrecognised-typed-nlri-discarded')
-@pytest.mark.xfail(
-    strict=True,
-    reason='an EVPN or MVPN route of an unregistered type decodes to GenericEVPN or GenericMVPN '
-    'and is kept as an announcement, deliberately, so an operator sees what the peer sent; '
-    'qa/rfc/rfc7606.toml records this as a gap',
-)
 @pytest.mark.parametrize(
     'afi,safi',
     [(AFI.l2vpn, SAFI.evpn), (AFI.ipv4, SAFI.mcast_vpn)],
@@ -356,3 +369,39 @@ def test_a_typed_route_of_an_unknown_type_is_discarded(afi: AFI, safi: SAFI) -> 
     assert announced(parsed) == ['10.0.0.0/24'], (
         f'a {afi} {safi} route of unknown type {UNKNOWN_ROUTE_TYPE:#x} was kept: {announced(parsed)}'
     )
+
+
+# a Source Active A-D route (RFC 6514 4.5, type 5) for the group 239.1.1.1, which MCAST-VPN
+# registers and which is outside the SSM range, so nothing but 5.4 could discard it
+KNOWN_MVPN_ROUTE = bytes([5, 18]) + bytes(8) + bytes([32, 10, 0, 0, 1]) + bytes([32, 239, 1, 1, 1])
+
+
+@pytest.mark.rfc('rfc7606#5.4-unrecognised-typed-nlri-discarded', polarity='negative')
+def test_a_typed_route_of_a_known_type_beside_an_unknown_one_is_kept() -> None:
+    """Discarding the whole attribute passes the test above; only the unknown route may go."""
+    routes = UNKNOWN_TYPED_ROUTE + KNOWN_MVPN_ROUTE
+    attributes = MANDATORY + mp_reach_typed(AFI.ipv4, SAFI.mcast_vpn, routes)
+    parsed = parse(update(attributes, nlri=b''), typed_session(AFI.ipv4, SAFI.mcast_vpn))
+
+    assert withdrawn_routes(parsed) == []
+    assert [type(routed.nlri).__name__ for routed in parsed.announces] == ['SourceAD'], announced(parsed)
+
+
+@pytest.mark.rfc('rfc7606#5.4-unrecognised-typed-nlri-discarded', polarity='negative')
+def test_a_withdrawn_typed_route_of_an_unknown_type_is_still_reported() -> None:
+    """Only announcements are discarded: a withdrawal removes nothing and shows the operator the peer."""
+    payload = pack('!HB', AFI.ipv4, SAFI.mcast_vpn) + UNKNOWN_TYPED_ROUTE
+    attributes = attribute(OPTIONAL, CODE.MP_UNREACH_NLRI, payload)
+    parsed = parse(update(attributes, nlri=b''), typed_session(AFI.ipv4, SAFI.mcast_vpn))
+
+    assert [type(nlri).__name__ for nlri in parsed.withdraws] == ['GenericMVPN']
+
+
+@pytest.mark.rfc('rfc7606#5.4-unrecognised-typed-nlri-discarded', polarity='negative')
+def test_an_mvpn_route_of_a_type_rfc6514_defines_but_we_do_not_decode_is_kept() -> None:
+    """Type 1, Intra-AS I-PMSI A-D, is kept as raw bytes: recognised, so not discarded."""
+    intra_as_i_pmsi = bytes([1, 12]) + bytes(8) + bytes([10, 0, 0, 1])
+    attributes = MANDATORY + mp_reach_typed(AFI.ipv4, SAFI.mcast_vpn, intra_as_i_pmsi)
+    parsed = parse(update(attributes, nlri=b''), typed_session(AFI.ipv4, SAFI.mcast_vpn))
+
+    assert [type(routed.nlri).__name__ for routed in parsed.announces] == ['GenericMVPN']

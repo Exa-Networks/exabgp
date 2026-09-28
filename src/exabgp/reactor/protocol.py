@@ -28,7 +28,7 @@ from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotia
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update import UpdateCollection
-from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
+from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.logger import lazymsg, log
 
 # from exabgp.reactor.network.error import NotifyError
@@ -314,10 +314,10 @@ class Protocol:
         if message.TYPE == Notification.TYPE:
             raise cast(Notification, message)
 
-        if isinstance(message, Update) and Attribute.CODE.INTERNAL_DISCARD in message.data.attributes:
-            return _NOP
-        else:
-            return message
+        # RFC 7606 2: "attribute discard" drops the malformed attribute and processes the
+        # rest of the UPDATE. The Discard marker the parser leaves behind records that it
+        # happened, for the API; it is not a reason to ignore the routes beside it.
+        return message
 
     def validate_open(self) -> None:
         error: tuple[int, int, str] | None = self.negotiated.validate(self.neighbor)
