@@ -38,25 +38,26 @@ class Target(Enum):
 class RouteStatement(Type[list[Route]]):
     # the error for a keyword the table does not have, as each statement of the legacy parser worded it
     unknown = "Unknown command '{keyword}'"
-    # the error for a route of more than MAX_ROUTE_VALUES values; None, legacy: the rest is not read
-    too_many: str | None = 'a route holds at most {count} values'
+    # the error for a route of more than MAX_ROUTE_VALUES values
+    too_many = 'a route holds at most {count} values'
 
     def keywords(self, words: Words, table: Mapping[str, Any], stop: str = '') -> Iterator[tuple[str, Any]]:
         """Where each keyword is and what the table has for it, until the words end or `stop`.
 
         The caller reads the value, `spec.type.parse(words)`, before asking for the next one.
         """
-        for _ in range(MAX_ROUTE_VALUES):
+        # one turn past the bound, to see whether the words end after the last value allowed
+        for count in range(MAX_ROUTE_VALUES + 1):
             where = words.where()
             keyword = words.word()
             if not keyword or keyword == stop:
                 return
+            if count == MAX_ROUTE_VALUES:
+                raise ConfigError(where, self.too_many.format(count=MAX_ROUTE_VALUES))
             spec = table.get(keyword)
             if spec is None:
                 raise ConfigError(where, self.unknown.format(keyword=keyword), expected=sorted(table))
             yield where, spec
-        if self.too_many is not None:
-            raise ConfigError(words.where(), self.too_many.format(count=MAX_ROUTE_VALUES))
 
     @abstractmethod
     def printed(self, route: Route) -> list[str]:

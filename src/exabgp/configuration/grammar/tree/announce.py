@@ -274,8 +274,6 @@ ANNOUNCE_SAFIS: dict[str, AnnounceSafi] = {
 class AnnounceLine(RouteStatement):
     """`[<prefix>] <keyword> <value> ...` of one family of one address family."""
 
-    too_many = None  # legacy: the values past the bound are not read
-
     def __init__(self, afi: AFI, safi: SAFI, announce_safi: AnnounceSafi) -> None:
         self.afi = afi
         self.safi = safi
