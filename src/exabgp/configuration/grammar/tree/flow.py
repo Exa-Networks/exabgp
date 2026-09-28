@@ -46,7 +46,7 @@ from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.context import PrintContext, ReadContext
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
-from exabgp.configuration.grammar.section import Kept, Section, Store, Values
+from exabgp.configuration.grammar.section import Collector, Kept, Pending, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
     MAX_ROUTE_VALUES,
@@ -374,19 +374,9 @@ def announce_flow_words(route: Route) -> list[str]:
 # --------------------------------------------------------------------------- the route block
 
 
-class FlowValueStore(Store):
-    """A value of the flow route block being read, kept in order: they apply one after the other."""
-
-    def __init__(self, spec: FlowValue) -> None:
-        self.spec = spec
-
-    def keep(self, values: Values, value: Any, context: ReadContext) -> None:
-        context.flow_values.append((self.spec, value))
-
-
 def _leaves(values: dict[str, FlowValue]) -> tuple[Leaf, ...]:
     return tuple(
-        Leaf(keyword, spec.type, field=f'_{keyword}', store=FlowValueStore(spec), doc=spec.doc)
+        Leaf(keyword, spec.type, field=f'_{keyword}', store=Pending(spec), doc=spec.doc)
         for keyword, spec in values.items()
     )
 
@@ -409,16 +399,12 @@ class _Ignored(Type[str]):
         return ['', 'name']
 
 
-class FlowRouteSection(Section[list[Route]]):
+class FlowRouteSection(Collector[list[Route]]):
     """`route [<name>] { match { } then { } scope { } }`: one flow route."""
 
-    def opened(self, context: ReadContext) -> None:
-        context.flow_values = []
-
-    def build(self, name: Any, values: Values, context: ReadContext) -> list[Route]:
+    def collected(self, name: Any, values: Values, entries: list[tuple[Any, Any]], context: ReadContext) -> list[Route]:
         built = FlowRoute()
-        taken, context.flow_values = context.flow_values, []
-        for spec, value in taken:
+        for spec, value in entries:
             built.apply(spec, value, line=False)
         if not built.nlri.rules:
             raise ValueError('a flow route needs at least one match, or it matches every packet')

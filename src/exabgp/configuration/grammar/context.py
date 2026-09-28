@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, Any, Iterator
 from exabgp.protocol.family import AFI
 
 if TYPE_CHECKING:
-    from exabgp.bgp.message.operational import OperationalFamily
     from exabgp.configuration.grammar.lexer import Token
     from exabgp.rib.route import Route
 
@@ -43,12 +42,9 @@ class ReadContext:
     neighbor_indexes: list[bytes] = field(default_factory=list)
     # legacy: api names are unique across the whole configuration, not per neighbor
     api_names: set[str] = field(default_factory=set)
-    # the values of the flow route block being read, in their order: (what, value)
-    flow_values: list[tuple[Any, Any]] = field(default_factory=list)
-    # the values of the vpls block being read, in their order: (what, value)
-    vpls_values: list[tuple[Any, Any]] = field(default_factory=list)
-    # the messages of the operational block being read
-    messages: list[OperationalFamily] = field(default_factory=list)
+    # the statements of the Collector block being read, in their order: (what, value).
+    # One list is enough: no collector block is ever inside another
+    pending: list[tuple[Any, Any]] = field(default_factory=list)
 
     def take_routes(self) -> list[Route]:
         """The routes not yet taken, now taken: those read after them start a new list."""

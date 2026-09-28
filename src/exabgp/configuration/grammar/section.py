@@ -6,6 +6,9 @@ The code a tree of nodes runs, beside the value types (types/base.py):
              again to be printed
     Store    where the value of a statement goes, when it is not simply set or added to a list
 
+A Collector is a Section whose statements are used together, in the order they were given,
+when it closes: its leaves keep their value with a Pending store.
+
 Each is a base class: every section and every store of the configuration is a subclass,
 found with `Section.__subclasses__()` or by any editor.
 
@@ -73,3 +76,29 @@ class Store(ABC):
     @abstractmethod
     def keep(self, values: Values, value: Any, context: ReadContext) -> None:
         """Keep `value` in the values of its block, or in the context; raises ValueError."""
+
+
+class Pending(Store):
+    """The value of a statement of a Collector block, kept in order with `what` says how to use it."""
+
+    def __init__(self, what: Any = None) -> None:
+        self.what = what
+
+    def keep(self, values: Values, value: Any, context: ReadContext) -> None:
+        context.pending.append((self.what, value))
+
+
+class Collector(Section[T]):
+    """A block whose statements are used together, in their order, when it closes."""
+
+    def opened(self, context: ReadContext) -> None:
+        # the entries of a block closed with an error are not those of the next one
+        context.pending = []
+
+    def build(self, name: Any, values: Values, context: ReadContext) -> T:
+        entries, context.pending = context.pending, []
+        return self.collected(name, values, entries, context)
+
+    @abstractmethod
+    def collected(self, name: Any, values: Values, entries: list[tuple[Any, Any]], context: ReadContext) -> T:
+        """What the block stands for, from the (what, value) of its statements in their order."""

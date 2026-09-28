@@ -22,7 +22,7 @@ from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
-from exabgp.configuration.grammar.section import Kept, Section, Store, Values
+from exabgp.configuration.grammar.section import Collector, Kept, Pending, Store, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
     MAX_ROUTE_VALUES,
@@ -159,16 +159,6 @@ def vpls_words(route: Route) -> list[str]:
 # --------------------------------------------------------------------------- the l2vpn section
 
 
-class VPLSValueStore(Store):
-    """A value of the vpls block being read, kept in order: they apply one after the other."""
-
-    def __init__(self, spec: RouteValue) -> None:
-        self.spec = spec
-
-    def keep(self, values: Values, value: Any, context: ReadContext) -> None:
-        context.vpls_values.append((self.spec, value))
-
-
 class _Ignored(Type[str]):
     """The name of a vpls block: read, kept by nobody."""
 
@@ -187,18 +177,14 @@ class _Ignored(Type[str]):
         return ['', 'site']
 
 
-class VPLSSection(Section[list[Route]]):
+class VPLSSection(Collector[list[Route]]):
     """`vpls [<name>] { ... }`: one VPLS route, its values one per statement."""
 
-    def opened(self, context: ReadContext) -> None:
-        context.vpls_values = []
-
-    def build(self, name: Any, values: Values, context: ReadContext) -> list[Route]:
+    def collected(self, name: Any, values: Values, entries: list[tuple[Any, Any]], context: ReadContext) -> list[Route]:
         settings = VPLSSettings()
         settings.action = Action.ANNOUNCE
         attributes = AttributeCollection()
-        taken, context.vpls_values = context.vpls_values, []
-        for spec, value in taken:
+        for spec, value in entries:
             _apply(settings, attributes, spec, value)
         route = _vpls_route(settings, attributes, '')
         context.routes.append(route)
@@ -254,7 +240,7 @@ VPLS_BLOCK = Block(
     key='label',  # the name is read and ignored
     doc='a VPLS route, its values one per statement',
     children=tuple(
-        Leaf(keyword, spec.type, field=f'_{keyword}', store=VPLSValueStore(spec), doc=spec.doc)
+        Leaf(keyword, spec.type, field=f'_{keyword}', store=Pending(spec), doc=spec.doc)
         for keyword, spec in VPLS_VALUES.items()
     ),
 )

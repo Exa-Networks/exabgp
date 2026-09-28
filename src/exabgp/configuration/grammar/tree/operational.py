@@ -27,7 +27,7 @@ from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Leaf
-from exabgp.configuration.grammar.section import Kept, Store, Values
+from exabgp.configuration.grammar.section import Collector, Pending, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.words import Words
@@ -165,20 +165,13 @@ KINDS: dict[str, tuple[type[OperationalFamily], tuple[str, ...], str]] = {
 }
 
 
-class MessageStore(Store):
-    """A message of the operational block being read."""
-
-    def keep(self, values: Values, value: OperationalFamily, context: ReadContext) -> None:
-        context.messages.append(value)
+MESSAGE = Pending()
 
 
-class OperationalSection(Kept):
-    def opened(self, context: ReadContext) -> None:
-        context.messages = []
-
-    def build(self, name: Any, values: Values, context: ReadContext) -> Values:
+class OperationalSection(Collector[Values]):
+    def collected(self, name: Any, values: Values, entries: list[tuple[Any, Any]], context: ReadContext) -> Values:
         # legacy: the messages of a block replace those of a block before it, unless it has none
-        messages, context.messages = context.messages, []
+        messages = [message for _, message in entries]
         if messages:
             values[MESSAGES] = messages
         return values
@@ -202,7 +195,7 @@ OPERATIONAL = Block(
             keyword,
             OperationalLine(keyword, klass, parameters),
             field=f'_{keyword}',
-            store=MessageStore(),
+            store=MESSAGE,
             doc=doc,
             multiple=True,
         )

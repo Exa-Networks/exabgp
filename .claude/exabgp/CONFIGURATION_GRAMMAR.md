@@ -56,7 +56,7 @@ One concept, one name, in every file of the package:
 
 Helpers: a statement type is `<Thing>Line`; a printer is `<thing>_words(route)`; the
 section of a block is `<Keyword>Section` (`FlowSection`, `VPLSSection`); a store is
-`<What>Store` (`RoutesStore`, `AnnouncedStore`, `FlowValueStore`); a count bound is
+`<What>Store` (`RoutesStore`, `AnnouncedStore`, `LastRouteStore`); a count bound is
 `MAX_<THINGS>`, a value ceiling `<THING>_MAX`. Shared helpers: `Words.expect`,
 `static.action`, `static.ROUTES`, `static.MAX_ROUTE_VALUES`, `error.ROUTE_ERRORS`,
 `render.INDENT`.
@@ -71,6 +71,7 @@ implementation is a subclass an editor or `__subclasses__()` finds:
 | `Type[T]` (`types/base.py`) | reads and prints the value of a statement | none, abstract |
 | `Section[T]` | `opened`, `finish`, `build` a block into a `T`, `unbuild` it to print | `KEPT`: the values as they are |
 | `Store` | `keep`s the value of a statement, when it is not simply set or added to a list | `Leaf.collect` |
+| `Collector[T]` | a `Section` using its statements together, in order, when it closes: `collected` | its leaves use `Pending` |
 
 Sections and stores keep no state: what a statement tells another block goes through the
 `ReadContext`. `test_sections.py` holds the tree to it: every block runs a `Section`, every
