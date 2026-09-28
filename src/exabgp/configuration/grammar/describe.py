@@ -131,7 +131,7 @@ def neighbor_defaults() -> dict[str, Any]:
     back from a neighbor, so they are never written twice.
     """
     from exabgp.configuration.grammar.read import read_text
-    from exabgp.configuration.grammar.tree.unresolve import neighbor_values
+    from exabgp.configuration.grammar.tree.codecs import neighbor_values
 
     _, values = neighbor_values(read_text(MINIMAL_NEIGHBOR).neighbors[0], PrintContext())
     return {keyword: value for keyword, value in values.items() if keyword not in GIVEN}

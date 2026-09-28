@@ -1,6 +1,7 @@
 """unresolve.py
 
-The statements which make a NeighborSettings: the inverse of resolve.py, for printing.
+The statements which make each part of a NeighborSettings: the inverse of resolve.py, for
+printing, applied part by part by codecs.py.
 
 Everything is written out, defaults included, so the printed neighbor does not depend on
 what the defaults of the reader are. Values are given the way each leaf reads them: one
@@ -20,10 +21,7 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.empty import Empty
 from exabgp.bgp.neighbor.capability import NeighborCapability
 from exabgp.bgp.neighbor.settings import NeighborSettings, SessionSettings
-from exabgp.configuration.grammar.context import PrintContext
-from exabgp.configuration.grammar.render import STATEMENTS
 from exabgp.configuration.grammar.tree.family import SAFIS, default_families
-from exabgp.configuration.grammar.tree.operational import kind
 from exabgp.configuration.grammar.tree.resolve import API_COMMANDS, API_MESSAGES, REQUIRABLE, REQUIRE
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
@@ -37,7 +35,7 @@ def _afi_keyword(afi: AFI) -> str:
     raise ValueError(f'no family keyword for {afi}')
 
 
-def _session(session: SessionSettings) -> dict[str, Any]:
+def session_values(session: SessionSettings) -> dict[str, Any]:
     values: dict[str, Any] = {
         'local-as': session.local_as,
         'peer-as': session.peer_as,
@@ -78,7 +76,7 @@ def _tristate(state: TriState) -> bool | None:
     return None if state.is_unset() else state.is_enabled()
 
 
-def _capability(neighbor_capability: NeighborCapability) -> dict[str, Any]:
+def capability(neighbor_capability: NeighborCapability) -> dict[str, Any]:
     values: dict[str, Any] = {
         'asn4': _tristate(neighbor_capability.asn4),
         'extended-message': _tristate(neighbor_capability.extended_message),
@@ -102,7 +100,7 @@ def _capability(neighbor_capability: NeighborCapability) -> dict[str, Any]:
     return {keyword: value for keyword, value in values.items() if value is not None}
 
 
-def _families(settings: NeighborSettings) -> dict[str, Any] | None:
+def families(settings: NeighborSettings) -> dict[str, Any] | None:
     # the defaults hold families no statement names (ipv6 multicast): they are said by omission
     if not settings.prefix_limit:
         if settings.families == default_families():
@@ -115,7 +113,7 @@ def _families(settings: NeighborSettings) -> dict[str, Any] | None:
     return by_afi
 
 
-def _add_path(settings: NeighborSettings) -> dict[str, Any] | None:
+def add_path(settings: NeighborSettings) -> dict[str, Any] | None:
     if not settings.capability.add_path:
         return None
     if not settings.addpaths:
@@ -131,7 +129,7 @@ def _add_path(settings: NeighborSettings) -> dict[str, Any] | None:
     return add_path
 
 
-def _api(api: dict[str, Any], names: Iterator[int]) -> dict[str, Any]:
+def api(api: dict[str, Any], names: Iterator[int]) -> dict[str, Any]:
     """One api block per process, with the flags of that process; the matches in a block of their own."""
     blocks: dict[str, Any] = {}
     # a process may be listed more than once, each time with its own flags: the n-th block
@@ -153,7 +151,7 @@ def _api(api: dict[str, Any], names: Iterator[int]) -> dict[str, Any]:
     return blocks
 
 
-def _routes(routes: list[Any]) -> dict[str, Any]:
+def routes(routes: list[Any]) -> dict[str, Any]:
     """The static, announce and flow sections which print the routes, each where a statement reads it back.
 
     The order of the routes is kept within a section, not across them. A flow section makes
@@ -210,43 +208,3 @@ def _routes(routes: list[Any]) -> dict[str, Any]:
     if flow_section:
         printed['flow'] = {'_routes': flows, '_line': flow_lines}
     return printed
-
-
-def neighbor_values(settings: NeighborSettings, context: PrintContext) -> tuple[Any, dict[str, Any]]:
-    """The name and the statements of the neighbor block which reads back as `settings`.
-
-    api blocks are named when printed, counting through the configuration printed: one left
-    unnamed is named for the microsecond it is read in, and two could share it.
-    """
-    names = context.api_names
-    values = _session(settings.session)
-    values.update(
-        {
-            'description': settings.description or None,
-            'hold-time': int(settings.hold_time),
-            'rate-limit': settings.rate_limit,
-            'host-name': settings.host_name or None,
-            'domain-name': settings.domain_name or None,
-            'group-updates': settings.group_updates,
-            'as-set': settings.as_set,
-            'auto-flush': settings.auto_flush,
-            'adj-rib-in': settings.adj_rib_in,
-            'adj-rib-out': settings.adj_rib_out,
-            'manual-eor': settings.manual_eor,
-            'shutdown': settings.shutdown,
-            'capability': _capability(settings.capability),
-            'family': _families(settings),
-            'add-path': _add_path(settings),
-            'api': _api(settings.api, names) or None,
-        }
-    )
-    if settings.routes:
-        values.update(_routes(settings.routes))
-    nexthop: dict[str, Any] = {}
-    for entry in settings.nexthops:
-        nexthop.setdefault(entry[0].name(), []).append(entry)
-    if nexthop:
-        values['nexthop'] = nexthop
-    if settings.operational:
-        values['operational'] = {STATEMENTS: [(kind(message), message) for message in settings.operational]}
-    return settings.session.peer_address, {keyword: value for keyword, value in values.items() if value is not None}

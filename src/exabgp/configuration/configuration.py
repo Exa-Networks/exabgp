@@ -266,6 +266,9 @@ class Configuration(_Configuration):
         # how many sections the last API command left open: its routes are then not used
         self.open_sections = 0
         self._previous_neighbors: dict[str, Any] = {}
+        # what the configuration was made from, for serialise(): processes and neighbors are
+        # changed once running (the API ones are added, a multi-session neighbor is split)
+        self._settings: ConfigurationSettings | None = None
 
     @classmethod
     def from_settings(cls, settings: 'ConfigurationSettings') -> 'Configuration':
@@ -290,6 +293,7 @@ class Configuration(_Configuration):
         for neighbor_settings in settings.neighbors:
             neighbor = Neighbor.from_settings(neighbor_settings)
             config.neighbors[neighbor.name()] = neighbor
+        config._settings = settings
         return config
 
     def reload(self) -> bool:
@@ -326,6 +330,7 @@ class Configuration(_Configuration):
         self.processes = cli_processes()
         self.processes.update({name: process.to_dict() for name, process in settings.processes.items()})
         self.neighbors = install(settings.neighbors)
+        self._settings = settings
         # the neighbor before the reload, for the routes which are gone
         for name, neighbor in self.neighbors.items():
             if name in self._previous_neighbors:
@@ -429,6 +434,27 @@ class Configuration(_Configuration):
         if not self.partial('static', route_text, action):
             return []
         return self.pop_routes()
+
+    def serialise(self) -> str:
+        """The configuration as text, which reads back to the same processes and neighbors.
+
+        The routes are left out: they are what the API changes, and a neighbor printed with
+        str() is a display, not a configuration. Empty when nothing was read yet.
+        """
+        from dataclasses import replace
+
+        from exabgp.configuration.grammar.render import render
+        from exabgp.configuration.grammar.tree.root import ROOT
+        from exabgp.configuration.settings import ConfigurationSettings, ProcessSettings
+
+        if self._settings is None:
+            return ''
+        processes = {
+            name: process if isinstance(process, ProcessSettings) else ProcessSettings.from_dict(process)
+            for name, process in self._settings.processes.items()
+        }
+        neighbors = [replace(neighbor, routes=[]) for neighbor in self._settings.neighbors]
+        return render(ROOT, ConfigurationSettings(neighbors=neighbors, processes=processes))
 
     def to_dict(self) -> dict[str, Any]:
         """Export parsed configuration as a serializable dict.

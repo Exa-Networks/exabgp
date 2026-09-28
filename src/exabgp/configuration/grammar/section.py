@@ -9,6 +9,11 @@ The code a tree of nodes runs, beside the value types (types/base.py):
 A Collector is a Section whose statements are used together, in the order they were given,
 when it closes: its leaves keep their value with a Pending store.
 
+A neighbor is read the legacy way, its values merged with those of its templates first, so
+its parts are made by a Codec each, which also gives the statements of its part back:
+
+    Codec    one part of a neighbor, from its statements into NeighborSettings, and back
+
 Each is a base class: every section and every store of the configuration is a subclass,
 found with `Section.__subclasses__()` or by any editor.
 
@@ -20,9 +25,12 @@ from __future__ import annotations
 
 import dataclasses
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar
 
 from exabgp.configuration.grammar.context import PrintContext, ReadContext
+
+if TYPE_CHECKING:
+    from exabgp.bgp.neighbor.settings import NeighborSettings
 
 T = TypeVar('T')
 
@@ -102,3 +110,22 @@ class Collector(Section[T]):
     @abstractmethod
     def collected(self, name: Any, values: Values, entries: list[tuple[Any, Any]], context: ReadContext) -> T:
         """What the block stands for, from the (what, value) of its statements in their order."""
+
+
+class Codec(ABC):
+    """One part of a neighbor: set from the values of the neighbor block, and printed back.
+
+    The codecs of a neighbor run in their order, each on the NeighborSettings the ones before
+    it filled: the add-path families are those of the families part.
+    """
+
+    # the fields of the neighbor block this part is made from, and printed as
+    fields: ClassVar[tuple[str, ...]] = ()
+
+    @abstractmethod
+    def resolve(self, values: Values, settings: NeighborSettings) -> None:
+        """Set this part of `settings` from the values of the neighbor; raises ValueError."""
+
+    @abstractmethod
+    def unresolve(self, settings: NeighborSettings, context: PrintContext) -> Values:
+        """The values, by field, which resolve to this part of `settings`: None where nothing is said."""

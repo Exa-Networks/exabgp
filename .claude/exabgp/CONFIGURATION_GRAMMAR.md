@@ -32,8 +32,9 @@ removed once every configuration and API command read the same with both; see
 | `read.py` | `read_text`, `read_file`, `read_command` (API route commands) |
 | `install.py` | makes the Neighbor objects from `NeighborSettings`, as the legacy post did |
 | `tree/` | the declaration: `root`, `process`, `neighbor`, `family`, `session`, `static`, `announce`, `flow`, `l2vpn`, `select` (MUP, MVPN), `sr_policy`, `operational` |
-| `tree/resolve.py` | template inheritance (`transfer`) and values → `NeighborSettings` |
-| `tree/unresolve.py` | `NeighborSettings` → values, for printing |
+| `tree/codecs.py` | the parts of a neighbor, a `Codec` each: `neighbor_settings` and `neighbor_values` |
+| `tree/resolve.py` | template inheritance (`transfer`) and the rules values → `NeighborSettings` |
+| `tree/unresolve.py` | the rules `NeighborSettings` → values, for printing |
 
 ## Names
 
@@ -72,10 +73,16 @@ implementation is a subclass an editor or `__subclasses__()` finds:
 | `Section[T]` | `opened`, `finish`, `build` a block into a `T`, `unbuild` it to print | `KEPT`: the values as they are |
 | `Store` | `keep`s the value of a statement, when it is not simply set or added to a list | `Leaf.collect` |
 | `Collector[T]` | a `Section` using its statements together, in order, when it closes: `collected` | its leaves use `Pending` |
+| `Codec` | one part of a neighbor: `resolve` its fields into `NeighborSettings`, `unresolve` them back | none, abstract |
 
 Sections and stores keep no state: what a statement tells another block goes through the
 `ReadContext`. `test_sections.py` holds the tree to it: every block runs a `Section`, every
 section and store is used, and a block building a Settings dataclass has a field for each leaf.
+`test_codecs.py` holds the neighbor to its codecs: each field has one owner, which prints only it.
+
+`Configuration.serialise()` prints what a configuration was made from, routes aside, with the
+same printer: it reads back equal (`test_serialise.py`, every configuration of the repository).
+`str(neighbor)` is a display, it does not read back.
 
 ## The data model
 
@@ -102,7 +109,7 @@ A statement given several times (a route, a family) says so with `Leaf(multiple=
    not a plain set; `default`, `mandatory`, `doc`.
 4. Make it reach the Settings: the `build` of the block's `Section`, or `tree/resolve.py`
    for a neighbor.
-5. Make it print back: `tree/unresolve.py` for a neighbor value.
+5. Make it print back: `tree/unresolve.py` for a neighbor value, through the codec owning it.
 6. Add forms in `tests/unit/config_grammar/forms*.py`: one accepted and one refused per
    keyword are enforced by `test_forms.py`.
 

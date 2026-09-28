@@ -51,6 +51,16 @@ class ProcessSettings:
             'on-exit': str(self.on_exit),
         }
 
+    @classmethod
+    def from_dict(cls, process: dict[str, Any]) -> ProcessSettings:
+        """The inverse of to_dict: a process given to Configuration.from_settings as the reactor takes it."""
+        return cls(
+            run=list(process['run']),
+            encoder=Encoder(process.get('encoder', Encoder.TEXT)),
+            respawn=process.get('respawn', True),
+            on_exit=OnExit(process.get('on-exit', OnExit.WITHDRAW)),
+        )
+
 
 @dataclass
 class ConfigurationSettings:

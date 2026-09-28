@@ -1,7 +1,7 @@
 """resolve.py
 
-Turn the values of a neighbor block into NeighborSettings, as the legacy parser turned its
-scope into a Neighbor (ParseNeighbor.post).
+The rules turning the values of a neighbor block into NeighborSettings, as the legacy parser
+turned its scope into a Neighbor (ParseNeighbor.post); codecs.py applies them part by part.
 
 The values come in by keyword, the way the legacy scope held them, because template
 inheritance merges them in that form (`transfer`, reproduced with its accidents). Every
@@ -17,10 +17,9 @@ from typing import Any
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
-from exabgp.bgp.neighbor.settings import NeighborSettings, SessionSettings
+from exabgp.bgp.neighbor.settings import SessionSettings
 from exabgp.configuration.grammar.tree.family import SAFIS, default_families
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
@@ -292,41 +291,3 @@ def api(apis: dict[str, Any]) -> dict[str, Any]:
             for message in API_MESSAGES:
                 built[f'{direction}-{message}'].extend(processes if data.get(message, False) else [])
     return built
-
-
-def policy(values: dict[str, Any], settings: NeighborSettings) -> None:
-    """The BGP policy leaves, where the neighbor keeps them."""
-    hold_time = values.get('hold-time')
-    if hold_time is not None:
-        settings.hold_time = HoldTime(hold_time)
-    for keyword in ('description', 'rate-limit', 'host-name', 'domain-name', 'group-updates', 'as-set'):
-        if values.get(keyword) is not None:
-            setattr(settings, keyword.replace('-', '_'), values[keyword])
-    for keyword in ('auto-flush', 'adj-rib-in', 'adj-rib-out', 'manual-eor', 'shutdown'):
-        if values.get(keyword) is not None:
-            setattr(settings, keyword.replace('-', '_'), values[keyword])
-
-
-def neighbor_settings(values: dict[str, Any]) -> NeighborSettings:
-    check_mandatory(values)
-    negotiated = families(values)
-    check_role(values)
-    check_confederation(values)
-    neighbor_capability = capability(values)
-    settings = NeighborSettings(session=session(values), capability=neighbor_capability, families=negotiated)
-    policy(values, settings)
-    settings.addpaths = addpaths(values, neighbor_capability, negotiated)
-    limits = values.get('family', {}).get('prefix-limit', [])
-    settings.prefix_limit = {family: limit for family, limit in limits if family in negotiated}
-    settings.nexthops = nexthops(values, neighbor_capability, negotiated)
-    if neighbor_capability.route_refresh.is_enabled() and not settings.adj_rib_out:
-        log.warning(
-            lazymsg(
-                'neighbor.route_refresh.adj_rib_out peer={peer} action=auto_enabled reason=route_refresh_requires_cache',
-                peer=settings.session.peer_address,
-            ),
-            'configuration',
-        )
-        settings.adj_rib_out = True
-    settings.api = api(values.get('api', {}))
-    return settings

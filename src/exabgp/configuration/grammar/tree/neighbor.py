@@ -26,11 +26,12 @@ from exabgp.configuration.grammar.nodes import Block, Collect, Keep, Leaf
 from exabgp.configuration.grammar.section import Kept, Section, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.announce import ANNOUNCE_BLOCK, STATIC
+from exabgp.configuration.grammar.tree.codecs import neighbor_settings, neighbor_values
 from exabgp.configuration.grammar.tree.family import ADD_PATH, FAMILY, NEXTHOP
 from exabgp.configuration.grammar.tree.flow import FLOW
 from exabgp.configuration.grammar.tree.l2vpn import L2VPN_SECTION
 from exabgp.configuration.grammar.tree.operational import OPERATIONAL
-from exabgp.configuration.grammar.tree.resolve import inherit, neighbor_settings
+from exabgp.configuration.grammar.tree.resolve import inherit
 from exabgp.configuration.grammar.tree.session import (
     API,
     CAPABILITY,
@@ -40,7 +41,6 @@ from exabgp.configuration.grammar.tree.session import (
     TCP_AO,
     boolean,
 )
-from exabgp.configuration.grammar.tree.unresolve import neighbor_values
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.types.network import (
     ASN_OR_AUTO,
