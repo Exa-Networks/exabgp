@@ -1543,11 +1543,19 @@ async def main(options, checker, queue):
         flushed('no test data available to test against')
         sys.exit(1)
 
-    sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+    # a host without IPv6 (some containers) cannot open an AF_INET6 socket at all,
+    # and an IPv4 test only needs 127.0.0.1, so fall back rather than fail every test
+    try:
+        sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+        host = '::1' if options['ipv6'] else '::FFFF:127.0.0.1'
+    except OSError:
+        if options['ipv6']:
+            raise
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        host = '127.0.0.1'
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
     try:
-        host = '::1' if options['ipv6'] else '::FFFF:127.0.0.1'
         port = options['port']
         sock.bind((host, port))
     except (PermissionError, OSError) as exc:
