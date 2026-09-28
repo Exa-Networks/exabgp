@@ -201,6 +201,33 @@ thing. Napkin math first: the costs, worst to best, are **network, then disk, th
 - **Booleans are positive.** `has_labels`, not `no_labels`. `enabled`, not `disabled`.
 - **Say what it is, not what it does to you.** `_label_size` beats `_label_helper`.
 
+### Ask the object, not its class
+
+**Do not use `isinstance` when the object can answer.** The base class declares the interface
+every subclass keeps (methods, properties) and the class fields which tell the kinds apart
+(`ClassVar` discriminators: `ID`, `IS_EOR`, `has_label`), with their default. Callers use those.
+
+- A new discriminator is declared on the base with its default, so every subclass answers it.
+  Never `getattr(x, 'FLAG', default)`: that is an `isinstance` in disguise.
+- Dispatch on the field, `message.ID == Message.CODE.UPDATE`, and when the type checker needs the
+  subtype after that test, `cast()` it: the field is the runtime check which makes the cast true.
+- Better still, give the base a method whose subclasses each do the right thing, and there is no
+  dispatch to write.
+- `isinstance` stays for what no interface of ours can answer: builtins, third party objects,
+  decoded JSON, and a union of classes which share no base.
+
+```python
+# WRONG: the caller decides what the object is
+if isinstance(message, Update):
+    message.data.classify_otc(negotiated)
+
+# RIGHT: the class says what it is
+if message.ID == Message.CODE.UPDATE:
+    cast(Update, message).data.classify_otc(negotiated)
+```
+
+See also `.claude/CODING_STANDARDS.md`, "Minimize `isinstance` Checks".
+
 ### Comments
 
 Comments are sentences, with a capital and a full stop, and they explain **why**. The code already
@@ -316,6 +343,7 @@ test are listed in `[tool.mutmut]` in `pyproject.toml`: add the module you are h
 - [ ] No new `except X: pass` without a comment justifying it
 - [ ] New and modified functions are under 70 lines
 - [ ] Names carry their units, booleans are positive, no new abbreviations
+- [ ] No `isinstance` where a base class field or method can answer; no `getattr` with a default for a flag
 - [ ] Comments explain why, not what
 - [ ] The fix has a test that fails without it
 - [ ] `./qa/bin/test_everything` passes, including `exa-style`

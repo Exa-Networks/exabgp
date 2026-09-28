@@ -385,6 +385,10 @@ if hasattr(obj, 'attr'):  # Workaround for missing attribute
 
 **Exception: `cast()` with runtime type checks:**
 ```python
+# ✅ Acceptable - cast() preceded by a check of the class field which tells the kinds apart
+if message.ID == Message.CODE.OPEN:
+    return cast(Open, message)
+
 # ✅ Acceptable - cast() preceded by isinstance check
 if isinstance(self.default, bool):
     return cast(T, parsing.boolean(value))
@@ -490,7 +494,7 @@ When modifying JSON output format for NLRI types, attributes, or messages:
 - [ ] Avoid `| None` class attributes when possible
 - [ ] Use ClassVar flags for type identification, not hasattr/isinstance
 - [ ] Fix type errors at root cause, avoid `# type: ignore`
-- [ ] Only use `cast()` when preceded by runtime type check (isinstance/hasattr)
+- [ ] Only use `cast()` when preceded by a runtime check (a discriminating class field such as `ID`, or isinstance/hasattr)
 - [ ] `ruff format src && ruff check src` passes
 - [ ] `./qa/bin/test_everything` passes
 - [ ] No asyncio introduced

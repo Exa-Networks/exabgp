@@ -457,6 +457,7 @@ Generator-based API callbacks still work, they run inside the asyncio loop.
 - Bound every loop, cap every buffer with a named constant
 - New and modified functions under 70 lines
 - A bug fix comes with the test that fails without it
+- Ask the object, not its class: no `isinstance` where a base class field (`ID`, `IS_EOR`) or method can answer
 - Enforced by `./qa/bin/check_exa_style`, part of `./qa/bin/test_everything`
 
 **Python 3.12+ ONLY:**
