@@ -34,8 +34,10 @@ from exabgp.bgp.message.update.nlri.flow import (
     Flow6Destination,
 )
 from exabgp.bgp.message.update.nlri.settings import FlowSettings
-from exabgp.configuration.core.parser import Tokeniser
-from exabgp.configuration.flow.parser import dscp, flow_label, fragment, protocol, traffic_class
+from exabgp.configuration.grammar.lexer import lex_text
+from exabgp.configuration.grammar.tree.flow import MATCH
+from exabgp.configuration.grammar.types.flow import Operation
+from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPv4
 
@@ -53,8 +55,16 @@ def ipv6_destination() -> Flow6Destination:
     return Flow6Destination.make_prefix6(IP.pton('2001:db8::'), 32, 0)
 
 
-def component(parser, text: str):
-    (parsed,) = list(parser(Tokeniser().replenish(text.split())))
+dscp = MATCH['dscp'].type
+flow_label = MATCH['flow-label'].type
+fragment = MATCH['fragment'].type
+protocol = MATCH['protocol'].type
+traffic_class = MATCH['traffic-class'].type
+
+
+def component(parser: Operation, text: str):
+    statement = lex_text(f'{parser.name} {text};')[0]
+    (parsed,) = parser.parse(Words(tuple(statement.words[1:]), statement.tokens[-1], {}))
     return parsed
 
 

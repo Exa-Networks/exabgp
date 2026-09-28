@@ -317,7 +317,6 @@ class DebugSection(ConfigSection):
     defensive: bool = option(False, 'generate random fault in the code in purpose')
     rotate: bool = option(False, 'rotate configurations file on reload (signal)')
     timing: bool = option(False, 'enable timing instrumentation for reactor performance analysis')
-    parser: str = option('grammar', 'undocumented option: legacy or grammar, the configuration parser (development)')
 
 
 # =============================================================================

@@ -195,7 +195,8 @@ def test_the_json_schema_is_well_formed() -> None:
             re.compile(each['pattern'])
         if '$ref' in each:
             assert each['$ref'].removeprefix('#/$defs/') in document['$defs']
-        if 'required' in each and 'allOf' not in each:
+        # an object which only adds `required` to one a grouping defines has no properties of its own
+        if 'required' in each and 'allOf' not in each and 'properties' in each:
             assert set(each['required']) <= set(each['properties']), each['required']
         if 'minimum' in each:
             assert each['minimum'] <= each['maximum']
@@ -310,3 +311,22 @@ def test_a_capability_is_a_boolean_or_required() -> None:
     asn4 = document['$defs']['neighbor']['properties']['capability']['properties']['asn4']
     assert asn4['anyOf'] == [{'type': 'boolean'}, {'type': 'string', 'enum': ['require']}]
     assert asn4['default'] is True
+
+
+def test_the_needed_statements_are_those_a_neighbor_is_refused_without() -> None:
+    from exabgp.configuration.grammar.describe import needed
+    from exabgp.configuration.grammar.tree.neighbor import NEIGHBOR
+    from exabgp.configuration.grammar.tree.resolve import MANDATORY, TCP_AO_MANDATORY
+
+    paths = set(needed(NEIGHBOR))
+    # peer-address is the name of the neighbor block, always there
+    assert {name for name in MANDATORY if name != 'peer-address'} <= paths
+    assert {f'tcp-ao/{name}' for name in TCP_AO_MANDATORY} <= paths
+    assert paths == {'local-as', 'peer-as', 'role/local', *(f'tcp-ao/{name}' for name in TCP_AO_MANDATORY)}
+
+
+def test_a_template_needs_nothing() -> None:
+    document = json_document(ROOT, 'ExaBGP configuration')
+    template = document['properties']['template']['properties']['neighbor']['items']
+    assert template['required'] == ['name']
+    assert 'properties' not in template or all('required' not in each for each in template['properties'].values())

@@ -75,6 +75,11 @@ class Shape:
     # container: the named shapes whose members it has too (a YANG grouping, a JSON $defs entry)
     uses: tuple[Shape, ...] = ()
     name: str = ''  # a shape used in several places: the name of its grouping
+    # container: the members which must be there, as paths (`role/local`), when it uses a
+    # grouping which does not require them itself (a neighbor, not a template)
+    requires: tuple[str, ...] = ()
+    # container: it means something by being there (`role`, `tcp-ao`), its members may be needed
+    presence: bool = False
 
     def described(self, description: str) -> Shape:
         return _replace(self, description=description) if description else self
@@ -125,10 +130,10 @@ def leaf_list(item: Shape, min_items: int = 0, max_items: int = 0) -> Shape:
     return Shape(Kind.LIST, item=item, min_items=min_items, max_items=max_items)
 
 
-def container(*fields: tuple[str, Shape], uses: tuple[Shape, ...] = ()) -> Shape:
+def container(*fields: tuple[str, Shape], uses: tuple[Shape, ...] = (), requires: tuple[str, ...] = ()) -> Shape:
     names = [name for name, _ in fields]
     assert len(names) == len(set(names)), f'a member named twice in {names}'
-    return Shape(Kind.CONTAINER, fields=tuple(fields), uses=uses)
+    return Shape(Kind.CONTAINER, fields=tuple(fields), uses=uses, requires=requires)
 
 
 def keyed(item: Shape, key: str) -> Shape:

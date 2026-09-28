@@ -450,10 +450,8 @@ def routes_from_api(section: str, line: str) -> list[Route]:
     the one above passed while every mpls-vpn UPDATE we recorded carried both.
     """
     configuration = Configuration([''], text=True)
-    configuration.static.clear()
     assert configuration.partial(section, line, 'announce'), str(configuration.error)
-    configuration.scope.to_context()
-    routes = configuration.scope.pop_routes()
+    routes = configuration.pop_routes()
     assert routes, 'the line parsed to no route at all'
     return routes
 

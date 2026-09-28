@@ -265,18 +265,32 @@ async def test_receive_classifies_without_api_or_cache_and_live_meta_setting_onl
     assert json.loads(hidden)['neighbor']['message']['update']['attribute']['otc'] == 65009
 
 
-def test_role_schema_exports_the_required_role_and_supported_policies():
-    from exabgp.application.schema import _get_root_schema, _get_section_schema, schema_to_json_schema
+def _role_schema() -> tuple[dict, dict]:
+    """The role section as `exabgp schema export role` prints it, and the whole configuration."""
+    from exabgp.application.schema import section_block
+    from exabgp.configuration.grammar.describe import json_document
+    from exabgp.configuration.grammar.tree.root import ROOT
 
-    role = _get_section_schema('role')
+    role = section_block('role')
     assert role is not None
-    exported = schema_to_json_schema(role)
-    assert exported['required'] == ['local']
+    return json_document(role, 'ExaBGP role configuration'), json_document(ROOT, 'ExaBGP configuration')
+
+
+def test_role_schema_exports_the_required_role_and_supported_policies():
+    exported, root = _role_schema()
     assert set(exported['properties']['local']['enum']) == {'provider', 'customer', 'peer', 'rs', 'rs-client'}
     # RFC 9234 section 5 leaves the operator no switch, so none is offered by the schema.
     assert 'otc' not in exported['properties']
-    root = schema_to_json_schema(_get_root_schema())
-    assert root['properties']['neighbor']['properties']['role'] == exported
+    neighbor_role = root['$defs']['neighbor']['properties']['role']
+    assert neighbor_role['properties'] == exported['properties']
+
+
+def test_role_schema_marks_the_local_role_required():
+    """A neighbor with a role must give its local role (tree/resolve.py refuses it without), a template need not:
+    the neighbor it is inherited by may give it."""
+    _, root = _role_schema()
+    assert root['properties']['neighbor']['items']['properties']['role']['required'] == ['local']
+    assert 'required' not in root['$defs']['neighbor']['properties']['role']
 
 
 @pytest.mark.parametrize('local_as,peer_as', [(65001, 65001), (0, 65002), (65001, 0)])

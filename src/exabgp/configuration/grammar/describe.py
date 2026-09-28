@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from exabgp.configuration.grammar import json_schema, shape, yang
@@ -197,12 +197,28 @@ def _section(block: Block, build: _Build, defaults: dict[str, Any], depth: int) 
             build.groups[key] = shape.grouping(name, *fields)
         fields, uses = (), (build.groups[key],)
     if block.keep == Keep.SINGLE:
-        return shape.container(*fields, uses=uses).described(block.doc)
+        # a section with needed statements means something by being there: role, tcp-ao
+        present = any(isinstance(child, Leaf) and child.needed for child in block.children)
+        return replace(shape.container(*fields, uses=uses), presence=present).described(block.doc)
     if block.name is None:
         return shape.leaf_list(shape.container(*fields, uses=uses)).described(block.doc)
     naming = block.name.shape().described(f'what the {block.keyword} is called, `{block.keyword} <{block.key}> {{`')
-    item = shape.container((block.key, naming), *fields, uses=uses)
+    requires = needed(block) if block.complete else ()
+    item = shape.container((block.key, naming), *fields, uses=uses, requires=requires)
     return shape.keyed(item, block.key).described(block.doc)
+
+
+def needed(block: Block, prefix: str = '', depth: int = 0) -> tuple[str, ...]:
+    """The paths of the leaves a complete `block` must have (`local-as`, `role/local`)."""
+    assert depth <= MAX_DEPTH, 'the tree is deeper than the engine reads'
+    found: list[str] = []
+    for child in block.children:
+        if isinstance(child, Leaf):
+            if child.needed:
+                found.append(prefix + child.keyword)
+        elif child.keep == Keep.SINGLE:
+            found.extend(needed(child, f'{prefix}{child.keyword}/', depth + 1))
+    return tuple(found)
 
 
 def json_document(block: Block, title: str) -> dict[str, Any]:

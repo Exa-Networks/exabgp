@@ -23,13 +23,8 @@ from exabgp.application.error import (
     CLITimeoutError,
 )
 
-# ParsingError hierarchy
-from exabgp.configuration.core.error import (
-    Error,
-    ParsingError,
-    AFISAFIParsingError,
-    IPAddressParsingError,
-)
+# the configuration error
+from exabgp.configuration.grammar.error import ConfigError
 
 
 class TestProcessErrorHierarchy:
@@ -125,39 +120,16 @@ class TestCLIErrorHierarchy:
             raise CLIPipeError('pipe failed')
 
 
-class TestParsingErrorHierarchy:
-    """Test ParsingError exception hierarchy."""
+class TestConfigErrorHierarchy:
+    """The configuration raises one error, a ValueError, as every configuration error in exabgp is."""
 
-    def test_parsing_error_inherits_from_error(self):
-        assert issubclass(ParsingError, Error)
-        assert issubclass(ParsingError, Exception)
+    def test_config_error_is_a_value_error(self):
+        assert issubclass(ConfigError, ValueError)
+        assert issubclass(ConfigError, Exception)
 
-    def test_afi_safi_parsing_error_hierarchy(self):
-        assert issubclass(AFISAFIParsingError, ParsingError)
-        assert issubclass(AFISAFIParsingError, Error)
-        assert issubclass(AFISAFIParsingError, Exception)
-
-    def test_ip_address_parsing_error_hierarchy(self):
-        assert issubclass(IPAddressParsingError, ParsingError)
-        assert issubclass(IPAddressParsingError, Error)
-        assert issubclass(IPAddressParsingError, Exception)
-
-    def test_catch_parsing_error_catches_subclasses(self):
-        """Verify catching ParsingError catches all subclasses."""
-        subclasses = [
-            AFISAFIParsingError,
-            IPAddressParsingError,
-        ]
-        for exc_class in subclasses:
-            with pytest.raises(ParsingError):
-                raise exc_class()
-
-    def test_catch_error_catches_parsing_errors(self):
-        """Verify catching Error catches all ParsingError subclasses."""
-        with pytest.raises(Error):
-            raise AFISAFIParsingError()
-        with pytest.raises(Error):
-            raise IPAddressParsingError()
+    def test_catch_value_error_catches_config_error(self):
+        with pytest.raises(ValueError):
+            raise ConfigError('file:1:1', 'invalid AFI value')
 
 
 class TestExceptionMessages:
@@ -171,7 +143,7 @@ class TestExceptionMessages:
         exc = CLISocketError('connection refused')
         assert str(exc) == 'connection refused'
 
-    def test_parsing_error_message_attribute(self):
-        exc = AFISAFIParsingError()
-        exc.message = 'invalid AFI value'
+    def test_config_error_message_attribute(self):
+        exc = ConfigError('file:1:1', 'invalid AFI value')
         assert exc.message == 'invalid AFI value'
+        assert str(exc) == 'file:1:1: invalid AFI value'

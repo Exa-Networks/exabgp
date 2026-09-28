@@ -28,7 +28,7 @@ from exabgp.bgp.message.update.attribute.community.extended.rt import (
     RouteTargetASN4Number,
     RouteTargetIPNumber,
 )
-from exabgp.configuration.static.parser import _extended_community
+from exabgp.configuration.grammar.types.bgp import extended_community as _extended_community
 
 
 @pytest.mark.parametrize(

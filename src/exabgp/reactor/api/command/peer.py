@@ -17,7 +17,7 @@ from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.configuration.neighbor.api import ParseAPI
+from exabgp.configuration.grammar.tree.resolve import api as flatten_api
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -248,7 +248,7 @@ def _build_neighbor(params: dict[str, Any], api_processes: list[str] | None = No
         neighbor.group_updates = params['group-updates']
 
     # Initialize API configuration (required before setting processes)
-    neighbor.api = ParseAPI.flatten({})
+    neighbor.api = flatten_api({})
 
     # Configure API processes for dynamic peer notifications
     if api_processes:

@@ -45,8 +45,8 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import Negotiated
-from exabgp.configuration.process import API_PREFIX
-from exabgp.configuration.core.format import formated
+from exabgp.configuration.cli_process import API_PREFIX
+from exabgp.reactor.api.tokeniser import formated
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 from exabgp.reactor.api.response import Response, ResponseEncoder

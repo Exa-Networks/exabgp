@@ -1,13 +1,10 @@
-"""compare.py
+"""outcome.py
 
-Read a configuration with the legacy parser and with the grammar, and compare the results.
+What a configuration makes, reduced to what can be compared and frozen: the processes, and
+for each neighbor what the configuration decided about it (routes included).
 
-This exists while both parsers do (plan/wip-config-grammar.md): it backs
-`exabgp configuration validate --parser both` and the differential tests, and goes when
-the legacy parser goes.
-
-Two parsers agree when both accept with equal results, or both refuse; the error messages
-may differ.
+It compared the legacy parser with the grammar while both existed; it now backs the frozen
+results (frozen.py) and the tests reading a configuration.
 
 Copyright (c) 2009-2026 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
@@ -22,11 +19,6 @@ from typing import Any
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.configuration.configuration import Configuration
-
-LEGACY = 'legacy'
-GRAMMAR = 'grammar'
-BOTH = 'both'
-PARSERS = (LEGACY, GRAMMAR, BOTH)
 
 
 @dataclass(frozen=True)
@@ -102,60 +94,21 @@ def outcome(configuration: Configuration) -> Accepted:
     )
 
 
-def _read(configuration: Configuration, parser: str) -> tuple[Outcome, Configuration]:
-    if not configuration.reload(parser):
+def _read(configuration: Configuration) -> tuple[Outcome, Configuration]:
+    if not configuration.reload():
         return Rejected(str(configuration.error)), configuration
     return outcome(configuration), configuration
 
 
-def legacy_text(text: str) -> tuple[Outcome, Configuration]:
-    return _read(Configuration([text], text=True), LEGACY)
+def read_text(text: str) -> tuple[Outcome, Configuration]:
+    return _read(Configuration([text], text=True))
 
 
-def legacy_file(path: str) -> tuple[Outcome, Configuration]:
-    return _read(Configuration([path]), LEGACY)
-
-
-def grammar_text(text: str) -> tuple[Outcome, Configuration]:
-    return _read(Configuration([text], text=True), GRAMMAR)
-
-
-def grammar_file(path: str) -> tuple[Outcome, Configuration]:
-    return _read(Configuration([path]), GRAMMAR)
+def read_file(path: str) -> tuple[Outcome, Configuration]:
+    return _read(Configuration([path]))
 
 
 def agree(first: Outcome, second: Outcome) -> bool:
     if isinstance(first, Rejected) and isinstance(second, Rejected):
         return True
     return first == second
-
-
-def difference(legacy: Outcome, grammar: Outcome) -> str:
-    """A description of how the two outcomes differ, empty when they agree."""
-    if agree(legacy, grammar):
-        return ''
-    if isinstance(legacy, Rejected):
-        return f'only the grammar accepts it, the legacy parser says:\n{legacy.message}'
-    if isinstance(grammar, Rejected):
-        return f'only the legacy parser accepts it, the grammar says:\n{grammar.message}'
-    return '\n'.join(
-        _differences('', legacy.processes, grammar.processes) + _differences('', legacy.neighbors, grammar.neighbors)
-    )
-
-
-# a difference report names at most this many places, the first ones are what matter
-MAX_DIFFERENCES = 20
-
-
-def _differences(path: str, old: Any, new: Any) -> list[str]:
-    """Where two nested values differ, as `path: legacy != grammar` lines."""
-    found: list[str] = []
-    stack = [(path, old, new)]
-    while stack and len(found) < MAX_DIFFERENCES:
-        where, left, right = stack.pop()
-        if isinstance(left, dict) and isinstance(right, dict):
-            for key in sorted(set(left) | set(right), key=str, reverse=True):
-                stack.append((f'{where}/{key}', left.get(key, '<absent>'), right.get(key, '<absent>')))
-        elif left != right:
-            found.append(f'{where or "/"}\n  legacy:  {left!r}\n  grammar: {right!r}')
-    return found

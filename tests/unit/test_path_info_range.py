@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
-from exabgp.configuration.compare import Accepted, grammar_text, legacy_text
+from exabgp.configuration.configuration import Configuration
 
 NEIGHBOR = (
     'neighbor 127.0.0.1 {{ router-id 10.0.0.1; local-address 127.0.0.1; local-as 65001; peer-as 65002; '
@@ -28,7 +28,6 @@ def test_a_path_identifier_which_does_not_fit_is_refused(integer: int) -> None:
         PathInfo.make_from_integer(integer)
 
 
-@pytest.mark.parametrize('read', [legacy_text, grammar_text])
-def test_the_configuration_refuses_it(read) -> None:
-    assert isinstance(read(NEIGHBOR.format(path=PathInfo.MAX))[0], Accepted)
-    assert not isinstance(read(NEIGHBOR.format(path=PathInfo.MAX + 1))[0], Accepted)
+def test_the_configuration_refuses_it() -> None:
+    assert Configuration([NEIGHBOR.format(path=PathInfo.MAX)], text=True).reload()
+    assert not Configuration([NEIGHBOR.format(path=PathInfo.MAX + 1)], text=True).reload()

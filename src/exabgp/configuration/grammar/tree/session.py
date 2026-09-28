@@ -291,9 +291,15 @@ TCP_AO = Block(
     field='tcp-ao',
     doc='TCP-AO (RFC 5925) authentication',
     children=(
-        Leaf('keyid', integer('keyid', 0, TCP_AO_KEYID_MAX), field='keyid', doc='the key identifier'),
-        Leaf('algorithm', choice('algorithm', TCP_AO_ALGORITHMS), field='algorithm', doc='the MAC algorithm, RFC 5926'),
-        Leaf('password', text('password'), field='password', doc='the master key'),
+        Leaf('keyid', integer('keyid', 0, TCP_AO_KEYID_MAX), field='keyid', doc='the key identifier', needed=True),
+        Leaf(
+            'algorithm',
+            choice('algorithm', TCP_AO_ALGORITHMS),
+            field='algorithm',
+            doc='the MAC algorithm, RFC 5926',
+            needed=True,
+        ),
+        Leaf('password', text('password'), field='password', doc='the master key', needed=True),
         Leaf('base64', boolean(False), field='base64', doc='the password is base64 encoded'),
     ),
 )
@@ -340,6 +346,7 @@ ROLE = Block(
             ),
             field='local',
             doc='our role on the session',
+            needed=True,
         ),
         Leaf('strict', ROLE_SWITCH, field='strict', doc='refuse a peer which does not send its role'),
         Leaf('add-meta', ROLE_SWITCH, field='add-meta', doc='give the roles to the API programs with the routes'),

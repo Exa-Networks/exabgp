@@ -319,6 +319,8 @@ class SRPolicyLine(Type[list[Route]]):
         where = words.where()
         try:
             return [sr_policy_route(words, self.afi)]
+        except ConfigError:
+            raise  # positioned already, by the value which failed
         except ROUTE_ERRORS as exc:
             raise ConfigError(where, str(exc) or 'invalid sr-policy route') from None
 

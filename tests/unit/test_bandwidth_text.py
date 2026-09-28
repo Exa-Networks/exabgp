@@ -15,8 +15,9 @@ import subprocess
 import sys
 
 from exabgp.bgp.message.update.attribute.community.extended.bandwidth import Bandwidth
-from exabgp.configuration.core.parser import Tokeniser
-from exabgp.configuration.static.parser import extended_community
+from exabgp.configuration.grammar.lexer import lex_text
+from exabgp.configuration.grammar.types.bgp import ExtendedCommunitiesType
+from exabgp.configuration.grammar.words import Words
 
 
 def test_bandwidth_prints_its_name() -> None:
@@ -25,10 +26,10 @@ def test_bandwidth_prints_its_name() -> None:
 
 def test_what_bandwidth_prints_reads_back_as_the_same_community() -> None:
     community = Bandwidth.make_bandwidth(65000, 1000.0)
-    tokeniser = Tokeniser()
-    tokeniser.replenish([str(community)])
+    statement = lex_text(f'extended-community {community};')[0]
+    words = Words(tuple(statement.words[1:]), statement.tokens[-1], {})
 
-    read = extended_community(tokeniser).communities[0]
+    read = ExtendedCommunitiesType().parse(words).communities[0]
 
     assert bytes(read.community) == bytes(community.community)
 

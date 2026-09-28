@@ -80,7 +80,9 @@ def _composite(shape: Shape, defs: dict[str, Any], depth: int) -> dict[str, Any]
     if shape.kind == Kind.CHOICE:
         cases = [_object(((name, case),), (), defs, depth + 1, required=[name]) for name, case in shape.fields]
         return {'oneOf': cases}
-    return _object(shape.fields, shape.uses, defs, depth + 1)
+    found = _object(shape.fields, shape.uses, defs, depth + 1)
+    _required(found, shape.requires)
+    return found
 
 
 def _object(
@@ -106,3 +108,13 @@ def _object(
     found['allOf'] = [{'$ref': f'#/$defs/{group.name}'} for group in uses]
     found['unevaluatedProperties'] = False
     return found
+
+
+def _required(found: dict[str, Any], paths: tuple[str, ...]) -> None:
+    """Add to `found` the members which must be there: `role/local` is local, when role is given."""
+    for path in paths:
+        *sections, name = path.split('/')
+        target = found
+        for section in sections:
+            target = target.setdefault('properties', {}).setdefault(section, {})
+        target.setdefault('required', []).append(name)

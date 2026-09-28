@@ -39,9 +39,24 @@ from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.segment_list imp
     WeightSubSubTLV,
 )
 from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
-from exabgp.configuration.core.parser import Tokeniser
-from exabgp.configuration.static.sr_policy import _parse_sr_policy_subtlvs
+from exabgp.configuration.grammar.lexer import lex_text
+from exabgp.configuration.grammar.tree.sr_policy import SRPolicyLine
+from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
+
+# what an sr-policy route says before its sub-TLVs
+_ROUTE_HEAD = ['distinguisher', '1', 'color', '1', 'endpoint', '10.0.0.1', 'next-hop', '10.0.0.2']
+
+
+def _parse_sr_policy_subtlvs(tokens: list[str]) -> list:
+    """The sub-TLVs of an sr-policy route read by the grammar, `tokens` following its next-hop."""
+    statement = lex_text(' '.join(['route', *_ROUTE_HEAD, *tokens, ';']))[0]
+    (route,) = SRPolicyLine(AFI.ipv4).parse(Words(tuple(statement.words[1:]), statement.tokens[-1], {}))
+    (encap,) = route.attributes.values()
+    assert isinstance(encap, TunnelEncap)
+    (tunnel,) = encap.tunnel_tlvs
+    return list(tunnel.subtlvs)
+
 
 # ============================================================= SAFI
 
@@ -1147,9 +1162,8 @@ def test_enlp_repack_zeros_received_flags():
 
 
 def test_parse_rejects_duplicate_enlp():
-    tokeniser = Tokeniser().replenish(['enlp', 'push-ipv4', 'enlp', 'no-push'])
     with pytest.raises(ValueError, match='ENLP sub-TLV may appear only once'):
-        _parse_sr_policy_subtlvs(tokeniser)
+        _parse_sr_policy_subtlvs(['enlp', 'push-ipv4', 'enlp', 'no-push'])
 
 
 def test_pack_segment_verification_flag():
@@ -1841,8 +1855,7 @@ def test_no_configured_segment_transmits_an_unassigned_flag_bit():
     assert len(_SEGMENT_CONFIGURATIONS) == 11, 'RFC 9830 and RFC 9831 define Segment Types A to K'
 
     for name, tokens in _SEGMENT_CONFIGURATIONS.items():
-        tokeniser = Tokeniser().replenish(['segment-list', 'weight', '1', *tokens])
-        (segment_list,) = _parse_sr_policy_subtlvs(tokeniser)
+        (segment_list,) = _parse_sr_policy_subtlvs(['segment-list', 'weight', '1', *tokens])
         (segment,) = segment_list.segments
         flags = segment.pack()[2]
         assert flags & _SEGMENT_FLAGS_UNASSIGNED == 0, f'{name} transmits an unassigned segment flag bit'

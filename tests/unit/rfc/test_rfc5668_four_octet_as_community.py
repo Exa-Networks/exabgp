@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import pytest
 
-from exabgp.configuration.static.parser import _extended_community
+from exabgp.configuration.grammar.types.bgp import extended_community as _extended_community
 
 # RFC 5668 section 2 and section 4
 FOUR_OCTET_AS_TRANSITIVE = 0x02

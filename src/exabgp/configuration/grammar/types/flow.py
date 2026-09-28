@@ -104,6 +104,8 @@ class Operation(Type[list[Any]]):
         where = words.where()
         try:
             return self._read(words)
+        except ConfigError:
+            raise  # positioned already, by the value which failed
         except (ValueError, IndexError, KeyError, TypeError, OSError) as exc:
             raise ConfigError(where, str(exc) or f'invalid {self.name}', expected=[self._hint]) from None
 
@@ -400,7 +402,11 @@ def _redirect_simpson(words: Words) -> tuple[IP, ExtendedCommunities]:
     try:
         ip = IP.from_string(data)
     except (OSError, ValueError):
-        raise ValueError(f'redirect-simpson takes an address and {data} is not one: write "redirect {data}"') from None
+        # a route-target passes nothing in the next-hop: the operator is told why, not inet_pton's complaint
+        raise ValueError(
+            f'redirect-simpson takes an address and {data} is not one. A redirect to a route-target puts '
+            f'nothing in the next hop and is conformant already, so it has no -simpson form: write "redirect {data}".'
+        ) from None
     return ip, _simpson(False)
 
 

@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Iterator, Union
 
-from exabgp.configuration.core.parser import Tokeniser
+from exabgp.reactor.api.tokeniser import Tokeniser
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API

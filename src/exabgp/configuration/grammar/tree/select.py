@@ -287,6 +287,8 @@ class SelectLine(Type[list[Route]]):
         words.context[_AFI] = self.afi
         try:
             nlri = factory(words, self.afi)
+        except ConfigError:
+            raise  # a value of the route (its rd) says where it is itself
         except ROUTE_ERRORS as exc:
             raise ConfigError(where, str(exc) or f'invalid {kind} route') from None
         route = Route(nlri, AttributeCollection(), nexthop=IP.NoNextHop)

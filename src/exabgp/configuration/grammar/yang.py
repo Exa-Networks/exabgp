@@ -70,7 +70,10 @@ def node(name: str, shape: Shape, indent: str, groupings: dict[str, list[str]], 
     """The data node `name` holding a value of `shape`."""
     assert depth <= MAX_DEPTH, 'the shape nests deeper than any configuration'
     if shape.kind == Kind.CONTAINER:
-        return _statement('container', name, shape, indent, _members(shape, indent + INDENT, groupings, depth))
+        present = [f'{indent}{INDENT}presence {quote("the section is given")};'] if shape.presence else []
+        return _statement(
+            'container', name, shape, indent, [*present, *_members(shape, indent + INDENT, groupings, depth)]
+        )
     if shape.kind == Kind.CHOICE:
         return _choice(name, shape, indent, groupings, depth)
     if shape.kind == Kind.LIST:
@@ -95,7 +98,11 @@ def _members(shape: Shape, indent: str, groupings: dict[str, list[str]], depth: 
             groupings[group.name] = []  # taken before it is filled: a grouping may not use itself
             inner = _members(group, INDENT * 2, groupings, depth + 1)
             groupings[group.name] = [f'{INDENT}grouping {group.name} {{', *inner, f'{INDENT}}}']
-        lines.append(f'{indent}uses {group.name};')
+        if shape.requires:
+            refines = [f'{indent}{INDENT}refine {quote(path)} {{ mandatory true; }}' for path in shape.requires]
+            lines.extend([f'{indent}uses {group.name} {{', *refines, f'{indent}}}'])
+        else:
+            lines.append(f'{indent}uses {group.name};')
     for name, each in shape.fields:
         lines.extend(node(name, each, indent, groupings, depth + 1))
     return lines

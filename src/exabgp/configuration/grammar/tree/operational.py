@@ -119,6 +119,8 @@ class OperationalLine(Type[OperationalFamily]):
         words.rest()
         try:
             message: OperationalFamily = self.klass(**_values(pairs, list(self.parameters)))
+        except ConfigError:
+            raise  # positioned already, by the value which failed
         except (ValueError, TypeError, struct.error) as exc:
             raise ConfigError(where, str(exc) or f'invalid {self.name}') from None
         return message

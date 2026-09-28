@@ -7,9 +7,9 @@ from typing import Any
 
 import pytest
 
-from config_grammar.differential import Accepted, agree, grammar, grammar_file, legacy
+from config_grammar.differential import Accepted, agree, grammar, grammar_file
 from config_grammar.forms import DOCUMENTS, all_forms
-from config_grammar.test_differential import CONFIGURATIONS, ROOT as REPOSITORY
+from config_grammar.differential import CONFIGURATIONS, ROOT as REPOSITORY
 from exabgp.configuration.grammar.read import read_file, read_text
 from exabgp.configuration.grammar.render import quote, render
 from exabgp.configuration.grammar.tree.root import ROOT
@@ -47,29 +47,17 @@ def test_printed_configuration_reads_back_equal(document: str) -> None:
     assert render(ROOT, read_text(printed)) == printed, 'printing is not stable'
 
 
-@pytest.mark.parametrize('document', VALID)
-def test_printed_configuration_reads_the_same_with_the_legacy_parser(document: str) -> None:
-    printed = _printed(document)
-    old = legacy(printed)
-
-    assert isinstance(old, Accepted), f'the legacy parser refuses what the grammar printed:\n{printed}\n{old}'
-    assert agree(_unordered(old), _unordered(grammar(document)))
-
-
 @pytest.mark.parametrize('path', CONFIGURATIONS, ids=lambda path: os.path.relpath(path, REPOSITORY))
 def test_a_printed_configuration_file_reads_back_equal(path: str) -> None:
     original = grammar_file(path)
     if not isinstance(original, Accepted):
-        pytest.skip('a configuration both parsers refuse')
+        pytest.skip('a configuration the grammar refuses')
     try:
         printed = render(ROOT, read_file(path))
     except Unprintable as exc:
         pytest.skip(str(exc))
 
     assert agree(_unordered(grammar(printed)), _unordered(original)), printed
-    old = legacy(printed)
-    assert isinstance(old, Accepted), f'the legacy parser refuses what the grammar printed:\n{printed}\n{old}'
-    assert agree(_unordered(old), _unordered(original)), printed
 
 
 @pytest.mark.parametrize(

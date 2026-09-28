@@ -7,9 +7,9 @@ The configuration is declared once, in `src/exabgp/configuration/grammar/`. The 
 the errors, the printer (`render`), the syntax help (`exabgp configuration syntax`), the
 JSON schema and the CLI completion hints all come from that one declaration.
 
-The legacy parser (`configuration/core`, `static/`, `flow/`, `neighbor/`, ...) still exists
-beside it; `exabgp_debug_parser=legacy` selects it. The grammar is the default. See
-`plan/wip-config-grammar.md` for the migration and the removal of the legacy parser.
+It replaced the legacy parser (`configuration/core`, `static/`, `flow/`, `neighbor/`, ...),
+removed once every configuration and API command read the same with both; see
+`plan/wip-config-grammar.md`. The API command tokeniser is `reactor/api/tokeniser.py`.
 
 ---
 
@@ -86,23 +86,23 @@ A statement given several times (a route, a family) says so with `Leaf(multiple=
 6. Add forms in `tests/unit/config_grammar/forms*.py`: one accepted and one refused per
    keyword are enforced by `test_forms.py`.
 
-While the legacy parser exists every form is read by both parsers and must give the same
-result (`configuration/compare.py`). A difference in behaviour, even an accidental one,
-is reproduced and listed in the plan's accidents table.
+Whether each form is accepted was recorded against the legacy parser, and what every input
+made is frozen (`tests/unit/configuration/forms/expected/legacy.json`, `test_frozen.py`). A
+change of behaviour, even of an accidental one, is a decision: it changes the frozen results,
+and the commit says so. The accidents the grammar reproduces are listed in the plan.
 
 ## Tests
 
 | Test | Proves |
 |---|---|
-| `test_forms.py` | every form and document reads the same with both parsers |
-| `test_differential.py` | every `etc/exabgp/*.conf` and fixture reads the same |
-| `test_commands.py` | every API route command of `qa/*/*.ci` reads the same |
-| `test_roundtrip.py` | printed configuration reads back equal, with either parser |
-| `test_frozen.py` | the grammar matches the frozen legacy results (`config_grammar/frozen.py`) |
-| `test_imports.py` | the grammar imports nothing of the legacy parser |
+| `test_forms.py` | every form and document is accepted or refused as the legacy parser did |
+| `test_frozen.py` | every form, document, `etc/exabgp/*.conf`, fixture and API command of `qa/*/*.ci` makes what the legacy parser made (`config_grammar/frozen.py`) |
+| `test_roundtrip.py` | printed configuration reads back equal |
+| `test_model.py` | the data model: every Number reads its bounds, no number is a string, JSON Schema and YANG well formed |
+| `test_imports.py` | the grammar imports no configuration module but its own and settings |
 | `test_describe.py` | the syntax help and schema cover every keyword |
 
-Regenerate the frozen results, only while the legacy parser exists:
+Regenerate the frozen results only for a change of behaviour made on purpose:
 
 ```bash
 cd tests/unit && env exabgp_log_enable=false ../../.venv/bin/python -m config_grammar.frozen

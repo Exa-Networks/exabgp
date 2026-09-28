@@ -45,8 +45,7 @@ def api(line: str, action: str = 'announce') -> tuple[bool, str, list]:
     configuration = Configuration([''], text=True)
     if not configuration.partial('ipv4', line, action):
         return False, str(configuration.error), []
-    configuration.scope.to_context()
-    return True, '', configuration.scope.pop_routes()
+    return True, '', configuration.pop_routes()
 
 
 def wire(route) -> str:

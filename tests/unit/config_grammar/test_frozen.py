@@ -9,7 +9,7 @@ MAX_REPORTED = 20  # the first inputs which differ are what matter
 
 def test_the_grammar_reads_every_input_as_the_legacy_parser_did() -> None:
     frozen = load()
-    current = read(legacy_parser=False)
+    current = read()
 
     missing = sorted(name for key, (_, name) in current.items() if key not in frozen)
     assert not missing, 'inputs never frozen, regenerate config_grammar.frozen:\n' + '\n'.join(missing[:MAX_REPORTED])

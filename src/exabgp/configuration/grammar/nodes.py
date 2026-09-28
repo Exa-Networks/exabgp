@@ -72,13 +72,16 @@ class Leaf:
     type: Type[Any]
     field: str
     default: Any = MISSING
-    mandatory: bool = False
+    mandatory: bool = False  # the block is refused without it, when it closes
     doc: str = ''
     collect: Collect = Collect.SET
     store: Store | None = None
     # the statement may be given several times, each adding an entry (a route, a family):
     # what a data model makes a list. A store callback alone says nothing about it
     multiple: bool = False
+    # given by the neighbor or by a template it inherits: checked once they are merged, when
+    # the neighbor is made (tree/resolve.py), so a template may leave it out
+    needed: bool = False
 
     @property
     def repeated(self) -> bool:
@@ -121,6 +124,8 @@ class Block:
     name: Type[Any] | None = None
     # in the data model, the member holding that name: the key of the list of such blocks
     key: str = 'name'
+    # the block is complete once read (a neighbor, not a template): its needed leaves are there
+    complete: bool = False
     doc: str = ''
     # the message when a mandatory leaf is missing, per section, as the legacy parser words it
     missing: str = 'missing {names}'

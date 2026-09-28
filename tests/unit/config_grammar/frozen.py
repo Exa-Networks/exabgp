@@ -1,12 +1,13 @@
-"""What the legacy parser made of every input of the grammar tests, kept once it is gone.
+"""What the legacy parser made of every input of the grammar tests, kept now it is gone.
 
 Every document of the forms corpus, every configuration file and every API command is read,
 and what it produced is reduced to a digest: the outcome as canonical text (the processes
-and the neighbors of `compare.outcome`, or `rejected`), then hashed. The file maps a digest
+and the neighbors of `outcome.outcome`, or `rejected`), then hashed. The file maps a digest
 of the input to a digest of the outcome, so it stays small.
 
-Written from the legacy parser while it exists; once it is removed the tests compare the
-grammar against this file, which keeps proving the behaviour was preserved. Regenerate with
+It was written from the legacy parser, and the grammar is held to it: it is the proof the
+behaviour was preserved when the legacy parser was removed. Regenerate it only for a change
+of behaviour made on purpose, and say so in the commit:
 
     cd tests/unit && env exabgp_log_enable=false ../../.venv/bin/python -m config_grammar.frozen
 
@@ -23,12 +24,17 @@ import os
 from collections import deque
 from typing import Any, Callable
 
-from config_grammar.differential import Accepted, Outcome, grammar, grammar_file, legacy, legacy_file
+from config_grammar.differential import (
+    COMMANDS,
+    CONFIGURATIONS,
+    ROOT,
+    Accepted,
+    Outcome,
+    grammar,
+    grammar_command,
+    grammar_file,
+)
 from config_grammar.forms import DOCUMENTS, all_forms
-from config_grammar.test_commands import COMMANDS
-from config_grammar.test_commands import grammar as grammar_command
-from config_grammar.test_commands import legacy as legacy_command
-from config_grammar.test_differential import CONFIGURATIONS, ROOT
 from exabgp.environment import getenv
 
 FROZEN = os.path.join(ROOT, 'tests', 'unit', 'configuration', 'forms', 'expected', 'legacy.json')
@@ -71,24 +77,23 @@ def outcome_digest(outcome: Outcome | list[Any] | str) -> str:
     return digest(json.dumps(reduced, sort_keys=True))
 
 
-def inputs(legacy_parser: bool) -> dict[str, Callable[[], Any]]:
-    """Every input by name, with how the parser asked for reads it."""
-    text, path, command = (
-        (legacy, legacy_file, legacy_command) if legacy_parser else (grammar, grammar_file, grammar_command)
-    )
+def inputs() -> dict[str, Callable[[], Any]]:
+    """Every input by name, with how the grammar reads it."""
     found: dict[str, Callable[[], Any]] = {}
     for document in [form.document() for form in all_forms()] + [document for document, _ in DOCUMENTS]:
-        found[f'document {document}'] = lambda document=document: text(document)
+        found[f'document {document}'] = lambda document=document: grammar(document)
     for configuration in CONFIGURATIONS:
-        found[f'file {os.path.relpath(configuration, ROOT)}'] = lambda configuration=configuration: path(configuration)
+        found[f'file {os.path.relpath(configuration, ROOT)}'] = lambda configuration=configuration: grammar_file(
+            configuration
+        )
     for action, line in COMMANDS:
-        found[f'command {action} {line}'] = lambda action=action, line=line: command(action, line)
+        found[f'command {action} {line}'] = lambda action=action, line=line: grammar_command(action, line)
     return found
 
 
-def read(legacy_parser: bool) -> dict[str, tuple[str, str]]:
-    """The digest of each input, with the input, as the parser asked for reads it."""
-    return {digest(name): (outcome_digest(reading()), name) for name, reading in inputs(legacy_parser).items()}
+def read() -> dict[str, tuple[str, str]]:
+    """The digest of each input, with the input, as the grammar reads it."""
+    return {digest(name): (outcome_digest(reading()), name) for name, reading in inputs().items()}
 
 
 def load() -> dict[str, str]:
@@ -99,7 +104,7 @@ def load() -> dict[str, str]:
 
 def main() -> None:
     getenv().bgp.passive = False
-    frozen = {key: value for key, (value, _) in sorted(read(legacy_parser=True).items())}
+    frozen = {key: value for key, (value, _) in sorted(read().items())}
     os.makedirs(os.path.dirname(FROZEN), exist_ok=True)
     with open(FROZEN, 'w') as handle:
         json.dump(frozen, handle, indent=0, sort_keys=True)

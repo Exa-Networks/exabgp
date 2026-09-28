@@ -15,26 +15,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from exabgp.configuration.schema import ValueType
-
 
 @dataclass
 class CLIValueSpec:
     """Specification for a CLI command value/argument.
 
-    Describes the expected type, validation, and help text for a CLI value.
-    Used to drive auto-completion and validation in the interactive CLI.
+    The help text and examples of a CLI value, for the completion of the interactive CLI.
+    What the value is and how it is checked belongs to the configuration grammar.
 
     Example:
         CLIValueSpec(
-            value_type=ValueType.IP_PREFIX,
             description="Route prefix to announce",
             examples=["10.0.0.0/24", "2001:db8::/32"],
             required=True
         )
     """
 
-    value_type: ValueType
     description: str = ''
     examples: list[str] = field(default_factory=list)
     required: bool = True
@@ -52,8 +48,8 @@ class CLICommandSpec:
         CLICommandSpec(
             name="announce route",
             description="Announce a BGP route",
-            arguments={"prefix": CLIValueSpec(ValueType.IP_PREFIX, ...)},
-            options={"next-hop": CLIValueSpec(ValueType.NEXT_HOP, ...)}
+            arguments={"prefix": CLIValueSpec(...)},
+            options={"next-hop": CLIValueSpec(...)}
         )
     """
 
@@ -72,7 +68,6 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         description='Announce a BGP route to all peers',
         arguments={
             'prefix': CLIValueSpec(
-                value_type=ValueType.IP_PREFIX,
                 description='IP prefix to announce (CIDR notation)',
                 examples=['10.0.0.0/24', '192.0.2.0/24', '2001:db8::/32'],
                 required=True,
@@ -80,50 +75,42 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         },
         options={
             'next-hop': CLIValueSpec(
-                value_type=ValueType.NEXT_HOP,
                 description='Next-hop IP address or "self"',
                 examples=['192.0.2.1', 'self', '2001:db8::1'],
                 required=False,
             ),
             'as-path': CLIValueSpec(
-                value_type=ValueType.AS_PATH,
                 description='AS path as list of AS numbers',
                 examples=['[65000]', '[65000 65001]', '[65000 65001 65002]'],
                 required=False,
             ),
             'origin': CLIValueSpec(
-                value_type=ValueType.ORIGIN,
                 description='BGP origin attribute',
                 examples=['igp', 'egp', 'incomplete'],
                 required=False,
                 choices=['igp', 'egp', 'incomplete'],
             ),
             'med': CLIValueSpec(
-                value_type=ValueType.MED,
                 description='Multi-exit discriminator (metric)',
                 examples=['100', '200', '0'],
                 required=False,
             ),
             'local-preference': CLIValueSpec(
-                value_type=ValueType.LOCAL_PREF,
                 description='Local preference value',
                 examples=['100', '200', '150'],
                 required=False,
             ),
             'community': CLIValueSpec(
-                value_type=ValueType.COMMUNITY,
                 description='BGP community (AS:value)',
                 examples=['65000:100', '65000:200'],
                 required=False,
             ),
             'extended-community': CLIValueSpec(
-                value_type=ValueType.EXTENDED_COMMUNITY,
                 description='Extended community attribute',
                 examples=['target:65000:100', 'origin:65000:100'],
                 required=False,
             ),
             'large-community': CLIValueSpec(
-                value_type=ValueType.LARGE_COMMUNITY,
                 description='Large BGP community (AS:value:value)',
                 examples=['65000:100:200', '65000:0:1'],
                 required=False,
@@ -135,14 +122,12 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         description='Announce End-of-RIB marker to all peers',
         arguments={
             'afi': CLIValueSpec(
-                value_type=ValueType.ENUMERATION,
                 description='Address family identifier',
                 examples=['ipv4', 'ipv6', 'l2vpn'],
                 required=False,
                 choices=['ipv4', 'ipv6', 'l2vpn', 'bgp-ls'],
             ),
             'safi': CLIValueSpec(
-                value_type=ValueType.ENUMERATION,
                 description='Subsequent address family identifier',
                 examples=['unicast', 'multicast', 'mpls-vpn'],
                 required=False,
@@ -155,14 +140,12 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         description='Request route refresh from all peers',
         arguments={
             'afi': CLIValueSpec(
-                value_type=ValueType.ENUMERATION,
                 description='Address family identifier',
                 examples=['ipv4', 'ipv6'],
                 required=False,
                 choices=['ipv4', 'ipv6', 'l2vpn', 'bgp-ls'],
             ),
             'safi': CLIValueSpec(
-                value_type=ValueType.ENUMERATION,
                 description='Subsequent address family identifier',
                 examples=['unicast', 'mpls-vpn'],
                 required=False,
@@ -175,7 +158,6 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         description='Withdraw a previously announced route from all peers',
         arguments={
             'prefix': CLIValueSpec(
-                value_type=ValueType.IP_PREFIX,
                 description='IP prefix to withdraw (CIDR notation)',
                 examples=['10.0.0.0/24', '192.0.2.0/24', '2001:db8::/32'],
                 required=True,
@@ -183,13 +165,11 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         },
         options={
             'next-hop': CLIValueSpec(
-                value_type=ValueType.NEXT_HOP,
                 description='Next-hop IP address (for NLRI matching)',
                 examples=['192.0.2.1', '2001:db8::1'],
                 required=False,
             ),
             'path-information': CLIValueSpec(
-                value_type=ValueType.INTEGER,
                 description='Path identifier for add-path',
                 examples=['1', '2', '100'],
                 required=False,
@@ -202,7 +182,6 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         description='Display peer information',
         arguments={
             'ip': CLIValueSpec(
-                value_type=ValueType.IP_ADDRESS,
                 description='Peer IP address (optional filter)',
                 examples=['127.0.0.1', '192.168.1.1'],
                 required=False,
@@ -210,17 +189,14 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         },
         options={
             'summary': CLIValueSpec(
-                value_type=ValueType.BOOLEAN,
                 description='Show brief peer status',
                 required=False,
             ),
             'extensive': CLIValueSpec(
-                value_type=ValueType.BOOLEAN,
                 description='Show detailed peer information',
                 required=False,
             ),
             'configuration': CLIValueSpec(
-                value_type=ValueType.BOOLEAN,
                 description='Show peer configuration',
                 required=False,
             ),
@@ -232,7 +208,6 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         description='Display Adj-RIB-In (received routes)',
         arguments={
             'ip': CLIValueSpec(
-                value_type=ValueType.IP_ADDRESS,
                 description='Peer IP address (optional filter)',
                 examples=['127.0.0.1', '192.168.1.1'],
                 required=False,
@@ -240,7 +215,6 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         },
         options={
             'extensive': CLIValueSpec(
-                value_type=ValueType.BOOLEAN,
                 description='Show detailed route information',
                 required=False,
             ),
@@ -251,7 +225,6 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         description='Display Adj-RIB-Out (advertised routes)',
         arguments={
             'ip': CLIValueSpec(
-                value_type=ValueType.IP_ADDRESS,
                 description='Peer IP address (optional filter)',
                 examples=['127.0.0.1', '192.168.1.1'],
                 required=False,
@@ -259,7 +232,6 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         },
         options={
             'extensive': CLIValueSpec(
-                value_type=ValueType.BOOLEAN,
                 description='Show detailed route information',
                 required=False,
             ),
@@ -271,7 +243,6 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         description='Tear down BGP session with all peers',
         options={
             'notification': CLIValueSpec(
-                value_type=ValueType.INTEGER,
                 description='Cease subcode, or code then subcode, then optional text (default 6 2)',
                 examples=['4', '6 2 maintenance'],
                 required=False,
@@ -284,7 +255,6 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         description='Close the session with Administrative Shutdown and keep it down',
         options={
             'text': CLIValueSpec(
-                value_type=ValueType.STRING,
                 description='Shutdown Communication sent to the peer (RFC 9003)',
                 examples=['"maintenance until 18:00"'],
                 required=False,
@@ -309,7 +279,6 @@ CLI_COMMAND_SCHEMA: dict[str, CLICommandSpec] = {
         description='Execute batched commands to peers (semicolon-separated)',
         arguments={
             'commands': CLIValueSpec(
-                value_type=ValueType.STRING,
                 description='Semicolon-separated announce/withdraw commands',
                 examples=[
                     'announce route 10.0.0.0/24 next-hop 1.2.3.4 ; announce route 10.0.0.1/24 next-hop 1.2.3.4',

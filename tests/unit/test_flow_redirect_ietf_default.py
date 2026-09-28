@@ -22,14 +22,16 @@ from __future__ import annotations
 
 import pytest
 
-from exabgp.configuration.core.parser import Tokeniser
-from exabgp.configuration.flow.parser import copy
-from exabgp.configuration.flow.parser import copy_simpson
-from exabgp.configuration.flow.parser import redirect
-from exabgp.configuration.flow.parser import redirect_next_hop
-from exabgp.configuration.flow.parser import redirect_next_hop_ietf
-from exabgp.configuration.flow.parser import redirect_next_hop_simpson
-from exabgp.configuration.flow.parser import redirect_simpson
+from exabgp.configuration.grammar.lexer import lex_text
+from exabgp.configuration.grammar.types import flow as flow_types
+from exabgp.configuration.grammar.types.flow import COPY as copy
+from exabgp.configuration.grammar.types.flow import COPY_SIMPSON as copy_simpson
+from exabgp.configuration.grammar.types.flow import REDIRECT as redirect
+from exabgp.configuration.grammar.types.flow import REDIRECT_SIMPSON as redirect_simpson
+from exabgp.configuration.grammar.types.flow import REDIRECT_TO_NEXTHOP as redirect_next_hop
+from exabgp.configuration.grammar.types.flow import REDIRECT_TO_NEXTHOP_IETF as redirect_next_hop_ietf
+from exabgp.configuration.grammar.types.flow import REDIRECT_TO_NEXTHOP_SIMPSON as redirect_next_hop_simpson
+from exabgp.configuration.grammar.words import Words
 
 # draft-ietf-idr-flowspec-redirect-ip: IPv4-address-specific transitive, sub-type 0x0c
 IETF_IPV4 = bytes([0x01, 0x0C])
@@ -42,12 +44,10 @@ SIMPSON = bytes([0x08, 0x00])
 COPY_BIT = 0x01
 
 
-def parsed(function, *words):
-    """Run one leaf parser the way the dispatcher does, with the `;` already dropped."""
-    tokeniser = Tokeniser()
-    tokeniser.replenish(['keyword', *words])
-    tokeniser()
-    outcome = function(tokeniser)
+def parsed(operation, *words):
+    """Read one flow value the way the grammar does: the words after its keyword, before the `;`."""
+    statement = lex_text(' '.join([operation.name, *words, ';']))[0]
+    outcome = operation.parse(Words(tuple(statement.words[1:]), statement.tokens[-1], {}))
     if isinstance(outcome, tuple):
         nexthop, communities = outcome
     else:
@@ -143,11 +143,9 @@ def test_the_change_of_meaning_is_said_once(monkeypatch):
     is how a warning stops being read. The two keywords whose bytes changed share the flag:
     an operator needs to be told that this release encodes them differently, once.
     """
-    from exabgp.configuration.flow import parser as flow_parser
-
     said: list[str] = []
-    monkeypatch.setattr(flow_parser, '_TOLD_ABOUT_THE_IETF_DEFAULT', False)
-    monkeypatch.setattr(flow_parser.log, 'warning', lambda message, source='': said.append(message()))
+    monkeypatch.setattr(flow_types, '_TOLD_ABOUT_THE_IETF_DEFAULT', [False])
+    monkeypatch.setattr(flow_types.log, 'warning', lambda message, source='': said.append(message()))
 
     parsed(redirect, '1.2.3.4')
     parsed(copy, '1.2.3.4')
@@ -160,11 +158,9 @@ def test_the_change_of_meaning_is_said_once(monkeypatch):
 
 def test_asking_for_the_older_form_says_nothing(monkeypatch):
     """An operator who wrote -simpson has already chosen; there is nothing to warn about."""
-    from exabgp.configuration.flow import parser as flow_parser
-
     said: list[str] = []
-    monkeypatch.setattr(flow_parser, '_TOLD_ABOUT_THE_IETF_DEFAULT', False)
-    monkeypatch.setattr(flow_parser.log, 'warning', lambda message, source='': said.append(message()))
+    monkeypatch.setattr(flow_types, '_TOLD_ABOUT_THE_IETF_DEFAULT', [False])
+    monkeypatch.setattr(flow_types.log, 'warning', lambda message, source='': said.append(message()))
 
     parsed(redirect_simpson, '1.2.3.4')
     parsed(copy_simpson, '1.2.3.4')
@@ -197,3 +193,4 @@ def test_the_older_form_refuses_a_route_target_with_a_reason(target):
     assert 'inet_pton' not in message, 'the operator is shown the exception rather than the reason'
     assert 'redirect-simpson takes an address' in message
     assert 'no -simpson form' in message
+    assert f'write "redirect {target}"' in message

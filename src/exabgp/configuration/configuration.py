@@ -1,7 +1,10 @@
 """configuration.py
 
+The configuration exabgp runs with: read from its files by the grammar (configuration/grammar),
+and changed by the API commands.
+
 Created by Thomas Mangin on 2009-08-25.
-Copyright (c) 2009-2017 Exa Networks. All rights reserved.
+Copyright (c) 2009-2026 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
@@ -9,68 +12,18 @@ from __future__ import annotations
 
 import os
 import re
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.configuration.cli_process import cli_processes
+from exabgp.environment import getenv
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import Family, FamilyTuple
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.operational import OperationalFamily
     from exabgp.configuration.settings import ConfigurationSettings
     from exabgp.rib.route import Route
-
-from exabgp.configuration.announce import AnnounceIPv4, AnnounceIPv6, AnnounceL2VPN, SectionAnnounce
-from exabgp.configuration.announce.flow import AnnounceFlow  # noqa: F401,E261,E501
-
-# for registration
-from exabgp.configuration.announce.ip import AnnounceIP  # noqa: F401,E261,E501
-from exabgp.configuration.announce.label import AnnounceLabel  # noqa: F401,E261,E501
-from exabgp.configuration.announce.mup import AnnounceMup  # noqa: F401,E261,E501
-from exabgp.configuration.announce.mvpn import AnnounceMVPN  # noqa: F401,E261,E501
-from exabgp.configuration.announce.sr_policy import sr_policy_ipv4, sr_policy_ipv6  # noqa: F401,E261,E501
-from exabgp.configuration.announce.path import AnnouncePath  # noqa: F401,E261,E501
-from exabgp.configuration.announce.rtc import AnnounceRTC  # noqa: F401,E261,E501
-from exabgp.configuration.announce.vpls import AnnounceVPLS  # noqa: F401,E261,E501
-from exabgp.configuration.announce.vpn import AnnounceVPN  # noqa: F401,E261,E501
-from exabgp.configuration.capability import ParseCapability
-from exabgp.configuration.core import Error, Parser, Scope, Section, Tokeniser
-from exabgp.configuration.tcpao import ParseTCPAO
-from exabgp.configuration.confederation import ParseConfederation
-from exabgp.configuration.role import ParseRole
-from exabgp.configuration.flow import ParseFlow, ParseFlowMatch, ParseFlowRoute, ParseFlowScope, ParseFlowThen
-from exabgp.configuration.l2vpn import ParseL2VPN, ParseVPLS
-from exabgp.configuration.neighbor import ParseNeighbor
-from exabgp.configuration.neighbor.api import ParseAPI, ParseReceive, ParseSend
-from exabgp.configuration.neighbor.family import ParseAddPath, ParseFamily
-from exabgp.configuration.neighbor.nexthop import ParseNextHop
-from exabgp.configuration.operational import ParseOperational
-from exabgp.configuration.process import ParseProcess
-from exabgp.configuration.static import ParseStatic, ParseStaticRoute
-from exabgp.configuration.template import ParseTemplate
-from exabgp.configuration.template.neighbor import ParseTemplateNeighbor
-from exabgp.environment import getenv
-from exabgp.logger import lazymsg, log
-
-# the sections of an API command the grammar reads when selected; the others are read by the
-# legacy parser until the grammar declares them (plan/wip-config-grammar.md)
-GRAMMAR_COMMAND_SECTIONS = frozenset({'static', 'ipv4', 'ipv6', 'flow', 'l2vpn'})
-
-# Mapping for config keywords that don't match parser section names
-# Format: (parent_section_name, keyword) -> target_section_name
-# Only needed for exceptions where keyword != parser.name
-_KEYWORD_TO_SECTION: dict[tuple[str, str], str] = {
-    ('template', 'neighbor'): 'template-neighbor',
-    ('neighbor', 'l2vpn'): 'L2VPN',
-    ('template-neighbor', 'l2vpn'): 'L2VPN',
-    ('flow', 'route'): 'flow/route',
-    ('flow/route', 'match'): 'flow/match',
-    ('flow/route', 'then'): 'flow/then',
-    ('flow/route', 'scope'): 'flow/scope',
-    ('L2VPN', 'vpls'): 'l2vpn/vpls',
-    ('api', 'send'): 'api/send',
-    ('api', 'receive'): 'api/receive',
-    ('static', 'route'): 'static/route',
-}
 
 
 class _Configuration:
@@ -282,6 +235,23 @@ class _Configuration:
         return result
 
 
+class ConfigurationError:
+    """The last error of a reload or of an API command, as `str()` gives it."""
+
+    def __init__(self) -> None:
+        self.message = ''
+
+    def set(self, message: str) -> bool:
+        self.message = message
+        return False
+
+    def clear(self) -> None:
+        self.message = ''
+
+    def __str__(self) -> str:
+        return self.message
+
+
 class Configuration(_Configuration):
     def __init__(self, configurations: list[str], text: bool = False) -> None:
         _Configuration.__init__(self)
@@ -290,94 +260,16 @@ class Configuration(_Configuration):
         self._configurations: list[str] = configurations
         self._text: bool = text
 
-        self.error: Error = Error()
-        self.scope: Scope = Scope()
-
-        self.parser: Parser = Parser(self.scope, self.error)
-
-        params = (self.parser, self.scope, self.error)
-        self.section = Section(*params)
-        self.process = ParseProcess(*params)
-        self.template = ParseTemplate(*params)
-        self.template_neighbor = ParseTemplateNeighbor(*params)
-        self.neighbor = ParseNeighbor(*params)
-        self.family = ParseFamily(*params)
-        self.addpath = ParseAddPath(*params)
-        self.nexthop = ParseNextHop(*params)
-        self.capability = ParseCapability(*params)
-        self.tcpao = ParseTCPAO(*params)
-        self.role = ParseRole(*params)
-        self.confederation = ParseConfederation(*params)
-        self.api = ParseAPI(*params)
-        self.api_send = ParseSend(*params)
-        self.api_receive = ParseReceive(*params)
-        self.static = ParseStatic(*params)
-        self.static_route = ParseStaticRoute(*params)
-        self.announce = SectionAnnounce(*params)
-        self.announce_ipv4 = AnnounceIPv4(*params)
-        self.announce_ipv6 = AnnounceIPv6(*params)
-        self.announce_l2vpn = AnnounceL2VPN(*params)
-        self.flow = ParseFlow(*params)
-        self.flow_route = ParseFlowRoute(*params)
-        self.flow_match = ParseFlowMatch(*params)
-        self.flow_then = ParseFlowThen(*params)
-        self.flow_scope = ParseFlowScope(*params)
-        self.l2vpn = ParseL2VPN(*params)
-        self.vpls = ParseVPLS(*params)
-        self.operational = ParseOperational(*params)
-        # Build parser registry: section_name -> parser instance
-        self._parsers: dict[str, Section] = {
-            p.name: p
-            for p in [
-                self.process,
-                self.template,
-                self.template_neighbor,
-                self.neighbor,
-                self.family,
-                self.addpath,
-                self.nexthop,
-                self.capability,
-                self.tcpao,
-                self.role,
-                self.confederation,
-                self.api,
-                self.api_send,
-                self.api_receive,
-                self.static,
-                self.static_route,
-                self.announce,
-                self.announce_ipv4,
-                self.announce_ipv6,
-                self.announce_l2vpn,
-                self.flow,
-                self.flow_route,
-                self.flow_match,
-                self.flow_then,
-                self.flow_scope,
-                self.l2vpn,
-                self.vpls,
-                self.operational,
-            ]
-        }
-
-        # Build structure from schemas
-        self._structure = self._build_structure()
-
-        self._neighbors: dict[str, Any] = {}
+        self.error = ConfigurationError()
+        # the routes an API command read, until the API takes them
+        self._command_routes: list['Route'] = []
+        # how many sections the last API command left open: its routes are then not used
+        self.open_sections = 0
         self._previous_neighbors: dict[str, Any] = {}
 
     @classmethod
     def from_settings(cls, settings: 'ConfigurationSettings') -> 'Configuration':
-        """Create Configuration from validated settings.
-
-        This factory method enables programmatic Configuration creation without
-        parsing config files. Useful for testing and API-driven creation.
-
-        Args:
-            settings: ConfigurationSettings with neighbors and processes.
-
-        Returns:
-            Configured Configuration instance with neighbors ready.
+        """Create Configuration from validated settings, without reading a file.
 
         Raises:
             ValueError: If settings validation fails.
@@ -389,198 +281,33 @@ class Configuration(_Configuration):
         if error:
             raise ValueError(error)
 
-        # Create Configuration with empty configuration list
         config = cls(configurations=[])
-
-        # Set processes, the reactor takes each one as a dict keyed by configuration keyword
+        # the reactor takes each process as a dict keyed by configuration keyword
         config.processes = {
             name: process.to_dict() if isinstance(process, ProcessSettings) else process
             for name, process in settings.processes.items()
         }
-
-        # Create neighbors from settings
         for neighbor_settings in settings.neighbors:
             neighbor = Neighbor.from_settings(neighbor_settings)
             config.neighbors[neighbor.name()] = neighbor
-
         return config
 
-    def _build_structure(self) -> dict[str, dict[str, Any]]:
-        """Build the configuration structure from parser schemas.
-
-        Returns a dict mapping section names to their configuration:
-        - 'class': parser instance
-        - 'commands': valid commands (from known.keys() or explicit list)
-        - 'sections': mapping of keywords to child section names
-        """
-        # Special command lists for parsers that don't use known.keys()
-        _SPECIAL_COMMANDS: dict[str, list[str]] = {
-            'ipv4': [
-                'unicast',
-                'multicast',
-                'nlri-mpls',
-                'labeled-unicast',
-                'mpls-vpn',
-                'mcast-vpn',
-                'flow',
-                'flow-vpn',
-                'mup',
-                'sr-policy',
-                'rtc',
-            ],
-            'ipv6': [
-                'unicast',
-                'multicast',
-                'nlri-mpls',
-                'labeled-unicast',
-                'mpls-vpn',
-                'mcast-vpn',
-                'flow',
-                'flow-vpn',
-                'mup',
-                'sr-policy',
-            ],
-            'l2vpn': ['vpls'],
-            'static': ['route', 'attributes', 'sr-policy', 'rtc'],
-        }
-
-        # Build sections dict from schema Container children
-        def get_sections(parser: Section) -> dict[str, str]:
-            sections: dict[str, str] = {}
-            for keyword in parser.get_subsection_keywords():
-                # Look up target section name from override mapping or use keyword as-is
-                target = _KEYWORD_TO_SECTION.get((parser.name, keyword), keyword)
-                sections[keyword] = target
-            return sections
-
-        # Build structure entry for a parser
-        def build_entry(parser: Section) -> dict[str, Any]:
-            # Get commands from special list, known dict, or schema
-            if parser.name in _SPECIAL_COMMANDS:
-                commands = _SPECIAL_COMMANDS[parser.name]
-            else:
-                # Combine commands from known dict and schema Leaf children
-                # Filter to only string keys (known may have tuple keys for special cases)
-                commands = [k for k in parser.known.keys() if isinstance(k, str)]
-                if parser.schema:
-                    from exabgp.configuration.schema import Leaf, LeafList
-
-                    for name, child in parser.schema.children.items():
-                        if isinstance(child, (Leaf, LeafList)) and name not in commands:
-                            commands.append(name)
-            return {
-                'class': parser,
-                'commands': commands,
-                'sections': get_sections(parser),
-            }
-
-        # Start with root entry (special case - no parser)
-        structure: dict[str, dict[str, Any]] = {
-            'root': {
-                'class': self.section,
-                'commands': [],
-                'sections': {
-                    'process': 'process',
-                    'neighbor': 'neighbor',
-                    'template': 'template',
-                },
-            },
-        }
-
-        # Add entries for all registered parsers
-        for name, parser in self._parsers.items():
-            structure[name] = build_entry(parser)
-
-        # Special case: l2vpn/vpls uses l2vpn.known (commands from parent)
-        structure['l2vpn/vpls']['commands'] = list(self.l2vpn.known.keys())
-
-        return structure
-
-    @property
-    def tokeniser(self) -> Tokeniser:
-        """Convenience accessor for parser.tokeniser"""
-        return self.parser.tokeniser
-
-    def _clear(self) -> None:
-        self.processes = {}
-        self._previous_neighbors = self.neighbors
-        self.neighbors = {}
-        self._neighbors = {}
-
-    # clear the parser data (ie: free memory)
-    def _cleanup(self) -> None:
-        self.error.clear()
-        self.parser.clear()
-        self.scope.clear()
-
-        self.process.clear()
-        self.template.clear()
-        self.template_neighbor.clear()
-        self.neighbor.clear()
-        self.family.clear()
-        self.capability.clear()
-        self.tcpao.clear()
-        self.api.clear()
-        self.api_send.clear()
-        self.api_receive.clear()
-        self.announce_ipv6.clear()
-        self.announce_ipv4.clear()
-        self.announce_l2vpn.clear()
-        self.announce.clear()
-        self.static.clear()
-        self.static_route.clear()
-        self.flow.clear()
-        self.flow_route.clear()
-        self.flow_match.clear()
-        self.flow_then.clear()
-        self.flow_scope.clear()
-        self.l2vpn.clear()
-        self.vpls.clear()
-        self.operational.clear()
-
-    def _rollback_reload(self) -> None:
-        self.neighbors = self._previous_neighbors
-        self.processes = self.process.processes
-        self._neighbors = {}
-        self._previous_neighbors = {}
-
-    def _commit_reload(self) -> None:
-        self.neighbors = self.neighbor.neighbors
-        # Process change detection is handled in Processes.start() which compares
-        # old vs new config and only restarts processes that actually changed.
-        self.processes = self.process.processes
-        self._neighbors = {}
-
-        # Add the changes prior to the reload to the neighbor to correct handling of deleted routes
-        for neighbor in self.neighbors:
-            if neighbor in self._previous_neighbors:
-                self.neighbors[neighbor].previous = self._previous_neighbors[neighbor]
-
-        self._previous_neighbors = {}
-        self._cleanup()
-
-    def reload(self, parser: str = '') -> bool:
-        """Read the configuration again, with `parser` or the one exabgp_debug_parser selects."""
+    def reload(self) -> bool:
+        """Read the configuration again."""
         try:
-            return self._reload(parser or getenv().debug.parser)
+            return self._reload()
         except KeyboardInterrupt:
             return self.error.set('configuration reload aborted by ^C or SIGINT')
-        except Error as exc:
-            if getenv().debug.configuration:
-                raise
-            return self.error.set(
-                f'problem parsing configuration file line {self.parser.index_line}\nerror message: {exc}',
-            )
         except Exception as exc:
             if getenv().debug.configuration:
                 raise
-            return self.error.set(
-                f'problem parsing configuration file line {self.parser.index_line}\nerror message: {exc}',
-            )
+            return self.error.set(f'problem parsing configuration file\nerror message: {exc}')
 
-    def _reload(self, parser: str) -> bool:
-        # If created via from_settings(), no configurations to reload
-        # but neighbors are already set up - return success
+    def _reload(self) -> bool:
+        from exabgp.configuration.grammar.install import install
+        from exabgp.configuration.grammar.read import read_file, read_text
+
+        # created by from_settings(): nothing to read, the neighbors are there
         if not self._configurations and self.neighbors:
             return True
 
@@ -588,62 +315,25 @@ class Configuration(_Configuration):
         fname = self._configurations.pop(0)
         self._configurations.append(fname)
 
-        # clearing the current configuration to be able to re-parse it
-        self._clear()
-
-        if parser == 'grammar':
-            return self._reload_grammar(fname)
-
-        if self._text:
-            if not self.parser.set_text(fname):
-                return False
-        else:
-            # resolve any potential symlink, and check it is a file
-            target = os.path.realpath(fname)
-            if not os.path.isfile(target):
-                return False
-            if not self.parser.set_file(target):
-                return False
-
-        self.process.add_api()
-
-        if self.parse_section('root') is not True:
-            self._rollback_reload()
-            line_str = ' '.join(self.parser.line)
-            return self.error.set(
-                f'\nsyntax error in section {self.scope.location()}\nline {self.parser.statement_line}: {line_str}\n\n{self.error!s}',
-            )
-
-        self._commit_reload()
-        self._link()
-
-        check = self.validate()
-        if check:
-            return check
-
-        return True
-
-    def _reload_grammar(self, fname: str) -> bool:
-        """Read the configuration with the grammar, then commit it as the legacy parser does.
-
-        Selected by exabgp_debug_parser=grammar while both parsers exist (plan/wip-config-grammar.md).
-        """
-        from exabgp.configuration.grammar.install import install
-        from exabgp.configuration.grammar.read import read_file, read_text
-
+        self.error.clear()
+        self._previous_neighbors = self.neighbors
         try:
             settings = read_text(fname) if self._text else read_file(os.path.realpath(fname))
         except (ValueError, OSError) as exc:
-            self._rollback_reload()
+            self._previous_neighbors = {}
             return self.error.set(str(exc))
 
-        self.process.add_api()
-        self.process.processes.update({name: process.to_dict() for name, process in settings.processes.items()})
-        self.neighbor.neighbors.update(install(settings.neighbors))
+        self.processes = cli_processes()
+        self.processes.update({name: process.to_dict() for name, process in settings.processes.items()})
+        self.neighbors = install(settings.neighbors)
+        # the neighbor before the reload, for the routes which are gone
+        for name, neighbor in self.neighbors.items():
+            if name in self._previous_neighbors:
+                neighbor.previous = self._previous_neighbors[name]
+        self._previous_neighbors = {}
 
-        self._commit_reload()
         self._link()
-        # legacy: _reload ignores what validate() reports, an api naming a missing process is accepted
+        # legacy: what validate() reports is ignored, an api naming a missing process is accepted
         self.validate()
         return True
 
@@ -704,50 +394,28 @@ class Configuration(_Configuration):
                         if api[key]:
                             self.processes[process].setdefault(key, []).append(neighbor.session.router_id)
 
-    def partial(self, section: str, text: str, action: str = 'announce', parser: str = '') -> bool:
-        """Read an API command, with `parser` or the one exabgp_debug_parser selects."""
-        self._cleanup()  # this perform a big cleanup (may be able to be smarter)
-        self._clear()
-        if (parser or getenv().debug.parser) == 'grammar' and section in GRAMMAR_COMMAND_SECTIONS:
-            return self._partial_grammar(section, text, action)
-        self.parser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
-        self.parser.set_action(action)
-
-        if self.parse_section(section) is not True:
-            self._rollback_reload()
-            line_str = ' '.join(self.parser.line)
-            error_msg = (
-                f'\n'
-                f'syntax error in api command {self.scope.location()}\n'
-                f'line {self.parser.statement_line}: {line_str}\n'
-                f'\n{self.error}'
-            )
-            log.debug(lazymsg('configuration.parse.error message={error_msg}', error_msg=error_msg), 'configuration')
-            return False
-        return True
-
-    def _partial_grammar(self, section: str, text: str, action: str) -> bool:
-        """Read an API command with the grammar, leaving its routes where partial() leaves them."""
+    def partial(self, section: str, text: str, action: str = 'announce') -> bool:
+        """Read an API command as a statement of `section`; its routes are taken with pop_routes()."""
         from exabgp.configuration.grammar.read import read_command
 
+        self.error.clear()
+        self._command_routes = []
+        self.open_sections = 0
         try:
-            routes = read_command(section, text, action == 'announce')
+            routes, self.open_sections = read_command(section, text, action == 'announce')
         except ValueError as exc:
-            self._rollback_reload()
             log.debug(lazymsg('configuration.parse.error message={error}', error=str(exc)), 'configuration')
             return self.error.set(str(exc))
-        self.scope.extend_routes(routes)
+        self._command_routes = routes
         return True
 
+    def pop_routes(self) -> list['Route']:
+        """The routes of the last API command, given once."""
+        routes, self._command_routes = self._command_routes, []
+        return routes
+
     def parse_route_text(self, route_text: str, action: str = 'announce') -> list['Route']:
-        """Parse route text into Route objects without clearing neighbors.
-
-        Unlike partial(), this preserves existing neighbors and just parses
-        the route text. Useful for programmatic configuration building.
-
-        Args:
-            route_text: Route specification (e.g., "route 10.0.0.0/24 next-hop 1.2.3.4")
-            action: Action for routes - 'announce' or 'withdraw'
+        """Parse route text into Route objects, the neighbors left as they are.
 
         Returns:
             List of parsed Route objects, empty list if parsing failed.
@@ -758,123 +426,9 @@ class Configuration(_Configuration):
             for route in routes:
                 neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route))
         """
-        # Save neighbors before partial() clears them
-        saved_neighbors = self.neighbors.copy()
-
-        # Parse the route text
-        self.static.clear()
         if not self.partial('static', route_text, action):
-            # Restore neighbors on failure
-            self.neighbors = saved_neighbors
             return []
-
-        # Get parsed routes
-        self.scope.to_context()
-        routes = self.scope.pop_routes()
-
-        # Restore neighbors
-        self.neighbors = saved_neighbors
-
-        return routes
-
-    def _enter(self, name: str) -> bool | str:
-        location = self.parser.tokeniser()
-        log.debug(
-            lazymsg(
-                'configuration.enter location={location} params={params}',
-                location=location,
-                params=self.parser.params(),
-            ),
-            'configuration',
-        )
-
-        if location not in self._structure[name]['sections']:
-            return self.error.set(f'section {location} is invalid in {name}, {self.scope.location()}')
-
-        self.scope.enter(location)
-        self.scope.to_context()
-
-        class_name = self._structure[name]['sections'][location]
-        instance = self._structure[class_name].get('class', None)
-        if not instance:
-            raise RuntimeError('This should not be happening, debug time !')
-
-        if not instance.pre():
-            return False
-
-        if not self.dispatch(self._structure[name]['sections'][location]):
-            return False
-
-        if not instance.post():
-            return False
-
-        left = self.scope.leave()
-        if not left:
-            return self.error.set('closing too many parenthesis')
-        self.scope.to_context()
-
-        log.debug(
-            lazymsg('configuration.leave section={left} params={params}', left=left, params=self.parser.params()),
-            'configuration',
-        )
-        return True
-
-    def _run(self, name: str) -> bool:
-        command = self.parser.tokeniser()
-        log.debug(
-            lazymsg(
-                'configuration.run command={command} params={params}', command=command, params=self.parser.params()
-            ),
-            'configuration',
-        )
-
-        if not self.run(name, command):
-            return False
-        return True
-
-    def dispatch(self, name: str) -> bool | str:
-        while True:
-            self.parser()
-
-            if self.parser.end == ';':
-                if self._run(name):
-                    continue
-                return False
-
-            if self.parser.end == '{':
-                if self._enter(name):
-                    continue
-                return False
-
-            if self.parser.end == '}':
-                return True
-
-            if not self.parser.end:  # finished
-                return True
-
-            return self.error.set('invalid syntax line %d' % self.parser.index_line)
-        return False
-
-    def parse_section(self, name: str) -> bool | str:
-        if name not in self._structure:
-            return self.error.set('option {} is not allowed here'.format(name))
-
-        if not self.dispatch(name):
-            return False
-
-        instance = self._structure[name].get('class', None)
-        if instance is not None:
-            instance.post()
-        return True
-
-    def run(self, name: str, command: str) -> bool | str:
-        # restore 'anounce attribute' to provide backward 3.4 compatibility
-        if name == 'static' and command == 'attribute':
-            command = 'attributes'
-        if command not in self._structure[name]['commands']:
-            return self.error.set('invalid keyword "{}"'.format(command))
-
-        return cast(bool | str, self._structure[name]['class'].parse(name, command))
+        return self.pop_routes()
 
     def to_dict(self) -> dict[str, Any]:
         """Export parsed configuration as a serializable dict.

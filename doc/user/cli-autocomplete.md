@@ -106,10 +106,9 @@ export exabgp_cli_history=false
    - Scoring based on: exact prefix, compactness, frequency
    - Limit: Top 10 results
 
-2. **ValueTypeCompletionEngine** (`src/exabgp/cli/schema_bridge.py`)
-   - Bridges configuration schema with CLI completion
-   - Uses validators from `schema.py` for type checking
-   - LRU cache (100 entries) for validation results
+2. **Configuration grammar** (`src/exabgp/configuration/grammar/describe.py`)
+   - `route_help(keyword)` gives the syntax hint and an example of a route keyword
+   - Taken from the same declaration which reads the configuration, so they always agree
 
 3. **CommandCompleter** (`src/exabgp/cli/completer.py`)
    - Integrates fuzzy matching + schema validation
@@ -117,8 +116,8 @@ export exabgp_cli_history=false
    - Enhanced display with syntax hints and examples
 
 4. **CLI Command Schema** (`src/exabgp/cli/command_schema.py`)
-   - Maps runtime commands to value types
-   - Provides descriptions, examples, and validation rules
+   - Maps runtime commands to their arguments and options
+   - Provides descriptions and examples
    - Separate from configuration file schema
 
 ### Performance Targets
@@ -225,8 +224,8 @@ export exabgp_cli_fuzzy_matching=false
 # Test fuzzy matching
 uv run pytest tests/unit/cli/test_fuzzy.py
 
-# Test schema bridge
-uv run pytest tests/unit/cli/test_schema_bridge.py
+# Test the syntax help the grammar gives
+uv run pytest tests/unit/config_grammar/test_describe.py
 
 # Test completer integration
 uv run pytest tests/unit/test_completer.py
@@ -361,13 +360,11 @@ score += min(50, frequency * 5)      # Usage bonus (future)
 - `.claude/exabgp/CLI_IMPLEMENTATION.md` - Internal architecture
 
 **Schema Documentation:**
-- `src/exabgp/configuration/schema.py` - ValueType definitions
-- `src/exabgp/configuration/validator.py` - Validator implementations
+- `src/exabgp/configuration/grammar/` - the configuration grammar, its value types and their syntax
 - `src/exabgp/cli/command_schema.py` - CLI command schemas
 
 **Source Files:**
 - `src/exabgp/cli/fuzzy.py` - Fuzzy matching engine
-- `src/exabgp/cli/schema_bridge.py` - Schema integration
 - `src/exabgp/cli/completer.py` - Main completer
 - `src/exabgp/application/cli.py` - CLI REPL loop
 

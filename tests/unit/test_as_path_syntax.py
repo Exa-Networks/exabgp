@@ -23,14 +23,14 @@ from exabgp.bgp.message.update.attribute.aspath import (
     AS2Path,
     ASPath,
 )
-from exabgp.configuration.core.parser import Tokeniser
-from exabgp.configuration.static.parser import MAX_SEGMENT_ASNS, as_path
+from exabgp.configuration.grammar.lexer import lex_text
+from exabgp.configuration.grammar.types.bgp import MAX_SEGMENT_ASNS, ASPathType
+from exabgp.configuration.grammar.words import Words
 
 
 def parse(text: str) -> ASPath:
-    tokeniser = Tokeniser()
-    tokeniser.replenish(text.split())
-    return as_path(tokeniser)
+    statement = lex_text(f'as-path {text};')[0]
+    return ASPathType().parse(Words(tuple(statement.words[1:]), statement.tokens[-1], {}))
 
 
 def shape(path: ASPath) -> list[tuple[str, list[int]]]:

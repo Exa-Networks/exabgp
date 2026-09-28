@@ -510,13 +510,55 @@ Gate: review section 7 (API side effects) with Thomas first. If it is not empty 
 decide to keep the legacy parser and the switch as a user choice for the API; this phase
 is then replaced by documenting the switch and keeping both parsers tested.
 
-- [ ] delete `core/section.py`, `core/action.py`, the `Parse*` / `Announce*` sections, the
-      `*/parser.py` hand parsers, `schema.py`, `validator.py`, `validators.py`,
-      `constraints.py`, `_build_structure`, `_SPECIAL_COMMANDS`, `_KEYWORD_TO_SECTION`,
-      `dispatch`, `_enter`, `run`
-- [ ] delete `exabgp_configuration_parser` and `configuration validate --parser`
-- [ ] the differential tests switch to the frozen fixtures; nothing else in `tests/` may
-      import a deleted module (tests which only tested legacy internals go with it)
+Gate passed 2026-09-28: Thomas reviewed section 7 (errors are not an API; `schema export`
+moves to the grammar's model; man pages at the end).
+
+What outside the parser uses it (source scan, 15,490 lines to remove, 35 test files):
+
+| user | uses | step |
+|---|---|---|
+| API dispatch (`reactor/api/dispatch/*`, `reactor/api`) | `core.parser.Tokeniser`, `core.format` | 6.1 move out of configuration/ |
+| API `operational` command | `operational.parser` | 6.2 the grammar's OperationalLine |
+| reactor loop, processes | `process.API_PREFIX` | 6.3 move the constant |
+| `api.command.peer` | `neighbor.api` | 6.3 |
+| `Configuration` | every section, the route scope | 6.4 grammar only |
+| `schema export`, `configuration example` | `schema.py` | 6.5 from the model |
+| `cli/command_schema.py`, `cli/schema_bridge.py` | `ValueType`, validators | 6.5 |
+| tests | legacy internals | 6.6 port what proves behaviour (RFC markers), drop the rest |
+
+- [x] 6.1 the API tokeniser and `formated` moved to `reactor/api/tokeniser.py`
+- [x] 6.2 the API `operational` command reads through the grammar (`read.read_operational`),
+      its expectations taken from the legacy parser (`tests/unit/test_api_operational_command.py`)
+- [x] 6.3 `API_PREFIX` and the CLI processes in `configuration/cli_process.py`; the `peer`
+      command flattens its api with `grammar.tree.resolve.api`
+- [x] 6.4 `Configuration` reads with the grammar only (475 lines, was 922): `partial()` then
+      `pop_routes()`, `open_sections` for a command leaving a section open (the API drops its
+      routes, as before), `ConfigurationError` in place of the legacy `Error`
+- [x] 6.5 `schema export` prints the grammar's JSON Schema; `configuration example` is
+      generated from the grammar (`grammar/example.py`, a configuration which validates);
+      `cli/command_schema.py` without `ValueType`; `cli/schema_bridge.py` deleted
+- [x] delete `core/`, the `Parse*` / `Announce*` sections, the `*/parser.py` hand parsers,
+      `schema.py`, `validator.py`, `validators.py`, `constraints.py`, `example.py`,
+      `compare.py` (moved to the tests as `config_grammar/outcome.py`): 57 files
+- [x] delete `exabgp_debug_parser` and `configuration validate --parser`
+- [x] the grammar tests hold to the frozen results; `test_differential.py` goes (the frozen
+      results cover every file), the lexer's legacy parity frozen as literal expectations
+- [x] the other tests importing deleted modules: 23 ported where they prove behaviour (every
+      RFC marker kept), 9 deleted which only tested legacy internals (schema, validators,
+      constraints, action enums, the error collector, the old example generator, schema_bridge)
+- [x] `needed` leaves (local-as, peer-as, role local, tcp-ao keyid/algorithm/password): the
+      neighbor requires them in the model (JSON `required`, YANG `refine ... mandatory`), a
+      template does not; `role` and `tcp-ao` are YANG presence containers
+- [x] an error of a value inside a route is positioned once (it was `line 1:11: line 1:51:`)
+- [x] `test_everything` passes (25/25)
+- bug found and fixed: the Prefix-SID package (attribute/sr) did not register the SRv6 service
+  TLVs, the legacy parser importing them did; a received SRv6 L3 service was shown as not
+  implemented (qa decoding test M). `tests/unit/test_prefix_sid_srv6_registered.py`; every
+  one of the 130 registering modules is now loaded by the daemon's entry points
+- bug found and fixed: a failed reload left `Configuration.processes` with the processes read
+  before the error (legacy) or none (grammar); the reactor then stopped every API program not
+  in it. The configuration is now left as it was (`tests/unit/test_reload_keeps_processes.py`,
+  which fails on 40c34c239)
 - [ ] `test_everything` passes
 - [ ] commit, when Thomas asks
 

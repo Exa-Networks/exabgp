@@ -84,11 +84,9 @@ def validate(tmp_path, text):
 def api(section: str, line: str) -> tuple[bool, str, list[str]]:
     """Parse one API line the way reactor/api/__init__.py does, returning (ok, error, nlri)."""
     configuration = Configuration([''], text=True)
-    configuration.flow.clear()
     if not configuration.partial(section, line, 'announce'):
         return False, str(configuration.error), []
-    configuration.scope.to_context()
-    return True, '', [str(route.nlri) for route in configuration.scope.pop_routes()]
+    return True, '', [str(route.nlri) for route in configuration.pop_routes()]
 
 
 # -- Flow.add, used by the match block and by `flow route` ---------------------------------------

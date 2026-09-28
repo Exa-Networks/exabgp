@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from exabgp.configuration.core.parser import Tokeniser
+from exabgp.reactor.api.tokeniser import Tokeniser
 from exabgp.reactor.api.dispatch.common import (
     SELECTOR_KEY,
     DispatchTree,

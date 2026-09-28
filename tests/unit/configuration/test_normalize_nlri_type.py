@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # encoding: utf-8
-"""Tests for _normalize_nlri_type() and configuration parsing with MPLS labels
+"""Tests for normalize() (grammar/tree/static.py, once the legacy _normalize_nlri_type()) with MPLS labels
 
 This test file was created to catch issues with NLRI type normalization,
 specifically the bug where Label NLRIs were incorrectly downgraded to INET
-because _normalize_nlri_type() checked for the non-existent _labels_packed
+because the legacy _normalize_nlri_type() checked for the non-existent _labels_packed
 attribute instead of the correct _has_labels attribute.
 
 Key test scenarios:
@@ -20,18 +20,19 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, Label
 from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.settings import INETSettings
-from exabgp.configuration.static.route import ParseStaticRoute
+from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.grammar.tree.static import normalize
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 
 
 class TestNormalizeNlriTypeLabel:
-    """Test _normalize_nlri_type() preserves Label NLRI with labels."""
+    """Test normalize() preserves Label NLRI with labels."""
 
     def test_label_with_labels_preserved(self) -> None:
         """Label NLRI with labels should not be downgraded to INET.
 
-        This was the original bug: _normalize_nlri_type() checked for
+        This was the original bug: normalize() checked for
         _labels_packed which doesn't exist in packed-bytes-first Label.
         The fix uses _has_labels instead.
         """
@@ -50,7 +51,7 @@ class TestNormalizeNlriTypeLabel:
         assert nlri.labels != Labels.NOLABEL
 
         # Apply normalization
-        result = ParseStaticRoute._normalize_nlri_type(nlri)
+        result = normalize(nlri)
 
         # Should remain Label, not be downgraded to INET
         assert isinstance(result, Label)
@@ -79,14 +80,14 @@ class TestNormalizeNlriTypeLabel:
         assert nlri.labels == Labels.NOLABEL
 
         # Apply normalization
-        result = ParseStaticRoute._normalize_nlri_type(nlri)
+        result = normalize(nlri)
 
         # Should be downgraded to INET (exact type check)
         assert type(result) is INET  # noqa: E721
 
 
 class TestNormalizeNlriTypeIPVPN:
-    """Test _normalize_nlri_type() preserves IPVPN NLRI with RD."""
+    """Test normalize() preserves IPVPN NLRI with RD."""
 
     def test_ipvpn_with_rd_preserved(self) -> None:
         """IPVPN NLRI with RD should not be downgraded."""
@@ -105,7 +106,7 @@ class TestNormalizeNlriTypeIPVPN:
         assert nlri._has_rd is True
 
         # Apply normalization
-        result = ParseStaticRoute._normalize_nlri_type(nlri)
+        result = normalize(nlri)
 
         # Should remain IPVPN
         assert isinstance(result, IPVPN)
@@ -128,7 +129,7 @@ class TestNormalizeNlriTypeIPVPN:
         assert nlri._has_labels is True
 
         # Apply normalization
-        result = ParseStaticRoute._normalize_nlri_type(nlri)
+        result = normalize(nlri)
 
         # Should be downgraded to Label (has labels but no RD)
         assert isinstance(result, Label)
@@ -136,7 +137,7 @@ class TestNormalizeNlriTypeIPVPN:
 
 
 class TestNormalizeNlriTypeINET:
-    """Test _normalize_nlri_type() handles INET NLRI correctly."""
+    """Test normalize() handles INET NLRI correctly."""
 
     def test_inet_unchanged(self) -> None:
         """INET NLRI should pass through unchanged."""
@@ -151,7 +152,7 @@ class TestNormalizeNlriTypeINET:
         assert type(nlri) is INET  # noqa: E721
 
         # Apply normalization
-        result = ParseStaticRoute._normalize_nlri_type(nlri)
+        result = normalize(nlri)
 
         # Should remain INET
         assert type(result) is INET  # noqa: E721
@@ -277,7 +278,7 @@ class TestLabelPreservationThroughNormalization:
         original_packed = nlri._packed
 
         # Apply normalization
-        result = ParseStaticRoute._normalize_nlri_type(nlri)
+        result = normalize(nlri)
 
         # Labels should be preserved
         assert result.labels == original_labels
@@ -298,11 +299,33 @@ class TestLabelPreservationThroughNormalization:
         )
 
         # Apply normalization
-        result = ParseStaticRoute._normalize_nlri_type(nlri)
+        result = normalize(nlri)
 
         # Should still be IPVPN with same labels
         assert isinstance(result, IPVPN)
         assert result.labels == original_labels
+
+
+class TestConfigurationPreservesNlriType:
+    """A route read from the configuration keeps the NLRI type its labels and RD call for."""
+
+    @pytest.mark.parametrize(
+        'text,klass,safi',
+        [
+            ('route 198.51.100.100/32 next-hop 198.51.100.1 label 800001', Label, SAFI.nlri_mpls),
+            ('route 198.51.100.100/32 next-hop 198.51.100.1 rd 65000:1 label 800001', IPVPN, SAFI.mpls_vpn),
+            ('route 198.51.100.100/32 next-hop 198.51.100.1', INET, SAFI.unicast),
+        ],
+    )
+    def test_route_keeps_its_nlri_type(self, text: str, klass: type[INET], safi: SAFI) -> None:
+        configuration = Configuration([])
+        (route,) = configuration.parse_route_text(text)
+
+        assert type(route.nlri) is klass
+        assert route.nlri.safi == safi
+        if klass is not INET:
+            assert isinstance(route.nlri, Label)
+            assert route.nlri.labels == Labels.make_labels([800001])
 
 
 if __name__ == '__main__':

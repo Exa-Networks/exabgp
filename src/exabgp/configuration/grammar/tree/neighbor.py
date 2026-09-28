@@ -155,8 +155,8 @@ LEAVES = (
     Leaf('peer-address', IP_RANGE, field='peer-address', doc='the peer, or the peers of a range'),
     Leaf('local-address', IP_OR_AUTO, field='local-address', doc='the address to connect from, auto to find it'),
     Leaf('local-link-local', IP_ADDRESS, field='local-link-local', doc='the IPv6 link-local address (fe80::/10)'),
-    Leaf('local-as', ASN_OR_AUTO, field='local-as', doc='our AS, auto to use the peer AS'),
-    Leaf('peer-as', ASN_OR_AUTO, field='peer-as', doc='the peer AS, auto to use ours'),
+    Leaf('local-as', ASN_OR_AUTO, field='local-as', doc='our AS, auto to use the peer AS', needed=True),
+    Leaf('peer-as', ASN_OR_AUTO, field='peer-as', doc='the peer AS, auto to use ours', needed=True),
     Leaf('router-id', ROUTER_ID, field='router-id', doc='the BGP identifier, the local address by default'),
     Leaf('description', text('description'), field='description', doc='free text about the neighbor'),
     Leaf('host-name', text('host-name'), field='host-name', doc='sent in the hostname capability'),
@@ -343,6 +343,7 @@ NEIGHBOR = Block(
     keep=Keep.LIST,
     name=IP_RANGE,
     doc='a BGP peer',
+    complete=True,
     children=LEAVES + SECTIONS,
     unbuild=neighbor_values,
 )
