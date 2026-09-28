@@ -22,6 +22,8 @@ Five disagreements are always fatal, because each makes the ledger say something
   - a test names a requirement id no ledger defines.  Usually a typo, and a typo here
     quietly stops proving anything while still looking like proof.
   - a requirement recorded as out of scope is named by a test.  One of the two is wrong.
+    A gap may be named only by a test which also carries xfail: that test demonstrates
+    what we owe, and the day it passes the gap is closed and the ledger has to say so.
   - a requirement excused from testing carries no reason.  "not applicable" with no why
     is indistinguishable from "not done yet", which is the thing this file exists to
     stop.
@@ -126,6 +128,11 @@ class Requirement:
     def demonstrated(self) -> bool:
         """Not proven, but a failing test says exactly what is missing."""
         return not self.covered and any(self.gaps[side] for side in self.wanted)
+
+    @property
+    def undemonstrated(self) -> bool:
+        """A gap which only a note describes, with no failing test showing it."""
+        return self.status == GAP and not self.demonstrated
 
     @property
     def all_tests(self) -> list[str]:
@@ -321,7 +328,16 @@ def collect_tests(requirements: dict[str, Requirement]) -> list[Problem]:
                     Problem(where, f'{test} uses polarity {polarity!r}, not one of {", ".join(POLARITIES)}')
                 )
                 continue
-            if requirement.status != REQUIRED:
+            if requirement.status == GAP and not gap:
+                problems.append(
+                    Problem(
+                        where,
+                        f'{test} proves {identifier}, which the ledger records as a gap. A test on a gap has '
+                        f'to carry xfail(strict=True); if it passes, the gap is closed and the status is required',
+                    )
+                )
+                continue
+            if requirement.status not in (REQUIRED, GAP):
                 problems.append(
                     Problem(where, f'{test} proves {identifier}, which the ledger records as {requirement.status}')
                 )
@@ -367,7 +383,8 @@ def report(requirements: dict[str, Requirement]) -> None:
     """One line per RFC: of the MUSTs we said we would prove, how many we prove."""
     grouped = by_rfc(requirements)
     print(
-        f'{"RFC":<10} {"proven":>7} {"shown":>6} {"untested":>9} {"binding":>8} {"excused":>8} {"advisory":>9}  cover'
+        f'{"RFC":<10} {"proven":>7} {"shown":>6} {"untested":>9} {"binding":>8} {"excused":>8} {"advisory":>9} '
+        f'{"gaps":>6}  cover'
     )
     total_proven = 0
     total_binding = 0
@@ -380,16 +397,25 @@ def report(requirements: dict[str, Requirement]) -> None:
         untested = len(claimed) - len(proven) - len(shown)
         excused = len(binding) - len(claimed)
         advisory = len(grouped[rfc]) - len(binding)
+        gaps = gap_summary(grouped[rfc])
         total_proven += len(proven)
         total_binding += len(claimed)
         share = f'{100 * len(proven) / len(claimed):.0f}%' if claimed else '-'
         print(
             f'{rfc:<10} {len(proven):>7} {len(shown):>6} {untested:>9} '
-            f'{len(claimed):>8} {excused:>8} {advisory:>9}  {share}'
+            f'{len(claimed):>8} {excused:>8} {advisory:>9} {gaps:>6}  {share}'
         )
 
     share = f'{100 * total_proven / total_binding:.0f}%' if total_binding else '-'
-    print(f'{"total":<10} {total_proven:>7} {"":>6} {"":>9} {total_binding:>8} {"":>8} {"":>9}  {share}')
+    print(f'{"total":<10} {total_proven:>7} {"":>6} {"":>9} {total_binding:>8} {"":>8} {"":>9} {"":>6}  {share}')
+
+
+def gap_summary(entries: list[Requirement]) -> str:
+    """Of the gaps, at every level, how many a failing test demonstrates: shown/total."""
+    gaps = [entry for entry in entries if entry.status == GAP]
+    if not gaps:
+        return '-'
+    return f'{sum(1 for entry in gaps if entry.demonstrated)}/{len(gaps)}'
 
 
 def describe(entry: Requirement) -> str:
@@ -397,6 +423,8 @@ def describe(entry: Requirement) -> str:
         return 'proven'
     if entry.demonstrated:
         return 'known gap, demonstrated by a failing test'
+    if entry.undemonstrated:
+        return 'gap, described but not demonstrated'
     if entry.status != REQUIRED:
         return entry.status
     return 'untested (missing: ' + ', '.join(entry.missing) + ')'
@@ -414,8 +442,11 @@ def markdown(requirements: dict[str, Requirement], destination: Path) -> None:
         'Every quote below is checked against the published RFC in `qa/rfc/text/` on every',
         'run, so a requirement that is not in the document cannot appear in this table.',
         '',
-        '| RFC | proven | shown | untested | binding | excused | advisory | coverage |',
-        '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
+        '`gaps` counts the requirements, at every level, we record as owed, and how many of',
+        'them a failing (`xfail`) test demonstrates.',
+        '',
+        '| RFC | proven | shown | untested | binding | excused | advisory | gaps | coverage |',
+        '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |',
     ]
 
     for rfc in sorted(grouped):
@@ -426,7 +457,8 @@ def markdown(requirements: dict[str, Requirement], destination: Path) -> None:
         share = f'{100 * len(proven) / len(claimed):.0f}%' if claimed else '-'
         lines.append(
             f'| {rfc} | {len(proven)} | {len(shown)} | {len(claimed) - len(proven) - len(shown)} | '
-            f'{len(claimed)} | {len(binding) - len(claimed)} | {len(grouped[rfc]) - len(binding)} | {share} |'
+            f'{len(claimed)} | {len(binding) - len(claimed)} | {len(grouped[rfc]) - len(binding)} | '
+            f'{gap_summary(grouped[rfc])} | {share} |'
         )
 
     for rfc in sorted(grouped):

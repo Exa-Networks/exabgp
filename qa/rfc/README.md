@@ -123,6 +123,12 @@ That is worth more than a line in a plan file, because it runs. The requirement 
 reported as a known gap rather than as proven, and the day the behaviour arrives the
 `xfail` becomes an unexpected pass and the suite says so.
 
+The same shape works on an entry whose status is `gap`, and every gap should have one:
+the note says why we do not do it, the test shows exactly what doing it would mean. A
+test naming a `gap` without `xfail` is refused, because a gap which passes its test is
+not a gap any more: flip the status to `required` and drop the `xfail`. The `gaps`
+column of `--report` counts, per RFC, how many gaps a failing test demonstrates.
+
 ## Levels
 
 Only `MUST`, `MUST NOT`, `REQUIRED`, `SHALL` and `SHALL NOT` are gated. `SHOULD` and
