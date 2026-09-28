@@ -19,6 +19,7 @@
 | Plan | Description |
 |------|-------------|
 | `type-safety/` | MyPy error reduction |
+| `wip-rfc-gap-fixes.md` | Close the RFC ledger gaps, each shown by a strict xfail test (2 of 8 areas done) |
 
 ### Planning (plan-)
 
