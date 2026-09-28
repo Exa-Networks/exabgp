@@ -28,7 +28,7 @@ def _init(neighbor: Neighbor, operational: list[OperationalFamily], neighbors: d
         family = message.family()
         if family not in families:
             continue
-        if message.name == 'ASM':
+        if message.NAME == 'ASM':
             neighbor.asm[family] = message
         else:
             neighbor.messages.append(message)

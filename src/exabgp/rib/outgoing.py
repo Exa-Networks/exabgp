@@ -595,7 +595,7 @@ class OutgoingRIB(Cache):
         # Route refresh goes first: the flush which asked for it comes, to the operator,
         # before anything they announced afterwards in the same reactor cycle.
         for afi, safi in refresh_families:
-            yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.start)
+            yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.BEGIN)
         for route in refresh_routes.values():
             family = route.nlri.family().afi_safi()
             if route.nlri.index() in pending_withdraws.get(family, {}):
@@ -614,7 +614,7 @@ class OutgoingRIB(Cache):
                 replacement is None,
             )
         for afi, safi in refresh_families:
-            yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.end)
+            yield RouteRefresh.make_route_refresh(afi, safi, RouteRefresh.END)
 
         # Withdraws go before announces, which preserves the order the operator asked for
         # and is what lets a withdrawal free a slot an announce in this same batch can use.

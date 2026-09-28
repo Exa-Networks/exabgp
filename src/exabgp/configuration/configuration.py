@@ -199,7 +199,7 @@ class _Configuration:
             if neighbor in peers:
                 family = operational.family()
                 if family in self.neighbors[neighbor].families():
-                    if operational.name == 'ASM':
+                    if operational.NAME == 'ASM':
                         self.neighbors[neighbor].asm[family] = operational
                     self.neighbors[neighbor].messages.append(operational)
                 else:

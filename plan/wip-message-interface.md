@@ -54,7 +54,7 @@ Message
 | 3 | Base: TYPE derived, LENGTH_MIN/MAX, `pack_body` + final `pack_message`, eq/hash | unit + functional | ✅ |
 | 4 | Open bytes-first (`_packed` is the whole body) | unit + functional | ✅ |
 | 5 | EOR(Update), UpdateCollection out of Message, EOR marker as a field | unit + functional | ✅ |
-| 6 | Notification / Notify | unit + functional | ⏳ |
+| 6 | Notification / Notify | unit + functional | ✅ |
 | 7 | Operational bytes-first, UPPER constants, registry raises on duplicate, sequence bug | unit + functional | ⏳ |
 | 8 | Spec: `doc/` table per message, contract test green | `./qa/bin/test_everything` | ⏳ |
 
@@ -104,6 +104,18 @@ Message
   CODING_STANDARDS.md, ESSENTIAL_PROTOCOLS.md and CLAUDE.md. Message dispatch uses `ID`,
   `IS_EOR` and a `cast` after the check.
 
+## Notes from step 6 (Thomas chose "composition, fix .data")
+
+- `Notification(Message)` is the message both ways, not an exception. `data` is the Data field
+  as on the wire, `text` the display form (the RFC 9003 decoding which `data` used to be).
+- `Notify(Exception)` holds `.notification`; `code`, `subcode`, `data`, `detail` answer through
+  it. The reactor sends `notify.notification`.
+- `NotificationReceived(Exception)` is what the reactor raises for one a peer sent. Neither
+  exception subclasses the other: the handler order in `Peer` no longer matters.
+- API change: a received notification's JSON `data`/`message`, and text `data`, now show the
+  raw Data field (an RFC 9003 length octet included) rather than the display text. Pinned by
+  `test_a_received_shutdown_communication_is_reported_as_the_peer_sent_it`.
+
 ## Recent Failures
 
 ### 2026-09-28 baseline: 22 unit failures
@@ -113,4 +125,4 @@ Message
 
 ## Resume Point
 
-Step 6.
+Step 7.

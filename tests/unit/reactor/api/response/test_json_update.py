@@ -553,7 +553,7 @@ class TestEventJSONSemantics:
     """Non-UPDATE events must keep JSON API values parseable and typed."""
 
     def test_route_refresh_event_values_are_strings(self, json_encoder: JSON, api_neighbor: Mock) -> None:
-        refresh = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, RouteRefresh.start)
+        refresh = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, RouteRefresh.BEGIN)
 
         event = json.loads(json_encoder.refresh(api_neighbor, 'receive', refresh, b'', b'', Negotiated.UNSET))
         route_refresh = event['neighbor']['route-refresh']
@@ -605,9 +605,9 @@ class TestEventJSONSemantics:
         }
 
     def test_operational_events_values_are_strings(self, json_encoder: JSON, api_neighbor: Mock) -> None:
-        advisory = Advisory.ADM(AFI.ipv4, SAFI.unicast, 'maintenance')
-        query = Query.RPCQ(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7)
-        counter = Response.RPCP(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7, 42)
+        advisory = Advisory.ADM.make_advisory(AFI.ipv4, SAFI.unicast, 'maintenance')
+        query = Query.RPCQ.make_query(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7)
+        counter = Response.RPCP.make_counter(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7, 42)
 
         advisory_event = json.loads(
             json_encoder.operational(api_neighbor, 'receive', 'advisory', advisory, b'', b'', Negotiated.UNSET)

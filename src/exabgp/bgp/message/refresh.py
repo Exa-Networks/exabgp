@@ -44,10 +44,10 @@ class Reserved(int):
 class RouteRefresh(Message):
     ID = Message.CODE.ROUTE_REFRESH
 
-    # Reserved field values for route refresh subtypes
-    request = 0
-    start = 1
-    end = 2
+    # the Reserved field, the RFC 7313 Message Subtype
+    REQUEST = Reserved.ROUTE_REFRESH_QUERY
+    BEGIN = Reserved.ROUTE_REFRESH_BEGIN
+    END = Reserved.ROUTE_REFRESH_END
 
     FIXED_SIZE = 4  # RFC 2918 3: AFI, Reserved (the RFC 7313 Message Subtype) and SAFI
     LENGTH_MAX = Message.HEADER_LEN + FIXED_SIZE
@@ -98,11 +98,3 @@ class RouteRefresh(Message):
             message = cls.MARKER + pack('!H', cls.HEADER_LEN + len(data)) + cls.TYPE + bytes(data)
             raise Notify(7, 1, f'ROUTE-REFRESH body of {len(data)} octets', data=message)
         return cls(data)
-
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, RouteRefresh):
-            return False
-        return self._packed == other._packed
-
-    def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)

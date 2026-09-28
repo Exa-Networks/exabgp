@@ -524,7 +524,7 @@ class JSON:
     ) -> str:
         kv_content = self._kv(
             {
-                'name': operational.name,
+                'name': operational.NAME,
                 'afi': str(operational.afi),
                 'safi': str(operational.safi),
             },
@@ -557,7 +557,7 @@ class JSON:
         )
         kv_content = self._kv(
             {
-                'name': operational.name,
+                'name': operational.NAME,
                 'afi': str(operational.afi),
                 'safi': str(operational.safi),
                 'advisory': data,
@@ -584,7 +584,7 @@ class JSON:
     ) -> str:
         kv_content = self._kv(
             {
-                'name': operational.name,
+                'name': operational.NAME,
                 'afi': str(operational.afi),
                 'safi': str(operational.safi),
                 'router-id': str(operational.routerid),
@@ -635,7 +635,7 @@ class JSON:
     ) -> str:
         kv_content = self._kv(
             {
-                'name': operational.name,
+                'name': operational.NAME,
                 'type': str(operational.what),
                 'data': hexstring(bytes(getattr(operational, 'data', b''))),
             },

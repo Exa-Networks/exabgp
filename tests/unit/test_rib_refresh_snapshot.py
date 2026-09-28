@@ -206,9 +206,9 @@ def test_the_markers_wrap_only_the_replayed_routes(rib: OutgoingRIB, grouped: bo
     rib.add_to_rib(route(30, OTHER_PREFIX))
 
     assert events(rib.updates(grouped)) == [
-        (RouteRefresh.start, *FAMILY),
+        (RouteRefresh.BEGIN, *FAMILY),
         (PREFIX, ANNOUNCE, 10),
-        (RouteRefresh.end, *FAMILY),
+        (RouteRefresh.END, *FAMILY),
         (OTHER_PREFIX, ANNOUNCE, 30),
     ]
 
@@ -226,7 +226,7 @@ def test_a_mutation_after_the_first_yield_belongs_to_the_next_batch(
     replacement = route(10)
     rib.add_to_rib(replacement)
     batch = rib.updates(grouped)
-    assert events(iter([next(batch)])) == [(RouteRefresh.start, *FAMILY)]
+    assert events(iter([next(batch)])) == [(RouteRefresh.BEGIN, *FAMILY)]
 
     if withdraw:
         rib.del_from_rib(replacement)
@@ -235,12 +235,12 @@ def test_a_mutation_after_the_first_yield_belongs_to_the_next_batch(
     rib.resend(True)
     rib.resend(True)
 
-    assert events(batch) == [(PREFIX, ANNOUNCE, 10), (RouteRefresh.end, *FAMILY)]
+    assert events(batch) == [(PREFIX, ANNOUNCE, 10), (RouteRefresh.END, *FAMILY)]
 
-    expected = [(RouteRefresh.start, *FAMILY)]
+    expected = [(RouteRefresh.BEGIN, *FAMILY)]
     if not withdraw:
         expected.append((PREFIX, ANNOUNCE, 20))
-    expected.append((RouteRefresh.end, *FAMILY))
+    expected.append((RouteRefresh.END, *FAMILY))
     if withdraw:
         expected.append((PREFIX, WITHDRAW, 10))
 
@@ -277,7 +277,7 @@ def test_a_resend_without_a_cache_invents_no_route(rib: OutgoingRIB, grouped: bo
     assert cached(rib) == []
 
     rib.resend(True)
-    assert events(rib.updates(grouped)) == [(RouteRefresh.start, *FAMILY), (RouteRefresh.end, *FAMILY)]
+    assert events(rib.updates(grouped)) == [(RouteRefresh.BEGIN, *FAMILY), (RouteRefresh.END, *FAMILY)]
 
     for med in (10, 20):
         rib.add_to_rib(route(med))

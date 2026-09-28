@@ -97,7 +97,7 @@ class _MessageCode(int):
 class Message:
     """A BGP message: the body it was built from, and the framing every message shares.
 
-    The contract (doc/BGP_MESSAGE_INTERFACE.md, enforced by
+    The contract (.claude/exabgp/BGP_MESSAGE_INTERFACE.md, enforced by
     tests/unit/bgp/message/test_message_contract.py):
 
     - ID is the type octet, TYPE is derived from it and never declared by a subclass
@@ -105,6 +105,8 @@ class Message:
       derived from it, LENGTH_MAX bounds the whole message, header included
     - a subclass says what its body is with pack_body(), and nothing else: the header,
       the framing and the length rules belong here
+    - a message is its bytes: _packed is the body it was built from, every field is read
+      from it, and two messages are equal when their type and their body are
     """
 
     MARKER: ClassVar[bytes] = bytes([0xFF] * 16)
@@ -119,6 +121,8 @@ class Message:
     ID: ClassVar[int]
     TYPE: ClassVar[bytes]
 
+    _packed: Buffer
+
     # the octets of the body before its variable part, which every message of the type has
     FIXED_SIZE: ClassVar[int] = 0
     # the whole message, header included; the session's own maximum is checked apart
@@ -127,9 +131,12 @@ class Message:
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
-        assert 'TYPE' not in vars(cls), f'{cls.__qualname__}: TYPE is derived from ID, not declared'
-        assert 'LENGTH_MIN' not in vars(cls), f'{cls.__qualname__}: LENGTH_MIN is derived from FIXED_SIZE'
-        assert 0 <= cls.ID <= 0xFF, f'{cls.__qualname__}: the type of a message is one octet'
+        # a class is defined once, at import, and must be refused under -O too
+        for derived, source in (('TYPE', 'ID'), ('LENGTH_MIN', 'FIXED_SIZE')):
+            if derived in vars(cls):
+                raise TypeError(f'{cls.__qualname__}: {derived} is derived from {source}, not declared')
+        if not 0 <= cls.ID <= 0xFF:
+            raise TypeError(f'{cls.__qualname__}: the type of a message is one octet')
         cls.TYPE = bytes([cls.ID])
         cls.LENGTH_MIN = cls.HEADER_LEN + cls.FIXED_SIZE
         assert cls.HEADER_LEN <= cls.LENGTH_MIN <= cls.LENGTH_MAX <= cls.EXTENDED_MAX
@@ -165,6 +172,15 @@ class Message:
 
         def __init__(self) -> None:
             raise RuntimeError('This class can not be instantiated')
+
+    def __eq__(self, other: object) -> bool:
+        # `other` can be anything a caller compares with, so only here is its class asked
+        if not isinstance(other, Message):
+            return NotImplemented
+        return self.ID == other.ID and bytes(self._packed) == bytes(other._packed)
+
+    def __hash__(self) -> int:
+        return hash((self.ID, bytes(self._packed)))
 
     @classmethod
     def length_valid(cls, code: int, length: int) -> bool:

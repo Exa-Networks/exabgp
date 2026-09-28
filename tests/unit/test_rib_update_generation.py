@@ -395,9 +395,9 @@ class TestRouteRefreshGeneration:
 
         for i, u in enumerate(updates):
             if isinstance(u, RouteRefresh):
-                if u.reserved == RouteRefresh.start:
+                if u.reserved == RouteRefresh.BEGIN:
                     start_idx = i
-                elif u.reserved == RouteRefresh.end:
+                elif u.reserved == RouteRefresh.END:
                     end_idx = i
             elif isinstance(u, UpdateCollection) and u.announces:
                 route_idx = i

@@ -550,7 +550,7 @@ def test_operational_advisory_cannot_corrupt_the_stream(
     """
     from exabgp.bgp.message.operational import Advisory
 
-    message = Advisory.ADM(AFI.ipv4, SAFI.unicast, advisory)
+    message = Advisory.ADM.make_advisory(AFI.ipv4, SAFI.unicast, advisory)
     line = json_encoder.operational(api_neighbor, 'receive', 'advisory', message, b'', b'', Negotiated.UNSET)
 
     assert '\n' not in line.rstrip('\n'), f'{description} split one event across lines'
@@ -573,7 +573,7 @@ def test_operational_advisory_reaches_the_consumer_unchanged(
     """
     from exabgp.bgp.message.operational import Advisory
 
-    message = Advisory.ADM(AFI.ipv4, SAFI.unicast, advisory)
+    message = Advisory.ADM.make_advisory(AFI.ipv4, SAFI.unicast, advisory)
     line = json_encoder.operational(api_neighbor, 'receive', 'advisory', message, b'', b'', Negotiated.UNSET)
     read_back = jsonlib.loads(line)['neighbor']['operational']['advisory']
 
@@ -594,9 +594,9 @@ def test_operational_type_a_peer_invented_still_renders(code: int, api_neighbor,
     payload = b'\x00\x01\x01\xff\xfe\xfd'
     body = struct.pack('!HH', code, len(payload)) + payload
     message = Operational.unpack_message(body, Negotiated.UNSET)
-    assert message.category == 'unknown', f'type {code} is registered; this test needs an unregistered one'
+    assert message.CATEGORY == 'unknown', f'type {code} is registered; this test needs an unregistered one'
 
-    line = json_encoder.operational(api_neighbor, 'receive', message.category, message, b'', b'', Negotiated.UNSET)
+    line = json_encoder.operational(api_neighbor, 'receive', message.CATEGORY, message, b'', b'', Negotiated.UNSET)
     event = jsonlib.loads(line)['neighbor']['operational']
     # the WHOLE payload is data here: an unregistered type has no afi/safi we may assume,
     # so nothing is parsed out of it, and hexstring() writes it 0x prefixed and uppercase

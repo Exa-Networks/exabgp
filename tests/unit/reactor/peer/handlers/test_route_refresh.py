@@ -60,7 +60,7 @@ class TestRouteRefreshHandler:
 
         rr = Mock()
         rr.ID = Message.CODE.ROUTE_REFRESH
-        rr.reserved = RouteRefresh.request  # Request enhanced
+        rr.reserved = RouteRefresh.REQUEST  # Request enhanced
         rr.afi = AFI.ipv4
         rr.safi = SAFI.unicast
 
@@ -77,7 +77,7 @@ class TestRouteRefreshHandler:
 
         rr = Mock()
         rr.ID = Message.CODE.ROUTE_REFRESH
-        rr.reserved = RouteRefresh.request  # Request enhanced
+        rr.reserved = RouteRefresh.REQUEST  # Request enhanced
         rr.afi = AFI.ipv6
         rr.safi = SAFI.unicast
 
@@ -138,7 +138,7 @@ class TestRouteRefreshHandlerAsync:
 
         rr = Mock()
         rr.ID = Message.CODE.ROUTE_REFRESH
-        rr.reserved = RouteRefresh.request
+        rr.reserved = RouteRefresh.REQUEST
         rr.afi = AFI.ipv4
         rr.safi = SAFI.unicast
 

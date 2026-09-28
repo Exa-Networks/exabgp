@@ -21,7 +21,9 @@ OPERATIONAL_FORMS: list[tuple[str, bool]] = [
     ('asm afi ipv4 safi unicast advisory x router-id 1.2.3.4', True),
     ('rpcq afi ipv4 safi unicast sequence 5', True),
     ('rpcq afi ipv4 safi unicast sequence 0', True),
-    ('rpcq afi ipv4 safi unicast sequence -1', True),
+    # accepted by the legacy parser, and the session then died packing -1 into four octets
+    # when the query was sent; the message packs its body when built, so it is refused here
+    ('rpcq afi ipv4 safi unicast sequence -1', False),
     ('rpcq afi ipv4 safi unicast sequence 4294967295', True),
     ('rpcq afi ipv4 safi unicast sequence 4294967296', False),
     ('rpcq afi ipv4 safi unicast sequence x', False),

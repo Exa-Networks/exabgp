@@ -322,7 +322,7 @@ def test_latest_replacement_is_advertised_inside_enhanced_refresh_boundary():
     end = next(
         i
         for i, update in enumerate(updates)
-        if isinstance(update, RouteRefresh) and update.reserved == RouteRefresh.end
+        if isinstance(update, RouteRefresh) and update.reserved == RouteRefresh.END
     )
     advertised = [update for update in updates[:end] if isinstance(update, UpdateCollection) and update.announces]
     assert [str(item.nlri.cidr) for update in advertised for item in update.announces] == ['10.0.0.0/24']

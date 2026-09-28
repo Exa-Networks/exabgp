@@ -119,7 +119,7 @@ class OperationalLine(Type[OperationalFamily]):
         pairs = [words.word() for _ in range(2 * len(self.parameters))]
         words.rest()
         try:
-            message: OperationalFamily = self.klass(**_values(pairs, list(self.parameters)))
+            message: OperationalFamily = self.klass.from_values(_values(pairs, list(self.parameters)))
         except ConfigError:
             raise  # positioned already, by the value which failed
         except (ValueError, TypeError, struct.error) as exc:
@@ -180,7 +180,7 @@ class OperationalSection(Collector[Values]):
 def kind(message: OperationalFamily) -> str:
     """The statement which reads `message` back."""
     for keyword, (klass, _, _) in KINDS.items():
-        if type(message) is klass:
+        if message.SUBTYPE_ID == klass.SUBTYPE_ID:
             return keyword
     raise ValueError(f'no statement writes a {type(message).__name__} message')
 

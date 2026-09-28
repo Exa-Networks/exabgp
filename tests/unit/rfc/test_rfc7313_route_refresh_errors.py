@@ -48,7 +48,7 @@ def handled(subtype: int, enhanced: bool) -> Mock:
 
 @pytest.mark.rfc('rfc7313#5-invalid-message-length')
 def test_a_four_octet_route_refresh_is_accepted() -> None:
-    assert received(RouteRefresh.start).reserved == RouteRefresh.start
+    assert received(RouteRefresh.BEGIN).reserved == RouteRefresh.BEGIN
 
 
 @pytest.mark.rfc('rfc7313#5-invalid-message-length', polarity='negative')
@@ -70,7 +70,7 @@ def test_the_notification_carries_the_complete_route_refresh_message(size: int) 
 
 
 @pytest.mark.rfc('rfc7313#5-unknown-subtype-ignored')
-@pytest.mark.parametrize('subtype', [RouteRefresh.request, RouteRefresh.start, RouteRefresh.end])
+@pytest.mark.parametrize('subtype', [RouteRefresh.REQUEST, RouteRefresh.BEGIN, RouteRefresh.END])
 def test_a_defined_subtype_decodes(subtype: int) -> None:
     assert received(subtype).reserved == subtype
 

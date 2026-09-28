@@ -1562,7 +1562,7 @@ class Processes:
                 self._encoder[process].operational(
                     peer.neighbor,
                     direction,
-                    operational.category,
+                    operational.CATEGORY,
                     operational,
                     header,
                     body,

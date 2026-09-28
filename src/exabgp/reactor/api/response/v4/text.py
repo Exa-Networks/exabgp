@@ -186,17 +186,17 @@ class V4Text:
         # free text the peer chose, and not promised to be UTF-8
         raw = operational.data
         data = bytes(raw).decode('utf-8', 'replace') if isinstance(raw, (bytes, bytearray, memoryview)) else raw
-        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi} advisory "{oneline(data)}"{self._header_body(header, body)}'
+        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} afi {operational.afi} safi {operational.safi} advisory "{oneline(data)}"{self._header_body(header, body)}'
 
     def _operational_query(
         self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
     ) -> str:
-        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi}{self._header_body(header, body)}'
+        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} afi {operational.afi} safi {operational.safi}{self._header_body(header, body)}'
 
     def _operational_counter(
         self, neighbor: 'Neighbor', direction: str, operational: Any, header: bytes, body: bytes
     ) -> str:
-        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} afi {operational.afi} safi {operational.safi} router-id {operational.routerid} sequence {operational.sequence} counter {operational.counter}{self._header_body(header, body)}'
+        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} afi {operational.afi} safi {operational.safi} router-id {operational.routerid} sequence {operational.sequence} counter {operational.counter}{self._header_body(header, body)}'
 
     def operational(
         self,
@@ -219,4 +219,4 @@ class V4Text:
             return self._operational_counter(neighbor, direction, operational, header, body)
         # a peer choosing an unregistered type arrives here with category 'unknown'
         data = hexstring(bytes(getattr(operational, 'data', b'')))
-        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.name} type {operational.what} data {data}{self._header_body(header, body)}'
+        return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} type {operational.what} data {data}{self._header_body(header, body)}'
