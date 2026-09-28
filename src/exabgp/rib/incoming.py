@@ -23,6 +23,10 @@ class IncomingRIB(Cache):
     # set has to grow. Without this a peer which ignores the limit, the only peer the audit
     # exists to catch, is also the one which decides how much memory the audit costs.
     AUDIT_PATHS_HEADROOM = 1
+    # RFC 8955 6: the flow specifications a peer sent which are not feasible yet, held
+    # until a unicast route makes them so. A peer decides how many it sends, so they are
+    # capped per family; one past the cap is dropped, and the peer must send it again
+    PENDING_FLOWS_MAX = 65536
 
     _path_sets: dict[FamilyTuple, dict[bytes, set[bytes]]]
     _path_warned: set[tuple[FamilyTuple, bytes]]
@@ -34,6 +38,7 @@ class IncomingRIB(Cache):
     # the cache, which adj-rib-in can turn off, and bounded by the limit: the route which
     # takes a family past it ends the session
     _prefixes: dict[FamilyTuple, set[bytes]]
+    _pending_flows: dict[FamilyTuple, dict[bytes, Route]]
 
     def __init__(self, cache: bool, families: set[FamilyTuple], enabled: bool = True) -> None:
         Cache.__init__(self, cache, families, enabled)
@@ -42,10 +47,12 @@ class IncomingRIB(Cache):
         self._end_of_rib = set()
         self._stale = {}
         self._prefixes = {}
+        self._pending_flows = {}
 
     # back to square one, all the routes are removed
     def clear(self) -> None:
         self.clear_cache()
+        self._pending_flows = {}
         self._path_sets = {}
         self._path_warned = set()
         self._end_of_rib = set()
@@ -163,3 +170,23 @@ class IncomingRIB(Cache):
         prefixes = self._prefixes.get(nlri.family().afi_safi())
         if prefixes:
             prefixes.discard(self._make_index(nlri))
+
+    def hold_pending_flow(self, route: Route) -> bool:
+        """Keep a flow specification which is not feasible yet, False when the cap is reached."""
+        family = route.nlri.family().afi_safi()
+        pending = self._pending_flows.setdefault(family, {})
+        index = route.index()
+        if index not in pending and len(pending) >= self.PENDING_FLOWS_MAX:
+            return False
+        pending[index] = route
+        assert len(pending) <= self.PENDING_FLOWS_MAX, 'the pending flows of a family are capped'
+        return True
+
+    def discard_pending_flow(self, nlri: NLRI) -> Route | None:
+        """Forget a pending flow specification, the peer withdrew it or it became feasible."""
+        family = nlri.family().afi_safi()
+        return self._pending_flows.get(family, {}).pop(self._make_index(nlri), None)
+
+    def pending_flows(self, family: FamilyTuple) -> list[Route]:
+        """The flow specifications of the family held back as not feasible, a snapshot."""
+        return list(self._pending_flows.get(family, {}).values())

@@ -53,6 +53,7 @@ class Neighbor:
     tunnel_encapsulation: str
     route_target_filter: bool
     enforce_first_as: bool
+    flow_validation: str
     auto_flush: bool
     adj_rib_in: bool
     adj_rib_out: bool
@@ -96,6 +97,8 @@ class Neighbor:
         self.route_target_filter = False
         # RFC 8955 6: the leftmost AS of an EBGP route is the peer's, unless it is a route server
         self.enforce_first_as = True
+        # RFC 8955 6: off unless asked, many flow specifications arrive with no unicast route
+        self.flow_validation = 'disable'
         self.auto_flush = True
         self.adj_rib_in = True
         self.adj_rib_out = True
@@ -196,6 +199,7 @@ class Neighbor:
         neighbor.tunnel_encapsulation = settings.tunnel_encapsulation
         neighbor.route_target_filter = settings.route_target_filter
         neighbor.enforce_first_as = settings.enforce_first_as
+        neighbor.flow_validation = settings.flow_validation
         neighbor.auto_flush = settings.auto_flush
         neighbor.adj_rib_in = settings.adj_rib_in
         neighbor.adj_rib_out = settings.adj_rib_out
@@ -371,6 +375,7 @@ class Neighbor:
             and self.tunnel_encapsulation == other.tunnel_encapsulation
             and self.route_target_filter == other.route_target_filter
             and self.enforce_first_as == other.enforce_first_as
+            and self.flow_validation == other.flow_validation
             and self.auto_flush == other.auto_flush
             and self.adj_rib_in == other.adj_rib_in
             and self.adj_rib_out == other.adj_rib_out
@@ -651,6 +656,7 @@ Neighbor {peer-address}
             f'\ttunnel-encapsulation {neighbor.tunnel_encapsulation};\n'
             f'\troute-target-filter {"true" if neighbor.route_target_filter else "false"};\n'
             f'\tenforce-first-as {"true" if neighbor.enforce_first_as else "false"};\n'
+            f'\tflow-validation {neighbor.flow_validation};\n'
             f'\tauto-flush {"true" if neighbor.auto_flush else "false"};\n'
             f'\tadj-rib-in {"true" if neighbor.adj_rib_in else "false"};\n'
             f'\tadj-rib-out {"true" if neighbor.adj_rib_out else "false"};\n'

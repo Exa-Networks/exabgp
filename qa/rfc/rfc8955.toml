@@ -343,7 +343,7 @@ decoder of `FlowFragment` now masks the value with the four bits this section de
 id = "rfc8955#6-validation-feasible-if-and-only-if"
 section = "6"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 In the absence of explicit configuration, a Flow Specification NLRI
@@ -351,54 +351,55 @@ MUST be validated such that it is considered feasible if and only if
 all of the conditions below are true:
 """
 note = """
-Not implemented, in any part.  There is no code in the tree which matches a received flow
-specification against the unicast routes of the same AFI: no "best-match", no originator
-comparison, no ORIGINATOR_ID lookup for this purpose.  A flow specification from any peer
-for any destination prefix is accepted and handed to the API.
+Implemented in exabgp/rib/flow_validation.py, and OFF by default: `flow-validation enable`
+on the neighbour turns it on. That is a deliberate departure from "in the absence of
+explicit configuration", decided for this release because many exabgp users receive flow
+specifications with no unicast route behind them (controllers, DDoS feeds) and would lose
+them all on upgrade; the ledger records the rule as implemented because it is, and this
+note records that the default is not the one the RFC asks for.
 
-This is the security property of the whole document, so it is worth saying exactly what is
-lost and what is not.  exabgp installs nothing, so a peer cannot use this to make exabgp
-drop its own traffic.  What it can do is tell exabgp's API consumer to filter a prefix
-which belongs to somebody else, and the consumer, which usually is the thing programming
-hardware, has no way to know the check was never made.  Recorded as a gap and not as
-not-applicable for that reason: exabgp holds an incoming RIB and knows which peer sent
-what, so rule b is implementable here, and declining to implement it moves a
-denial-of-service vector one hop downstream rather than removing it.
+When on, `validate_flows` runs in Protocol.read_message, before the API or the adj-rib-in
+see the UPDATE. exabgp has one adj-rib-in per neighbour and no view across them, so the
+best-match unicast route is the longest unicast prefix this peer announced covering the
+flow's destination (after the UPDATE itself is applied). Rule a: exactly one destination
+prefix, with offset 0 for IPv6 (RFC 8956 5). Rule b: the same originator, the ORIGINATOR_ID
+when there is one. Rule c: no more-specific unicast route inside the destination from
+another neighbouring AS (the leftmost AS of its path), which can only differ on iBGP. An
+infeasible flow is withheld from the UPDATE and held, capped per family
+(IncomingRIB.PENDING_FLOWS_MAX); flow-vpn is not validated. It needs adj-rib-in.
 """
 
 [[requirement]]
 id = "rfc8955#6-rule-a-may-be-relaxed"
 section = "6"
 level = "MAY"
-status = "not-applicable"
+status = "required"
 polarity = "both"
 text = """
 However, rule a MAY be relaxed by explicit configuration, permitting
 Flow Specifications that include no destination prefix component.
 """
 note = """
-A permission to switch off a check, granted to an implementation which performs the check.
-exabgp performs no part of the validation procedure, so there is no rule a in force for a
-configuration knob to relax.  The day rfc8955#6-validation-feasible-if-and-only-if is
-closed this becomes a real choice; until then it is not one.
+`flow-validation relaxed` is the explicit configuration: a flow specification with no
+destination prefix component is feasible, and rules b and c are not applied to it. A flow
+with a destination is still judged by all three.
 """
 
 [[requirement]]
 id = "rfc8955#6-rules-b-and-c-disregarded"
 section = "6"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 If
 such is the case, rules b and c are moot and MUST be disregarded.
 """
 note = """
-exabgp disregards rules b and c, which looks like compliance and is not: it disregards
-them unconditionally rather than because rule a was relaxed by explicit configuration.
-The sentence describes a state machine with two settings and exabgp has one.  Kept as a
-gap and joined to rfc8955#6-validation-feasible-if-and-only-if, because an implementation
-which satisfies this sentence by never doing the work has satisfied nothing.
+Only a flow with no destination component, and only with `flow-validation relaxed`, skips
+rules b and c. With `flow-validation enable` such a flow fails rule a; with a destination,
+rules b and c apply in both modes. Off by default, as rfc8955#6-validation-feasible-if-and-
+only-if records.
 """
 
 [[requirement]]
@@ -426,7 +427,7 @@ default is on. A neighbouring Member-AS is held to RFC 5065 instead.
 id = "rfc8955#6-revalidate-on-unicast-change"
 section = "6"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 Therefore, a revalidation of the
@@ -434,9 +435,11 @@ Flow Specification NLRI MUST be performed whenever unicast routes
 change.
 """
 note = """
-Follows rfc8955#6-validation-feasible-if-and-only-if: there is no validation, so there is
-nothing to redo when the unicast RIB moves.  exabgp's incoming RIB does not notify across
-address families and nothing subscribes to it for this purpose.
+Whenever an UPDATE changes the peer's IPv4 or IPv6 unicast routes, `validate_flows` judges
+every flow of the peer again: one held in the adj-rib-in which is no longer feasible is
+removed and held back, one held back which has become feasible is put in the adj-rib-in,
+and each change is told to the API as an UPDATE of its own (Update.from_collection) after
+the one which caused it. A flow the peer withdraws while held back is forgotten.
 """
 
 # ============================================================ section 7, actions

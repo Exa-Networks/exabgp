@@ -36,12 +36,15 @@ from exabgp.bgp.message.open import ASN, RouterID, Version
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotiated
 from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.bgp.message.update.collection import UpdateCollection
 from exabgp.logger import lazymsg, log
 
 # from exabgp.reactor.network.error import NotifyError
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.reactor.network.outgoing import Outgoing
+from exabgp.rib.flow_validation import validate_flows
+from exabgp.util.types import Buffer
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
@@ -299,16 +302,13 @@ class Protocol:
 
         # the one decoder registered for the type is Update's, and it returns an Update
         update = cast(Update, message) if message.ID == Message.CODE.UPDATE else None
+        revalidated: list[UpdateCollection] = []
         if update is not None:
             update.data.classify_otc(self.negotiated)
+            revalidated = validate_flows(self.neighbor, update.data)
 
         if for_api:
-            if consolidate:
-                self.peer.reactor.processes.message(
-                    msg_id, self.peer, 'receive', message, bytes(header), bytes(body), self.negotiated
-                )
-            elif parsed:
-                self.peer.reactor.processes.message(msg_id, self.peer, 'receive', message, b'', b'', self.negotiated)
+            self._tell_api_received(message, header, body, revalidated)
 
         if message.ID == Message.CODE.NOTIFICATION:
             raise NotificationReceived(cast(Notification, message))
@@ -317,6 +317,20 @@ class Protocol:
         # rest of the UPDATE. The Discard marker the parser leaves behind records that it
         # happened, for the API; it is not a reason to ignore the routes beside it.
         return message
+
+    def _tell_api_received(
+        self, message: Message, header: Buffer, body: Buffer, revalidated: list[UpdateCollection]
+    ) -> None:
+        """Tell the API processes about a message received, the way they asked to hear of it."""
+        processes = self.peer.reactor.processes
+        if self._api['receive-consolidate']:
+            processes.message(message.ID, self.peer, 'receive', message, bytes(header), bytes(body), self.negotiated)
+        elif self._api['receive-parsed']:
+            processes.message(message.ID, self.peer, 'receive', message, b'', b'', self.negotiated)
+        # RFC 8955 6: flow specifications the unicast routes of this UPDATE made, or unmade, feasible
+        for change in revalidated:
+            update = Update.from_collection(change)
+            processes.message(Message.CODE.UPDATE, self.peer, 'receive', update, b'', b'', self.negotiated)
 
     def validate_open(self) -> None:
         error: tuple[int, int, str] | None = self.negotiated.validate(self.neighbor)

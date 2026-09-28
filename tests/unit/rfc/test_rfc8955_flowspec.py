@@ -29,7 +29,7 @@ from exabgp.bgp.message.open import ASN, HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities, Capability
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update import Update, UpdateCollection
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.community.extended.traffic import (
@@ -65,6 +65,7 @@ from exabgp.protocol.resource import NumericValue
 from exabgp.reactor.peer.context import PeerContext
 from exabgp.reactor.peer.handlers.update import UpdateHandler
 from exabgp.rib import RIB
+from exabgp.rib.flow_validation import validate_flows
 from exabgp.rib.incoming import IncomingRIB
 
 IPV4_UNICAST: FamilyTuple = (AFI.ipv4, SAFI.unicast)
@@ -178,6 +179,13 @@ def flow_announce(components: bytes, path: tuple[int, ...] = (PEER_AS,)) -> byte
     return pack('!H', 0) + pack('!H', len(attributes)) + attributes
 
 
+def flow_withdraw(components: bytes) -> bytes:
+    """An UPDATE payload withdrawing one IPv4 flow specification in MP_UNREACH_NLRI."""
+    unreach = pack('!HB', 1, 133) + nlri(components)
+    attributes = path_attribute(OPTIONAL, Attribute.CODE.MP_UNREACH_NLRI, unreach)
+    return pack('!H', 0) + pack('!H', len(attributes)) + attributes
+
+
 def unicast_announce(prefix: bytes = UNICAST_PREFIX) -> bytes:
     """An UPDATE payload announcing one IPv4 unicast route, sent by the neighbouring AS."""
     attributes = path_attribute(WELL_KNOWN, Attribute.CODE.ORIGIN, bytes([0])) + as_path(PEER_AS)
@@ -208,10 +216,14 @@ def received_update(payload: bytes, negotiated: Negotiated) -> Update:
     return message
 
 
-def peer_context() -> Any:
-    """What `UpdateHandler` reads of a peer: its neighbour's incoming RIB and counters."""
+def peer_context(validation: str = 'enable') -> Any:
+    """What `UpdateHandler` and the validation read of a peer: its neighbour's incoming RIB,
+    its `flow-validation` setting and counters.  Validation is on unless told otherwise:
+    the section 6 tests below are about what it does once asked for."""
     ctx = Mock(spec=PeerContext)
     ctx.neighbor = Mock()
+    ctx.neighbor.flow_validation = validation
+    ctx.neighbor.route_target_filter = False
     ctx.neighbor.prefix_limit = {}
     ctx.neighbor.rib = Mock()
     ctx.neighbor.rib.incoming = IncomingRIB(True, {IPV4_UNICAST, IPV4_FLOW})
@@ -222,12 +234,25 @@ def peer_context() -> Any:
     return ctx
 
 
-def receive(ctx: Any, *payloads: bytes) -> None:
-    """Hand each UPDATE, decoded on an eBGP session, to the handler a peer runs."""
+def ibgp_session() -> Negotiated:
+    """The same session inside our AS, where ORIGINATOR_ID and other neighbouring ASes exist."""
     negotiated = ebgp_session()
+    negotiated.peer_as = ASN(LOCAL_AS)
+    return negotiated
+
+
+def receive(ctx: Any, *payloads: bytes, negotiated: Negotiated | None = None) -> list[UpdateCollection]:
+    """Hand each UPDATE, decoded on an eBGP session, through the validation to the handler,
+    in the order `Protocol.read_message` and the peer loop do.  Returns what revalidation
+    tells the API."""
+    negotiated = negotiated or ebgp_session()
     handler = UpdateHandler()
+    changes: list[UpdateCollection] = []
     for payload in payloads:
-        list(handler.handle(ctx, received_update(payload, negotiated)))
+        update = received_update(payload, negotiated)
+        changes.extend(validate_flows(ctx.neighbor, update.data))
+        list(handler.handle(ctx, update))
+    return changes
 
 
 def held(ctx: Any, family: FamilyTuple) -> list[str]:
@@ -681,11 +706,6 @@ def announced_flows(payload: bytes) -> list[str]:
 
 
 @pytest.mark.rfc('rfc8955#6-validation-feasible-if-and-only-if', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='nothing matches a received flow specification against the unicast routes of '
-    'its AFI, so one for a prefix the peer never announced is held like any other route',
-)
 def test_a_flow_specification_without_a_unicast_route_for_its_destination_is_not_feasible() -> None:
     """Rule b: the originator of the flow must be the originator of the best unicast match.
 
@@ -705,11 +725,6 @@ def test_a_flow_specification_without_a_unicast_route_for_its_destination_is_not
 
 
 @pytest.mark.rfc('rfc8955#6-rules-b-and-c-disregarded')
-@pytest.mark.xfail(
-    strict=True,
-    reason='rules b and c are disregarded unconditionally, as if rule a had been relaxed '
-    'by configuration, and there is no configuration which relaxes it',
-)
 def test_rules_b_and_c_are_not_disregarded_without_explicit_configuration() -> None:
     """Rule a, a destination prefix, is only relaxed by explicit configuration.
 
@@ -735,11 +750,6 @@ def test_an_ebgp_route_whose_as_path_does_not_start_with_the_peer_as_is_not_acce
 
 
 @pytest.mark.rfc('rfc8955#6-revalidate-on-unicast-change')
-@pytest.mark.xfail(
-    strict=True,
-    reason='there is no validation to redo: the incoming RIB does not tell the flow '
-    'family when a unicast route goes, and nothing listens for it',
-)
 def test_a_flow_specification_is_no_longer_feasible_once_its_unicast_route_is_withdrawn() -> None:
     ctx = peer_context()
     receive(ctx, unicast_announce(), flow_announce(DESTINATION))
@@ -902,3 +912,164 @@ def test_a_route_server_neighbour_can_turn_the_leftmost_as_rule_off() -> None:
     parsed = received_update(flow_announce(DESTINATION, path=(OTHER_AS, PEER_AS)), negotiated).data
 
     assert [str(routed.nlri) for routed in parsed.announces] == ['flow destination-ipv4 192.0.2.0/24']
+
+
+# the section 6 validation beyond the four sentences above
+
+OTHER_PREFIX = bytes([24, 198, 51, 100])  # 198.51.100.0/24, which covers nothing the flow names
+MORE_SPECIFIC = bytes([25, 192, 0, 2, 0])  # 192.0.2.0/25, inside the flow's destination
+
+
+def unicast_from(asn: int, prefix: bytes = UNICAST_PREFIX, originator: bytes = b'', first: int = PEER_AS) -> bytes:
+    """A unicast UPDATE whose AS_PATH starts with `first` and ends with `asn`, with an
+    ORIGINATOR_ID when given."""
+    attributes = path_attribute(WELL_KNOWN, Attribute.CODE.ORIGIN, bytes([0]))
+    attributes += as_path(first, asn) if asn != first else as_path(first)
+    attributes += path_attribute(WELL_KNOWN, Attribute.CODE.NEXT_HOP, bytes([192, 0, 2, 254]))
+    if originator:
+        attributes += path_attribute(OPTIONAL, Attribute.CODE.ORIGINATOR_ID, originator)
+    return pack('!H', 0) + pack('!H', len(attributes)) + attributes + prefix
+
+
+def test_without_flow_validation_a_flow_with_no_unicast_route_is_held() -> None:
+    """Unmarked: the default is off, as decided for this release, and nothing changes then."""
+    ctx = peer_context('disable')
+    receive(ctx, flow_announce(DESTINATION))
+
+    assert held(ctx, IPV4_FLOW) == ['flow destination-ipv4 192.0.2.0/24']
+
+
+@pytest.mark.rfc('rfc8955#6-rule-a-may-be-relaxed')
+def test_relaxed_validation_accepts_a_flow_with_no_destination() -> None:
+    ctx = peer_context('relaxed')
+    receive(ctx, flow_announce(PROTOCOL_TCP + PORT_25))
+
+    assert held(ctx, IPV4_FLOW) == ['flow protocol =tcp port =25']
+
+
+@pytest.mark.rfc('rfc8955#6-rules-b-and-c-disregarded', polarity='negative')
+def test_relaxed_validation_still_applies_rules_b_and_c_to_a_flow_with_a_destination() -> None:
+    """Relaxing rule a is for flows with no destination; one with a destination is still
+    judged, and with no unicast route for it is not feasible."""
+    ctx = peer_context('relaxed')
+    receive(ctx, flow_announce(DESTINATION))
+
+    assert held(ctx, IPV4_FLOW) == []
+
+
+@pytest.mark.rfc('rfc8955#6-validation-feasible-if-and-only-if')
+def test_a_flow_covered_by_a_shorter_unicast_route_is_feasible() -> None:
+    """The best match is the longest unicast prefix covering the destination, not only an
+    identical one."""
+    ctx = peer_context()
+    receive(ctx, unicast_announce(bytes([16, 192, 0])), flow_announce(DESTINATION))
+
+    assert held(ctx, IPV4_FLOW) == ['flow destination-ipv4 192.0.2.0/24']
+
+
+@pytest.mark.rfc('rfc8955#6-validation-feasible-if-and-only-if', polarity='negative')
+def test_a_unicast_route_for_another_prefix_does_not_make_a_flow_feasible() -> None:
+    ctx = peer_context()
+    receive(ctx, unicast_announce(OTHER_PREFIX), flow_announce(DESTINATION))
+
+    assert held(ctx, IPV4_FLOW) == []
+
+
+@pytest.mark.rfc('rfc8955#6-validation-feasible-if-and-only-if', polarity='negative')
+def test_rule_b_a_flow_from_another_originator_than_its_best_match_is_not_feasible() -> None:
+    """Behind a route reflector the originator is the ORIGINATOR_ID, not the peer.
+
+    iBGP: RFC 7606 7.9 discards an ORIGINATOR_ID from an external neighbour.
+    """
+    ctx = peer_context()
+    receive(
+        ctx,
+        unicast_from(PEER_AS, originator=bytes([192, 0, 2, 7])),
+        flow_announce(DESTINATION),
+        negotiated=ibgp_session(),
+    )
+
+    assert held(ctx, IPV4_FLOW) == []
+
+
+@pytest.mark.rfc('rfc8955#6-validation-feasible-if-and-only-if', polarity='negative')
+def test_rule_c_a_more_specific_route_from_another_neighbouring_as_makes_a_flow_infeasible() -> None:
+    """iBGP: on one EBGP session every route's neighbouring AS is the peer's, so rule c can
+    only fail for routes which entered our AS from different neighbours."""
+    ctx = peer_context()
+    receive(
+        ctx,
+        unicast_from(PEER_AS),
+        unicast_from(OTHER_AS, MORE_SPECIFIC, first=OTHER_AS),
+        flow_announce(DESTINATION, path=(PEER_AS,)),
+        negotiated=ibgp_session(),
+    )
+
+    assert held(ctx, IPV4_FLOW) == []
+
+
+@pytest.mark.rfc('rfc8955#6-revalidate-on-unicast-change')
+def test_a_flow_held_back_becomes_feasible_when_its_unicast_route_arrives_and_the_api_is_told() -> None:
+    ctx = peer_context()
+    receive(ctx, flow_announce(DESTINATION))
+    assert held(ctx, IPV4_FLOW) == []
+
+    told = receive(ctx, unicast_announce())
+
+    assert held(ctx, IPV4_FLOW) == ['flow destination-ipv4 192.0.2.0/24']
+    assert [str(routed.nlri) for change in told for routed in change.announces] == [
+        'flow destination-ipv4 192.0.2.0/24'
+    ]
+
+
+@pytest.mark.rfc('rfc8955#6-revalidate-on-unicast-change', polarity='negative')
+def test_a_withdrawn_flow_is_not_brought_back_by_a_later_unicast_route() -> None:
+    """A flow the peer withdrew while it was held back is gone, not merely pending."""
+    ctx = peer_context()
+    receive(ctx, flow_announce(DESTINATION), flow_withdraw(DESTINATION))
+
+    told = receive(ctx, unicast_announce())
+
+    assert held(ctx, IPV4_FLOW) == []
+    assert told == []
+
+
+def test_the_api_is_told_when_a_held_flow_is_no_longer_feasible() -> None:
+    """Unmarked: the withdraw half of revalidation, as the API sees it."""
+    ctx = peer_context()
+    receive(ctx, unicast_announce(), flow_announce(DESTINATION))
+
+    told = receive(ctx, unicast_withdraw())
+
+    assert [str(nlri) for change in told for nlri in change.withdraws] == ['flow destination-ipv4 192.0.2.0/24']
+
+
+def test_rule_c_passes_when_the_more_specific_route_entered_from_the_same_neighbouring_as() -> None:
+    """Unmarked: the other side of rule c, so a check which refused every more-specific
+    route would fail here."""
+    ctx = peer_context()
+    receive(
+        ctx,
+        unicast_from(PEER_AS),
+        unicast_from(OTHER_AS, MORE_SPECIFIC),
+        flow_announce(DESTINATION),
+        negotiated=ibgp_session(),
+    )
+
+    assert held(ctx, IPV4_FLOW) == ['flow destination-ipv4 192.0.2.0/24']
+
+
+@pytest.mark.rfc('rfc8955#6-validation-feasible-if-and-only-if', polarity='negative')
+def test_rule_b_is_judged_against_the_longest_covering_route_not_any_covering_route() -> None:
+    """The /16 came from another originator, the /24 from the one which sent the flow: the
+    /24 is the best match and the flow is feasible; judged against the /16 it would not be."""
+    ctx = peer_context()
+    receive(
+        ctx,
+        unicast_from(PEER_AS, bytes([16, 192, 0]), originator=bytes([192, 0, 2, 7])),
+        unicast_from(PEER_AS),
+        flow_announce(DESTINATION),
+        negotiated=ibgp_session(),
+    )
+
+    assert held(ctx, IPV4_FLOW) == ['flow destination-ipv4 192.0.2.0/24']

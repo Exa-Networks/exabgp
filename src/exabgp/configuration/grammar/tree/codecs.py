@@ -94,6 +94,7 @@ POLICY = (
     'tunnel-encapsulation',
     'route-target-filter',
     'enforce-first-as',
+    'flow-validation',
     'auto-flush',
     'adj-rib-in',
     'adj-rib-out',

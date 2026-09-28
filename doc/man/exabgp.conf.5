@@ -58,6 +58,7 @@ neighbor <ip-address> {
     tunnel-encapsulation <auto | filter | accept>;  // received attribute, RFC 9012
     route-target-filter <truthvalue>;  // VPN routes by RT membership, RFC 4684
     enforce-first-as <truthvalue>;     // EBGP AS_PATH starts with the peer AS, RFC 8955
+    flow-validation <disable | enable | relaxed>;  // received flows, RFC 8955 section 6
     auto-flush <truthvalue>;
     adj-rib-in <truthvalue>;
     adj-rib-out <truthvalue>;
@@ -449,6 +450,23 @@ A flow route matching an ICMP type or code together with a port can match no
 packet, and is not announced; a warning names it.
 A flow label is sent in four octets (RFC 8956), and the two high bits of a
 received DSCP are ignored.
+.Pp
+.Dq flow-validation enable
+applies the validation of RFC 8955 section 6 to the flow routes a neighbor
+sends: one is kept only when the same neighbor announced the longest unicast
+route covering its destination, from the same originator, with no more specific
+route inside it from another neighbouring AS.
+One which fails is not given to the API nor kept in the adj-rib-in, and is
+announced to the API once a unicast route makes it valid; a flow route which
+stops being valid is withdrawn from the API.
+.Dq flow-validation relaxed
+also accepts a flow route with no destination.
+The default,
+.Dq disable ,
+checks nothing, which the RFC only allows by explicit configuration: it is
+kept for this release because many flow routes arrive with no unicast route.
+It needs
+.Dq adj-rib-in .
 .Sh MULTIPLE LABELS
 RFC 8277 lets a labelled unicast or VPN route (SAFI 4 or 128) carry more than
 one label only when both speakers sent the Multiple Labels Capability, and never

@@ -71,6 +71,17 @@ class Update(Message):
         self._packed = packed
         self._parsed: 'UpdateCollection | None' = None
 
+    @classmethod
+    def from_collection(cls, collection: 'UpdateCollection') -> 'Update':
+        """An UPDATE told to the API which the peer never sent as such: no bytes, only routes.
+
+        RFC 8955 6 revalidation announces or withdraws a flow specification because a
+        unicast route changed, and that change has to reach the API like any other.
+        """
+        update = cls(b'')
+        update._parsed = collection
+        return update
+
     @property
     def payload(self) -> Buffer:
         """Raw UPDATE payload bytes."""

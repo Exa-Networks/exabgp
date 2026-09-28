@@ -56,7 +56,7 @@ env exabgp_log_enable=false uv run pytest tests/unit/rfc -q -rx | grep XFAIL
 | 2 | Received NLRI | ✅ | `df87c44` |
 | 3 | Outgoing routes / adj-rib-out | ✅ | `e642645` |
 | 4 | RFC 8277 Multiple Labels Capability | ✅ | `9220b94` |
-| 5 | FlowSpec | 🔄 part A done (uncommitted), §6 validation todo | |
+| 5 | FlowSpec | ✅ part A `e778145`, part B (§6 validation) uncommitted | |
 | 6 | Graceful Restart receiving procedures | ❌ todo | |
 | 7 | EVPN and Prefix-SID | ❌ todo | |
 | 8 | BGP-LS, capability retry, four-octet AS | ❌ todo | |
@@ -223,6 +223,26 @@ Each area below is independent. Do one per commit. The xfail tests named are the
   (conf-ebgp, conf-confederation) and the same fix. Only these two qa tools build one.
 - Remaining: §6 validation (4 xfails), an option default off.
 
+**Area 5 part B, §6 validation (uncommitted, 2026-09-28):**
+- `rib/flow_validation.py` `validate_flows(neighbor, update)`, called in
+  `Protocol.read_message` right after `classify_otc`, before the API is told. It judges the
+  UPDATE's flows against the peer's unicast view (adj-rib-in plus and minus this UPDATE),
+  withholds infeasible ones (`UpdateCollection.withhold`, by identity) into
+  `IncomingRIB` pending (capped, `PENDING_FLOWS_MAX`), and when unicast changed re-judges
+  held and pending flows, returning the changes; `Protocol._tell_api_received` (extracted,
+  read_message 97 -> 94 lines) tells the API each as `Update.from_collection`.
+- Neighbour `flow-validation <disable | enable | relaxed>`, default disable (Thomas's call;
+  the ledger says the default departs from the RFC). Needs adj-rib-in (refused otherwise).
+- Semantics: best match = longest covering unicast prefix of THIS peer; originator =
+  ORIGINATOR_ID or ''; neighbouring AS = leftmost AS of the path. On EBGP ORIGINATOR_ID is
+  discarded (RFC 7606) and every leftmost AS is the peer, so rules b and c only bite on
+  iBGP; their tests use an iBGP session. flow-vpn is not validated.
+- Tests: `receive()` in test_rfc8955_flowspec mirrors read_message (validate, then
+  handler); tests/unit/test_flow_validation_read_message.py drives read_message itself.
+- Mutations: all caught; the first run of two looked caught but had broken the syntax
+  (empty `if` body), so pytest never ran. Use `pass`, and look for a summary line.
+- Not done: validation cost is O(flows x unicast routes) on every unicast change.
+
 - `tests/unit/rfc/test_rfc8955_flowspec.py`: next-hop length 0 (§4, beware the redirect-to-IP
   use of the next-hop), DSCP masked with 0x3F on decode, eBGP leftmost AS (§6), feasibility
   against the unicast routes the same peer sent (§6 a/b/c), revalidation on unicast change,
@@ -311,8 +331,8 @@ None.
 ## Resume point
 
 **2026-09-28 (local):** on `main` after #1432, not on the web branch. Area 3 committed as
-`e642645`, area 4 `9220b94` (not pushed). Area 5 part A done, uncommitted; next §6
-validation. `test_everything`: all 25 passed (one clean
+`e642645`, area 4 `9220b94` (not pushed). Area 5 part A `e778145`; part B (§6 validation)
+done, uncommitted. Next: area 6 (Graceful Restart). `test_everything`: all 25 passed (one clean
 run, 10m29s). Next: area 4 (RFC 8277). Areas one after the
 other, stopping for review between each.
 

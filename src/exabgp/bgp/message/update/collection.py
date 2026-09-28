@@ -189,6 +189,18 @@ class UpdateCollection:
         self._attributes: AttributeCollection = attributes
         self.route_leaks: dict[FamilyTuple, RouteLeak] | None = None
 
+    def withhold(self, withheld: list[RoutedNLRI]) -> None:
+        """Take announcements out of a received UPDATE before anything acts on it.
+
+        RFC 8955 6: a flow specification which is not feasible is neither held in the
+        adj-rib-in nor told to the API.
+        """
+        before = len(self._announces)
+        # by identity: two announcements of one prefix compare equal, and only these go
+        taken = {id(routed) for routed in withheld}
+        self._announces = [routed for routed in self._announces if id(routed) not in taken]
+        assert len(self._announces) == before - len(withheld), 'only announcements of this UPDATE are withheld'
+
     def classify_otc(self, negotiated: Negotiated) -> None:
         """Apply the ingress procedures of RFC 9234 5 to a received UPDATE.
 

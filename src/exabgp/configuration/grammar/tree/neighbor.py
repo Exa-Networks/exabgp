@@ -196,6 +196,12 @@ LEAVES = (
         doc='RFC 9012 11, a received Tunnel Encapsulation attribute: auto filters it on EBGP only',
     ),
     Leaf(
+        'flow-validation',
+        choice('flow-validation', ['disable', 'enable', 'relaxed']),
+        field='flow-validation',
+        doc='RFC 8955 6, hold back a received flow with no matching unicast route; relaxed accepts one with no destination',
+    ),
+    Leaf(
         'enforce-first-as',
         boolean(True),
         field='enforce-first-as',

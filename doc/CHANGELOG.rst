@@ -4,6 +4,11 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Feature: "flow-validation <enable | relaxed>;" on a neighbor validates the flow routes it
+   sends (RFC 8955 6): one without the longest matching unicast route from the same
+   neighbor and originator is held back from the API and the adj-rib-in, and announced to
+   the API when a unicast route makes it valid; "relaxed" accepts flows with no
+   destination. Off by default.
  * Incompatible: a route from an EBGP neighbor whose AS_PATH does not start with the
    neighbor's AS is treated as withdrawn (RFC 8955 6, RFC 4271 6.3). Set
    "enforce-first-as false;" on the neighbor of a route server, which does not prepend.
