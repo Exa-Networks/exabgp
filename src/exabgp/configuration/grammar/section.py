@@ -50,6 +50,10 @@ def fields(built: Any) -> Values:
 class Section(ABC, Generic[T]):
     """What a block stands for. A section keeps no state: what a read shares is in the context."""
 
+    # the Settings dataclass build() makes, when unbuild() prints it field by field: each leaf
+    # of the block names one of its fields
+    builds: ClassVar[type | None] = None
+
     def opened(self, context: ReadContext) -> None:
         """Called when the block opens, before any of its statements."""
 
@@ -80,6 +84,9 @@ KEPT = Kept()
 
 class Store(ABC):
     """Where the value of a statement goes. A store keeps no state either."""
+
+    # the value kept is a list of routes, read by a RouteStatement
+    routes: ClassVar[bool] = False
 
     @abstractmethod
     def keep(self, values: Values, value: Any, context: ReadContext) -> None:

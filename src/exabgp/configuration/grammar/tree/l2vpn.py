@@ -25,7 +25,6 @@ from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.section import Collector, Kept, Pending, Store, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
-    MAX_ROUTE_VALUES,
     ROUTE_VALUES,
     ROUTES,
     RouteValue,
@@ -34,6 +33,7 @@ from exabgp.configuration.grammar.tree.static import (
     value_fields,
 )
 from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI
@@ -117,28 +117,22 @@ def _vpls_route(settings: VPLSSettings, attributes: AttributeCollection, where: 
     return Route(nlri, attributes, nexthop=settings.nexthop)
 
 
-class VPLSLine(Type[list[Route]]):
+class VPLSLine(RouteStatement):
     """`<keyword> <value> ...`: a VPLS route on one line."""
 
     name = 'vpls route'
+    too_many = 'a vpls route holds at most {count} values'
 
     def parse(self, words: Words) -> list[Route]:
         settings = VPLSSettings()
         settings.action = action(words)
         attributes = AttributeCollection()
-        for _ in range(MAX_ROUTE_VALUES):
-            where = words.where()
-            keyword = words.word()
-            if not keyword:
-                return [_vpls_route(settings, attributes, where)]
-            spec = VPLS_VALUES.get(keyword)
-            if spec is None:
-                raise ConfigError(where, f"Unknown command '{keyword}'", expected=sorted(VPLS_VALUES))
+        for _, spec in self.keywords(words, VPLS_VALUES):
             _apply(settings, attributes, spec, spec.type.parse(words))
-        raise ConfigError(words.where(), f'a vpls route holds at most {MAX_ROUTE_VALUES} values')
+        return [_vpls_route(settings, attributes, words.where())]
 
-    def render(self, value: list[Route]) -> list[str]:
-        return [word for route in value for word in vpls_words(route)]
+    def printed(self, route: Route) -> list[str]:
+        return vpls_words(route)
 
     def hint(self) -> str:
         return 'endpoint <n> base <n> offset <n> size <n> rd <rd> next-hop <ip> [...]'

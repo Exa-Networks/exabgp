@@ -21,6 +21,8 @@ from exabgp.configuration.settings import Encoder, OnExit, ProcessSettings
 
 
 class ProcessSection(Section[ProcessSettings]):
+    builds = ProcessSettings
+
     def build(self, name: str, values: Values, context: ReadContext) -> ProcessSettings:
         return ProcessSettings(**values)
 

@@ -8,12 +8,13 @@ uses any more is noticed.
 from __future__ import annotations
 
 import dataclasses
-import typing
-from typing import Any, Iterator
+import inspect
+from typing import Iterator
 
 from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.read import _command_sections
 from exabgp.configuration.grammar.section import Section, Store
+from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.tree.root import ROOT
 
 MAX_DEPTH = 32  # as the engine: sections nest a handful deep
@@ -59,9 +60,9 @@ def test_every_block_runs_a_section_and_every_store_is_a_store() -> None:
 
 def test_every_section_is_used_by_a_block() -> None:
     used = {type(node.section) for node in every_node() if isinstance(node, Block)}
-    # a class the used ones derive from (Kept) is a base, not an implementation left behind
-    bases = {base for each in used for base in each.__mro__}
-    assert {each.__name__ for each in _concrete(Section) - used - bases} == set()
+    # an abstract section (Collector) is a base to derive from, not an implementation left behind
+    implementations = {each for each in _concrete(Section) if not inspect.isabstract(each)}
+    assert {each.__name__ for each in implementations - used} == set()
 
 
 def test_every_store_is_used_by_a_leaf() -> None:
@@ -69,26 +70,20 @@ def test_every_store_is_used_by_a_leaf() -> None:
     assert {each.__name__ for each in _concrete(Store) - used} == set()
 
 
-def _built(section: Section[Any]) -> Any:
-    """What the section builds, from the class it derives: `Section[ProcessSettings]`."""
-    for klass in type(section).__mro__:
-        for base in getattr(klass, '__orig_bases__', ()):
-            if typing.get_origin(base) is Section:
-                return typing.get_args(base)[0]
-    raise AssertionError(f'{type(section).__name__} does not say what it builds')
-
-
 def test_a_settings_block_prints_each_leaf_from_a_field_of_what_it_builds() -> None:
     """The printer takes a leaf's value from the field it names: one missing is never printed."""
-    checked = 0
-    for node in every_node():
-        if not isinstance(node, Block) or type(node.section).unbuild is not Section.unbuild:
-            continue
-        built = _built(node.section)
-        if not (isinstance(built, type) and dataclasses.is_dataclass(built)):
-            continue
+    blocks = [node for node in every_node() if isinstance(node, Block) and node.section.builds is not None]
+    assert blocks, 'no section says what Settings it builds: the test checks nothing'
+    for block in blocks:
+        built = block.section.builds
+        assert dataclasses.is_dataclass(built), f'{block.keyword}: {built} is not a Settings dataclass'
         names = {each.name for each in dataclasses.fields(built)}
-        for leaf in node.leaves():
-            assert leaf.field in names, f'{node.keyword} {leaf.keyword}: {built.__name__} has no {leaf.field}'
-        checked += 1
-    assert checked, 'no block builds a Settings dataclass any more: the test checks nothing'
+        for leaf in block.leaves():
+            assert leaf.field in names, f'{block.keyword} {leaf.keyword}: {built.__name__} has no {leaf.field}'
+
+
+def test_every_statement_keeping_routes_reads_them_with_a_route_statement() -> None:
+    """A leaf whose store keeps routes shares the value loop and the printer of RouteStatement."""
+    leaves = [node for node in every_node() if isinstance(node, Leaf) and node.store is not None and node.store.routes]
+    assert leaves, 'no store keeps routes: the test checks nothing'
+    assert [leaf.keyword for leaf in leaves if not isinstance(leaf.type, RouteStatement)] == []

@@ -49,7 +49,6 @@ from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.section import Collector, Kept, Pending, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
-    MAX_ROUTE_VALUES,
     ROUTE_VALUES,
     ROUTES,
     action,
@@ -57,6 +56,7 @@ from exabgp.configuration.grammar.tree.static import (
 )
 from exabgp.configuration.grammar.types import flow as types
 from exabgp.configuration.grammar.types.base import Printed, Type
+from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
@@ -233,31 +233,26 @@ class FlowRoute:
         return Route(nlri, self.attributes, nexthop=self.nexthop)
 
 
-class FlowLine(Type[list[Route]]):
+class FlowLine(RouteStatement):
     """`<keyword> <value> ...`: a flow route on one line."""
 
     name = 'flow route'
+    unknown = 'flow route: unknown command "{keyword}"'
+    too_many = 'a flow route holds at most {count} values'
 
     def parse(self, words: Words) -> list[Route]:
         built = FlowRoute()
-        for _ in range(MAX_ROUTE_VALUES):
-            where = words.where()
-            keyword = words.word()
-            if not keyword:
-                return [built.route()]
-            spec = LINE.get(keyword)
-            if spec is None:
-                raise ConfigError(where, f'flow route: unknown command "{keyword}"', expected=sorted(LINE))
+        for where, spec in self.keywords(words, LINE):
             value = spec.type.parse(words)
             try:
                 built.apply(spec, value, line=True)
             except ValueError as exc:
                 raise ConfigError(where, str(exc)) from None
-        raise ConfigError(words.where(), f'a flow route holds at most {MAX_ROUTE_VALUES} values')
+        return [built.route()]
 
-    def render(self, value: list[Route]) -> list[str]:
+    def printed(self, route: Route) -> list[str]:
         # a one-line route has no next-hop, and matches what it is given: nothing is possible
-        return [word for route in value for word in announce_flow_words(route)]
+        return announce_flow_words(route)
 
     def hint(self) -> str:
         return '<match> <value> ... <action> <value> ...'
@@ -461,8 +456,10 @@ ANNOUNCE_FLOW: dict[str, FlowValue] = {
 }
 
 
-class AnnounceFlowLine(Type[list[Route]]):
+class AnnounceFlowLine(RouteStatement):
     """`flow|flow-vpn <keyword> <value> ...` of an announce address family."""
+
+    too_many = 'a flow route holds at most {count} values'
 
     def __init__(self, afi: AFI, safi: SAFI) -> None:
         self.afi = afi
@@ -474,19 +471,12 @@ class AnnounceFlowLine(Type[list[Route]]):
         settings.action = action(words)
         settings.afi, settings.safi = self.afi, self.safi
         attributes = AttributeCollection()
-        for _ in range(MAX_ROUTE_VALUES):
-            where = words.where()
-            keyword = words.word()
-            if not keyword:
-                return [Route(Flow.from_settings(settings), attributes, nexthop=settings.nexthop)]
-            spec = ANNOUNCE_FLOW.get(keyword)
-            if spec is None:
-                raise ConfigError(where, f"Unknown command '{keyword}'", expected=sorted(ANNOUNCE_FLOW))
+        for where, spec in self.keywords(words, ANNOUNCE_FLOW):
             try:
                 self._apply(settings, attributes, spec, spec.type.parse(words))
             except ValueError as exc:
                 raise ConfigError(where, str(exc)) from None
-        raise ConfigError(words.where(), f'a flow route holds at most {MAX_ROUTE_VALUES} values')
+        return [Route(Flow.from_settings(settings), attributes, nexthop=settings.nexthop)]
 
     @staticmethod
     def _apply(settings: FlowSettings, attributes: AttributeCollection, spec: FlowValue, value: Any) -> None:
@@ -504,8 +494,8 @@ class AnnounceFlowLine(Type[list[Route]]):
         elif spec.target == 'attribute':
             attributes.add(value)
 
-    def render(self, value: list[Route]) -> list[str]:
-        return [word for route in value for word in announce_flow_words(route)]
+    def printed(self, route: Route) -> list[str]:
+        return announce_flow_words(route)
 
     def hint(self) -> str:
         return '<match> <value> ... <action> <value> ...'

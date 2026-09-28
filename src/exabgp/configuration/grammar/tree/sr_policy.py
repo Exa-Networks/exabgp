@@ -52,7 +52,7 @@ from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
 from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ROUTE_ERRORS, ConfigError
 from exabgp.configuration.grammar.shape import Shape
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
@@ -308,7 +308,7 @@ def sr_policy_route(words: Words, afi: AFI | None) -> Route:
     return Route(nlri, attributes, nexthop=nexthop)
 
 
-class SRPolicyLine(Type[list[Route]]):
+class SRPolicyLine(RouteStatement):
     """`distinguisher <n> color <n> endpoint <ip> next-hop <ip> [<sub-tlv> ...]`."""
 
     def __init__(self, afi: AFI | None) -> None:
@@ -324,8 +324,8 @@ class SRPolicyLine(Type[list[Route]]):
         except ROUTE_ERRORS as exc:
             raise ConfigError(where, str(exc) or 'invalid sr-policy route') from None
 
-    def render(self, value: list[Route]) -> list[str]:
-        return [word for route in value for word in sr_policy_words(route)]
+    def printed(self, route: Route) -> list[str]:
+        return sr_policy_words(route)
 
     def hint(self) -> str:
         return 'distinguisher <n> color <n> endpoint <ip> next-hop <ip> [<sub-tlv> ...]'

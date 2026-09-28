@@ -30,20 +30,19 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.settings import INETSettings
 from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.context import ReadContext
-from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.lexer import lex_command
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.section import Section, Store, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Syntax, Type
+from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPRange
 from exabgp.rib.route import Route
 
 # a route line holds a handful of attributes, each given once or a few times
-MAX_ROUTE_VALUES = 256
 
 
 @dataclass(frozen=True)
@@ -90,8 +89,7 @@ class Collected:
         self.settings = settings
         self.attributes = AttributeCollection()
 
-    def apply(self, keyword: str, value: Any) -> None:
-        spec = ROUTE_VALUES[keyword]
+    def apply(self, spec: RouteValue, value: Any) -> None:
         if spec.target == 'nlri':
             self.settings.set(spec.field, value)
         elif spec.target == 'nexthop':
@@ -100,19 +98,6 @@ class Collected:
             self.attributes.add(attribute)
         else:
             self.attributes.add(value)
-
-
-def read_values(words: Words, collected: Collected, stop: str = '') -> None:
-    """The keyword and value pairs of a route line, applied as they are read; `stop` ends them."""
-    for _ in range(MAX_ROUTE_VALUES):
-        where = words.where()
-        keyword = words.word()
-        if not keyword or keyword == stop:
-            return
-        if keyword not in ROUTE_VALUES:
-            raise ConfigError(where, f'unknown command "{keyword}"', expected=sorted(ROUTE_VALUES))
-        collected.apply(keyword, ROUTE_VALUES[keyword].type.parse(words))
-    raise ConfigError(words.where(), f'a route holds at most {MAX_ROUTE_VALUES} values')
 
 
 def _mentions(words: Words, *keywords: str) -> bool:
@@ -142,10 +127,11 @@ def value_fields(values: Mapping[str, Any]) -> tuple[tuple[str, Shape], ...]:
     return tuple((keyword, value) for keyword, value in fields if value.kind != shape.Kind.REFUSED)
 
 
-class RouteLine(Type[list[Route]]):
+class RouteLine(RouteStatement):
     """`<prefix> <keyword> <value> ...`: one route, or its more specifics when split."""
 
     name = 'route'
+    unknown = 'unknown command "{keyword}"'
 
     def parse(self, words: Words) -> list[Route]:
         prefix = bgp.Prefix().parse(words)
@@ -155,12 +141,13 @@ class RouteLine(Type[list[Route]]):
         settings.action = action(words)
         klass = _nlri_class(words, settings, prefix)
         collected = Collected(settings)
-        read_values(words, collected)
+        for _, spec in self.keywords(words, ROUTE_VALUES):
+            collected.apply(spec, spec.type.parse(words))
         route = Route(klass.from_settings(settings), collected.attributes, nexthop=settings.nexthop)
         return finish([route])
 
-    def render(self, value: list[Route]) -> list[str]:
-        return [word for route in value for word in route_words(route)]
+    def printed(self, route: Route) -> list[str]:
+        return route_words(route)
 
     def hint(self) -> str:
         return '<prefix> next-hop <ip>|self [<attribute> <value> ...]'
@@ -172,10 +159,11 @@ class RouteLine(Type[list[Route]]):
         return shape.container(('prefix', bgp.Prefix().shape()), *value_fields(ROUTE_VALUES))
 
 
-class AttributesLine(Type[list[Route]]):
+class AttributesLine(RouteStatement):
     """`<attribute> <value> ... nlri <prefix> ...`: the same attributes for every prefix."""
 
     name = 'attributes'
+    unknown = 'unknown command "{keyword}"'
 
     def parse(self, words: Words) -> list[Route]:
         statement = [token.word for token in words.context.statement]
@@ -188,7 +176,8 @@ class AttributesLine(Type[list[Route]]):
         settings.action = action(words)
         klass = _nlri_class(words, settings, prefix)
         collected = Collected(settings)
-        read_values(words, collected, stop='nlri')
+        for _, spec in self.keywords(words, ROUTE_VALUES, stop='nlri'):
+            collected.apply(spec, spec.type.parse(words))
         routes = []
         for _ in range(bgp.MAX_LIST_ITEMS):
             if words.at_end():
@@ -202,8 +191,8 @@ class AttributesLine(Type[list[Route]]):
             return [Route(Empty(AFI.ipv4, SAFI.unicast), collected.attributes)]
         return finish(routes)
 
-    def render(self, value: list[Route]) -> list[str]:
-        return [word for route in value for word in attribute_words(route)]
+    def printed(self, route: Route) -> list[str]:
+        return attribute_words(route)
 
     def hint(self) -> str:
         return '<attribute> <value> ... nlri <prefix> ...'
@@ -426,6 +415,8 @@ def finish(routes: list[Route]) -> list[Route]:
 class RoutesStore(Store):
     """The routes of a statement join those not yet taken by a neighbor."""
 
+    routes = True
+
     def keep(self, values: Values, value: list[Route], context: ReadContext) -> None:
         context.routes.extend(value)
 
@@ -473,7 +464,7 @@ class NestedRouteSection(Section[list[Route]]):
         settings.action = Action.ANNOUNCE
         collected = Collected(settings)
         for keyword, value in values.get('_values', []):
-            collected.apply(keyword, value)
+            collected.apply(ROUTE_VALUES[keyword], value)
         klass: type[INET]
         if settings.rd is not None:
             klass, settings.safi = IPVPN, SAFI.mpls_vpn

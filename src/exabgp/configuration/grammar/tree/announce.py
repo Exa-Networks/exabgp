@@ -33,7 +33,6 @@ from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.l2vpn import VPLSLine
 from exabgp.configuration.grammar.tree.sr_policy import SRPolicyLine
 from exabgp.configuration.grammar.tree.static import (
-    MAX_ROUTE_VALUES,
     ROUTE_VALUES,
     ROUTES,
     RouteValue,
@@ -48,6 +47,7 @@ from exabgp.configuration.grammar.tree.static import (
 from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.types.network import ASN_WORD
+from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
@@ -267,8 +267,10 @@ ANNOUNCE_SAFIS: dict[str, AnnounceSafi] = {
 }
 
 
-class AnnounceLine(Type[list[Route]]):
+class AnnounceLine(RouteStatement):
     """`[<prefix>] <keyword> <value> ...` of one family of one address family."""
+
+    too_many = None  # legacy: the values past the bound are not read
 
     def __init__(self, afi: AFI, safi: SAFI, announce_safi: AnnounceSafi) -> None:
         self.afi = afi
@@ -285,14 +287,7 @@ class AnnounceLine(Type[list[Route]]):
             settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask)
             settings.afi, settings.safi = self.afi, self.safi
         attributes = AttributeCollection()
-        for _ in range(MAX_ROUTE_VALUES):
-            where = words.where()
-            keyword = words.word()
-            if not keyword:
-                break
-            spec = self.announce_safi.values.get(keyword)
-            if spec is None:
-                raise ConfigError(where, f"Unknown command '{keyword}'", expected=sorted(self.announce_safi.values))
+        for _, spec in self.keywords(words, self.announce_safi.values):
             _apply(settings, attributes, spec, spec.type.parse(words))
         try:
             nlri = self.announce_safi.nlri.from_settings(settings)
@@ -300,8 +295,8 @@ class AnnounceLine(Type[list[Route]]):
             raise ConfigError(words.where(), str(exc)) from None
         return [Route(nlri, attributes, nexthop=settings.nexthop)]
 
-    def render(self, value: list[Route]) -> list[str]:
-        return [word for route in value for word in announce_words(route)]
+    def printed(self, route: Route) -> list[str]:
+        return announce_words(route)
 
     def hint(self) -> str:
         return '<prefix> next-hop <ip>|self [<attribute> <value> ...]' if self.announce_safi.prefix else '...'
@@ -333,6 +328,8 @@ def _apply(settings: Any, attributes: AttributeCollection, spec: RouteValue, val
 
 class AnnouncedStore(Store):
     """The routes of an address family, kept by its block until it closes."""
+
+    routes = True
 
     def keep(self, values: Values, value: list[Route], context: ReadContext) -> None:
         values.setdefault(ANNOUNCED, []).extend(value)

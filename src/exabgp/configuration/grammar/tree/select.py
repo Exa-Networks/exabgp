@@ -28,13 +28,13 @@ from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ROUTE_ERRORS, ConfigError
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
-    MAX_ROUTE_VALUES,
     ROUTE_VALUES,
     RouteValue,
     attribute_words,
     value_fields,
 )
 from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPSelf, IPv4, IPv6
@@ -262,7 +262,7 @@ def mup_values() -> dict[str, RouteValue]:
     }
 
 
-class SelectLine(Type[list[Route]]):
+class SelectLine(RouteStatement):
     """`<type> <fields of the type> [<keyword> <value> ...]`."""
 
     def __init__(
@@ -288,16 +288,9 @@ class SelectLine(Type[list[Route]]):
         except ROUTE_ERRORS as exc:
             raise ConfigError(where, str(exc) or f'invalid {kind} route') from None
         route = Route(nlri, AttributeCollection(), nexthop=IP.NoNextHop)
-        for _ in range(MAX_ROUTE_VALUES):
-            where = words.where()
-            keyword = words.word()
-            if not keyword:
-                return [route]
-            spec = self.values.get(keyword)
-            if spec is None:
-                raise ConfigError(where, f"Unknown command '{keyword}'", expected=sorted(self.values))
+        for _, spec in self.keywords(words, self.values):
             route = self._apply(route, spec, spec.type.parse(words))
-        raise ConfigError(words.where(), f'a route holds at most {MAX_ROUTE_VALUES} values')
+        return [route]
 
     def _apply(self, route: Route, spec: RouteValue, value: Any) -> Route:
         if spec.target != 'nexthop':
@@ -311,8 +304,8 @@ class SelectLine(Type[list[Route]]):
             route.attributes.add(attribute)
         return route
 
-    def render(self, value: list[Route]) -> list[str]:
-        return [word for route in value for word in select_words(route.nlri) + attribute_words(route)]
+    def printed(self, route: Route) -> list[str]:
+        return select_words(route.nlri) + attribute_words(route)
 
     def hint(self) -> str:
         return '|'.join(self.types) + ' ...'
