@@ -2,19 +2,16 @@
 # encoding: utf-8
 """test_operational_nop.py
 
-Comprehensive tests for BGP OPERATIONAL and NOP messages
+Comprehensive tests for BGP OPERATIONAL messages
 
 OPERATIONAL: Vendor-specific operational messages (not officially standardized)
-NOP: Internal-only message type (cannot be sent on wire)
 
 Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-import pytest
 import struct
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.scheduling import NOP
 from exabgp.bgp.message.operational import (
     Operational,
     Advisory,
@@ -26,207 +23,6 @@ from exabgp.bgp.message.operational import (
 )
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.protocol.family import AFI, SAFI
-
-
-# ==============================================================================
-# Part 1: NOP Message Tests
-# ==============================================================================
-
-
-def test_nop_creation() -> None:
-    """Test NOP message creation.
-
-    NOP is an internal message type used for control flow.
-    """
-    nop = NOP()
-    assert str(nop) == 'NOP'
-    assert nop.ID == Message.CODE.NOP
-
-
-def test_nop_message_id() -> None:
-    """Test NOP message ID is correct (0xFC = 252)."""
-    assert NOP.ID == 0xFC
-    assert NOP.ID == Message.CODE.NOP
-
-
-def test_nop_message_type_bytes() -> None:
-    """Test NOP TYPE byte representation."""
-    assert NOP.TYPE == bytes([0xFC])
-
-
-def test_nop_cannot_be_encoded() -> None:
-    """Test that NOP messages cannot be encoded for transmission.
-
-    NOP is an internal message only and should raise RuntimeError
-    if you try to get its wire format.
-    """
-    nop = NOP()
-
-    with pytest.raises(RuntimeError) as exc_info:
-        nop.pack_message(None)
-
-    assert 'NOP messages can not be sent on the wire' in str(exc_info.value)
-
-
-def test_nop_cannot_be_encoded_with_negotiated() -> None:
-    """Test that NOP encoding fails even with negotiated parameters."""
-    nop = NOP()
-    negotiated = {'test': 'value'}
-
-    with pytest.raises(RuntimeError):
-        nop.pack_message(negotiated)
-
-
-def test_nop_unpack() -> None:
-    """Test unpacking NOP message.
-
-    Since NOP is internal, unpacking just returns a NOP instance.
-    """
-    data = b''
-    nop = NOP.unpack_message(data, {})
-
-    assert isinstance(nop, NOP)
-
-
-def test_nop_unpack_with_data() -> None:
-    """Test unpacking NOP message with arbitrary data.
-
-    NOP unpacking ignores any data provided.
-    """
-    data = b'\x01\x02\x03\x04'
-    nop = NOP.unpack_message(data, {})
-
-    assert isinstance(nop, NOP)
-
-
-def test_nop_singleton_instance() -> None:
-    """Test that NOP module provides a singleton instance."""
-    from exabgp.bgp.message.scheduling import _NOP
-
-    assert isinstance(_NOP, NOP)
-
-
-def test_nop_string_representation() -> None:
-    """Test NOP string representation."""
-    nop = NOP()
-    assert str(nop) == 'NOP'
-
-
-def test_nop_scheduling_attribute() -> None:
-    """Test NOP has SCHEDULING = LATER for reactor scheduling."""
-    from exabgp.bgp.message.scheduling import Scheduling
-
-    nop = NOP()
-    assert nop.SCHEDULING == Scheduling.LATER
-
-
-# ==============================================================================
-# Part 1.5: AWAKE and DONE Message Tests
-# ==============================================================================
-
-
-def test_awake_creation() -> None:
-    """Test AWAKE message creation."""
-    from exabgp.bgp.message.scheduling import AWAKE
-
-    awake = AWAKE()
-    assert str(awake) == 'AWAKE'
-    assert awake.ID == Message.CODE.AWAKE
-
-
-def test_awake_message_id() -> None:
-    """Test AWAKE message ID is correct (0xFE = 254)."""
-    from exabgp.bgp.message.scheduling import AWAKE
-
-    assert AWAKE.ID == 0xFE
-    assert AWAKE.ID == Message.CODE.AWAKE
-
-
-def test_awake_scheduling_attribute() -> None:
-    """Test AWAKE has SCHEDULING = NOW for immediate reactor scheduling."""
-    from exabgp.bgp.message.scheduling import AWAKE, Scheduling
-
-    awake = AWAKE()
-    assert awake.SCHEDULING == Scheduling.NOW
-
-
-def test_awake_cannot_be_encoded() -> None:
-    """Test that AWAKE messages cannot be encoded for transmission."""
-    from exabgp.bgp.message.scheduling import AWAKE
-
-    awake = AWAKE()
-    with pytest.raises(RuntimeError) as exc_info:
-        awake.pack_message(None)
-    assert 'AWAKE messages can not be sent on the wire' in str(exc_info.value)
-
-
-def test_awake_singleton_instance() -> None:
-    """Test that AWAKE module provides a singleton instance."""
-    from exabgp.bgp.message.scheduling import AWAKE, _AWAKE
-
-    assert isinstance(_AWAKE, AWAKE)
-
-
-def test_done_creation() -> None:
-    """Test DONE message creation."""
-    from exabgp.bgp.message.scheduling import DONE
-
-    done = DONE()
-    assert str(done) == 'DONE'
-    assert done.ID == Message.CODE.DONE
-
-
-def test_done_message_id() -> None:
-    """Test DONE message ID is correct (0xFD = 253)."""
-    from exabgp.bgp.message.scheduling import DONE
-
-    assert DONE.ID == 0xFD
-    assert DONE.ID == Message.CODE.DONE
-
-
-def test_done_scheduling_attribute() -> None:
-    """Test DONE has SCHEDULING = CLOSE for peer removal."""
-    from exabgp.bgp.message.scheduling import DONE, Scheduling
-
-    done = DONE()
-    assert done.SCHEDULING == Scheduling.CLOSE
-
-
-def test_done_cannot_be_encoded() -> None:
-    """Test that DONE messages cannot be encoded for transmission."""
-    from exabgp.bgp.message.scheduling import DONE
-
-    done = DONE()
-    with pytest.raises(RuntimeError) as exc_info:
-        done.pack_message(None)
-    assert 'DONE messages can not be sent on the wire' in str(exc_info.value)
-
-
-def test_done_singleton_instance() -> None:
-    """Test that DONE module provides a singleton instance."""
-    from exabgp.bgp.message.scheduling import DONE, _DONE
-
-    assert isinstance(_DONE, DONE)
-
-
-def test_scheduling_enum_values() -> None:
-    """Test Scheduling enum has correct values."""
-    from exabgp.bgp.message.scheduling import Scheduling
-
-    # Values are: MESSAGE=0, NOW=1, LATER=2, CLOSE=3
-    assert Scheduling.MESSAGE == 0x00
-    assert Scheduling.NOW == 0x01
-    assert Scheduling.LATER == 0x02
-    assert Scheduling.CLOSE == 0x03
-
-
-def test_scheduling_enum_string_format() -> None:
-    """Test Scheduling enum string formatting."""
-    from exabgp.bgp.message.scheduling import Scheduling
-
-    assert str(Scheduling.LATER) == 'later'
-    assert str(Scheduling.NOW) == 'now'
-    assert str(Scheduling.CLOSE) == 'close'
 
 
 # ==============================================================================
@@ -749,15 +545,6 @@ def test_ns_error_subcodes() -> None:
 # ==============================================================================
 # Summary
 # ==============================================================================
-# Total tests: 60
-#
-# NOP Message Tests (10 tests):
-# - Creation and basic properties
-# - Message ID and type verification
-# - Encoding restrictions (cannot be sent on wire)
-# - Unpacking behavior
-# - String representation
-#
 # OPERATIONAL Message Tests (50 tests):
 # - Message constants and registration (5 tests)
 # - Advisory messages - ADM/ASM (8 tests)
@@ -768,7 +555,6 @@ def test_ns_error_subcodes() -> None:
 # - NS error messages (8 tests)
 #
 # This test suite ensures:
-# - NOP is internal-only and cannot be transmitted
 # - OPERATIONAL messages are properly structured
 # - Advisory, Query, and Response message types work correctly
 # - Message encoding/decoding for operational messages

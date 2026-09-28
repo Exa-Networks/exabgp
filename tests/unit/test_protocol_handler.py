@@ -346,9 +346,9 @@ async def test_protocol_read_message_keepalive(mock_peer: Any) -> None:
 
 @pytest.mark.asyncio
 async def test_protocol_read_message_nop(mock_peer: Any) -> None:
-    """Test reading when no data is available (NOP)."""
+    """Test reading when no data is available."""
     from exabgp.reactor.protocol import Protocol
-    from exabgp.bgp.message import Message, NOP
+    from exabgp.bgp.message import Message
 
     protocol = Protocol(mock_peer)
 
@@ -359,7 +359,7 @@ async def test_protocol_read_message_nop(mock_peer: Any) -> None:
 
     message = await protocol.read_message()
 
-    assert message.TYPE == NOP.TYPE
+    assert message is None
 
 
 @pytest.mark.asyncio
@@ -993,7 +993,6 @@ async def test_protocol_new_update(mock_peer: Any) -> None:
 async def test_protocol_new_update_no_updates(mock_peer: Any) -> None:
     """Test new_update() with empty RIB."""
     from exabgp.reactor.protocol import Protocol
-    from exabgp.bgp.message import UpdateCollection
 
     protocol = Protocol(mock_peer)
 
@@ -1009,8 +1008,8 @@ async def test_protocol_new_update_no_updates(mock_peer: Any) -> None:
 
     result = await protocol.new_update(include_withdraw=False)
 
-    # Should still return _UPDATE at the end
-    assert result.TYPE == UpdateCollection.TYPE
+    # nothing was queued, so nothing was sent
+    assert result == 0
 
 
 # ==============================================================================
@@ -1320,10 +1319,9 @@ async def test_protocol_read_open_success(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     # Mock reading OPEN message
-    mock_open = Mock()
+    mock_open = Mock(spec=Open)
     mock_open.TYPE = Open.TYPE
     mock_open.ID = Message.CODE.OPEN
-    mock_open.SCHEDULING = 0  # Real message
     mock_open.__str__ = Mock(return_value='OPEN')
 
     mock_connection = Mock()
@@ -1338,28 +1336,23 @@ async def test_protocol_read_open_success(mock_peer: Any) -> None:
 
 @pytest.mark.asyncio
 async def test_protocol_read_open_with_nop(mock_peer: Any) -> None:
-    """Test read_open() skips NOP messages."""
+    """Test read_open() skips a read which returned nothing."""
     from exabgp.reactor.protocol import Protocol
-    from exabgp.bgp.message import Message, Open, NOP, Scheduling
+    from exabgp.bgp.message import Message, Open
 
     protocol = Protocol(mock_peer)
 
-    mock_nop = Mock()
-    mock_nop.TYPE = NOP.TYPE
-    mock_nop.SCHEDULING = Scheduling.LATER  # NOP has SCHEDULING = LATER
-
-    mock_open = Mock()
+    mock_open = Mock(spec=Open)
     mock_open.TYPE = Open.TYPE
     mock_open.ID = Message.CODE.OPEN
-    mock_open.SCHEDULING = 0  # Real messages have SCHEDULING = 0 (INVALID/falsy)
     mock_open.__str__ = Mock(return_value='OPEN')
 
     mock_connection = Mock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    # Return NOP then OPEN
-    with patch.object(protocol, 'read_message', new=AsyncMock(side_effect=[mock_nop, mock_open])):
+    # Nothing read, then OPEN
+    with patch.object(protocol, 'read_message', new=AsyncMock(side_effect=[None, mock_open])):
         result = await protocol.read_open('192.0.2.1')
 
         assert result.TYPE == Open.TYPE
@@ -1378,9 +1371,7 @@ async def test_protocol_read_keepalive_success(mock_peer: Any) -> None:
 
     protocol = Protocol(mock_peer)
 
-    mock_keepalive = Mock()
-    mock_keepalive.TYPE = KeepAlive.TYPE
-    mock_keepalive.SCHEDULING = 0  # Real message
+    mock_keepalive = KeepAlive.make_keepalive()
 
     mock_connection = Mock()
     mock_connection.session = Mock(return_value='test-session')
@@ -1394,26 +1385,19 @@ async def test_protocol_read_keepalive_success(mock_peer: Any) -> None:
 
 @pytest.mark.asyncio
 async def test_protocol_read_keepalive_with_nop(mock_peer: Any) -> None:
-    """Test read_keepalive() skips NOP messages."""
+    """Test read_keepalive() skips a read which returned nothing."""
     from exabgp.reactor.protocol import Protocol
-    from exabgp.bgp.message import NOP, Scheduling
     from exabgp.bgp.message.keepalive import KeepAlive
 
     protocol = Protocol(mock_peer)
 
-    mock_nop = Mock()
-    mock_nop.TYPE = NOP.TYPE
-    mock_nop.SCHEDULING = Scheduling.LATER  # NOP has SCHEDULING = LATER
-
-    mock_keepalive = Mock()
-    mock_keepalive.TYPE = KeepAlive.TYPE
-    mock_keepalive.SCHEDULING = 0  # Real messages have SCHEDULING = 0 (INVALID/falsy)
+    mock_keepalive = KeepAlive.make_keepalive()
 
     mock_connection = Mock()
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    with patch.object(protocol, 'read_message', new=AsyncMock(side_effect=[mock_nop, mock_keepalive])):
+    with patch.object(protocol, 'read_message', new=AsyncMock(side_effect=[None, mock_keepalive])):
         result = await protocol.read_keepalive()
 
         assert result.TYPE == KeepAlive.TYPE

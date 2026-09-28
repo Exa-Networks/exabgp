@@ -13,8 +13,10 @@ reactor's catch-all turned into
 naming the wrong error, and calling a type 252 message an update.  RFC 4271 6.1 is
 explicit: an unrecognised Type field is Bad Message Type, subcode 3.
 
-252 is the one a peer reaches today.  It is listed in Message.CODE.MESSAGES, so
-reactor/protocol.py's membership check lets it through, and no class registers it.
+252 was the one a peer could reach: it was the internal NOP of the reactor, listed in
+Message.CODE.MESSAGES, so reactor/protocol.py's membership check let it through, and no
+class registered it.  The reactor's signals are no longer message codes, so MESSAGES now
+lists exactly the types which have a decoder, and 252 is refused by that check.
 """
 
 from __future__ import annotations
@@ -43,14 +45,13 @@ def test_an_unregistered_message_type_is_a_bad_message_type(code: int) -> None:
     assert str(code) in str(caught.value), 'the notification does not say which type was refused'
 
 
-def test_the_type_a_peer_actually_reaches_is_covered() -> None:
-    """252 is in MESSAGES and registered by nobody, which is what makes it reachable.
+def test_the_types_the_reactor_accepts_are_the_types_with_a_decoder() -> None:
+    """MESSAGES is what reactor/protocol.py lets through, so it must not name a code no class decodes.
 
-    If a later change registers it, or drops it from MESSAGES, this test says so rather
-    than quietly covering a code no peer can send.
+    252 was the reactor's internal NOP and was listed here, which is what made it reachable.
     """
-    assert NOP in [int(code) for code in Message.CODE.MESSAGES], 'reactor/protocol.py would refuse 252 earlier'
-    assert NOP not in Message.registered_message, '252 now has a decoder, so this file pins the wrong code'
+    assert sorted(int(code) for code in Message.CODE.MESSAGES) == sorted(Message.registered_message)
+    assert NOP not in [int(code) for code in Message.CODE.MESSAGES]
 
 
 @pytest.mark.parametrize('code', [1, 2, 3, 4], ids=['open', 'update', 'notification', 'keepalive'])

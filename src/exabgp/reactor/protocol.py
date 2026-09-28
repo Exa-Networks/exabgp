@@ -20,15 +20,13 @@ if TYPE_CHECKING:
 # ================================================================ Registration
 #
 
-from exabgp.bgp.message import _NOP, EOR, KeepAlive, Message, Notification, Notify, Open, Operational, Update
+from exabgp.bgp.message import EOR, KeepAlive, Message, Notification, Notify, Open, Operational, Update
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import ASN, RouterID, Version
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotiated
-from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message.update import UpdateCollection
-from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
+from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.logger import lazymsg, log
 
 # from exabgp.reactor.network.error import NotifyError
@@ -43,9 +41,6 @@ MAX_BACKLOG = 15000
 # because the header is read before any decoder sees the message.
 MESSAGE_HEADER_ERROR = 1
 BAD_MESSAGE_TYPE = 3
-
-_UPDATE = UpdateCollection([], [], AttributeCollection())
-_OPERATIONAL = Operational(0x00)
 
 
 class Protocol:
@@ -65,10 +60,6 @@ class Protocol:
             self.port = int(os.environ['exabgp_tcp_port'])
         else:
             self.port = 179
-
-        from exabgp.environment import getenv
-
-        self.log_routes: bool = peer.neighbor.adj_rib_in or getenv().log.routes
 
     def fd(self) -> int:
         if self.connection is None:
@@ -220,8 +211,8 @@ class Protocol:
 
     # Read from network .......................................................
 
-    async def read_message(self) -> Message:
-        """Read BGP message using async I/O."""
+    async def read_message(self) -> Message | None:
+        """Read one BGP message using async I/O, or None when there is nothing to process."""
         assert self.connection is not None
         packets = self._api['receive-packets']
         consolidate = self._api['receive-consolidate']
@@ -262,7 +253,7 @@ class Protocol:
             raise Notify(MESSAGE_HEADER_ERROR, BAD_MESSAGE_TYPE, f'type {msg_id}', data=bytes([msg_id]))
 
         if not length:
-            return _NOP
+            return None
 
         current_msg_id = msg_id
         log.debug(
@@ -278,14 +269,6 @@ class Protocol:
             self.peer.reactor.processes.packets(
                 self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self.negotiated
             )
-
-        if msg_id == Message.CODE.UPDATE:
-            if (
-                self.negotiated.role == RoleValue.NO_ROLE
-                and not self.neighbor.adj_rib_in
-                and not (for_api or self.log_routes or parsed or consolidate)
-            ):
-                return _UPDATE
 
         try:
             message = Message.unpack(msg_id, body, self.negotiated)
@@ -315,9 +298,8 @@ class Protocol:
             raise cast(Notification, message)
 
         if isinstance(message, Update) and Attribute.CODE.INTERNAL_DISCARD in message.data.attributes:
-            return _NOP
-        else:
-            return message
+            return None
+        return message
 
     def validate_open(self) -> None:
         error: tuple[int, int, str] | None = self.negotiated.validate(self.neighbor)
@@ -352,26 +334,26 @@ class Protocol:
         """Read OPEN message using async I/O."""
         while True:
             received_open = await self.read_message()
-            if not received_open.SCHEDULING:  # Real message (not NOP)
+            if received_open is not None:
                 break
 
-        if received_open.TYPE != Open.TYPE:
+        if not isinstance(received_open, Open):
             raise Notify(5, 1, f'{received_open} where the OPEN was expected')
 
         log.debug(lazymsg('open.received message={m}', m=received_open), self._session())
-        return cast(Open, received_open)
+        return received_open
 
     async def read_keepalive(self) -> KeepAlive:
         """Read KEEPALIVE message using async I/O."""
         while True:
             message = await self.read_message()
-            if not message.SCHEDULING:  # Real message (not NOP)
+            if message is not None:
                 break
 
-        if message.TYPE != KeepAlive.TYPE:
+        if not isinstance(message, KeepAlive):
             raise Notify(5, 2)
 
-        return cast(KeepAlive, message)
+        return message
 
     #
     # Sending message to peer
@@ -463,8 +445,8 @@ class Protocol:
             log.debug(lazymsg('update.sent count={n}', n=final_number), self._session())
         log.debug(lazymsg('update.generator.completed count={count}', count=number), self._session())
 
-    async def new_update(self, include_withdraw: bool) -> UpdateCollection:
-        """Send BGP UPDATE messages (runs to completion)."""
+    async def new_update(self, include_withdraw: bool) -> int:
+        """Send BGP UPDATE messages (runs to completion), and say how many were sent."""
         assert self.connection is not None
         log.debug(lazymsg('update.started'), self._session())
         updates = self.neighbor.rib.outgoing.updates(
@@ -490,7 +472,7 @@ class Protocol:
         if number:
             log.debug(lazymsg('update.sent count={n}', n=number), self._session())
         log.debug(lazymsg('update.completed count={count}', count=number), self._session())
-        return _UPDATE
+        return number
 
     async def new_eor(self, afi: AFI, safi: SAFI) -> EOR:
         """Send BGP End-of-RIB marker."""
@@ -500,7 +482,7 @@ class Protocol:
         log.debug(lazymsg('eor.sent afi={a} safi={s}', a=afi, s=safi), self._session())
         return eor
 
-    async def new_eors(self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined) -> UpdateCollection:
+    async def new_eors(self, afi: AFI = AFI.undefined, safi: SAFI = SAFI.undefined) -> None:
         """Send End-of-RIB markers for all families."""
         if self.negotiated.families:
             families = self.negotiated.families if (afi, safi) == (AFI.undefined, SAFI.undefined) else [(afi, safi)]
@@ -509,7 +491,6 @@ class Protocol:
         else:
             # If not sending EOR, send keepalive
             await self.new_keepalive('EOR')
-        return _UPDATE
 
     async def new_operational(self, operational: Operational, negotiated: Negotiated) -> Operational:
         """Send BGP OPERATIONAL message."""

@@ -62,10 +62,6 @@ NOT_A_ROUTE_VALUE = {
     'States.EXIT',
     'States.UP',
     'Listener.STOPPED',
-    'Scheduling.NOW',
-    'Scheduling.LATER',
-    'Scheduling.CLOSE',
-    'Scheduling.MESSAGE',
     # `type(x) is Y.__repr__` and similar, which are not singleton comparisons at all
     'ExtendedCommunityBase.__repr__',
 }
@@ -76,8 +72,10 @@ NOT_A_ROUTE_VALUE = {
 SOURCE_ROOT = pathlib.Path(__file__).resolve().parents[2] / 'src' / 'exabgp'
 
 MIN_SINGLETONS_COMPARED = 8
-# a ratchet on the WALK, not on the list: raise it, never lower it to make a red run green
-MIN_COMPARISONS_FOUND = 18
+# a ratchet on the WALK, not on the list: raise it, never lower it to make a red run green.
+# Lowered once, from 18, when the four Scheduling comparisons left with the class they
+# compared (plan/wip-message-interface.md): the walk still found every one that remained.
+MIN_COMPARISONS_FOUND = 16
 
 
 def compared_by_identity() -> set[str]:

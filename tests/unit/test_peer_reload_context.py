@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from exabgp.bgp.fsm import FSM
-from exabgp.bgp.message import _NOP, Update, UpdateCollection
+from exabgp.bgp.message import Update, UpdateCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.configuration.check import _negotiated
 from exabgp.configuration.configuration import Configuration
@@ -51,13 +51,15 @@ async def test_established_reload_sends_received_routes_to_current_rib(monkeypat
     peer.proto.connection = Mock()
     peer.recv_timer = Mock()
     peer.fsm.change(FSM.ESTABLISHED)
-    messages = iter([_NOP, update])
+    # a first read which returns nothing, during which the configuration is reloaded
+    messages = iter([None, update])
+    exhausted = object()
 
     async def read_message():
-        message = next(messages, None)
-        if message is None:
+        message = next(messages, exhausted)
+        if message is exhausted:
             raise EOFError
-        if message is _NOP:
+        if message is None:
             after.previous = before
             peer.reconfigure(after)
         return message

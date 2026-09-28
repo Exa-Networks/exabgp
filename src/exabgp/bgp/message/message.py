@@ -23,15 +23,9 @@ class _MessageCode(int):
     KEEPALIVE: ClassVar[int] = 0x04  # .     4
     ROUTE_REFRESH: ClassVar[int] = 0x05  # . 5
     OPERATIONAL: ClassVar[int] = 0x06  # .   6  # Not IANA assigned yet
-    NOP: ClassVar[int] = 0xFC  # .           252 - internal - no data yet
-    DONE: ClassVar[int] = 0xFD  # .          253 - internal - peer finished
-    AWAKE: ClassVar[int] = 0xFE  # .         254 - internal - immediate action
 
     names: ClassVar[dict[int | None, str]] = {
         None: 'INVALID',
-        NOP: 'NOP',
-        AWAKE: 'AWAKE',
-        DONE: 'DONE',
         OPEN: 'OPEN',
         UPDATE: 'UPDATE',
         NOTIFICATION: 'NOTIFICATION',
@@ -42,9 +36,6 @@ class _MessageCode(int):
 
     short_names: ClassVar[dict[int | None, str]] = {
         None: 'invalid',
-        NOP: 'nop',
-        AWAKE: 'awake',
-        DONE: 'done',
         OPEN: 'open',
         UPDATE: 'update',
         NOTIFICATION: 'notification',
@@ -55,9 +46,6 @@ class _MessageCode(int):
 
     long_names: ClassVar[dict[int | None, str]] = {
         None: 'invalid',
-        NOP: 'nop',
-        AWAKE: 'awake',
-        DONE: 'done',
         OPEN: 'open',
         UPDATE: 'update',
         NOTIFICATION: 'notification',
@@ -122,23 +110,15 @@ class Message:
     TYPE: ClassVar[bytes]
     ID: ClassVar[int]
 
-    # Reactor scheduling - 0 (MESSAGE) for real BGP messages
-    # Scheduling messages (NOP, AWAKE, DONE) set this to Scheduling.LATER/NOW/CLOSE
-    SCHEDULING: int = 0  # Scheduling.MESSAGE
-
     class CODE:
-        NOP: ClassVar[_MessageCode] = _MessageCode(_MessageCode.NOP)
         OPEN: ClassVar[_MessageCode] = _MessageCode(_MessageCode.OPEN)
         UPDATE: ClassVar[_MessageCode] = _MessageCode(_MessageCode.UPDATE)
         NOTIFICATION: ClassVar[_MessageCode] = _MessageCode(_MessageCode.NOTIFICATION)
         KEEPALIVE: ClassVar[_MessageCode] = _MessageCode(_MessageCode.KEEPALIVE)
         ROUTE_REFRESH: ClassVar[_MessageCode] = _MessageCode(_MessageCode.ROUTE_REFRESH)
         OPERATIONAL: ClassVar[_MessageCode] = _MessageCode(_MessageCode.OPERATIONAL)
-        DONE: ClassVar[_MessageCode] = _MessageCode(_MessageCode.DONE)
-        AWAKE: ClassVar[_MessageCode] = _MessageCode(_MessageCode.AWAKE)
 
         MESSAGES: ClassVar[list[_MessageCode]] = [
-            NOP,
             OPEN,
             UPDATE,
             NOTIFICATION,
@@ -230,10 +210,3 @@ class Message:
         from exabgp.bgp.message.notification import Notify
 
         raise Notify(1, 3, f'type {message}', data=bytes([message]))
-
-    @classmethod
-    def code_from_name(cls, name: str) -> _MessageCode:
-        for message in cls.CODE.MESSAGES:
-            if name == str(message) or name == message.short():
-                return message
-        return cls.CODE.NOP

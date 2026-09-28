@@ -13,9 +13,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.scheduling import Scheduling
-from exabgp.bgp.message.scheduling import NOP, AWAKE, DONE
-from exabgp.bgp.message.scheduling import _NOP, _AWAKE, _DONE
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.open import Open
@@ -28,13 +25,6 @@ from exabgp.bgp.message.operational import Operational
 
 __all__ = [
     'Action',
-    'Scheduling',
-    'NOP',
-    'AWAKE',
-    'DONE',
-    '_NOP',
-    '_AWAKE',
-    '_DONE',
     'Message',
     'Open',
     'Update',

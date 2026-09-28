@@ -247,7 +247,6 @@ async def test_receive_classifies_without_api_or_cache_and_live_meta_setting_onl
     wire = next(collection.messages(negotiated))
     proto = Protocol(Peer(neighbor, Mock()))
     proto.negotiated = negotiated
-    proto.log_routes = False
     proto.connection = Mock(
         reader_async=AsyncMock(return_value=(len(wire), Message.CODE.UPDATE, wire[:19], wire[19:], None))
     )
