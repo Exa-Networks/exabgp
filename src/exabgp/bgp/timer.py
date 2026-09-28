@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 from exabgp.logger import log, lazymsg
 from exabgp.bgp.message import Message
-from exabgp.bgp.message import KeepAlive
 from exabgp.bgp.message import Notify
 
 # ================================================================ ReceiveTimer
@@ -41,7 +40,7 @@ class ReceiveTimer:
     # `message` is None when nothing was read: only a message received restarts the timer
     def check_ka_timer(self, message: Message | None = None) -> bool:
         if self.holdtime == 0:
-            return not isinstance(message, KeepAlive)
+            return message is None or message.ID != Message.CODE.KEEPALIVE
         now = int(time.time())
         if message is not None:
             self.last_read = now

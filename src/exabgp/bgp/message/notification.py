@@ -32,7 +32,6 @@ from exabgp.util import hexbytes, hexstring
 @Message.register
 class Notification(Message, Exception):
     ID: ClassVar[int] = Message.CODE.NOTIFICATION
-    TYPE: ClassVar[bytes] = bytes([Message.CODE.NOTIFICATION])
 
     # RFC 9003 - Shutdown Communication, carried by these two Cease subcodes only
     SHUTDOWN_SUBCODES: ClassVar[tuple[tuple[int, int], ...]] = ((6, 2), (6, 4))
@@ -114,16 +113,19 @@ class Notification(Message, Exception):
         (9, 0): 'Unspecific',
     }
 
-    HEADER_SIZE: ClassVar[int] = 2  # RFC 4271 4.5: an error code and an error subcode
+    FIXED_SIZE: ClassVar[int] = 2  # RFC 4271 4.5: an error code and an error subcode
 
     def __init__(self, packed: Buffer) -> None:
         # this guards our own construction, not the wire: unpack_message pads a short body
         # rather than letting a peer reach it, because a raw exception here is answered
         # with a NOTIFICATION and RFC 4271 6.5 forbids that
-        if len(packed) < self.HEADER_SIZE:
-            raise ValueError(f'Notification requires at least {self.HEADER_SIZE} bytes, got {len(packed)}')
+        if len(packed) < self.FIXED_SIZE:
+            raise ValueError(f'Notification requires at least {self.FIXED_SIZE} bytes, got {len(packed)}')
         Exception.__init__(self)
         self._packed = packed
+
+    def pack_body(self, negotiated: Negotiated) -> Buffer:
+        return self._packed
 
     @classmethod
     def is_assigned(cls, code: int, subcode: int) -> bool:
@@ -208,8 +210,8 @@ class Notification(Message, Exception):
         hold a code renders as "unknown error / unknow reason", which is accurate: the peer
         did not say.
         """
-        if len(data) < cls.HEADER_SIZE:
-            return cls(bytes(cls.HEADER_SIZE))
+        if len(data) < cls.FIXED_SIZE:
+            return cls(bytes(cls.FIXED_SIZE))
         return cls(data)
 
 
@@ -234,7 +236,7 @@ class Notify(Notification):
 
     # RFC 4271 4.1: a message is at most 4096 octets, header 19, code and subcode 2.  An
     # attribute with an extended length can be larger than that, and is cut to fit
-    DATA_MAX_OCTETS: ClassVar[int] = 4096 - Message.HEADER_LEN - Notification.HEADER_SIZE
+    DATA_MAX_OCTETS: ClassVar[int] = Message.STANDARD_MAX - Message.HEADER_LEN - Notification.FIXED_SIZE
 
     def __init__(self, code: int, subcode: int, detail: str = '', *, data: Buffer | None = None) -> None:
         self.detail = detail
@@ -274,9 +276,6 @@ class Notify(Notification):
         # Subcode 0 is "Unspecific" (RFC 4271 4.5): it names nothing the code does not
         names = code_name if self.subcode == 0 else f'{code_name} / {subcode_name}'
         return f'{names}: {self.detail}' if self.detail else names
-
-    def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(self._packed)
 
     @property
     def data(self) -> bytes:

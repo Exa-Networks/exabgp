@@ -102,11 +102,12 @@ def test_update_wire_pack_message() -> None:
     """Test UpdateWire.pack_message() generates complete BGP message."""
     from exabgp.bgp.message.update import UpdateWire
     from exabgp.bgp.message.message import Message
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
     payload = b'\x00\x00\x00\x00'
     update = UpdateWire(payload)
 
-    msg_bytes = update.pack_message()
+    msg_bytes = update.pack_message(Negotiated.UNSET)
 
     # Should have 16-byte marker + 2-byte length + 1-byte type + payload
     assert msg_bytes[:16] == Message.MARKER

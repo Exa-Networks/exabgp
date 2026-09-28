@@ -679,7 +679,7 @@ def encode_api_command(
                 return None
 
             # Create EOR message and pack it
-            eor = EOR(afi, safi)
+            eor = EOR.make_eor(afi, safi)
             # EOR doesn't need negotiated, but pack_message requires it
             # Create a minimal negotiated context
             from exabgp.bgp.message.open.capability.negotiated import Negotiated

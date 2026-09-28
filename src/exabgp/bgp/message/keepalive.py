@@ -26,7 +26,8 @@ from exabgp.bgp.message.notification import Notify
 @Message.register
 class KeepAlive(Message):
     ID = Message.CODE.KEEPALIVE
-    TYPE = bytes([Message.CODE.KEEPALIVE])
+    # RFC 4271 4.4: a KEEPALIVE is the header alone
+    LENGTH_MAX = Message.HEADER_LEN
 
     def __init__(self, packed: Buffer = b'') -> None:
         if packed:
@@ -40,8 +41,8 @@ class KeepAlive(Message):
     def make_keepalive(cls) -> 'KeepAlive':
         return cls(b'')
 
-    def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(self._packed)
+    def pack_body(self, negotiated: Negotiated) -> Buffer:
+        return self._packed
 
     def __str__(self) -> str:
         return 'KEEPALIVE'

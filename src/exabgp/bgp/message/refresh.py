@@ -43,18 +43,18 @@ class Reserved(int):
 @Message.register
 class RouteRefresh(Message):
     ID = Message.CODE.ROUTE_REFRESH
-    TYPE = bytes([Message.CODE.ROUTE_REFRESH])
 
     # Reserved field values for route refresh subtypes
     request = 0
     start = 1
     end = 2
 
-    LENGTH = 4  # RFC 2918 3: AFI, Reserved (the RFC 7313 Message Subtype) and SAFI
+    FIXED_SIZE = 4  # RFC 2918 3: AFI, Reserved (the RFC 7313 Message Subtype) and SAFI
+    LENGTH_MAX = Message.HEADER_LEN + FIXED_SIZE
 
     def __init__(self, packed: Buffer) -> None:
-        if len(packed) != self.LENGTH:
-            raise ValueError(f'RouteRefresh requires exactly {self.LENGTH} bytes, got {len(packed)}')
+        if len(packed) != self.FIXED_SIZE:
+            raise ValueError(f'RouteRefresh requires exactly {self.FIXED_SIZE} bytes, got {len(packed)}')
         self._packed = packed
 
     @classmethod
@@ -76,8 +76,8 @@ class RouteRefresh(Message):
     def reserved(self) -> Reserved:
         return Reserved(self._packed[2])
 
-    def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(self._packed)
+    def pack_body(self, negotiated: Negotiated) -> Buffer:
+        return self._packed
 
     def messages(self, negotiated: Negotiated, include_withdraw: bool) -> Generator[bytes, None, None]:
         yield self.pack_message(negotiated)
@@ -94,7 +94,7 @@ class RouteRefresh(Message):
         # and the header held nothing the body does not give back: marker, length, type.
         # An unknown subtype is not an error here, the RFC says it is ignored, which is
         # RouteRefreshHandler's decision since only it knows what was negotiated
-        if len(data) != cls.LENGTH:
+        if len(data) != cls.FIXED_SIZE:
             message = cls.MARKER + pack('!H', cls.HEADER_LEN + len(data)) + cls.TYPE + bytes(data)
             raise Notify(7, 1, f'ROUTE-REFRESH body of {len(data)} octets', data=message)
         return cls(data)

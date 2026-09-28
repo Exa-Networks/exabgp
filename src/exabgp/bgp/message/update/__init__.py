@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from exabgp.util.types import Buffer
 
@@ -17,12 +17,7 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, AttributeCollection
-from exabgp.bgp.message.update.collection import (
-    EOR_IPV4_UNICAST_LENGTH,
-    EOR_WITH_PREFIX_LENGTH,
-    UpdateCollection,
-)
-from exabgp.bgp.message.update.eor import EOR
+from exabgp.bgp.message.update.collection import UpdateCollection
 from exabgp.bgp.message.update.nlri import MPNLRICollection, NLRICollection
 from exabgp.logger import lazyformat, log
 from exabgp.protocol.family import AFI, SAFI
@@ -59,20 +54,21 @@ class Update(Message):
     """
 
     ID = Message.CODE.UPDATE
-    TYPE = bytes([Message.CODE.UPDATE])
-    IS_EOR: bool = False  # Not an End-of-RIB marker
+    IS_EOR: ClassVar[bool] = False  # EOR, the End-of-RIB marker, says True
+    FIXED_SIZE = 4  # RFC 4271 4.3: the two length fields, withdrawn routes and path attributes
 
-    def __init__(self, packed: Buffer, negotiated: 'Negotiated | None' = None) -> None:
+    def __init__(self, packed: Buffer) -> None:
         """Create Update from raw payload bytes.
 
         Args:
             packed: The UPDATE message payload (after BGP header).
                     Format: withdrawn_len(2) + withdrawn + attr_len(2) + attributes + nlri
-                    Can be bytes or memoryview (converted to bytes for storage).
-            negotiated: Optional BGP session negotiated parameters for parsing context.
+                    Can be bytes or memoryview.
+
+        What it means depends on the session (ADD-PATH, ASN4, ...), so it is decoded by
+        parse(negotiated), once, and read through data afterwards.
         """
         self._packed = packed
-        self._negotiated = negotiated
         self._parsed: 'UpdateCollection | None' = None
 
     @property
@@ -103,16 +99,8 @@ class Update(Message):
         nlri_offset = attr_offset + 2 + attr_len
         return self._packed[nlri_offset:]
 
-    def pack_message(self, negotiated: 'Negotiated | None' = None) -> bytes:
-        """Generate complete BGP message with header.
-
-        Args:
-            negotiated: Unused, kept for API compatibility with Message.pack_message().
-
-        Returns:
-            Complete BGP UPDATE message: marker(16) + length(2) + type(1) + payload
-        """
-        return self._message(self._packed)
+    def pack_body(self, negotiated: 'Negotiated') -> Buffer:
+        return self._packed
 
     @property
     def data(self) -> 'UpdateCollection':
@@ -122,32 +110,16 @@ class Update(Message):
             Parsed UpdateCollection (semantic container) with announces, withdraws, attributes.
 
         Raises:
-            ValueError: If parse() was not called and no negotiated context available.
+            ValueError: If parse() was not called.
         """
         if self._parsed is None:
-            if self._negotiated is None:
-                raise ValueError('Cannot access data: Update not parsed and no negotiated context stored')
-            self._parsed = UpdateCollection._parse_payload(bytes(self._packed), self._negotiated)
+            raise ValueError('Cannot access data: Update not parsed, call parse(negotiated) first')
         return self._parsed
 
-    def parse(self, negotiated: 'Negotiated | None' = None) -> 'UpdateCollection':
-        """Parse payload to semantic UpdateCollection with negotiated context.
-
-        Args:
-            negotiated: BGP session negotiated parameters. If not provided,
-                       uses the negotiated context stored at construction time.
-
-        Returns:
-            Parsed UpdateCollection (semantic container).
-
-        Raises:
-            ValueError: If no negotiated context available (neither passed nor stored).
-        """
+    def parse(self, negotiated: 'Negotiated') -> 'UpdateCollection':
+        """Parse payload to semantic UpdateCollection with negotiated context, once."""
         if self._parsed is None:
-            neg = negotiated or self._negotiated
-            if neg is None:
-                raise ValueError('Cannot parse Update: no negotiated context provided or stored')
-            self._parsed = UpdateCollection._parse_payload(bytes(self._packed), neg)
+            self._parsed = UpdateCollection._parse_payload(bytes(self._packed), negotiated)
         return self._parsed
 
     @staticmethod
@@ -156,8 +128,8 @@ class Update(Message):
         return UpdateCollection.split(data)
 
     @classmethod
-    def unpack_message(cls, data: Buffer, negotiated: 'Negotiated') -> Message:
-        """Unpack raw UPDATE payload to Update or EOR.
+    def unpack_message(cls, data: Buffer, negotiated: 'Negotiated') -> Update:
+        """Unpack raw UPDATE payload to Update, or EOR which is one.
 
         This is the registered message handler called by Message.unpack().
 
@@ -171,17 +143,12 @@ class Update(Message):
         """
         log.debug(lazyformat('parsing UPDATE', data), 'parser')
 
-        length = len(data)
+        # the two RFC 4724 forms of an End-of-RIB, kept as received
+        if EOR.is_eor_body(data):
+            return EOR(data)
 
-        # Check for End-of-RIB markers (fast path)
-        if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
-            return EOR(AFI.ipv4, SAFI.unicast)
-        if length == EOR_WITH_PREFIX_LENGTH and bytes(data).startswith(EOR.EOR_NLRI.PREFIX):
-            return EOR.unpack_message(data, negotiated)
-
-        # Create wire container with negotiated context and parse
-        update = cls(data, negotiated)
-        parsed = update.parse()
+        update = cls(data)
+        parsed = update.parse(negotiated)
 
         # Check if this is actually an EOR after parsing (empty update with MP attributes)
         if not parsed.attributes and not parsed.announces and not parsed.withdraws:
@@ -194,12 +161,13 @@ class Update(Message):
                 temp_attrs = AttributeCollection.unpack(bytes(attr_view), negotiated)
                 unreach = temp_attrs.get(MPURNLRI.ID)
                 reach = temp_attrs.get(MPRNLRI.ID)
+                # an End-of-RIB in a form RFC 4724 does not give, so stored in the one it does
                 if unreach is not None and isinstance(unreach, MPURNLRI):
-                    return EOR(unreach.afi, unreach.safi)
+                    return EOR.make_eor(unreach.afi, unreach.safi)
                 if reach is not None and isinstance(reach, MPRNLRI):
-                    return EOR(reach.afi, reach.safi)
+                    return EOR.make_eor(reach.afi, reach.safi)
             # No MP attributes - this is IPv4 unicast EOR
-            return EOR(AFI.ipv4, SAFI.unicast)
+            return EOR.make_eor(AFI.ipv4, SAFI.unicast)
 
         def log_parsed(_: object) -> str:
             # we need the import in the function as otherwise we have an cyclic loop
@@ -218,3 +186,7 @@ class Update(Message):
 
 # Backward compatibility alias
 UpdateWire = Update
+
+
+# EOR is an Update, so it is defined once Update is: eor.py imports it from this module
+from exabgp.bgp.message.update.eor import EOR  # noqa: E402

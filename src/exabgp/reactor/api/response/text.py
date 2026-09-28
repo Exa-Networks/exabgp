@@ -137,8 +137,7 @@ class Text:
 
         attributes = str(update.attributes)
 
-        # EOR messages have .nlris directly but no .announces/.withdraws
-        if getattr(update, 'IS_EOR', False):
+        if update.IS_EOR:
             for nlri in update.nlris:
                 r += f'{prefix} route {oneline(nlri.extensive())}\n'
         else:

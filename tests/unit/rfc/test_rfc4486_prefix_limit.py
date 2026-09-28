@@ -17,7 +17,8 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from exabgp.bgp.message import UpdateCollection
+from exabgp.bgp.message import Message
+
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
@@ -80,7 +81,8 @@ def update(
     parsed.withdraws = [nlri(prefix, afi) for prefix in withdraws]
     parsed.attributes = AttributeCollection()
     message = Mock()
-    message.TYPE = UpdateCollection.TYPE
+    message.ID = Message.CODE.UPDATE
+    message.IS_EOR = False
     message.data = parsed
     return message
 

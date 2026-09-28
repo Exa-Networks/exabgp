@@ -121,13 +121,6 @@ def test_the_reactor_really_handles_both() -> None:
 # ============================================== the classes mean what they claim
 
 
-def test_notify_serialises_and_notification_does_not() -> None:
-    assert 'pack_message' in Notify.__dict__, 'Notify must serialise: it goes on the wire'
-    assert 'pack_message' not in Notification.__dict__, (
-        'Notification is what a peer sent us, there is nothing to send back'
-    )
-
-
 def test_notify_is_a_notification() -> None:
     """Which is why the handler order above is load bearing."""
     assert issubclass(Notify, Notification)

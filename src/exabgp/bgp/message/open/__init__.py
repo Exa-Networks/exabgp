@@ -67,18 +67,19 @@ __all__ = [
 @Message.register
 class Open(Message):
     ID = Message.CODE.OPEN
-    TYPE = bytes([Message.CODE.OPEN])
 
-    # Fixed header size: version(1) + asn(2) + hold_time(2) + router_id(4)
-    HEADER_SIZE = 9  # the fixed fields this class stores, without the optional parameters length
-    MINIMUM_BODY_SIZE = 10  # RFC 4271 4.2, the fixed fields plus the optional parameters length
+    # RFC 4271 4.2: version(1) + my AS(2) + hold time(2) + identifier(4), then the optional
+    # parameters length(1) which is part of the fixed portion; the parameters follow it
+    FIXED_SIZE = 10
+    PARAMETERS_OFFSET = 9
+    LENGTH_MAX = Message.STANDARD_MAX  # RFC 8654 3: an OPEN is never extended
 
-    def __init__(self, packed: Buffer, capabilities: Capabilities) -> None:
-        # Convert to bytearray first - this gives us length and ownership
-        if len(packed) != self.HEADER_SIZE:
-            raise ValueError(f'Open header requires exactly {self.HEADER_SIZE} bytes, got {len(packed)}')
+    def __init__(self, packed: Buffer) -> None:
+        if len(packed) < self.FIXED_SIZE:
+            raise ValueError(f'Open requires at least {self.FIXED_SIZE} bytes, got {len(packed)}')
         self._packed = packed
-        self._capabilities = capabilities
+        # decoded on first use: unpack_message decodes it at once, to refuse a bad one
+        self._capabilities: Capabilities | None = None
 
     @classmethod
     def make_open(
@@ -86,8 +87,12 @@ class Open(Message):
     ) -> 'Open':
         # OPEN message ASN field is always 2 bytes (RFC 4271)
         # 4-byte ASN is negotiated via ASN4 capability
-        packed = version.pack_version() + asn.trans().pack_asn2() + hold_time.pack_holdtime() + router_id.pack_ip()
-        return cls(packed, capabilities)
+        fixed = version.pack_version() + asn.trans().pack_asn2() + hold_time.pack_holdtime() + router_id.pack_ip()
+        instance = cls(fixed + capabilities.pack_capabilities())
+        # the object given, rather than one decoded from its bytes: what we send is what we
+        # configured, and a capability we do not decode must not be lost on the way
+        instance._capabilities = capabilities
+        return instance
 
     @property
     def version(self) -> Version:
@@ -108,10 +113,12 @@ class Open(Message):
 
     @property
     def capabilities(self) -> Capabilities:
+        if self._capabilities is None:
+            self._capabilities = Capabilities.unpack(self._packed[self.PARAMETERS_OFFSET :])
         return self._capabilities
 
-    def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(bytes(self._packed) + self._capabilities.pack_capabilities())
+    def pack_body(self, negotiated: Negotiated) -> Buffer:
+        return self._packed
 
     def __str__(self) -> str:
         return 'OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]' % (
@@ -135,7 +142,7 @@ class Open(Message):
         # Length".  That is a Message Header Error, code 1 subcode 2, and not the OPEN
         # message error this used to send: 2/0 is Unspecific, which names nothing, and the
         # OPEN subcodes in 6.2 have no entry for a message which is too short to read.
-        if len(data) < cls.MINIMUM_BODY_SIZE:
+        if len(data) < cls.FIXED_SIZE:
             # RFC 4271 6.1: "The Data field MUST contain the erroneous Length field", which
             # is the two octet Length from the message header, not a sentence describing it
             raise Notify(1, 2, f'OPEN body of {len(data)} octets', data=pack('!H', Message.HEADER_LEN + len(data)))
@@ -146,4 +153,7 @@ class Open(Message):
             # or failing that the smallest.  We support one, so it is always 4
             raise Notify(2, 1, f'version {version}', data=pack('!H', Version.BGP_4))
 
-        return cls(data[0:9], Capabilities.unpack(data[9:]))
+        received = cls(data)
+        # decoded here, at the boundary, so a malformed parameter is refused with the OPEN
+        received._capabilities = Capabilities.unpack(data[cls.PARAMETERS_OFFSET :])
+        return received

@@ -82,7 +82,7 @@ class Operational(Message):
     """
 
     ID = Message.CODE.OPERATIONAL
-    TYPE = bytes([Message.CODE.OPERATIONAL])
+    FIXED_SIZE = 4  # the operational header: a two octet type and a two octet length
 
     registered_operational: ClassVar[dict[int, tuple[str, TypingType['Operational']]]] = dict()
 
@@ -121,8 +121,8 @@ class Operational(Message):
         Message.__init__(self)
         self.what: Type = Type(what)
 
-    def _message(self, data: Buffer) -> bytes:
-        return Message._message(self, self.what.pack() + pack('!H', len(data)) + bytes(data))
+    def _operational(self, data: Buffer) -> bytes:
+        return self.what.pack() + pack('!H', len(data)) + bytes(data)
 
     def __str__(self) -> str:
         return self.extensive()
@@ -231,8 +231,8 @@ class UnknownOperational(Operational):
     def extensive(self) -> str:
         return f'operational unknown type={self.what}'
 
-    def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(self.raw_data)
+    def pack_body(self, negotiated: Negotiated) -> Buffer:
+        return self._operational(self.raw_data)
 
 
 # ============================================================ OperationalFamily
@@ -255,11 +255,11 @@ class OperationalFamily(Operational):
     def family(self) -> FamilyTuple:
         return (self.afi, self.safi)
 
-    def _message(self, data: Buffer) -> bytes:
-        return Operational._message(self, self.afi.pack_afi() + self.safi.pack_safi() + data)
+    def _family(self, data: Buffer) -> bytes:
+        return self._operational(self.afi.pack_afi() + self.safi.pack_safi() + data)
 
-    def pack_message(self, negotiated: Negotiated) -> bytes:
-        return self._message(self.data)
+    def pack_body(self, negotiated: Negotiated) -> Buffer:
+        return self._family(self.data)
 
 
 # =================================================== SequencedOperationalFamily
@@ -289,7 +289,7 @@ class SequencedOperationalFamily(OperationalFamily):
         self._sequence: int | None = self.sequence
         self._routerid: RouterID | None = self.routerid
 
-    def pack_message(self, negotiated: Negotiated) -> bytes:
+    def pack_body(self, negotiated: Negotiated) -> Buffer:
         if self.routerid:
             self.sent_routerid: RouterID = self.routerid
         elif negotiated.sent_open is not None:
@@ -302,7 +302,7 @@ class SequencedOperationalFamily(OperationalFamily):
         else:
             self.sent_sequence = self.sequence
 
-        return self._message(bytes(self.sent_routerid.pack_ip()) + pack('!L', self.sent_sequence) + self.data)
+        return self._family(bytes(self.sent_routerid.pack_ip()) + pack('!L', self.sent_sequence) + self.data)
 
 
 # =========================================================================== NS

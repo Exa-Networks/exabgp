@@ -49,8 +49,8 @@ Message
 
 | # | Step | Verification | Status |
 |---|------|--------------|--------|
-| 1 | Contract test `tests/unit/bgp/message/test_message_contract.py`, failing | pytest on it | ⏳ |
-| 2 | Signals: remove NOP/AWAKE/DONE/Scheduling; `read_message() -> Message \| None`; fix `_UPDATE` fast path | unit + functional | ⏳ |
+| 1 | Contract test `tests/unit/bgp/message/test_message_contract.py`, failing | pytest on it | ✅ fails at collection, as it should |
+| 2 | Signals: remove NOP/AWAKE/DONE/Scheduling; `read_message() -> Message \| None`; fix `_UPDATE` fast path | unit + functional | ✅ |
 | 3 | Base: TYPE derived, LENGTH_MIN/MAX, `pack_body` + final `pack_message`, eq/hash | unit + functional | ⏳ |
 | 4 | Open bytes-first (`_packed` is the whole body) | unit + functional | ⏳ |
 | 5 | EOR(Update), UpdateCollection out of Message, EOR marker as a field | unit + functional | ⏳ |
@@ -66,10 +66,29 @@ Message
   the fast path (no role, no adj-rib-in, no API, no route logging). `UpdateHandler` then
   reads `.data`, which `UpdateCollection` does not have.
 
+## Notes from step 2
+
+- The `_UPDATE` fast path is removed rather than repaired: skipping the decode also skipped
+  the prefix limit (RFC 4486), the End-of-RIB record (RFC 7313) and the RFC 7606 checks.
+  Regression test: `tests/unit/test_read_update_without_rib_in.py`.
+- `Protocol.log_routes` existed only for the fast path, and is gone.
+- `new_update()` returns the number of messages sent, `new_eors()` returns None: both used
+  to return the `_UPDATE` placeholder, which no caller read.
+- 252 (the old NOP code) is no longer in `Message.CODE.MESSAGES`, so the reactor refuses it
+  with Bad Message Type at its membership check, the answer `Message.unpack` gave anyway.
+- An UPDATE carrying INTERNAL_DISCARD still returns None, so it does not restart the hold
+  timer, as before. RFC 4271 says a received UPDATE does restart it: not changed here.
+- `tests/unit/test_singleton_copy.py` `MIN_COMPARISONS_FOUND` lowered 18 -> 16: the four
+  `Scheduling` comparisons left with the class. Flag it to Thomas.
+- `scheduling.py` deleted with Thomas's permission.
+
 ## Recent Failures
 
-(none yet)
+### 2026-09-28 baseline: 22 unit failures
+**Error:** subprocess tests raised `ImportError: cannot import name '_NOP'`.
+**Cause:** the baseline `test_everything` ran while step 2 was half applied.
+**Status:** ✅ not a regression; functional suites green after step 2.
 
 ## Resume Point
 
-Step 1.
+Step 3.

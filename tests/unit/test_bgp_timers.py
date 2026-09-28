@@ -15,11 +15,13 @@ from unittest.mock import Mock
 
 import pytest
 
+from exabgp.bgp.message import Message
+
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.bgp.message import KeepAlive, Notify, Update  # noqa: E402
+from exabgp.bgp.message import KeepAlive, Notify  # noqa: E402
 from exabgp.bgp.message.open.holdtime import HoldTime  # noqa: E402
 from exabgp.bgp.timer import ReceiveTimer, SendTimer  # noqa: E402
 
@@ -95,7 +97,8 @@ class TestReceiveTimerKeepaliveCheck:
         timer = ReceiveTimer(session, 0, 4, 0)
 
         message = Mock()
-        message.TYPE = Update.TYPE
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         result = timer.check_ka_timer(message)
         assert result is True
@@ -119,7 +122,8 @@ class TestReceiveTimerKeepaliveCheck:
         timer.last_read = int(time.time()) - 10
 
         message = Mock()
-        message.TYPE = Update.TYPE
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         old_last_read = timer.last_read
         timer.check_ka_timer(message)
@@ -166,7 +170,8 @@ class TestReceiveTimerKeepaliveCheck:
         timer = ReceiveTimer(session, 180, 4, 0)
 
         message = Mock()
-        message.TYPE = Update.TYPE
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         # Should not raise
         result = timer.check_ka_timer(message)
@@ -182,7 +187,8 @@ class TestReceiveTimerCheckKa:
         timer = ReceiveTimer(session, 180, 4, 0)
 
         message = Mock()
-        message.TYPE = Update.TYPE
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         # Should not raise
         timer.check_ka(message)
@@ -416,7 +422,8 @@ class TestReceiveTimerIntegration:
 
         # Receive update
         update = Mock()
-        update.TYPE = Update.TYPE
+        update.ID = Message.CODE.UPDATE
+        update.IS_EOR = False
         timer.check_ka_timer(update)
 
         # Receive keepalive
@@ -473,7 +480,8 @@ class TestTimerEdgeCases:
         timer = ReceiveTimer(session, 1, 4, 0)
 
         message = Mock()
-        message.TYPE = Update.TYPE
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         # Should handle short holdtime
         timer.check_ka_timer(message)
@@ -557,7 +565,8 @@ class TestTimerConcurrentBehavior:
         timer = ReceiveTimer(session, 180, 4, 0)
 
         message = Mock()
-        message.TYPE = Update.TYPE
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         # Rapid fire messages
         for _ in range(10):

@@ -8,12 +8,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Callable, ClassVar, Type
+from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar, final
 
 from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+
+_M = TypeVar('_M', bound='Message')
 
 
 class _MessageCode(int):
@@ -92,23 +95,44 @@ class _MessageCode(int):
 
 
 class Message:
-    # we need to define TYPE inside __init__ of the subclasses
-    # otherwise we can not dynamically create different UnknownMessage
-    # TYPE = None
+    """A BGP message: the body it was built from, and the framing every message shares.
 
-    MARKER: ClassVar[bytes] = bytes(
-        [
-            0xFF,
-        ]
-        * 16,
-    )
+    The contract (doc/BGP_MESSAGE_INTERFACE.md, enforced by
+    tests/unit/bgp/message/test_message_contract.py):
+
+    - ID is the type octet, TYPE is derived from it and never declared by a subclass
+    - FIXED_SIZE is the part of the body every message of the type has, LENGTH_MIN is
+      derived from it, LENGTH_MAX bounds the whole message, header included
+    - a subclass says what its body is with pack_body(), and nothing else: the header,
+      the framing and the length rules belong here
+    """
+
+    MARKER: ClassVar[bytes] = bytes([0xFF] * 16)
     HEADER_LEN: ClassVar[int] = 19
+
+    # RFC 4271 4.1: the largest message; RFC 8654 raises it for all but OPEN and KEEPALIVE
+    STANDARD_MAX: ClassVar[int] = 4096
+    EXTENDED_MAX: ClassVar[int] = 65535
 
     registered_message: ClassVar[dict[int, Type[Message]]] = {}
 
-    # TYPE attribute set by subclasses
-    TYPE: ClassVar[bytes]
     ID: ClassVar[int]
+    TYPE: ClassVar[bytes]
+
+    # the octets of the body before its variable part, which every message of the type has
+    FIXED_SIZE: ClassVar[int] = 0
+    # the whole message, header included; the session's own maximum is checked apart
+    LENGTH_MIN: ClassVar[int] = HEADER_LEN
+    LENGTH_MAX: ClassVar[int] = EXTENDED_MAX
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        super().__init_subclass__(**kwargs)
+        assert 'TYPE' not in vars(cls), f'{cls.__qualname__}: TYPE is derived from ID, not declared'
+        assert 'LENGTH_MIN' not in vars(cls), f'{cls.__qualname__}: LENGTH_MIN is derived from FIXED_SIZE'
+        assert 0 <= cls.ID <= 0xFF, f'{cls.__qualname__}: the type of a message is one octet'
+        cls.TYPE = bytes([cls.ID])
+        cls.LENGTH_MIN = cls.HEADER_LEN + cls.FIXED_SIZE
+        assert cls.HEADER_LEN <= cls.LENGTH_MIN <= cls.LENGTH_MAX <= cls.EXTENDED_MAX
 
     class CODE:
         OPEN: ClassVar[_MessageCode] = _MessageCode(_MessageCode.OPEN)
@@ -139,40 +163,49 @@ class Message:
                 return _MessageCode.short_names.get(message_id, 'unknown message')
             return _MessageCode.short_names.get(message_id, 'unknown message {}'.format(hex(message_id)))
 
-        # # Can raise KeyError
-        # @staticmethod
-        # def code (short):
-        # 	return _MessageCode.names.get[short]
-
         def __init__(self) -> None:
             raise RuntimeError('This class can not be instantiated')
 
-    Length: ClassVar[dict[int, Callable[[int], bool]]] = {
-        CODE.OPEN: lambda _: _ >= 29,  # noqa
-        CODE.UPDATE: lambda _: _ >= 23,  # noqa
-        CODE.NOTIFICATION: lambda _: _ >= 21,  # noqa
-        CODE.KEEPALIVE: lambda _: _ == 19,  # noqa
-        CODE.ROUTE_REFRESH: lambda _: _ == 23,  # noqa
-    }
+    @classmethod
+    def length_valid(cls, code: int, length: int) -> bool:
+        """Whether `length`, header included, is one a message of type `code` can have.
+
+        A type nobody registered is refused by its type (RFC 4271 6.1, Bad Message Type),
+        so only the header bounds it here.
+        """
+        klass = cls.registered_message.get(code)
+        if klass is None:
+            return length >= cls.HEADER_LEN
+        return klass.LENGTH_MIN <= length <= klass.LENGTH_MAX
 
     @staticmethod
     def string(code: int | None) -> str:
         return _MessageCode.long_names.get(code, 'unknown')
 
-    def _message(self, message: Buffer) -> bytes:
-        # Accept Buffer (bytes or memoryview), convert to bytes for output
-        message_len: bytes = pack('!H', 19 + len(message))
-        return self.MARKER + message_len + self.TYPE + bytes(message)
+    @classmethod
+    def frame(cls, code: int, body: Buffer) -> bytes:
+        """The complete message: marker, length and type, then the body."""
+        assert 0 <= code <= 0xFF, 'the type of a message is one octet'
+        # what we build, never what a peer sent, but it must hold under -O: the length field
+        # is two octets, and a larger body would go out with a length which lies about it
+        if cls.HEADER_LEN + len(body) > cls.EXTENDED_MAX:
+            raise RuntimeError(f'a message body of {len(body)} octets does not fit a BGP message')
+        return cls.MARKER + pack('!H', cls.HEADER_LEN + len(body)) + bytes([code]) + bytes(body)
 
-    def pack_message(self, negotiated: Negotiated) -> Buffer:
-        raise NotImplementedError('message not implemented in subclasses')
+    def pack_body(self, negotiated: Negotiated) -> Buffer:
+        """The body of the message, what follows the header on the wire."""
+        raise NotImplementedError(f'{type(self).__qualname__} does not say what its body is')
+
+    @final
+    def pack_message(self, negotiated: Negotiated) -> bytes:
+        return self.frame(self.ID, self.pack_body(negotiated))
 
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Message:
         raise NotImplementedError('unpack_message not implemented in subclass')
 
     @classmethod
-    def register(cls, klass: Type[Message]) -> Type[Message]:
+    def register(cls, klass: Type[_M]) -> Type[_M]:
         if klass.ID in cls.registered_message:
             raise RuntimeError('only one class can be registered per message')
         cls.registered_message[klass.ID] = klass

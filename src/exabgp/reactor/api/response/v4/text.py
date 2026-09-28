@@ -147,8 +147,7 @@ class V4Text:
         # escaped once, above the loop: it is the same string for every NLRI
         attributes = oneline(str(update.attributes))
 
-        # EOR messages have .nlris directly but no .announces/.withdraws
-        if getattr(update, 'IS_EOR', False):
+        if update.IS_EOR:
             for nlri in update.nlris:
                 r += f'{prefix} route {oneline(nlri.extensive())}\n'
         else:

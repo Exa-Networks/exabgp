@@ -288,7 +288,7 @@ class TestEORJSON:
         """
 
         # Create EOR for IPv4 unicast
-        eor = EOR(AFI.ipv4, SAFI.unicast)
+        eor = EOR.make_eor(AFI.ipv4, SAFI.unicast)
 
         # Generate JSON - should not crash
         result = json_encoder._update(eor)
@@ -304,7 +304,7 @@ class TestEORJSON:
         """Test EOR for IPv6 unicast produces some JSON output."""
 
         # Create EOR for IPv6 unicast
-        eor = EOR(AFI.ipv6, SAFI.unicast)
+        eor = EOR.make_eor(AFI.ipv6, SAFI.unicast)
 
         # Generate JSON - should not crash
         result = json_encoder._update(eor)
@@ -318,7 +318,7 @@ class TestEORJSON:
     def test_eor_has_eor_attribute(self) -> None:
         """Test that EOR class has EOR=True attribute."""
 
-        eor = EOR(AFI.ipv4, SAFI.unicast)
+        eor = EOR.make_eor(AFI.ipv4, SAFI.unicast)
 
         # EOR messages have IS_EOR=True
         assert eor.IS_EOR is True
@@ -339,7 +339,7 @@ class TestEORJSON:
         """
 
         # EOR message
-        eor = EOR(AFI.ipv4, SAFI.unicast)
+        eor = EOR.make_eor(AFI.ipv4, SAFI.unicast)
         assert getattr(eor, 'IS_EOR', False) is True
 
         # UpdateCollection

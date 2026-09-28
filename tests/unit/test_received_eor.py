@@ -37,7 +37,7 @@ def context() -> Mock:
 
 def test_an_end_of_rib_is_handled_and_recorded() -> None:
     ctx = context()
-    list(UpdateHandler().handle(ctx, EOR(*IPV4_UNICAST)))
+    list(UpdateHandler().handle(ctx, EOR.make_eor(*IPV4_UNICAST)))
 
     assert ctx.neighbor.rib.incoming.has_end_of_rib(IPV4_UNICAST)
     assert not ctx.neighbor.rib.incoming.has_end_of_rib(IPV6_UNICAST)
@@ -46,7 +46,7 @@ def test_an_end_of_rib_is_handled_and_recorded() -> None:
 @pytest.mark.asyncio
 async def test_the_async_path_handles_it_too() -> None:
     ctx = context()
-    await UpdateHandler().handle_async(ctx, EOR(*IPV6_UNICAST))
+    await UpdateHandler().handle_async(ctx, EOR.make_eor(*IPV6_UNICAST))
 
     assert ctx.neighbor.rib.incoming.has_end_of_rib(IPV6_UNICAST)
 

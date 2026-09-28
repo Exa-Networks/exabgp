@@ -283,8 +283,10 @@ class Protocol:
             raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id) from None
             # raise Notify(5,0,'unknown message received')
 
-        if isinstance(message, Update):
-            message.data.classify_otc(self.negotiated)
+        # the one decoder registered for the type is Update's, and it returns an Update
+        update = cast(Update, message) if message.ID == Message.CODE.UPDATE else None
+        if update is not None:
+            update.data.classify_otc(self.negotiated)
 
         if for_api:
             if consolidate:
@@ -297,7 +299,7 @@ class Protocol:
         if message.TYPE == Notification.TYPE:
             raise cast(Notification, message)
 
-        if isinstance(message, Update) and Attribute.CODE.INTERNAL_DISCARD in message.data.attributes:
+        if update is not None and Attribute.CODE.INTERNAL_DISCARD in update.data.attributes:
             return None
         return message
 
@@ -337,11 +339,11 @@ class Protocol:
             if received_open is not None:
                 break
 
-        if not isinstance(received_open, Open):
+        if received_open.ID != Message.CODE.OPEN:
             raise Notify(5, 1, f'{received_open} where the OPEN was expected')
 
         log.debug(lazymsg('open.received message={m}', m=received_open), self._session())
-        return received_open
+        return cast(Open, received_open)
 
     async def read_keepalive(self) -> KeepAlive:
         """Read KEEPALIVE message using async I/O."""
@@ -350,10 +352,10 @@ class Protocol:
             if message is not None:
                 break
 
-        if not isinstance(message, KeepAlive):
+        if message.ID != Message.CODE.KEEPALIVE:
             raise Notify(5, 2)
 
-        return message
+        return cast(KeepAlive, message)
 
     #
     # Sending message to peer
@@ -477,7 +479,7 @@ class Protocol:
     async def new_eor(self, afi: AFI, safi: SAFI) -> EOR:
         """Send BGP End-of-RIB marker."""
         assert self.connection is not None
-        eor: EOR = EOR(afi, safi)
+        eor: EOR = EOR.make_eor(afi, safi)
         await self.write(eor, self.negotiated)
         log.debug(lazymsg('eor.sent afi={a} safi={s}', a=afi, s=safi), self._session())
         return eor

@@ -23,7 +23,9 @@ from exabgp.bgp.message.open import Version, ASN, RouterID, HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import RouteRefresh
+from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.graceful import Graceful
+from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 from exabgp.bgp.message.direction import Direction
@@ -120,7 +122,7 @@ def test_open_with_multiprotocol_ipv4_unicast() -> None:
     RFC 4760: Multiprotocol Extensions for BGP-4
     """
     capabilities = Capabilities()
-    capabilities[Capability.CODE.MULTIPROTOCOL] = [(AFI.ipv4, SAFI.unicast)]
+    capabilities[Capability.CODE.MULTIPROTOCOL] = MultiProtocol([(AFI.ipv4, SAFI.unicast)])
 
     open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
@@ -131,7 +133,7 @@ def test_open_with_multiprotocol_ipv4_unicast() -> None:
 def test_open_with_multiprotocol_ipv6_unicast() -> None:
     """Test OPEN with IPv6 Unicast capability."""
     capabilities = Capabilities()
-    capabilities[Capability.CODE.MULTIPROTOCOL] = [(AFI.ipv6, SAFI.unicast)]
+    capabilities[Capability.CODE.MULTIPROTOCOL] = MultiProtocol([(AFI.ipv6, SAFI.unicast)])
 
     open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
@@ -144,10 +146,12 @@ def test_open_with_multiple_multiprotocol_families() -> None:
     Common scenario: IPv4 Unicast + IPv6 Unicast
     """
     capabilities = Capabilities()
-    capabilities[Capability.CODE.MULTIPROTOCOL] = [
-        (AFI.ipv4, SAFI.unicast),
-        (AFI.ipv6, SAFI.unicast),
-    ]
+    capabilities[Capability.CODE.MULTIPROTOCOL] = MultiProtocol(
+        [
+            (AFI.ipv4, SAFI.unicast),
+            (AFI.ipv6, SAFI.unicast),
+        ]
+    )
 
     open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
@@ -162,7 +166,7 @@ def test_open_with_vpnv4_capability() -> None:
     RFC 4364: BGP/MPLS IP VPNs
     """
     capabilities = Capabilities()
-    capabilities[Capability.CODE.MULTIPROTOCOL] = [(AFI.ipv4, SAFI.mpls_vpn)]
+    capabilities[Capability.CODE.MULTIPROTOCOL] = MultiProtocol([(AFI.ipv4, SAFI.mpls_vpn)])
 
     open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
@@ -172,10 +176,12 @@ def test_open_with_vpnv4_capability() -> None:
 def test_open_with_multicast_capability() -> None:
     """Test OPEN with multicast capabilities."""
     capabilities = Capabilities()
-    capabilities[Capability.CODE.MULTIPROTOCOL] = [
-        (AFI.ipv4, SAFI.multicast),
-        (AFI.ipv6, SAFI.multicast),
-    ]
+    capabilities[Capability.CODE.MULTIPROTOCOL] = MultiProtocol(
+        [
+            (AFI.ipv4, SAFI.multicast),
+            (AFI.ipv6, SAFI.multicast),
+        ]
+    )
 
     open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
@@ -227,7 +233,7 @@ def test_open_with_4byte_asn_capability() -> None:
     """
     capabilities = Capabilities()
     asn4_value = 4200000000  # Large ASN requiring 4 bytes
-    capabilities[Capability.CODE.FOUR_BYTES_ASN] = asn4_value
+    capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(asn4_value)
 
     open_msg = Open.make_open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
@@ -248,7 +254,7 @@ def test_open_with_various_4byte_asns() -> None:
 
     for asn4 in test_asns:
         capabilities = Capabilities()
-        capabilities[Capability.CODE.FOUR_BYTES_ASN] = asn4
+        capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(asn4)
 
         open_msg = Open.make_open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
@@ -416,16 +422,18 @@ def test_open_with_multiple_capabilities() -> None:
     capabilities = Capabilities()
 
     # Multiprotocol for IPv4 and IPv6
-    capabilities[Capability.CODE.MULTIPROTOCOL] = [
-        (AFI.ipv4, SAFI.unicast),
-        (AFI.ipv6, SAFI.unicast),
-    ]
+    capabilities[Capability.CODE.MULTIPROTOCOL] = MultiProtocol(
+        [
+            (AFI.ipv4, SAFI.unicast),
+            (AFI.ipv6, SAFI.unicast),
+        ]
+    )
 
     # Route Refresh
     capabilities[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
 
     # 4-Byte ASN
-    capabilities[Capability.CODE.FOUR_BYTES_ASN] = 4200000000
+    capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(4200000000)
 
     open_msg = Open.make_open(Version(4), ASN(23456), HoldTime(180), RouterID('192.0.2.1'), capabilities)
 
@@ -439,17 +447,19 @@ def test_open_with_full_capability_set() -> None:
     capabilities = Capabilities()
 
     # Multiprotocol
-    capabilities[Capability.CODE.MULTIPROTOCOL] = [
-        (AFI.ipv4, SAFI.unicast),
-        (AFI.ipv6, SAFI.unicast),
-        (AFI.ipv4, SAFI.mpls_vpn),
-    ]
+    capabilities[Capability.CODE.MULTIPROTOCOL] = MultiProtocol(
+        [
+            (AFI.ipv4, SAFI.unicast),
+            (AFI.ipv6, SAFI.unicast),
+            (AFI.ipv4, SAFI.mpls_vpn),
+        ]
+    )
 
     # Route Refresh
     capabilities[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
 
     # 4-Byte ASN
-    capabilities[Capability.CODE.FOUR_BYTES_ASN] = 4200000000
+    capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(4200000000)
 
     # Graceful Restart
     graceful = Graceful()
@@ -732,7 +742,7 @@ def test_open_with_link_local_nexthop_and_ipv6() -> None:
     from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
 
     capabilities = Capabilities()
-    capabilities[Capability.CODE.MULTIPROTOCOL] = [(AFI.ipv6, SAFI.unicast)]
+    capabilities[Capability.CODE.MULTIPROTOCOL] = MultiProtocol([(AFI.ipv6, SAFI.unicast)])
     capabilities[Capability.CODE.LINK_LOCAL_NEXTHOP] = LinkLocalNextHop()
 
     open_msg = Open.make_open(Version(4), ASN(65500), HoldTime(180), RouterID('192.0.2.1'), capabilities)

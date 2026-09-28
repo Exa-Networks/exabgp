@@ -481,7 +481,9 @@ def test_route_refresh_length_validation_rule() -> None:
 
     RFC 2918: ROUTE_REFRESH messages must be exactly 23 octets.
     """
-    validator = Message.Length[Message.CODE.ROUTE_REFRESH]
+
+    def validator(length: int) -> bool:
+        return Message.length_valid(Message.CODE.ROUTE_REFRESH, length)
 
     # Should accept exactly 23
     assert validator(23) is True

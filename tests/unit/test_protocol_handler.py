@@ -1320,7 +1320,7 @@ async def test_protocol_read_open_success(mock_peer: Any) -> None:
 
     # Mock reading OPEN message
     mock_open = Mock(spec=Open)
-    mock_open.TYPE = Open.TYPE
+    mock_open.ID = Message.CODE.OPEN
     mock_open.ID = Message.CODE.OPEN
     mock_open.__str__ = Mock(return_value='OPEN')
 
@@ -1331,7 +1331,7 @@ async def test_protocol_read_open_success(mock_peer: Any) -> None:
     with patch.object(protocol, 'read_message', new=AsyncMock(return_value=mock_open)):
         result = await protocol.read_open('192.0.2.1')
 
-        assert result.TYPE == Open.TYPE
+        assert result is mock_open
 
 
 @pytest.mark.asyncio
@@ -1343,7 +1343,7 @@ async def test_protocol_read_open_with_nop(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_open = Mock(spec=Open)
-    mock_open.TYPE = Open.TYPE
+    mock_open.ID = Message.CODE.OPEN
     mock_open.ID = Message.CODE.OPEN
     mock_open.__str__ = Mock(return_value='OPEN')
 
@@ -1355,7 +1355,7 @@ async def test_protocol_read_open_with_nop(mock_peer: Any) -> None:
     with patch.object(protocol, 'read_message', new=AsyncMock(side_effect=[None, mock_open])):
         result = await protocol.read_open('192.0.2.1')
 
-        assert result.TYPE == Open.TYPE
+        assert result is mock_open
 
 
 # ==============================================================================

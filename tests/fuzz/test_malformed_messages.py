@@ -315,9 +315,9 @@ def test_update_withdrawn_length_exceeds_data(withdrawn_len: int) -> None:
     negotiated = create_mock_negotiated()
 
     try:
-        update = Update(update_data, negotiated)
+        update = Update(update_data)
         # Accessing parsed data should fail
-        _ = update.parse()
+        _ = update.parse(negotiated)
         pytest.fail('Expected exception for truncated UPDATE')
     except Notify:
         # Expected - malformed data detected
@@ -338,8 +338,8 @@ def test_update_attribute_length_exceeds_data(attr_len: int) -> None:
     negotiated = create_mock_negotiated()
 
     try:
-        update = Update(update_data, negotiated)
-        _ = update.parse()
+        update = Update(update_data)
+        _ = update.parse(negotiated)
         pytest.fail('Expected exception for truncated UPDATE')
     except Notify:
         # Expected - malformed data detected
@@ -356,8 +356,8 @@ def test_update_random_payload(random_data: bytes) -> None:
     negotiated = create_mock_negotiated()
 
     try:
-        update = Update(random_data, negotiated)
-        _ = update.parse()
+        update = Update(random_data)
+        _ = update.parse(negotiated)
     except Notify:
         pass
 
@@ -371,8 +371,8 @@ def test_update_empty_payload() -> None:
     negotiated = create_mock_negotiated()
 
     try:
-        update = Update(b'', negotiated)
-        _ = update.parse()
+        update = Update(b'')
+        _ = update.parse(negotiated)
         pytest.fail('Expected exception for empty UPDATE')
     except (IndexError, struct.error, ValueError, Notify):
         # Expected - not enough data
@@ -390,10 +390,10 @@ def test_update_minimum_valid() -> None:
     negotiated = create_mock_negotiated()
 
     # This should parse as EOR
-    update = Update(update_data, negotiated)
+    update = Update(update_data)
     # Should not crash when accessing data
     try:
-        parsed = update.parse()
+        parsed = update.parse(negotiated)
         # Empty update - should have no routes
         assert len(parsed.announces) == 0
         assert len(parsed.withdraws) == 0
