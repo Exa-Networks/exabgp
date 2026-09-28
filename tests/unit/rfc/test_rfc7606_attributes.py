@@ -12,8 +12,9 @@ Two rows fail and carry xfail:
   7.3  a NEXT_HOP path attribute of sixteen bytes is accepted instead of being malformed
 
 Three more rows - the "if received from an external neighbor, discard it" halves of 7.5,
-7.9 and 7.10 - are recorded in qa/rfc/rfc7606.toml as gaps rather than tested, because the
-ledger does not let a test claim a requirement we have admitted we do not meet.
+7.9 and 7.10 - are recorded in qa/rfc/rfc7606.toml as gaps.  Each is demonstrated by a
+strict xfail test asserting what the RFC asks for, so the day the decode path consults
+Negotiated.is_ibgp the suite reports an unexpected pass and the ledger entry can flip.
 """
 
 from __future__ import annotations
@@ -184,6 +185,22 @@ def test_a_four_byte_local_pref_from_an_internal_neighbour_is_accepted() -> None
     assert CODE.LOCAL_PREF in parsed.attributes, 'a well formed LOCAL_PREF from an IBGP peer was dropped'
 
 
+@pytest.mark.rfc('rfc7606#7.5-local-pref-external-discard')
+@pytest.mark.xfail(
+    strict=True,
+    reason='the LOCAL_PREF decode path does not consult Negotiated.is_ibgp, so the attribute from '
+    'an EBGP peer is kept; qa/rfc/rfc7606.toml records this as a gap',
+)
+def test_a_local_pref_from_an_external_neighbour_is_discarded() -> None:
+    """Attribute discard: the attribute goes, the route and everything else in the UPDATE stay."""
+    attributes = MANDATORY + attribute(WELL_KNOWN_TRANSITIVE, CODE.LOCAL_PREF, bytes(4))
+    parsed = parse(update(attributes), session())
+
+    assert announced(parsed) == ROUTE, 'the route was withdrawn, attribute discard keeps it'
+    assert CODE.NEXT_HOP in parsed.attributes, 'the rest of the UPDATE was lost with the LOCAL_PREF'
+    assert CODE.LOCAL_PREF not in parsed.attributes, 'a well formed LOCAL_PREF from an EBGP peer was kept'
+
+
 # ------------------------------------------------------------------ 7.6 ATOMIC_AGGREGATE
 
 
@@ -280,6 +297,22 @@ def test_a_four_byte_originator_id_from_an_internal_neighbour_is_accepted() -> N
     assert CODE.ORIGINATOR_ID in parsed.attributes, 'a well formed ORIGINATOR_ID from an IBGP peer was dropped'
 
 
+@pytest.mark.rfc('rfc7606#7.9-originator-id-external-discard')
+@pytest.mark.xfail(
+    strict=True,
+    reason='the ORIGINATOR_ID decode path does not consult Negotiated.is_ibgp, so the attribute from '
+    'an EBGP peer is kept; qa/rfc/rfc7606.toml records this as a gap',
+)
+def test_an_originator_id_from_an_external_neighbour_is_discarded() -> None:
+    """Attribute discard: the attribute goes, the route and everything else in the UPDATE stay."""
+    attributes = MANDATORY + attribute(OPTIONAL, CODE.ORIGINATOR_ID, bytes(4))
+    parsed = parse(update(attributes), session())
+
+    assert announced(parsed) == ROUTE, 'the route was withdrawn, attribute discard keeps it'
+    assert CODE.NEXT_HOP in parsed.attributes, 'the rest of the UPDATE was lost with the ORIGINATOR_ID'
+    assert CODE.ORIGINATOR_ID not in parsed.attributes, 'a well formed ORIGINATOR_ID from an EBGP peer was kept'
+
+
 # ------------------------------------------------------------------ 7.10 CLUSTER_LIST
 
 
@@ -299,6 +332,22 @@ def test_a_cluster_list_of_a_legal_length_from_an_internal_neighbour_is_accepted
 
     assert announced(parsed) == ROUTE
     assert CODE.CLUSTER_LIST in parsed.attributes, f'a {length} byte CLUSTER_LIST was dropped'
+
+
+@pytest.mark.rfc('rfc7606#7.10-cluster-list-external-discard')
+@pytest.mark.xfail(
+    strict=True,
+    reason='the CLUSTER_LIST decode path does not consult Negotiated.is_ibgp, so the attribute from '
+    'an EBGP peer is kept; qa/rfc/rfc7606.toml records this as a gap',
+)
+def test_a_cluster_list_from_an_external_neighbour_is_discarded() -> None:
+    """Attribute discard: the attribute goes, the route and everything else in the UPDATE stay."""
+    attributes = MANDATORY + attribute(OPTIONAL, CODE.CLUSTER_LIST, bytes(4))
+    parsed = parse(update(attributes), session())
+
+    assert announced(parsed) == ROUTE, 'the route was withdrawn, attribute discard keeps it'
+    assert CODE.NEXT_HOP in parsed.attributes, 'the rest of the UPDATE was lost with the CLUSTER_LIST'
+    assert CODE.CLUSTER_LIST not in parsed.attributes, 'a well formed CLUSTER_LIST from an EBGP peer was kept'
 
 
 # ------------------------------------------------------------------ 7.11 MP_REACH_NLRI

@@ -23,10 +23,16 @@ from struct import pack
 
 import pytest
 
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
+from exabgp.configuration.configuration import Configuration
 
 pytestmark = pytest.mark.timeout(10)
 
@@ -47,6 +53,17 @@ PRIORITY_SUBTLV = 15
 # sub-TLV type numbers below 128 carry a one octet length, 128 and above carry two
 LOW_UNRECOGNISED_SUBTLV = 60
 HIGH_UNRECOGNISED_SUBTLV = 200
+
+# section 11 is about sessions, so its test needs one: two different ASes make it EBGP
+LOCAL_AS = 65001
+PEER_AS = 65002
+
+# the mandatory attributes of an UPDATE and one IPv4 prefix, so that the only thing the
+# decoder has to decide about is the Tunnel Encapsulation attribute beside them
+ORIGIN_IGP = bytes([0x40, 0x01, 0x01, 0x00])
+EMPTY_AS_PATH = bytes([0x40, 0x02, 0x00])
+NEXT_HOP = bytes([0x40, 0x03, 0x04, 192, 0, 2, 1])
+PREFIX_10_0_0_0_24 = bytes([24, 10, 0, 0])
 
 
 def subtlv(subtype: int, value: bytes) -> bytes:
@@ -76,6 +93,28 @@ def decoded(wire: bytes) -> TunnelEncap:
     attr = parse(wire)[TUNNEL_ENCAP]
     assert isinstance(attr, TunnelEncap)
     return attr
+
+
+def ebgp_session() -> Negotiated:
+    """An EBGP neighbour built by the real configuration parser, and its negotiated OPEN."""
+    text = f"""
+neighbor 192.0.2.1 {{
+    router-id 192.0.2.2;
+    local-address 192.0.2.2;
+    local-as {LOCAL_AS};
+    peer-as {PEER_AS};
+    family {{ ipv4 unicast; }}
+}}
+"""
+    configuration = Configuration([text], text=True)
+    assert configuration.reload(), str(configuration.error)
+    neighbor = next(iter(configuration.neighbors.values()))
+
+    capabilities = Capabilities().new(neighbor, False, local_as=ASN(LOCAL_AS))
+    negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
+    negotiated.sent(Open.make_open(Version(4), ASN(LOCAL_AS), HoldTime(180), RouterID('192.0.2.2'), capabilities))
+    negotiated.received(Open.make_open(Version(4), ASN(PEER_AS), HoldTime(180), RouterID('192.0.2.1'), capabilities))
+    return negotiated
 
 
 # --------------------------------------------------------------------------------------
@@ -283,3 +322,34 @@ def test_a_run_of_zero_length_tlvs_and_subtlvs_terminates() -> None:
     assert len(decoded(attribute(value)).tunnel_tlvs) == 4
     inner = subtlv(LOW_UNRECOGNISED_SUBTLV, b'') * 4
     assert len(decoded(attribute(tunnel(SR_POLICY_TUNNEL, inner))).tunnel_tlvs) == 1
+
+
+# --------------------------------------------------------------------------------------
+# 11 the attribute must be filterable on the way in
+
+
+@pytest.mark.rfc('rfc9012#11-must-be-able-to-filter-incoming')
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason='gap: no neighbour knob filters the Tunnel Encapsulation attribute on receipt, and none is on for EBGP',
+)
+def test_an_ebgp_session_filters_the_tunnel_encapsulation_attribute_from_an_incoming_update() -> None:
+    """Being able to filter is only visible once a filter exists and is turned on.
+
+    The same section asks for the filter to be on by default for every EBGP session, so a
+    neighbour configured with nothing but its ASes is where it shows without guessing the
+    name of a knob that has not been written.  Filtered means "neither processed nor
+    distributed": the route arrives and the attribute is not in what the API is handed.
+    """
+    negotiated = ebgp_session()
+    encap = attribute(tunnel(SR_POLICY_TUNNEL, preference(100)))
+    attributes = ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP + encap
+    payload = pack('!H', 0) + pack('!H', len(attributes)) + attributes + PREFIX_10_0_0_0_24
+
+    message = Update.unpack_message(payload, negotiated)
+    assert isinstance(message, Update)
+    collection = message.parse(negotiated)
+
+    assert len(collection.announces) == 1, 'the route itself must still be accepted'
+    assert TUNNEL_ENCAP not in collection.attributes, 'an EBGP peer delivered a Tunnel Encapsulation attribute'

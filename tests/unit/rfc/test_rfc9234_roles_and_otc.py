@@ -366,6 +366,29 @@ def test_an_otc_from_a_peer_naming_that_peer_is_not_a_leak() -> None:
     assert collection.route_leaks is None, "a Peer's own OTC value was treated as a leak"
 
 
+@pytest.mark.rfc('rfc9234#5-ingress-add-otc-when-absent')
+@pytest.mark.parametrize('local, peer', [('customer', 'a Provider'), ('peer', 'a Peer'), ('rs-client', 'an RS')])
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason='gap: a route from a Provider, Peer or RS without OTC reaches the API unmarked',
+)
+def test_a_route_without_otc_from_above_or_beside_us_is_marked_with_the_remote_as(local: str, peer: str) -> None:
+    """Ingress rule 3: the marking a well behaved neighbour would have added on egress.
+
+    Without it a route from a Provider which forgot to mark it looks to the API exactly
+    like one from a Customer, and the leak check downstream has nothing to go on.
+    """
+    neighbor = neighbour(local)
+    negotiated = negotiate(neighbor, None)
+
+    collection = received_update(negotiated, ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP)
+
+    otc = collection.attributes.get(Attribute.CODE.OTC)
+    assert isinstance(otc, OTC), f'a route from {peer} without OTC was not marked on ingress'
+    assert otc.asn == PEER_AS, 'the added OTC value must be the remote AS, not our own'
+
+
 # ============================================================ 5 egress procedures
 
 

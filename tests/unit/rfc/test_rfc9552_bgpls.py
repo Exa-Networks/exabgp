@@ -30,6 +30,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, GenericBGPLS
@@ -100,18 +101,17 @@ def node_nlri(
     return pack('!HH', code, len(payload)) + payload
 
 
-def link_nlri(remote: bytes) -> bytes:
+def link_nlri(remote: bytes, ascending: bool = True) -> bytes:
     """A Link NLRI: the same header, then the Local, Remote and Link Descriptors.
 
     5.2.1 says "any Node Descriptor", not "the local one", so the Link NLRI is where the
-    rule has a second place to hold.
+    rule has a second place to hold.  With `ascending` False the Link Descriptor (258) is
+    moved ahead of the Remote Node Descriptors (257), every TLV otherwise unchanged.
     """
-    payload = (
-        pack('!BQ', PROTOCOL_ID_OSPFV2, 0)
-        + tlv(LOCAL_NODE_DESCRIPTORS, descriptors())
-        + tlv(REMOTE_NODE_DESCRIPTORS, remote)
-        + tlv(LINK_LOCAL_REMOTE_IDENTIFIERS, pack('!LL', 1, 2))
-    )
+    remote_tlv = tlv(REMOTE_NODE_DESCRIPTORS, remote)
+    identifiers = tlv(LINK_LOCAL_REMOTE_IDENTIFIERS, pack('!LL', 1, 2))
+    descriptor_tlvs = remote_tlv + identifiers if ascending else identifiers + remote_tlv
+    payload = pack('!BQ', PROTOCOL_ID_OSPFV2, 0) + tlv(LOCAL_NODE_DESCRIPTORS, descriptors()) + descriptor_tlvs
     return pack('!HH', NLRI_TYPE_LINK, len(payload)) + payload
 
 
@@ -126,6 +126,21 @@ def unpack_nlri(data: bytes, safi: SAFI = SAFI.bgp_ls) -> tuple[NLRI, bytes]:
     """Feed wire bytes to the decoder an MP_REACH would reach."""
     nlri, left = BGPLS.unpack_nlri(AFI.bgpls, safi, data, Action.ANNOUNCE, False, session())
     return nlri, bytes(left)
+
+
+def mp_reach(nlris: bytes) -> MPRNLRI:
+    """An MP_REACH_NLRI value for AFI 16388 / SAFI 71, through the real attribute decoder.
+
+    The session is the shared one with BGP-LS negotiated and no ADD-PATH, which is all
+    `MPRNLRI.unpack_attribute` asks of it.
+    """
+    negotiated = session()
+    negotiated.families = [(AFI.bgpls, SAFI.bgp_ls)]
+    negotiated.required.return_value = False
+    value = pack('!HB', int(AFI.bgpls), int(SAFI.bgp_ls)) + bytes([len(ROUTER_ID)]) + ROUTER_ID + b'\x00' + nlris
+    reach = MPRNLRI.unpack_attribute(value, negotiated)
+    assert isinstance(reach, MPRNLRI)
+    return reach
 
 
 def unpack_attribute(value: bytes) -> LinkState:
@@ -225,6 +240,23 @@ def test_descending_order_does_not_excuse_a_tlv_which_runs_past_the_value() -> N
 
     with pytest.raises(Notify):
         unpack_attribute(value)
+
+
+@pytest.mark.rfc('rfc9552#5.1-nlri-tlvs-ascending-order')
+@pytest.mark.xfail(
+    strict=True,
+    raises=pytest.fail.Exception,
+    reason='gap: the NLRI level TLVs of a Link NLRI are never compared one type to the next',
+)
+def test_a_link_nlri_whose_tlvs_are_not_ascending_is_not_taken_as_well_formed() -> None:
+    """Sub-TLV order is checked inside a Node Descriptor; the TLVs around it are not.
+
+    An NLRI which compares unequal to its own ascending twin is two routes for one link,
+    which is what the rule exists to prevent.  `link_nlri(...)` in order is the control,
+    and decodes: the test above the Remote Node Descriptor sub-TLVs uses it.
+    """
+    with pytest.raises(Notify):
+        unpack_nlri(link_nlri(descriptors(), ascending=False))
 
 
 # ================================================================ section 5.2, the NLRI
@@ -371,6 +403,27 @@ def test_node_descriptor_sub_tlvs_out_of_ascending_order_are_refused() -> None:
 
     with pytest.raises(Notify):
         unpack_nlri(node_nlri(descending))
+
+
+@pytest.mark.rfc('rfc9552#8.2.2-nlri-discard', polarity='negative')
+@pytest.mark.xfail(
+    strict=True,
+    raises=Notify,
+    reason='gap: a skippable BGP-LS NLRI error is a Notify and a session reset, never an NLRI discard',
+)
+def test_an_nlri_violating_the_ordering_rule_is_discarded_and_the_next_one_kept() -> None:
+    """The example 8.2.2 gives itself: the ordering rule broken, the length still honest.
+
+    The Total NLRI Length says where the bad NLRI ends, so the decoder can step over it,
+    and the NLRI after it in the same MP_REACH is owed to the RIB rather than lost with
+    the session.
+    """
+    descending = tlv(SUB_TLV_IGP_ROUTER_ID, ROUTER_ID) + tlv(SUB_TLV_AUTONOMOUS_SYSTEM, pack('!L', 65000))
+    good = node_nlri()
+
+    announced = list(mp_reach(node_nlri(descending) + good).iter_routed())
+
+    assert [bytes(routed.nlri.pack_nlri(session())) for routed in announced] == [good]
 
 
 @pytest.mark.rfc('rfc9552#8.2.2-session-reset-when-unable-to-process')

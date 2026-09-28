@@ -14,12 +14,22 @@ same damage the decode bug caused, arriving from the other end.
 
 from __future__ import annotations
 
+from struct import pack
 
 import pytest
 
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.negotiated import RequirePath
+from exabgp.bgp.message.open.capability.negotiated import Negotiated, RequirePath
+from exabgp.bgp.message.update import Update, UpdateCollection
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.configuration.configuration import Configuration
+from exabgp.rib import RIB
+from exabgp.rib.route import Route
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
@@ -169,3 +179,181 @@ def test_two_paths_for_one_prefix_stay_apart() -> None:
 
     assert first.index() != second.index(), 'two paths for one prefix share a RIB key'
     assert first.index() == again.index(), 'the same path taken twice does not land on the same key'
+
+
+# ---------------------------------------------------------------------------
+# Section 4, the negative side: a peer which splits the capability.
+
+# the Capabilities optional parameter, RFC 5492 section 4
+CAPABILITIES_PARAMETER = 2
+
+
+def add_path_tuple(afi: AFI, safi: SAFI, send_receive: int) -> bytes:
+    """One <AFI, SAFI, Send/Receive> entry of the ADD-PATH capability value."""
+    return pack('!HBB', int(afi), int(safi), send_receive)
+
+
+def add_path_capability(*entries: bytes) -> bytes:
+    """One instance of the ADD-PATH capability TLV, carrying the entries given."""
+    value = b''.join(entries)
+    return bytes([Capability.CODE.ADD_PATH, len(value)]) + value
+
+
+def optional_parameters(*parameters: bytes) -> bytes:
+    """An OPEN optional parameter block: the one octet length, then each Capabilities
+    parameter wrapping the capability TLVs it was given."""
+    block = b''.join(bytes([CAPABILITIES_PARAMETER, len(tlvs)]) + tlvs for tlvs in parameters)
+    return bytes([len(block)]) + block
+
+
+IPV6_ENTRY = add_path_tuple(AFI.ipv6, SAFI.unicast, SEND)
+IPV4_ENTRY = add_path_tuple(AFI.ipv4, SAFI.unicast, RECEIVE)
+
+SPLIT_LAYOUTS = {
+    'two instances in one parameter': optional_parameters(
+        add_path_capability(IPV4_ENTRY) + add_path_capability(IPV6_ENTRY)
+    ),
+    'one instance in each of two parameters': optional_parameters(
+        add_path_capability(IPV4_ENTRY), add_path_capability(IPV6_ENTRY)
+    ),
+}
+
+
+@pytest.mark.rfc('rfc7911#4-single-capability-instance', polarity='negative')
+@pytest.mark.parametrize('packed', list(SPLIT_LAYOUTS.values()), ids=list(SPLIT_LAYOUTS))
+def test_a_peer_which_splits_add_path_across_instances_loses_no_family(packed: bytes) -> None:
+    """The peer broke the MUST, and we survive it by merging rather than by overwriting.
+
+    Section 4 is a rule for the sender, and the damage a receiver can do with a split
+    capability is quiet: `Capabilities` is a dict keyed by capability code, so a second
+    instance which replaced the first would leave IPv4 negotiated as off while the peer
+    believes it is on, and the path identifiers it sends would be read as the start of
+    the prefix.  `AddPath.unpack_capability` is handed the instance already decoded and
+    extends it, so each family keeps the direction the peer gave it.
+    """
+    received = Opened(None)
+    received.capabilities = Capabilities.unpack(packed)
+
+    capability = received.capabilities[Capability.CODE.ADD_PATH]
+    assert isinstance(capability, AddPath)
+    assert dict(capability) == {IPV4_UNICAST: RECEIVE, (AFI.ipv6, SAFI.unicast): SEND}, (
+        f'the second ADD-PATH instance did not merge with the first: {dict(capability)}'
+    )
+
+    require = RequirePath()
+    require.setup(received, Opened(SEND_RECEIVE))
+    assert require.send(*IPV4_UNICAST), 'the family in the first instance was lost'
+
+
+# ---------------------------------------------------------------------------
+# Section 2: re-advertisement.  A gap, because exabgp re-advertises nothing on its own.
+#
+# The closest real path is the one an API helper forwarding routes between neighbours
+# takes: a route decoded off one session, exactly as reactor/protocol.py decodes it, and
+# handed to the outgoing RIB of another.  That route keeps the Path Identifier its
+# original sender chose, which was only ever unique on the session it arrived on.
+
+LOCAL_AS = 65001
+TARGET_AS = 64998
+OUR_ADDRESS = '192.0.2.254'
+TARGET = '192.0.2.2'
+SOURCES = {'192.0.2.1': 64999, '192.0.2.3': 64997}
+
+ORIGIN_IGP = bytes([0x40, 0x01, 0x01, 0x00])
+NEXT_HOP = bytes([0x40, 0x03, 0x04, 192, 0, 2, 1])
+PREFIX_10_0_0_0_24 = bytes([24, 10, 0, 0])
+
+
+@pytest.fixture
+def isolated_ribs(monkeypatch: pytest.MonkeyPatch) -> None:
+    """RIB keeps a process wide cache keyed by neighbour name; tests must not share it."""
+    monkeypatch.setattr(RIB, '_cache', {})
+
+
+def add_path_neighbour(address: str, peer_as: int) -> Neighbor:
+    """A neighbour with ADD-PATH send/receive for IPv4 unicast, from the real parser."""
+    text = f"""
+neighbor {address} {{
+    router-id {OUR_ADDRESS};
+    local-address {OUR_ADDRESS};
+    local-as {LOCAL_AS};
+    peer-as {peer_as};
+    capability {{ add-path send/receive; }}
+    add-path {{ ipv4 unicast; }}
+    family {{ ipv4 unicast; }}
+}}
+"""
+    configuration = Configuration([text], text=True)
+    assert configuration.reload(), str(configuration.error)
+    parsed: Neighbor = next(iter(configuration.neighbors.values()))
+    return parsed
+
+
+def established(neighbor: Neighbor, peer_as: int) -> Negotiated:
+    """Run the real OPEN negotiation against a peer which offered what we did."""
+    sent = Capabilities().new(neighbor, False, local_as=ASN(LOCAL_AS))
+    negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
+    negotiated.sent(Open.make_open(Version(4), ASN(LOCAL_AS), HoldTime(180), RouterID(OUR_ADDRESS), sent))
+    negotiated.received(Open.make_open(Version(4), ASN(peer_as), HoldTime(180), RouterID(TARGET), Capabilities(sent)))
+    assert negotiated.required(*IPV4_UNICAST), 'ADD-PATH was not negotiated in both directions'
+    return negotiated
+
+
+def received(address: str, peer_as: int, path_id: int) -> UpdateCollection:
+    """10.0.0.0/24 as `address` sends it, with the Path Identifier it chose, decoded."""
+    session = established(add_path_neighbour(address, peer_as), peer_as)
+    attributes = ORIGIN_IGP + bytes([0x40, 0x02, 0x06, 0x02, 0x01]) + pack('!L', peer_as) + NEXT_HOP
+    nlri = pack('!L', path_id) + PREFIX_10_0_0_0_24
+    message = Update.unpack_message(pack('!H', 0) + pack('!H', len(attributes)) + attributes + nlri, session)
+    assert isinstance(message, Update)
+    return message.parse(session)
+
+
+def readvertised_identifiers(path_ids: dict[str, int]) -> list[bytes]:
+    """The Path Identifiers the target is sent, once handed each source's route."""
+    target = add_path_neighbour(TARGET, TARGET_AS)
+    session = established(target, TARGET_AS)
+    for address, path_id in path_ids.items():
+        learned = received(address, SOURCES[address], path_id)
+        assert learned.announces, f'the UPDATE from {address} carried no route'
+        for routed in learned.announces:
+            target.rib.outgoing.add_to_rib(Route(routed.nlri, learned.attributes, routed.nexthop))
+
+    identifiers: list[bytes] = []
+    for update in target.rib.outgoing.updates(True, None, session):
+        if not isinstance(update, UpdateCollection) or not update.announces:
+            continue
+        for wire in update.messages(session):
+            message = Update.unpack_message(wire[19:], session)
+            assert isinstance(message, Update)
+            identifiers.extend(bytes(routed.nlri.path_info.pack_path()) for routed in message.parse(session).announces)
+    return identifiers
+
+
+@pytest.mark.usefixtures('isolated_ribs')
+def test_two_received_paths_with_different_identifiers_both_reach_the_target() -> None:
+    """The control for the xfail below: two paths do travel, when their senders happened
+    to pick different identifiers.  Without it the xfail could be failing for want of
+    plumbing, and the day identifiers were generated nobody would be told."""
+    identifiers = readvertised_identifiers({'192.0.2.1': 1, '192.0.2.3': 2})
+
+    assert sorted(identifiers) == [pack('!L', 1), pack('!L', 2)]
+
+
+@pytest.mark.usefixtures('isolated_ribs')
+@pytest.mark.rfc('rfc7911#2-readvertise-generates-own-identifier')
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason='a re-advertised route keeps the Path Identifier its sender chose, so two paths '
+    'from two peers which both picked 1 go out to the third as the same path',
+)
+def test_a_readvertised_path_carries_an_identifier_we_chose() -> None:
+    """Identifiers are unique per session, not globally: two peers may both call their
+    path 1.  Passed on as received, the second replaces the first at the peer we send
+    them to, which is the loss of path ADD-PATH exists to prevent.  Generating our own
+    identifier is what keeps them two paths."""
+    identifiers = readvertised_identifiers({'192.0.2.1': 1, '192.0.2.3': 1})
+
+    assert len(identifiers) == 2, f'expected two paths to be sent, got {len(identifiers)}'
+    assert len(set(identifiers)) == 2, f'two different paths were sent under one identifier: {identifiers}'

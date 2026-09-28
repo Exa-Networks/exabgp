@@ -224,6 +224,25 @@ def test_the_same_prefix_withdrawn_and_announced_is_processed() -> None:
     assert len(parsed.withdraws) == 1, 'the withdrawal was lost'
 
 
+@pytest.mark.rfc('rfc4271#4.3-ignore-a-prefix-in-both-fields')
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason='the withdrawal is kept beside the announcement, in wire order, and left to the consumer to apply in order',
+)
+def test_the_same_prefix_withdrawn_and_announced_is_only_announced() -> None:
+    """The SHOULD which follows the MUST above: act as if the withdrawal was not there.
+
+    A consumer which batches, or sorts withdrawals ahead of announcements, would otherwise
+    remove the route the same UPDATE installs.  When this passes, the withdraw count in
+    `test_the_same_prefix_withdrawn_and_announced_is_processed` has to become zero too.
+    """
+    parsed = parse(body(withdrawn=IPV4_PREFIX, nlri=IPV4_PREFIX))
+
+    assert [str(routed.nlri) for routed in parsed.announces] == ['10.0.0.0/24'], 'the announcement was lost'
+    assert not parsed.withdraws, f'the prefix was withdrawn as well: {parsed.withdraws}'
+
+
 # ------------------------------------------------------------ 6.3 the two length fields
 
 
@@ -308,6 +327,53 @@ def test_an_invalid_prefix_in_the_withdrawn_routes_is_refused_too(prefix: bytes)
 
     assert notify.code == UPDATE_MESSAGE_ERROR
     assert notify.subcode == INVALID_NETWORK_FIELD
+
+
+# ------------------------------------------------------- 6.3 semantically incorrect values
+
+
+@pytest.mark.parametrize(
+    'address',
+    [bytes([0, 0, 0, 0]), bytes([224, 0, 0, 1])],
+    ids=['unspecified', 'multicast'],
+)
+@pytest.mark.rfc('rfc4271#6.3-next-hop-semantically-incorrect', polarity='negative')
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason='no semantic check on a received NEXT_HOP: 0.0.0.0 and multicast are kept',
+)
+def test_a_route_with_a_semantically_incorrect_next_hop_is_ignored(address: bytes) -> None:
+    """Syntactically a NEXT_HOP is four octets, and these are four octets.
+
+    Neither is an address a router can forward to, which is what RFC 4271 5.1.3 asks a
+    NEXT_HOP to be, so the route SHOULD be ignored: not a session reset, not a withdrawal,
+    simply not announced onwards to the API.
+    """
+    next_hop = bytes([WELL_KNOWN_TRANSITIVE, Attribute.CODE.NEXT_HOP, 4]) + address
+    parsed = parse(body(attributes=ORIGIN_IGP + EMPTY_AS_PATH + next_hop))
+
+    assert not parsed.announces, f'a route with next hop {".".join(map(str, address))} was kept: {parsed.announces}'
+
+
+@pytest.mark.parametrize(
+    'prefix',
+    [bytes([4, 224]), bytes([24, 239, 1, 1])],
+    ids=['224.0.0.0/4', '239.1.1.0/24'],
+)
+@pytest.mark.rfc('rfc4271#6.3-nlri-semantically-incorrect', polarity='negative')
+@pytest.mark.xfail(
+    strict=True, raises=AssertionError, reason='no semantic filter on a received prefix: a multicast prefix is kept'
+)
+def test_a_multicast_prefix_in_the_nlri_is_ignored(prefix: bytes) -> None:
+    """The RFC's own example of a semantically incorrect prefix, in the unicast NLRI field.
+
+    The prefix alone is ignored: the UPDATE is otherwise well formed, so it is no reason
+    to reset the session, and a unicast prefix beside it would still be announced.
+    """
+    parsed = parse(body(nlri=prefix + IPV4_PREFIX))
+
+    assert [str(routed.nlri) for routed in parsed.announces] == ['10.0.0.0/24']
 
 
 # ----------------------------------------------------------- 6.3 an optional attribute error

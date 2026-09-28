@@ -26,12 +26,20 @@ from typing import cast
 import pytest
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open import ASN, HoldTime, Open, RouterID, Version
+from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update import Update, UpdateCollection
+from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.update.nlri.label import LabelBase
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.rib.route import Route
 from exabgp.util.types import Buffer
 
 # Section 2.2: the Length field counts bits, and a label contributes 24 of them.
@@ -368,3 +376,138 @@ def test_the_configuration_parser_can_build_a_stack_we_are_not_allowed_to_send()
         rd=RouteDistinguisher(RD),
     )
     assert bytes(built.pack_nlri(Negotiated.UNSET)) == vpn(label(100, bottom=False) + label(200))
+
+
+# ------------------------------------------------- section 2.1, the Multiple Labels Capability
+#
+# exabgp has no decoder for capability code 8 and no gate between a configured label stack
+# and the wire.  The tests below say what the five gaps recorded in qa/rfc/rfc8277.toml
+# would mean if they were closed, and each fails today for the reason its xfail gives.
+# They build the session the way a real one is built, from OPEN capabilities decoded off
+# the wire, and generate the UPDATE through UpdateCollection.messages, which is what the
+# outgoing RIB calls.
+
+MULTIPROTOCOL = 1
+MULTIPLE_LABELS = 8
+
+LABELLED_UNICAST = (AFI.ipv4, SAFI.nlri_mpls)
+
+
+def triple(count: int, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.nlri_mpls) -> bytes:
+    """One <AFI, SAFI, Count> triple of the Multiple Labels Capability."""
+    return pack('!HBB', afi, safi, count)
+
+
+def capabilities(multiple_labels: bytes | None = None) -> Capabilities:
+    """An OPEN's capabilities offering IPv4 labelled unicast, decoded off the wire.
+
+    `multiple_labels` is the value of a Multiple Labels Capability, or None for an OPEN
+    which does not carry one.
+    """
+    fields = [(MULTIPROTOCOL, pack('!HBB', AFI.ipv4, 0, SAFI.nlri_mpls))]
+    if multiple_labels is not None:
+        fields.append((MULTIPLE_LABELS, multiple_labels))
+    body = b''.join(bytes([code, len(value)]) + value for code, value in fields)
+    parameter = bytes([2, len(body)]) + body
+    return Capabilities.unpack(bytes([len(parameter)]) + parameter)
+
+
+def session(ours: bytes | None, theirs: bytes | None) -> Negotiated:
+    """A negotiated outgoing session, each OPEN carrying the given Multiple Labels value."""
+    neighbor = Neighbor()
+    neighbor.session.local_as = ASN(65001)
+    negotiated = Negotiated(neighbor, Direction.OUT)
+    negotiated.sent(Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), capabilities(ours)))
+    negotiated.received(
+        Open.make_open(Version(4), ASN(65002), HoldTime(90), RouterID('192.0.2.2'), capabilities(theirs))
+    )
+    assert LABELLED_UNICAST in negotiated.families, 'the session did not negotiate labelled unicast'
+    return negotiated
+
+
+def configured(labels: str) -> list[Route]:
+    """The routes a static labelled route produces, through the configuration parser."""
+    configuration = Configuration([''], text=True)
+    configuration.static.clear()
+    line = f'route 10.0.0.0/24 next-hop 192.0.2.1 label {labels}'
+    assert configuration.partial('static', line, 'announce'), str(configuration.error)
+    configuration.scope.to_context()
+    routes = configuration.scope.pop_routes()
+    assert routes, 'the line parsed to no route at all'
+    return routes
+
+
+def labels_sent(routes: list[Route], negotiated: Negotiated) -> list[list[int]]:
+    """The label stack of every NLRI we put on the wire, read back off our own UPDATEs."""
+    routed = [RoutedNLRI(route.nlri, route.nexthop) for route in routes]
+    stacks: list[list[int]] = []
+    for message in UpdateCollection(routed, [], routes[0].attributes).messages(negotiated):
+        update = Update.unpack_message(message[19:], negotiated)
+        assert isinstance(update, Update), 'what we generated did not decode as an UPDATE'
+        for announced in update.parse(negotiated).announces:
+            nlri = cast(LabelBase, announced.nlri)
+            assert nlri.labels is not None, 'a labelled route went out without a label'
+            stacks.append(list(nlri.labels.labels))
+    assert stacks, 'no labelled NLRI was generated, so there is nothing to look at'
+    return stacks
+
+
+@pytest.mark.rfc('rfc8277#2-single-label-without-capability')
+@pytest.mark.xfail(
+    strict=True,
+    reason='a configured `label [100 200]` is packed whole: nothing between the parser and pack_nlri '
+    'consults a Multiple Labels Capability, which exabgp never sends',
+)
+def test_without_the_capability_a_configured_label_stack_goes_out_as_a_single_label() -> None:
+    """Neither OPEN carries code 8, which is every session exabgp forms today."""
+    assert labels_sent(configured('[ 100 200 ]'), session(None, None)) == [[100]]
+
+
+@pytest.mark.rfc('rfc8277#2.1-must-not-send-multiple-labels-uncapable')
+@pytest.mark.xfail(
+    strict=True,
+    reason='the peer offering the Multiple Labels Capability is not enough, we must have sent it '
+    'too, and exabgp neither sends code 8 nor checks for it before packing a label stack',
+)
+def test_a_peer_which_offers_multiple_labels_alone_does_not_let_us_send_two() -> None:
+    """The capability has to go both ways: here the peer sends it and we do not."""
+    for stack in labels_sent(configured('[ 100 200 ]'), session(None, triple(2))):
+        assert len(stack) == 1, f'{stack} bound to one prefix on a session we never sent code 8 on'
+
+
+@pytest.mark.rfc('rfc8277#2.1-duplicate-triple-ignored')
+@pytest.mark.xfail(
+    strict=True,
+    reason='code 8 is decoded by UnknownCapability, so neither the first triple nor its '
+    'duplicates is read and the peer count of two is never honoured',
+)
+def test_a_duplicate_triple_does_not_raise_the_count_the_first_one_gave() -> None:
+    """The peer says two, then eight, for the same family: two is the only one which counts."""
+    negotiated = session(triple(3), triple(2) + triple(8))
+    for stack in labels_sent(configured('[ 100 200 300 ]'), negotiated):
+        assert len(stack) <= 2, f'{stack} is more than the two labels the first triple allows'
+
+
+@pytest.mark.rfc('rfc8277#2.1-capability-length-multiple-of-four', polarity='negative')
+@pytest.mark.xfail(
+    strict=True,
+    reason='code 8 is decoded by UnknownCapability, which keeps the value and checks no length, '
+    'so a five octet Multiple Labels Capability is accepted as well formed',
+)
+def test_a_multiple_labels_capability_of_five_octets_is_malformed() -> None:
+    with pytest.raises(Notify) as raised:
+        capabilities(triple(2) + b'\x00')
+    assert raised.value.code == 2
+
+
+@pytest.mark.rfc('rfc8277#3.2.3-must-not-send-more-labels-than-peer-handles')
+@pytest.mark.xfail(
+    strict=True,
+    reason='the Count a peer advertises is never recorded, so a configured stack of three '
+    'labels is sent to a peer which said it handles two',
+)
+def test_we_send_no_more_labels_than_the_peer_said_it_handles() -> None:
+    """Both ends exchanged the capability, which leaves only the count to respect."""
+    negotiated = session(triple(3), triple(2))
+    for stack in labels_sent(configured('[ 100 200 300 ]'), negotiated):
+        assert len(stack) <= 2, f'{stack} is more than the two labels the peer announced'

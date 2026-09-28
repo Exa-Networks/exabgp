@@ -8,15 +8,20 @@ them findable.  It has two halves, and they pull in opposite directions on purpo
       next sentence that we MUST accept a peer which ignores all of it.
   5.2, 5.3 and 5.4 constrain what we do with what we RECEIVE.
 
-One requirement here is not met and carries xfail, on the receiving side: an UPDATE with no
-reachable NLRI and a treat-as-withdraw error does not escalate to a session reset.
+Two requirements here are not met and carry xfail, both on the receiving side: an UPDATE
+with no reachable NLRI and a treat-as-withdraw error does not escalate to a session reset,
+and an EVPN or MVPN route of an unknown type is kept as GenericEVPN / GenericMVPN rather
+than discarded (a `gap` in qa/rfc/rfc7606.toml, demonstrated here).
 """
 
 from __future__ import annotations
 
+from struct import pack
+
 import pytest
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import UpdateCollection
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
@@ -57,6 +62,11 @@ BGP_HEADER_SIZE = 19
 MALFORMED_MED = attribute(OPTIONAL, CODE.MED, bytes(3))
 MALFORMED_ATOMIC = attribute(WELL_KNOWN_TRANSITIVE, CODE.ATOMIC_AGGREGATE, bytes(4))
 
+# a route type neither EVPN (RFC 7432 and successors) nor MVPN (RFC 6514) registers, as the
+# type and length octets both families put in front of every route
+UNKNOWN_ROUTE_TYPE = 0x7F
+UNKNOWN_TYPED_ROUTE = bytes([UNKNOWN_ROUTE_TYPE, 4]) + bytes([1, 2, 3, 4])
+
 
 def routed(prefix: str) -> RoutedNLRI:
     """One route with a next hop of its own family, ready to be packed."""
@@ -64,6 +74,19 @@ def routed(prefix: str) -> RoutedNLRI:
     ip = IP.from_string(address)
     nlri = INET.from_cidr(CIDR.create_cidr(ip.pack_ip(), int(mask)), ip.afi, SAFI.unicast)
     return RoutedNLRI(nlri, IP.from_string('192.0.2.1' if ip.afi == AFI.ipv4 else '2001:db8::ffff'))
+
+
+def typed_session(afi: AFI, safi: SAFI) -> Negotiated:
+    """An EBGP session which negotiated the typed family on top of IPv4 and IPv6 unicast."""
+    negotiated = session()
+    negotiated.families = negotiated.families + [(afi, safi)]
+    return negotiated
+
+
+def mp_reach_typed(afi: AFI, safi: SAFI, routes: bytes) -> bytes:
+    """An MP_REACH_NLRI for a typed family, with an IPv4 next hop and the given routes."""
+    payload = pack('!HB', afi, safi) + bytes([4, 192, 0, 2, 1]) + bytes([0]) + routes
+    return attribute(OPTIONAL, CODE.MP_REACH_NLRI, payload)
 
 
 def sections(message: bytes) -> tuple[int, list[int], int]:
@@ -307,3 +330,29 @@ def test_mp_attributes_at_or_above_their_minimum_are_accepted() -> None:
     parsed = parse(update(ORIGIN_IGP + EMPTY_AS_PATH + mp_unreach_ipv6(), nlri=b''), session())
 
     assert withdrawn_routes(parsed) == ['::/64'], 'an MP_UNREACH of legal length was refused'
+
+
+# ------------------------------------------------------------------ 5.4
+
+
+@pytest.mark.rfc('rfc7606#5.4-unrecognised-typed-nlri-discarded')
+@pytest.mark.xfail(
+    strict=True,
+    reason='an EVPN or MVPN route of an unregistered type decodes to GenericEVPN or GenericMVPN '
+    'and is kept as an announcement, deliberately, so an operator sees what the peer sent; '
+    'qa/rfc/rfc7606.toml records this as a gap',
+)
+@pytest.mark.parametrize(
+    'afi,safi',
+    [(AFI.l2vpn, SAFI.evpn), (AFI.ipv4, SAFI.mcast_vpn)],
+    ids=['evpn', 'mvpn'],
+)
+def test_a_typed_route_of_an_unknown_type_is_discarded(afi: AFI, safi: SAFI) -> None:
+    """Discarded alone: the IPv4 route in the same UPDATE is still advertised, nothing is withdrawn."""
+    attributes = MANDATORY + mp_reach_typed(afi, safi, UNKNOWN_TYPED_ROUTE)
+    parsed = parse(update(attributes), typed_session(afi, safi))
+
+    assert withdrawn_routes(parsed) == [], 'an unknown route type was treated as withdraw instead of discarded'
+    assert announced(parsed) == ['10.0.0.0/24'], (
+        f'a {afi} {safi} route of unknown type {UNKNOWN_ROUTE_TYPE:#x} was kept: {announced(parsed)}'
+    )

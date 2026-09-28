@@ -490,3 +490,33 @@ def test_a_parsed_mp_route_carries_no_next_hop_attribute(
         if bytes(update.nlri_bytes):
             continue  # carries IPv4 NLRI as well, so the rule does not apply
         assert Attribute.CODE.NEXT_HOP not in attributes, f'{name}: we sent NEXT_HOP beside an MP_REACH_NLRI'
+
+
+# ------------------------------------------- 3 one prefix in more than one field
+
+
+@pytest.mark.rfc('rfc4760#3-no-duplicate-prefix-across-fields')
+@pytest.mark.parametrize('family', [IPV4_UNICAST, IPV6_UNICAST], ids=['ipv4', 'ipv6'])
+def test_a_prefix_announced_and_withdrawn_together_never_shares_an_update(family: FamilyTuple) -> None:
+    """No UPDATE we build fills more than one of the four fields (the RFC 7606 5.1 split
+    in UpdateCollection.messages), so a prefix handed to it both to announce and to
+    withdraw goes out in two messages, the withdrawal first.
+    """
+    if family == IPV4_UNICAST:
+        address, length, nexthop = IP.from_string('10.0.0.0'), 24, IP.from_string('192.0.2.1')
+    else:
+        address, length, nexthop = IP.from_string('2001:db8::'), 32, IP.from_string('2001:db8::ffff')
+    nlri = INET.from_cidr(CIDR.create_cidr(address.pack_ip(), length), family[0], family[1])
+    routes = routes_from_api('static', f'route {address}/{length} next-hop {nexthop}')
+    collection = UpdateCollection([RoutedNLRI(nlri, nexthop)], [nlri], routes[0].attributes)
+    receiver = session([family], Direction.IN)
+
+    fields = []
+    for message in collection.messages(session([family], Direction.OUT)):
+        update = Update.unpack_message(message[19:], receiver)
+        assert isinstance(update, Update), 'what we generated did not decode as an UPDATE'
+        parsed = update.parse(receiver)
+        fields.append(([str(routed.nlri) for routed in parsed.announces], [str(each) for each in parsed.withdraws]))
+
+    prefix = f'{address}/{length}'
+    assert fields == [([], [prefix]), ([prefix], [])], fields

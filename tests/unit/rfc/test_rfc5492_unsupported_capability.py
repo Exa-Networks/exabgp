@@ -15,17 +15,23 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import Notification, Notify
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities, Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
 from exabgp.reactor.peer import Peer
+from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
 
 OPEN_MESSAGE_ERROR = 2
+UNSUPPORTED_OPTIONAL_PARAMETER = 4
 UNSUPPORTED_CAPABILITY = 7
+
+# RFC 4271 4.2: the Optional Parameters Length octet follows the 19 octet header and the
+# nine octets of version, My Autonomous System, Hold Time and BGP Identifier
+OPTIONAL_PARAMETERS_LENGTH_OFFSET = 28
 
 ASN4 = Capability.CODE.FOUR_BYTES_ASN
 ROUTE_REFRESH = Capability.CODE.ROUTE_REFRESH
@@ -205,8 +211,6 @@ def test_route_refresh_require_asks_for_the_base_capability_only() -> None:
 
 
 def test_validate_open_raises_the_unsupported_capability() -> None:
-    from exabgp.reactor.protocol import Protocol
-
     neighbor = parsed_neighbor('asn4 require;')
     peer = Mock()
     peer.neighbor = neighbor
@@ -253,3 +257,35 @@ async def test_a_peering_ended_for_another_reason_is_still_restarted(monkeypatch
     await peer._run()
 
     assert peer._restart, 'stopping every peer after any NOTIFICATION also passes the test above'
+
+
+# =========================================================== 3, falling back to no capabilities
+
+
+@pytest.mark.rfc('rfc5492#3-reconnect-without-the-capabilities-parameter')
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason='the received subcode is not read: Protocol.new_open builds the same Capabilities on every attempt',
+)
+@pytest.mark.asyncio
+async def test_after_unsupported_optional_parameter_the_next_open_has_no_capabilities() -> None:
+    """A pre-RFC 2842 speaker answers an OPEN carrying capabilities with (2, 4).
+
+    The session is not stopped for it, the reactor retries, and the OPEN it retries with
+    SHOULD carry no Capabilities Optional Parameter at all, or the peer refuses it again
+    for ever.  What is asserted is the wire: an Optional Parameters Length of zero.
+    """
+    neighbor = parsed_neighbor('asn4 enable; route-refresh enable;')
+    peer = Peer(neighbor, Mock())
+    refusal = Notification.make_notification(OPEN_MESSAGE_ERROR, UNSUPPORTED_OPTIONAL_PARAMETER)
+    peer._establish = AsyncMock(side_effect=refusal)  # type: ignore[method-assign]
+
+    await peer._run()
+
+    assert peer._restart, 'the peering was stopped rather than retried'
+    retry = Protocol(peer)
+    retry.connection = Mock()
+    retry.write = AsyncMock()  # type: ignore[method-assign]
+    sent = (await retry.new_open()).pack_message(retry.negotiated)
+    assert sent[OPTIONAL_PARAMETERS_LENGTH_OFFSET] == 0, f'the retried OPEN still carries parameters: {sent.hex()}'
