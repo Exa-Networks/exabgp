@@ -36,7 +36,7 @@ from exabgp.configuration.grammar.section import Section, Store, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Syntax, Type
-from exabgp.configuration.grammar.types.route import RouteStatement
+from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPRange
@@ -48,37 +48,39 @@ from exabgp.rib.route import Route
 @dataclass(frozen=True)
 class RouteValue:
     type: Type[Any]
-    target: str  # 'attribute', 'nexthop' (an address and its attribute), or 'nlri'
+    target: Target  # NLRI, NEXTHOP_ATTRIBUTE or ATTRIBUTE
     field: str = ''  # the INETSettings field, for an 'nlri' target
     doc: str = ''
 
 
 ROUTE_VALUES: dict[str, RouteValue] = {
-    'next-hop': RouteValue(bgp.NextHopType(), 'nexthop', doc='the next-hop, or self for the local address'),
-    'path-information': RouteValue(bgp.PATH_INFORMATION, 'nlri', 'path_info', 'the ADD-PATH path identifier'),
-    'rd': RouteValue(bgp.ROUTE_DISTINGUISHER, 'nlri', 'rd', 'the route distinguisher, making it a VPN route'),
-    'route-distinguisher': RouteValue(bgp.ROUTE_DISTINGUISHER, 'nlri', 'rd'),
-    'label': RouteValue(bgp.LabelsType(), 'nlri', 'labels', 'the MPLS label stack'),
-    'bgp-prefix-sid': RouteValue(bgp.PrefixSidType(), 'attribute'),
-    'bgp-prefix-sid-srv6': RouteValue(bgp.PrefixSidSrv6Type(), 'attribute'),
-    'attribute': RouteValue(bgp.HexAttribute(), 'attribute', doc='any attribute, as its wire bytes'),
-    'origin': RouteValue(bgp.ORIGIN, 'attribute'),
-    'otc': RouteValue(bgp.OTC_VALUE, 'attribute', doc='RFC 9234 Only-to-Customer'),
-    'med': RouteValue(bgp.MED_VALUE, 'attribute'),
-    'as-path': RouteValue(bgp.ASPathType(), 'attribute'),
-    'local-preference': RouteValue(bgp.LOCAL_PREFERENCE, 'attribute'),
-    'atomic-aggregate': RouteValue(bgp.ATOMIC_AGGREGATE, 'attribute'),
-    'aggregator': RouteValue(bgp.AggregatorType(), 'attribute'),
-    'originator-id': RouteValue(bgp.ORIGINATOR_ID, 'attribute'),
-    'cluster-list': RouteValue(bgp.ClusterListType(), 'attribute'),
-    'community': RouteValue(bgp.COMMUNITIES, 'attribute'),
-    'large-community': RouteValue(bgp.LARGE_COMMUNITIES, 'attribute'),
-    'extended-community': RouteValue(bgp.ExtendedCommunitiesType(), 'attribute'),
-    'aigp': RouteValue(bgp.AIGP_VALUE, 'attribute'),
-    'name': RouteValue(bgp.NAME, 'attribute', doc='a name for the route, kept by exabgp'),
-    'split': RouteValue(bgp.SPLIT, 'attribute', doc='announce the prefix as its more specifics of this length'),
-    'watchdog': RouteValue(bgp.WATCHDOG, 'attribute', doc='the watchdog which announces and withdraws the route'),
-    'withdraw': RouteValue(bgp.WITHDRAW, 'attribute', doc='start with the route withdrawn'),
+    'next-hop': RouteValue(
+        bgp.NextHopType(), Target.NEXTHOP_ATTRIBUTE, doc='the next-hop, or self for the local address'
+    ),
+    'path-information': RouteValue(bgp.PATH_INFORMATION, Target.NLRI, 'path_info', 'the ADD-PATH path identifier'),
+    'rd': RouteValue(bgp.ROUTE_DISTINGUISHER, Target.NLRI, 'rd', 'the route distinguisher, making it a VPN route'),
+    'route-distinguisher': RouteValue(bgp.ROUTE_DISTINGUISHER, Target.NLRI, 'rd'),
+    'label': RouteValue(bgp.LabelsType(), Target.NLRI, 'labels', 'the MPLS label stack'),
+    'bgp-prefix-sid': RouteValue(bgp.PrefixSidType(), Target.ATTRIBUTE),
+    'bgp-prefix-sid-srv6': RouteValue(bgp.PrefixSidSrv6Type(), Target.ATTRIBUTE),
+    'attribute': RouteValue(bgp.HexAttribute(), Target.ATTRIBUTE, doc='any attribute, as its wire bytes'),
+    'origin': RouteValue(bgp.ORIGIN, Target.ATTRIBUTE),
+    'otc': RouteValue(bgp.OTC_VALUE, Target.ATTRIBUTE, doc='RFC 9234 Only-to-Customer'),
+    'med': RouteValue(bgp.MED_VALUE, Target.ATTRIBUTE),
+    'as-path': RouteValue(bgp.ASPathType(), Target.ATTRIBUTE),
+    'local-preference': RouteValue(bgp.LOCAL_PREFERENCE, Target.ATTRIBUTE),
+    'atomic-aggregate': RouteValue(bgp.ATOMIC_AGGREGATE, Target.ATTRIBUTE),
+    'aggregator': RouteValue(bgp.AggregatorType(), Target.ATTRIBUTE),
+    'originator-id': RouteValue(bgp.ORIGINATOR_ID, Target.ATTRIBUTE),
+    'cluster-list': RouteValue(bgp.ClusterListType(), Target.ATTRIBUTE),
+    'community': RouteValue(bgp.COMMUNITIES, Target.ATTRIBUTE),
+    'large-community': RouteValue(bgp.LARGE_COMMUNITIES, Target.ATTRIBUTE),
+    'extended-community': RouteValue(bgp.ExtendedCommunitiesType(), Target.ATTRIBUTE),
+    'aigp': RouteValue(bgp.AIGP_VALUE, Target.ATTRIBUTE),
+    'name': RouteValue(bgp.NAME, Target.ATTRIBUTE, doc='a name for the route, kept by exabgp'),
+    'split': RouteValue(bgp.SPLIT, Target.ATTRIBUTE, doc='announce the prefix as its more specifics of this length'),
+    'watchdog': RouteValue(bgp.WATCHDOG, Target.ATTRIBUTE, doc='the watchdog which announces and withdraws the route'),
+    'withdraw': RouteValue(bgp.WITHDRAW, Target.ATTRIBUTE, doc='start with the route withdrawn'),
 }
 
 
@@ -90,9 +92,9 @@ class Collected:
         self.attributes = AttributeCollection()
 
     def apply(self, spec: RouteValue, value: Any) -> None:
-        if spec.target == 'nlri':
+        if spec.target == Target.NLRI:
             self.settings.set(spec.field, value)
-        elif spec.target == 'nexthop':
+        elif spec.target == Target.NEXTHOP_ATTRIBUTE:
             ip, attribute = value
             self.settings.nexthop = ip
             self.attributes.add(attribute)

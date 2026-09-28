@@ -34,7 +34,7 @@ from exabgp.configuration.grammar.tree.static import (
     value_fields,
 )
 from exabgp.configuration.grammar.types.base import Type
-from exabgp.configuration.grammar.types.route import RouteStatement
+from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPSelf, IPv4, IPv6
@@ -256,7 +256,9 @@ class MupNextHop(Type[tuple[Any, Any]]):
 
 def mup_values() -> dict[str, RouteValue]:
     return {
-        'next-hop': RouteValue(MupNextHop(), 'nexthop', doc='the next-hop, IPv4 mapped into IPv6 for an IPv6 route'),
+        'next-hop': RouteValue(
+            MupNextHop(), Target.NEXTHOP_ATTRIBUTE, doc='the next-hop, IPv4 mapped into IPv6 for an IPv6 route'
+        ),
         'bgp-prefix-sid-srv6': ROUTE_VALUES['bgp-prefix-sid-srv6'],
         'extended-community': ROUTE_VALUES['extended-community'],
     }
@@ -293,7 +295,7 @@ class SelectLine(RouteStatement):
         return [route]
 
     def _apply(self, route: Route, spec: RouteValue, value: Any) -> Route:
-        if spec.target != 'nexthop':
+        if spec.target != Target.NEXTHOP_ATTRIBUTE:
             route.attributes.add(value)
             return route
         ip, attribute = value

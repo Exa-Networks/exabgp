@@ -33,7 +33,7 @@ from exabgp.configuration.grammar.tree.static import (
     value_fields,
 )
 from exabgp.configuration.grammar.types.base import Type
-from exabgp.configuration.grammar.types.route import RouteStatement
+from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI
@@ -68,16 +68,16 @@ VPLS_NLRI: dict[str, RouteValue] = {
             ['10.0.0.1', 'self'],
             shape=shape.union(shape.IP_ADDRESS, shape.enumeration('self')),
         ),
-        'nlri',
+        Target.NLRI,
         'nexthop',
         'the next-hop, or self for the IPv4 local address',
     ),
-    'rd': RouteValue(ROUTE_VALUES['rd'].type, 'nlri', 'rd'),
+    'rd': RouteValue(ROUTE_VALUES['rd'].type, Target.NLRI, 'rd'),
     # RFC 4761 3.2.2
-    'endpoint': RouteValue(_vpls_number('endpoint'), 'nlri', 'endpoint', 'the VE ID of the site'),
-    'offset': RouteValue(_vpls_number('block-offset'), 'nlri', 'offset', 'the VE block offset'),
-    'size': RouteValue(_vpls_number('block-size'), 'nlri', 'size', 'the VE block size'),
-    'base': RouteValue(_vpls_number('label'), 'nlri', 'base', 'the label base'),
+    'endpoint': RouteValue(_vpls_number('endpoint'), Target.NLRI, 'endpoint', 'the VE ID of the site'),
+    'offset': RouteValue(_vpls_number('block-offset'), Target.NLRI, 'offset', 'the VE block offset'),
+    'size': RouteValue(_vpls_number('block-size'), Target.NLRI, 'size', 'the VE block size'),
+    'base': RouteValue(_vpls_number('label'), Target.NLRI, 'base', 'the label base'),
 }
 VPLS_ATTRIBUTES = (
     'attribute',
@@ -98,12 +98,12 @@ VPLS_ATTRIBUTES = (
 )
 VPLS_VALUES: dict[str, RouteValue] = {
     **VPLS_NLRI,
-    **{keyword: RouteValue(ROUTE_VALUES[keyword].type, 'attribute') for keyword in VPLS_ATTRIBUTES},
+    **{keyword: RouteValue(ROUTE_VALUES[keyword].type, Target.ATTRIBUTE) for keyword in VPLS_ATTRIBUTES},
 }
 
 
 def _apply(settings: VPLSSettings, attributes: AttributeCollection, spec: RouteValue, value: Any) -> None:
-    if spec.target == 'nlri':
+    if spec.target == Target.NLRI:
         settings.set(spec.field, value)
     else:
         attributes.add(value)

@@ -13,6 +13,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from abc import abstractmethod
+from enum import Enum
 from typing import Any, Iterator, Mapping
 
 from exabgp.configuration.grammar.error import ConfigError
@@ -21,6 +22,17 @@ from exabgp.configuration.grammar.words import Words
 from exabgp.rib.route import Route
 
 MAX_ROUTE_VALUES = 256  # the keyword and value pairs of one route, far past a real one
+
+
+class Target(Enum):
+    """What the value of a route statement sets."""
+
+    NLRI = 'nlri'  # a field of the NLRI settings, named by the value
+    NEXTHOP = 'nexthop'  # the next-hop, an address
+    NEXTHOP_ATTRIBUTE = 'nexthop-attribute'  # the next-hop and the attribute given with it
+    ATTRIBUTE = 'attribute'  # an attribute of the route
+    RULE = 'rule'  # the rules of a flow match, added to its NLRI
+    NOTHING = 'nothing'  # read and not kept: `accept`
 
 
 class RouteStatement(Type[list[Route]]):

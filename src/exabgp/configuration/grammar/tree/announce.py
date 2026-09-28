@@ -47,7 +47,7 @@ from exabgp.configuration.grammar.tree.static import (
 from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Type
 from exabgp.configuration.grammar.types.network import ASN_WORD
-from exabgp.configuration.grammar.types.route import RouteStatement
+from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
@@ -140,12 +140,14 @@ REFUSED = (
 
 # the values of an IP route in an announce family, before the per family additions
 IP_VALUES: dict[str, RouteValue] = {
-    'next-hop': RouteValue(AnnounceNextHop(), 'nexthop', doc='the next-hop, or self for the IPv4 local address'),
+    'next-hop': RouteValue(
+        AnnounceNextHop(), Target.NEXTHOP_ATTRIBUTE, doc='the next-hop, or self for the IPv4 local address'
+    ),
     'origin': ROUTE_VALUES['origin'],
     'otc': ROUTE_VALUES['otc'],
     'med': RouteValue(
         Number('med', ((0, MED.MAX),), convert=_capped('MED', MED.from_int), examples=['0', '100']),
-        'attribute',
+        Target.ATTRIBUTE,
         doc=ROUTE_VALUES['med'].type.shape().description,
     ),
     'as-path': ROUTE_VALUES['as-path'],
@@ -156,16 +158,16 @@ IP_VALUES: dict[str, RouteValue] = {
             convert=_capped('local-preference', LocalPreference.from_int),
             examples=['100'],
         ),
-        'attribute',
+        Target.ATTRIBUTE,
         doc=ROUTE_VALUES['local-preference'].type.shape().description,
     ),
     'aggregator': ROUTE_VALUES['aggregator'],
     'community': ROUTE_VALUES['community'],
     'large-community': ROUTE_VALUES['large-community'],
     'extended-community': ROUTE_VALUES['extended-community'],
-    **{keyword: RouteValue(Refused(keyword), 'attribute') for keyword in REFUSED},
+    **{keyword: RouteValue(Refused(keyword), Target.ATTRIBUTE) for keyword in REFUSED},
 }
-PATH_VALUES = {**IP_VALUES, 'path-information': RouteValue(Refused('path-information'), 'nlri', 'path_info')}
+PATH_VALUES = {**IP_VALUES, 'path-information': RouteValue(Refused('path-information'), Target.NLRI, 'path_info')}
 LABEL_VALUES = {**PATH_VALUES, 'label': ROUTE_VALUES['label']}
 VPN_VALUES = {**LABEL_VALUES, 'rd': ROUTE_VALUES['rd']}
 
@@ -236,15 +238,17 @@ class _Default(Type[bool]):
 
 
 RTC_VALUES: dict[str, RouteValue] = {
-    'next-hop': RouteValue(_RTCNextHop(), 'nlri', 'nexthop', 'the next-hop, or self for the IPv4 local address'),
-    'origin-as': RouteValue(ASN_WORD, 'nlri', 'origin_as', 'the AS of the route target membership, RFC 4684'),
+    'next-hop': RouteValue(_RTCNextHop(), Target.NLRI, 'nexthop', 'the next-hop, or self for the IPv4 local address'),
+    'origin-as': RouteValue(ASN_WORD, Target.NLRI, 'origin_as', 'the AS of the route target membership, RFC 4684'),
     'route-target': RouteValue(
         Word('route-target', '<asn>:<n>|<ip>:<n>', _route_target, ['65000:1'], shape=ROUTE_TARGET),
-        'nlri',
+        Target.NLRI,
         'route_target',
         'the route target the membership is for',
     ),
-    'default': RouteValue(_Default(), 'nlri', 'default', 'the default route target membership, every route target'),
+    'default': RouteValue(
+        _Default(), Target.NLRI, 'default', 'the default route target membership, every route target'
+    ),
     **{keyword: value for keyword, value in IP_VALUES.items() if keyword not in ('split', 'aigp', 'otc', 'next-hop')},
 }
 
@@ -314,9 +318,9 @@ class AnnounceLine(RouteStatement):
 
 
 def _apply(settings: Any, attributes: AttributeCollection, spec: RouteValue, value: Any) -> None:
-    if spec.target == 'nlri':
+    if spec.target == Target.NLRI:
         settings.set(spec.field, value)
-    elif spec.target == 'nexthop':
+    elif spec.target == Target.NEXTHOP_ATTRIBUTE:
         ip, attribute = value
         if ip:
             settings.nexthop = ip

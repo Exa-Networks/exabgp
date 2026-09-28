@@ -56,7 +56,7 @@ from exabgp.configuration.grammar.tree.static import (
 )
 from exabgp.configuration.grammar.types import flow as types
 from exabgp.configuration.grammar.types.base import Printed, Type
-from exabgp.configuration.grammar.types.route import RouteStatement
+from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
@@ -66,116 +66,128 @@ from exabgp.rib.route import Route
 @dataclass(frozen=True)
 class FlowValue:
     type: Type[Any]
-    # 'rule' added to the NLRI, 'set' an NLRI field, 'nexthop', 'nexthop-attribute' (an address and
-    # a community), 'attribute', or 'nothing'
-    target: str
+    target: Target
     field: str = ''
     doc: str = ''
 
 
 MATCH: dict[str, FlowValue] = {
-    'source': FlowValue(types.SOURCE, 'rule', doc='the source prefix, RFC 8955 type 2'),
-    'source-ipv4': FlowValue(types.SOURCE, 'rule', doc='the source prefix, as source'),
-    'source-ipv6': FlowValue(types.SOURCE, 'rule', doc='the source prefix, as source'),
-    'destination': FlowValue(types.DESTINATION, 'rule', doc='the destination prefix, RFC 8955 type 1'),
-    'destination-ipv4': FlowValue(types.DESTINATION, 'rule', doc='the destination prefix, as destination'),
-    'destination-ipv6': FlowValue(types.DESTINATION, 'rule', doc='the destination prefix, as destination'),
+    'source': FlowValue(types.SOURCE, Target.RULE, doc='the source prefix, RFC 8955 type 2'),
+    'source-ipv4': FlowValue(types.SOURCE, Target.RULE, doc='the source prefix, as source'),
+    'source-ipv6': FlowValue(types.SOURCE, Target.RULE, doc='the source prefix, as source'),
+    'destination': FlowValue(types.DESTINATION, Target.RULE, doc='the destination prefix, RFC 8955 type 1'),
+    'destination-ipv4': FlowValue(types.DESTINATION, Target.RULE, doc='the destination prefix, as destination'),
+    'destination-ipv6': FlowValue(types.DESTINATION, Target.RULE, doc='the destination prefix, as destination'),
     'protocol': FlowValue(
         types.condition('protocol', FlowIPProtocol, ['tcp', '[ udp tcp ]', '=6']),
-        'rule',
+        Target.RULE,
         doc='the IP protocol, RFC 8955 type 3',
     ),
     'next-header': FlowValue(
-        types.condition('next-header', FlowNextHeader, ['tcp']), 'rule', doc='the IPv6 next header, RFC 8956 type 3'
+        types.condition('next-header', FlowNextHeader, ['tcp']),
+        Target.RULE,
+        doc='the IPv6 next header, RFC 8956 type 3',
     ),
     'port': FlowValue(
         types.condition('port', FlowAnyPort, ['25', '[ =80 >8080&<8088 ]']),
-        'rule',
+        Target.RULE,
         doc='the source or destination port, RFC 8955 type 4',
     ),
     'destination-port': FlowValue(
         types.condition('destination-port', FlowDestinationPort, ['=80']),
-        'rule',
+        Target.RULE,
         doc='the destination port, RFC 8955 type 5',
     ),
     'source-port': FlowValue(
-        types.condition('source-port', FlowSourcePort, ['>1024']), 'rule', doc='the source port, RFC 8955 type 6'
+        types.condition('source-port', FlowSourcePort, ['>1024']), Target.RULE, doc='the source port, RFC 8955 type 6'
     ),
     'icmp-type': FlowValue(
-        types.condition('icmp-type', FlowICMPType, ['8']), 'rule', doc='the ICMP type, RFC 8955 type 7'
+        types.condition('icmp-type', FlowICMPType, ['8']), Target.RULE, doc='the ICMP type, RFC 8955 type 7'
     ),
     'icmp-code': FlowValue(
-        types.condition('icmp-code', FlowICMPCode, ['0']), 'rule', doc='the ICMP code, RFC 8955 type 8'
+        types.condition('icmp-code', FlowICMPCode, ['0']), Target.RULE, doc='the ICMP code, RFC 8955 type 8'
     ),
     'tcp-flags': FlowValue(
-        types.condition('tcp-flags', FlowTCPFlag, ['syn', '[ syn ack ]']), 'rule', doc='the TCP flags, RFC 8955 type 9'
+        types.condition('tcp-flags', FlowTCPFlag, ['syn', '[ syn ack ]']),
+        Target.RULE,
+        doc='the TCP flags, RFC 8955 type 9',
     ),
     'packet-length': FlowValue(
         types.condition('packet-length', FlowPacketLength, ['>200&<300']),
-        'rule',
+        Target.RULE,
         doc='the packet length, RFC 8955 type 10',
     ),
-    'dscp': FlowValue(types.condition('dscp', FlowDSCP, ['10']), 'rule', doc='the DSCP, RFC 8955 type 11'),
+    'dscp': FlowValue(types.condition('dscp', FlowDSCP, ['10']), Target.RULE, doc='the DSCP, RFC 8955 type 11'),
     'traffic-class': FlowValue(
         types.condition('traffic-class', FlowTrafficClass, ['10']),
-        'rule',
+        Target.RULE,
         doc='the IPv6 traffic class, RFC 8956 type 11',
     ),
     'fragment': FlowValue(
-        types.condition('fragment', FlowFragment, ['is-fragment']), 'rule', doc='the fragment flags, RFC 8955 type 12'
+        types.condition('fragment', FlowFragment, ['is-fragment']),
+        Target.RULE,
+        doc='the fragment flags, RFC 8955 type 12',
     ),
     'flow-label': FlowValue(
         types.condition('flow-label', FlowFlowLabel, ['>100&<2000']),
-        'rule',
+        Target.RULE,
         doc='the IPv6 flow label, RFC 8956 type 13',
     ),
 }
 
 THEN: dict[str, FlowValue] = {
-    'accept': FlowValue(types.ACCEPT, 'nothing', doc='no action: the traffic is accepted'),
-    'discard': FlowValue(types.DISCARD, 'attribute', doc='drop the traffic, a traffic-rate of 0'),
+    'accept': FlowValue(types.ACCEPT, Target.NOTHING, doc='no action: the traffic is accepted'),
+    'discard': FlowValue(types.DISCARD, Target.ATTRIBUTE, doc='drop the traffic, a traffic-rate of 0'),
     'rate-limit': FlowValue(
-        types.RATE_LIMIT, 'attribute', doc='traffic-rate, RFC 8955 7.3: bytes or packets per second'
+        types.RATE_LIMIT, Target.ATTRIBUTE, doc='traffic-rate, RFC 8955 7.3: bytes or packets per second'
     ),
     'redirect': FlowValue(
-        types.REDIRECT, 'nexthop-attribute', doc='redirect to the VRF of a route target, or to an address'
+        types.REDIRECT, Target.NEXTHOP_ATTRIBUTE, doc='redirect to the VRF of a route target, or to an address'
     ),
     'redirect-to-nexthop': FlowValue(
-        types.REDIRECT_TO_NEXTHOP, 'attribute', doc='redirect to the next-hop of the route, or to the address given'
+        types.REDIRECT_TO_NEXTHOP,
+        Target.ATTRIBUTE,
+        doc='redirect to the next-hop of the route, or to the address given',
     ),
     'redirect-to-nexthop-ietf': FlowValue(
-        types.REDIRECT_TO_NEXTHOP_IETF, 'attribute', doc='redirect to an address, the IETF community'
+        types.REDIRECT_TO_NEXTHOP_IETF, Target.ATTRIBUTE, doc='redirect to an address, the IETF community'
     ),
     'redirect-to-nexthop-simpson': FlowValue(
-        types.REDIRECT_TO_NEXTHOP_SIMPSON, 'attribute', doc='redirect to the next-hop of the UPDATE, the older form'
+        types.REDIRECT_TO_NEXTHOP_SIMPSON,
+        Target.ATTRIBUTE,
+        doc='redirect to the next-hop of the UPDATE, the older form',
     ),
-    'copy': FlowValue(types.COPY, 'nexthop-attribute', doc='copy the traffic to an address, the IETF community'),
+    'copy': FlowValue(types.COPY, Target.NEXTHOP_ATTRIBUTE, doc='copy the traffic to an address, the IETF community'),
     'copy-simpson': FlowValue(
-        types.COPY_SIMPSON, 'nexthop-attribute', doc='copy the traffic to an address, the older form'
+        types.COPY_SIMPSON, Target.NEXTHOP_ATTRIBUTE, doc='copy the traffic to an address, the older form'
     ),
     'redirect-simpson': FlowValue(
-        types.REDIRECT_SIMPSON, 'nexthop-attribute', doc='redirect to an address, the older form'
+        types.REDIRECT_SIMPSON, Target.NEXTHOP_ATTRIBUTE, doc='redirect to an address, the older form'
     ),
-    'mark': FlowValue(types.MARK, 'attribute', doc='traffic-marking, RFC 8955 7.5: the DSCP to set'),
+    'mark': FlowValue(types.MARK, Target.ATTRIBUTE, doc='traffic-marking, RFC 8955 7.5: the DSCP to set'),
     'action': FlowValue(
-        types.ACTION, 'attribute', doc='traffic-action, RFC 8955 7.6: sample the traffic, stop at this rule, or both'
+        types.ACTION,
+        Target.ATTRIBUTE,
+        doc='traffic-action, RFC 8955 7.6: sample the traffic, stop at this rule, or both',
     ),
-    'community': FlowValue(ROUTE_VALUES['community'].type, 'attribute'),
-    'large-community': FlowValue(ROUTE_VALUES['large-community'].type, 'attribute'),
-    'extended-community': FlowValue(ROUTE_VALUES['extended-community'].type, 'attribute'),
+    'community': FlowValue(ROUTE_VALUES['community'].type, Target.ATTRIBUTE),
+    'large-community': FlowValue(ROUTE_VALUES['large-community'].type, Target.ATTRIBUTE),
+    'extended-community': FlowValue(ROUTE_VALUES['extended-community'].type, Target.ATTRIBUTE),
 }
 
 SCOPE: dict[str, FlowValue] = {
     'interface-set': FlowValue(
-        types.INTERFACE_SET, 'attribute', doc='the interfaces the rule applies to, draft-ietf-idr-flowspec-interfaceset'
+        types.INTERFACE_SET,
+        Target.ATTRIBUTE,
+        doc='the interfaces the rule applies to, draft-ietf-idr-flowspec-interfaceset',
     )
 }
 
 ROUTE: dict[str, FlowValue] = {
-    'rd': FlowValue(ROUTE_VALUES['rd'].type, 'set', 'rd'),
-    'route-distinguisher': FlowValue(ROUTE_VALUES['rd'].type, 'set', 'rd'),
-    'path-information': FlowValue(ROUTE_VALUES['path-information'].type, 'set', 'addpath'),
-    'next-hop': FlowValue(types.FLOW_NEXTHOP, 'nexthop', doc='the next-hop of the flow route, or self'),
+    'rd': FlowValue(ROUTE_VALUES['rd'].type, Target.NLRI, 'rd'),
+    'route-distinguisher': FlowValue(ROUTE_VALUES['rd'].type, Target.NLRI, 'rd'),
+    'path-information': FlowValue(ROUTE_VALUES['path-information'].type, Target.NLRI, 'addpath'),
+    'next-hop': FlowValue(types.FLOW_NEXTHOP, Target.NEXTHOP, doc='the next-hop of the flow route, or self'),
 }
 
 # legacy: a one-line route reads no next-hop, and sets `route-distinguisher` on a field of that
@@ -185,7 +197,7 @@ LINE = {
     **THEN,
     **SCOPE,
     **ROUTE,
-    'route-distinguisher': FlowValue(ROUTE_VALUES['rd'].type, 'set', 'route-distinguisher'),
+    'route-distinguisher': FlowValue(ROUTE_VALUES['rd'].type, Target.NLRI, 'route-distinguisher'),
 }
 del LINE['next-hop']
 
@@ -199,26 +211,26 @@ class FlowRoute:
         self.nexthop: IP = IP.NoNextHop
 
     def apply(self, spec: FlowValue, value: Any, line: bool) -> None:
-        if spec.target == 'rule':
+        if spec.target == Target.RULE:
             for rule in value:
                 if not self.nlri.add(rule):
                     raise ValueError(self.nlri.family_conflict(rule))
-        elif spec.target == 'set':
+        elif spec.target == Target.NLRI:
             try:
                 setattr(self.nlri, spec.field, value)
             except AttributeError:
                 # legacy: the one-line `route-distinguisher` names no field, and the route fails
                 raise ValueError(f'a flow route has no {spec.field}') from None
-        elif spec.target == 'nexthop':
+        elif spec.target == Target.NEXTHOP:
             if value:
                 self.nexthop = value
-        elif spec.target == 'nexthop-attribute':
+        elif spec.target == Target.NEXTHOP_ATTRIBUTE:
             ip, attribute = value
             # legacy: a one-line route takes the address even when there is none
             if ip or line:
                 self.nexthop = ip
             self.attributes.add(attribute)
-        elif spec.target == 'attribute':
+        elif spec.target == Target.ATTRIBUTE:
             self.attributes.add(value)
 
     def route(self) -> Route:
@@ -447,12 +459,12 @@ FLOW = Block(
 # --------------------------------------------------------------------------- announce families
 
 ANNOUNCE_FLOW: dict[str, FlowValue] = {
-    'rd': FlowValue(ROUTE_VALUES['rd'].type, 'set', 'rd'),
-    'path-information': FlowValue(ROUTE_VALUES['path-information'].type, 'set', 'path_info'),
+    'rd': FlowValue(ROUTE_VALUES['rd'].type, Target.NLRI, 'rd'),
+    'path-information': FlowValue(ROUTE_VALUES['path-information'].type, Target.NLRI, 'path_info'),
     **MATCH,
     **THEN,
     **SCOPE,
-    'attribute': FlowValue(ROUTE_VALUES['attribute'].type, 'attribute'),
+    'attribute': FlowValue(ROUTE_VALUES['attribute'].type, Target.ATTRIBUTE),
 }
 
 
@@ -480,18 +492,18 @@ class AnnounceFlowLine(RouteStatement):
 
     @staticmethod
     def _apply(settings: FlowSettings, attributes: AttributeCollection, spec: FlowValue, value: Any) -> None:
-        if spec.target == 'rule':
+        if spec.target == Target.RULE:
             for rule in value:
                 settings.add_rule(rule)
-        elif spec.target == 'set':
+        elif spec.target == Target.NLRI:
             settings.set(spec.field, value)
-        elif spec.target == 'nexthop-attribute':
+        elif spec.target == Target.NEXTHOP_ATTRIBUTE:
             ip, attribute = value
             if ip:
                 settings.nexthop = ip
             if attribute:
                 attributes.add(attribute)
-        elif spec.target == 'attribute':
+        elif spec.target == Target.ATTRIBUTE:
             attributes.add(value)
 
     def printed(self, route: Route) -> list[str]:
