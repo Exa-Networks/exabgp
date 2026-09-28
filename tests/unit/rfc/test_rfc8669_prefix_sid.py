@@ -14,17 +14,11 @@ treat-as-withdraw instead.  `PrefixSid` now sets `VALID_ZERO` to keep that gener
 from answering for it and refuses the empty value in its own decoder, so all three doors
 reach `DISCARD`.
 
-The two xfails in this file are the other shape: not a flag in the wrong place but a
-check with no place to stand.  Sections 3.1 and 4.1 both scope their requirement to
-labelled unicast, and the attribute decoder cannot know the family, because MP_REACH_NLRI
-is itself a path attribute in the same collection and carries the NLRI the rule is about.
-Nothing is missing from `PrefixSid`; what is missing is a caller with the family in hand.
-The shape such a caller would have already exists one level up, in
-`UpdateCollection.classify_otc`, which runs after the NLRI are built and annotates the
-UpdateCollection rather than the shared attribute dictionary.  Until the equivalent pass
-exists for this rule these two tests assert against `AttributeCollection.parse`, where the
-answer can only ever be no, and so they stay xfail rather than being quietly rewritten
-into something that passes.
+Sections 3.1 and 4.1 are the other shape: not a flag in the wrong place but a check with
+no place to stand in the attribute decoder.  Both scope their requirement to labelled
+unicast, and the family is in MP_REACH_NLRI, itself a path attribute beside this one.
+`UpdateCollection._without_invalid_prefix_sid` runs once the NLRI are built, so those
+tests go through a whole UPDATE.
 """
 
 from __future__ import annotations
@@ -39,6 +33,10 @@ from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
 from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
+from exabgp.bgp.message.update import Update, UpdateCollection
+from exabgp.protocol.family import AFI, SAFI
+
+from rfc import rfc7606_wire
 
 pytestmark = pytest.mark.timeout(10)
 
@@ -140,13 +138,13 @@ def test_every_flag_bit_set_neither_refuses_the_tlv_nor_changes_the_index() -> N
 
 
 @pytest.mark.rfc('rfc8669#3.1-label-index-must-be-present')
-@pytest.mark.xfail(
-    strict=True,
-    reason='scoped to labelled unicast, and the family lives in MP_REACH_NLRI, which is a sibling attribute still being parsed',
-)
-def test_a_prefix_sid_without_a_label_index_tlv_is_refused() -> None:
-    collection = parse(attribute(srgb([(4096, 100)])))
-    assert DISCARD in collection
+def test_a_labelled_unicast_route_whose_prefix_sid_has_no_label_index_loses_the_attribute() -> None:
+    """The route stays, the attribute goes: section 6 has an invalid Prefix-SID ignored."""
+    parsed = received(labelled_unicast_reach(), attribute(srgb([(4096, 100)])))
+
+    assert DISCARD in parsed.attributes
+    assert PREFIX_SID not in parsed.attributes
+    assert [str(routed.nlri.cidr) for routed in parsed.announces] == ['10.0.0.0/24']
 
 
 @pytest.mark.rfc('rfc8669#3.1-label-index-must-be-present', polarity='negative')
@@ -208,12 +206,23 @@ def test_the_attribute_reaches_the_api_unfiltered_for_the_operator_to_judge() ->
 
 
 @pytest.mark.rfc('rfc8669#4.1-no-label-index-is-invalid')
-@pytest.mark.xfail(
-    strict=True,
-    reason='an SRGB-only attribute decodes and is handed on as valid, and refusing it here would also refuse every RFC 9252 SRv6 service attribute',
-)
 def test_a_prefix_sid_carrying_only_an_srgb_is_treated_as_invalid() -> None:
-    assert DISCARD in parse(attribute(srgb([(4096, 100)])))
+    assert DISCARD in received(labelled_unicast_reach(), attribute(srgb([(4096, 100)]))).attributes
+
+
+@pytest.mark.rfc('rfc8669#4.1-no-label-index-is-invalid', polarity='negative')
+def test_a_labelled_unicast_prefix_sid_with_a_label_index_is_kept() -> None:
+    parsed = received(labelled_unicast_reach(), attribute(label_index(100) + srgb([(4096, 100)])))
+
+    assert PREFIX_SID in parsed.attributes
+    assert DISCARD not in parsed.attributes
+
+
+def test_the_label_index_rule_does_not_touch_a_family_other_than_labelled_unicast() -> None:
+    """Unmarked: an SRv6 service Prefix-SID on a VPN route has no Label-Index (RFC 9252)."""
+    parsed = received(vpn_reach(), attribute(tlv(Srv6L3Service.TLV, b'\x00')))
+
+    assert DISCARD not in parsed.attributes
 
 
 @pytest.mark.rfc('rfc8669#4.1-no-label-index-is-invalid', polarity='negative')
@@ -336,3 +345,39 @@ def test_a_repeated_unknown_tlv_is_left_alone() -> None:
     attr = decoded(attribute(value))
     assert [each.TLV for each in attr.sr_attrs] == [LABEL_INDEX_TLV, UNKNOWN_TLV, UNKNOWN_TLV]
     assert bytes(attr.pack_attribute(Negotiated.UNSET)) == attribute(value)
+
+
+# --------------------------------------------------------------------------------------
+# a whole UPDATE, for the rules which need the family
+
+ORIGIN_IGP = bytes([0x40, 0x01, 0x01, 0x00])
+EMPTY_AS_PATH = bytes([0x40, 0x02, 0x00])
+LABEL_100 = bytes([0x00, 0x06, 0x41])  # label 100, bottom of stack
+
+
+def mp_reach(afi: int, safi: int, next_hop: bytes, nlri: bytes) -> bytes:
+    value = pack('!HB', afi, safi) + bytes([len(next_hop)]) + next_hop + b'\x00' + nlri
+    return bytes([0x80, int(Attribute.CODE.MP_REACH_NLRI), len(value)]) + value
+
+
+def labelled_unicast_reach() -> bytes:
+    """10.0.0.0/24 with label 100, IPv4 labelled unicast (SAFI 4)."""
+    return mp_reach(1, 4, bytes([192, 0, 2, 1]), bytes([24 + 24]) + LABEL_100 + bytes([10, 0, 0]))
+
+
+def vpn_reach() -> bytes:
+    """10.0.0.0/24 with label 100 and a type 0 RD, IPv4 VPN (SAFI 128)."""
+    rd = pack('!HHL', 0, 65000, 1)
+    return mp_reach(
+        1, 128, bytes(8) + bytes([192, 0, 2, 1]), bytes([24 + 64 + 24]) + LABEL_100 + rd + bytes([10, 0, 0])
+    )
+
+
+def received(reach: bytes, prefix_sid: bytes) -> UpdateCollection:
+    """An UPDATE from an iBGP peer, decoded as the reactor decodes one."""
+    negotiated = rfc7606_wire.internal_session()
+    negotiated.families = [(AFI.ipv4, SAFI.nlri_mpls), (AFI.ipv4, SAFI.mpls_vpn)]
+    attributes = ORIGIN_IGP + EMPTY_AS_PATH + reach + prefix_sid
+    message = Update.unpack_message(pack('!H', 0) + pack('!H', len(attributes)) + attributes, negotiated)
+    assert isinstance(message, Update)
+    return message.data

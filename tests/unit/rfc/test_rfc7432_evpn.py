@@ -16,9 +16,8 @@ Everything drives `EVPN.unpack_nlri`, the real entry point the reactor uses, on 
 built here rather than on anything the encoder produced: an encoder and a decoder that
 agree with each other and disagree with the RFC pass every round-trip test ever written.
 
-The tests at the end carry a strict xfail as well as a marker.  Each names a requirement
-qa/rfc/rfc7432.toml records as a gap and shows what meeting it would look like; the day
-one passes, its status becomes required and the xfail comes off.
+The tests at the end were strict xfails for requirements recorded as gaps; the communities
+and the route distinguisher check they asked for are now there.
 """
 
 from __future__ import annotations
@@ -32,6 +31,7 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity, RouteTarget
+from exabgp.bgp.message.update.attribute.community.extended.evpn import ESILabel, ESImportRouteTarget
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.evpn.ethernetad import EthernetAD
 from exabgp.bgp.message.update.nlri.evpn.mac import MAC
@@ -365,10 +365,6 @@ SOMEONE_ELSES_ADDRESS = '198.51.100.7'
 
 
 @pytest.mark.rfc('rfc7432#8.2.1-esi-label-extended-community-included')
-@pytest.mark.xfail(
-    strict=True,
-    reason='no ESI Label class: type 0x06 sub-type 0x01 is not registered and decodes as a hex blob',
-)
 def test_an_esi_label_extended_community_is_recognised_with_its_label() -> None:
     """A route can only carry an ESI Label exabgp knows how to read and write."""
     decoded = ExtendedCommunity.unpack_attribute(ESI_LABEL_COMMUNITY, None)
@@ -380,10 +376,6 @@ def test_an_esi_label_extended_community_is_recognised_with_its_label() -> None:
 
 
 @pytest.mark.rfc('rfc7432#8.1.1-es-import-route-target-carried')
-@pytest.mark.xfail(
-    strict=True,
-    reason='no ES-Import Route Target class: type 0x06 sub-type 0x02 decodes as a generic community',
-)
 def test_an_es_import_route_target_decodes_as_a_route_target_carrying_a_mac() -> None:
     decoded = ExtendedCommunity.unpack_attribute(ES_IMPORT_ROUTE_TARGET, None)
 
@@ -393,7 +385,6 @@ def test_an_es_import_route_target_decodes_as_a_route_target_carrying_a_mac() ->
 
 
 @pytest.mark.rfc('rfc7432#8.1.1-rd-type-1', polarity='negative')
-@pytest.mark.xfail(strict=True, reason='make_ethernetsegment encodes whatever route distinguisher it is given')
 @pytest.mark.parametrize('rd', [RD_TYPE_0, RD_TYPE_2], ids=['type-0', 'type-2'])
 def test_an_ethernet_segment_route_with_an_rd_other_than_type_1_is_refused(rd: bytes) -> None:
     """RD above is type 1, so the only difference from a route we do build is the RD type."""
@@ -403,10 +394,9 @@ def test_an_ethernet_segment_route_with_an_rd_other_than_type_1_is_refused(rd: b
         )
 
 
-@pytest.mark.rfc('rfc7432#11.1-next-hop-advertising-pe', polarity='negative')
-@pytest.mark.xfail(strict=True, reason='resolve_self only resolves `self`, any other next-hop is sent as written')
-def test_an_inclusive_multicast_route_with_another_routers_next_hop_is_refused() -> None:
-    """Section 11.1 is about the Inclusive Multicast route, so that is the route built here."""
+def test_an_inclusive_multicast_route_keeps_the_next_hop_the_operator_wrote() -> None:
+    """Unmarked: rfc7432#11.1-next-hop-advertising-pe is not-applicable, exabgp injects
+    routes on behalf of the PE whose address the operator writes, and sends it as written."""
     neighbor = Neighbor()
     neighbor.session = Session(
         peer_address=IPv4.from_string(PEER_ADDRESS),
@@ -418,5 +408,31 @@ def test_an_inclusive_multicast_route_with_another_routers_next_hop_is_refused()
     multicast = Multicast.make_multicast(RouteDistinguisher(RD), EthernetTag(ETAG), IP.create_ip(IPV4), Action.ANNOUNCE)
     route = Route(multicast, AttributeCollection(), nexthop=IPv4.from_string(SOMEONE_ELSES_ADDRESS))
 
-    with pytest.raises(ValueError):
-        neighbor.resolve_self(route)
+    assert str(neighbor.resolve_self(route).nexthop) == SOMEONE_ELSES_ADDRESS
+
+
+@pytest.mark.rfc('rfc7432#8.2.1-esi-label-extended-community-included')
+@pytest.mark.parametrize('single_active', [True, False], ids=['single-active', 'all-active'])
+def test_an_esi_label_we_build_decodes_back_to_its_label_and_mode(single_active: bool) -> None:
+    built = ESILabel.make_esi_label(100, single_active)
+    decoded = ExtendedCommunity.unpack_attribute(bytes(built.pack_attribute(Negotiated.UNSET)), None)
+
+    assert isinstance(decoded, ESILabel)
+    assert (decoded.label, decoded.single_active) == (100, single_active)
+
+
+@pytest.mark.rfc('rfc7432#8.1.1-es-import-route-target-carried')
+def test_an_es_import_route_target_we_build_is_the_seven_octet_layout_of_section_7_6() -> None:
+    built = ESImportRouteTarget.make_es_import(MAC_ADDRESS)
+
+    assert bytes(built.pack_attribute(Negotiated.UNSET)) == ES_IMPORT_ROUTE_TARGET
+
+
+@pytest.mark.rfc('rfc7432#8.1.1-rd-type-1')
+def test_an_ethernet_segment_route_with_a_type_1_rd_is_built() -> None:
+    """The other side of the refusal above, so a builder refusing everything would fail."""
+    built = EthernetSegment.make_ethernetsegment(
+        RouteDistinguisher(RD), SegmentIdentifier(ESI), IP.create_ip(IPV4), Action.ANNOUNCE
+    )
+
+    assert bytes(built.rd.pack_rd()) == RD

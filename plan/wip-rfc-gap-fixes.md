@@ -57,8 +57,8 @@ env exabgp_log_enable=false uv run pytest tests/unit/rfc -q -rx | grep XFAIL
 | 3 | Outgoing routes / adj-rib-out | ✅ | `e642645` |
 | 4 | RFC 8277 Multiple Labels Capability | ✅ | `9220b94` |
 | 5 | FlowSpec | ✅ | `e778145`, `7a59c04` |
-| 6 | Graceful Restart receiving procedures | ✅ uncommitted | |
-| 7 | EVPN and Prefix-SID | ❌ todo | |
+| 6 | Graceful Restart receiving procedures | ✅ | `c36aeba` |
+| 7 | EVPN and Prefix-SID | ✅ uncommitted | |
 | 8 | BGP-LS, capability retry, four-octet AS | ❌ todo | |
 
 ### Done, and the decisions taken
@@ -285,6 +285,21 @@ Each area below is independent. Do one per commit. The xfail tests named are the
   labelled unicast only, keeping RFC 9252 SRv6 service TLVs valid. Rewrite those two tests
   to go through a real UPDATE.
 
+**Area 7 as implemented (2026-09-29):**
+- `extended/evpn.py`: `ESILabel` (0x06/0x01) and `ESImportRouteTarget` (0x06/0x02, a
+  RouteTarget), registered, with builders. The configuration has no EVPN route statement,
+  so exabgp originates no type 1/4 route itself: the two "MUST carry" rules are closed as
+  carrying what a PE sends (positive-only).
+- `EthernetSegment.make_ethernetsegment` refuses an RD not of type 1 (ValueError); receipt
+  is untouched.
+- RFC 7432 11.1 (next hop is the advertising PE): reclassified not-applicable, exabgp is a
+  route injector sending the next hop the operator writes. Decision taken without Thomas
+  while he asked to continue; revisit if wanted.
+- RFC 8669: `UpdateCollection._without_invalid_prefix_sid` at the end of `_parse_payload`:
+  on labelled unicast, a Prefix-SID with no Label-Index is discarded (copy of the
+  collection), routes kept; other families untouched (RFC 9252 SRv6). Tests go through a
+  whole UPDATE.
+
 ### 8. BGP-LS, capability retry, four-octet AS
 - `tests/unit/rfc/test_rfc9552_bgpls.py`: NLRI TLVs in ascending order (§5.1), NLRI discard
   instead of session reset (§8.2.2). Also `tests/fuzz/test_bgpls_tlv_properties.py` has a
@@ -347,7 +362,7 @@ None.
 
 **2026-09-28 (local):** on `main` after #1432, not on the web branch. Area 3 committed as
 `e642645`, area 4 `9220b94` (not pushed). Area 5 part A `e778145`; part B (§6 validation)
-`7a59c04`; area 6 done. Next: area 7. `test_everything`: all 25 passed (one clean
+`7a59c04`; area 6 `c36aeba`; area 7 done. Next: area 8. `test_everything`: all 25 passed (one clean
 run, 10m29s). Next: area 4 (RFC 8277). Areas one after the
 other, stopping for review between each.
 

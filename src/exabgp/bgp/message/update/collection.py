@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING, Generator, cast
 
 from exabgp.util.types import Buffer
 
@@ -24,7 +24,9 @@ from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.attribute.otc import OTC
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, SEQUENCE, ASPath
-from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
+from exabgp.bgp.message.update.attribute.attribute import Discard, TreatAsWithdraw
+from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
+from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.inet import INET
@@ -856,6 +858,17 @@ class UpdateCollection:
             attributes = attributes.copy()
             attributes.add(TreatAsWithdraw())
 
+        return cls._routes(legacy, mp_reach, withdraws, attributes)
+
+    @classmethod
+    def _routes(
+        cls,
+        legacy: list[RoutedNLRI],
+        mp_reach: list[RoutedNLRI],
+        withdraws: list[NLRI],
+        attributes: AttributeCollection,
+    ) -> UpdateCollection:
+        """The collection an UPDATE decodes to, once its routes and attributes are known."""
         # Treat-as-withdraw is an action on every announced route, not merely a
         # diagnostic attribute. NLRI parsing has completed at this point, so all
         # affected legacy and MP_REACH routes can be moved safely. It comes before the
@@ -865,7 +878,35 @@ class UpdateCollection:
             return cls([], withdraws, attributes)
 
         announces = [routed for routed in legacy if cls._semantically_correct(routed)] + mp_reach
-        return cls(announces, cls._not_announced(withdraws, announces), attributes)
+        valid = cls._without_invalid_prefix_sid(attributes, announces)
+        return cls(announces, cls._not_announced(withdraws, announces), valid)
+
+    @staticmethod
+    def _without_invalid_prefix_sid(
+        attributes: AttributeCollection, announces: list[RoutedNLRI]
+    ) -> AttributeCollection:
+        """RFC 8669 3.1 and 4.1: on labelled unicast, a Prefix-SID with no Label-Index is invalid.
+
+        Invalid means ignored and not propagated (section 6), so the attribute is discarded
+        and the routes kept. Only labelled unicast: the Label-Index is ignored on other
+        families, and RFC 9252 puts SRv6 service TLVs with no Label-Index in this same
+        attribute on VPN and EVPN routes. Decided here, after the NLRI are built, because
+        the family is in MP_REACH_NLRI, a sibling of the attribute.
+        """
+        if Attribute.CODE.BGP_PREFIX_SID not in attributes:
+            return attributes
+        if not any(routed.nlri.safi == SAFI.nlri_mpls for routed in announces):
+            return attributes
+        # the attribute stored under BGP_PREFIX_SID is the Prefix-SID attribute
+        prefix_sid = cast(PrefixSid, attributes[Attribute.CODE.BGP_PREFIX_SID])
+        if any(tlv.TLV == SrLabelIndex.TLV for tlv in prefix_sid.sr_attrs):
+            return attributes
+        log.warning(lazymsg('update.prefix-sid.invalid reason=no-label-index action=discard'), 'parser')
+        # the collection may be the session's cached one, so the change is made on a copy
+        discarded = attributes.copy()
+        discarded.remove(Attribute.CODE.BGP_PREFIX_SID)
+        discarded.add(Discard(Attribute.CODE.BGP_PREFIX_SID))
+        return discarded
 
     @staticmethod
     def _warn_next_hop_is_ours(nexthop: Attribute | IP, negotiated: Negotiated) -> None:

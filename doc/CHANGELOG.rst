@@ -4,6 +4,11 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Feature: the EVPN ESI Label (0x06/0x01) and ES-Import Route Target (0x06/0x02) extended
+   communities of RFC 7432 are decoded, printed ("esi-label:<label>:<mode>",
+   "es-import:<mac>") and re-encoded; they were a hex blob.
+ * Change: a BGP Prefix-SID with no Label-Index TLV received on a labelled unicast route
+   is discarded, the route kept (RFC 8669 3.1, 4.1, 6). Other families are unaffected.
  * Feature: the routes of a neighbor which advertised Graceful Restart are kept in the
    adj-rib-in, stale, when its TCP session is lost (RFC 4724 4.2), instead of being cleared
    when the session comes back. They go, with a withdrawal to the API, at its End-of-RIB,

@@ -31,6 +31,10 @@ from exabgp.util.types import Buffer
 # ===================================================================== EVPNNLRI
 
 
+# RFC 7432 8.1.1: an IP address and a number, the router's own
+ETHERNET_SEGMENT_RD_TYPE = 1
+
+
 @EVPN.register_evpn_route(code=4)
 class EthernetSegment(EVPN):
     """EVPN Route Type 4: Ethernet Segment.
@@ -63,7 +67,14 @@ class EthernetSegment(EVPN):
 
         Packs fields into wire format immediately (packed-bytes-first pattern).
         Note: nexthop is not part of NLRI - set separately after creation.
+
+        RFC 7432 8.1.1: the route distinguisher of an Ethernet Segment route is of type 1,
+        so any other is refused here. A received one is decoded as it is: the check is on
+        what we build, not a reason to reset a session.
         """
+        rd_type = int.from_bytes(bytes(rd.pack_rd())[:2], 'big')
+        if rd_type != ETHERNET_SEGMENT_RD_TYPE:
+            raise ValueError(f'an Ethernet Segment route needs a type 1 route distinguisher, not type {rd_type}')
         payload = bytes(rd.pack_rd()) + esi.pack_esi() + bytes([len(ip) * 8]) + ip.pack_ip()
         # Include type + length header for zero-copy pack
         packed = bytes([cls.CODE, len(payload)]) + payload

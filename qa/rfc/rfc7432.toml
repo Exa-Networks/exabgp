@@ -113,55 +113,48 @@ stands between a truncated A-D route and an IndexError out of the `esi` accessor
 id = "rfc7432#8.2.1-esi-label-extended-community-included"
 section = "8.2.1"
 level = "MUST"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
 The ESI Label extended community MUST be included in the route.
 """
 note = """
-exabgp has no ESI Label extended community at all.  Type 0x06 sub-type 0x01 is not in
-`ExtendedCommunity.registered_extended`, so one arriving from a peer decodes to a generic
-`ExtendedCommunity` and is reported as a hex blob with neither the Single-Active flag nor
-the label parsed out, and there is no configuration syntax to originate one.  The table
-at the top of extended/__init__.py compounds it by listing ESI Label as sub-type 0x04,
-which section 7.5 of this document says is 0x01.
+exabgp's configuration has no statement which originates an Ethernet A-D route, so what
+it owes is to carry the community a PE puts in one: `ESILabel` (extended/evpn.py) decodes
+Type 0x06 Sub-Type 0x01, renders the label and the Single-Active flag, and re-encodes it
+byte for byte; `make_esi_label` builds one for a program composing the route. Positive
+only: it is about what a route carries, and there is no peer input for it to reject.
 """
 
 [[requirement]]
 id = "rfc7432#8.1.1-es-import-route-target-carried"
 section = "8.1.1"
 level = "MUST"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
 The BGP advertisement that advertises the Ethernet Segment route MUST
    also carry an ES-Import Route Target, as defined in Section 7.6.
 """
 note = """
-exabgp will happily originate a type 4 route with no ES-Import Route Target, and has no
-class for one: section 7.6 extends the Route Target extended community to a high-order
-octet of 0x06 with sub-type 0x02 and a 6-octet MAC value, and exabgp's `RouteTarget`
-subclasses cover only the 0x00, 0x01 and 0x02 types of RFC 4360.  A received 0x06/0x02
-falls through to a generic `ExtendedCommunity` and is neither recognised as a route
-target nor rendered as a MAC.
+As for the ESI Label: no configuration statement originates an Ethernet Segment route, and
+`ESImportRouteTarget` (extended/evpn.py), a RouteTarget, decodes Type 0x06 Sub-Type 0x02,
+renders the MAC and re-encodes it; `make_es_import` builds one. Positive only, as above.
 """
 
 [[requirement]]
 id = "rfc7432#8.1.1-rd-type-1"
 section = "8.1.1"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 The Route Distinguisher (RD) MUST be a Type 1 RD [RFC4364].
 """
 note = """
-exabgp encodes whatever route distinguisher the operator writes into an EVPN route and
-the configuration parser accepts the type 0 and type 2 forms for a type 4 route as
-readily as the type 1 form.  Nothing in `EthernetSegment` looks at the RD type octets.
-This is a deliberate-looking omission rather than an oversight - exabgp exists to send
-what it is told - but it is still a MUST we do not meet, so it is recorded as a gap
-rather than excused.
+`EthernetSegment.make_ethernetsegment`, the one builder of the route, refuses a route
+distinguisher which is not of type 1 with a ValueError. A received route is decoded as it
+arrived: the MUST is on the originator, not a reason to reset a session.
 """
 
 # ------------------------------------------------ obligations on a PE, not on us
@@ -274,18 +267,18 @@ sentence exabgp can enforce is the IP Address Length that follows it, which
 id = "rfc7432#11.1-next-hop-advertising-pe"
 section = "11.1"
 level = "MUST"
-status = "gap"
+status = "not-applicable"
 polarity = "both"
 text = """
 The Next Hop field of the MP_REACH_NLRI attribute of the route MUST
    be set to the IPv4 or IPv6 address of the advertising PE.
 """
 note = """
-exabgp puts the configured next-hop into MP_REACH_NLRI and does not check that it is an
-address of the local speaker: `next-hop` may name any address, including one belonging to
-another router, and `self` is resolved to the session's local address rather than
-enforced.  Route injection into someone else's next-hop is the whole point of several
-exabgp deployments, so this is a gap we are unlikely to close, but it is a gap.
+Binds a PE advertising its own routes. exabgp is not the PE: it is a route injector, and
+the routes it sends are written by an operator on behalf of the PE whose address goes in
+the next hop, which is the whole point of several exabgp deployments. It sends the next
+hop it was given (`self` resolves to the session's local address). Decided 2026-09-29:
+not-applicable rather than a gap which would only be closed by refusing that use.
 """
 
 [[requirement]]
