@@ -404,7 +404,12 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
     - **Read when:** Adding or changing a configuration keyword, API route command, or configuration printing
     - **Contains:** Package layout, how to add a keyword, the tests which prove behaviour is preserved
 
+21. **`.claude/exabgp/BGP_MESSAGE_INTERFACE.md`** - The BGP message contract
+    - **Read when:** Adding or changing a BGP message class (OPEN, UPDATE, NOTIFICATION, ...), Notify, Operational
+    - **Contains:** The base class contract, one table per message, what each malformation is answered with
+
 **Quick reference:**
+- Adding or changing a BGP message → Read #21
 - Adding a configuration keyword → Read #20
 - Adding NLRI type → Read #3, then #1
 - Understanding message flow → Read #2

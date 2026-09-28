@@ -55,8 +55,8 @@ Message
 | 4 | Open bytes-first (`_packed` is the whole body) | unit + functional | ✅ |
 | 5 | EOR(Update), UpdateCollection out of Message, EOR marker as a field | unit + functional | ✅ |
 | 6 | Notification / Notify | unit + functional | ✅ |
-| 7 | Operational bytes-first, UPPER constants, registry raises on duplicate, sequence bug | unit + functional | ⏳ |
-| 8 | Spec: `doc/` table per message, contract test green | `./qa/bin/test_everything` | ⏳ |
+| 7 | Operational bytes-first, UPPER constants, registry raises on duplicate, sequence bug | unit + functional | ✅ |
+| 8 | Spec: `.claude/exabgp/BGP_MESSAGE_INTERFACE.md` table per message, contract test green | `./qa/bin/test_everything` | ⏳ |
 
 ## Bugs found on the way
 
@@ -116,6 +116,35 @@ Message
   raw Data field (an RFC 9003 length octet included) rather than the display text. Pinned by
   `test_a_received_shutdown_communication_is_reported_as_the_peer_sent_it`.
 
+## Notes from steps 7 and 8
+
+- Base `__eq__`/`__hash__` on `(ID, bytes(_packed))` came last, once every class stored its
+  body (it was listed under step 3). `RouteRefresh` lost its own `__eq__`/`__ne__`, and its
+  `request/start/end` became `REQUEST/BEGIN/END`, taken from `Reserved`.
+- Operational is bytes-first: `make_advisory`, `make_query`, `make_counter`, `make_ns`,
+  `make_unknown`, and `from_values` for the configuration. Class constants are UPPER:
+  `SUBTYPE` (the table, was `CODE`), `SUBTYPE_ID` (was `code`), `NAME`, `CATEGORY`,
+  `HAS_FAMILY`, `HAS_ROUTERID`, `IS_FAULT`. `register_operational` refuses a duplicate.
+- Sequence bug fixed, and shown on HEAD: three queries without a sequence went out
+  `[1, 1, 1]`. `tests/unit/test_operational_sequence.py`. Packing no longer changes the message.
+- A received advisory longer than 2048 octets is kept as received; only `make_advisory` cuts.
+- `rpcq ... sequence -1` is refused by the configuration (it crashed the send before):
+  `forms_operational.py` and the frozen legacy digests updated, two entries of 5883.
+- Thomas asked why `NS._NS` and not `NS.NS`: the groups' shared layouts are now
+  `NS.NS`, `Advisory.Advisory`, `Query.Query`, `Response.Counter`; a class with no `NAME`
+  is one which is never sent, and the contract test finds them by that field.
+- The derived-field guards in `Message.__init_subclass__` raise TypeError, not assert: the
+  `optimised` suite (-O) caught it.
+- Spec: `.claude/exabgp/BGP_MESSAGE_INTERFACE.md`, referenced from CLAUDE.md (#21).
+- CHANGELOG: the API change and the three fixes.
+
+## Flakes which are not this work (both fail at HEAD)
+
+- `tests/unit/test_util.py::TestDNS` under xdist.
+- `tests/unit/test_otc_parsing.py::test_inline_encode_literal_otc[ipv4...]` fails whenever
+  `tests/unit/configuration/test_configuration_export.py` (or `config_grammar/test_roundtrip.py`)
+  ran before it on the same worker. Reproduced on a HEAD worktree: a test isolation bug.
+
 ## Recent Failures
 
 ### 2026-09-28 baseline: 22 unit failures
@@ -125,4 +154,4 @@ Message
 
 ## Resume Point
 
-Step 7.
+All steps done; waiting for Thomas's review. Nothing committed.

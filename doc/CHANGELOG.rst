@@ -4,6 +4,20 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Incompatible: the "data" of a received notification, in the JSON and text API, is the
+   Data field the peer sent, as for one we send. It was a display form for a received one
+   only, so a Shutdown Communication showed as 'Shutdown Communication: "..."' rather than
+   its length octet and its text.
+ * Fix: operational queries sent without a sequence number all went out with sequence 1,
+   so a reply could not be matched to its query. Each now takes the next number for the
+   router-id it is sent with.
+ * Fix: a neighbor with "adj-rib-in false", no role, no API process reading updates and
+   route logging off reset the session on the first UPDATE the peer sent. The UPDATE was
+   not decoded, so the prefix limit and the RFC 7606 checks were skipped as well.
+ * Fix: "rpcq ... sequence -1" was accepted by the configuration and the session failed
+   when it tried to send the query. It is refused when the configuration is read.
+ * Change: an OPERATIONAL message too short for its own type and length fields is refused
+   by the header check with Bad Message Length (1/2), rather than by the decoder with 5/0.
  * Feature: BGP confederations (RFC 5065), issue #96. A neighbor "confederation {
    identifier <asn>; members [ <asn> ... ]; }" block makes local-as our Member-AS. The
    OPEN carries the identifier to a peer outside the confederation and the Member-AS to a

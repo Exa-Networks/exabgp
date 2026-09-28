@@ -157,7 +157,7 @@ ExaBGP operates on three main data flows:
 - `configuration/configuration.py` - `parse()`
 - `reactor/api/command/announce.py` - API route parsing
 - `rib/outgoing.py` - `insert_announced()`
-- `bgp/message/update/__init__.py` - `Update.pack_message()`
+- `bgp/message/update/__init__.py` - `Update.pack_message(negotiated)`
 - `bgp/message/update/attribute/attribute.py` - `Attribute.pack()`
 - `bgp/message/update/nlri/nlri.py` - `NLRI.pack_nlri()`
 
