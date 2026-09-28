@@ -11,7 +11,7 @@ apply the same rule to it.
 
 from __future__ import annotations
 
-from typing import Iterator
+from typing import Any, Iterator
 from unittest.mock import Mock, patch
 
 import pytest
@@ -88,12 +88,12 @@ class Session:
 @pytest.mark.rfc('rfc7313#4-examine-the-subtype')
 def test_a_normal_request_is_answered_with_an_enhanced_refresh() -> None:
     session = Session()
-    session.receive(RouteRefresh.request)
+    session.receive(RouteRefresh.REQUEST)
     session.resend.assert_called_once_with(True, FAMILY)
 
 
 @pytest.mark.rfc('rfc7313#4-examine-the-subtype', polarity='negative')
-@pytest.mark.parametrize('subtype', [RouteRefresh.start, RouteRefresh.end], ids=['BoRR', 'EoRR'])
+@pytest.mark.parametrize('subtype', [RouteRefresh.BEGIN, RouteRefresh.END], ids=['BoRR', 'EoRR'])
 def test_a_borr_or_an_eorr_is_not_a_request(subtype: int) -> None:
     """Both were answered by replaying our whole Adj-RIB-Out at the peer."""
     session = Session()
@@ -109,9 +109,9 @@ def test_a_borr_or_an_eorr_is_not_a_request(subtype: int) -> None:
 def test_what_the_peer_did_not_repeat_is_removed_at_the_eorr() -> None:
     session = Session()
     session.announced(KEPT, DROPPED)
-    session.receive(RouteRefresh.start)
+    session.receive(RouteRefresh.BEGIN)
     session.announced(KEPT)
-    session.receive(RouteRefresh.end)
+    session.receive(RouteRefresh.END)
 
     assert held(session.incoming) == [KEPT]
 
@@ -120,9 +120,9 @@ def test_what_the_peer_did_not_repeat_is_removed_at_the_eorr() -> None:
 def test_a_route_re_sent_after_the_borr_is_no_longer_stale() -> None:
     session = Session()
     session.announced(KEPT)
-    session.receive(RouteRefresh.start)
+    session.receive(RouteRefresh.BEGIN)
     session.announced(KEPT)
-    session.receive(RouteRefresh.end)
+    session.receive(RouteRefresh.END)
 
     assert held(session.incoming) == [KEPT]
 
@@ -131,8 +131,8 @@ def test_a_route_re_sent_after_the_borr_is_no_longer_stale() -> None:
 def test_only_the_family_of_the_borr_is_marked() -> None:
     session = Session()
     session.announced(KEPT)
-    session.receive(RouteRefresh.start, OTHER)
-    session.receive(RouteRefresh.end, OTHER)
+    session.receive(RouteRefresh.BEGIN, OTHER)
+    session.receive(RouteRefresh.END, OTHER)
 
     assert held(session.incoming) == [KEPT]
 
@@ -140,10 +140,10 @@ def test_only_the_family_of_the_borr_is_marked() -> None:
 def test_a_route_withdrawn_during_the_refresh_is_not_purged_twice() -> None:
     session = Session()
     session.announced(KEPT, DROPPED)
-    session.receive(RouteRefresh.start)
+    session.receive(RouteRefresh.BEGIN)
     session.incoming.update_cache_withdraw(route(DROPPED).nlri)
     session.announced(KEPT)
-    session.receive(RouteRefresh.end)
+    session.receive(RouteRefresh.END)
 
     assert held(session.incoming) == [KEPT]
 
@@ -152,9 +152,9 @@ def test_a_route_withdrawn_during_the_refresh_is_not_purged_twice() -> None:
 def test_purged_routes_are_logged() -> None:
     session = Session()
     session.announced(KEPT, DROPPED)
-    session.receive(RouteRefresh.start)
+    session.receive(RouteRefresh.BEGIN)
     with patch.object(route_refresh.log, 'info') as info:
-        session.receive(RouteRefresh.end)
+        session.receive(RouteRefresh.END)
     info.assert_called_once()
 
 
@@ -162,7 +162,7 @@ def test_purged_routes_are_logged() -> None:
 def test_an_eorr_without_a_borr_removes_nothing() -> None:
     session = Session()
     session.announced(KEPT)
-    session.receive(RouteRefresh.end)
+    session.receive(RouteRefresh.END)
 
     assert held(session.incoming) == [KEPT]
 
@@ -171,7 +171,7 @@ def test_an_eorr_without_a_borr_removes_nothing() -> None:
 def test_an_eorr_without_a_borr_is_logged() -> None:
     session = Session()
     with patch.object(route_refresh.log, 'warning') as warning:
-        session.receive(RouteRefresh.end)
+        session.receive(RouteRefresh.END)
     warning.assert_called_once()
 
 
@@ -179,7 +179,7 @@ def test_without_the_capability_the_octet_is_still_ignored() -> None:
     """RFC 2918: without Enhanced Route Refresh a BoRR's subtype is a Reserved octet."""
     session = Session(enhanced=False)
     session.announced(KEPT)
-    session.receive(RouteRefresh.start)
+    session.receive(RouteRefresh.BEGIN)
     session.resend.assert_called_once_with(False, FAMILY)
     assert held(session.incoming) == [KEPT]
 
@@ -191,8 +191,8 @@ def test_without_the_capability_the_octet_is_still_ignored() -> None:
 def test_a_borr_before_the_peers_end_of_rib_is_ignored() -> None:
     session = Session(graceful=True)
     session.announced(KEPT, DROPPED)
-    session.receive(RouteRefresh.start)
-    session.receive(RouteRefresh.end)
+    session.receive(RouteRefresh.BEGIN)
+    session.receive(RouteRefresh.END)
 
     assert held(session.incoming) == sorted([KEPT, DROPPED])
 
@@ -202,9 +202,9 @@ def test_a_borr_after_the_peers_end_of_rib_is_honoured() -> None:
     session = Session(graceful=True)
     session.announced(KEPT, DROPPED)
     session.incoming.record_end_of_rib(FAMILY)
-    session.receive(RouteRefresh.start)
+    session.receive(RouteRefresh.BEGIN)
     session.announced(KEPT)
-    session.receive(RouteRefresh.end)
+    session.receive(RouteRefresh.END)
 
     assert held(session.incoming) == [KEPT]
 
@@ -213,7 +213,7 @@ def test_a_borr_after_the_peers_end_of_rib_is_honoured() -> None:
 def test_a_borr_before_the_peers_end_of_rib_is_logged() -> None:
     session = Session(graceful=True)
     with patch.object(route_refresh.log, 'warning') as warning:
-        session.receive(RouteRefresh.start)
+        session.receive(RouteRefresh.BEGIN)
     warning.assert_called_once()
 
 
@@ -297,14 +297,47 @@ def test_a_refresh_we_start_is_bracketed_when_the_peer_advertised_it() -> None:
 
 
 @pytest.mark.rfc('rfc7313#4-advertise-the-capability')
-def test_route_refresh_enabled_advertises_the_enhanced_capability_too() -> None:
+@pytest.mark.parametrize(
+    'mode',
+    [
+        'route-refresh enable;',
+        'route-refresh require;',
+        'route-refresh enable; route-refresh-normal require;',
+        'route-refresh enable; route-refresh-enhanced require;',
+    ],
+)
+def test_route_refresh_enabled_advertises_the_enhanced_capability_too(mode: str) -> None:
     from exabgp.bgp.message.open.capability.capabilities import Capabilities
 
-    neighbor = Mock()
-    neighbor.capability.route_refresh = True
     capabilities = Capabilities()
-    capabilities._refresh(neighbor)
+    capabilities._refresh(_configured(mode))
+    assert Capability.CODE.ROUTE_REFRESH in capabilities
     assert Capability.CODE.ENHANCED_ROUTE_REFRESH in capabilities
+
+
+def test_enable_normal_advertises_route_refresh_alone() -> None:
+    """The SHOULD leaves the operator the choice, for a peer whose enhanced route refresh misbehaves."""
+    from exabgp.bgp.message.open.capability.capabilities import Capabilities
+
+    capabilities = Capabilities()
+    capabilities._refresh(_configured('route-refresh-normal enable;'))
+    assert Capability.CODE.ROUTE_REFRESH in capabilities
+    assert Capability.CODE.ENHANCED_ROUTE_REFRESH not in capabilities
+
+
+def _configured(mode: str) -> Any:
+    from exabgp.configuration.configuration import Configuration
+
+    configuration = Configuration(
+        [
+            'neighbor 192.0.2.1 { router-id 192.0.2.2; local-address 192.0.2.2; local-as 65001; peer-as 65002; '
+            f'capability {{ {mode} }} }}'
+        ],
+        text=True,
+    )
+    assert configuration.reload(), str(configuration.error)
+    (neighbor,) = configuration.neighbors.values()
+    return neighbor
 
 
 def test_a_purged_route_no_longer_counts_against_the_prefix_limit() -> None:
@@ -316,9 +349,9 @@ def test_a_purged_route_no_longer_counts_against_the_prefix_limit() -> None:
     for prefix in (KEPT, DROPPED):
         session.announced(prefix)
         session.incoming.count_prefix(route(prefix).nlri)
-    session.receive(RouteRefresh.start)
+    session.receive(RouteRefresh.BEGIN)
     session.announced(KEPT)
-    session.receive(RouteRefresh.end)
+    session.receive(RouteRefresh.END)
 
     assert session.incoming.count_prefix(route(KEPT).nlri) == 1
 
@@ -331,8 +364,8 @@ def test_the_prefix_limit_is_released_with_adj_rib_in_off() -> None:
     for prefix in (KEPT, DROPPED):
         session.announced(prefix)
         session.incoming.count_prefix(route(prefix).nlri)
-    session.receive(RouteRefresh.start)
+    session.receive(RouteRefresh.BEGIN)
     session.announced(KEPT)
-    session.receive(RouteRefresh.end)
+    session.receive(RouteRefresh.END)
 
     assert session.incoming.count_prefix(route(KEPT).nlri) == 1

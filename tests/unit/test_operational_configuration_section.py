@@ -39,7 +39,7 @@ def _configured(operational: str) -> Configuration:
 
 
 def test_operational_family_returns_a_tuple_not_a_family():
-    message = Advisory.ASM(AFI.ipv4, SAFI.unicast, b'noc@example.com')
+    message = Advisory.ASM.make_advisory(AFI.ipv4, SAFI.unicast, b'noc@example.com')
     assert message.family() == (AFI.ipv4, SAFI.unicast)
     assert not hasattr(message.family(), 'afi_safi')
 
@@ -50,7 +50,7 @@ def test_an_advisory_state_message_loads_and_is_stored_by_family():
 
     neighbor = next(iter(config.neighbors.values()))
     assert list(neighbor.asm) == [(AFI.ipv4, SAFI.unicast)]
-    assert neighbor.asm[(AFI.ipv4, SAFI.unicast)].name == 'ASM'
+    assert neighbor.asm[(AFI.ipv4, SAFI.unicast)].NAME == 'ASM'
     assert not neighbor.messages
 
 
@@ -60,7 +60,7 @@ def test_a_non_advisory_operational_message_loads_into_the_queue():
 
     neighbor = next(iter(config.neighbors.values()))
     assert not neighbor.asm
-    assert [message.name for message in neighbor.messages] == ['RPCQ']
+    assert [message.NAME for message in neighbor.messages] == ['RPCQ']
 
 
 def test_an_operational_message_for_an_unconfigured_family_is_dropped():

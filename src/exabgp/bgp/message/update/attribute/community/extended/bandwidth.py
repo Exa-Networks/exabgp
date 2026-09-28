@@ -47,7 +47,7 @@ class Bandwidth(ExtendedCommunity):
         return value
 
     def __repr__(self) -> str:
-        return 'bandwith:%d:%0.f' % (self.asn, self.speed)
+        return 'bandwidth:%d:%0.f' % (self.asn, self.speed)
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> Bandwidth:

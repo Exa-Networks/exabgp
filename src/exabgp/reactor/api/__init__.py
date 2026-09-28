@@ -14,8 +14,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
 
-from exabgp.configuration.core.format import formated
-from exabgp.configuration.operational.parser import operational
+from exabgp.reactor.api.tokeniser import formated
+from exabgp.configuration.grammar.read import read_operational
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
@@ -161,16 +161,13 @@ class API:
             # Legacy format: command is "announce route 10.0.0.0/24 ..."
             action, line = command.split(' ', 1)
 
-        self.configuration.static.clear()
         if not self.configuration.partial('static', line, action):
             return []
 
-        if self.configuration.scope.location():
+        if self.configuration.open_sections:
             return []
 
-        self.configuration.scope.to_context()
-        routes = self.configuration.scope.pop_routes()
-        return routes
+        return self.configuration.pop_routes()
 
     def api_announce_v4(self, command: str, action: str = '') -> list[Route]:
         if action:
@@ -181,16 +178,13 @@ class API:
             action, line = command.split(' ', 1)
             _, line = line.split(' ', 1)
 
-        self.configuration.static.clear()
         if not self.configuration.partial('ipv4', line, action):
             return []
 
-        if self.configuration.scope.location():
+        if self.configuration.open_sections:
             return []
 
-        self.configuration.scope.to_context()
-        routes = self.configuration.scope.pop_routes()
-        return routes
+        return self.configuration.pop_routes()
 
     def api_announce_v6(self, command: str, action: str = '') -> list[Route]:
         if action:
@@ -201,16 +195,13 @@ class API:
             action, line = command.split(' ', 1)
             _, line = line.split(' ', 1)
 
-        self.configuration.static.clear()
         if not self.configuration.partial('ipv6', line, action):
             return []
 
-        if self.configuration.scope.location():
+        if self.configuration.open_sections:
             return []
 
-        self.configuration.scope.to_context()
-        routes = self.configuration.scope.pop_routes()
-        return routes
+        return self.configuration.pop_routes()
 
     def api_flow(self, command: str, action: str = '') -> list[Route]:
         if action:
@@ -220,16 +211,13 @@ class API:
             # Legacy format: command is "announce flow match ..."
             action, _, line = command.split(' ', 2)
 
-        self.configuration.flow.clear()
         if not self.configuration.partial('flow', line, action):
             return []
 
-        if self.configuration.scope.location():
+        if self.configuration.open_sections:
             return []
 
-        self.configuration.scope.to_context()
-        routes = self.configuration.scope.pop_routes()
-        return routes
+        return self.configuration.pop_routes()
 
     def api_vpls(self, command: str, action: str = '') -> list[Route]:
         if action:
@@ -240,13 +228,10 @@ class API:
             # Legacy format: command is "announce vpls ..."
             action, line = command.split(' ', 1)
 
-        self.configuration.l2vpn.clear()
         if not self.configuration.partial('l2vpn', line, action):
             return []
 
-        self.configuration.scope.to_context()
-        routes = self.configuration.scope.pop_routes()
-        return routes
+        return self.configuration.pop_routes()
 
     def api_attributes(self, command: str, peers: list[str], action: str = '') -> list[Route]:
         if action:
@@ -257,16 +242,13 @@ class API:
             # Legacy format: command is "announce attribute ..."
             action, line = command.split(' ', 1)
 
-        self.configuration.static.clear()
         if not self.configuration.partial('static', line, action):
             return []
 
-        if self.configuration.scope.location():
+        if self.configuration.open_sections:
             return []
 
-        self.configuration.scope.to_context()
-        routes = self.configuration.scope.pop_routes()
-        return routes
+        return self.configuration.pop_routes()
 
     def api_refresh(self, command: str, action: str = '') -> list[RouteRefresh] | None:
         if action:
@@ -325,6 +307,6 @@ class API:
         if op != 'operational':
             return False
 
-        self.configuration.tokeniser.replenish(rest)
         # None or a class
-        return operational(what, self.configuration.tokeniser)
+        message: Operational | None = read_operational(what, rest)
+        return message

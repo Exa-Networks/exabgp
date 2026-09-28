@@ -1,6 +1,6 @@
 {
     "bare_except": 0,
     "input_assert": 0,
-    "long_function": 80,
+    "long_function": 70,
     "silent_except": 0
 }

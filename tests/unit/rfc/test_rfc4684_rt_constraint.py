@@ -79,10 +79,8 @@ def vpn_route(prefix: str, target: int) -> Route:
     """One VPN route, through the parser the API uses, carrying Route Target 65000:<target>."""
     line = f'route {prefix} next-hop 192.0.2.2 rd 65000:{target} label 100 extended-community target:65000:{target}'
     configuration = Configuration([''], text=True)
-    configuration.static.clear()
     assert configuration.partial('static', line, 'announce'), str(configuration.error)
-    configuration.scope.to_context()
-    (route,) = configuration.scope.pop_routes()
+    (route,) = configuration.pop_routes()
     return route
 
 

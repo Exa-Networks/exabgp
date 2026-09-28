@@ -16,6 +16,11 @@ from exabgp.protocol.family import FamilyTuple
 from exabgp.util.enumeration import TriState
 
 
+# the capability codes of route refresh, RFC 2918, and enhanced route refresh, RFC 7313
+ROUTE_REFRESH_CODE = 0x02
+ENHANCED_ROUTE_REFRESH_CODE = 0x46
+
+
 @dataclass
 class GracefulRestartConfig:
     """Graceful restart configuration.
@@ -79,7 +84,8 @@ class NeighborCapability:
     operational: TriState = TriState.FALSE
     add_path: int = 0  # 0=disabled, 1=receive, 2=send, 3=send/receive
     paths_limit_per_family: dict[FamilyTuple, int] = field(default_factory=dict)
-    route_refresh: int = 0  # REFRESH enum: ABSENT=1, NORMAL=2, ENHANCED=4
+    route_refresh: TriState = TriState.FALSE  # advertise Route Refresh, RFC 2918
+    enhanced_route_refresh: TriState = TriState.FALSE  # advertise Enhanced Route Refresh, RFC 7313
     nexthop: TriState = TriState.UNSET
     aigp: TriState = TriState.UNSET
     link_local_nexthop: TriState = TriState.UNSET
@@ -102,6 +108,7 @@ class NeighborCapability:
             add_path=self.add_path,
             paths_limit_per_family=dict(self.paths_limit_per_family),
             route_refresh=self.route_refresh,
+            enhanced_route_refresh=self.enhanced_route_refresh,
             nexthop=self.nexthop,
             aigp=self.aigp,
             link_local_nexthop=self.link_local_nexthop,
@@ -123,6 +130,7 @@ class NeighborCapability:
             and self.add_path == other.add_path
             and self.paths_limit_per_family == other.paths_limit_per_family
             and self.route_refresh == other.route_refresh
+            and self.enhanced_route_refresh == other.enhanced_route_refresh
             and self.nexthop == other.nexthop
             and self.aigp == other.aigp
             and self.link_local_nexthop == other.link_local_nexthop
@@ -130,3 +138,17 @@ class NeighborCapability:
             and self.software_version == other.software_version
             and self.required == other.required
         )
+
+    def route_refresh_statements(self) -> list[tuple[str, str]]:
+        """The statements which configure route refresh: one when both capabilities agree, two otherwise."""
+        normal = _capability_word(self.route_refresh, ROUTE_REFRESH_CODE in self.required)
+        enhanced = _capability_word(self.enhanced_route_refresh, ENHANCED_ROUTE_REFRESH_CODE in self.required)
+        if normal == enhanced:
+            return [('route-refresh', normal)]
+        return [('route-refresh-normal', normal), ('route-refresh-enhanced', enhanced)]
+
+
+def _capability_word(advertised: TriState, required: bool) -> str:
+    if not advertised.is_enabled():
+        return 'disable'
+    return 'require' if required else 'enable'

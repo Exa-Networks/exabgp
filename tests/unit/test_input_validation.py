@@ -30,7 +30,7 @@ from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from exabgp.configuration.configuration import Configuration
-from exabgp.configuration.static.parser import _extended_community
+from exabgp.configuration.grammar.types.bgp import extended_community as _extended_community
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.psk import PSKError, decode_base64
 

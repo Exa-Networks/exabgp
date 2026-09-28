@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
-from typing import Iterator
+from typing import Iterator, cast
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -233,7 +233,7 @@ def test_on_exit_keep_queues_nothing(processes) -> None:
 
 
 def test_the_cli_helper_never_owns_routes(processes) -> None:
-    from exabgp.configuration.process import API_PREFIX
+    from exabgp.configuration.cli_process import API_PREFIX
 
     name = f'{API_PREFIX}-socket-1'
     _start(processes, name)
@@ -262,7 +262,7 @@ def test_the_reactor_withdraws_the_helper_routes_on_every_neighbour() -> None:
         asynchronous=SimpleNamespace(schedule=lambda uid, command, callback: scheduled.append((uid, callback))),
     )
 
-    Reactor._withdraw_helper_routes(reactor, 'helper')  # type: ignore[arg-type]
+    Reactor._withdraw_helper_routes(cast(Reactor, reactor), 'helper')
     assert [uid for uid, _ in scheduled] == ['helper']
     with patch('exabgp.reactor.loop.log', MagicMock()):
         asyncio.run(scheduled[0][1])

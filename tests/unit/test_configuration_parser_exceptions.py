@@ -5,86 +5,68 @@ from __future__ import annotations
 import os
 
 import pytest
-from unittest.mock import MagicMock
+
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.configuration.configuration import Configuration
+from exabgp.rib.route import Route
+from exabgp.util import program as program_module
 
 
-def tokeniser_returning(*tokens: str) -> object:
-    """Build a real Tokeniser primed with a fixed sequence of tokens.
+NEIGHBOR = """\
+neighbor 127.0.0.1 {
+    router-id 1.2.3.4;
+    local-address 127.0.0.1;
+    local-as 65000;
+    peer-as 65001;
+    %s
+}
+"""
 
-    Uses the production Tokeniser (rather than a mock) so behaviour the
-    parsers rely on - attribute assignment such as `tokeniser.afi = ...`,
-    `.consume()`, and returning '' instead of raising once tokens run out -
-    matches what happens for real, e.g. a bare `run;` with no argument.
-    """
-    from exabgp.configuration.core.parser import Tokeniser
 
-    tokeniser = Tokeniser()
-    tokeniser.replenish(list(tokens))
-    return tokeniser
+def neighbor_error(statement: str) -> str:
+    """The error reading a neighbor with one more statement, which must be refused."""
+    configuration = Configuration([NEIGHBOR % statement], text=True)
+    assert not configuration.reload(), f'{statement!r} was accepted'
+    return str(configuration.error)
+
+
+def command_error(section: str, command: str) -> str:
+    """The error reading an API route command, which must be refused."""
+    configuration = Configuration([])
+    assert not configuration.partial(section, command), f'{command!r} was accepted'
+    return str(configuration.error)
+
+
+def command_route(section: str, command: str) -> Route:
+    """The one route an API route command reads."""
+    configuration = Configuration([])
+    assert configuration.partial(section, command), str(configuration.error)
+    (route,) = configuration.pop_routes()
+    return route
+
+
+def rd_error(rd: str) -> str:
+    return command_error('static', f'route 10.0.0.0/24 next-hop 1.2.3.4 rd {rd} label 100')
+
+
+def rd_route(rd: str) -> Route:
+    return command_route('static', f'route 10.0.0.0/24 next-hop 1.2.3.4 rd {rd} label 100')
 
 
 class TestNeighborParserExceptions:
-    """Test neighbor/parser.py exception handling patterns."""
-
-    def test_description_raises_value_error_on_tokenizer_failure(self):
-        """Test that description() converts tokenizer exceptions to ValueError."""
-        from exabgp.configuration.neighbor.parser import description
-
-        # Create mock tokeniser that raises StopIteration
-        mock_tokeniser = MagicMock()
-        mock_tokeniser.side_effect = StopIteration()
-
-        # The string() function will raise, description() should convert to ValueError
-        with pytest.raises(ValueError, match='bad neighbor description'):
-            description(mock_tokeniser)
-
-    def test_source_interface_raises_value_error_on_tokenizer_failure(self):
-        """Test that source_interface() converts tokenizer exceptions to ValueError."""
-        from exabgp.configuration.neighbor.parser import source_interface
-
-        # Create mock tokeniser that raises StopIteration
-        mock_tokeniser = MagicMock()
-        mock_tokeniser.side_effect = StopIteration()
-
-        # The string() function will raise, source_interface() should convert to ValueError
-        with pytest.raises(ValueError, match='bad source interface'):
-            source_interface(mock_tokeniser)
+    """A neighbor value which does not parse is a configuration error, not a traceback."""
 
     def test_local_address_raises_value_error_for_invalid_ip(self):
-        """Test that local_address() converts IP parsing errors to ValueError."""
-        from exabgp.configuration.neighbor.parser import local_address
-
-        # Create mock tokeniser that returns invalid IP
-        mock_tokeniser = MagicMock()
-        mock_tokeniser.tokens = ['invalid']
-        mock_tokeniser.return_value = 'not-an-ip'
-
-        with pytest.raises(ValueError, match='is not a valid IP address'):
-            local_address(mock_tokeniser)
+        """An invalid local-address is refused, naming the value."""
+        assert 'is not a valid IP address' in neighbor_error('local-address not-an-ip;')
 
     def test_router_id_raises_value_error_for_invalid_id(self):
-        """Test that router_id() converts parsing errors to ValueError."""
-        from exabgp.configuration.neighbor.parser import router_id
-
-        # Create mock tokeniser that returns invalid router ID
-        # Note: RouterID uses IP parsing which raises OSError for invalid IPs
-        # The except ValueError block catches this case
-        mock_tokeniser = MagicMock()
-        mock_tokeniser.return_value = 'invalid'  # Single word, triggers ValueError
-
-        with pytest.raises(ValueError, match='is not a valid router-id'):
-            router_id(mock_tokeniser)
+        """An invalid router-id is refused, naming the value."""
+        assert 'is not a valid router-id' in neighbor_error('router-id invalid;')
 
     def test_hold_time_raises_value_error_for_invalid_time(self):
-        """Test that hold_time() converts parsing errors to ValueError."""
-        from exabgp.configuration.neighbor.parser import hold_time
-
-        # Create mock tokeniser that returns invalid hold time
-        mock_tokeniser = MagicMock()
-        mock_tokeniser.return_value = 'not-a-number'
-
-        with pytest.raises(ValueError, match='is not a valid hold-time'):
-            hold_time(mock_tokeniser)
+        """An invalid hold-time is refused, naming the value."""
+        assert 'is not a valid hold-time' in neighbor_error('hold-time not-a-number;')
 
 
 class TestFlowParserExceptions:
@@ -128,45 +110,8 @@ class TestAFISAFIParsingExceptions:
         assert str(result) == 'undefined'
 
 
-class TestExceptionTranslationPatterns:
-    """Test the exception translation pattern used in parsers.
-
-    The common pattern is:
-        try:
-            result = some_operation()
-        except Exception:
-            raise ValueError('descriptive message') from None
-
-    This should be tightened to catch specific exceptions.
-    """
-
-    def test_stop_iteration_translates_to_value_error(self):
-        """Verify StopIteration is properly translated to ValueError."""
-        from exabgp.configuration.neighbor.parser import description
-
-        class MockTokeniser:
-            def __call__(self):
-                raise StopIteration()
-
-        mock = MockTokeniser()
-        with pytest.raises(ValueError):
-            description(mock)
-
-    def test_attribute_error_in_parser_produces_value_error(self):
-        """Verify AttributeError is translated to ValueError in parsers."""
-        from exabgp.configuration.neighbor.parser import hostname
-
-        class MockTokeniser:
-            def __call__(self):
-                return None  # Will cause AttributeError on None[0]
-
-        mock = MockTokeniser()
-        with pytest.raises((ValueError, TypeError, AttributeError)):
-            hostname(mock)
-
-
 class TestStaticPrefixParserExceptions:
-    """Test static/parser.py prefix() exception handling.
+    """Test the static route prefix exception handling.
 
     prefix() built an IPRange straight from IP.pton(ip), which calls
     socket.inet_pton and raises a bare OSError on malformed input such as
@@ -175,21 +120,15 @@ class TestStaticPrefixParserExceptions:
     """
 
     def test_an_unparseable_prefix_address_is_a_configuration_error(self) -> None:
-        from exabgp.configuration.static.parser import prefix
-
-        with pytest.raises(ValueError, match='999.999.999.999'):
-            prefix(tokeniser_returning('999.999.999.999/24'))
+        assert '999.999.999.999' in command_error('static', 'route 999.999.999.999/24 next-hop 1.2.3.4')
 
     def test_a_prefix_with_a_non_numeric_afi_marker_is_a_configuration_error(self) -> None:
         """IP.toafi() also runs before pton() and can itself raise ValueError."""
-        from exabgp.configuration.static.parser import prefix
-
-        with pytest.raises(ValueError, match='not-an-ip'):
-            prefix(tokeniser_returning('not-an-ip'))
+        assert 'not-an-ip' in command_error('static', 'route not-an-ip next-hop 1.2.3.4')
 
 
 class TestMplsRouteDistinguisherExceptions:
-    """Test static/mpls.py route_distinguisher() exception handling.
+    """Test the route-distinguisher exception handling.
 
     route_distinguisher() only assigned prefix/suffix when the token
     contained a ':' at index > 0; 'rd 12345' (no colon) left both
@@ -198,61 +137,37 @@ class TestMplsRouteDistinguisherExceptions:
     """
 
     def test_route_distinguisher_without_a_colon_is_a_configuration_error(self) -> None:
-        from exabgp.configuration.static.mpls import route_distinguisher
-
-        with pytest.raises(ValueError, match='12345'):
-            route_distinguisher(tokeniser_returning('12345'))
+        assert '12345' in rd_error('12345')
 
     def test_route_distinguisher_with_a_leading_colon_is_a_configuration_error(self) -> None:
         """separator == 0 also skipped the assignment ('find' returns 0, not > 0)."""
-        from exabgp.configuration.static.mpls import route_distinguisher
-
-        with pytest.raises(ValueError, match=r':100'):
-            route_distinguisher(tokeniser_returning(':100'))
+        assert ':100' in rd_error(':100')
 
     def test_mvpn_sharedjoin_propagates_the_route_distinguisher_fix(self) -> None:
         """mvpn_sharedjoin (and mvpn_sourcejoin/sourcead, srv6_mup_*) share
         route_distinguisher() with no wrapping of their own - confirm the fix
         in the shared function actually reaches this caller rather than assuming it.
         """
-        from exabgp.configuration.static.mpls import mvpn_sharedjoin
-        from exabgp.protocol.family import AFI
-
-        tokeniser = tokeniser_returning('rp', '1.2.3.4', 'group', '5.6.7.8', 'rd', '12345', 'source-as', '100')
-        with pytest.raises(ValueError, match='12345'):
-            mvpn_sharedjoin(tokeniser, AFI.ipv4, None)
+        command = 'mcast-vpn shared-join rp 1.2.3.4 group 5.6.7.8 rd 12345 source-as 100 next-hop 1.2.3.4'
+        assert '12345' in command_error('ipv4', command)
 
     def test_srv6_mup_isd_propagates_the_route_distinguisher_fix(self) -> None:
-        from exabgp.configuration.static.mpls import srv6_mup_isd
-        from exabgp.protocol.family import AFI
-
-        tokeniser = tokeniser_returning('10.0.0.0/24', 'rd', '12345')
-        with pytest.raises(ValueError, match='12345'):
-            srv6_mup_isd(tokeniser, AFI.ipv4)
+        assert '12345' in command_error('ipv4', 'mup mup-isd 10.0.0.0/24 rd 12345 next-hop 2001::1')
 
     def test_route_distinguisher_with_a_non_numeric_asn_prefix_is_a_configuration_error(self) -> None:
         """int(prefix) on a non-numeric ASN raised a bare, unlabelled ValueError
         naming only the fragment 'abc' rather than the full RD token.
         """
-        from exabgp.configuration.static.mpls import route_distinguisher
-
-        with pytest.raises(ValueError, match='abc:100'):
-            route_distinguisher(tokeniser_returning('abc:100'))
+        assert 'abc:100' in rd_error('abc:100')
 
     def test_route_distinguisher_with_an_out_of_range_ipv4_octet_is_a_configuration_error(self) -> None:
         """bytes([int(_)]) on an out-of-range octet (400) raised a bare
         'bytes must be in range(0, 256)' with no token at all.
         """
-        from exabgp.configuration.static.mpls import route_distinguisher
-
-        with pytest.raises(ValueError, match=r'1\.2\.3\.400:100'):
-            route_distinguisher(tokeniser_returning('1.2.3.400:100'))
+        assert '1.2.3.400:100' in rd_error('1.2.3.400:100')
 
     def test_route_distinguisher_with_a_non_numeric_ipv4_octet_is_a_configuration_error(self) -> None:
-        from exabgp.configuration.static.mpls import route_distinguisher
-
-        with pytest.raises(ValueError, match=r'1\.2\.3\.abc:100'):
-            route_distinguisher(tokeniser_returning('1.2.3.abc:100'))
+        assert '1.2.3.abc:100' in rd_error('1.2.3.abc:100')
 
     @pytest.mark.parametrize('token', ['1.2.3:100', '1.2.3.4.5:100', '1.2:100'])
     def test_route_distinguisher_rejects_a_wrong_ipv4_octet_count(self, token: str) -> None:
@@ -261,60 +176,39 @@ class TestMplsRouteDistinguisherExceptions:
         byte value and a long one nine bytes, and both reach the wire as a
         route-distinguisher no receiver can read.
         """
-        from exabgp.configuration.static.mpls import route_distinguisher
-
-        with pytest.raises(ValueError) as raised:
-            route_distinguisher(tokeniser_returning(token))
-
-        assert token in str(raised.value)
+        assert token in rd_error(token)
 
     def test_route_distinguisher_ipv4_form_packs_exactly_eight_bytes(self) -> None:
         """Negative-space check: the accepted form is the one which is eight bytes."""
-        from exabgp.configuration.static.mpls import route_distinguisher
+        route = rd_route('192.0.2.1:100')
 
-        parsed = route_distinguisher(tokeniser_returning('192.0.2.1:100'))
-
-        assert parsed.pack_rd() == bytes([0, 1, 192, 0, 2, 1, 0, 100])
+        assert route.nlri.rd.pack_rd() == bytes([0, 1, 192, 0, 2, 1, 0, 100])
 
     @pytest.mark.parametrize('token', ['-1:1', '1:-1', '192.0.2.1:-1'])
     def test_route_distinguisher_rejects_negative_fields(self, token: str) -> None:
-        from exabgp.configuration.static.mpls import route_distinguisher
-
-        with pytest.raises(ValueError) as raised:
-            route_distinguisher(tokeniser_returning(token))
-
-        assert token in str(raised.value)
+        assert token in rd_error(token)
 
     def test_route_distinguisher_accepts_a_legitimate_two_byte_asn_form(self) -> None:
         """Negative-space check: a well-formed Type 0 ASN:nn RD must still parse."""
-        from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-        from exabgp.configuration.static.mpls import route_distinguisher
-
-        rd = route_distinguisher(tokeniser_returning('65000:100'))
+        rd = rd_route('65000:100').nlri.rd
         assert isinstance(rd, RouteDistinguisher)
         assert len(rd.rd) == RouteDistinguisher.LENGTH
 
     def test_route_distinguisher_accepts_a_legitimate_ipv4_form(self) -> None:
         """Negative-space check: a well-formed Type 1 IP:nn RD must still parse."""
-        from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-        from exabgp.configuration.static.mpls import route_distinguisher
-
-        rd = route_distinguisher(tokeniser_returning('192.0.2.1:100'))
+        rd = rd_route('192.0.2.1:100').nlri.rd
         assert isinstance(rd, RouteDistinguisher)
         assert len(rd.rd) == RouteDistinguisher.LENGTH
 
     def test_route_distinguisher_accepts_a_legitimate_four_byte_asn_form(self) -> None:
         """Negative-space check: a well-formed Type 2 4-byte-ASN:nn RD must still parse."""
-        from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-        from exabgp.configuration.static.mpls import route_distinguisher
-
-        rd = route_distinguisher(tokeniser_returning('4200000000:100'))
+        rd = rd_route('4200000000:100').nlri.rd
         assert isinstance(rd, RouteDistinguisher)
         assert len(rd.rd) == RouteDistinguisher.LENGTH
 
 
 class TestMplsPrefixSidExceptions:
-    """Test static/mpls.py prefix_sid() exception handling.
+    """Test the bgp-prefix-sid exception handling.
 
     prefix_sid() only assigned label_sid inside the 'if value == "[":'
     branch; 'bgp-prefix-sid 300' (no leading '[') left label_sid unassigned,
@@ -323,10 +217,8 @@ class TestMplsPrefixSidExceptions:
     """
 
     def test_prefix_sid_without_an_opening_bracket_is_a_configuration_error(self) -> None:
-        from exabgp.configuration.static.mpls import prefix_sid
-
-        with pytest.raises(ValueError, match='300'):
-            prefix_sid(tokeniser_returning('300'))
+        error = command_error('static', 'route 10.0.0.0/24 next-hop 1.2.3.4 label 100 bgp-prefix-sid 300')
+        assert 'bgp-prefix-sid' in error
 
 
 class TestEnvironmentSetupExceptions:
@@ -357,7 +249,7 @@ class TestEnvironmentSetupExceptions:
 
 
 class TestProcessParserRunExceptions:
-    """Test process/parser.py run() exception handling.
+    """Test the process run exception handling.
 
     run() indexed prg[0] to check for a leading '/' with no emptiness
     check first; a bare 'run;' with no program argument left prg == '',
@@ -366,16 +258,14 @@ class TestProcessParserRunExceptions:
     """
 
     def test_run_without_a_program_argument_is_a_configuration_error(self) -> None:
-        from exabgp.configuration.process.parser import run
+        configuration = Configuration(['process helper {\n    run;\n}\n'], text=True)
 
-        with pytest.raises(ValueError, match='requires a program path'):
-            run(tokeniser_returning())
+        assert not configuration.reload()
+        assert 'requires a program path' in str(configuration.error)
 
 
 class TestExecutableDescriptorValidation:
     def test_checks_the_opened_object_when_the_path_changes(self, monkeypatch, tmp_path) -> None:
-        from exabgp.configuration.process import parser
-
         program = tmp_path / 'program'
         program.write_text('#!/bin/sh\n')
         program.chmod(0o700)
@@ -389,16 +279,14 @@ class TestExecutableDescriptorValidation:
             program.mkdir()
             return fd
 
-        monkeypatch.setattr(parser.os, 'open', open_then_replace)
+        monkeypatch.setattr(program_module.os, 'open', open_then_replace)
 
-        parser._validate_executable(str(program))
+        program_module.validate_executable(str(program))
 
         with pytest.raises(OSError):
             os.fstat(opened[0])
 
     def test_closes_the_descriptor_when_validation_fails(self, monkeypatch, tmp_path) -> None:
-        from exabgp.configuration.process import parser
-
         program = tmp_path / 'program'
         program.write_text('#!/bin/sh\n')
         program.chmod(0o600)
@@ -410,17 +298,27 @@ class TestExecutableDescriptorValidation:
             opened.append(fd)
             return fd
 
-        monkeypatch.setattr(parser.os, 'open', record_open)
+        monkeypatch.setattr(program_module.os, 'open', record_open)
 
         with pytest.raises(ValueError, match='will not be able to run'):
-            parser._validate_executable(str(program))
+            program_module.validate_executable(str(program))
 
         with pytest.raises(OSError):
             os.fstat(opened[0])
 
+    def test_a_program_which_cannot_run_is_a_configuration_error(self, tmp_path) -> None:
+        """The check is made when a configuration is read, and names the program."""
+        program = tmp_path / 'program'
+        program.write_text('#!/bin/sh\n')
+        program.chmod(0o600)
+        configuration = Configuration([f'process helper {{\n    run {program};\n}}\n'], text=True)
+
+        assert not configuration.reload()
+        assert 'will not be able to run' in str(configuration.error)
+
 
 class TestResolveRelativeProgramPrecedence:
-    """Test process/parser.py _resolve_relative_program() candidate ordering.
+    """Test util/program.py resolve_program() candidate ordering.
 
     `options` is built most-specific-first: [/etc/exabgp/<prg>, the config
     file's own directory/<prg>, then each $PATH entry in order]. The loop
@@ -434,9 +332,6 @@ class TestResolveRelativeProgramPrecedence:
     """
 
     def test_prefers_etc_exabgp_over_a_path_entry(self, monkeypatch, tmp_path) -> None:
-        from exabgp.configuration.core.parser import Tokeniser
-        from exabgp.configuration.process.parser import _resolve_relative_program
-
         prg_name = 'myscript'
         etc_candidate = os.path.abspath(os.path.join('/etc/exabgp', prg_name))
 
@@ -447,8 +342,7 @@ class TestResolveRelativeProgramPrecedence:
         (path_dir / prg_name).write_text('#!/bin/sh\n')
         monkeypatch.setenv('PATH', str(path_dir))
 
-        tokeniser = Tokeniser()
-        tokeniser.fname = str(tmp_path / 'unrelated.conf')  # its directory has no match
+        configuration_file = str(tmp_path / 'unrelated.conf')  # its directory has no match
 
         # Simulate /etc/exabgp/<prg> existing without writing to the real
         # /etc/exabgp: this machine has none, and even where one exists a
@@ -460,14 +354,11 @@ class TestResolveRelativeProgramPrecedence:
                 return True
             return real_exists(path)
 
-        monkeypatch.setattr('exabgp.configuration.process.parser.os.path.exists', fake_exists)
+        monkeypatch.setattr('exabgp.util.program.os.path.exists', fake_exists)
 
-        assert _resolve_relative_program(tokeniser, prg_name) == etc_candidate
+        assert program_module.resolve_program(prg_name, configuration_file) == etc_candidate
 
     def test_prefers_an_earlier_path_entry_over_a_later_one(self, monkeypatch, tmp_path) -> None:
-        from exabgp.configuration.core.parser import Tokeniser
-        from exabgp.configuration.process.parser import _resolve_relative_program
-
         prg_name = 'myscript'
         etc_candidate = os.path.abspath(os.path.join('/etc/exabgp', prg_name))
         assert not os.path.exists(etc_candidate), 'test assumes no real /etc/exabgp on this machine'
@@ -480,10 +371,9 @@ class TestResolveRelativeProgramPrecedence:
         (second_dir / prg_name).write_text('#!/bin/sh\n')
         monkeypatch.setenv('PATH', f'{first_dir}:{second_dir}')
 
-        tokeniser = Tokeniser()
-        tokeniser.fname = str(tmp_path / 'unrelated.conf')  # its directory has no match
+        configuration_file = str(tmp_path / 'unrelated.conf')  # its directory has no match
 
-        result = _resolve_relative_program(tokeniser, prg_name)
+        result = program_module.resolve_program(prg_name, configuration_file)
         assert result == str(first_dir / prg_name)
 
     def test_single_candidate_resolves_the_same_regardless_of_match_order(self, monkeypatch, tmp_path) -> None:
@@ -491,9 +381,6 @@ class TestResolveRelativeProgramPrecedence:
         last-match agree - proves the two tests above are genuinely
         exercising the multi-candidate ordering, not a coincidence.
         """
-        from exabgp.configuration.core.parser import Tokeniser
-        from exabgp.configuration.process.parser import _resolve_relative_program
-
         prg_name = 'myscript'
         etc_candidate = os.path.abspath(os.path.join('/etc/exabgp', prg_name))
         assert not os.path.exists(etc_candidate), 'test assumes no real /etc/exabgp on this machine'
@@ -503,24 +390,31 @@ class TestResolveRelativeProgramPrecedence:
         (config_dir / prg_name).write_text('#!/bin/sh\n')
         monkeypatch.setenv('PATH', str(tmp_path / 'no-such-path-dir'))
 
-        tokeniser = Tokeniser()
-        tokeniser.fname = str(config_dir / 'my.conf')
-
-        result = _resolve_relative_program(tokeniser, prg_name)
+        result = program_module.resolve_program(prg_name, str(config_dir / 'my.conf'))
         assert result == str(config_dir / prg_name)
 
     def test_returns_prg_unchanged_when_no_candidate_exists(self, monkeypatch, tmp_path) -> None:
-        from exabgp.configuration.core.parser import Tokeniser
-        from exabgp.configuration.process.parser import _resolve_relative_program
-
         prg_name = 'no-such-program-anywhere'
         etc_candidate = os.path.abspath(os.path.join('/etc/exabgp', prg_name))
         assert not os.path.exists(etc_candidate), 'test assumes no real /etc/exabgp on this machine'
 
         monkeypatch.setenv('PATH', str(tmp_path / 'no-such-path-dir'))
 
-        tokeniser = Tokeniser()
-        tokeniser.fname = str(tmp_path / 'unrelated.conf')
-
-        result = _resolve_relative_program(tokeniser, prg_name)
+        result = program_module.resolve_program(prg_name, str(tmp_path / 'unrelated.conf'))
         assert result == prg_name
+
+    def test_a_configuration_runs_the_program_next_to_it(self, monkeypatch, tmp_path) -> None:
+        """A relative `run` in a configuration file is looked up the same way, by the grammar."""
+        prg_name = 'myscript'
+        etc_candidate = os.path.abspath(os.path.join('/etc/exabgp', prg_name))
+        assert not os.path.exists(etc_candidate), 'test assumes no real /etc/exabgp on this machine'
+
+        (tmp_path / prg_name).write_text('#!/bin/sh\n')
+        (tmp_path / prg_name).chmod(0o700)
+        monkeypatch.setenv('PATH', str(tmp_path / 'no-such-path-dir'))
+        configuration_file = tmp_path / 'my.conf'
+        configuration_file.write_text(f'process helper {{\n    run {prg_name};\n}}\n')
+        configuration = Configuration([str(configuration_file)])
+
+        assert configuration.reload(), str(configuration.error)
+        assert configuration.processes['helper']['run'] == [str(tmp_path / prg_name)]

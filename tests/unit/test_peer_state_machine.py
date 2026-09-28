@@ -21,7 +21,6 @@ os.environ['exabgp_tcp_bind'] = '127.0.0.1'
 os.environ['exabgp_tcp_attempts'] = '0'
 
 from exabgp.bgp.fsm import FSM  # noqa: E402
-from exabgp.bgp.message import Scheduling  # noqa: E402
 from exabgp.bgp.message.notification import Notify  # noqa: E402
 from exabgp.reactor.peer import Peer, Stats  # noqa: E402
 
@@ -863,26 +862,6 @@ class TestPeerNegotiatedFamilies:
         result = peer.negotiated_families()
         assert '[' in result
         assert ']' in result
-
-
-class TestSchedulingConstants:
-    """Test Scheduling enum constants"""
-
-    def test_scheduling_constants_defined(self) -> None:
-        """Test Scheduling constants are defined"""
-        # Values are: MESSAGE=0, NOW=1, LATER=2, CLOSE=3
-        assert Scheduling.MESSAGE == 0x00
-        assert Scheduling.NOW == 0x01
-        assert Scheduling.LATER == 0x02
-        assert Scheduling.CLOSE == 0x03
-
-    def test_scheduling_all_values(self) -> None:
-        """Test Scheduling contains all expected values"""
-        assert Scheduling.MESSAGE in list(Scheduling)
-        assert Scheduling.CLOSE in list(Scheduling)
-        assert Scheduling.LATER in list(Scheduling)
-        assert Scheduling.NOW in list(Scheduling)
-        assert len(list(Scheduling)) == 4
 
 
 class TestPeerRun:

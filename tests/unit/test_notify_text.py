@@ -31,41 +31,41 @@ def test_with_no_detail_the_names_are_the_whole_text() -> None:
 
 
 def test_without_data_the_detail_is_what_the_peer_reads() -> None:
-    assert Notify(3, 5, 'OTC is 3 bytes, need 4').raw_data == b'OTC is 3 bytes, need 4'
+    assert Notify(3, 5, 'OTC is 3 bytes, need 4').data == b'OTC is 3 bytes, need 4'
 
 
 def test_with_no_detail_the_peer_gets_an_empty_data_field() -> None:
     """The peer already has the code and subcode; spelling their names back to it adds nothing."""
-    assert Notify(6, 3).raw_data == b''
+    assert Notify(6, 3).data == b''
 
 
 def test_data_is_sent_and_the_detail_stays_local() -> None:
     notify = Notify(1, 2, 'KEEPALIVE of 20 octets', data=b'\x00\x14')
-    assert notify.raw_data == b'\x00\x14'
+    assert notify.data == b'\x00\x14'
     assert str(notify) == 'Message Header Error / Bad Message Length: KEEPALIVE of 20 octets'
 
 
 def test_data_with_no_detail() -> None:
     notify = Notify(1, 2, data=b'\x00\x14')
-    assert notify.raw_data == b'\x00\x14'
+    assert notify.data == b'\x00\x14'
     assert str(notify) == 'Message Header Error / Bad Message Length'
 
 
 def test_a_detail_which_is_not_ascii_does_not_stop_the_notification() -> None:
     """A Notify raised while handling an error must not itself raise on its own text."""
     notify = Notify(3, 10, 'préfixe')
-    assert notify.raw_data.isascii()
+    assert notify.data.isascii()
     assert str(notify).endswith('préfixe')
 
 
 def test_the_detail_on_the_wire_is_bounded_so_the_message_fits() -> None:
     notify = Notify(3, 1, 'x' * 10000)
-    assert len(notify.pack_message(Negotiated.UNSET)) <= ExtendedMessage.INITIAL_SIZE
+    assert len(notify.notification.pack_message(Negotiated.UNSET)) <= ExtendedMessage.INITIAL_SIZE
     assert str(notify).endswith('x' * 10000), 'the log keeps what the wire had to cut'
 
 
 def test_the_wire_message_is_marker_length_type_code_subcode_data() -> None:
-    packed = Notify(4, 0, 'late').pack_message(Negotiated.UNSET)
+    packed = Notify(4, 0, 'late').notification.pack_message(Negotiated.UNSET)
     assert packed[19:] == b'\x04\x00late'
 
 
@@ -74,4 +74,4 @@ def test_short_says_what_was_needed_and_what_arrived() -> None:
     notify = Notify.short(3, 10, 'EVPN NLRI', 40, 12)
     assert (notify.code, notify.subcode) == (3, 10)
     assert str(notify) == 'UPDATE Message Error / Invalid Network Field: EVPN NLRI needs 40 octets, got 12'
-    assert notify.raw_data == b'EVPN NLRI needs 40 octets, got 12'
+    assert notify.data == b'EVPN NLRI needs 40 octets, got 12'

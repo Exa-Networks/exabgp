@@ -1,75 +1,62 @@
 #!/usr/bin/env python3
 """
-Tests for route validation check functions.
+Tests for route validation when a route is read.
 
-The check functions validate route structure, NOT nexthop presence.
+Reading a route validates its structure, NOT nexthop presence.
 Nexthop validation happens at wire format generation time, not during
 route parsing. Withdrawals don't have nexthop per RFC 4271.
+
+The legacy parser did this in AnnounceIP.check(); the grammar reads the route
+(Configuration.partial / parse_route_text) and must accept the same routes.
 """
 
-from unittest.mock import Mock
+from __future__ import annotations
 
-from exabgp.rib.route import Route
+from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
-from exabgp.configuration.announce.ip import AnnounceIP
+
+
+def _read(text: str, action: str = 'announce') -> list:
+    configuration = Configuration([])
+    routes = configuration.parse_route_text(text, action)
+    assert routes, str(configuration.error)
+    return routes
 
 
 class TestAnnounceIPCheck:
-    """Test AnnounceIP.check() route validation."""
-
-    def _create_mock_route(
-        self,
-        has_nexthop: bool = True,
-        afi: AFI = AFI.ipv4,
-        safi: SAFI = SAFI.unicast,
-    ) -> Mock:
-        """Create a mock Route for testing check()."""
-        route = Mock(spec=Route)
-
-        # Create mock NLRI
-        nlri = Mock()
-        nlri.afi = afi
-        nlri.safi = safi
-        if has_nexthop:
-            nexthop = IP.pton('1.2.3.4')
-        else:
-            nexthop = IP.NoNextHop
-        nlri.nexthop = nexthop
-        route.nlri = nlri
-        # Route.nexthop property
-        route.nexthop = nexthop
-
-        return route
+    """Test the route validation done when an IP route is read."""
 
     def test_route_with_nexthop_passes(self):
         """Route with nexthop passes validation."""
-        route = self._create_mock_route(has_nexthop=True)
+        (route,) = _read('route 10.0.0.0/24 next-hop 1.2.3.4')
 
-        result = AnnounceIP.check(route, AFI.ipv4)
-        assert result is True
+        assert route.nexthop == IP.from_string('1.2.3.4')
 
     def test_route_without_nexthop_passes(self):
         """Route without nexthop passes validation.
 
-        Nexthop validation is NOT done in check() - it happens at wire format
+        Nexthop validation is NOT done when the route is read - it happens at wire format
         generation time. Withdrawals legitimately don't have nexthop per RFC 4271.
         """
-        route = self._create_mock_route(has_nexthop=False)
+        for action in ('announce', 'withdraw'):
+            (route,) = _read('route 10.0.0.0/24', action)
 
-        result = AnnounceIP.check(route, AFI.ipv4)
-        assert result is True
+            assert route.nexthop is IP.NoNextHop
 
     def test_ipv6_route_with_nexthop_passes(self):
         """IPv6 route with nexthop passes validation."""
-        route = self._create_mock_route(has_nexthop=True, afi=AFI.ipv6)
+        (route,) = _read('route 2001:db8::/32 next-hop 2001:db8::1')
 
-        result = AnnounceIP.check(route, AFI.ipv6)
-        assert result is True
+        assert route.nlri.afi == AFI.ipv6
+        assert route.nexthop == IP.from_string('2001:db8::1')
 
     def test_non_unicast_without_nexthop_passes(self):
         """Non-unicast/multicast SAFI routes pass validation without nexthop."""
-        route = self._create_mock_route(has_nexthop=False, safi=SAFI.flow_ip)
+        configuration = Configuration([])
 
-        result = AnnounceIP.check(route, AFI.ipv4)
-        assert result is True
+        assert configuration.partial('flow', 'route { match { destination 10.0.0.0/24; } then { discard; } }')
+        (route,) = configuration.pop_routes()
+
+        assert route.nlri.safi == SAFI.flow_ip
+        assert route.nexthop is IP.NoNextHop

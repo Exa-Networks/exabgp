@@ -397,9 +397,8 @@ class JSON:
         plus: dict[FamilyTuple, dict[str, list[tuple[NLRI, IP]]]] = {}
         minus: dict[FamilyTuple, list[NLRI]] = {}
 
-        # EOR messages have .nlris directly but no .announces/.withdraws
-        if getattr(update_msg, 'IS_EOR', False):
-            # EOR message - use .nlris directly with original behavior
+        if update_msg.IS_EOR:
+            # an End-of-RIB has no route, its one NLRI names the family
             for nlri in update_msg.nlris:
                 nexthop_ip = getattr(nlri, 'nexthop', IP.NoNextHop)
                 nexthop_str = str(nexthop_ip) if nexthop_ip is not IP.NoNextHop else 'null'
@@ -525,7 +524,7 @@ class JSON:
     ) -> str:
         kv_content = self._kv(
             {
-                'name': operational.name,
+                'name': operational.NAME,
                 'afi': str(operational.afi),
                 'safi': str(operational.safi),
             },
@@ -558,7 +557,7 @@ class JSON:
         )
         kv_content = self._kv(
             {
-                'name': operational.name,
+                'name': operational.NAME,
                 'afi': str(operational.afi),
                 'safi': str(operational.safi),
                 'advisory': data,
@@ -585,7 +584,7 @@ class JSON:
     ) -> str:
         kv_content = self._kv(
             {
-                'name': operational.name,
+                'name': operational.NAME,
                 'afi': str(operational.afi),
                 'safi': str(operational.safi),
                 'router-id': str(operational.routerid),
@@ -636,7 +635,7 @@ class JSON:
     ) -> str:
         kv_content = self._kv(
             {
-                'name': operational.name,
+                'name': operational.NAME,
                 'type': str(operational.what),
                 'data': hexstring(bytes(getattr(operational, 'data', b''))),
             },

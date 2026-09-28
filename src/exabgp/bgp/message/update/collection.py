@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar, Generator
+from typing import TYPE_CHECKING, Generator
 
 from exabgp.util.types import Buffer
 
@@ -129,10 +129,6 @@ class RouteLeak:
 UPDATE_WITHDRAWN_LENGTH_OFFSET = 2  # Offset to start of withdrawn routes
 UPDATE_ATTR_LENGTH_HEADER_SIZE = 4  # Size of withdrawn length (2) + attr length (2)
 
-# EOR (End-of-RIB) message length constants
-EOR_IPV4_UNICAST_LENGTH = 4  # Length of IPv4 unicast EOR marker
-EOR_WITH_PREFIX_LENGTH = 11  # Length of EOR with NLRI prefix
-
 
 # ======================================================================= UpdateCollection
 
@@ -157,7 +153,7 @@ EOR_WITH_PREFIX_LENGTH = 11  # Length of EOR with NLRI prefix
 # +---------------------------+
 
 
-class UpdateCollection(Message):
+class UpdateCollection:
     """Semantic container for BGP UPDATE message data.
 
     Holds announces, withdraws, and attributes as semantic objects.
@@ -169,26 +165,22 @@ class UpdateCollection(Message):
     Withdraws are stored as bare NLRI because MP_UNREACH_NLRI doesn't
     include nexthop.
 
-    Note: This class inherits from Message for backward compatibility
-    (uses _message() method) but is NOT registered as the UPDATE handler.
-    The Update class is the registered handler.
+    It is not a Message: it builds them.  messages() turns it into as many UPDATEs as
+    its routes need, and Update.parse() turns an UPDATE back into one.
 
-    EOR (End-of-RIB) markers are represented as cached UpdateCollection singletons.
-    Use the EOR property to check, and eor_afi/eor_safi to get the address family.
+    An End-of-RIB (RFC 4724) is a collection with no route, marked with its family:
+    make_eor() builds one, IS_EOR tells it apart, eor_afi and eor_safi name the family.
     """
-
-    ID = Message.CODE.UPDATE
-    TYPE = bytes([Message.CODE.UPDATE])
-
-    # Cache of EOR UpdateCollection singletons keyed by (AFI, SAFI)
-    _EOR_CACHE: ClassVar[dict[FamilyTuple, UpdateCollection]] = {}
 
     def __init__(
         self,
         announces: list[RoutedNLRI],
         withdraws: list[NLRI],
         attributes: AttributeCollection,
+        eor: FamilyTuple | None = None,
     ) -> None:
+        assert eor is None or not (announces or withdraws), 'an End-of-RIB carries no route'
+        self._eor: FamilyTuple | None = eor
         # UpdateCollection is a composite container - NLRIs and Attributes are already packed-bytes-first
         # No single _packed representation exists because messages() can generate multiple
         # wire-format messages from one UpdateCollection due to size limits
@@ -260,42 +252,34 @@ class UpdateCollection(Message):
         self._attributes = marked
 
     @classmethod
-    def _get_eor(cls, afi: AFI, safi: SAFI) -> 'UpdateCollection':
-        """Get or create a cached EOR singleton for the given address family."""
-        key = (afi, safi)
-        if key not in cls._EOR_CACHE:
-            cls._EOR_CACHE[key] = cls([], [], AttributeCollection())
-        return cls._EOR_CACHE[key]
-
-    def _eor_family(self) -> FamilyTuple | None:
-        """Return (AFI, SAFI) if this is a cached EOR instance, else None."""
-        for key, instance in self._EOR_CACHE.items():
-            if self is instance:
-                return key
-        return None
+    def make_eor(cls, afi: AFI, safi: SAFI) -> 'UpdateCollection':
+        """The End-of-RIB marker of a family."""
+        return cls([], [], AttributeCollection(), eor=(afi, safi))
 
     @property
     def IS_EOR(self) -> bool:
-        """True if this is an End-of-RIB marker (cached singleton)."""
-        return self._eor_family() is not None
+        """True if this is an End-of-RIB marker."""
+        return self._eor is not None
 
     @property
     def eor_afi(self) -> AFI:
         """AFI of this EOR marker. Only call on EOR instances."""
-        family = self._eor_family()
-        assert family is not None, 'eor_afi called on non-EOR UpdateCollection'
-        return family[0]
+        assert self._eor is not None, 'eor_afi called on non-EOR UpdateCollection'
+        return self._eor[0]
 
     @property
     def eor_safi(self) -> SAFI:
         """SAFI of this EOR marker. Only call on EOR instances."""
-        family = self._eor_family()
-        assert family is not None, 'eor_safi called on non-EOR UpdateCollection'
-        return family[1]
+        assert self._eor is not None, 'eor_safi called on non-EOR UpdateCollection'
+        return self._eor[1]
 
     @property
     def nlris(self) -> list[NLRI]:
-        # Backward compat: combine announces and withdraws (extract NLRI from RoutedNLRI)
+        """Every NLRI, announced then withdrawn; for an End-of-RIB, the one which names its family."""
+        if self._eor is not None:
+            from exabgp.bgp.message.update.eor import EOR
+
+            return [EOR.EOR_NLRI(*self._eor)]
         return [routed.nlri for routed in self._announces] + self._withdraws
 
     @property
@@ -500,7 +484,7 @@ class UpdateCollection(Message):
             if has_empty_nlri and self._attributes:
                 attr = self.attributes.pack_attribute(negotiated, with_default=True)
                 # Generate UPDATE with no withdrawn routes and no NLRI, just attributes
-                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(attr))
+                yield Message.frame(Message.CODE.UPDATE, UpdateCollection.prefix(b'') + UpdateCollection.prefix(attr))
             return
 
         # If all we have is MP_UNREACH_NLRI, we send no path attribute at all.
@@ -593,13 +577,17 @@ class UpdateCollection(Message):
                         # attributes: this pass sends none, and the budget is the whole message.
                         log.critical(lazymsg('update.pack.error reason=withdrawal_too_large'), 'parser')
                         return
-                    yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b''))
+                    yield Message.frame(
+                        Message.CODE.UPDATE, UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b'')
+                    )
                     withdraws = b''
                     withdraws_size = 0
                 withdraws += packed
                 withdraws_size += len(packed)
             if withdraws:
-                yield self._message(UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b''))
+                yield Message.frame(
+                    Message.CODE.UPDATE, UpdateCollection.prefix(withdraws) + UpdateCollection.prefix(b'')
+                )
 
         if v4_announces and msg_size <= 0:
             # The attributes these routes need leave no room for a single NLRI, so they cannot
@@ -616,14 +604,18 @@ class UpdateCollection(Message):
                 if not announced:
                     log.critical(lazymsg('update.pack.error reason=attributes_too_large'), 'parser')
                     return
-                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(attr) + announced)
+                yield Message.frame(
+                    Message.CODE.UPDATE, UpdateCollection.prefix(b'') + UpdateCollection.prefix(attr) + announced
+                )
                 announced = b''
                 announced_size = 0
             announced += packed
             announced_size += len(packed)
         if announced:
             # Native NLRI has been emitted; it must not be repeated in an MP family's packet.
-            yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(attr) + announced)
+            yield Message.frame(
+                Message.CODE.UPDATE, UpdateCollection.prefix(b'') + UpdateCollection.prefix(attr) + announced
+            )
 
         # Get all families that have MP announces or withdraws
         all_mp_families = set(mp_announces.keys()) | set(mp_withdraws.keys())
@@ -669,7 +661,10 @@ class UpdateCollection(Message):
                     )
                 else:
                     for mpurnlri in mp_withdraw.packed_unreach_attributes(negotiated, withdraw_size):
-                        yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mpurnlri + mp_attr))
+                        yield Message.frame(
+                            Message.CODE.UPDATE,
+                            UpdateCollection.prefix(b'') + UpdateCollection.prefix(mpurnlri + mp_attr),
+                        )
 
             msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)
             if msg_size <= 0:
@@ -684,7 +679,9 @@ class UpdateCollection(Message):
             # SHALL be encoded as the very first path attribute in an UPDATE message", so
             # the attribute goes in front of ORIGIN, AS_PATH and the rest rather than after.
             for mprnlri in mp_announce.packed_reach_attributes(negotiated, msg_size):
-                yield self._message(UpdateCollection.prefix(b'') + UpdateCollection.prefix(mprnlri + attr))
+                yield Message.frame(
+                    Message.CODE.UPDATE, UpdateCollection.prefix(b'') + UpdateCollection.prefix(mprnlri + attr)
+                )
 
     def pack_messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator['Update', None, None]:
         """Pack this UpdateCollection into wire-format Update messages.
@@ -705,8 +702,8 @@ class UpdateCollection(Message):
         for msg_bytes in self.messages(negotiated, include_withdraw):
             # BGP message format: marker(16) + length(2) + type(1) + payload
             # Extract payload by removing 19-byte header
-            payload = msg_bytes[19:]
-            yield Update(payload, negotiated)
+            payload = msg_bytes[Message.HEADER_LEN :]
+            yield Update(payload)
 
     # Note: This method can raise ValueError, IndexError, TypeError, struct.error (from unpack).
     # These exceptions are caught by the caller in reactor/protocol.py:read_message() which
@@ -945,27 +942,17 @@ class UpdateCollection(Message):
         announced = {routed.nlri.index() for routed in announces}
         return [nlri for nlri in withdraws if nlri.index() not in announced]
 
-    # EOR prefix for non-IPv4-unicast families
-    _EOR_PREFIX: ClassVar[bytes] = b'\x00\x00\x00\x07\x90\x0f\x00\x03'
-
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> 'UpdateCollection':
         """Parse raw UPDATE payload bytes into UpdateCollection.
 
-        EOR (End-of-RIB) markers are returned as cached UpdateCollection
-        singletons with EOR=True and _eor_afi/_eor_safi set.
+        An End-of-RIB (RFC 4724) is returned marked with its family, see make_eor.
         """
-        length = len(data)
+        from exabgp.bgp.message.update.eor import EOR
 
-        # Check for End-of-RIB markers (fast path)
-        if length == EOR_IPV4_UNICAST_LENGTH and data == b'\x00\x00\x00\x00':
-            return cls._get_eor(AFI.ipv4, SAFI.unicast)
-        if length == EOR_WITH_PREFIX_LENGTH and bytes(data).startswith(cls._EOR_PREFIX):
-            # Extract AFI/SAFI from after the prefix
-            prefix_len = len(cls._EOR_PREFIX)
-            afi = AFI.unpack_afi(data[prefix_len : prefix_len + 2])
-            safi = SAFI.unpack_safi(data[prefix_len + 2 : prefix_len + 3])
-            return cls._get_eor(afi, safi)
+        if EOR.is_eor_body(data):
+            eor = EOR(data)
+            return cls.make_eor(eor.afi, eor.safi)
 
         # Parse normally
         return cls._parse_payload(data, negotiated)

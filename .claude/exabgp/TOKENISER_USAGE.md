@@ -2,7 +2,11 @@
 
 ## Overview
 
-The `Tokeniser` class (`src/exabgp/configuration/core/parser.py`) is a streaming token parser used throughout ExaBGP for configuration files and API commands. It provides a consistent pattern for consuming and peeking at tokens.
+The `Tokeniser` class (`src/exabgp/reactor/api/tokeniser.py`) is a streaming token reader for the API commands. It provides a consistent pattern for consuming and peeking at tokens.
+
+The configuration files are not read with it any more: the configuration grammar
+(`src/exabgp/configuration/grammar/`) has its own lexer and reads a statement through
+`Words` (`peek`, `word`, `expect`, `where`), see `.claude/exabgp/CONFIGURATION_GRAMMAR.md`.
 
 ## Core API
 
@@ -272,151 +276,20 @@ def prefix(tokeniser: Tokeniser) -> IPRange:
     return ip_obj
 ```
 
-## The Parser Class
+## Reading a configuration
 
-The `Parser` class (`src/exabgp/configuration/core/parser.py`) wraps `Tokeniser` and handles line-by-line reading from files, text, or API commands.
-
-### Parser Architecture
-
-```
-Input Source (file/text/api)
-    ↓
-format.py:tokens() - Lexical analysis
-    ↓ yields list[tuple[line, col, word]]
-Parser._tokenise() - Extract words
-    ↓ yields list[str] per line
-Parser.__call__() - Advance to next line
-    ↓ replenishes tokeniser
-Tokeniser - Token-by-token consumption
-```
-
-### Parser Attributes
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `tokeniser` | `Tokeniser` | The tokeniser for current line |
-| `line` | `list[str]` | Current line's tokens (including terminator) |
-| `end` | `str` | Line terminator: `{`, `}`, or `;` |
-| `number` | `int` | Current line number |
-| `fname` | `str` | Source filename |
-| `type` | `str` | Source type: `'file'`, `'text'`, or `'unset'` |
-| `finished` | `bool` | True when all lines consumed |
-| `scope` | `Scope` | Configuration scope for nested blocks |
-| `error` | `Error` | Error handler |
-
-### Input Methods
-
-#### `parser.set_file(filename)` - Parse Configuration File
+The configuration is read by the grammar, not with a tokeniser loop:
 
 ```python
-parser = Parser(scope, error)
-if parser.set_file('/etc/exabgp/config.conf'):
-    while parser():
-        process_line(parser)
+from exabgp.configuration.grammar.read import read_file
+
+settings = read_file('config.conf')  # ConfigurationSettings, or ConfigError with its position
 ```
 
-Features:
-- Handles line continuation with `\`
-- Tracks line numbers for errors
-- Processes escape sequences (`\n`, `\t`, etc.)
+## Important Notes
 
-#### `parser.set_text(text)` - Parse String
-
-```python
-parser = Parser(scope, error)
-parser.set_text('''
-neighbor 10.0.0.1 {
-    router-id 1.2.3.4;
-}
-''')
-while parser():
-    process_line(parser)
-```
-
-#### `parser.set_api(line)` - Parse Single API Command
-
-```python
-parser = Parser(scope, error)
-parser.set_api('announce route 10.0.0.0/24 next-hop 1.2.3.4')
-parser()  # Advance to the line
-# Now parser.tokeniser has: ['announce', 'route', '10.0.0.0/24', 'next-hop', '1.2.3.4']
-```
-
-### Line Termination
-
-The `format.py:tokens()` function treats these as line terminators:
-- `;` - Statement end
-- `{` - Block open
-- `}` - Block close
-
-After `parser()` is called:
-- `parser.line` contains all tokens including terminator
-- `parser.tokeniser` is replenished with tokens EXCLUDING terminator
-- `parser.end` contains the terminator
-
-Example:
-```python
-# Input: "neighbor 10.0.0.1 {"
-parser()
-# parser.line = ['neighbor', '10.0.0.1', '{']
-# parser.end = '{'
-# parser.tokeniser has ['neighbor', '10.0.0.1'] (no '{')
-```
-
-### Token Preprocessing (format.py)
-
-The `format.py` module performs lexical preprocessing:
-
-```python
-# Adds spaces around brackets
-'[a,b]' → '[ a , b ]'
-'(x)' → '( x )'
-
-# Handles quoted strings (preserves spaces)
-'"hello world"' → 'hello world'  # As single token
-
-# Handles escape sequences
-'\\n' → '\n'
-'\\t' → '\t'
-'\\uXXXX' → Unicode character
-```
-
-### Parser Usage Pattern
-
-```python
-from exabgp.configuration.core.parser import Parser
-from exabgp.configuration.core.scope import Scope
-from exabgp.configuration.core.error import Error
-
-scope = Scope()
-error = Error()
-parser = Parser(scope, error)
-
-parser.set_file('config.conf')
-
-while parser():
-    keyword = parser.tokeniser()
-
-    if keyword == 'neighbor':
-        ip = parser.tokeniser()
-        if parser.end == '{':
-            # Start of neighbor block
-            parse_neighbor_block(parser, ip)
-        else:
-            # Single line neighbor statement
-            parse_neighbor_statement(parser, ip)
-
-    elif keyword == 'route':
-        prefix = parser.tokeniser()
-        parse_route(parser, prefix)
-```
-
-### Important Notes
-
-1. **Line vs Tokeniser**: `parser.line` includes the terminator, `parser.tokeniser` does not
-2. **Terminator Check**: Always check `parser.end` to know if entering a block
-3. **Replenish Behavior**: `replenish()` resets `consumed` to 0
-4. **Empty Tokens**: `tokeniser()` returns `''` when exhausted, not `None`
+1. **Replenish Behavior**: `replenish()` resets `consumed` to 0
+2. **Empty Tokens**: `tokeniser()` returns `''` when exhausted, not `None`
 
 ## Summary
 

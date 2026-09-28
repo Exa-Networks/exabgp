@@ -288,7 +288,7 @@ class TestEORJSON:
         """
 
         # Create EOR for IPv4 unicast
-        eor = EOR(AFI.ipv4, SAFI.unicast)
+        eor = EOR.make_eor(AFI.ipv4, SAFI.unicast)
 
         # Generate JSON - should not crash
         result = json_encoder._update(eor)
@@ -304,7 +304,7 @@ class TestEORJSON:
         """Test EOR for IPv6 unicast produces some JSON output."""
 
         # Create EOR for IPv6 unicast
-        eor = EOR(AFI.ipv6, SAFI.unicast)
+        eor = EOR.make_eor(AFI.ipv6, SAFI.unicast)
 
         # Generate JSON - should not crash
         result = json_encoder._update(eor)
@@ -318,7 +318,7 @@ class TestEORJSON:
     def test_eor_has_eor_attribute(self) -> None:
         """Test that EOR class has EOR=True attribute."""
 
-        eor = EOR(AFI.ipv4, SAFI.unicast)
+        eor = EOR.make_eor(AFI.ipv4, SAFI.unicast)
 
         # EOR messages have IS_EOR=True
         assert eor.IS_EOR is True
@@ -339,7 +339,7 @@ class TestEORJSON:
         """
 
         # EOR message
-        eor = EOR(AFI.ipv4, SAFI.unicast)
+        eor = EOR.make_eor(AFI.ipv4, SAFI.unicast)
         assert getattr(eor, 'IS_EOR', False) is True
 
         # UpdateCollection
@@ -553,7 +553,7 @@ class TestEventJSONSemantics:
     """Non-UPDATE events must keep JSON API values parseable and typed."""
 
     def test_route_refresh_event_values_are_strings(self, json_encoder: JSON, api_neighbor: Mock) -> None:
-        refresh = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, RouteRefresh.start)
+        refresh = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, RouteRefresh.BEGIN)
 
         event = json.loads(json_encoder.refresh(api_neighbor, 'receive', refresh, b'', b'', Negotiated.UNSET))
         route_refresh = event['neighbor']['route-refresh']
@@ -605,9 +605,9 @@ class TestEventJSONSemantics:
         }
 
     def test_operational_events_values_are_strings(self, json_encoder: JSON, api_neighbor: Mock) -> None:
-        advisory = Advisory.ADM(AFI.ipv4, SAFI.unicast, 'maintenance')
-        query = Query.RPCQ(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7)
-        counter = Response.RPCP(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7, 42)
+        advisory = Advisory.ADM.make_advisory(AFI.ipv4, SAFI.unicast, 'maintenance')
+        query = Query.RPCQ.make_query(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7)
+        counter = Response.RPCP.make_counter(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7, 42)
 
         advisory_event = json.loads(
             json_encoder.operational(api_neighbor, 'receive', 'advisory', advisory, b'', b'', Negotiated.UNSET)
@@ -678,6 +678,23 @@ class TestPeerStringEscaping:
         assert notification_json['message'] == payload.decode()
         assert notification_json['data'] == '0x79222C2022696E6A65637465642D6E6F746966223A20226F776E656432'
         assert 'injected-notif' not in notification_json
+
+    def test_a_received_shutdown_communication_is_reported_as_the_peer_sent_it(
+        self, json_encoder: JSON, api_neighbor: Mock
+    ) -> None:
+        """`data` is the Data field as it came off the wire, the RFC 9003 length octet included.
+
+        It was the decoded display text, `Shutdown Communication: "bye"`, for a received
+        notification only, while a sent one reported its raw bytes: the same key meant two
+        things.  Notification.data is now the Data field both ways, and .text is the display.
+        """
+        notification = Notification.make_notification(6, 2, b'\x03bye')
+
+        event = json.loads(json_encoder.notification(api_neighbor, 'receive', notification, b'', b'', Negotiated.UNSET))
+        notification_json = event['neighbor']['notification']
+
+        assert notification_json['data'] == '0x03627965'
+        assert notification.text == b'Shutdown Communication: "bye"'
 
 
 if __name__ == '__main__':

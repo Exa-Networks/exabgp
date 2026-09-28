@@ -131,14 +131,37 @@ def test_a_neighbour_which_did_not_enable_it_does_not_announce_it() -> None:
 
 
 @pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#10-support-trivial-groups')
-@pytest.mark.xfail(strict=True, reason='per-family neighbours share one name(), so only the last is kept')
 def test_multisession_with_two_families_makes_one_session_per_family() -> None:
     configured = neighbours('capability { multi-session enable; }')
 
-    assert sorted(neighbor.rib.outgoing.families for neighbor in configured) == [
+    assert [neighbor.rib.outgoing.families for neighbor in configured] == [
         {(AFI.ipv4, SAFI.unicast)},
         {(AFI.ipv6, SAFI.unicast)},
     ]
+    assert len({neighbor.name() for neighbor in configured}) == 2
+
+
+@pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#10-support-trivial-groups')
+def test_each_session_advertises_its_family_alone() -> None:
+    """Sessions are grouped by their MULTIPROTOCOL capability: one listing both would match neither of the peer's."""
+    configured = neighbours('capability { multi-session enable; add-path send; }')
+
+    for neighbor, family in zip(configured, [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)], strict=True):
+        capabilities = Capabilities().new(neighbor, False)
+        assert list(capabilities[MULTIPROTOCOL]) == [family]
+        assert neighbor.families() == [family]
+        assert neighbor.addpaths() == [family]
+        assert neighbor.name().endswith(f'family-allowed {family[0].name()}-{family[1].name()}')
+
+
+def test_a_route_is_sent_on_the_session_of_its_family() -> None:
+    routes = 'static { route 10.0.0.0/24 next-hop 192.0.2.3; route 2001:db8::/32 next-hop 2001:db8::1; }'
+    configured = neighbours(f'capability {{ multi-session enable; }} {routes}')
+
+    for neighbor in configured:
+        (family,) = neighbor.families()
+        sent = [route.nlri.family().afi_safi() for route in neighbor.rib.outgoing.cached_routes()]
+        assert sent == [family]
 
 
 # ==============================================================================

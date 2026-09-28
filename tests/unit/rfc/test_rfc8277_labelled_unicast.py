@@ -428,11 +428,9 @@ def session(ours: bytes | None, theirs: bytes | None) -> Negotiated:
 def configured(labels: str) -> list[Route]:
     """The routes a static labelled route produces, through the configuration parser."""
     configuration = Configuration([''], text=True)
-    configuration.static.clear()
     line = f'route 10.0.0.0/24 next-hop 192.0.2.1 label {labels}'
     assert configuration.partial('static', line, 'announce'), str(configuration.error)
-    configuration.scope.to_context()
-    routes = configuration.scope.pop_routes()
+    routes = configuration.pop_routes()
     assert routes, 'the line parsed to no route at all'
     return routes
 

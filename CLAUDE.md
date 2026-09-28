@@ -400,7 +400,17 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
     - **Read when:** Debugging FlowSpec encoding issues, understanding resolved limitations
     - **Contains:** Coverage stats, resolved issues, `group` command solutions
 
+20. **`.claude/exabgp/CONFIGURATION_GRAMMAR.md`** - The configuration grammar
+    - **Read when:** Adding or changing a configuration keyword, API route command, or configuration printing
+    - **Contains:** Package layout, how to add a keyword, the tests which prove behaviour is preserved
+
+21. **`.claude/exabgp/BGP_MESSAGE_INTERFACE.md`** - The BGP message contract
+    - **Read when:** Adding or changing a BGP message class (OPEN, UPDATE, NOTIFICATION, ...), Notify, Operational
+    - **Contains:** The base class contract, one table per message, what each malformation is answered with
+
 **Quick reference:**
+- Adding or changing a BGP message → Read #21
+- Adding a configuration keyword → Read #20
 - Adding NLRI type → Read #3, then #1
 - Understanding message flow → Read #2
 - Finding where BGP concept lives → Read #4
@@ -452,6 +462,7 @@ Generator-based API callbacks still work, they run inside the asyncio loop.
 - Bound every loop, cap every buffer with a named constant
 - New and modified functions under 70 lines
 - A bug fix comes with the test that fails without it
+- Ask the object, not its class: no `isinstance` where a base class field (`ID`, `IS_EOR`) or method can answer
 - Enforced by `./qa/bin/check_exa_style`, part of `./qa/bin/test_everything`
 
 **Python 3.12+ ONLY:**

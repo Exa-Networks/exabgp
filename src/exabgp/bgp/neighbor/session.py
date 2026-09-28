@@ -281,6 +281,11 @@ class Session:
             role_strict=settings.role_strict,
             role_otc=settings.role_otc,
             role_add_meta=settings.role_add_meta,
+            md5_ip=settings.md5_ip,
+            local_link_local=settings.local_link_local,
         )
+        if settings.confederation is not None:
+            session.confederation = settings.confederation
+        session.confederation_members = settings.confederation_members
         session.infer()
         return session

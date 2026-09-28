@@ -128,7 +128,7 @@ def test_numeric_peer_asn4_passes_open_validation() -> None:
     sent = Capabilities()
     sent[Capability.CODE.FOUR_BYTES_ASN] = ASN4(65001)
     received = Capabilities()
-    received[Capability.CODE.FOUR_BYTES_ASN] = 65537
+    received[Capability.CODE.FOUR_BYTES_ASN] = ASN4(65537)
     negotiated = Negotiated(neighbor, Direction.OUT)
     negotiated.sent(Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), sent))
     negotiated.received(Open.make_open(Version(4), ASN(65537), HoldTime(90), RouterID('192.0.2.2'), received))
@@ -141,7 +141,7 @@ def test_numeric_local_asn4_recovers_identity_without_requiring_peer_support(rec
     neighbor = Neighbor()
     neighbor.session.peer_as = ASN(65002)
     sent = Capabilities()
-    sent[Capability.CODE.FOUR_BYTES_ASN] = 65537
+    sent[Capability.CODE.FOUR_BYTES_ASN] = ASN4(65537)
     received = Capabilities()
     if receive_asn4:
         received[Capability.CODE.FOUR_BYTES_ASN] = ASN4(65002)
@@ -168,7 +168,7 @@ def test_numeric_local_asn4_preserves_default_path_without_peer_support() -> Non
     neighbor = Neighbor()
     neighbor.session.peer_as = ASN(65002)
     sent = Capabilities()
-    sent[Capability.CODE.FOUR_BYTES_ASN] = 65537
+    sent[Capability.CODE.FOUR_BYTES_ASN] = ASN4(65537)
     negotiated = Negotiated(neighbor, Direction.OUT)
     negotiated.sent(Open.make_open(Version(4), ASN(65537), HoldTime(90), RouterID('192.0.2.1'), sent))
     negotiated.received(Open.make_open(Version(4), ASN(65002), HoldTime(90), RouterID('192.0.2.2'), Capabilities()))

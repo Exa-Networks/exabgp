@@ -15,11 +15,13 @@ from unittest.mock import Mock
 
 import pytest
 
+from exabgp.bgp.message import Message
+
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.bgp.message import KeepAlive, Notify, Update, _NOP, Scheduling  # noqa: E402
+from exabgp.bgp.message import KeepAlive, Notify  # noqa: E402
 from exabgp.bgp.message.open.holdtime import HoldTime  # noqa: E402
 from exabgp.bgp.timer import ReceiveTimer, SendTimer  # noqa: E402
 
@@ -95,8 +97,8 @@ class TestReceiveTimerKeepaliveCheck:
         timer = ReceiveTimer(session, 0, 4, 0)
 
         message = Mock()
-        message.TYPE = Update.TYPE
-        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         result = timer.check_ka_timer(message)
         assert result is True
@@ -106,9 +108,7 @@ class TestReceiveTimerKeepaliveCheck:
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 0, 4, 0)
 
-        message = Mock()
-        message.TYPE = KeepAlive.TYPE
-        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
+        message = KeepAlive.make_keepalive()
 
         result = timer.check_ka_timer(message)
         assert result is False
@@ -122,8 +122,8 @@ class TestReceiveTimerKeepaliveCheck:
         timer.last_read = int(time.time()) - 10
 
         message = Mock()
-        message.TYPE = Update.TYPE
-        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         old_last_read = timer.last_read
         timer.check_ka_timer(message)
@@ -132,7 +132,7 @@ class TestReceiveTimerKeepaliveCheck:
         assert timer.last_read > old_last_read
 
     def test_check_ka_timer_ignores_nop(self) -> None:
-        """Test check_ka_timer ignores NOP messages"""
+        """Test check_ka_timer does not count a read which returned nothing"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
 
@@ -140,14 +140,12 @@ class TestReceiveTimerKeepaliveCheck:
         timer.last_read = int(time.time()) - 10
         old_last_read = timer.last_read
 
-        message = Mock()
-        message.TYPE = _NOP.TYPE
-        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
+        message = None  # nothing was read
 
         time.sleep(1)
         timer.check_ka_timer(message)
 
-        # last_read should NOT be updated for ignored message (NOP)
+        # last_read should NOT be updated when nothing was read
         assert timer.last_read == old_last_read
 
     def test_check_ka_timer_raises_notify_on_expiry(self) -> None:
@@ -158,9 +156,7 @@ class TestReceiveTimerKeepaliveCheck:
         # Set last_read to past (beyond holdtime)
         timer.last_read = int(time.time()) - 3
 
-        message = Mock()
-        message.TYPE = _NOP.TYPE
-        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
+        message = None  # nothing was read
 
         with pytest.raises(Notify) as exc_info:
             timer.check_ka_timer(message)
@@ -174,8 +170,8 @@ class TestReceiveTimerKeepaliveCheck:
         timer = ReceiveTimer(session, 180, 4, 0)
 
         message = Mock()
-        message.TYPE = Update.TYPE
-        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         # Should not raise
         result = timer.check_ka_timer(message)
@@ -191,8 +187,8 @@ class TestReceiveTimerCheckKa:
         timer = ReceiveTimer(session, 180, 4, 0)
 
         message = Mock()
-        message.TYPE = Update.TYPE
-        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         # Should not raise
         timer.check_ka(message)
@@ -202,9 +198,7 @@ class TestReceiveTimerCheckKa:
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 0, 2, 6)
 
-        message = Mock()
-        message.TYPE = KeepAlive.TYPE
-        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
+        message = KeepAlive.make_keepalive()
 
         # First keepalive should set single flag but not raise
         timer.check_ka(message)
@@ -222,9 +216,7 @@ class TestReceiveTimerCheckKa:
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 0, 2, 6)
 
-        message = Mock()
-        message.TYPE = KeepAlive.TYPE
-        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
+        message = KeepAlive.make_keepalive()
 
         # First keepalive
         try:
@@ -248,9 +240,7 @@ class TestReceiveTimerElapsedTime:
         # Set last_read to known past time
         timer.last_read = int(time.time()) - 10
 
-        message = Mock()
-        message.TYPE = _NOP.TYPE
-        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
+        message = None  # nothing was read
 
         # Should calculate elapsed time
         timer.check_ka_timer(message)
@@ -267,9 +257,7 @@ class TestReceiveTimerElapsedTime:
         # Set last_read to exactly holdtime + 1 seconds ago
         timer.last_read = int(time.time()) - (holdtime + 1)
 
-        message = Mock()
-        message.TYPE = _NOP.TYPE
-        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
+        message = None  # nothing was read
 
         with pytest.raises(Notify):
             timer.check_ka_timer(message)
@@ -434,12 +422,12 @@ class TestReceiveTimerIntegration:
 
         # Receive update
         update = Mock()
-        update.TYPE = Update.TYPE
+        update.ID = Message.CODE.UPDATE
+        update.IS_EOR = False
         timer.check_ka_timer(update)
 
         # Receive keepalive
-        keepalive = Mock()
-        keepalive.TYPE = KeepAlive.TYPE
+        keepalive = KeepAlive.make_keepalive()
         timer.check_ka_timer(keepalive)
 
         # Should not raise
@@ -452,9 +440,7 @@ class TestReceiveTimerIntegration:
         # Simulate no messages for holdtime period
         timer.last_read = int(time.time()) - 3
 
-        message = Mock()
-        message.TYPE = _NOP.TYPE
-        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
+        message = None  # nothing was read
 
         with pytest.raises(Notify) as exc_info:
             timer.check_ka_timer(message)
@@ -494,7 +480,8 @@ class TestTimerEdgeCases:
         timer = ReceiveTimer(session, 1, 4, 0)
 
         message = Mock()
-        message.TYPE = Update.TYPE
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         # Should handle short holdtime
         timer.check_ka_timer(message)
@@ -510,7 +497,7 @@ class TestTimerEdgeCases:
         assert timer.keepalive == 1
 
     def test_receive_timer_message_none(self) -> None:
-        """Test ReceiveTimer with default NOP message"""
+        """Test ReceiveTimer when nothing was read"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, 180, 4, 0)
 
@@ -545,9 +532,7 @@ class TestTimerNotifyMessages:
 
         timer.last_read = int(time.time()) - 2
 
-        message = Mock()
-        message.TYPE = _NOP.TYPE
-        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
+        message = None  # nothing was read
 
         with pytest.raises(Notify) as exc_info:
             timer.check_ka_timer(message)
@@ -562,9 +547,7 @@ class TestTimerNotifyMessages:
 
         timer.last_read = int(time.time()) - 2
 
-        message = Mock()
-        message.TYPE = _NOP.TYPE
-        message.SCHEDULING = Scheduling.LATER  # NOP messages have truthy SCHEDULING
+        message = None  # nothing was read
 
         with pytest.raises(Notify) as exc_info:
             timer.check_ka_timer(message)
@@ -582,8 +565,8 @@ class TestTimerConcurrentBehavior:
         timer = ReceiveTimer(session, 180, 4, 0)
 
         message = Mock()
-        message.TYPE = Update.TYPE
-        message.SCHEDULING = 0  # Real BGP messages have SCHEDULING = 0 (INVALID/falsy)
+        message.ID = Message.CODE.UPDATE
+        message.IS_EOR = False
 
         # Rapid fire messages
         for _ in range(10):

@@ -269,7 +269,7 @@ uv run pytest tests/unit/specific_test.py::test_function -v
 - NO code requiring mypy config changes
 - BGP APIs: keep `negotiated` parameter (stable API, unused OK)
 - Fix type errors at root cause, NEVER use `# type:` comments
-- `cast()` is acceptable ONLY when preceded by runtime type check (isinstance/hasattr)
+- `cast()` is acceptable ONLY when preceded by a runtime check: a discriminating class field (`ID`, `IS_EOR`), or isinstance/hasattr where no field exists (EXA_STYLE.md "Ask the object, not its class")
   - Example: `if isinstance(x, bool): return cast(T, x)` ✅
   - Example: `return cast(int, value)` without check ❌
   - Prefer assertions/raises over fallback cast: `raise TypeError(...)` not `return cast(T, value)`

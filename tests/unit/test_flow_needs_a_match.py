@@ -28,9 +28,13 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import subprocess
 
 import pytest
+
+# the legacy parser writes `line 8: <statement>`, the grammar `<file>:8:10: <message>`
+NAMES_A_LINE = re.compile(r'line \d+|:\d+:\d+: ')
 
 ROOT = pathlib.Path(__file__).parent.parent.parent
 
@@ -87,8 +91,9 @@ def test_the_refusal_names_the_line(tmp_path) -> None:
     result = validate(tmp_path, NO_MATCH)
 
     combined = result.stdout + result.stderr
-    assert 'line ' in combined
-    assert 'neighbor/flow/route' in combined
+    assert NAMES_A_LINE.search(combined)
+    # the legacy parser names the section, the grammar the column of the statement
+    assert 'neighbor/flow/route' in combined or re.search(r':\d+:\d+: ', combined)
 
 
 def test_it_is_a_configuration_error_and_not_a_traceback(tmp_path) -> None:

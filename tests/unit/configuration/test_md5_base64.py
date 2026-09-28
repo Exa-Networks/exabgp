@@ -85,7 +85,7 @@ def test_md5_base64_auto_explains_its_removal(tmp_path) -> None:
 
 def _warnings(configuration: Configuration) -> list[str]:
     """Return the configuration warnings raised while parsing."""
-    with patch('exabgp.configuration.neighbor.log') as log:
+    with patch('exabgp.configuration.grammar.tree.neighbor.log') as log:
         assert configuration.reload(), str(configuration.error)
     return [call.args[0]() for call in log.warning.call_args_list]
 

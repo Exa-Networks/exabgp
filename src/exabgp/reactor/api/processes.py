@@ -32,7 +32,6 @@ import time
 from threading import Thread
 from typing import IO, TYPE_CHECKING, Any, Callable, Generator, TypeVar, cast
 
-from exabgp.bgp.message.update import UpdateCollection  # Needed at runtime for cast()
 
 if TYPE_CHECKING:
     from exabgp.bgp.fsm import FSM
@@ -45,8 +44,8 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import Negotiated
-from exabgp.configuration.process import API_PREFIX
-from exabgp.configuration.core.format import formated
+from exabgp.configuration.cli_process import API_PREFIX
+from exabgp.reactor.api.tokeniser import formated
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 from exabgp.reactor.api.response import Response, ResponseEncoder
@@ -1506,16 +1505,8 @@ class Processes:
     def _update(
         self, peer: 'Peer', direction: str, update: 'Update', negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
-        # Encoders expect UpdateCollection (semantic container), not Update (wire container)
-        # Both Update and EOR have TYPE == Update.TYPE, but EOR has .nlris/.attributes directly
-        # Check for IS_EOR flag to distinguish (EOR.IS_EOR == True, Update.IS_EOR == False)
-        # Both branches produce something compatible with UpdateCollection interface
-        update_collection: UpdateCollection
-        if update.IS_EOR:
-            # EOR has .nlris and .attributes directly, compatible with encoder interface
-            update_collection = cast(UpdateCollection, update)
-        else:
-            update_collection = update.data
+        # Encoders take the decoded UpdateCollection; an EOR's is marked as an End-of-RIB
+        update_collection = update.data
         for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.UPDATE.SHORT}'):
             self.write(
                 process,
@@ -1571,7 +1562,7 @@ class Processes:
                 self._encoder[process].operational(
                     peer.neighbor,
                     direction,
-                    operational.category,
+                    operational.CATEGORY,
                     operational,
                     header,
                     body,

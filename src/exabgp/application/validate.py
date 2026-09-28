@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import argparse
+from typing import NoReturn
 
 from exabgp.environment import getenv
 from exabgp.environment import getconf
@@ -53,14 +54,7 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
             sys.stderr.write(f'error: {msg}\n')
             sys.exit(1)
 
-        config = Configuration([location])
-
-        if not config.reload():
-            error = str(config.error)
-            msg = f'{configuration} is not a valid config file: {error}'
-            log.critical(lazymsg('{msg}', msg=msg), 'configuration')
-            sys.stderr.write(f'error: {msg}\n')
-            sys.exit(1)
+        config = _load(configuration, location)
         log.info(lazymsg('validate.loading status=success'), 'configuration')
 
         if cmdarg.neighbor:
@@ -78,6 +72,19 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
                 )
                 sys.exit(1)
             log.info(lazymsg('validate.routes status=success'), 'configuration')
+
+
+def _fail(msg: str) -> NoReturn:
+    log.critical(lazymsg('{msg}', msg=msg), 'configuration')
+    sys.stderr.write(f'error: {msg}\n')
+    sys.exit(1)
+
+
+def _load(configuration: str, location: str) -> Configuration:
+    config = Configuration([location])
+    if not config.reload():
+        _fail(f'{configuration} is not a valid config file: {config.error!s}')
+    return config
 
 
 def main() -> None:

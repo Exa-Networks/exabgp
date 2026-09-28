@@ -33,7 +33,9 @@ REFRESH message and the related procedures SHOULD advertise the
 """
 note = """
 Capabilities._refresh advertises Enhanced Route Refresh whenever route refresh is enabled
-for the neighbour, which is the only configuration under which exabgp handles the subtypes.
+for the neighbour (`route-refresh enable` or `require`). The SHOULD leaves the operator the
+choice: `route-refresh-enhanced disable` advertises route refresh alone, for a peer whose
+enhanced route refresh misbehaves.
 """
 
 [[requirement]]

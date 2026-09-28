@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 # import traceback
 from exabgp.bgp.fsm import FSM
-from exabgp.bgp.message import _NOP, Message, Notification, Notify, Open
+from exabgp.bgp.message import Message, NotificationReceived, Notify, Open
 from exabgp.bgp.message.open.capability import REFRESH, Capability
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.debug.report import format_exception
@@ -612,7 +612,7 @@ class Peer:
 
             if getenv().bgp.passive:
                 while not self.proto:
-                    await asyncio.sleep(0)  # Yield control like _NOP
+                    await asyncio.sleep(0)  # Yield control while nothing is read
 
             self.fsm.change(FSM.IDLE)
 
@@ -675,7 +675,7 @@ class Peer:
     async def _send_refresh_messages(self) -> None:
         """Send route refresh messages from the neighbor's refresh queue."""
         assert self.proto is not None, 'Protocol must be established'
-        if self.neighbor.capability.route_refresh:
+        if self.neighbor.capability.route_refresh.is_enabled():
             new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
             if new_refresh:
                 await self.proto.new_refresh(new_refresh)
@@ -738,15 +738,10 @@ class Peer:
     def _has_pending_work(
         self,
         new_routes: AsyncGenerator[None, None] | None,
-        message: Message,
+        message: Message | None,
     ) -> bool:
         """Check if there's pending work that requires immediate attention."""
-        return bool(
-            new_routes
-            or not message.SCHEDULING  # Real message received (not NOP)
-            or self.neighbor.messages
-            or self.neighbor.eor
-        )
+        return bool(new_routes or message is not None or self.neighbor.messages or self.neighbor.eor)
 
     async def _main(self) -> int:
         """Main BGP message processing loop using async I/O.
@@ -828,10 +823,11 @@ class Peer:
                 ctx.neighbor = self.neighbor
 
                 # Read message with timeout
+                message: Message | None
                 try:
                     message = await asyncio.wait_for(self.proto.read_message(), timeout=0.1)
                 except asyncio.TimeoutError:
-                    message = _NOP
+                    message = None
                     await asyncio.sleep(0)
 
                 # Keepalive handling
@@ -843,7 +839,9 @@ class Peer:
                     log.info(lazymsg('statistics.changed info={counter_line}', counter_line=counter_line), 'statistics')
 
                 # Process inbound messages using handlers
-                if update_handler.can_handle(message):
+                if message is None:
+                    pass
+                elif update_handler.can_handle(message):
                     await update_handler.handle_async(ctx, message)
                 elif route_refresh_handler.can_handle(message):
                     await route_refresh_handler.handle_async(ctx, message)
@@ -935,7 +933,7 @@ class Peer:
             return
 
         # THE PEER NOTIFIED US OF AN ERROR
-        except Notification as notification:
+        except NotificationReceived as notification:
             # Check if maximum connection attempts reached
             if not self.can_reconnect():
                 log.debug(
@@ -1055,10 +1053,7 @@ class Peer:
         cap = self.neighbor.capability
         capabilities: dict[str, tuple[TriState, TriState]] = {
             'asn4': (cap.asn4, TriState.from_bool(peer['asn4'])),
-            'route-refresh': (
-                TriState.from_bool(bool(cap.route_refresh)),
-                TriState.from_bool(peer['route-refresh']),
-            ),
+            'route-refresh': (cap.route_refresh, TriState.from_bool(peer['route-refresh'])),
             'multi-session': (
                 cap.multi_session,
                 TriState.from_bool(peer['multi-session']),

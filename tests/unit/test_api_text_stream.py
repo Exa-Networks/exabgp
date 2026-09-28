@@ -124,7 +124,7 @@ def test_operational_advisory_cannot_forge_an_event(neighbor, encoder: Text) -> 
     advisory = FORGED.encode('utf-8')
     body = struct.pack('!HH', 1, len(advisory) + 3) + struct.pack('!H', 1) + bytes([1]) + advisory
     operational = Operational.unpack_message(body, Negotiated.UNSET)
-    produced = encoder.operational(neighbor, 'in', operational.category, operational, b'', b'', Negotiated.UNSET)
+    produced = encoder.operational(neighbor, 'in', operational.CATEGORY, operational, b'', b'', Negotiated.UNSET)
     one_line(produced)
 
 
@@ -133,7 +133,7 @@ def test_operational_advisory_survives_bytes_which_are_not_text(neighbor, encode
     advisory = b'\xff\xfe\xfd'
     body = struct.pack('!HH', 1, len(advisory) + 3) + struct.pack('!H', 1) + bytes([1]) + advisory
     operational = Operational.unpack_message(body, Negotiated.UNSET)
-    one_line(encoder.operational(neighbor, 'in', operational.category, operational, b'', b'', Negotiated.UNSET))
+    one_line(encoder.operational(neighbor, 'in', operational.CATEGORY, operational, b'', b'', Negotiated.UNSET))
 
 
 @pytest.mark.parametrize(
@@ -168,10 +168,10 @@ def test_unknown_operational_type_is_reported_not_raised(neighbor, encoder: Text
     payload = b'\x01\x02\x03'
     body = struct.pack('!HH', 0xBEEF, len(payload)) + payload
     operational = Operational.unpack_message(body, Negotiated.UNSET)
-    assert operational.category == 'unknown'
+    assert operational.CATEGORY == 'unknown'
     str(operational)
     repr(operational)
-    one_line(encoder.operational(neighbor, 'in', operational.category, operational, b'', b'', Negotiated.UNSET))
+    one_line(encoder.operational(neighbor, 'in', operational.CATEGORY, operational, b'', b'', Negotiated.UNSET))
 
 
 def test_unknown_operational_type_has_a_printable_type() -> None:

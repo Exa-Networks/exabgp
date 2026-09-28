@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.refresh import REFRESH
-from exabgp.configuration.process import API_PREFIX
+from exabgp.configuration.cli_process import API_PREFIX
 from exabgp.environment import getenv
 from exabgp.logger import lazyexc, lazymsg, log
 from exabgp.reactor.api import API

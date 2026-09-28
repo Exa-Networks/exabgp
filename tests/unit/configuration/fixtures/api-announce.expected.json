@@ -38,6 +38,7 @@
         "add_path": 0,
         "aigp": "UNSET",
         "asn4": "TRUE",
+        "enhanced_route_refresh": "FALSE",
         "extended_message": "TRUE",
         "graceful_restart": {
           "_type": "GracefulRestartConfig",
@@ -47,7 +48,7 @@
         "multi_session": "FALSE",
         "nexthop": "UNSET",
         "operational": "FALSE",
-        "route_refresh": 0,
+        "route_refresh": "FALSE",
         "software_version": null
       },
       "description": "",

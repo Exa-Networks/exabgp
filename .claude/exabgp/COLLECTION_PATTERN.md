@@ -176,7 +176,7 @@ Update                    UpdateCollection
     |                           |
     +---> .parse() -------------+  (returns fresh collection)
     |
-    +---> .pack_message() -----> bytes (just adds header)
+    +---> .pack_message(negotiated) -> bytes (just adds header)
 
                                 |
     <--- .pack(negotiated) -----+  (factory creates new Update)

@@ -49,26 +49,17 @@ def negotiated_for_fuzzing() -> Any:
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=100)
 def test_parser_robustness(text: str) -> None:
     """Test configuration parser doesn't crash on random text."""
-    from exabgp.configuration.core.parser import Parser
-    from exabgp.configuration.core.error import Error
-    from exabgp.configuration.core.scope import Scope
-
-    scope = Scope()
-    error = Error()
-    parser = Parser(scope, error)
+    from exabgp.configuration.grammar.lexer import lex_text
+    from exabgp.configuration.grammar.read import read_text
 
     try:
-        parser.set_text(text)
-
-        # Try to consume some tokens without crashing
-        for _ in range(10):
-            line = parser()
-            if not line:
-                break
+        # Tokenise, then read the whole text as a configuration, without crashing
+        lex_text(text)
+        read_text(text)
     except (Notify, ValueError):
         # ValueError is the configuration layer's own error channel rather than an escape:
-        # section.py catches it and the CLI reports "is not a valid config file" with no
-        # traceback.  It is listed here because it is documented, not because it is tidy
+        # Configuration.reload() catches it and reports it as the configuration error with
+        # no traceback.  It is listed here because it is documented, not because it is tidy
         return
 
 
@@ -132,9 +123,7 @@ def test_asn_number_range(asn: int) -> None:
 @settings(deadline=None, max_examples=20)
 def test_nested_config_blocks(nesting_level: int) -> None:
     """Test configuration parser handles nested blocks."""
-    from exabgp.configuration.core.parser import Parser
-    from exabgp.configuration.core.error import Error
-    from exabgp.configuration.core.scope import Scope
+    from exabgp.configuration.grammar.lexer import lex_text
 
     # Create nested configuration with valid syntax
     config_text = ''
@@ -144,25 +133,16 @@ def test_nested_config_blocks(nesting_level: int) -> None:
     for i in range(nesting_level):
         config_text += '}\n'
 
-    scope = Scope()
-    error = Error()
-    parser = Parser(scope, error)
-
     try:
-        parser.set_text(config_text)
-
         # Parse all tokens
-        token_count = 0
-        max_iterations = nesting_level * 4 + 10
-        for _ in range(max_iterations):
-            line = parser()
-            if not line:
-                break
-            token_count += 1
+        statements = lex_text(config_text)
+        opened = [statement for statement in statements if statement.end == '{']
+        closed = [statement for statement in statements if statement.end == '}']
 
         # Should have parsed tokens for nested blocks
         if nesting_level > 0:
-            assert token_count >= nesting_level
+            assert len(statements) >= nesting_level
+            assert len(opened) == len(closed) == nesting_level
     except RecursionError:
         # May fail for very deep nesting
         if nesting_level > 50:
@@ -355,22 +335,13 @@ def test_update_message_robustness(data: bytes) -> None:
 @pytest.mark.fuzz
 def test_empty_configuration() -> None:
     """Test parser handles empty configuration."""
-    from exabgp.configuration.core.parser import Parser
-    from exabgp.configuration.core.error import Error
-    from exabgp.configuration.core.scope import Scope
+    from exabgp.configuration.grammar.lexer import lex_text
+    from exabgp.configuration.grammar.read import read_text
 
-    scope = Scope()
-    error = Error()
-    parser = Parser(scope, error)
-
-    try:
-        parser.set_text('')
-
-        # Should not crash
-        parser()
-        # Empty config should return empty line or no data
-    except Notify:
-        pass
+    # Should not crash: no statement, and the configuration is refused as empty
+    assert lex_text('') == []
+    with pytest.raises(ValueError, match='empty'):
+        read_text('')
 
 
 @pytest.mark.fuzz
@@ -378,24 +349,13 @@ def test_empty_configuration() -> None:
 @settings(deadline=None, max_examples=30)
 def test_whitespace_only_config(whitespace: str) -> None:
     """Test parser handles whitespace-only configuration."""
-    from exabgp.configuration.core.parser import Parser
-    from exabgp.configuration.core.error import Error
-    from exabgp.configuration.core.scope import Scope
+    from exabgp.configuration.grammar.lexer import lex_text
+    from exabgp.configuration.grammar.read import read_text
 
-    scope = Scope()
-    error = Error()
-    parser = Parser(scope, error)
-
-    try:
-        parser.set_text(whitespace)
-
-        # Should handle gracefully
-        for _ in range(5):
-            line = parser()
-            if not line:
-                break
-    except Notify:
-        pass
+    # Should handle gracefully: no statement, and the configuration is refused as empty
+    assert lex_text(whitespace) == []
+    with pytest.raises(ValueError, match='empty'):
+        read_text(whitespace)
 
 
 @pytest.mark.fuzz

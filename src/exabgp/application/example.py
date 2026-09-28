@@ -3,7 +3,7 @@
 This command outputs a complete, documented configuration example
 with all available options and their metadata (type, default, range, etc.).
 
-The output is generated from the schema definitions, not from a static file,
+The output is generated from the configuration grammar, not from a static file,
 ensuring it's always up-to-date with the current codebase.
 
 Usage:
@@ -17,7 +17,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from exabgp.configuration.example import generate_full_example, generate_neighbor_example
+from exabgp.configuration.grammar.example import example
 
 
 def setargs(sub: argparse.ArgumentParser) -> None:
@@ -51,14 +51,8 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
     Returns:
         Exit code (0 for success, non-zero for error)
     """
-    section = cmdarg.section
-
-    # Generate the appropriate section
-    if section == 'neighbor':
-        output = generate_neighbor_example()
-    else:
-        # Default: full example
-        output = generate_full_example()
+    # the full example is the neighbor one: a neighbor holds every other section
+    output = example()
 
     # Output to stdout
     sys.stdout.write(output)

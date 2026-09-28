@@ -23,7 +23,6 @@ Internal architecture and design of the ExaBGP interactive CLI.
 | `formatter.py` | 458 | Output formatting (JSON/text) |
 | `history.py` | 420 | Command history management |
 | `command_schema.py` | 350 | Command schema definitions |
-| `schema_bridge.py` | 407 | Registry ↔ schema bridge |
 | `fuzzy.py` | 359 | Fuzzy command matching |
 | `colors.py` | 59 | ANSI color helpers |
 

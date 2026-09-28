@@ -1,8 +1,7 @@
 """Base class for message handlers.
 
 MessageHandler is the abstract base class for all inbound message handlers.
-Each handler processes a specific BGP message type and returns a generator
-of scheduling messages.
+Each handler processes a specific BGP message type.
 """
 
 from __future__ import annotations
@@ -18,7 +17,7 @@ if TYPE_CHECKING:
 class MessageHandler(ABC):
     """Abstract base class for BGP message handlers.
 
-    Handlers process inbound BGP messages and return scheduling hints.
+    Handlers process inbound BGP messages.
     Each handler declares which message types it can process via can_handle().
     """
 
@@ -43,7 +42,7 @@ class MessageHandler(ABC):
             message: The BGP message to process
 
         Yields:
-            Scheduling messages (_NOP, _AWAKE) as needed
+            Nothing: the generator form is what the synchronous callers iterate
         """
         ...
 

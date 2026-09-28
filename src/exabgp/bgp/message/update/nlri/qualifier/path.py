@@ -19,6 +19,7 @@ class PathInfo:
     __slots__ = ('_packed', '_disabled')
 
     LENGTH = 4  # Path info is always 4 bytes
+    MAX = (1 << (8 * LENGTH)) - 1  # the largest path identifier, from its four octets
     NOPATH: ClassVar['PathInfo']
     DISABLED: ClassVar['PathInfo']
 
@@ -30,9 +31,10 @@ class PathInfo:
 
     @classmethod
     def make_from_integer(cls, integer: int) -> 'PathInfo':
-        """Create PathInfo from integer value."""
-        packed = b''.join(bytes([(integer >> offset) & 0xFF]) for offset in [24, 16, 8, 0])
-        return cls(packed)
+        """Create PathInfo from integer value, which must fit in its four octets."""
+        if not 0 <= integer <= cls.MAX:
+            raise ValueError(f'path-information {integer} is invalid, it is 0-{cls.MAX}')
+        return cls(integer.to_bytes(cls.LENGTH, 'big'))
 
     @classmethod
     def make_from_ip(cls, ip: str) -> 'PathInfo':

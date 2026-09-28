@@ -15,10 +15,10 @@ License: 3-clause BSD
 import pytest
 from unittest.mock import Mock
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.notification import Notify, Notification
+from exabgp.bgp.message.notification import Notification, NotificationReceived, Notify
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from typing import NoReturn
+from typing import Any
 
 
 # ==============================================================================
@@ -157,7 +157,7 @@ def test_notification_incoming_creation_basic() -> None:
 
     assert notif.code == 2
     assert notif.subcode == 1
-    assert notif.data == b'Extra data'
+    assert notif.text == b'Extra data'
 
 
 def test_notification_incoming_creation_no_data() -> None:
@@ -166,7 +166,7 @@ def test_notification_incoming_creation_no_data() -> None:
 
     assert notif.code == 4
     assert notif.subcode == 0
-    assert notif.data == b''
+    assert notif.text == b''
 
 
 def test_notification_incoming_creation_binary_data() -> None:
@@ -180,7 +180,7 @@ def test_notification_incoming_creation_binary_data() -> None:
     assert notif.code == 3
     assert notif.subcode == 5
     # Binary data should be converted to hex string
-    assert isinstance(notif.data, (bytes, str))
+    assert isinstance(notif.text, (bytes, str))
 
 
 def test_notification_incoming_printable_data() -> None:
@@ -190,7 +190,7 @@ def test_notification_incoming_printable_data() -> None:
 
     assert notif.code == 1
     assert notif.subcode == 2
-    assert notif.data == printable_data
+    assert notif.text == printable_data
 
 
 # ==============================================================================
@@ -255,7 +255,7 @@ def test_notification_shutdown_no_data() -> None:
 
     assert notif.code == 6
     assert notif.subcode == 2
-    assert notif.data == b''
+    assert notif.text == b''
 
 
 def test_notification_shutdown_empty_communication() -> None:
@@ -268,7 +268,7 @@ def test_notification_shutdown_empty_communication() -> None:
 
     assert notif.code == 6
     assert notif.subcode == 2
-    assert b'empty Shutdown Communication' in notif.data
+    assert b'empty Shutdown Communication' in notif.text
 
 
 def test_notification_shutdown_valid_communication() -> None:
@@ -284,8 +284,8 @@ def test_notification_shutdown_valid_communication() -> None:
 
     assert notif.code == 6
     assert notif.subcode == 2
-    assert b'Shutdown Communication:' in notif.data
-    assert b'Maintenance scheduled' in notif.data
+    assert b'Shutdown Communication:' in notif.text
+    assert b'Maintenance scheduled' in notif.text
 
 
 def test_notification_shutdown_max_length_communication() -> None:
@@ -295,7 +295,7 @@ def test_notification_shutdown_max_length_communication() -> None:
 
     notif = Notification.make_notification(6, 2, data)
 
-    assert b'Shutdown Communication:' in notif.data
+    assert b'Shutdown Communication:' in notif.text
 
 
 def test_notification_shutdown_longer_than_rfc8203_allowed() -> None:
@@ -305,7 +305,7 @@ def test_notification_shutdown_longer_than_rfc8203_allowed() -> None:
 
     notif = Notification.make_notification(6, 2, data)
 
-    assert notif.data == b'Shutdown Communication: "' + message.encode() + b'"'
+    assert notif.text == b'Shutdown Communication: "' + message.encode() + b'"'
 
 
 def test_notification_shutdown_buffer_underrun() -> None:
@@ -317,7 +317,7 @@ def test_notification_shutdown_buffer_underrun() -> None:
 
     notif = Notification.make_notification(6, 2, data)
 
-    assert b'invalid Shutdown Communication (buffer underrun)' in notif.data
+    assert b'invalid Shutdown Communication (buffer underrun)' in notif.text
 
 
 def test_notification_shutdown_invalid_utf8() -> None:
@@ -331,7 +331,7 @@ def test_notification_shutdown_invalid_utf8() -> None:
 
     notif = Notification.make_notification(6, 2, data)
 
-    assert b'invalid Shutdown Communication (invalid UTF-8)' in notif.data
+    assert b'invalid Shutdown Communication (invalid UTF-8)' in notif.text
 
 
 def test_notification_shutdown_trailing_data() -> None:
@@ -346,8 +346,8 @@ def test_notification_shutdown_trailing_data() -> None:
 
     notif = Notification.make_notification(6, 2, data)
 
-    assert b'Shutdown Communication:' in notif.data
-    assert b'trailing data:' in notif.data
+    assert b'Shutdown Communication:' in notif.text
+    assert b'trailing data:' in notif.text
 
 
 def test_notification_shutdown_newline_carriage_return() -> None:
@@ -379,9 +379,9 @@ def test_notification_shutdown_newline_carriage_return() -> None:
 
     notif = Notification.make_notification(6, 2, data)
 
-    assert b'Shutdown Communication: "Line1 Line2 Line3"' in notif.data
-    assert b'\n' not in notif.data
-    assert b'\r' not in notif.data
+    assert b'Shutdown Communication: "Line1 Line2 Line3"' in notif.text
+    assert b'\n' not in notif.text
+    assert b'\r' not in notif.text
 
 
 def test_notification_admin_reset_communication() -> None:
@@ -397,8 +397,8 @@ def test_notification_admin_reset_communication() -> None:
 
     assert notif.code == 6
     assert notif.subcode == 4
-    assert b'Shutdown Communication:' in notif.data
-    assert b'Reset required' in notif.data
+    assert b'Shutdown Communication:' in notif.text
+    assert b'Reset required' in notif.text
 
 
 def test_notify_shutdown_with_message() -> None:
@@ -429,7 +429,7 @@ def test_notify_wire_format_basic() -> None:
     - Data: variable
     """
     notify = Notify(2, 1, 'AB')
-    packet = notify.pack_message(negotiated=None)
+    packet = notify.notification.pack_message(Negotiated.UNSET)
 
     # Marker: 16 bytes of 0xFF
     assert packet[:16] == Message.MARKER
@@ -455,7 +455,7 @@ def test_notify_wire_format_basic() -> None:
 def test_notify_wire_format_no_data() -> None:
     """Test Notify encoding with no additional data."""
     notify = Notify(4, 0)
-    packet = notify.pack_message(create_negotiated())
+    packet = notify.notification.pack_message(create_negotiated())
 
     # Total length should be header + code + subcode + default message
     assert len(packet) >= Message.HEADER_LEN + 2
@@ -468,7 +468,7 @@ def test_notify_wire_format_various_sizes() -> None:
     for size in test_sizes:
         data = 'A' * size
         notify = Notify(3, 1, data)
-        packet = notify.pack_message(create_negotiated())
+        packet = notify.notification.pack_message(create_negotiated())
 
         # Verify marker
         assert packet[:16] == Message.MARKER
@@ -493,7 +493,7 @@ def test_notification_unpack_basic() -> None:
 
     assert notif.code == 2
     assert notif.subcode == 1
-    assert notif.data == b'Extra'
+    assert notif.text == b'Extra'
 
 
 def test_notification_unpack_no_data() -> None:
@@ -504,7 +504,7 @@ def test_notification_unpack_no_data() -> None:
 
     assert notif.code == 4
     assert notif.subcode == 0
-    assert notif.data == b''
+    assert notif.text == b''
 
 
 def test_notification_unpack_through_message_class() -> None:
@@ -529,7 +529,7 @@ def test_notification_unpack_shutdown_with_message() -> None:
 
     assert notif.code == 6
     assert notif.subcode == 2
-    assert b'Shutdown Communication:' in notif.data
+    assert b'Shutdown Communication:' in notif.text
 
 
 def test_notification_unpack_various_errors() -> None:
@@ -601,38 +601,38 @@ def test_notification_str_representation_various_errors() -> None:
 
 
 # ==============================================================================
-# Part 9: NOTIFICATION as Exception
+# Part 9: NOTIFICATION is a message, the exceptions hold one
 # ==============================================================================
 
 
-def test_notification_is_exception() -> None:
-    """Test that Notification is an Exception subclass.
-
-    NOTIFICATION can be raised as an exception.
-    """
+def test_notification_is_not_an_exception() -> None:
+    """A Notification is a message: raising one is a TypeError, not a silent reset."""
     notif = Notification.make_notification(2, 1)
 
-    assert isinstance(notif, Exception)
+    assert not isinstance(notif, BaseException)
+    thrown: Any = notif
+    with pytest.raises(TypeError):
+        raise thrown
 
 
-def test_notification_can_be_raised() -> NoReturn:
-    """Test that NOTIFICATION can be raised and caught."""
-    with pytest.raises(Notification) as exc_info:
-        raise Notification.make_notification(2, 1, b'Test error')
+def test_a_received_notification_is_raised_as_notification_received() -> None:
+    """The reactor raises what a peer sent wrapped, and the wrapper answers its code."""
+    with pytest.raises(NotificationReceived) as exc_info:
+        raise NotificationReceived(Notification.make_notification(3, 6, b'Invalid ORIGIN'))
 
     caught = exc_info.value
-    assert caught.code == 2
-    assert caught.subcode == 1
+    assert caught.code == 3
+    assert caught.subcode == 6
+    assert 'ORIGIN' in str(caught)
 
 
-def test_notification_raise_and_catch_specific() -> None:
-    """Test raising NOTIFICATION and accessing attributes."""
-    try:
-        raise Notification.make_notification(3, 6, b'Invalid ORIGIN')
-    except Notification as e:
-        assert e.code == 3
-        assert e.subcode == 6
-        assert 'ORIGIN' in str(e)
+def test_notify_is_not_a_notification_and_holds_one() -> None:
+    """Neither exception is the other, so the order of the handlers cannot matter."""
+    notify = Notify(2, 1, 'refused')
+
+    assert not isinstance(notify, NotificationReceived)
+    assert notify.notification.code == 2
+    assert notify.notification.data == b'refused'
 
 
 # ==============================================================================
@@ -652,7 +652,7 @@ def test_notify_vs_notification_data_handling() -> None:
 
     # Notification (incoming): Binary data parsed
     notif = Notification.make_notification(3, 1, b'Error text')
-    assert isinstance(notif.data, bytes)
+    assert isinstance(notif.text, bytes)
 
 
 def test_notify_shutdown_adds_length_prefix() -> None:
@@ -673,7 +673,7 @@ def test_notification_shutdown_parses_length_prefix() -> None:
     notif = Notification.make_notification(6, 2, data)
 
     # Should parse and format the message
-    assert b'Shutdown Communication:' in notif.data
+    assert b'Shutdown Communication:' in notif.text
 
 
 # ==============================================================================
@@ -685,7 +685,7 @@ def test_notification_encode_decode_roundtrip() -> None:
     """Test NOTIFICATION encode/decode round-trip."""
     # Create and encode
     original = Notify(2, 1, 'Test data')
-    encoded = original.pack_message(create_negotiated())
+    encoded = original.notification.pack_message(create_negotiated())
 
     # Extract payload (skip 19-byte header)
     payload = encoded[19:]
@@ -710,7 +710,7 @@ def test_notification_roundtrip_various_errors() -> None:
 
     for code, subcode, data in test_cases:
         original = Notify(code, subcode, data)
-        encoded = original.pack_message(create_negotiated())
+        encoded = original.notification.pack_message(create_negotiated())
         payload = encoded[19:]
         decoded = Notification.unpack_message(payload, create_negotiated())
 
@@ -729,7 +729,7 @@ def test_notification_empty_data_field() -> None:
 
     assert notif.code == 1
     assert notif.subcode == 1
-    assert notif.data == b''
+    assert notif.text == b''
 
 
 def test_notification_large_data_field() -> None:
@@ -750,9 +750,9 @@ def test_notification_raw_data_access() -> None:
     notif = Notification.make_notification(3, 1, raw_data)
 
     # raw_data gives unparsed bytes
-    assert notif.raw_data == raw_data
+    assert notif.data == raw_data
     # data property parses (for non-printable data, converts to hex)
-    assert isinstance(notif.data, (bytes, str))
+    assert isinstance(notif.text, (bytes, str))
 
 
 def test_notification_all_subcodes_for_cease() -> None:

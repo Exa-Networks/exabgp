@@ -37,8 +37,7 @@ from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.pmsi import PMSI
 from exabgp.bgp.message.update.nlri.mvpn import MVPN, SourceAD
-from exabgp.configuration.core.parser import Tokeniser
-from exabgp.configuration.static.mpls import mvpn_sourcead
+from exabgp.configuration.configuration import Configuration
 from exabgp.logger import log
 from exabgp.logger.option import echo, option
 from exabgp.protocol.family import AFI, SAFI
@@ -414,9 +413,15 @@ def test_a_received_ipv6_source_active_route_for_an_ssm_group_is_discarded() -> 
 
 
 def configured_source_ad(group: str, action: Action) -> SourceAD:
-    """A Source Active A-D route as the configuration and the API parse one."""
-    tokens = Tokeniser().replenish(['source', '10.0.0.1', 'group', group, 'rd', '65000:1'])
-    return mvpn_sourcead(tokens, AFI.ipv4, action)
+    """A Source Active A-D route as the API parses one, through Configuration.partial."""
+    configuration = Configuration([''], text=True)
+    verb = 'announce' if action == Action.ANNOUNCE else 'withdraw'
+    line = f'mcast-vpn source-ad source 10.0.0.1 group {group} rd 65000:1'
+    if not configuration.partial('ipv4', line, verb):
+        raise ValueError(str(configuration.error))
+    (route,) = configuration.pop_routes()
+    assert isinstance(route.nlri, SourceAD)
+    return route.nlri
 
 
 @pytest.mark.rfc('rfc6514#4.5-ssm-range-not-advertised-and-discarded')

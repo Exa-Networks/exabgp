@@ -202,7 +202,7 @@ def capability_parameters(*values: bytes) -> bytes:
 
 
 def eor_payload(afi: AFI, safi: SAFI) -> bytes:
-    return EOR(afi, safi).pack_message(Mock())[HEADER_LENGTH:]
+    return EOR.make_eor(afi, safi).pack_message(Mock())[HEADER_LENGTH:]
 
 
 async def establish(peer: Peer) -> None:
@@ -381,7 +381,7 @@ def test_the_ipv4_unicast_marker_is_an_update_of_the_minimum_length() -> None:
 
     Four zero octets: no withdrawn routes, no path attributes, no NLRI.
     """
-    message = EOR(AFI.ipv4, SAFI.unicast).pack_message(Mock())
+    message = EOR.make_eor(AFI.ipv4, SAFI.unicast).pack_message(Mock())
 
     assert len(message) == MINIMUM_UPDATE_LENGTH, f'the IPv4 unicast marker is {len(message)} bytes'
     assert message[HEADER_LENGTH:] == b'\x00\x00\x00\x00', f'unexpected payload {message[HEADER_LENGTH:]!r}'

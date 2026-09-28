@@ -90,8 +90,8 @@ def test_refresh_retains_admitted_paths_and_honors_limit() -> None:
     rib.resend(True)
     updates = list(rib.updates(True, {IPV4: 1}))
     assert announced(updates) == [first.nlri.index()]
-    assert isinstance(updates[0], RouteRefresh) and updates[0].reserved == RouteRefresh.start
-    assert isinstance(updates[-1], RouteRefresh) and updates[-1].reserved == RouteRefresh.end
+    assert isinstance(updates[0], RouteRefresh) and updates[0].reserved == RouteRefresh.BEGIN
+    assert isinstance(updates[-1], RouteRefresh) and updates[-1].reserved == RouteRefresh.END
     rib.del_from_rib(first)
     assert announced(list(rib.updates(True, {IPV4: 1}))) == [second.nlri.index()]
     rib.resend(False)

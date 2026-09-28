@@ -1,73 +1,66 @@
 """Test route-refresh capability auto-enables adj-rib-out.
 
 When route-refresh is enabled, adj-rib-out must be enabled for it to function.
-ParseNeighbor._post_capa_rr auto-enables adj-rib-out when route-refresh is configured.
+Reading a neighbor (grammar/tree/resolve.py, neighbor_settings) auto-enables adj-rib-out
+when route-refresh is configured.
 
 See: https://github.com/Exa-Networks/exabgp/issues/1151
 """
 
+from __future__ import annotations
+
+from exabgp.util.enumeration import TriState
+
 from exabgp.bgp.neighbor.neighbor import Neighbor
-from exabgp.protocol.ip import IP
+from exabgp.configuration.configuration import Configuration
+
+NEIGHBOR = """\
+neighbor 192.168.1.1 {
+    router-id 10.0.0.1;
+    local-address 192.168.1.2;
+    local-as 65000;
+    peer-as 65001;
+    adj-rib-out %s;
+    capability {
+        route-refresh %s;
+    }
+}
+"""
+
+
+def _neighbor(adj_rib_out: str, route_refresh: str) -> Neighbor:
+    configuration = Configuration([NEIGHBOR % (adj_rib_out, route_refresh)], text=True)
+    assert configuration.reload(), str(configuration.error)
+    (neighbor,) = configuration.neighbors.values()
+    return neighbor
 
 
 class TestRouteRefreshAdjRibOut:
     """Test that route-refresh capability auto-enables adj-rib-out."""
 
-    def _create_neighbor(self) -> Neighbor:
-        """Create a minimal Neighbor for testing."""
-        neighbor = Neighbor()
-        neighbor.session.peer_address = IP.from_string('192.168.1.1')
-        return neighbor
-
     def test_adj_rib_out_auto_enabled_when_route_refresh_enabled(self) -> None:
         """When route-refresh is enabled and adj-rib-out is False, auto-enable it."""
-        from exabgp.configuration.neighbor import ParseNeighbor
+        neighbor = _neighbor('false', 'enable')
 
-        neighbor = self._create_neighbor()
-        neighbor.capability.route_refresh = 2  # REFRESH.NORMAL
-        neighbor.adj_rib_out = False
-
-        # Simulate what ParseNeighbor.post() does
-        parser = ParseNeighbor.__new__(ParseNeighbor)
-        parser._post_capa_rr(neighbor)
-
+        assert neighbor.capability.route_refresh == TriState.TRUE
         assert neighbor.adj_rib_out is True
 
     def test_adj_rib_out_unchanged_when_already_enabled(self) -> None:
         """When adj-rib-out is already True, it stays True."""
-        from exabgp.configuration.neighbor import ParseNeighbor
-
-        neighbor = self._create_neighbor()
-        neighbor.capability.route_refresh = 2  # REFRESH.NORMAL
-        neighbor.adj_rib_out = True
-
-        parser = ParseNeighbor.__new__(ParseNeighbor)
-        parser._post_capa_rr(neighbor)
+        neighbor = _neighbor('true', 'enable')
 
         assert neighbor.adj_rib_out is True
 
     def test_adj_rib_out_unchanged_when_route_refresh_disabled(self) -> None:
         """When route-refresh is disabled, adj-rib-out is not changed."""
-        from exabgp.configuration.neighbor import ParseNeighbor
+        neighbor = _neighbor('false', 'disable')
 
-        neighbor = self._create_neighbor()
-        neighbor.capability.route_refresh = 0  # Disabled
-        neighbor.adj_rib_out = False
-
-        parser = ParseNeighbor.__new__(ParseNeighbor)
-        parser._post_capa_rr(neighbor)
-
+        assert neighbor.capability.route_refresh == TriState.FALSE
         assert neighbor.adj_rib_out is False
 
-    def test_enhanced_route_refresh_also_enables_adj_rib_out(self) -> None:
-        """Enhanced route-refresh (value 4) also auto-enables adj-rib-out."""
-        from exabgp.configuration.neighbor import ParseNeighbor
+    def test_route_refresh_required_also_enables_adj_rib_out(self) -> None:
+        """A required route-refresh is enabled too, so it also auto-enables adj-rib-out."""
+        neighbor = _neighbor('false', 'require')
 
-        neighbor = self._create_neighbor()
-        neighbor.capability.route_refresh = 4  # REFRESH.ENHANCED
-        neighbor.adj_rib_out = False
-
-        parser = ParseNeighbor.__new__(ParseNeighbor)
-        parser._post_capa_rr(neighbor)
-
+        assert neighbor.capability.route_refresh == TriState.TRUE
         assert neighbor.adj_rib_out is True

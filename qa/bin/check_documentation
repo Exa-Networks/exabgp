@@ -325,11 +325,12 @@ def validate(work: tuple[str, int, str]) -> Report | None:
         )
         if not result.returncode:
             return None
-        reason = (result.stdout + result.stderr).strip().split('\n')
-        detail = reason[-1][:120]
+        output = (result.stdout + result.stderr).strip()
+        detail = output.split('\n')[-1][:120]
         # the parser checks that the programs of a process section exist: the reader's
-        # filesystem is not the documentation's fault
-        if 'can not locate the program' in detail:
+        # filesystem is not the documentation's fault. Looked for in the whole output, the
+        # line may start with a long file name
+        if 'can not locate the program' in output:
             return None
         return Report('config', path, number, f'configuration rejected: {detail}')
     finally:

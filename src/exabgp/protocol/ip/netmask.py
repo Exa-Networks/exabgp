@@ -17,6 +17,33 @@ class NetMask(Resource):
 
     maximum: int  # Set by make_netmask() - 32 for IPv4, 128 for IPv6
 
+    # One instance per length and family. Resource caches by value alone, which made every
+    # mask of one length a single object, and `maximum` belonged to whichever family asked
+    # last: an IPv6 /32 made an IPv4 /32 count 2**96 addresses.
+    _by_family: ClassVar[dict[tuple[int, int], NetMask]] = {}
+
+    @classmethod
+    def _make(cls, value: int, maximum: int) -> NetMask:
+        key = (value, maximum)
+        if key not in cls._by_family:
+            instance = int.__new__(cls, value)
+            instance.maximum = maximum
+            cls._by_family[key] = instance
+        mask = cls._by_family[key]
+        assert mask.maximum == maximum, 'a netmask is only ever made for one family'
+        return mask
+
+    # a copy, deep or not, and an unpickled mask are the instance of their family: rebuilt by
+    # value, they would come from the Resource cache, which is shared by both families
+    def __copy__(self) -> NetMask:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, object]) -> NetMask:
+        return self
+
+    def __reduce__(self) -> tuple[object, tuple[int, int]]:
+        return NetMask._make, (int(self), self.maximum)
+
     def size(self) -> int:
         return int(pow(2, self.maximum - int(self)))
 
@@ -75,9 +102,7 @@ class NetMask(Resource):
     def make_netmask(cls, string: str | int, afi: AFI) -> NetMask:
         if afi == AFI.ipv4:
             if isinstance(string, str) and string in cls.codes:
-                klass = cls(cls.codes[string])
-                klass.maximum = 32
-                return klass
+                return cls._make(cls.codes[string], 32)
             maximum = 32
         elif afi == AFI.ipv6:
             if isinstance(string, str) and string in cls.codes:
@@ -93,6 +118,4 @@ class NetMask(Resource):
         if value < 0 or value > maximum:
             raise ValueError('invalid netmask {}'.format(string))
 
-        klass = cls(value)
-        klass.maximum = maximum
-        return klass
+        return cls._make(value, maximum)

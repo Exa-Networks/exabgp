@@ -4,7 +4,8 @@ Issue #927. RFC 8956 6.1 defines rt-redirect-ipv6, an IPv6-Address-Specific Exte
 (attribute 25, twenty octets) "with the Type value always 0x000d". Four things were wrong:
 
 - `redirect [2001:db8::1]:100;` was a syntax error. The tokeniser splits the line at the brackets,
-  so redirect() read `[` as the whole target and never saw the address.
+  so redirect() read `[` as the whole target and never saw the address. The grammar's lexer
+  splits it the same way, and REDIRECT reads the pieces back together.
 - TrafficRedirectIPv6 wrote type 0x0002, the plain IPv6 route-target of RFC 5701, and registered
   0x800b, a pre-RFC draft value, for decoding: it could not read back what it wrote.
 - the parser put the twenty octet community in ExtendedCommunities, attribute 16, where every
@@ -27,9 +28,9 @@ from exabgp.bgp.message.update.attribute.community.extended import (
 )
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunityIPv6
 from exabgp.configuration.configuration import Configuration
-from exabgp.configuration.core.parser import Tokeniser
-from exabgp.configuration.flow.parser import redirect
-from exabgp.configuration.flow.parser import redirect_simpson
+from exabgp.configuration.grammar.lexer import lex_text
+from exabgp.configuration.grammar.types.flow import REDIRECT, REDIRECT_SIMPSON
+from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.ip import IP
 
 ROOT = pathlib.Path(__file__).parent.parent.parent
@@ -49,8 +50,17 @@ neighbor 127.0.0.1 {
 """
 
 
-def tokens(*content: str) -> Tokeniser:
-    return Tokeniser().replenish(list(content))
+def tokens(*content: str) -> Words:
+    statement = lex_text(' '.join(['redirect', *content, ';']))[0]
+    return Words(tuple(statement.words[1:]), statement.tokens[-1])
+
+
+def redirect(words: Words):
+    return REDIRECT.parse(words)
+
+
+def redirect_simpson(words: Words):
+    return REDIRECT_SIMPSON.parse(words)
 
 
 def validate(tmp_path, then):
@@ -161,9 +171,7 @@ def test_the_configuration_puts_it_in_attribute_25(tmp_path) -> None:
 
 def test_the_api_accepts_it() -> None:
     configuration = Configuration([''], text=True)
-    configuration.flow.clear()
     line = 'route destination 2001:db8:1::/48 redirect [2001:db8::1]:100'
     assert configuration.partial('flow', line, 'announce'), str(configuration.error)
-    configuration.scope.to_context()
-    (route,) = configuration.scope.pop_routes()
+    (route,) = configuration.pop_routes()
     assert 'redirect [2001:db8::1]:100' in str(route.attributes)

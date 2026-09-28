@@ -1,9 +1,10 @@
 """Tests for UpdateHandler."""
 
 import pytest
+
+from exabgp.bgp.message import Message
 from unittest.mock import Mock, patch
 
-from exabgp.bgp.message import UpdateCollection, KeepAlive
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.peer.handlers.update import UpdateHandler
 from exabgp.reactor.peer.context import PeerContext
@@ -31,13 +32,14 @@ class TestUpdateHandler:
     def test_can_handle_update(self, handler: UpdateHandler) -> None:
         """UpdateHandler recognizes UPDATE messages."""
         update = Mock()
-        update.TYPE = UpdateCollection.TYPE
+        update.ID = Message.CODE.UPDATE
+        update.IS_EOR = False
         assert handler.can_handle(update) is True
 
     def test_cannot_handle_keepalive(self, handler: UpdateHandler) -> None:
         """UpdateHandler ignores non-UPDATE messages."""
         ka = Mock()
-        ka.TYPE = KeepAlive.TYPE
+        ka.ID = Message.CODE.KEEPALIVE
         assert handler.can_handle(ka) is False
 
     def test_handle_stores_nlris(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
@@ -48,7 +50,8 @@ class TestUpdateHandler:
         parsed.withdraws = []
         parsed.attributes = Mock()
         update = Mock()
-        update.TYPE = UpdateCollection.TYPE
+        update.ID = Message.CODE.UPDATE
+        update.IS_EOR = False
         update.data = parsed
 
         list(handler.handle(mock_context, update))
@@ -64,7 +67,8 @@ class TestUpdateHandler:
         parsed.withdraws = []
         parsed.attributes = Mock()
         update = Mock()
-        update.TYPE = UpdateCollection.TYPE
+        update.ID = Message.CODE.UPDATE
+        update.IS_EOR = False
         update.data = parsed
 
         list(handler.handle(mock_context, update))
@@ -78,7 +82,8 @@ class TestUpdateHandler:
         parsed.withdraws = []
         parsed.attributes = Mock()
         update = Mock()
-        update.TYPE = UpdateCollection.TYPE
+        update.ID = Message.CODE.UPDATE
+        update.IS_EOR = False
         update.data = parsed
 
         list(handler.handle(mock_context, update))
@@ -99,7 +104,8 @@ class TestUpdateHandler:
         parsed.withdraws = [Mock(), Mock(), Mock()]
         parsed.attributes = Mock()
         update = Mock()
-        update.TYPE = UpdateCollection.TYPE
+        update.ID = Message.CODE.UPDATE
+        update.IS_EOR = False
         update.data = parsed
 
         list(handler.handle(mock_context, update))
@@ -114,7 +120,8 @@ class TestUpdateHandler:
         parsed.withdraws = []
         parsed.attributes = Mock()
         update = Mock()
-        update.TYPE = UpdateCollection.TYPE
+        update.ID = Message.CODE.UPDATE
+        update.IS_EOR = False
         update.data = parsed
 
         result = handler.handle(mock_context, update)
@@ -150,7 +157,8 @@ class TestUpdateHandlerAsync:
         parsed.withdraws = []
         parsed.attributes = Mock()
         update = Mock()
-        update.TYPE = UpdateCollection.TYPE
+        update.ID = Message.CODE.UPDATE
+        update.IS_EOR = False
         update.data = parsed
 
         await handler.handle_async(mock_context, update)
@@ -165,7 +173,8 @@ class TestUpdateHandlerAsync:
         parsed.withdraws = []
         parsed.attributes = Mock()
         update = Mock()
-        update.TYPE = UpdateCollection.TYPE
+        update.ID = Message.CODE.UPDATE
+        update.IS_EOR = False
         update.data = parsed
 
         await handler.handle_async(mock_context, update)
@@ -216,7 +225,8 @@ def _make_update(announces: list, withdraws: list) -> Mock:
     parsed.withdraws = withdraws
     parsed.attributes = Mock()
     msg = Mock()
-    msg.TYPE = UpdateCollection.TYPE
+    msg.ID = Message.CODE.UPDATE
+    msg.IS_EOR = False
     msg.data = parsed
     return msg
 

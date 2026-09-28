@@ -29,11 +29,10 @@ BAD_MESSAGE_LENGTH = 2
 OPEN_MESSAGE_ERROR = 2
 UNSUPPORTED_VERSION = 1
 
-# up to and including 9, which is the byte that matters: HEADER_SIZE is what Open stores
-# and MINIMUM_BODY_SIZE is what RFC 4271 4.2 requires on the wire, and a body of 9 sits
-# between them.  A test which only ranges to HEADER_SIZE passes at either threshold, which
-# is why the boundary is the assertion worth making
-TOO_SHORT = list(range(Open.MINIMUM_BODY_SIZE))
+# up to and including 9, which is the byte that matters: Open used to store 9 octets, while
+# RFC 4271 4.2 requires 10 on the wire, and a body of 9 sat between them.  A test which only
+# ranged to 9 passed at either threshold, which is why the boundary is the assertion worth making
+TOO_SHORT = list(range(Open.FIXED_SIZE))
 
 # version 4, AS 65000, hold time 180, identifier 1.2.3.4
 WELL_FORMED = bytes([4]) + pack('!H', 65000) + pack('!H', 180) + bytes([1, 2, 3, 4]) + bytes([0])
@@ -52,8 +51,7 @@ def test_an_open_too_short_to_read_is_a_bad_message_length(length: int) -> None:
 def test_the_boundary_is_the_rfc_minimum_and_not_what_the_class_stores() -> None:
     """Nine octets is an OPEN with no Optional Parameters Length at all, and it was accepted.
 
-    HEADER_SIZE is 9 because that is what Open keeps in _packed, and __init__ requires
-    exactly that.  The wire minimum is a different question: RFC 4271 4.2 makes the
+    Open kept 9 octets in _packed, and __init__ required exactly that.  The wire minimum is a different question: RFC 4271 4.2 makes the
     Optional Parameters Length octet part of the fixed portion and states "The minimum
     length of the OPEN message is 29 octets (including the message header)", so the body
     is 10.  The validation reused the wrong constant, and Capabilities.unpack cannot tell
@@ -62,14 +60,14 @@ def test_the_boundary_is_the_rfc_minimum_and_not_what_the_class_stores() -> None
     Session 5.0 traced it: the check said 9 on the day it was written and there is no
     regression to revert.
     """
-    assert Open.MINIMUM_BODY_SIZE == Open.HEADER_SIZE + 1, 'the optional parameters length octet is mandatory'
+    assert Open.FIXED_SIZE == 10, 'the optional parameters length octet is mandatory'
 
     with pytest.raises(Notify):
-        Message.unpack(int(Message.CODE.OPEN), bytes(Open.HEADER_SIZE), Negotiated.UNSET)
+        Message.unpack(int(Message.CODE.OPEN), bytes(Open.FIXED_SIZE - 1), Negotiated.UNSET)
 
     # and one octet more, the smallest legal OPEN body, is read
     smallest = bytes([4]) + pack('!H', 65000) + pack('!H', 180) + bytes([1, 2, 3, 4]) + bytes([0])
-    assert len(smallest) == Open.MINIMUM_BODY_SIZE
+    assert len(smallest) == Open.FIXED_SIZE
     assert Message.unpack(int(Message.CODE.OPEN), smallest, Negotiated.UNSET) is not None
 
 

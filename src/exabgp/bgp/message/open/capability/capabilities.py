@@ -176,10 +176,12 @@ class Capabilities(dict[int, Capability]):
         )
 
     def _refresh(self, neighbor: Neighbor) -> None:
-        if not neighbor.capability.route_refresh:
+        if not neighbor.capability.route_refresh.is_enabled():
             return
         self[Capability.CODE.ROUTE_REFRESH] = RouteRefresh()
-        self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
+        # RFC 7313 works on the ROUTE-REFRESH message: it is only offered with route refresh
+        if neighbor.capability.enhanced_route_refresh.is_enabled():
+            self[Capability.CODE.ENHANCED_ROUTE_REFRESH] = EnhancedRouteRefresh()
 
     def _extended_message(self, neighbor: Neighbor) -> None:
         if not neighbor.capability.extended_message.is_enabled():

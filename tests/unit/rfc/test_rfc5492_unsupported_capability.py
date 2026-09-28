@@ -200,14 +200,38 @@ def test_a_capability_enabled_but_not_required_is_not_grounds_for_refusal() -> N
     assert negotiate(neighbor, {ASN4, ROUTE_REFRESH}).unsupported_capability() is None
 
 
-def test_route_refresh_require_asks_for_the_base_capability_only() -> None:
-    """We advertise Enhanced Route Refresh beside it, a peer which lacks only that is fine."""
+ENHANCED_ROUTE_REFRESH = Capability.CODE.ENHANCED_ROUTE_REFRESH
+ENHANCED_ROUTE_REFRESH_TLV = bytes([ENHANCED_ROUTE_REFRESH, 0])
+
+
+def test_route_refresh_require_asks_for_both_capabilities() -> None:
+    """`route-refresh` configures both capabilities: `require` requires both of the peer."""
     neighbor = parsed_neighbor('route-refresh require;')
 
-    assert negotiate(neighbor, {Capability.CODE.ENHANCED_ROUTE_REFRESH}).unsupported_capability() is None
+    assert negotiate(neighbor, set()).unsupported_capability() is None
+    for withheld, data in ((ROUTE_REFRESH, ROUTE_REFRESH_TLV), (ENHANCED_ROUTE_REFRESH, ENHANCED_ROUTE_REFRESH_TLV)):
+        notify = negotiate(neighbor, {withheld}).unsupported_capability()
+        assert notify is not None
+        assert notify.data == data
+
+
+def test_route_refresh_require_normal_asks_for_the_base_capability_only() -> None:
+    """We advertise Enhanced Route Refresh beside it, a peer which lacks only that is fine."""
+    neighbor = parsed_neighbor('route-refresh enable; route-refresh-normal require;')
+
+    assert negotiate(neighbor, {ENHANCED_ROUTE_REFRESH}).unsupported_capability() is None
     notify = negotiate(neighbor, {ROUTE_REFRESH}).unsupported_capability()
     assert notify is not None
     assert notify.data == ROUTE_REFRESH_TLV
+
+
+def test_route_refresh_require_enhanced_asks_for_the_enhanced_capability_only() -> None:
+    neighbor = parsed_neighbor('route-refresh enable; route-refresh-enhanced require;')
+
+    assert negotiate(neighbor, {ROUTE_REFRESH}).unsupported_capability() is None
+    notify = negotiate(neighbor, {ENHANCED_ROUTE_REFRESH}).unsupported_capability()
+    assert notify is not None
+    assert notify.data == ENHANCED_ROUTE_REFRESH_TLV
 
 
 def test_validate_open_raises_the_unsupported_capability() -> None:

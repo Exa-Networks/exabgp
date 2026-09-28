@@ -90,9 +90,7 @@ class MockReactor:
 
     def active_peers(self) -> Set[str]:
         """Return set of active peer names."""
-        from exabgp.bgp.message import Scheduling
-
-        return {key for key in self._peers.keys() if self._peers[key].action != Scheduling.LATER}
+        return {key for key in self._peers.keys() if self._peers[key].action != 'LATER'}
 
     def established_peers(self) -> Set[str]:
         """Return set of established peer names."""

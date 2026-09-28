@@ -23,7 +23,7 @@ FIELD_LIMIT_OCTETS = 255
 
 
 def received(subcode: int, communication: bytes) -> bytes:
-    return Notification.make_notification(CEASE, subcode, bytes([len(communication)]) + communication).data
+    return Notification.make_notification(CEASE, subcode, bytes([len(communication)]) + communication).text
 
 
 # ------------------------------------------------------------------- what we send
@@ -32,32 +32,31 @@ def received(subcode: int, communication: bytes) -> bytes:
 @pytest.mark.rfc('rfc9003#2-subcode-is-shutdown-or-reset')
 @pytest.mark.parametrize('subcode', [ADMINISTRATIVE_SHUTDOWN, ADMINISTRATIVE_RESET])
 def test_shutdown_and_reset_carry_a_length_prefixed_communication(subcode: int) -> None:
-    assert Notify(CEASE, subcode, 'maintenance').raw_data == b'\x0bmaintenance'
+    assert Notify(CEASE, subcode, 'maintenance').data == b'\x0bmaintenance'
 
 
 @pytest.mark.rfc('rfc9003#2-subcode-is-shutdown-or-reset', polarity='negative')
 def test_another_cease_subcode_carries_no_length_octet() -> None:
-    assert Notify(CEASE, PEER_DECONFIGURED, 'maintenance').raw_data == b'maintenance'
+    assert Notify(CEASE, PEER_DECONFIGURED, 'maintenance').data == b'maintenance'
 
 
 @pytest.mark.rfc('rfc9003#2-communication-is-utf8')
 def test_the_communication_is_encoded_in_utf8() -> None:
     communication = 'maintenance à 22h'.encode()
     assert (
-        Notify(CEASE, ADMINISTRATIVE_SHUTDOWN, 'maintenance à 22h').raw_data
-        == bytes([len(communication)]) + communication
+        Notify(CEASE, ADMINISTRATIVE_SHUTDOWN, 'maintenance à 22h').data == bytes([len(communication)]) + communication
     )
 
 
 @pytest.mark.rfc('rfc9003#3-no-longer-than-128-octets-unless-known')
 def test_a_long_communication_is_cut_to_128_octets_on_a_character_boundary() -> None:
-    sent = Notify(CEASE, ADMINISTRATIVE_SHUTDOWN, 'é' * 100).raw_data  # 200 octets of two octet characters
+    sent = Notify(CEASE, ADMINISTRATIVE_SHUTDOWN, 'é' * 100).data  # 200 octets of two octet characters
     assert sent[0] == LEGACY_LIMIT_OCTETS
     assert sent[1:].decode('utf-8') == 'é' * (LEGACY_LIMIT_OCTETS // 2)
 
 
 def test_no_communication_is_the_old_fashioned_empty_data_field() -> None:
-    assert Notify(CEASE, ADMINISTRATIVE_SHUTDOWN).raw_data == b''
+    assert Notify(CEASE, ADMINISTRATIVE_SHUTDOWN).data == b''
 
 
 # ---------------------------------------------------------------- what we receive
@@ -90,5 +89,5 @@ def test_an_overlong_encoding_is_not_accepted() -> None:
 
 @pytest.mark.rfc('rfc9003#2-shortest-form-required')
 def test_what_we_send_is_shortest_form() -> None:
-    sent = Notify(CEASE, ADMINISTRATIVE_SHUTDOWN, 'é').raw_data
+    sent = Notify(CEASE, ADMINISTRATIVE_SHUTDOWN, 'é').data
     assert sent == b'\x02\xc3\xa9'

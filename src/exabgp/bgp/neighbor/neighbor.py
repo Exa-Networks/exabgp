@@ -154,7 +154,7 @@ class Neighbor:
         return cls()
 
     @classmethod
-    def from_settings(cls, settings: 'NeighborSettings') -> 'Neighbor':
+    def from_settings(cls, settings: 'NeighborSettings', rib: bool = True) -> 'Neighbor':
         """Create Neighbor from validated settings.
 
         This factory method enables programmatic Neighbor creation without
@@ -162,6 +162,7 @@ class Neighbor:
 
         Args:
             settings: NeighborSettings with required fields populated.
+            rib: make the RIB now; the configuration makes it once multi-session is split
 
         Returns:
             Configured Neighbor instance with RIB enabled.
@@ -209,12 +210,14 @@ class Neighbor:
 
         # Set API
         neighbor.api = dict(settings.api)
+        neighbor.prefix_limit = dict(settings.prefix_limit)
 
         # Call infer for graceful_restart time derivation
         neighbor.infer()
 
-        # Initialize RIB with families
-        neighbor.make_rib()
+        # Initialize RIB with families, unless the caller has more to decide first
+        if rib:
+            neighbor.make_rib()
 
         return neighbor
 
@@ -648,8 +651,8 @@ Neighbor {peer-address}
             + cls._configuration_confederation(neighbor)
             + f'\tcapability {{\n'
             f'\t\tasn4 {state(cap.asn4.is_enabled(), CapabilityCode.FOUR_BYTES_ASN)};\n'
-            f'\t\troute-refresh {state(bool(cap.route_refresh), CapabilityCode.ROUTE_REFRESH)};\n'
-            f'\t\tgraceful-restart {graceful_str};\n'
+            + ''.join(f'\t\t{keyword} {word};\n' for keyword, word in cap.route_refresh_statements())
+            + f'\t\tgraceful-restart {graceful_str};\n'
             f'\t\tsoftware-version {state(bool(cap.software_version), CapabilityCode.SOFTWARE_VERSION)};\n'
             f'\t\tnexthop {state(cap.nexthop.is_enabled(), CapabilityCode.NEXTHOP)};\n'
             f'\t\tadd-path {add_path_str};\n'

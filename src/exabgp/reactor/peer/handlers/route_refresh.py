@@ -35,7 +35,7 @@ class RouteRefreshHandler(MessageHandler):
 
     def can_handle(self, message: Message) -> bool:
         """Check if this is a ROUTE-REFRESH message."""
-        return message.TYPE == RouteRefresh.TYPE
+        return message.ID == Message.CODE.ROUTE_REFRESH
 
     def handle(self, ctx: PeerContext, message: Message) -> Generator[Message, None, None]:
         """Process the ROUTE-REFRESH message synchronously.

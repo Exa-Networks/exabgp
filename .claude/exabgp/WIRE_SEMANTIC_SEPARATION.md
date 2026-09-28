@@ -29,7 +29,7 @@ When a route reflector receives an UPDATE from Peer A and forwards to Peer B:
 ```python
 update_a = Update(wire_bytes, negotiated_a)
 # Peer B has same capabilities - forward directly
-socket_b.write(update_a.pack_message())  # Zero-copy, no parsing
+socket_b.write(update_a.pack_message(negotiated))  # Zero-copy, no parsing
 ```
 
 **Transformation path (different capabilities):**
@@ -37,7 +37,7 @@ socket_b.write(update_a.pack_message())  # Zero-copy, no parsing
 update_a = Update(wire_bytes, negotiated_a)
 collection = update_a.parse()           # Decode with caps_a
 update_b = collection.pack(negotiated_b) # Re-encode with caps_b
-socket_b.write(update_b.pack_message())
+socket_b.write(update_b.pack_message(negotiated))
 ```
 
 The Wire Container enables zero-copy forwarding when no transformation is needed.

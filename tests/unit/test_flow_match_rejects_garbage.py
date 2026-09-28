@@ -18,6 +18,10 @@ wire as a malformed FlowSpec prefix length or offset instead of failing at
 configuration time. netmask is now bounded to 0-32 (IPv4) / 0-128 (IPv6). The IPv6
 offset must be zero when the netmask is zero; otherwise RFC 8956 requires it
 to be smaller than the netmask.
+
+The legacy parser is gone: the grammar reads source and destination with SOURCE and
+DESTINATION of exabgp.configuration.grammar.types.flow, and these tests hold it to the
+same behaviour.
 """
 
 from __future__ import annotations
@@ -25,8 +29,9 @@ from typing import Any
 
 import pytest
 
-from exabgp.configuration.core.parser import Tokeniser
-from exabgp.configuration.flow.parser import destination, source
+from exabgp.configuration.grammar.lexer import lex_text
+from exabgp.configuration.grammar.types.flow import DESTINATION, SOURCE, Operation
+from exabgp.configuration.grammar.words import Words
 from exabgp.bgp.message.update.nlri.flow import (
     Flow4Destination,
     Flow4Source,
@@ -35,8 +40,21 @@ from exabgp.bgp.message.update.nlri.flow import (
 )
 
 
-def tokeniser_for(token: str) -> Tokeniser:
-    return Tokeniser().replenish([token])
+def tokeniser_for(token: str) -> Words:
+    statement = lex_text(f'keyword {token};')[0]
+    return Words(tuple(statement.words[1:]), statement.tokens[-1])
+
+
+def _reader(operation: Operation) -> Any:
+    def read(words: Words) -> list[Any]:
+        return operation.parse(words)
+
+    read.__name__ = operation.name
+    return read
+
+
+source = _reader(SOURCE)
+destination = _reader(DESTINATION)
 
 
 # -- garbage that matches none of the three branches -------------------------

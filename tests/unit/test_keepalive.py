@@ -359,8 +359,9 @@ def test_keepalive_length_validation_rule() -> None:
 
     RFC 4271: KEEPALIVE messages must be exactly 19 octets.
     """
-    # The Message.Length dictionary defines validation rules
-    keepalive_validator = Message.Length[Message.CODE.KEEPALIVE]
+
+    def keepalive_validator(length: int) -> bool:
+        return Message.length_valid(Message.CODE.KEEPALIVE, length)
 
     # Should accept exactly 19
     assert keepalive_validator(19) is True

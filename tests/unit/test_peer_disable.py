@@ -251,14 +251,14 @@ def test_disable_sends_the_text_as_the_shutdown_communication() -> None:
     assert answered is True
     (name, notify), _ = reactor.disable_peer.call_args
     assert name == 'peer'
-    assert (notify.code, notify.subcode, notify.raw_data) == (CEASE, ADMINISTRATIVE_SHUTDOWN, b'\x0dback at 18:00')
+    assert (notify.code, notify.subcode, notify.data) == (CEASE, ADMINISTRATIVE_SHUTDOWN, b'\x0dback at 18:00')
 
 
 def test_disable_with_no_text() -> None:
     _, reactor = called(disable, '')
 
     (_, notify), _ = reactor.disable_peer.call_args
-    assert notify.raw_data == b''
+    assert notify.data == b''
 
 
 def test_disable_refuses_an_unbalanced_quote() -> None:

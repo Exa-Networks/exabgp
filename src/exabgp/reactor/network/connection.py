@@ -46,14 +46,6 @@ from exabgp.protocol.family import AFI
 
 # from .error import *
 
-# BGP message minimum length (RFC 4271)
-MIN_BGP_MESSAGE_LENGTH = 19  # Minimum valid BGP message length (header size)
-
-
-def _default_length_validator(length: int) -> bool:
-    """Default validator for unknown BGP message types"""
-    return length >= MIN_BGP_MESSAGE_LENGTH
-
 
 class Connection:
     direction: ClassVar[str] = 'undefined'
@@ -474,8 +466,7 @@ class Connection:
             yield length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
             return
 
-        validator = Message.Length.get(msg, _default_length_validator)
-        if not validator(length):
+        if not Message.length_valid(msg, length):
             # RFC 4271 6.1: the Data field MUST contain the erroneous Length field
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
             yield length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
@@ -522,8 +513,7 @@ class Connection:
                 report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
                 return length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
 
-            validator = Message.Length.get(msg, _default_length_validator)
-            if not validator(length):
+            if not Message.length_valid(msg, length):
                 # RFC 4271 6.1: the Data field MUST contain the erroneous Length field
                 report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
                 return length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))

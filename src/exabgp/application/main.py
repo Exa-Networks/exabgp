@@ -20,6 +20,7 @@ from exabgp.application import encode
 from exabgp.application import environ
 from exabgp.application import version
 from exabgp.application import validate
+from exabgp.application import syntax
 from exabgp.application import healthcheck
 from exabgp.application import shell
 from exabgp.application import schema
@@ -166,6 +167,12 @@ def main() -> int | None:
     )
     config_export.set_defaults(func=export.cmdline)
     export.setargs(config_export)
+
+    config_syntax = config_subparsers.add_parser(
+        'syntax', help='show what the configuration accepts', description=syntax.__doc__
+    )
+    config_syntax.set_defaults(func=syntax.cmdline)
+    syntax.setargs(config_syntax)
 
     config_example = config_subparsers.add_parser(
         'example', help='generate documented configuration example', description=example.__doc__

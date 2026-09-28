@@ -37,7 +37,7 @@ class UpdateHandler(MessageHandler):
 
     def can_handle(self, message: Message) -> bool:
         """Check if this is an UPDATE message."""
-        return message.TYPE == Update.TYPE
+        return message.ID == Message.CODE.UPDATE
 
     def _audit_announce(self, ctx: PeerContext, nlri: NLRI) -> None:
         advertised = ctx.negotiated.advertised_paths_limit
@@ -99,10 +99,9 @@ class UpdateHandler(MessageHandler):
         incoming.untrack_path(family, nlri.prefix_index(), nlri.index())
 
     def _end_of_rib(self, ctx: PeerContext, eor: EOR) -> None:
-        # An End-of-RIB decodes to EOR, whose TYPE is UPDATE, so it arrives here.  Reading
-        # it as an Update raised AttributeError and reset the session.  RFC 7313 section 4
-        # needs to know it was received, per family, for the Graceful Restart rule on BoRR
-        family = (eor.nlris[0].afi, eor.nlris[0].safi)
+        # RFC 7313 section 4 needs to know an End-of-RIB was received, per family, for the
+        # Graceful Restart rule on BoRR
+        family = (eor.afi, eor.safi)
         ctx.neighbor.rib.incoming.record_end_of_rib(family)
         log.debug(lazymsg('eor.received afi={a} safi={s}', a=family[0], s=family[1]), ctx.peer_id)
 
@@ -111,10 +110,12 @@ class UpdateHandler(MessageHandler):
 
         Stores all NLRIs in the incoming RIB cache.
         """
-        if isinstance(message, EOR):
-            self._end_of_rib(ctx, message)
-            return
+        assert self.can_handle(message), 'the peer loop only hands over what can_handle accepted'
+        # the one decoder registered for UPDATE is Update's, and it returns an Update
         update = cast(Update, message)
+        if update.IS_EOR:
+            self._end_of_rib(ctx, cast(EOR, update))
+            return
         parsed = update.data  # Already parsed by unpack_message
         self._number += 1
 
@@ -153,10 +154,12 @@ class UpdateHandler(MessageHandler):
 
         Same logic as sync - no async I/O needed for inbound processing.
         """
-        if isinstance(message, EOR):
-            self._end_of_rib(ctx, message)
-            return
+        assert self.can_handle(message), 'the peer loop only hands over what can_handle accepted'
+        # the one decoder registered for UPDATE is Update's, and it returns an Update
         update = cast(Update, message)
+        if update.IS_EOR:
+            self._end_of_rib(ctx, cast(EOR, update))
+            return
         parsed = update.data  # Already parsed by unpack_message
         self._number += 1
 

@@ -30,11 +30,11 @@
 # tests/unit/rfc/test_draft_multisession.py.  exabgp never sends 131 itself.
 #
 # How exabgp runs multisession today matters to most of sections 6 to 10.  Enabling it
-# on a neighbour with several families is meant to create one neighbour per family, but
-# Neighbor.name() is built from families(), which the split does not narrow, so every copy
-# gets the same name and only the last survives in Configuration.neighbors.  There is one
-# session per peer, it carries every family in its OPEN, and RFC 4271 section 6.8 governs
-# it.  The trivial-groups entry below demonstrates that with a strict xfail.
+# on a neighbour with several families makes one neighbour per family
+# (configuration/grammar/install.py, session_of): each advertises its family alone in its
+# OPEN, has its own name, RIB and Peer, and connects on its own.  What is missing is on the
+# passive side: the listener hands an incoming connection to the first neighbour whose
+# addresses match, before its OPEN is read, and RFC 4271 section 6.8 governs from there.
 
 rfc = "draft-ietf-idr-bgp-multisession-07"
 title = "Multisession BGP"
@@ -206,9 +206,10 @@ Otherwise two sessions are considered unique and both MAY transition
 to the ESTABLISHED state (subject to rest of BGP specification).
 """
 note = """
-exabgp never has two sessions with one peer: the per-family neighbours collapse into one
-(see the header of this file), and the listener would give both connections to the same
-Peer in any case.
+Each family is a neighbour and a Peer of its own (see the header of this file), and each
+connects out on its own, so two sessions with one peer can be established by us.  A peer
+connecting in is not served: the listener gives every connection from its address to the
+first matching Peer, which refuses the second once established.  No test shows either.
 """
 
 [[requirement]]
@@ -387,8 +388,8 @@ warrants session reset, it SHOULD reset only session that was
 affected by the error.
 """
 note = """
-There is one session per peer carrying every family (see the header of this file), so an
-error in any family resets all of them.
+Each family is a Peer of its own (see the header of this file), so an error resets the
+session of that family only; no test shows it yet.
 """
 
 [[requirement]]
@@ -447,8 +448,9 @@ operator to view state of each individual group and at least last
 NOTIFICATION message that caused connection reset.
 """
 note = """
-There is one session per peer (see the header of this file), so there is no per-group
-state to show.
+Each group is a neighbour of its own, shown as any neighbour is, with its family in its
+name (`family-allowed ipv4-unicast`); that this shows the last NOTIFICATION of each is not
+checked by a test.
 """
 
 [[requirement]]
@@ -480,11 +482,9 @@ implementation MUST support at least trivial groups based on that
 attribute.
 """
 note = """
-One session per AFI/SAFI is what the per-family split in
-configuration/neighbor/__init__.py sets out to build, and it does not: every copy has the
-same Neighbor.name(), so only the last one is kept.  Demonstrated by a strict xfail in
-tests/unit/rfc/test_draft_multisession.py, so it counts as untested until fixed.  5.0 has
-the same code.
+One session per AFI/SAFI: configuration/grammar/install.py makes one neighbour per family,
+advertising that family alone.  Until 6.0 every copy kept every family, so all had the same
+Neighbor.name() and only the last was kept.  5.0 has that code still.
 
 Positive only: this is a property of the sessions we build from our own configuration,
 and there is no peer input which violates it.

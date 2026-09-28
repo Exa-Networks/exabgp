@@ -22,10 +22,10 @@ That leaves one recordable obligation with teeth:
 the well-known values are outside its scope, and `ASN:value` in the configuration is how
 exabgp implements it.
 
-Two of the tests below are `xfail`.  `_community` bounds both halves of `ASN:value`
-against `Community.MAX`, which is 0xFFFFFFFF, when each half is sixteen bits.  Nothing in
-the function is sixteen bit aware, so the check never fires for a value which overflows
-its half, and the two failures fall out of the same wrong constant:
+Two of the tests below were once `xfail`.  The legacy parser bounded both halves of
+`ASN:value` against `Community.MAX`, which is 0xFFFFFFFF, when each half is sixteen bits.
+Nothing in it was sixteen bit aware, so the check never fired for a value which overflowed
+its half, and the two failures fell out of the same wrong constant:
 
     community 1:65536   is encoded as 0x00020000 and reported back as 2:0
     community 65536:1   escapes the configuration parser as a struct.error
@@ -52,9 +52,9 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community import Communities, Community
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
-from exabgp.configuration.static.parser import _community
 from exabgp.rib import RIB
 from exabgp.rib.route import Route
+from exabgp.configuration.grammar.types.bgp import community as _community
 
 from rfc.community_wire import attribute, parse, withdrawn
 
@@ -146,9 +146,9 @@ def test_an_asn_too_large_for_two_octets_is_refused_by_the_parser() -> None:
     """A 32 bit ASN does not fit the first two octets, so the configuration is invalid.
 
     EXA_STYLE 1.2: bad operator configuration raises `ValueError` with the parser
-    context.  `struct.error` is neither, and `configuration/core/section.py` only catches
-    `ValueError`, so this one leaves the parser as an unhandled exception rather than as
-    a message naming the line which is wrong.
+    context.  `struct.error` is neither, and the grammar only turns a `ValueError` into a
+    `ConfigError`, so a `struct.error` would leave the parser as an unhandled exception
+    rather than as a message naming the line which is wrong.
     """
     with pytest.raises(ValueError):
         _community('65536:1')
