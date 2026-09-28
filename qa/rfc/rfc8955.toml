@@ -52,19 +52,12 @@ advertising Flow Specifications, the Length of the Next-Hop Network
 Address MUST be set to 0.
 """
 note = """
-`MPNLRICollection._encode_nexthop` returns no bytes for `IP.NoNextHop`, so the ordinary
-flow route, which carries none, packs a next-hop length of 0.  Every redirect-to-an-address
-action now keeps it that way: `redirect <ip>`, `copy <ip>` and `redirect-to-nexthop <ip>`
-send the draft-ietf-idr-flowspec-redirect-ip community, which carries the address itself, so
-nothing needs the next-hop field.  That draft replaces draft-simpson-idr-flowspec-redirect-ip,
-which is where the four octet next-hop came from.
-
-The negative side still does not hold, because the older encoding is still reachable on
-request: `redirect-simpson`, `copy-simpson` and a bare `redirect-to-nexthop` take their
-target from the route's `next-hop` keyword and so pack a four octet next-hop, against this
-sentence.  They are kept because for anyone using them the next hop IS the redirect target,
-and zeroing it would send their traffic somewhere else.  Shown by a failing test rather than
-described.
+`MPNLRICollection._encode_nexthop` writes a next hop length of 0 for SAFI 133 and 134,
+whatever next hop the route was given. The one exception is a route carrying the
+draft-simpson-idr-flowspec-redirect-ip community (0x08/0x00), which exists to point at
+the next hop and is only sent when the operator writes `redirect-simpson` or
+`redirect-to-nexthop-simpson`; `UpdateCollection.messages` hands the route's attributes to
+the collection so it can tell.
 """
 
 [[requirement]]
@@ -185,20 +178,19 @@ the one before it, so that sequence is refused on the 3.
 id = "rfc8955#4.2-unmatchable-not-propagated"
 section = "4.2"
 level = "SHOULD NOT"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
 However, some combinations cannot match any packets (e.g.,
 "ICMP Type AND Port" will never match any packets) and thus SHOULD
 NOT be propagated by BGP.
 """
 note = """
-Nothing in `src/exabgp/configuration/flow/` or in `Flow.add` looks at which components a
-flow specification combines, so `flow route { match { icmp-type 8; port =80; } }` is
-configured, announced and never questioned.  Recorded as a gap rather than as
-not-applicable: exabgp originates rather than propagates, but a filter it originates which
-can never match is the same useless entry in the receiver's hardware, and the check is
-three lines of table lookup we simply do not do.
+`Flow.unmatchable` names the section's own example, an ICMP type or code with a port
+(ICMP has no ports), and the configuration and the API drop such a route with a warning
+(`flow.unmatchable`) rather than announce it. The configuration still loads, so a file
+which carried one before keeps working without it. Other unmatchable combinations are not
+looked for. Positive only: this binds what we send, and no input from a peer can violate it.
 """
 
 # ============================================================ section 4.2.1, operators
@@ -297,18 +289,16 @@ encoder.
 id = "rfc8955#4.2.2.11-dscp-other-bits-zero"
 section = "4.2.2.11"
 level = "SHOULD"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 The six least significant bits contain the DSCP value.  All other
 bits SHOULD be treated as 0.
 """
 note = """
-`FlowDSCP.decoder` is `_number`, which returns the octet whole, so a type 11 component
-carrying 0xFF is reported to the API as `dscp =255`.  A DSCP value of 255 does not exist:
-the two high bits are ECN in the same octet of the IP header and a sender which left them
-set has described a match exabgp then passes on as if it were a DSCP.  Masking with 0x3F
-on decode is the whole fix; it is not done.
+`FlowDSCP.decoder` masks the value with 0x3F, so the two high bits of the octet (the ECN
+field of the IP header) are ignored on receipt; the configuration refuses a DSCP above 63,
+so they are always zero on the way out.
 """
 
 [[requirement]]
@@ -415,7 +405,7 @@ which satisfies this sentence by never doing the work has satisfied nothing.
 id = "rfc8955#6-enforce-leftmost-as"
 section = "6"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 BGP implementations MUST also enforce that the AS_PATH attribute of a
@@ -424,12 +414,12 @@ contains the neighboring AS in the left-most position of the AS_PATH
 attribute.
 """
 note = """
-Not enforced.  Nothing in the tree compares the leftmost AS of a received AS_PATH against
-the peer's ASN; there is no configuration option for it and no check in
-`AttributeCollection.parse` or in the peer code.  RFC 4271 leaves this optional and exabgp
-takes the option, which the sentence above says in as many words is not good enough for a
-speaker exchanging flow specifications.  It is the cheapest half of section 6 to implement
-and the one with no RIB lookup in it at all.
+`UpdateCollection._not_first_as_of_peer` treats as withdrawn (RFC 7606, for the malformed
+AS_PATH of RFC 4271 6.3) any route from an EBGP neighbour, outside the confederation, whose
+AS_PATH does not start with an AS_SEQUENCE led by the peer's AS, logged as
+update.first-as.withdraw. Every family, not only flow routes. A route server does not
+prepend its AS, so `enforce-first-as false` on its neighbour turns the check off; the
+default is on. A neighbouring Member-AS is held to RFC 5065 instead.
 """
 
 [[requirement]]

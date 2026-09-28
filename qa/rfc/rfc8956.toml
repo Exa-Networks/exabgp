@@ -197,18 +197,13 @@ The IPv6 decoder masks with IsF, FF and LF only, so 0x01 decodes to nothing at a
 id = "rfc8956#3.7-flow-label-four-octets"
 section = "3.7"
 level = "SHOULD"
-status = "gap"
-polarity = "both"
+status = "required"
+polarity = "positive-only"
 text = """
 Type 13 component values SHOULD be
 encoded as 4-octet quantities (numeric_op len=10).
 """
 note = """
-Declined, and not deliberately.  `FlowFlowLabel` derives from `IOperationByteShortLong`,
-whose `encode` picks the narrowest width that fits, so a flow label of 5 goes on the wire
-as `0105`, one octet with len=00, and only a label above 65535 gets the four octets this
-sentence asks for.  A flow label is a 20 bit field, so the width exabgp chooses varies with
-the value an operator happened to pick, which is exactly the inconsistency a fixed width
-avoids.  The decoder reads all four widths, so this costs interoperability only with a
-receiver strict about the SHOULD.
+`FlowFlowLabel` encodes through `IOperationLong`, four octets whatever the value; on
+receipt any width the operator octet allows is still read.
 """

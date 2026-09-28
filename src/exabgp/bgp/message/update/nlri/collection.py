@@ -10,7 +10,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Generator
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Generator, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -176,7 +177,7 @@ class MPNLRICollection:
     def __init__(
         self,
         nlris: list[NLRI],
-        attributes: 'dict[int, Attribute]',
+        attributes: 'Mapping[int, Attribute]',
         afi: AFI,
         safi: SAFI,
     ) -> None:
@@ -198,7 +199,7 @@ class MPNLRICollection:
     def from_routed(
         cls,
         routed_nlris: 'list[RoutedNLRI]',
-        attributes: 'dict[int, Attribute]',
+        attributes: 'Mapping[int, Attribute]',
         afi: AFI,
         safi: SAFI,
     ) -> 'MPNLRICollection':
@@ -224,7 +225,7 @@ class MPNLRICollection:
         cls,
         mprnlri: 'MPRNLRI | None',
         mpurnlri: 'MPURNLRI | None',
-        attributes: 'dict[int, Attribute]',
+        attributes: 'Mapping[int, Attribute]',
         afi: AFI,
         safi: SAFI,
     ) -> 'MPNLRICollection':
@@ -254,7 +255,7 @@ class MPNLRICollection:
         return self._nlris
 
     @property
-    def attributes(self) -> 'dict[int, Attribute]':
+    def attributes(self) -> 'Mapping[int, Attribute]':
         """Get attributes dict indexed by Attribute.CODE."""
         return self._attributes
 
@@ -281,6 +282,26 @@ class MPNLRICollection:
         """Calculate total attribute length including header."""
         return payload_len + (4 if payload_len > 255 else 3)
 
+    def _redirects_to_next_hop(self) -> bool:
+        """The routes carry draft-simpson-idr-flowspec-redirect-ip, whose target is the next hop.
+
+        That community is the one thing which gives a flow next hop a meaning, and it is only
+        sent when the operator wrote `redirect-simpson` or `redirect-to-nexthop-simpson`.
+        """
+        from exabgp.bgp.message.update.attribute.attribute import Attribute
+        from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
+        from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHopSimpson
+
+        communities = self._attributes.get(Attribute.CODE.EXTENDED_COMMUNITY)
+        if communities is None:
+            return False
+        # the attribute stored under EXTENDED_COMMUNITY is the EXTENDED_COMMUNITY attribute
+        return any(
+            community.COMMUNITY_TYPE == TrafficNextHopSimpson.COMMUNITY_TYPE
+            and community.COMMUNITY_SUBTYPE == TrafficNextHopSimpson.COMMUNITY_SUBTYPE
+            for community in cast(ExtendedCommunities, communities).communities
+        )
+
     def _encode_nexthop(
         self,
         nlri_nexthop: IP,
@@ -304,6 +325,9 @@ class MPNLRICollection:
         from exabgp.protocol.family import Family
 
         if nlri_nexthop is IP.NoNextHop:
+            return b''
+        # RFC 8955 4: a flow specification is advertised with a next hop length of 0
+        if family_key[1] in (SAFI.flow_ip, SAFI.flow_vpn) and not self._redirects_to_next_hop():
             return b''
 
         _, rd_size = Family.size.get(family_key, (0, 0))

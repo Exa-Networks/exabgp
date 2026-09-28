@@ -39,6 +39,8 @@ async def test_established_reload_sends_received_routes_to_current_rib(monkeypat
     monkeypatch.setattr(RIB, '_cache', {})
     _, after = configured()
     before.manual_eor = after.manual_eor = True
+    # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
+    before.enforce_first_as = False
     negotiated, _ = _negotiated(before)
     (route,) = config.parse_route_text('route 10.0.0.0/24 next-hop 192.0.2.1')
     (wire,) = UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes).messages(negotiated)

@@ -9,10 +9,9 @@ follow it.  Every one of those is a chance for a decoder to read past the end of
 buffer or to accept a filter the sender did not write, so the negative tests here feed
 real malformed bytes to the real `Flow.unpack_nlri` and look at what comes back.
 
-Three tests carry `xfail` without an `rfc()` marker.  That is not an oversight: the rule
-they break is stated in RFC 8955 without an RFC 2119 keyword, so it may not be recorded
-as a requirement, and a test is the only place left to put it.  The first of them is the
-worst bug in this file's subject matter and is at the top for that reason.
+Some tests carry no `rfc()` marker.  That is not an oversight: the rule they pin is stated
+in RFC 8955 without an RFC 2119 keyword, so it may not be recorded as a requirement, and a
+test is the only place left to put it.
 """
 
 from __future__ import annotations
@@ -32,8 +31,10 @@ from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.community.extended.traffic import (
     TrafficAction,
+    TrafficNextHopSimpson,
     TrafficMark,
     TrafficRate,
     TrafficRatePackets,
@@ -291,17 +292,11 @@ def test_a_flow_specification_is_advertised_with_a_next_hop_length_of_zero() -> 
 
 
 @pytest.mark.rfc('rfc8955#4-next-hop-length-zero', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='a flow route carrying a next-hop packs it into MP_REACH_NLRI with a length '
-    'of 4; MPNLRICollection._encode_nexthop has no flow_ip case and writes whatever the '
-    'route was given',
-)
 def test_a_next_hop_on_a_flow_route_is_not_put_on_the_wire() -> None:
     """The sentence is unconditional: when advertising, the length is 0.
 
-    exabgp's flow grammar has a `next-hop` keyword, used with the redirect-to-IP drafts,
-    and a route which carries one emits a four octet next-hop for AFI 1 SAFI 133.
+    exabgp's flow grammar has a `next-hop` keyword, used with the redirect-to-IP drafts;
+    without the draft-simpson community which gives it a meaning it is not sent.
     """
     attribute = packed_mp_reach(RoutedNLRI(flow_to(), IP.create_ip(bytes([1, 2, 3, 4]))))
 
@@ -466,11 +461,6 @@ def propagated(peer: str, name: str, match: str) -> list[str]:
 
 
 @pytest.mark.rfc('rfc8955#4.2-unmatchable-not-propagated')
-@pytest.mark.xfail(
-    strict=True,
-    reason='nothing in the flow configuration or in Flow.add looks at which components are '
-    'combined, so icmp-type AND port is configured and announced like any other filter',
-)
 def test_a_flow_specification_matching_icmp_type_and_port_is_not_propagated(isolated_rib: None) -> None:
     """ICMP carries no ports, so a packet with an ICMP type never has a port to match.
 
@@ -483,6 +473,30 @@ def test_a_flow_specification_matching_icmp_type_and_port_is_not_propagated(isol
     ]
 
     assert propagated('192.0.2.3', 'icmp-and-port', 'icmp-type echo-request; port =80;') == []
+
+
+def test_a_flow_route_redirecting_to_its_next_hop_keeps_it() -> None:
+    """Unmarked: draft-simpson-idr-flowspec-redirect-ip puts the redirect target in the next
+    hop, so a route carrying its community (`redirect-simpson`) is the one exception."""
+    simpson = ExtendedCommunities().add(TrafficNextHopSimpson.make_traffic_nexthop_simpson(False))
+    collection = MPNLRICollection.from_routed(
+        [RoutedNLRI(flow_to(), IP.create_ip(bytes([1, 2, 3, 4])))],
+        {Attribute.CODE.EXTENDED_COMMUNITY: simpson},
+        AFI.ipv4,
+        SAFI.flow_ip,
+    )
+    (attribute,) = collection.packed_reach_attributes(Negotiated.UNSET)
+
+    assert next_hop_length(attribute) == 4
+
+
+def test_a_configuration_with_an_unmatchable_flow_route_still_loads(isolated_rib: None) -> None:
+    """Unmarked: the route is dropped with a warning, the rest of the configuration stands."""
+    configuration = Configuration(
+        [FLOW_NEIGHBOR % ('192.0.2.5', 'icmp-and-port', 'icmp-type echo-request; port =80;')], text=True
+    )
+
+    assert configuration.reload(), str(configuration.error)
 
 
 # ==================================================== section 4.2.1.1, the numeric operator
@@ -597,11 +611,6 @@ def test_a_dscp_which_would_not_fit_a_single_octet_is_refused_by_the_grammar(tex
 
 
 @pytest.mark.rfc('rfc8955#4.2.2.11-dscp-other-bits-zero', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='FlowDSCP.decoder is _number, which returns the octet whole rather than masking '
-    'it with 0x3F, so 0xFF is reported as dscp =255',
-)
 def test_the_two_high_bits_of_a_dscp_octet_are_ignored_on_decoding() -> None:
     """The two high bits of the IP header octet are ECN, not part of the DSCP."""
     clean = decoded(AFI.ipv4, bytes([0x0B, EOL | NumericOperator.EQ, 0x3F]))
@@ -716,12 +725,8 @@ def test_rules_b_and_c_are_not_disregarded_without_explicit_configuration() -> N
 
 
 @pytest.mark.rfc('rfc8955#6-enforce-leftmost-as', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='nothing compares the leftmost AS of an AS_PATH received over eBGP with the '
-    "peer's AS, so a path starting with another AS is accepted",
-)
 def test_an_ebgp_route_whose_as_path_does_not_start_with_the_peer_as_is_not_accepted() -> None:
+    """The first half is the positive side: the peer's own AS first is accepted."""
     assert announced_flows(flow_announce(DESTINATION, path=(PEER_AS, OTHER_AS))) == [
         'flow destination-ipv4 192.0.2.0/24'
     ]
@@ -877,3 +882,23 @@ def test_the_reserved_bits_of_a_traffic_marking_are_ignored_on_decoding(octet: i
     community = TrafficMark.unpack_attribute(pack('!BBLBB', 0x80, 0x09, 0, 0, octet))
 
     assert community.dscp == expected
+
+
+@pytest.mark.rfc('rfc8955#6-enforce-leftmost-as')
+@pytest.mark.parametrize('path', [(OTHER_AS,), (OTHER_AS, PEER_AS)], ids=['another-as-alone', 'another-as-first'])
+def test_the_leftmost_as_rule_does_not_bind_an_internal_peer(path: tuple[int, ...]) -> None:
+    """The rule is for routes received over eBGP: an iBGP path may start anywhere."""
+    negotiated = ebgp_session()
+    negotiated.peer_as = ASN(LOCAL_AS)
+    parsed = received_update(flow_announce(DESTINATION, path=path), negotiated).data
+
+    assert [str(routed.nlri) for routed in parsed.announces] == ['flow destination-ipv4 192.0.2.0/24']
+
+
+def test_a_route_server_neighbour_can_turn_the_leftmost_as_rule_off() -> None:
+    """Unmarked: `enforce-first-as false`, for a route server, which does not prepend."""
+    negotiated = ebgp_session()
+    negotiated.neighbor.enforce_first_as = False
+    parsed = received_update(flow_announce(DESTINATION, path=(OTHER_AS, PEER_AS)), negotiated).data
+
+    assert [str(routed.nlri) for routed in parsed.announces] == ['flow destination-ipv4 192.0.2.0/24']

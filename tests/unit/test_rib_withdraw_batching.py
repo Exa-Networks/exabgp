@@ -54,6 +54,8 @@ WIDE_WITHDRAWAL_COUNT = 2000
 
 def session() -> Negotiated:
     negotiated = Negotiated.make_negotiated(Neighbor(), Direction.IN)
+    # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
+    negotiated.neighbor.enforce_first_as = False
     negotiated.local_as = ASN(65001)
     negotiated.peer_as = ASN(65002)
     negotiated.asn4 = True

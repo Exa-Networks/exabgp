@@ -23,7 +23,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.attribute.otc import OTC
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
-from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, ASPath
+from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, SEQUENCE, ASPath
 from exabgp.bgp.message.update.attribute.attribute import TreatAsWithdraw
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
 from exabgp.bgp.message.update.nlri.label import Label
@@ -632,7 +632,7 @@ class UpdateCollection:
                 if announce_routed and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
                 else mp_attr
             )
-            mp_announce = MPNLRICollection.from_routed(announce_routed, {}, afi, safi)
+            mp_announce = MPNLRICollection.from_routed(announce_routed, self._attributes, afi, safi)
             mp_withdraw = MPNLRICollection(withdraw_nlris, {}, afi, safi)
 
             # RFC 7606 5.1 again: an MP_UNREACH_NLRI never shares a message with an
@@ -722,6 +722,8 @@ class UpdateCollection:
             return True
         if UpdateCollection._malformed_confederation_path(attributes.get(Attribute.CODE.AS_PATH, None), negotiated):
             return True
+        if UpdateCollection._not_first_as_of_peer(attributes.get(Attribute.CODE.AS_PATH, None), negotiated):
+            return True
         # RFC 9774 3: a route with an AS_SET or AS_CONFED_SET is treated as withdrawn,
         # unless the operator configured the neighbour to accept them (`as-set accept`).
         # An AS4_PATH still here was not dropped by RFC 6793 and its sets now count.
@@ -752,6 +754,34 @@ class UpdateCollection:
             segments = path.aspath
             return not segments or not isinstance(segments[0], CONFED_SEQUENCE)
         return False
+
+    @staticmethod
+    def _not_first_as_of_peer(path: Attribute | None, negotiated: Negotiated) -> bool:
+        """RFC 8955 6 and RFC 4271 6.3: an EBGP route's AS_PATH starts with the neighbour's AS.
+
+        RFC 4271 makes the check optional, RFC 8955 makes it a MUST. A route server does
+        not prepend its own AS, so `enforce-first-as false` on its neighbour turns it off.
+        A neighbouring Member-AS is checked by the RFC 5065 rule above instead. RFC 7606
+        turns the malformed AS_PATH of RFC 4271 6.3 into a withdraw.
+        """
+        if not isinstance(path, ASPath) or negotiated.is_internal_neighbor:
+            return False
+        neighbor = getattr(negotiated, 'neighbor', None)
+        if neighbor is None or not neighbor.enforce_first_as:
+            return False
+        segments = path.aspath
+        if segments and isinstance(segments[0], SEQUENCE) and segments[0] and segments[0][0] == negotiated.peer_as:
+            return False
+        log.warning(
+            lazymsg(
+                'update.first-as.withdraw peer={peer} peer-as={asn} as-path="{path}"',
+                peer=negotiated.peer_address,
+                asn=negotiated.peer_as,
+                path=path,
+            ),
+            'routes',
+        )
+        return True
 
     @classmethod
     def _parse_payload(cls, data: Buffer, negotiated: Negotiated) -> UpdateCollection:

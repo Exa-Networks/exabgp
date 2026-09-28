@@ -46,6 +46,9 @@ def session(asn4: bool = True, peer_as: int = PEER_AS) -> Negotiated:
     negotiated.peer_as = ASN(peer_as)
     negotiated.asn4 = asn4
     negotiated.families = [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)]
+    # MANDATORY carries an empty AS_PATH, which RFC 8955 6 withdraws on EBGP: these sessions
+    # test the handling of the attributes, and the first AS rule has tests of its own
+    negotiated.neighbor.enforce_first_as = False
     return negotiated
 
 

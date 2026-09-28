@@ -293,6 +293,8 @@ def established(neighbor: Neighbor, peer_as: int) -> Negotiated:
     """Run the real OPEN negotiation against a peer which offered what we did."""
     sent = Capabilities().new(neighbor, False, local_as=ASN(LOCAL_AS))
     negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
+    # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
+    negotiated.neighbor.enforce_first_as = False
     negotiated.sent(Open.make_open(Version(4), ASN(LOCAL_AS), HoldTime(180), RouterID(OUR_ADDRESS), sent))
     negotiated.received(Open.make_open(Version(4), ASN(peer_as), HoldTime(180), RouterID(TARGET), Capabilities(sent)))
     assert negotiated.required(*IPV4_UNICAST), 'ADD-PATH was not negotiated in both directions'

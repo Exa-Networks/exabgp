@@ -196,6 +196,12 @@ LEAVES = (
         doc='RFC 9012 11, a received Tunnel Encapsulation attribute: auto filters it on EBGP only',
     ),
     Leaf(
+        'enforce-first-as',
+        boolean(True),
+        field='enforce-first-as',
+        doc='RFC 8955 6, withdraw an EBGP route whose AS_PATH does not start with the peer AS',
+    ),
+    Leaf(
         'route-target-filter',
         boolean(True),
         field='route-target-filter',

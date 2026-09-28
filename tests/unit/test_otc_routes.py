@@ -52,6 +52,8 @@ neighbor 192.0.2.1 {{
     configuration = Configuration([text], text=True)
     assert configuration.reload(), str(configuration.error)
     neighbor = next(iter(configuration.neighbors.values()))
+    # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
+    neighbor.enforce_first_as = False
     _, negotiated = _negotiated(neighbor)
     return neighbor, negotiated
 

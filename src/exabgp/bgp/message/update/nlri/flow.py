@@ -527,6 +527,15 @@ class IOperationByteShortLong(IOperation):
         return 4, pack('!L', value)
 
 
+class IOperationLong(IOperation):
+    """Always four octets on the way out, any width the operator allows on the way in."""
+
+    VALUE_SIZES: ClassVar[tuple[int, ...]] = (1, 2, 4)
+
+    def encode(self, value: BaseValue) -> tuple[int, bytes]:
+        return 4, pack('!L', value)
+
+
 # String representation for Numeric and Binary Tests
 
 
@@ -631,6 +640,12 @@ def port_value(data: str) -> int:
     except ValueError:
         raise ValueError(_str_bad_port) from None
     return number
+
+
+def _dscp(string: bytes) -> NumericValue:
+    # RFC 8955 4.2.2.11: the DSCP is the six low bits, and the other bits of the octet,
+    # the ECN field of the IP header, are ignored on receipt
+    return NumericValue(int(_number(string)) & MAX_DSCP_VALUE)
 
 
 def dscp_value(data: str) -> int:
@@ -773,7 +788,7 @@ class FlowDSCP(IOperationByte, NumericString, FlowIPv4):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'dscp'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(dscp_value, NumericValue)
-    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
+    decoder: ClassVar[Callable[[bytes], NumericValue]] = _dscp
 
 
 # RFC2460
@@ -833,7 +848,8 @@ class FlowFragmentIPv6(IOperationByteShort, BinaryString, FlowIPv6):
 
 
 # draft-raszuk-idr-flow-spec-v6-01
-class FlowFlowLabel(IOperationByteShortLong, NumericString, FlowIPv6):
+# RFC 8956 3.7: the 20 bit flow label is encoded in four octets, whatever its value
+class FlowFlowLabel(IOperationLong, NumericString, FlowIPv6):
     ID: ClassVar[int] = 0x0D
     NAME: ClassVar[str] = 'flow-label'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(label_value, NumericValue)
@@ -1230,6 +1246,18 @@ class Flow(NLRI):
     def family_conflict(self, rule: Any) -> str:  # Any is FlowRule
         """Why `rule` cannot be added to this flow route, or '' when it can."""
         return family_conflict(self.rules, rule)
+
+    def unmatchable(self) -> str:
+        """Why no packet can match this flow route, or '' when one can.
+
+        RFC 8955 4.2: a specification which can never match SHOULD NOT be propagated, and the
+        section's own example is an ICMP type or code combined with a port: ICMP has no ports.
+        """
+        icmp = [FlowICMPType.ID, FlowICMPCode.ID]
+        ports = [FlowAnyPort.ID, FlowDestinationPort.ID, FlowSourcePort.ID]
+        if any(ID in self.rules for ID in icmp) and any(ID in self.rules for ID in ports):
+            return 'a flow route matching an ICMP type or code and a port matches no packet, ICMP has no ports'
+        return ''
 
     def add(self, rule: Any) -> bool:  # Any is FlowRule
         """Add a rule to the Flow NLRI, False when it has no family in common with another.

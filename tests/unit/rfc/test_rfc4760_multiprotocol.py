@@ -60,6 +60,8 @@ def session(families: list[FamilyTuple], direction: Direction = Direction.IN) ->
         multiprotocol.extend(families)
         capabilities[Capability.CODE.MULTIPROTOCOL] = multiprotocol
     negotiated = Negotiated(neighbor, direction)
+    # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
+    negotiated.neighbor.enforce_first_as = False
     negotiated.sent(Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), sent))
     negotiated.received(Open.make_open(Version(4), ASN(65002), HoldTime(90), RouterID('192.0.2.2'), received))
     return negotiated

@@ -4,6 +4,16 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Incompatible: a route from an EBGP neighbor whose AS_PATH does not start with the
+   neighbor's AS is treated as withdrawn (RFC 8955 6, RFC 4271 6.3). Set
+   "enforce-first-as false;" on the neighbor of a route server, which does not prepend.
+ * Incompatible: a flow route is sent with a next hop length of 0 (RFC 8955 4) unless it
+   carries the draft-simpson redirect-to-nexthop community, and its flow label always in
+   four octets (RFC 8956 3.7).
+ * Change: a flow route matching an ICMP type or code together with a port is not
+   announced, with a warning: no packet can match it (RFC 8955 4.2).
+ * Fix: the two high bits of a received flow DSCP octet are ignored (RFC 8955 4.2.2.11),
+   so 0xFF reads as 63 rather than 255.
  * Incompatible: a labelled unicast or VPN route configured with more than one label is
    sent with its first label only, unless both ends sent the Multiple Labels Capability,
    and never with more labels than the peer announced (RFC 8277). The stack used to go

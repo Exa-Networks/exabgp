@@ -70,6 +70,8 @@ IPV4_ANNOUNCE_ONLY = bytes.fromhex(
 def session() -> Negotiated:
     """An EBGP session which has negotiated the three families these tests use."""
     negotiated = Negotiated.make_negotiated(Neighbor(), Direction.IN)
+    # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
+    negotiated.neighbor.enforce_first_as = False
     negotiated.local_as = ASN(65001)
     negotiated.peer_as = ASN(65002)
     negotiated.asn4 = True

@@ -55,8 +55,8 @@ env exabgp_log_enable=false uv run pytest tests/unit/rfc -q -rx | grep XFAIL
 | 1 | Received attributes | ✅ | `95dd8d8` |
 | 2 | Received NLRI | ✅ | `df87c44` |
 | 3 | Outgoing routes / adj-rib-out | ✅ | `e642645` |
-| 4 | RFC 8277 Multiple Labels Capability | ✅ uncommitted on main | |
-| 5 | FlowSpec | ❌ todo | |
+| 4 | RFC 8277 Multiple Labels Capability | ✅ | `9220b94` |
+| 5 | FlowSpec | 🔄 part A done (uncommitted), §6 validation todo | |
 | 6 | Graceful Restart receiving procedures | ❌ todo | |
 | 7 | EVPN and Prefix-SID | ❌ todo | |
 | 8 | BGP-LS, capability retry, four-octet AS | ❌ todo | |
@@ -190,6 +190,39 @@ Each area below is independent. Do one per commit. The xfail tests named are the
 - Every rule mutated and caught.
 
 ### 5. FlowSpec (RFC 8955, RFC 8956)
+**Session 2026-09-28, decisions taken with Thomas:**
+- §4 next hop: length 0 for flow families unless the route carries the draft-simpson
+  redirect-to-nexthop community (0x08/0x00), the only thing giving a flow next hop a meaning
+  (`MPNLRICollection._redirects_to_next_hop`; UpdateCollection now passes its attributes).
+- §4.2 ICMP type/code with a port: dropped with a warning, the configuration still loads.
+  conf-flow-redirect (functional B) has such a route and is changed.
+- §6 validation: a neighbour option, default OFF (deviates from "in the absence of explicit
+  configuration ... MUST"; said in the ledger). When on: infeasible flows are held back from
+  the adj-rib-in and the API, and unicast changes announce/withdraw them to the API.
+- §6 leftmost AS: every family on eBGP (not confederation members), default on, with a
+  neighbour knob to disable it for IXP route servers.
+
+**Area 5 part A as implemented (uncommitted, 2026-09-28):**
+- §4 next hop, §4.2 ICMP+port (`Flow.unmatchable`, `tree/flow.py` `propagated`), DSCP mask
+  (`flow.py` `_dscp`), RFC 8956 flow label (`IOperationLong`), leftmost AS
+  (`UpdateCollection._not_first_as_of_peer`, neighbour `enforce-first-as`, default true).
+- Leftmost AS on every family broke 124 unit tests: fixtures decoding on EBGP sessions with
+  an empty AS_PATH (rfc7606_wire MANDATORY) or decoding what the same session sent. Their
+  session builders now set `enforce_first_as = False` with a comment. Functional encoding
+  (47) and decoding (23) were unaffected. `configuration validate` uses a synthetic iBGP
+  session, so it is unaffected too.
+- Functional B (conf-flow-redirect): its big route had icmp-type/icmp-code with ports; the
+  ICMP components moved to a route of their own (`icmp-without-ports`), raw/json re-recorded
+  from `exabgp encode`/`decode`. conf-flow.ci re-recorded for the four octet flow label.
+- Frozen outcomes: pass 1 added 34 lines and changed 7, all explained (4 flow-label forms,
+  conf-flow and conf-flow-redirect files, the removed conf-flow-redirect cmd input).
+- `qa/bin/test_json` (the `json` step) decodes what exabgp SENT with the neighbour's
+  config, so an EBGP path starts with our AS: conf-ebgp failed. Its neighbour now has
+  `enforce_first_as = False` (loopback only; `exabgp decode -c` keeps the check).
+- `qa/bin/test_api_encode --self-check` (`cmd-roundtrip`) had the same loopback problem
+  (conf-ebgp, conf-confederation) and the same fix. Only these two qa tools build one.
+- Remaining: §6 validation (4 xfails), an option default off.
+
 - `tests/unit/rfc/test_rfc8955_flowspec.py`: next-hop length 0 (§4, beware the redirect-to-IP
   use of the next-hop), DSCP masked with 0x3F on decode, eBGP leftmost AS (§6), feasibility
   against the unicast routes the same peer sent (§6 a/b/c), revalidation on unicast change,
@@ -278,7 +311,8 @@ None.
 ## Resume point
 
 **2026-09-28 (local):** on `main` after #1432, not on the web branch. Area 3 committed as
-`e642645` (not pushed). Area 4 done, uncommitted. `test_everything`: all 25 passed (one clean
+`e642645`, area 4 `9220b94` (not pushed). Area 5 part A done, uncommitted; next §6
+validation. `test_everything`: all 25 passed (one clean
 run, 10m29s). Next: area 4 (RFC 8277). Areas one after the
 other, stopping for review between each.
 

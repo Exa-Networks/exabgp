@@ -45,6 +45,8 @@ async def test_update_without_adj_rib_in_is_decoded() -> None:
     configuration = Configuration([CONFIGURATION], text=True)
     assert configuration.reload(), str(configuration.error)
     neighbor = next(iter(configuration.neighbors.values()))
+    # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
+    neighbor.enforce_first_as = False
     _, negotiated = _negotiated(neighbor)
 
     announced = API(Mock()).api_route('route 10.0.0.0/24 next-hop 192.0.2.2', 'announce')[0]

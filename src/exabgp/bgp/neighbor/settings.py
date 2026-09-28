@@ -142,6 +142,8 @@ class NeighborSettings:
         as_set: 'withdraw' or 'accept' a received AS_SET / AS_CONFED_SET (RFC 9774)
         tunnel_encapsulation: 'auto', 'filter' or 'accept' a received Tunnel Encapsulation
             attribute (RFC 9012 11); 'auto' filters it from an EBGP neighbour only
+        enforce_first_as: withdraw an EBGP route whose AS_PATH does not start with the peer
+            AS (RFC 8955 6), on by default; off for a route server, which does not prepend
         route_target_filter: send the VPN routes only for the Route Targets the peer is a
             member of (RFC 4684 5), off by default
         auto_flush: Auto flush routes
@@ -170,6 +172,7 @@ class NeighborSettings:
     as_set: str = 'withdraw'
     tunnel_encapsulation: str = 'auto'
     route_target_filter: bool = False
+    enforce_first_as: bool = True
     auto_flush: bool = True
     adj_rib_in: bool = True
     adj_rib_out: bool = True

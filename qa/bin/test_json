@@ -106,6 +106,9 @@ def get_neighbor(config_file: Path | None) -> Neighbor:
             neighbors = list(config.neighbors.values())
             if neighbors:
                 neighbor = neighbors[0]
+                # the captures are what exabgp sent this neighbour, so an EBGP path starts
+                # with our AS and not the peer's: RFC 8955 6 is for what a peer sends us
+                neighbor.enforce_first_as = False
                 _neighbor_cache[config_file] = neighbor
                 return neighbor
         except Exception:

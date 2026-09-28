@@ -93,6 +93,7 @@ POLICY = (
     'as-set',
     'tunnel-encapsulation',
     'route-target-filter',
+    'enforce-first-as',
     'auto-flush',
     'adj-rib-in',
     'adj-rib-out',

@@ -313,11 +313,6 @@ LEN_FOUR = 0x20  # numeric_op len=10
 
 
 @pytest.mark.rfc('rfc8956#3.7-flow-label-four-octets')
-@pytest.mark.xfail(
-    strict=True,
-    reason='FlowFlowLabel is an IOperationByteShortLong, whose encode picks the narrowest '
-    'width which fits, so only a label above 65535 gets four octets',
-)
 @pytest.mark.parametrize('value', [0, 5, 2013, 65535])
 def test_every_flow_label_we_encode_uses_four_octets(value: int) -> None:
     """A flow label is a 20 bit field, so its width must not depend on the value chosen."""
@@ -361,7 +356,7 @@ neighbor 192.0.2.1 {
 # bits, and carries one.  Section 3.1: "The encoded pattern contains enough octets for the
 # bits used in matching (length minus offset bits)."
 CONFIGURED_NLRI = bytes.fromhex(
-    '21'  # the components below occupy 0x21 octets
+    '23'  # the components below occupy 0x23 octets
     '018000'
     '2a020b80001500007aca39fffeaea87a'  # type 1, length 128, offset 0
     '028078'
@@ -373,8 +368,8 @@ CONFIGURED_NLRI = bytes.fromhex(
     '81'
     '65'  # type 11, =101
     '0d'
-    '91'
-    '07dd'  # type 13, =2013, two octets: see the 3.7 gap in the ledger
+    'a1'
+    '000007dd'  # type 13, =2013, four octets as section 3.7 wants
 )
 
 CONFIGURED_STRING = (

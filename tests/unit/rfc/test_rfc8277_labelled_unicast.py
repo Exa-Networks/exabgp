@@ -417,6 +417,8 @@ def session(ours: bytes | None, theirs: bytes | None) -> Negotiated:
     neighbor = Neighbor()
     neighbor.session.local_as = ASN(65001)
     negotiated = Negotiated(neighbor, Direction.OUT)
+    # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
+    negotiated.neighbor.enforce_first_as = False
     negotiated.sent(Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), capabilities(ours)))
     negotiated.received(
         Open.make_open(Version(4), ASN(65002), HoldTime(90), RouterID('192.0.2.2'), capabilities(theirs))

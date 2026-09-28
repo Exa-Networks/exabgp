@@ -21,7 +21,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.nlri import Flow
@@ -58,6 +58,7 @@ from exabgp.configuration.grammar.types import flow as types
 from exabgp.configuration.grammar.types.base import Printed, Type
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.words import Words
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.rib.route import Route
@@ -245,6 +246,22 @@ class FlowRoute:
         return Route(nlri, self.attributes, nexthop=self.nexthop)
 
 
+def propagated(route: Route) -> list[Route]:
+    """The route, or nothing when no packet can match it (RFC 8955 4.2 SHOULD NOT propagate).
+
+    Dropped with a warning rather than refused: a configuration which loaded before still
+    loads, and the operator is told which route is not announced and why.
+    """
+    reason = cast(Flow, route.nlri).unmatchable()
+    if not reason:
+        return [route]
+    log.warning(
+        lazymsg('flow.unmatchable action=drop route="{route}" reason="{reason}"', route=route.nlri, reason=reason),
+        'configuration',
+    )
+    return []
+
+
 class FlowLine(RouteStatement):
     """`<keyword> <value> ...`: a flow route on one line."""
 
@@ -260,7 +277,7 @@ class FlowLine(RouteStatement):
                 built.apply(spec, value, line=True)
             except ValueError as exc:
                 raise ConfigError(where, str(exc)) from None
-        return [built.route()]
+        return propagated(built.route())
 
     def printed(self, route: Route) -> list[str]:
         # a one-line route has no next-hop, and matches what it is given: nothing is possible
@@ -415,9 +432,9 @@ class FlowRouteSection(Collector[list[Route]]):
             built.apply(spec, value, line=False)
         if not built.nlri.rules:
             raise ValueError('a flow route needs at least one match, or it matches every packet')
-        route = built.route()
-        context.routes.append(route)
-        return [route]
+        routes = propagated(built.route())
+        context.routes.extend(routes)
+        return routes
 
     def unbuild(self, name: Any, built: Route, context: PrintContext) -> tuple[Any, Values]:
         return route_values(built)

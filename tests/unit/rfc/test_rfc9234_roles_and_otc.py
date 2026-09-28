@@ -95,6 +95,8 @@ def negotiate(neighbor: Neighbor, peer_role: RoleValue | None) -> Negotiated:
         received[Capability.CODE.ROLE] = Role(peer_role)
 
     negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
+    # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
+    negotiated.neighbor.enforce_first_as = False
     negotiated.sent(open_message(LOCAL_AS, '192.0.2.2', sent))
     negotiated.received(open_message(PEER_AS, '192.0.2.1', received))
     return negotiated

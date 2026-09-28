@@ -57,6 +57,7 @@ neighbor <ip-address> {
     as-set <withdraw | accept>;  // received AS_SET / AS_CONFED_SET, RFC 9774
     tunnel-encapsulation <auto | filter | accept>;  // received attribute, RFC 9012
     route-target-filter <truthvalue>;  // VPN routes by RT membership, RFC 4684
+    enforce-first-as <truthvalue>;     // EBGP AS_PATH starts with the peer AS, RFC 8955
     auto-flush <truthvalue>;
     adj-rib-in <truthvalue>;
     adj-rib-out <truthvalue>;
@@ -432,6 +433,22 @@ It needs
 and
 .Dq adj-rib-out ,
 both on by default.
+.Sh FIRST AS OF AN EXTERNAL ROUTE
+A route received from an EBGP neighbor outside the confederation whose AS_PATH
+does not start with the neighbor's AS is treated as withdrawn, as RFC 8955
+section 6 requires and RFC 4271 permits, and logged.
+An internet exchange route server does not add its own AS to the paths it
+passes on:
+.Dq enforce-first-as false
+on its neighbor turns the check off.
+.Sh FLOW SPECIFICATION
+A flow route is sent with no next hop in its MP_REACH_NLRI (RFC 8955), unless it
+redirects to that next hop with the draft-simpson community
+.Dq ( redirect-simpson ) .
+A flow route matching an ICMP type or code together with a port can match no
+packet, and is not announced; a warning names it.
+A flow label is sent in four octets (RFC 8956), and the two high bits of a
+received DSCP are ignored.
 .Sh MULTIPLE LABELS
 RFC 8277 lets a labelled unicast or VPN route (SAFI 4 or 128) carry more than
 one label only when both speakers sent the Multiple Labels Capability, and never
