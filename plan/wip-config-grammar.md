@@ -1,6 +1,6 @@
 # Configuration grammar: define every keyword once, derive everything else
 
-**Status:** 📋 Planning
+**Status:** 🔄 Active
 **Created:** 2026-09-27
 **Last Updated:** 2026-09-27
 
@@ -399,41 +399,69 @@ sections, and reports the rest as skipped with the missing section named.
 - [ ] `grammar/types/base.py`, `basic.py`, `network.py`, each type with `examples()`, unit
       and property tests
 - [ ] `grammar/nodes.py`, `engine.py`, `render.py`
-- [ ] `exabgp_configuration_parser` switch, default `legacy`
-- [ ] `configuration validate --parser grammar|legacy|both`
+- [x] `exabgp_debug_parser` switch, default `legacy` (`Configuration.reload(parser)`)
+- [x] `configuration validate --parser grammar|legacy|both`
 - [ ] differential test harness (2.8), with the equality check; verify `Neighbor.__eq__`
       covers every field and extend it where it does not
 - [ ] forms corpus skeleton and coverage test (2.9)
 - [ ] round-trip harness (2.10)
-- [ ] fix the reported line number in the legacy parser (wrong today regardless of this plan)
+- [x] fix the reported line number in the legacy parser (commit 2978fbb38)
 
-### Phase 1: the small blocks
+### Phase 1: neighbor, template and the blocks inside them
 
-For each block: write its forms against the legacy parser first, then the declaration and
-its Settings class, until both parsers agree on every form.
+Merged with the old phase 2 on 2026-09-27: the small blocks (api, capability, role,
+tcp-ao, confederation, family, add-path, nexthop) all sit inside `neighbor`, and can only
+be compared through the `Neighbor` the section builds. The legacy parser builds that
+`Neighbor` directly (`ParseNeighbor.post`, ~400 lines), not through `NeighborSettings`.
 
-- [ ] `process` (`ProcessSettings`)
-- [ ] `api`, `api/send`, `api/receive`
-- [ ] `capability`, `role`, `tcp-ao`
-- [ ] `confederation`
-- [ ] `family`, `add-path`, `nexthop`
+- [x] compare neighbors: `Neighbor.__eq__` only covers what forces a reset on reload, so
+      `compare.neighbor_state` snapshots every field (session and capability dataclasses,
+      families, api, routes as text, RIB name)
+- [x] `SessionSettings` gains md5-ip, local-link-local, confederation; `NeighborSettings`
+      gains prefix-limit; `Neighbor.from_settings(rib=False)` lets the configuration make
+      the RIB after the multi-session split (`grammar/install.py`)
+- [x] forms for every neighbor leaf and section leaf (`tests/unit/config_grammar/forms_neighbor.py`),
+      each run in a neighbor and in a template it inherits, plus whole documents
+- [x] `neighbor` and `template neighbor` from one set of children, with `api`, `capability`,
+      `role`, `tcp-ao`, `confederation`, `family`, `add-path`, `nexthop`
+      (`static`, `flow`, `l2vpn`, `operational`, `announce` stay pending for phases 3 and 4)
+- [x] `inherit` merges the values by keyword before they become Settings, with the legacy
+      `transfer` rules (`grammar/tree/resolve.py`): the rules operate on the raw values, a
+      Settings merge could not reproduce them. To revisit once the legacy parser is gone.
+- [x] a neighbor prints back from its NeighborSettings (`grammar/tree/unresolve.py`), and the
+      print reads back equal with both parsers
+- [ ] `str(neighbor)` and `to_dict` from `render()`: deferred to the milestone review, it
+      changes what `show neighbor configuration` prints to API programs (section 7)
 
-### Phase 2: neighbor and template
+### Phase 2: merged into phase 1
 
-- [ ] forms for every neighbor leaf and for `inherit` / `template` combinations
-- [ ] `neighbor` and `template neighbor` from one `Block`
-- [ ] `inherit` as a Settings merge, compared to the legacy result on every template form
-- [ ] `str(neighbor)` and `to_dict` from `render()`, output accepted by both parsers; the
-      `rate-limit disable` printing bug closes here (printing, not parsing, so the preserve
-      decision is not touched)
+The numbers of the later phases are kept, other sections refer to them.
 
 ### Phase 3: unicast route lines
 
-- [ ] forms for every attribute and every route keyword
-- [ ] `grammar/types/bgp.py`: every attribute type (`Origin`, `ASPath`, `Community`, ...)
-- [ ] `static` / `route` as a `Line`; API `announce` commands through it when `grammar` is
-      selected, and the `cmd:` lines of `qa/*.ci` in the differential test
-- [ ] `label`, `vpn`, `path`, `rtc`
+Decided 2026-09-28: every route value (next-hop, as-path, communities, labels, RD, flow
+match and then, MUP, VPLS, ...) is rewritten as a grammar Type with parse, render, hint and
+examples; the ~130 legacy value functions are not moved or wrapped. Each type is checked
+against the legacy function by the forms and differential tests, and phase 6 deletes the
+legacy functions.
+
+- [x] forms for every attribute and every route keyword (`tests/unit/config_grammar/forms_route.py`),
+      each in a one-line route, a route block, and a template
+- [x] `grammar/types/bgp.py`: every static route value (prefix, next-hop, origin, med,
+      local-preference, as-path, communities, large and extended communities, aggregator,
+      originator-id, cluster-list, otc, aigp, attribute, label, rd, path-information,
+      bgp-prefix-sid, bgp-prefix-sid-srv6, name, split, watchdog, withdraw);
+      `grammar/types/lists.py`: `OneOrList` for `value | [ value ... ]`
+- [x] `static`: `route` one-liner, `route <prefix> { }` block, `attributes`/`attribute`
+      (`grammar/tree/static.py`); routes printed back as route lines. `sr-policy` and `rtc`
+      statements pending.
+- [x] API `announce|withdraw route|attributes` read by the grammar when selected
+      (`Configuration._partial_grammar`); the `cmd:` lines of `qa/*.ci` in
+      `tests/unit/config_grammar/test_commands.py`
+- [x] `announce { ipv4|ipv6 { unicast|multicast|nlri-mpls|mpls-vpn|rtc ...; } }` and
+      `static { rtc ...; }` (`grammar/tree/announce.py`), with the announce value rules;
+      API `announce|withdraw ipv4|ipv6 ...`; routes no static line writes are printed in
+      announce blocks. `mcast-vpn`, `flow`, `flow-vpn`, `mup`, `sr-policy`, `vpls` pending.
 - [ ] `exabgp decode --command` uses `render()`
 
 ### Phase 4: the rest of the families
@@ -527,9 +555,38 @@ corpus, no 5.0 branch work.
 
 ## 6. Accidents found during migration
 
-(to fill: things the legacy parser accepts or rejects by accident, one line each. The
-grammar parser reproduces each one; whether to drop any of them is a separate decision
-after phase 6, each with its own CHANGELOG entry.)
+Things the legacy parser accepts or rejects by accident, one line each. The grammar
+reproduces each one (marked `legacy:` in `grammar/engine.py` and the types); whether to
+drop any of them is a separate decision after phase 6, each with its own CHANGELOG entry.
+Each is pinned by a form or document in `tests/unit/config_grammar/forms.py`.
+
+| Accident | Example | Where reproduced |
+|---|---|---|
+| words a value does not use are ignored | `respawn false extra;` is `respawn false;` | engine `_leaf` |
+| words before a `}` are ignored, even an unknown keyword | `process p { run /bin/cat; hold 1 }` | engine `read` |
+| a `}` with nothing open ends the configuration, the rest is never read | `process p { ... } } anything {` | engine `read` |
+| sections still open at the end of the text are closed | `process p { run /bin/cat;` | engine `read` |
+| a section name is the word after the keyword, whatever it is, and more words are ignored | `process { ... }` is named `{`, `process a b {` is `a` | engine `_open` |
+| process names are not checked | `process p$ { ... }` | engine `_open` |
+| a boolean given no word takes the leaf default rather than true | `respawn;` | `Bool(bare=...)` |
+| an opening quote does not end the word before it | `ab"cd"` is `abcd` | lexer `_quote` |
+| inside quotes the other quote character switches which one closes, so a word can not hold a quote | `"it's"` never closes | lexer `_quote`, render `quote` |
+| `validate()` failures are ignored: its result is only returned when true | `api { processes [ undefined ]; }` is accepted | `Configuration._reload_grammar` |
+| templates override the neighbor: a number, address or string of the template replaces the neighbor's own | `inherit t; hold-time 30;` with `hold-time 60` in `t` is 60 | `resolve.transfer` |
+| an `inherit` of a template which does not exist, or is defined further down, is ignored | `inherit nothing;` | `resolve.inherit` |
+| `family { ipv4 unicast; all; }` is accepted and asks for every family; `add-path { all; }` asks for none | | `family._store_all` |
+| a boolean given no word takes the leaf default, which is not the neighbor default | `adj-rib-in;` is false, no statement is true | `boolean(bare)` |
+| `rate-limit` takes any integer, a negative one or 0 included, and not `disable` (which the printer writes) | `rate-limit -5;` | `integer('rate-limit')` |
+| api names are unique across the whole configuration, not per neighbor | two neighbors with `api a { }` | `session._api` |
+| a route line picks VPN or labelled from the word `rd`, `route-distinguisher` or `label` anywhere in the statement, a value included | `route ... name rd;` is built as a VPN route, then made unicast again | `static._mentions`, `static.normalize` |
+| a prefix whose mask is no number is a host route | `route 10.0.0.0/x` is `10.0.0.0/32` | `bgp.Prefix` |
+| `bgp-prefix-sid` skips the words it does not expect, and looped forever on a list never closed (the grammar refuses it) | `bgp-prefix-sid [ 300` hung the legacy parser | `bgp.PrefixSidType` |
+| the announce families declare `atomic-aggregate`, `originator-id`, `cluster-list`, `aigp`, `attribute`, `name`, `split`, `watchdog`, `withdraw` and refuse every value of them (the validators return a bool, address, number or string where an attribute is needed; for an API command the exception leaves `partial()`) | `announce { ipv4 { unicast ... name x; } }` | `announce.Refused` |
+| `path-information` is refused in an announce family: a number is no address, an address no path id | `unicast ... path-information 1` | `announce.Refused` |
+| `labeled-unicast` is listed for `announce ipv4`/`ipv6` and refused as an unknown command | | `announce._refused_family` |
+| `next-hop self` in an announce family is IPv4 whatever the family | `announce { ipv6 { unicast ... next-hop self; } }` | `announce.AnnounceNextHop` |
+| a prefix of the other address family is taken, and builds a route no one can show | `announce { ipv4 { unicast 2001:db8::/48 ... } }` | `announce.AnnounceLine` |
+| a file ending on a continuation line repeats its last piece | `run /bin/cat \` at EOF | lexer `_file_lines` |
 
 ---
 
@@ -544,11 +601,42 @@ anything printed from `render()` that the API emits (`show neighbor configuratio
 Preserving behaviour means this list should stay empty; an entry is a failure to preserve
 that could not be avoided. It decides the phase 6 gate.
 
-(none yet)
+- bug found, not a parser one: `Resource.__new__` caches instances by value, so every
+  `NetMask` of one length is one object, and `make_netmask` sets `maximum` on it. An IPv6
+  `/32` prefix makes the IPv4 peer's `/32` count 2**96 addresses: an IPv4 neighbor with an
+  IPv6 `/32` route is refused "can only use ip ranges for the peer address with passive
+  neighbors". The host-bit check of prefixes can be wrong the same way. Both parsers go
+  through it; pinned as NETMASK_DOCUMENT_BODY in the forms. To fix on its own, with its test.
+- candidate, not done: `str(neighbor)` from `render()` would change the text of
+  `show neighbor configuration`. Today's printer writes `rate-limit disable`, which neither
+  parser reads back.
 
 ---
 
 ## Progress
+
+- 2026-09-27: phase 0 started
+  - `grammar/`: lexer (legacy words, physical positions), error, words, types (base,
+    `Bool`, `Choice`, `Program`), nodes (`Leaf`, `Block`), engine, render, read
+  - `process` declared (`tree/process.py`), `ProcessSettings`, `Encoder`, `OnExit` in
+    `configuration/settings.py`; `Configuration.from_settings` takes `ProcessSettings`
+  - program lookup and checks moved to `util/program.py`, used by both parsers
+  - `configuration/compare.py` and `configuration validate --parser legacy|grammar|both`
+  - tests in `tests/unit/config_grammar/`: lexer parity with the legacy tokeniser over
+    every example configuration, forms (generated and hand written), documents,
+    differential over every `etc/exabgp/*.conf` and fixture, round trip through both
+    parsers; mutating the grammar (dropping a boolean spelling, a default, an accident)
+    turns them red
+  - legacy error line fixed: it named the statement count (`tests/unit/test_configuration_error_line.py`)
+- 2026-09-28: phase 3 announce sections (ipv4/ipv6 unicast, multicast, nlri-mpls, mpls-vpn,
+  rtc; static rtc; API ipv4/ipv6 commands); 5957 grammar tests
+- 2026-09-28: phase 3 static routes: every static route value as a type, `static` section,
+  API route commands; all `etc/exabgp/*.conf` without flow/l2vpn/announce/sr-policy
+  compared (22 skipped), 4400+ grammar tests
+- 2026-09-28: switch `exabgp_debug_parser=grammar` (`Configuration.reload(parser)`,
+  `_reload_grammar` commits the same way as the legacy reload); phase 1 (neighbor, template
+  and their sections) done but for the printer switch; 3309 grammar tests, every
+  `etc/exabgp/*.conf` without routes compared (66 skipped for static/flow/l2vpn/operational)
 
 - 2026-09-27: survey done, design agreed (new package, bind to Settings), plan written
 - 2026-09-27: preserve behaviour, both parsers must agree, forms corpus for every valid

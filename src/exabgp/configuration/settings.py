@@ -12,10 +12,44 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor.settings import NeighborSettings
+
+
+class Encoder(StrEnum):
+    """How exabgp writes to an API program."""
+
+    TEXT = 'text'
+    JSON = 'json'
+
+
+class OnExit(StrEnum):
+    """What happens to the routes an API program announced when it exits."""
+
+    WITHDRAW = 'withdraw'
+    KEEP = 'keep'
+
+
+@dataclass
+class ProcessSettings:
+    """One `process` section: an API program exabgp runs and talks to."""
+
+    run: list[str]
+    encoder: Encoder = Encoder.TEXT
+    respawn: bool = True
+    on_exit: OnExit = OnExit.WITHDRAW
+
+    def to_dict(self) -> dict[str, Any]:
+        """The form the reactor takes a process in, the keys being the configuration keywords."""
+        return {
+            'run': list(self.run),
+            'encoder': str(self.encoder),
+            'respawn': self.respawn,
+            'on-exit': str(self.on_exit),
+        }
 
 
 @dataclass
@@ -27,7 +61,7 @@ class ConfigurationSettings:
 
     Attributes:
         neighbors: List of NeighborSettings to create neighbors from
-        processes: Process configuration dict
+        processes: the process sections by name, ProcessSettings or the dict the reactor takes
     """
 
     neighbors: list['NeighborSettings'] = field(default_factory=list)

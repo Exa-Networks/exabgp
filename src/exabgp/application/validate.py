@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import argparse
+from typing import NoReturn
 
 from exabgp.environment import getenv
 from exabgp.environment import getconf
@@ -14,7 +15,9 @@ from exabgp.bgp.neighbor import NeighborTemplate
 from exabgp.debug.intercept import trace_interceptor
 from exabgp.logger import log, lazymsg
 
+from exabgp.configuration import compare
 from exabgp.configuration.check import check_generation
+from exabgp.configuration.grammar.engine import NotMigrated
 
 
 def setargs(sub: argparse.ArgumentParser) -> None:
@@ -23,6 +26,7 @@ def setargs(sub: argparse.ArgumentParser) -> None:
     sub.add_argument('-r', '--route', help='check the parsing of the routes', action='store_true')
     sub.add_argument('-v', '--verbose', help='be verbose in the display', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on critical logging, SIGTERM, and exceptions (shortcut for exabgp.pdb.enable=true)', action='store_true')
+    sub.add_argument('--parser', help='the configuration parser to use, or both to compare them (development)', choices=compare.PARSERS, default=compare.LEGACY)
     sub.add_argument('configuration', help='configuration file(s)', nargs='+', type=str)
     # fmt:on
 
@@ -53,14 +57,7 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
             sys.stderr.write(f'error: {msg}\n')
             sys.exit(1)
 
-        config = Configuration([location])
-
-        if not config.reload():
-            error = str(config.error)
-            msg = f'{configuration} is not a valid config file: {error}'
-            log.critical(lazymsg('{msg}', msg=msg), 'configuration')
-            sys.stderr.write(f'error: {msg}\n')
-            sys.exit(1)
+        config = _load(configuration, location, cmdarg.parser)
         log.info(lazymsg('validate.loading status=success'), 'configuration')
 
         if cmdarg.neighbor:
@@ -78,6 +75,34 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
                 )
                 sys.exit(1)
             log.info(lazymsg('validate.routes status=success'), 'configuration')
+
+
+def _fail(msg: str) -> NoReturn:
+    log.critical(lazymsg('{msg}', msg=msg), 'configuration')
+    sys.stderr.write(f'error: {msg}\n')
+    sys.exit(1)
+
+
+def _load(configuration: str, location: str, parser: str) -> Configuration:
+    """Read the configuration with the parser asked for, or with both and require they agree."""
+    if parser == compare.LEGACY:
+        config = Configuration([location])
+        if not config.reload():
+            _fail(f'{configuration} is not a valid config file: {config.error!s}')
+        return config
+
+    try:
+        outcome, grammar = compare.grammar_file(location)
+    except NotMigrated as exc:
+        _fail(f'{configuration} can not be read by the grammar parser yet: {exc}')
+    if parser == compare.BOTH:
+        legacy_outcome, _ = compare.legacy_file(location)
+        difference = compare.difference(legacy_outcome, outcome)
+        if difference:
+            _fail(f'{configuration} is read differently by the two parsers: {difference}')
+    if isinstance(outcome, compare.Rejected):
+        _fail(f'{configuration} is not a valid config file: {outcome.message}')
+    return grammar
 
 
 def main() -> None:

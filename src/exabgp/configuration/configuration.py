@@ -51,6 +51,10 @@ from exabgp.configuration.template.neighbor import ParseTemplateNeighbor
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 
+# the sections of an API command the grammar reads when selected; the others are read by the
+# legacy parser until the grammar declares them (plan/wip-config-grammar.md)
+GRAMMAR_COMMAND_SECTIONS = frozenset({'static', 'ipv4', 'ipv6'})
+
 # Mapping for config keywords that don't match parser section names
 # Format: (parent_section_name, keyword) -> target_section_name
 # Only needed for exceptions where keyword != parser.name
@@ -379,6 +383,7 @@ class Configuration(_Configuration):
             ValueError: If settings validation fails.
         """
         from exabgp.bgp.neighbor.neighbor import Neighbor
+        from exabgp.configuration.settings import ProcessSettings
 
         error = settings.validate()
         if error:
@@ -387,8 +392,11 @@ class Configuration(_Configuration):
         # Create Configuration with empty configuration list
         config = cls(configurations=[])
 
-        # Set processes
-        config.processes = dict(settings.processes)
+        # Set processes, the reactor takes each one as a dict keyed by configuration keyword
+        config.processes = {
+            name: process.to_dict() if isinstance(process, ProcessSettings) else process
+            for name, process in settings.processes.items()
+        }
 
         # Create neighbors from settings
         for neighbor_settings in settings.neighbors:
@@ -551,9 +559,10 @@ class Configuration(_Configuration):
         self._previous_neighbors = {}
         self._cleanup()
 
-    def reload(self) -> bool:
+    def reload(self, parser: str = '') -> bool:
+        """Read the configuration again, with `parser` or the one exabgp_debug_parser selects."""
         try:
-            return self._reload()
+            return self._reload(parser or getenv().debug.parser)
         except KeyboardInterrupt:
             return self.error.set('configuration reload aborted by ^C or SIGINT')
         except Error as exc:
@@ -569,7 +578,7 @@ class Configuration(_Configuration):
                 f'problem parsing configuration file line {self.parser.index_line}\nerror message: {exc}',
             )
 
-    def _reload(self) -> bool:
+    def _reload(self, parser: str) -> bool:
         # If created via from_settings(), no configurations to reload
         # but neighbors are already set up - return success
         if not self._configurations and self.neighbors:
@@ -581,6 +590,9 @@ class Configuration(_Configuration):
 
         # clearing the current configuration to be able to re-parse it
         self._clear()
+
+        if parser == 'grammar':
+            return self._reload_grammar(fname)
 
         if self._text:
             if not self.parser.set_text(fname):
@@ -609,6 +621,30 @@ class Configuration(_Configuration):
         if check:
             return check
 
+        return True
+
+    def _reload_grammar(self, fname: str) -> bool:
+        """Read the configuration with the grammar, then commit it as the legacy parser does.
+
+        Selected by exabgp_debug_parser=grammar while both parsers exist (plan/wip-config-grammar.md).
+        """
+        from exabgp.configuration.grammar.install import install
+        from exabgp.configuration.grammar.read import read_file, read_text
+
+        try:
+            settings = read_text(fname) if self._text else read_file(os.path.realpath(fname))
+        except (ValueError, OSError) as exc:
+            self._rollback_reload()
+            return self.error.set(str(exc))
+
+        self.process.add_api()
+        self.process.processes.update({name: process.to_dict() for name, process in settings.processes.items()})
+        self.neighbor.neighbors.update(install(settings.neighbors))
+
+        self._commit_reload()
+        self._link()
+        # legacy: _reload ignores what validate() reports, an api naming a missing process is accepted
+        self.validate()
         return True
 
     def validate(self) -> bool:
@@ -671,6 +707,8 @@ class Configuration(_Configuration):
     def partial(self, section: str, text: str, action: str = 'announce') -> bool:
         self._cleanup()  # this perform a big cleanup (may be able to be smarter)
         self._clear()
+        if getenv().debug.parser == 'grammar' and section in GRAMMAR_COMMAND_SECTIONS:
+            return self._partial_grammar(section, text, action)
         self.parser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
         self.parser.set_action(action)
 
@@ -685,6 +723,19 @@ class Configuration(_Configuration):
             )
             log.debug(lazymsg('configuration.parse.error message={error_msg}', error_msg=error_msg), 'configuration')
             return False
+        return True
+
+    def _partial_grammar(self, section: str, text: str, action: str) -> bool:
+        """Read an API command with the grammar, leaving its routes where partial() leaves them."""
+        from exabgp.configuration.grammar.read import read_command
+
+        try:
+            routes = read_command(section, text, action == 'announce')
+        except ValueError as exc:
+            self._rollback_reload()
+            log.debug(lazymsg('configuration.parse.error message={error}', error=str(exc)), 'configuration')
+            return self.error.set(str(exc))
+        self.scope.extend_routes(routes)
         return True
 
     def parse_route_text(self, route_text: str, action: str = 'announce') -> list['Route']:

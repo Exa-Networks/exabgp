@@ -1,0 +1,92 @@
+"""render.py
+
+Print Settings back as configuration text, walking the same tree the engine reads with.
+
+What is printed reads back to equal Settings, with either parser.
+
+Copyright (c) 2009-2026 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
+from __future__ import annotations
+
+import dataclasses
+from typing import Any
+
+from exabgp.configuration.grammar.lexer import COMMENT, QUOTES, SEPARATORS, SPACES, TERMINATORS
+from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
+from exabgp.configuration.grammar.types.base import Syntax
+
+INDENT = '\t'
+_PLAIN_BREAKERS = set(SPACES + TERMINATORS + SEPARATORS + QUOTES + (COMMENT, '\\'))
+_ESCAPED = {'\\': '\\\\', '\b': '\\b', '\f': '\\f', '\n': '\\n', '\r': '\\r', '\t': '\\t'}
+
+
+def quote(word: str) -> str:
+    """A word as the lexer will read it back."""
+    if isinstance(word, Syntax):
+        return str(word)
+    if word and not any(char in _PLAIN_BREAKERS for char in word):
+        return word
+    # the lexer resolves escapes before it looks for quotes, and inside quotes the other quote
+    # character changes which one closes: a word holding either can not be written at all
+    if any(char in QUOTES for char in word):
+        raise ValueError(f'{word!r} holds a quote character and can not be written in a configuration')
+    escaped = ''.join(_ESCAPED.get(char, char) for char in word)
+    return f'"{escaped}"'
+
+
+def fields(built: Any) -> dict[str, Any]:
+    """The values by field of a Settings object, the inverse of what a block builds."""
+    if isinstance(built, dict):
+        return built
+    if dataclasses.is_dataclass(built) and not isinstance(built, type):
+        return {each.name: getattr(built, each.name) for each in dataclasses.fields(built)}
+    raise TypeError(f'can not render {type(built).__name__}, it is not a dataclass')
+
+
+def _leaf(leaf: Leaf, value: Any) -> str:
+    words = ' '.join(quote(word) for word in leaf.type.render(value))
+    return f'{leaf.keyword} {words};' if words else f'{leaf.keyword};'
+
+
+def _block(block: Block, name: Any, built: Any, depth: int, context: dict[str, Any]) -> list[str]:
+    if block.unbuild is not None:
+        name, values = block.unbuild(built, context)
+    else:
+        values = fields(built)
+    indent = INDENT * depth
+    words = [quote(word) for word in block.name.render(name)] if block.name is not None else []
+    lines = [indent + ' '.join([block.keyword, *words, '{'])] if block.keyword else []
+    inner = depth + 1 if block.keyword else depth
+    lines.extend(_children(block, values, inner, context))
+    if block.keyword:
+        lines.append(indent + '}')
+    return lines
+
+
+def _children(block: Block, values: dict[str, Any], depth: int, context: dict[str, Any]) -> list[str]:
+    lines: list[str] = []
+    for child in block.children:
+        value = values.get(child.field)
+        if value is None:
+            continue
+        if isinstance(child, Leaf) and child.repeated:
+            lines.extend(INDENT * depth + _leaf(child, each) for each in value)
+        elif isinstance(child, Leaf):
+            lines.append(INDENT * depth + _leaf(child, value))
+        elif child.keep != Keep.SINGLE and not value:
+            continue
+        elif child.keep == Keep.NAMED:
+            for name, built in value.items():
+                lines.extend(_block(child, name, built, depth, context))
+        elif child.keep == Keep.LIST:
+            for built in value:
+                lines.extend(_block(child, '', built, depth, context))
+        else:
+            lines.extend(_block(child, '', value, depth, context))
+    return lines
+
+
+def render(root: Block, settings: Any) -> str:
+    return '\n'.join(_block(root, '', settings, 0, {})) + '\n'

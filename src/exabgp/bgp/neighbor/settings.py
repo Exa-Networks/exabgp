@@ -79,6 +79,12 @@ class SessionSettings:
     role_strict: bool = False
     role_otc: bool = True
     role_add_meta: bool = True
+    # the address MD5 signs for, the local address unless configured; never with auto-discovery
+    md5_ip: 'IP | None' = None
+    local_link_local: 'IP | None' = None
+    # RFC 5065: the confederation identifier, ASN(0) outside a confederation, and its other members
+    confederation: 'ASN | None' = None
+    confederation_members: tuple['ASN', ...] = ()
 
     def validate(self) -> str:
         """Validate all settings are present and consistent.
@@ -174,6 +180,9 @@ class NeighborSettings:
     # Routes and API (optional)
     routes: list['Route'] = field(default_factory=list)
     api: dict[str, Any] = field(default_factory=dict)
+
+    # RFC 4486 4: per family, the most routes the peer may hold with us
+    prefix_limit: dict[tuple['AFI', 'SAFI'], int] = field(default_factory=dict)
 
     def validate(self) -> str:
         """Validate all settings are present and consistent.

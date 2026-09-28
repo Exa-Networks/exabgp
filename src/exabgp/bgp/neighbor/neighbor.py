@@ -151,7 +151,7 @@ class Neighbor:
         return cls()
 
     @classmethod
-    def from_settings(cls, settings: 'NeighborSettings') -> 'Neighbor':
+    def from_settings(cls, settings: 'NeighborSettings', rib: bool = True) -> 'Neighbor':
         """Create Neighbor from validated settings.
 
         This factory method enables programmatic Neighbor creation without
@@ -159,6 +159,7 @@ class Neighbor:
 
         Args:
             settings: NeighborSettings with required fields populated.
+            rib: make the RIB now; the configuration makes it once multi-session is split
 
         Returns:
             Configured Neighbor instance with RIB enabled.
@@ -205,12 +206,14 @@ class Neighbor:
 
         # Set API
         neighbor.api = dict(settings.api)
+        neighbor.prefix_limit = dict(settings.prefix_limit)
 
         # Call infer for graceful_restart time derivation
         neighbor.infer()
 
-        # Initialize RIB with families
-        neighbor.make_rib()
+        # Initialize RIB with families, unless the caller has more to decide first
+        if rib:
+            neighbor.make_rib()
 
         return neighbor
 

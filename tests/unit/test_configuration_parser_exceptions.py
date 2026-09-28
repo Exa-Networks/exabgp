@@ -375,6 +375,7 @@ class TestProcessParserRunExceptions:
 class TestExecutableDescriptorValidation:
     def test_checks_the_opened_object_when_the_path_changes(self, monkeypatch, tmp_path) -> None:
         from exabgp.configuration.process import parser
+        from exabgp.util import program as program_module
 
         program = tmp_path / 'program'
         program.write_text('#!/bin/sh\n')
@@ -389,7 +390,7 @@ class TestExecutableDescriptorValidation:
             program.mkdir()
             return fd
 
-        monkeypatch.setattr(parser.os, 'open', open_then_replace)
+        monkeypatch.setattr(program_module.os, 'open', open_then_replace)
 
         parser._validate_executable(str(program))
 
@@ -398,6 +399,7 @@ class TestExecutableDescriptorValidation:
 
     def test_closes_the_descriptor_when_validation_fails(self, monkeypatch, tmp_path) -> None:
         from exabgp.configuration.process import parser
+        from exabgp.util import program as program_module
 
         program = tmp_path / 'program'
         program.write_text('#!/bin/sh\n')
@@ -410,7 +412,7 @@ class TestExecutableDescriptorValidation:
             opened.append(fd)
             return fd
 
-        monkeypatch.setattr(parser.os, 'open', record_open)
+        monkeypatch.setattr(program_module.os, 'open', record_open)
 
         with pytest.raises(ValueError, match='will not be able to run'):
             parser._validate_executable(str(program))
@@ -460,7 +462,7 @@ class TestResolveRelativeProgramPrecedence:
                 return True
             return real_exists(path)
 
-        monkeypatch.setattr('exabgp.configuration.process.parser.os.path.exists', fake_exists)
+        monkeypatch.setattr('exabgp.util.program.os.path.exists', fake_exists)
 
         assert _resolve_relative_program(tokeniser, prg_name) == etc_candidate
 

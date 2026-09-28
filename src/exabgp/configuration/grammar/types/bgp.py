@@ -1,0 +1,1038 @@
+"""bgp.py
+
+The values of a route: its prefix and path attributes.
+
+Each type reads what the legacy value function read (configuration/static/parser.py and
+mpls.py), and builds the same attribute object; the forms and differential tests hold the
+two to it. A route line keeps what one value tells the next in `words.context`: the address
+family of the prefix decides what `next-hop self` means.
+
+Copyright (c) 2009-2026 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
+from __future__ import annotations
+
+from struct import pack
+from typing import Any, cast
+
+from exabgp.bgp.message.open import ASN, RouterID
+from exabgp.bgp.message.update.attribute import (
+    AIGP,
+    CONFED_SEQUENCE,
+    CONFED_SET,
+    MED,
+    SEQUENCE,
+    SET,
+    Aggregator,
+    AS2Path,
+    AtomicAggregate,
+    Attribute,
+    ClusterID,
+    ClusterList,
+    GenericAttribute,
+    LocalPreference,
+    NextHop,
+    NextHopSelf,
+    Origin,
+    OriginatorID,
+)
+from exabgp.bgp.message.update.attribute.community import (
+    Communities,
+    Community,
+    ExtendedCommunities,
+    ExtendedCommunity,
+    LargeCommunities,
+    LargeCommunity,
+)
+from exabgp.bgp.message.update.attribute.otc import OTC, OTCSelf
+from exabgp.bgp.message.open.capability.role import RoleValue
+from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
+from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.types.base import Syntax, Type
+from exabgp.configuration.grammar.types.word import Word
+from exabgp.configuration.grammar.words import Words
+from exabgp.protocol.family import AFI
+from exabgp.protocol.ip import IP, IPRange, IPSelf, IPv4, IPv6
+
+AFI_CONTEXT = 'afi'  # the address family of the prefix, set by PREFIX and read by NEXT_HOP
+
+AIGP_MAX = 0xFFFFFFFFFFFFFFFF  # RFC 7311: a 64 bit metric
+MAX_SEGMENT_ASNS = 255  # RFC 4271 4.3: a path segment counts its AS numbers in one octet
+MAX_LIST_ITEMS = 1024  # a list of values is written by hand
+COMMUNITY_HALF_MAX = 0xFFFF  # RFC 1997: an AS number and a value of two octets each
+LARGE_COMMUNITY_FIELD_MAX = 0xFFFFFFFF  # RFC 8092: three four-octet fields
+IPV4_OCTETS = 4
+RD_TYPE_1_OCTETS = 4
+
+
+class Prefix(Type[IPRange]):
+    """`<ip>/<mask>`, or an address alone for its host route; the host bits must be zero."""
+
+    name = 'prefix'
+
+    def parse(self, words: Words) -> IPRange:
+        where = words.where()
+        word = words.word()
+        # legacy: a word with no mask, several slashes, or a mask which is no number is taken
+        # as a host route of what precedes the first slash, or of the whole word
+        parts = word.split('/')
+        ip = parts[0] if len(parts) == 2 else word
+        try:
+            mask = int(parts[1]) if len(parts) == 2 else (128 if ':' in ip else 32)
+        except ValueError:
+            mask = 128 if ':' in ip else 32
+        try:
+            words.context[AFI_CONTEXT] = IP.toafi(ip)
+            iprange = IPRange.make_range(ip, mask)
+        except (OSError, ValueError):
+            raise ConfigError(where, f"'{ip}/{mask}' is not a valid prefix", expected=['<ip>/<mask>']) from None
+        if iprange.address() & iprange.mask.hostmask() != 0:
+            raise ConfigError(where, f"'{ip}/{mask}' is not a valid network, the host bits are not zero")
+        return iprange
+
+    def render(self, value: IPRange) -> list[str]:
+        return [f'{value.top()}/{int(value.mask)}']
+
+    def hint(self) -> str:
+        return '<ip>/<mask>'
+
+    def examples(self) -> list[str]:
+        return ['10.0.0.0/24', '10.0.0.1', '2001:db8::/32', '2001:db8::1']
+
+
+def _path_information(word: str) -> PathInfo:
+    if word.isdigit():
+        return PathInfo.make_from_integer(int(word))
+    return PathInfo.make_from_ip(word)
+
+
+PATH_INFORMATION = Word('path-information', '<number>|<ipv4>', _path_information, ['1', '0.0.0.1'])
+
+
+class NextHopType(Type[tuple[IP | IPSelf, NextHop | NextHopSelf]]):
+    """An address, or `self` for the local address of the session, in the family of the prefix."""
+
+    name = 'next-hop'
+
+    def parse(self, words: Words) -> tuple[IP | IPSelf, NextHop | NextHopSelf]:
+        where = words.where()
+        word = words.word()
+        afi = words.context.get(AFI_CONTEXT, AFI.undefined)
+        if word.lower() == 'self':
+            return IPSelf(afi), NextHopSelf(afi)
+        try:
+            ip = IP.from_string(word)
+        except (OSError, IndexError, ValueError):
+            raise ConfigError(where, f"'{word}' is not a valid next-hop", expected=['<ip>', 'self']) from None
+        return ip, NextHop.from_string(ip.top())
+
+    def render(self, value: tuple[IP | IPSelf, NextHop | NextHopSelf]) -> list[str]:
+        ip = value[0]
+        return ['self'] if isinstance(ip, IPSelf) else [str(ip)]
+
+    def hint(self) -> str:
+        return '<ip>|self'
+
+    def examples(self) -> list[str]:
+        return ['10.0.0.1', 'self', 'SELF']
+
+
+class HexAttribute(Type[GenericAttribute]):
+    """`[ 0x<code> 0x<flag> 0x<data> ]`: an attribute given as its wire bytes."""
+
+    name = 'attribute'
+
+    def parse(self, words: Words) -> GenericAttribute:
+        where = words.where()
+        if words.word() != '[':
+            raise ConfigError(where, 'invalid attribute format', expected=[self.hint()])
+        code = self._hex(words, 'attribute code')
+        flag = self._hex(words, 'attribute flag')
+        where = words.where()
+        data = words.word().lower()
+        if not data.startswith('0x'):
+            raise ConfigError(where, f"'{data}' is not valid attribute data, it is hexadecimal")
+        if len(data) % 2:
+            raise ConfigError(where, f"'{data}' has an odd number of hexadecimal digits")
+        try:
+            raw = bytes(int(data[index : index + 2], 16) for index in range(2, len(data), 2))
+        except ValueError:
+            raise ConfigError(where, f"'{data}' is not valid attribute data, it is hexadecimal") from None
+        if words.word() != ']':
+            raise ConfigError(where, "invalid attribute format - missing closing ']'")
+        return GenericAttribute.make_generic(code, flag, raw)
+
+    @staticmethod
+    def _hex(words: Words, what: str) -> int:
+        where = words.where()
+        word = words.word().lower()
+        if not word.startswith('0x'):
+            raise ConfigError(where, f"'{word}' is not a valid {what}, it is hexadecimal")
+        try:
+            return int(word, 16)
+        except ValueError:
+            raise ConfigError(where, f"'{word}' is not a valid {what}, it is hexadecimal") from None
+
+    def render(self, value: GenericAttribute) -> list[str]:
+        return [Syntax('['), f'0x{value.ID:02x}', f'0x{value.FLAG:02x}', '0x' + bytes(value.data).hex(), Syntax(']')]
+
+    def hint(self) -> str:
+        return '[ 0x<code> 0x<flag> 0x<data> ]'
+
+    def examples(self) -> list[str]:
+        return ['[ 0x20 0xc0 0x00000001 ]']
+
+
+def _aigp(word: str) -> AIGP:
+    base = 16 if word.lower().startswith('0x') else 10
+    try:
+        number = int(word, base)
+    except ValueError:
+        raise ValueError(f"'{word}' is not a valid AIGP value") from None
+    if not 0 <= number <= AIGP_MAX:
+        raise ValueError(f'AIGP value {number} out of range, it is 0 to {AIGP_MAX}')
+    return AIGP.from_int(number)
+
+
+AIGP_VALUE = Word('aigp', '<number>|0x<hex>', _aigp, ['100', '0x64', '0'])
+
+_ORIGINS = {'igp': Origin.IGP, 'egp': Origin.EGP, 'incomplete': Origin.INCOMPLETE}
+
+
+def _origin(word: str) -> Origin:
+    value = word.lower()
+    if value not in _ORIGINS:
+        raise ValueError(f"'{value}' is not a valid origin")
+    return Origin.from_int(_ORIGINS[value])
+
+
+ORIGIN = Word(
+    'origin',
+    'igp|egp|incomplete',
+    _origin,
+    ['igp', 'egp', 'incomplete', 'IGP'],
+    render=lambda value: [{Origin.IGP: 'igp', Origin.EGP: 'egp', Origin.INCOMPLETE: 'incomplete'}[int(value.origin)]],
+    choices=list(_ORIGINS),
+)
+
+OTC_NONE_REMOVED = (
+    "'otc none' was removed in 6.0.0: RFC 9234 section 5 says the operator MUST NOT have the "
+    'ability to modify the Only-to-Customer procedures.'
+)
+
+
+def _otc(word: str) -> OTC | OTCSelf:
+    if word == 'none':
+        raise ValueError(OTC_NONE_REMOVED)
+    if word == 'self':
+        return OTCSelf()
+    try:
+        role = RoleValue.from_string(word)
+    except ValueError:
+        try:
+            return OTC.make_otc(ASN.from_string(word))
+        except ValueError:
+            raise ValueError(f"'{word}' is not a valid OTC: expected an ASN, self, or a BGP role name") from None
+    return OTCSelf(role)
+
+
+OTC_VALUE = Word('otc', '<asn>|self|<role>', _otc, ['65000', 'self', 'provider', 'customer'])
+
+
+def _digits(name: str, make: Any) -> Any:
+    def convert(word: str) -> Any:
+        if not word.isdigit():
+            raise ValueError(f"'{word}' is not a valid {name}, it is a non-negative integer")
+        return make(int(word))
+
+    return convert
+
+
+MED_VALUE = Word('med', '<number>', _digits('MED', MED.from_int), ['0', '100'])
+LOCAL_PREFERENCE = Word(
+    'local-preference', '<number>', _digits('local-preference', LocalPreference.from_int), ['0', '100']
+)
+
+
+class Flag(Type[Any]):
+    """A keyword with no value, what follows ignored: `atomic-aggregate;`."""
+
+    def __init__(self, name: str, make: Any) -> None:
+        self.name = name
+        self._make = make
+
+    def parse(self, words: Words) -> Any:
+        return self._make()
+
+    def render(self, value: Any) -> list[str]:
+        return []
+
+    def hint(self) -> str:
+        return ''
+
+    def examples(self) -> list[str]:
+        return ['']
+
+
+ATOMIC_AGGREGATE = Flag('atomic-aggregate', AtomicAggregate.make_atomic_aggregate)
+
+
+class AggregatorType(Type[Aggregator]):
+    """`<asn>:<router-id>`, in brackets or not: `( 65000:10.0.0.1 )`, `(65000:10.0.0.1)`."""
+
+    name = 'aggregator'
+
+    def parse(self, words: Words) -> Aggregator:
+        where = words.where()
+        word = words.word()
+        eat = word == '('
+        if eat:
+            word = words.word()
+            if word.endswith(')'):
+                eat, word = False, word[:-1]
+        elif word.startswith('('):
+            eat, word = not word.endswith(')'), word[1:-1] if word.endswith(')') else word[1:]
+        try:
+            as_number, address = word.split(':')
+            aggregator = Aggregator.make_aggregator(ASN.from_string(as_number), RouterID(address))
+        except (ValueError, IndexError, OSError):
+            raise ConfigError(where, f"'{word}' is not a valid aggregator", expected=[self.hint()]) from None
+        if eat and words.word() != ')':
+            raise ConfigError(where, "invalid aggregator - missing closing ')'")
+        return aggregator
+
+    def render(self, value: Aggregator) -> list[str]:
+        return [Syntax('('), f'{value.asn}:{value.speaker}', Syntax(')')]
+
+    def hint(self) -> str:
+        return '( <asn>:<router-id> )'
+
+    def examples(self) -> list[str]:
+        return ['( 65000:10.0.0.1 )', '(65000:10.0.0.1)', '65000:10.0.0.1', '( 65000:10.0.0.1)']
+
+
+def _originator_id(word: str) -> OriginatorID:
+    if word.count('.') != IPv4.DOT_COUNT or not all(part.isdigit() for part in word.split('.')):
+        raise ValueError(f"'{word}' is not a valid originator-id, it is an IPv4 address")
+    return OriginatorID.from_string(word)
+
+
+ORIGINATOR_ID = Word('originator-id', '<ipv4>', _originator_id, ['10.0.0.1'])
+
+
+class ClusterListType(Type[ClusterList]):
+    """A cluster id, or several in brackets; a comma is read as a cluster id, and refused."""
+
+    name = 'cluster-list'
+
+    def parse(self, words: Words) -> ClusterList:
+        where = words.where()
+        word = words.word()
+        ids: list[ClusterID] = []
+        try:
+            if word != '[':
+                ids.append(ClusterID.from_string(word))
+            else:
+                for _ in range(MAX_LIST_ITEMS):
+                    word = words.word()
+                    if word == ']':
+                        break
+                    ids.append(ClusterID.from_string(word))
+                else:
+                    raise ValueError(f'a cluster-list holds at most {MAX_LIST_ITEMS} ids')
+            if not ids:
+                raise ValueError('cluster-list is empty')
+            return ClusterList.make_clusterlist(ids)
+        except (ValueError, OSError):
+            raise ConfigError(where, f"'{word}' is not a valid cluster-list", expected=[self.hint()]) from None
+
+    def render(self, value: ClusterList) -> list[str]:
+        return [Syntax('['), *(str(each) for each in value.clusters), Syntax(']')]
+
+    def hint(self) -> str:
+        return '<ipv4>|[ <ipv4> ... ]'
+
+    def examples(self) -> list[str]:
+        return ['10.0.0.1', '[ 10.0.0.1 ]', '[ 10.0.0.1 10.0.0.2 ]']
+
+
+# --------------------------------------------------------------------------- as-path
+
+_SEGMENT_OPEN: dict[str, tuple[type[SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET], str]] = {
+    '[': (SEQUENCE, ']'),
+    '(': (SET, ')'),
+}
+_SEGMENT_KEYWORD: dict[str, type[CONFED_SEQUENCE | CONFED_SET]] = {
+    'confed-sequence': CONFED_SEQUENCE,
+    'confed-set': CONFED_SET,
+}
+
+
+class ASPathType(Type[AS2Path]):
+    """`as-path [ 1 2 ] ( 3 4 ) confed-sequence [ 5 ] confed-set [ 6 7 ];`, or one AS alone."""
+
+    name = 'as-path'
+
+    def parse(self, words: Words) -> AS2Path:
+        where = words.where()
+        word = words.word()
+        try:
+            if word not in _SEGMENT_OPEN and word not in _SEGMENT_KEYWORD:
+                try:
+                    return AS2Path.make_aspath([SEQUENCE([ASN.from_string(word)])])
+                except ValueError:
+                    raise ValueError('could not parse as-path') from None
+            # `as-path [ ]` alone is the empty path, which is not an empty segment
+            if word == '[' and words.peek() == ']':
+                words.take()
+                return AS2Path.make_aspath([])
+            segments = [self._segment(words, word)]
+            for _ in range(MAX_LIST_ITEMS):
+                if words.peek() not in _SEGMENT_OPEN and words.peek() not in _SEGMENT_KEYWORD:
+                    break
+                segments.append(self._segment(words, words.word()))
+            return AS2Path.make_aspath(segments)
+        except ValueError as exc:
+            raise ConfigError(where, str(exc), expected=[self.hint()]) from None
+
+    @staticmethod
+    def _segment(words: Words, opener: str) -> SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET:
+        kind: type[SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET]
+        if opener in _SEGMENT_KEYWORD:
+            kind = _SEGMENT_KEYWORD[opener]
+            bracket = words.word()
+            if bracket not in _SEGMENT_OPEN:
+                raise ValueError(f"'{opener}' must be followed by '[' or '(', not '{bracket}'")
+            close = _SEGMENT_OPEN[bracket][1]
+        else:
+            kind, close = _SEGMENT_OPEN[opener]
+        segment = kind()
+        for _ in range(MAX_SEGMENT_ASNS + 2):
+            value = words.word()
+            if value == close:
+                break
+            if value == ',':
+                continue
+            if value in ('', ';', ']', ')'):
+                raise ValueError(f"as-path segment opened with '{opener}' is not closed with '{close}'")
+            if len(segment) == MAX_SEGMENT_ASNS:
+                raise ValueError(f'an as-path segment holds at most {MAX_SEGMENT_ASNS} AS numbers')
+            try:
+                segment.append(ASN.from_string(value))
+            except ValueError:
+                raise ValueError(f"'{value}' is not an AS number in the as-path") from None
+        if not segment:
+            raise ValueError('an as-path segment can not be empty')
+        return segment
+
+    def render(self, value: AS2Path) -> list[str]:
+        # the text of an as-path reads back as the same path
+        return [Syntax(word) if word in ('[', ']', '(', ')') else word for word in str(value).split()] or [
+            Syntax('['),
+            Syntax(']'),
+        ]
+
+    def hint(self) -> str:
+        return '<asn>|[ <asn> ... ] ( <asn> ... ) confed-sequence [ ... ] confed-set [ ... ]'
+
+    def examples(self) -> list[str]:
+        return ['65001', '[ 1 2 ]', '( 3 4 )', '[ 1 , 2 ]', '[ ]', 'confed-sequence [ 5 ] [ 1 ]', 'confed-set ( 7 8 )']
+
+
+# --------------------------------------------------------------------------- communities
+
+
+def community(value: str) -> Community:
+    separator = value.find(':')
+    if separator > 0:
+        high, low = value[:separator], value[separator + 1 :]
+        if not high.isdigit() or not low.isdigit():
+            raise ValueError(f'invalid community {value}')
+        if int(high) > COMMUNITY_HALF_MAX:
+            raise ValueError(f'invalid community {value} (AS number must be 0-{COMMUNITY_HALF_MAX})')
+        if int(low) > COMMUNITY_HALF_MAX:
+            raise ValueError(f'invalid community {value} (value must be 0-{COMMUNITY_HALF_MAX})')
+        return Community(pack('!L', (int(high) << 16) + int(low)))
+    if value[:2].lower() == '0x':
+        number = int(value, 16)
+        if number > Community.MAX:
+            raise ValueError(f'invalid community {value} (too large)')
+        return Community(pack('!L', number))
+    named = _WELL_KNOWN.get(value.lower())
+    if named is not None:
+        return Community(named)
+    if value.isdigit():
+        number = int(value)
+        if number > Community.MAX:
+            raise ValueError(f'invalid community {value} (too large)')
+        return Community(pack('!L', number))
+    raise ValueError(f'invalid community name {value}')
+
+
+_WELL_KNOWN = {
+    'no-export': Community.NO_EXPORT,
+    'no_export': Community.NO_EXPORT,
+    'no-advertise': Community.NO_ADVERTISE,
+    'no_advertise': Community.NO_ADVERTISE,
+    'no-export-subconfed': Community.NO_EXPORT_SUBCONFED,
+    'nopeer': Community.NO_PEER,
+    'no-peer': Community.NO_PEER,
+    'blackhole': Community.BLACKHOLE,
+}
+
+
+def large_community(value: str) -> LargeCommunity:
+    if value.find(':') > 0:
+        high, middle, low = value.split(':')
+        if not any(part.isdigit() for part in (high, middle, low)):
+            raise ValueError(f'invalid community {value}')
+        fields = [int(part) for part in (high, middle, low)]
+        if any(field > LARGE_COMMUNITY_FIELD_MAX for field in fields):
+            raise ValueError(f'invalid large community {value}: every field must be 0-{LARGE_COMMUNITY_FIELD_MAX}')
+        return LargeCommunity(pack('!LLL', *fields))
+    if value[:2].lower() == '0x':
+        number = int(value, 16)
+    elif value.lower().isdigit():
+        number = int(value.lower())
+    else:
+        raise ValueError(f'invalid large community name {value.lower()}')
+    if number > LargeCommunity.MAX:
+        raise ValueError(f'invalid large community {value} (too large)')
+    return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
+
+
+class CommunitiesType(Type[Any]):
+    """One community, or several in brackets; a comma is read as a community, and refused."""
+
+    def __init__(self, name: str, make: Any, container: Any, unique: bool, hint: str, examples: list[str]) -> None:
+        self.name = name
+        self._make = make
+        self._container = container
+        self._unique = unique  # a large community given twice is kept once
+        self._hint = hint
+        self._examples = examples
+
+    def parse(self, words: Words) -> Any:
+        where = words.where()
+        found = self._container()
+        word = words.word()
+        try:
+            if word != '[':
+                found.add(self._make(word))
+                return found
+            for _ in range(MAX_LIST_ITEMS):
+                where = words.where()
+                word = words.word()
+                if word == ']':
+                    return found
+                value = self._make(word)
+                if self._unique and value in found.communities:
+                    continue
+                found.add(value)
+        except ValueError as exc:
+            raise ConfigError(where, str(exc), expected=[self._hint]) from None
+        raise ConfigError(where, f'a {self.name} list holds at most {MAX_LIST_ITEMS} values')
+
+    def render(self, value: Any) -> list[str]:
+        return [Syntax('['), *(str(each) for each in value.communities), Syntax(']')]
+
+    def hint(self) -> str:
+        return f'{self._hint}|[ {self._hint} ... ]'
+
+    def examples(self) -> list[str]:
+        return self._examples
+
+
+COMMUNITIES = CommunitiesType(
+    'community',
+    community,
+    Communities,
+    False,
+    '<asn>:<value>',
+    ['1:1', '[ 1:1 2:2 ]', 'no-export', '[ no-advertise nopeer blackhole ]', '0x10001', '65537', '[ ]'],
+)
+LARGE_COMMUNITIES = CommunitiesType(
+    'large-community',
+    large_community,
+    LargeCommunities,
+    True,
+    '<asn>:<value>:<value>',
+    ['1:2:3', '[ 1:2:3 4:5:6 ]', '[ 1:2:3 1:2:3 ]', '0x1', '1'],
+)
+
+# --------------------------------------------------------------------------- extended communities
+
+# RFC 4360: two octet AS (0x00) and IPv4 address (0x01); RFC 5668: four octet AS (0x02)
+_HEADER = {
+    'target': bytes([0x00, 0x02]),
+    'target4': bytes([0x01, 0x02]),
+    'target-as4': bytes([0x02, 0x02]),
+    'origin': bytes([0x00, 0x03]),
+    'origin4': bytes([0x01, 0x03]),
+    'origin-as4': bytes([0x02, 0x03]),
+    'redirect': bytes([0x80, 0x08]),
+    'l2info': bytes([0x80, 0x0A]),
+    'redirect-to-nexthop': bytes([0x08, 0x00]),
+    'bandwidth': bytes([0x40, 0x04]),
+    'mup': bytes([0x0C, 0x00]),
+}
+_ENCODE = {
+    'target': 'HL',
+    'target4': 'LH',
+    'target-as4': 'LH',
+    'origin': 'HL',
+    'origin4': 'LH',
+    'origin-as4': 'LH',
+    'redirect': 'HL',
+    'l2info': 'BBHH',
+    'bandwidth': 'Hf',
+    'mup': 'HL',
+}
+_SIZE = {'B': 0xFF, 'H': 0xFFFF, 'L': 0xFFFFFFFF, 'f': 0xFFFFFFFF}
+# draft-ietf-idr-flowspec-redirect-ip: a name and an address, the only two word communities
+TAKES_AN_ADDRESS = ('redirect-to-nexthop-ietf', 'copy-to-nexthop-ietf')
+
+
+def _digit(text: str) -> bool:
+    return (text[:-1] if text.endswith('L') else text).isdigit()
+
+
+def _integer(text: str) -> int:
+    # backward compatibility: a trailing L asks for a four octet AS
+    base = 10
+    if text.startswith('0x'):
+        text, base = text[2:], 16
+    if text[-1] == 'L':
+        return int(text[:-1])
+    return int(text, base)
+
+
+def _ipv4(text: str, value: str) -> int:
+    parts = text.split('.')
+    if len(parts) != IPV4_OCTETS:
+        raise ValueError(f'invalid extended community: {value}, expecting {IPV4_OCTETS} dotted decimal parts')
+    number = 0
+    for part in parts:
+        if not part.isascii() or not part.isdigit() or int(part) > _SIZE['B']:
+            raise ValueError(f'invalid extended community: {value}, "{part}" is not a decimal number 0-255')
+        number = (number << 8) + int(part)
+    return number
+
+
+def _encode(command: str, components: list[int], parts: list[str]) -> tuple[bytes, str]:
+    if command not in _HEADER:
+        raise ValueError(f'invalid extended community type {command}')
+    if command in ('origin', 'target'):
+        if '.' in parts[0]:
+            command += '4'
+        elif components[0] > _SIZE['H'] or parts[0][-1] == 'L':
+            command += '-as4'
+    encoding = _ENCODE[command]
+    if len(components) != len(encoding):
+        raise ValueError(f'invalid extended community {command}, expecting {len(components)} fields')
+    for size, value in zip(encoding, components):
+        if value > _SIZE[size]:
+            raise ValueError(f'invalid extended community, value is too large {value}')
+    return _HEADER[command], '!' + encoding
+
+
+def extended_community(value: str) -> ExtendedCommunity:
+    name, _, address = value.partition(' ')
+    if name in TAKES_AN_ADDRESS:
+        from exabgp.bgp.message.update.attribute.community.extended import (
+            TrafficNextHopIPv4IETF,
+            TrafficNextHopIPv6IETF,
+        )
+
+        ip = IP.from_string(address)
+        copy = name.startswith('copy')
+        if ip.ipv4():
+            return TrafficNextHopIPv4IETF.make_traffic_nexthop_ipv4(cast(IPv4, ip), copy)
+        return cast(ExtendedCommunity, TrafficNextHopIPv6IETF.make_traffic_nexthop_ipv6(cast(IPv6, ip), copy))
+    if not value.count(':'):
+        if value[:2].lower() == '0x':
+            if len(value) % 2:
+                raise ValueError(f'invalid extended community {value}')
+            raw = bytes(int(value[index : index + 2], 16) for index in range(2, len(value), 2))
+            return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(raw, None))
+        if value == 'redirect-to-nexthop':
+            return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(_HEADER[value] + pack('!HL', 0, 0), None))
+        raise ValueError(f'invalid extended community {value} - lc+gc')
+    parts = value.split(':')
+    command = 'target' if len(parts) == 2 else parts.pop(0)
+    components = [_integer(part) if _digit(part) else _ipv4(part, value) for part in parts]
+    header, encoding = _encode(command, components, parts)
+    return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(header + pack(encoding, *components), None))
+
+
+class ExtendedCommunitiesType(Type[ExtendedCommunities]):
+    """One extended community, or several in brackets; the redirect-to-IP ones take an address."""
+
+    name = 'extended-community'
+
+    def parse(self, words: Words) -> ExtendedCommunities:
+        where = words.where()
+        found = ExtendedCommunities()
+        word = words.word()
+        try:
+            if word != '[':
+                found.add(self._one(words, word))
+                return found
+            for _ in range(MAX_LIST_ITEMS):
+                where = words.where()
+                word = words.word()
+                if word == ']':
+                    return found
+                found.add(self._one(words, word))
+        except (ValueError, IndexError, OSError) as exc:
+            raise ConfigError(where, str(exc) or f"'{word}' is not a valid extended community") from None
+        raise ConfigError(where, f'an extended-community list holds at most {MAX_LIST_ITEMS} values')
+
+    @staticmethod
+    def _one(words: Words, word: str) -> ExtendedCommunity:
+        if word in TAKES_AN_ADDRESS:
+            address = words.word()
+            if not address or address == ']':
+                raise ValueError(f'invalid extended community: {word} needs an IP address')
+            return extended_community(f'{word} {address}')
+        return extended_community(word)
+
+    def render(self, value: ExtendedCommunities) -> list[str]:
+        return [Syntax('['), *(word for each in value.communities for word in str(each).split()), Syntax(']')]
+
+    def hint(self) -> str:
+        return '<type>:<value>|[ <type>:<value> ... ]'
+
+    def examples(self) -> list[str]:
+        return [
+            'target:65000:1',
+            '65000:1',
+            'origin:10.0.0.1:1',
+            'target:4200000000:1',
+            '[ target:1:1 origin:2:2 ]',
+            'redirect:65000:1',
+            'l2info:19:0:1500:111',
+            'bandwidth:1:1000',
+            '0x0002fde800000001',
+            'redirect-to-nexthop',
+            'redirect-to-nexthop-ietf 10.0.0.1',
+            'copy-to-nexthop-ietf 2001:db8::1',
+            '[ redirect-to-nexthop-ietf 10.0.0.1 target:1:1 ]',
+        ]
+
+
+# --------------------------------------------------------------------------- MPLS
+
+
+class LabelsType(Type[Labels]):
+    """One MPLS label, or a stack of them in brackets."""
+
+    name = 'label'
+
+    def parse(self, words: Words) -> Labels:
+        where = words.where()
+        labels: list[int] = []
+        word = words.word()
+        try:
+            if word != '[':
+                labels.append(self._label(word))
+            else:
+                for _ in range(MAX_LIST_ITEMS):
+                    where = words.where()
+                    word = words.word()
+                    if word == ']':
+                        break
+                    labels.append(self._label(word))
+        except ValueError as exc:
+            raise ConfigError(where, str(exc) or f"'{word}' is not a valid label", expected=[self.hint()]) from None
+        return Labels.make_labels(labels)
+
+    @staticmethod
+    def _label(word: str) -> int:
+        label = int(word)
+        if not 0 <= label <= Labels.MAX:
+            raise ValueError(f'MPLS label {label} out of range, it is 0 to {Labels.MAX}')
+        return label
+
+    def render(self, value: Labels) -> list[str]:
+        return [Syntax('['), *(str(label) for label in value.labels), Syntax(']')]
+
+    def hint(self) -> str:
+        return '<label>|[ <label> ... ]'
+
+    def examples(self) -> list[str]:
+        return ['100', '[ 100 ]', '[ 100 200 ]', '1048575']
+
+
+def _route_distinguisher(data: str) -> RouteDistinguisher:
+    separator = data.find(':')
+    if separator <= 0:
+        raise ValueError(f"'{data}' is not a valid route-distinguisher, it is <asn>:<n> or <ipv4>:<n>")
+    administrator = data[:separator]
+    try:
+        suffix = int(data[separator + 1 :])
+    except ValueError:
+        raise ValueError(f"'{data}' is not a valid route-distinguisher, the suffix is a number") from None
+    if '.' in administrator:
+        if not 0 <= suffix < pow(2, 16):
+            raise ValueError(f"'{data}' is not a valid route-distinguisher (suffix must be 0-65535)")
+        octets = administrator.split('.')
+        if len(octets) != RD_TYPE_1_OCTETS:
+            raise ValueError(f"'{data}' is not a valid route-distinguisher, an IPv4 administrator is 4 octets")
+        try:
+            raw = bytes([0, 1]) + bytes(int(octet) for octet in octets) + bytes([suffix >> 8, suffix & 0xFF])
+        except ValueError:
+            raise ValueError(f"'{data}' is not a valid route-distinguisher (invalid IPv4 address)") from None
+        return RouteDistinguisher(raw)
+    try:
+        number = int(administrator)
+    except ValueError:
+        raise ValueError(f"'{data}' is not a valid route-distinguisher (prefix must be ASN or IPv4)") from None
+    if 0 <= number < pow(2, 16) and 0 <= suffix < pow(2, 32):
+        return RouteDistinguisher(bytes([0, 0]) + pack('!H', number) + pack('!L', suffix))
+    if 0 <= number < pow(2, 32) and 0 <= suffix < pow(2, 16):
+        return RouteDistinguisher(bytes([0, 2]) + pack('!L', number) + pack('!H', suffix))
+    raise ValueError(f'invalid route-distinguisher {data}')
+
+
+ROUTE_DISTINGUISHER = Word(
+    'route-distinguisher',
+    '<asn>:<n>|<ipv4>:<n>',
+    _route_distinguisher,
+    ['65000:1', '10.0.0.1:1', '4200000000:1'],
+)
+
+# --------------------------------------------------------------------------- configuration only
+
+
+class Internal(Type[Any]):
+    """A value exabgp keeps with the route and never sends: name, split, watchdog, withdraw.
+
+    They travel in the attribute collection under a private code, as the legacy parser made
+    them: a `str` or `int` subclass carrying the code as `ID`.
+    """
+
+    def __init__(self, name: str, code: int, base: type, convert: Any, hint: str, examples: list[str]) -> None:
+        self.name = name
+        self._class = type(name.title().replace('-', ''), (base,), {'ID': code})
+        self._convert = convert
+        self._hint = hint
+        self._examples = examples
+
+    def parse(self, words: Words) -> Any:
+        where = words.where()
+        try:
+            return self._class(self._convert(words.word()))
+        except ValueError as exc:
+            raise ConfigError(where, str(exc), expected=[self._hint]) from None
+
+    def render(self, value: Any) -> list[str]:
+        return [f'/{int(value)}'] if isinstance(value, int) else [str(value)]
+
+    def hint(self) -> str:
+        return self._hint
+
+    def examples(self) -> list[str]:
+        return self._examples
+
+
+def _split(word: str) -> int:
+    if not word or word[0] != '/' or not word[1:].isdigit():
+        raise ValueError(f"'{word}' is not a valid split value, it is /<length>")
+    return int(word[1:])
+
+
+def _watchdog(word: str) -> str:
+    if word.lower() in ('announce', 'withdraw'):
+        raise ValueError(f"'{word}' is a reserved word and cannot be used as a watchdog name")
+    return word
+
+
+NAME = Internal('name', Attribute.CODE.INTERNAL_NAME, str, str, '<name>', ['route-name', ''])
+SPLIT = Internal('split', Attribute.CODE.INTERNAL_SPLIT, int, _split, '/<length>', ['/24', '/32'])
+WATCHDOG = Internal('watchdog', Attribute.CODE.INTERNAL_WATCHDOG, str, _watchdog, '<name>', ['dog', ''])
+
+
+class Withdrawn:
+    ID = Attribute.CODE.INTERNAL_WITHDRAW
+
+
+WITHDRAW = Flag('withdraw', Withdrawn)
+
+
+# --------------------------------------------------------------------------- segment routing
+
+SRGB_MAX = pow(2, 24)  # an SRGB base and range are three octets each
+LABEL_INDEX_MAX = pow(2, 32)
+SRV6_STRUCTURE_FIELDS = 6  # LBL, LNL, FL, AL, transposition length and offset
+# the legacy parser looped until it met a closing bracket, forever when there was none
+MAX_PREFIX_SID_WORDS = 1024
+
+
+def _srgb_number(word: str) -> int:
+    """The number int() reads, as the legacy parser read it; SRGB_MAX, which is refused, when none."""
+    try:
+        return int(word)
+    except ValueError:
+        return SRGB_MAX
+
+
+class PrefixSidType(Type[Any]):
+    """`[ <label-index> ]` or `[ <label-index>, [ ( <base>,<range> ) ... ] ]` (RFC 8669).
+
+    legacy: words the format does not expect are skipped, and a word after the closing
+    bracket is swallowed when an inner `[` was seen. Where the legacy parser looped forever
+    on a list which was never closed, this one stops and refuses it.
+    """
+
+    name = 'bgp-prefix-sid'
+
+    def parse(self, words: Words) -> Any:
+        from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
+        from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
+        from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
+
+        where = words.where()
+        if words.word() != '[':
+            raise ConfigError(where, 'invalid bgp-prefix-sid', expected=[self.hint()])
+        label_sid = words.word()
+        ranges = self._ranges(words, where)
+        try:
+            index = int(label_sid)
+        except ValueError:
+            raise ConfigError(where, f"'{label_sid}' is not a valid label index") from None
+        attributes: list[Any] = [SrLabelIndex.make_labelindex(index)] if index < LABEL_INDEX_MAX else []
+        srgbs: list[tuple[int, int]] = []
+        for base, size in ranges:
+            numbers = (_srgb_number(base), _srgb_number(size))
+            if not all(number < SRGB_MAX for number in numbers):
+                raise ConfigError(where, 'could not parse SRGB tupple')
+            srgbs.append(numbers)
+        if srgbs:
+            attributes.append(SrGb.make_srgb(srgbs))
+        return PrefixSid(attributes)
+
+    @staticmethod
+    def _ranges(words: Words, where: str) -> list[tuple[str, str]]:
+        ranges: list[tuple[str, str]] = []
+        extra = False
+        base = size = None
+        for _ in range(MAX_PREFIX_SID_WORDS):
+            if words.at_end():
+                raise ConfigError(where, "could not parse BGP PrefixSid attribute: missing ']'")
+            word = words.word()
+            if word == '[':
+                extra = True
+            elif word == '(':
+                base, size = PrefixSidType._range(words, where)
+            elif word == ')':
+                if base is None or size is None:
+                    raise ConfigError(where, 'could not parse BGP PrefixSid attribute: a range without its values')
+                ranges.append((base, size))
+            elif word == ']':
+                if extra:
+                    words.take()
+                return ranges
+        raise ConfigError(where, f'a bgp-prefix-sid holds at most {MAX_PREFIX_SID_WORDS} words')
+
+    @staticmethod
+    def _range(words: Words, where: str) -> tuple[str | None, str | None]:
+        base = size = None
+        after_comma = False
+        for _ in range(MAX_PREFIX_SID_WORDS):
+            if words.at_end():
+                raise ConfigError(where, "could not parse BGP PrefixSid attribute: missing ')'")
+            word = words.peek()
+            if word == ')':
+                return base, size
+            words.take()
+            if word == ',':
+                after_comma = True
+            elif after_comma:
+                size, after_comma = word, False
+            else:
+                base = word
+        raise ConfigError(where, f'a bgp-prefix-sid holds at most {MAX_PREFIX_SID_WORDS} words')
+
+    def render(self, value: Any) -> list[str]:
+        return str(value).split()
+
+    def hint(self) -> str:
+        return '[ <label-index> ] | [ <label-index>, [ ( <base>,<range> ) ... ] ]'
+
+    def examples(self) -> list[str]:
+        return ['[ 300 ]', '[ 300, [ ( 800000,100 ) ] ]', '[ 300, [ ( 800000,100 ), ( 1000000,5000 ) ] ]']
+
+
+class PrefixSidSrv6Type(Type[Any]):
+    """`( l3-service|l2-service <sid> [<behavior> [ [ <LBL>,<LNL>,<FL>,<AL>,<Tpose-len>,<Tpose-offset> ] ]] )`."""
+
+    name = 'bgp-prefix-sid-srv6'
+
+    def parse(self, words: Words) -> Any:
+        from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
+        from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
+        from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
+        from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
+
+        where = words.where()
+        try:
+            self._expect(words, '(')
+            service = words.word()
+            if service not in ('l3-service', 'l2-service'):
+                raise ValueError(f"expect 'l3-service' or 'l2-service', but received '{service}'")
+            sid = IPv6.from_string(words.word())
+            behavior, structures = self._behavior(words)
+            information = [Srv6SidInformation(sid=sid, behavior=behavior, subsubtlvs=structures)]
+        except (ValueError, OSError, IndexError) as exc:
+            raise ConfigError(where, str(exc) or 'invalid bgp-prefix-sid-srv6', expected=[self.hint()]) from None
+        if service == 'l3-service':
+            return PrefixSid([Srv6L3Service(subtlvs=information)])
+        return PrefixSid([Srv6L2Service(subtlvs=information)])
+
+    @staticmethod
+    def _expect(words: Words, expected: str) -> None:
+        word = words.word()
+        if word != expected:
+            raise ValueError(f"expect '{expected}', but received '{word}'")
+
+    @staticmethod
+    def _number(word: str) -> int:
+        return int(word, 16 if word.startswith('0x') else 10)
+
+    def _behavior(self, words: Words) -> tuple[int, list[Any]]:
+        from exabgp.bgp.message.update.attribute.sr.srv6.sidstructure import Srv6SidStructure
+
+        word = words.word()
+        if word == ')':
+            return 0xFFFF, []
+        behavior = self._number(word)
+        word = words.word()
+        structures: list[Any] = []
+        if word == '[':
+            fields = []
+            for index in range(SRV6_STRUCTURE_FIELDS):
+                if index:
+                    self._expect(words, ',')
+                fields.append(self._number(words.word()))
+            self._expect(words, ']')
+            structures.append(Srv6SidStructure.make_sid_structure(*fields))
+            word = words.word()
+        if word != ')':
+            raise ValueError(f"expect ')', but received '{word}'")
+        return behavior, structures
+
+    def render(self, value: Any) -> list[str]:
+        return str(value).split()
+
+    def hint(self) -> str:
+        return '( l3-service|l2-service <ipv6> [<behavior> [ [ <LBL>, <LNL>, <FL>, <AL>, <len>, <offset> ] ]] )'
+
+    def examples(self) -> list[str]:
+        return [
+            '( l3-service 2001:db8::1 )',
+            '( l3-service 2001:db8::1 0x48 )',
+            '( l2-service 2001:db8::1 0x48 )',
+            '( l3-service 2001:db8::1 0x48 [ 64, 24, 16, 0, 16, 64 ] )',
+        ]
