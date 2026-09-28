@@ -24,10 +24,6 @@ from exabgp.configuration.grammar.words import Words
 MAX_DEPTH = 32
 
 
-class NotMigrated(ConfigError):
-    """A section the legacy parser knows and the grammar does not declare yet."""
-
-
 @dataclass
 class _Frame:
     block: Block
@@ -68,8 +64,6 @@ class Engine:
     def _leaf(self, frame: _Frame, statement: Statement) -> None:
         words = statement.words
         keyword = words[0] if words else statement.tokens[-1]
-        if keyword.word in frame.block.pending and words:
-            raise NotMigrated(keyword.where(), f'statement {keyword.word} is not declared in the grammar yet')
         child = frame.block.leaf(keyword.word) if words else None
         if child is None:
             raise self._unknown(frame.block, keyword, [leaf.keyword for leaf in frame.block.leaves()])
@@ -83,8 +77,6 @@ class Engine:
     def _open(self, stack: list[_Frame], statement: Statement) -> _Frame:
         frame = stack[-1]
         keyword = statement.tokens[0]
-        if keyword.word in frame.block.pending and statement.words:
-            raise NotMigrated(keyword.where(), f'section {keyword.word} is not declared in the grammar yet')
         child = frame.block.block(keyword.word) if statement.words else None
         if child is None:
             raise self._unknown(frame.block, keyword, [block.keyword for block in frame.block.blocks()], 'section')
@@ -93,6 +85,8 @@ class Engine:
         name = child.name.parse(self._words(statement, 1)) if child.name else ''
         if child.keep == Keep.NAMED and name in frame.values.get(child.field, {}):
             raise ConfigError(keyword.where(), f'a {child.keyword} section called "{name}" already exists')
+        if child.opened is not None:
+            child.opened(self.context)
         opened = _Frame(child, name, keyword)
         existing = frame.values.get(child.field)
         if child.keep == Keep.SINGLE and isinstance(existing, dict):

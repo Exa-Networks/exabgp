@@ -23,6 +23,7 @@ from exabgp.bgp.message.open.capability.role import RoleValue
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.asn import ASN
     from exabgp.bgp.message.open.routerid import RouterID
+    from exabgp.bgp.message.operational import OperationalFamily
     from exabgp.bgp.neighbor.capability import NeighborCapability
     from exabgp.protocol.family import AFI, SAFI
     from exabgp.protocol.ip import IP
@@ -180,6 +181,8 @@ class NeighborSettings:
     # Routes and API (optional)
     routes: list['Route'] = field(default_factory=list)
     api: dict[str, Any] = field(default_factory=dict)
+    # the operational messages of the configuration, sent once the session is up
+    operational: list['OperationalFamily'] = field(default_factory=list)
 
     # RFC 4486 4: per family, the most routes the peer may hold with us
     prefix_limit: dict[tuple['AFI', 'SAFI'], int] = field(default_factory=dict)

@@ -360,6 +360,16 @@ ANY_WORD: frozenset[tuple[tuple[str, ...], str]] = frozenset(
         (('neighbor', 'static', 'route'), 'atomic-aggregate'),
         (('neighbor', 'static', 'route'), 'withdraw'),
         (('neighbor', 'static', 'route'), 'name'),
+        # flow actions which take no value, what follows ignored
+        (('neighbor', 'l2vpn', 'vpls'), 'atomic-aggregate'),
+        (('neighbor', 'l2vpn', 'vpls'), 'withdraw'),
+        (('neighbor', 'l2vpn', 'vpls'), 'name'),
+        (('neighbor', 'l2vpn'), 'atomic-aggregate'),
+        (('neighbor', 'l2vpn'), 'withdraw'),
+        (('neighbor', 'l2vpn'), 'name'),
+        (('neighbor', 'flow', 'route', 'then'), 'accept'),
+        (('neighbor', 'flow', 'route', 'then'), 'discard'),
+        (('neighbor', 'flow', 'route', 'then'), 'redirect-to-nexthop-simpson'),
     }
 )
 

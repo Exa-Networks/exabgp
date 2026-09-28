@@ -400,7 +400,12 @@ IPv4/IPv6, VPNv4/v6, EVPN, BGP-LS, FlowSpec, VPLS, MUP, SRv6
     - **Read when:** Debugging FlowSpec encoding issues, understanding resolved limitations
     - **Contains:** Coverage stats, resolved issues, `group` command solutions
 
+20. **`.claude/exabgp/CONFIGURATION_GRAMMAR.md`** - The configuration grammar
+    - **Read when:** Adding or changing a configuration keyword, API route command, or configuration printing
+    - **Contains:** Package layout, how to add a keyword, the tests which prove behaviour is preserved
+
 **Quick reference:**
+- Adding a configuration keyword → Read #20
 - Adding NLRI type → Read #3, then #1
 - Understanding message flow → Read #2
 - Finding where BGP concept lives → Read #4

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from exabgp.configuration.grammar.engine import Engine, NotMigrated
+from exabgp.configuration.grammar.engine import Engine
 from exabgp.configuration.grammar.lexer import lex_command, lex_file, lex_text
 from exabgp.configuration.settings import ConfigurationSettings
 
@@ -34,21 +34,18 @@ def read_text(text: str) -> ConfigurationSettings:
 
 
 def _command_sections() -> dict[str, Any]:
-    from exabgp.configuration.grammar.tree.announce import IPV4, IPV6, STATIC
+    from exabgp.configuration.grammar.tree.announce import IPV4, IPV6, L2VPN, STATIC
+    from exabgp.configuration.grammar.tree.flow import FLOW
 
-    return {'static': STATIC, 'ipv4': IPV4, 'ipv6': IPV6}
+    return {'static': STATIC, 'ipv4': IPV4, 'ipv6': IPV6, 'flow': FLOW, 'l2vpn': L2VPN}
 
 
 def read_command(section: str, text: str, announce: bool) -> list[Any]:
-    """The routes of one API command, read as a statement of `section` (Configuration.partial).
-
-    Raises NotMigrated for a section the grammar does not declare yet.
-    """
+    """The routes of one API command, read as a statement of `section` (Configuration.partial)."""
     from exabgp.configuration.grammar.tree.static import ANNOUNCE, ROUTES
 
     block = _command_sections().get(section)
-    if block is None:
-        raise NotMigrated('', f'section {section} is not declared in the grammar yet')
+    assert block is not None, f'partial() reads no section {section}'
     engine = Engine(block)
     engine.context[ANNOUNCE] = announce
     engine.read(lex_command(text if text.endswith(';') or text.endswith('}') else text + ' ;'))

@@ -85,9 +85,14 @@ def test_md5_base64_auto_explains_its_removal(tmp_path) -> None:
 
 def _warnings(configuration: Configuration) -> list[str]:
     """Return the configuration warnings raised while parsing."""
-    with patch('exabgp.configuration.neighbor.log') as log:
+    # the legacy parser and the grammar each warn from their own module
+    with (
+        patch('exabgp.configuration.neighbor.log') as legacy,
+        patch('exabgp.configuration.grammar.tree.neighbor.log') as grammar,
+    ):
         assert configuration.reload(), str(configuration.error)
-    return [call.args[0]() for call in log.warning.call_args_list]
+    calls = legacy.warning.call_args_list + grammar.warning.call_args_list
+    return [call.args[0]() for call in calls]
 
 
 def test_an_upgrade_which_changes_the_key_is_reported(tmp_path) -> None:

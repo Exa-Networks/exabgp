@@ -12,20 +12,21 @@ import re
 
 import pytest
 
-from exabgp.configuration.compare import route_state
+from exabgp.configuration.compare import LEGACY, route_state
 from exabgp.configuration.configuration import Configuration
-from exabgp.configuration.grammar.engine import NotMigrated
 from exabgp.configuration.grammar.read import read_command
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
-COMMAND = re.compile(r'^\d+:cmd:(announce|withdraw) ((?:route|attributes?|ipv4|ipv6) .*)$')
+COMMAND = re.compile(r'^\d+:cmd:(announce|withdraw) ((?:route|attributes?|ipv4|ipv6|flow|vpls) .*)$')
 
 
 def section(line: str) -> tuple[str, str]:
     """The section partial() is given, and the text: `ipv4 unicast ...` is `unicast ...` of ipv4."""
     first, _, rest = line.partition(' ')
-    if first in ('ipv4', 'ipv6'):
+    if first in ('ipv4', 'ipv6', 'flow'):
         return first, rest
+    if first == 'vpls':
+        return 'l2vpn', line
     return 'static', line
 
 
@@ -46,7 +47,7 @@ COMMANDS = _commands()
 def legacy(action: str, line: str) -> list[tuple[object, ...]] | str:
     configuration = Configuration([''], text=True)
     try:
-        accepted = configuration.partial(*section(line), action)
+        accepted = configuration.partial(*section(line), action, LEGACY)
     except AttributeError:
         # legacy: an announce family builds `originator-id` as an address, which the attribute
         # collection can not take, and the exception leaves partial(): the command fails
@@ -60,8 +61,6 @@ def legacy(action: str, line: str) -> list[tuple[object, ...]] | str:
 def grammar(action: str, line: str) -> list[tuple[object, ...]] | str:
     try:
         routes = read_command(*section(line), action == 'announce')
-    except NotMigrated as exc:
-        pytest.skip(str(exc).split(': ', 1)[-1])
     except ValueError:
         return 'rejected'
     return [route_state(route) for route in routes]

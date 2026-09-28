@@ -443,31 +443,31 @@ class ASPathType(Type[AS2Path]):
 # --------------------------------------------------------------------------- communities
 
 
-def community(value: str) -> Community:
-    separator = value.find(':')
+def community(word: str) -> Community:
+    separator = word.find(':')
     if separator > 0:
-        high, low = value[:separator], value[separator + 1 :]
+        high, low = word[:separator], word[separator + 1 :]
         if not high.isdigit() or not low.isdigit():
-            raise ValueError(f'invalid community {value}')
+            raise ValueError(f'invalid community {word}')
         if int(high) > COMMUNITY_HALF_MAX:
-            raise ValueError(f'invalid community {value} (AS number must be 0-{COMMUNITY_HALF_MAX})')
+            raise ValueError(f'invalid community {word} (AS number must be 0-{COMMUNITY_HALF_MAX})')
         if int(low) > COMMUNITY_HALF_MAX:
-            raise ValueError(f'invalid community {value} (value must be 0-{COMMUNITY_HALF_MAX})')
+            raise ValueError(f'invalid community {word} (value must be 0-{COMMUNITY_HALF_MAX})')
         return Community(pack('!L', (int(high) << 16) + int(low)))
-    if value[:2].lower() == '0x':
-        number = int(value, 16)
+    if word[:2].lower() == '0x':
+        number = int(word, 16)
         if number > Community.MAX:
-            raise ValueError(f'invalid community {value} (too large)')
+            raise ValueError(f'invalid community {word} (too large)')
         return Community(pack('!L', number))
-    named = _WELL_KNOWN.get(value.lower())
+    named = _WELL_KNOWN.get(word.lower())
     if named is not None:
         return Community(named)
-    if value.isdigit():
-        number = int(value)
+    if word.isdigit():
+        number = int(word)
         if number > Community.MAX:
-            raise ValueError(f'invalid community {value} (too large)')
+            raise ValueError(f'invalid community {word} (too large)')
         return Community(pack('!L', number))
-    raise ValueError(f'invalid community name {value}')
+    raise ValueError(f'invalid community name {word}')
 
 
 _WELL_KNOWN = {
@@ -482,23 +482,23 @@ _WELL_KNOWN = {
 }
 
 
-def large_community(value: str) -> LargeCommunity:
-    if value.find(':') > 0:
-        high, middle, low = value.split(':')
+def large_community(word: str) -> LargeCommunity:
+    if word.find(':') > 0:
+        high, middle, low = word.split(':')
         if not any(part.isdigit() for part in (high, middle, low)):
-            raise ValueError(f'invalid community {value}')
+            raise ValueError(f'invalid community {word}')
         fields = [int(part) for part in (high, middle, low)]
         if any(field > LARGE_COMMUNITY_FIELD_MAX for field in fields):
-            raise ValueError(f'invalid large community {value}: every field must be 0-{LARGE_COMMUNITY_FIELD_MAX}')
+            raise ValueError(f'invalid large community {word}: every field must be 0-{LARGE_COMMUNITY_FIELD_MAX}')
         return LargeCommunity(pack('!LLL', *fields))
-    if value[:2].lower() == '0x':
-        number = int(value, 16)
-    elif value.lower().isdigit():
-        number = int(value.lower())
+    if word[:2].lower() == '0x':
+        number = int(word, 16)
+    elif word.lower().isdigit():
+        number = int(word.lower())
     else:
-        raise ValueError(f'invalid large community name {value.lower()}')
+        raise ValueError(f'invalid large community name {word.lower()}')
     if number > LargeCommunity.MAX:
-        raise ValueError(f'invalid large community {value} (too large)')
+        raise ValueError(f'invalid large community {word} (too large)')
     return LargeCommunity(pack('!LLL', number >> 64, (number >> 32) & 0xFFFFFFFF, number & 0xFFFFFFFF))
 
 
@@ -594,18 +594,18 @@ _SIZE = {'B': 0xFF, 'H': 0xFFFF, 'L': 0xFFFFFFFF, 'f': 0xFFFFFFFF}
 TAKES_AN_ADDRESS = ('redirect-to-nexthop-ietf', 'copy-to-nexthop-ietf')
 
 
-def _digit(text: str) -> bool:
-    return (text[:-1] if text.endswith('L') else text).isdigit()
+def _digit(word: str) -> bool:
+    return (word[:-1] if word.endswith('L') else word).isdigit()
 
 
-def _integer(text: str) -> int:
+def _integer(word: str) -> int:
     # backward compatibility: a trailing L asks for a four octet AS
     base = 10
-    if text.startswith('0x'):
-        text, base = text[2:], 16
-    if text[-1] == 'L':
-        return int(text[:-1])
-    return int(text, base)
+    if word.startswith('0x'):
+        word, base = word[2:], 16
+    if word[-1] == 'L':
+        return int(word[:-1])
+    return int(word, base)
 
 
 def _ipv4(text: str, value: str) -> int:
@@ -637,8 +637,8 @@ def _encode(command: str, components: list[int], parts: list[str]) -> tuple[byte
     return _HEADER[command], '!' + encoding
 
 
-def extended_community(value: str) -> ExtendedCommunity:
-    name, _, address = value.partition(' ')
+def extended_community(word: str) -> ExtendedCommunity:
+    name, _, address = word.partition(' ')
     if name in TAKES_AN_ADDRESS:
         from exabgp.bgp.message.update.attribute.community.extended import (
             TrafficNextHopIPv4IETF,
@@ -650,18 +650,18 @@ def extended_community(value: str) -> ExtendedCommunity:
         if ip.ipv4():
             return TrafficNextHopIPv4IETF.make_traffic_nexthop_ipv4(cast(IPv4, ip), copy)
         return cast(ExtendedCommunity, TrafficNextHopIPv6IETF.make_traffic_nexthop_ipv6(cast(IPv6, ip), copy))
-    if not value.count(':'):
-        if value[:2].lower() == '0x':
-            if len(value) % 2:
-                raise ValueError(f'invalid extended community {value}')
-            raw = bytes(int(value[index : index + 2], 16) for index in range(2, len(value), 2))
+    if not word.count(':'):
+        if word[:2].lower() == '0x':
+            if len(word) % 2:
+                raise ValueError(f'invalid extended community {word}')
+            raw = bytes(int(word[index : index + 2], 16) for index in range(2, len(word), 2))
             return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(raw, None))
-        if value == 'redirect-to-nexthop':
-            return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(_HEADER[value] + pack('!HL', 0, 0), None))
-        raise ValueError(f'invalid extended community {value} - lc+gc')
-    parts = value.split(':')
+        if word == 'redirect-to-nexthop':
+            return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(_HEADER[word] + pack('!HL', 0, 0), None))
+        raise ValueError(f'invalid extended community {word} - lc+gc')
+    parts = word.split(':')
     command = 'target' if len(parts) == 2 else parts.pop(0)
-    components = [_integer(part) if _digit(part) else _ipv4(part, value) for part in parts]
+    components = [_integer(part) if _digit(part) else _ipv4(part, word) for part in parts]
     header, encoding = _encode(command, components, parts)
     return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(header + pack(encoding, *components), None))
 
@@ -765,35 +765,35 @@ class LabelsType(Type[Labels]):
         return ['100', '[ 100 ]', '[ 100 200 ]', '1048575']
 
 
-def _route_distinguisher(data: str) -> RouteDistinguisher:
-    separator = data.find(':')
+def _route_distinguisher(word: str) -> RouteDistinguisher:
+    separator = word.find(':')
     if separator <= 0:
-        raise ValueError(f"'{data}' is not a valid route-distinguisher, it is <asn>:<n> or <ipv4>:<n>")
-    administrator = data[:separator]
+        raise ValueError(f"'{word}' is not a valid route-distinguisher, it is <asn>:<n> or <ipv4>:<n>")
+    administrator = word[:separator]
     try:
-        suffix = int(data[separator + 1 :])
+        suffix = int(word[separator + 1 :])
     except ValueError:
-        raise ValueError(f"'{data}' is not a valid route-distinguisher, the suffix is a number") from None
+        raise ValueError(f"'{word}' is not a valid route-distinguisher, the suffix is a number") from None
     if '.' in administrator:
         if not 0 <= suffix < pow(2, 16):
-            raise ValueError(f"'{data}' is not a valid route-distinguisher (suffix must be 0-65535)")
+            raise ValueError(f"'{word}' is not a valid route-distinguisher (suffix must be 0-65535)")
         octets = administrator.split('.')
         if len(octets) != RD_TYPE_1_OCTETS:
-            raise ValueError(f"'{data}' is not a valid route-distinguisher, an IPv4 administrator is 4 octets")
+            raise ValueError(f"'{word}' is not a valid route-distinguisher, an IPv4 administrator is 4 octets")
         try:
             raw = bytes([0, 1]) + bytes(int(octet) for octet in octets) + bytes([suffix >> 8, suffix & 0xFF])
         except ValueError:
-            raise ValueError(f"'{data}' is not a valid route-distinguisher (invalid IPv4 address)") from None
+            raise ValueError(f"'{word}' is not a valid route-distinguisher (invalid IPv4 address)") from None
         return RouteDistinguisher(raw)
     try:
         number = int(administrator)
     except ValueError:
-        raise ValueError(f"'{data}' is not a valid route-distinguisher (prefix must be ASN or IPv4)") from None
+        raise ValueError(f"'{word}' is not a valid route-distinguisher (prefix must be ASN or IPv4)") from None
     if 0 <= number < pow(2, 16) and 0 <= suffix < pow(2, 32):
         return RouteDistinguisher(bytes([0, 0]) + pack('!H', number) + pack('!L', suffix))
     if 0 <= number < pow(2, 32) and 0 <= suffix < pow(2, 16):
         return RouteDistinguisher(bytes([0, 2]) + pack('!L', number) + pack('!H', suffix))
-    raise ValueError(f'invalid route-distinguisher {data}')
+    raise ValueError(f'invalid route-distinguisher {word}')
 
 
 ROUTE_DISTINGUISHER = Word(
@@ -978,7 +978,7 @@ class PrefixSidSrv6Type(Type[Any]):
 
         where = words.where()
         try:
-            self._expect(words, '(')
+            words.expect('(')
             service = words.word()
             if service not in ('l3-service', 'l2-service'):
                 raise ValueError(f"expect 'l3-service' or 'l2-service', but received '{service}'")
@@ -990,12 +990,6 @@ class PrefixSidSrv6Type(Type[Any]):
         if service == 'l3-service':
             return PrefixSid([Srv6L3Service(subtlvs=information)])
         return PrefixSid([Srv6L2Service(subtlvs=information)])
-
-    @staticmethod
-    def _expect(words: Words, expected: str) -> None:
-        word = words.word()
-        if word != expected:
-            raise ValueError(f"expect '{expected}', but received '{word}'")
 
     @staticmethod
     def _number(word: str) -> int:
@@ -1014,9 +1008,9 @@ class PrefixSidSrv6Type(Type[Any]):
             fields = []
             for index in range(SRV6_STRUCTURE_FIELDS):
                 if index:
-                    self._expect(words, ',')
+                    words.expect(',')
                 fields.append(self._number(words.word()))
-            self._expect(words, ']')
+            words.expect(']')
             structures.append(Srv6SidStructure.make_sid_structure(*fields))
             word = words.word()
         if word != ')':

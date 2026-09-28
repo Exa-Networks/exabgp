@@ -15,9 +15,12 @@ from typing import Any
 
 from exabgp.configuration.grammar.lexer import COMMENT, QUOTES, SEPARATORS, SPACES, TERMINATORS
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
-from exabgp.configuration.grammar.types.base import Syntax
+from exabgp.configuration.grammar.types.base import Printed, Syntax
 
 INDENT = '\t'
+# the statements of a block whose order matters across keywords, as (keyword, value) pairs,
+# printed before the fields, which are printed in the order the block declares its children
+STATEMENTS = '_statements'
 _PLAIN_BREAKERS = set(SPACES + TERMINATORS + SEPARATORS + QUOTES + (COMMENT, '\\'))
 _ESCAPED = {'\\': '\\\\', '\b': '\\b', '\f': '\\f', '\n': '\\n', '\r': '\\r', '\t': '\\t'}
 
@@ -46,7 +49,8 @@ def fields(built: Any) -> dict[str, Any]:
 
 
 def _leaf(leaf: Leaf, value: Any) -> str:
-    words = ' '.join(quote(word) for word in leaf.type.render(value))
+    rendered = list(value) if isinstance(value, Printed) else leaf.type.render(value)
+    words = ' '.join(quote(word) for word in rendered)
     return f'{leaf.keyword} {words};' if words else f'{leaf.keyword};'
 
 
@@ -66,7 +70,8 @@ def _block(block: Block, name: Any, built: Any, depth: int, context: dict[str, A
 
 
 def _children(block: Block, values: dict[str, Any], depth: int, context: dict[str, Any]) -> list[str]:
-    lines: list[str] = []
+    leaves = {child.keyword: child for child in block.children if isinstance(child, Leaf)}
+    lines = [INDENT * depth + _leaf(leaves[keyword], value) for keyword, value in values.get(STATEMENTS, [])]
     for child in block.children:
         value = values.get(child.field)
         if value is None:
@@ -80,7 +85,7 @@ def _children(block: Block, values: dict[str, Any], depth: int, context: dict[st
         elif child.keep == Keep.NAMED:
             for name, built in value.items():
                 lines.extend(_block(child, name, built, depth, context))
-        elif child.keep == Keep.LIST:
+        elif child.keep in (Keep.LIST, Keep.EXTEND):
             for built in value:
                 lines.extend(_block(child, '', built, depth, context))
         else:

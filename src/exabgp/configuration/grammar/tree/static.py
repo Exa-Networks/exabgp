@@ -129,7 +129,8 @@ def _nlri_class(words: Words, settings: INETSettings, prefix: IPRange | None) ->
     return INET
 
 
-def _announce(words: Words) -> Action:
+def action(words: Words) -> Action:
+    """Whether the route read is announced or withdrawn, as the API command said."""
     return Action.ANNOUNCE if words.context.get(ANNOUNCE, True) else Action.WITHDRAW
 
 
@@ -143,7 +144,7 @@ class RouteLine(Type[list[Route]]):
         settings = INETSettings()
         settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask)
         settings.afi = IP.toafi(prefix.top())
-        settings.action = _announce(words)
+        settings.action = action(words)
         klass = _nlri_class(words, settings, prefix)
         collected = Collected(settings)
         read_values(words, collected)
@@ -173,7 +174,7 @@ class AttributesLine(Type[list[Route]]):
         words.context[bgp.AFI_CONTEXT] = prefix.afi if prefix is not None else AFI.ipv4
         settings = INETSettings()
         settings.afi = IP.toafi(prefix.top()) if prefix is not None else AFI.ipv4
-        settings.action = _announce(words)
+        settings.action = action(words)
         klass = _nlri_class(words, settings, prefix)
         collected = Collected(settings)
         read_values(words, collected, stop='nlri')
@@ -407,7 +408,7 @@ def finish(routes: list[Route]) -> list[Route]:
 # --------------------------------------------------------------------------- the blocks
 
 
-def _take_routes(values: dict[str, Any], routes: list[Route], context: dict[str, Any]) -> None:
+def store_routes(values: dict[str, Any], routes: list[Route], context: dict[str, Any]) -> None:
     context.setdefault(ROUTES, []).extend(routes)
 
 
@@ -476,14 +477,13 @@ def static_block(extra: tuple[Leaf, ...]) -> Block:
         field='static',
         doc='routes to announce',
         children=STATIC_CHILDREN + extra,
-        pending=frozenset({'sr-policy'}),
     )
 
 
 STATIC_CHILDREN = (
-    Leaf('route', RouteLine(), field='_routes', store=_take_routes, doc='a route, on one line'),
-    Leaf('attributes', AttributesLine(), field='_attributes', store=_take_routes),
+    Leaf('route', RouteLine(), field='_routes', store=store_routes, doc='a route, on one line'),
+    Leaf('attributes', AttributesLine(), field='_attributes', store=store_routes),
     # legacy: 3.4 wrote `attribute`, still read as `attributes`
-    Leaf('attribute', AttributesLine(), field='_attribute', store=_take_routes),
+    Leaf('attribute', AttributesLine(), field='_attribute', store=store_routes),
     NESTED_ROUTE,
 )

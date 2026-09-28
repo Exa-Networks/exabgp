@@ -21,9 +21,12 @@ from exabgp.bgp.neighbor.capability import NeighborCapability
 from exabgp.bgp.neighbor.settings import NeighborSettings, SessionSettings
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.empty import Empty
+from exabgp.configuration.grammar.render import STATEMENTS
 from exabgp.configuration.grammar.tree.family import SAFIS, default_families
+from exabgp.configuration.grammar.tree.operational import kind
 from exabgp.configuration.grammar.tree.resolve import API_COMMANDS, API_MESSAGES, REQUIRABLE, REQUIRE
-from exabgp.protocol.family import AFI, FamilyTuple
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
+from exabgp.protocol.ip import IP
 from exabgp.util.enumeration import TriState
 
 
@@ -75,23 +78,25 @@ def _tristate(state: TriState) -> bool | None:
     return None if state.is_unset() else state.is_enabled()
 
 
-def _capability(cap: NeighborCapability) -> dict[str, Any]:
+def _capability(neighbor_capability: NeighborCapability) -> dict[str, Any]:
     values: dict[str, Any] = {
-        'asn4': _tristate(cap.asn4),
-        'extended-message': _tristate(cap.extended_message),
-        'multi-session': _tristate(cap.multi_session),
-        'operational': _tristate(cap.operational),
-        'nexthop': _tristate(cap.nexthop),
-        'aigp': _tristate(cap.aigp),
-        'link-local-nexthop': _tristate(cap.link_local_nexthop),
-        'add-path': cap.add_path,
-        'route-refresh': bool(cap.route_refresh),
-        'software-version': cap.software_version is not None,
-        'link-local-prefer': cap.link_local_prefer,
-        'graceful-restart': cap.graceful_restart.time if cap.graceful_restart.is_enabled() else False,
+        'asn4': _tristate(neighbor_capability.asn4),
+        'extended-message': _tristate(neighbor_capability.extended_message),
+        'multi-session': _tristate(neighbor_capability.multi_session),
+        'operational': _tristate(neighbor_capability.operational),
+        'nexthop': _tristate(neighbor_capability.nexthop),
+        'aigp': _tristate(neighbor_capability.aigp),
+        'link-local-nexthop': _tristate(neighbor_capability.link_local_nexthop),
+        'add-path': neighbor_capability.add_path,
+        'route-refresh': bool(neighbor_capability.route_refresh),
+        'software-version': neighbor_capability.software_version is not None,
+        'link-local-prefer': neighbor_capability.link_local_prefer,
+        'graceful-restart': neighbor_capability.graceful_restart.time
+        if neighbor_capability.graceful_restart.is_enabled()
+        else False,
     }
     for name, code in REQUIRABLE.items():
-        if code in cap.required:
+        if code in neighbor_capability.required:
             values[name] = REQUIRE
     return {keyword: value for keyword, value in values.items() if value is not None}
 
@@ -103,10 +108,10 @@ def _families(settings: NeighborSettings) -> dict[str, Any] | None:
             return None
         if settings.families == NLRI.known_families():
             return {'all': [None]}
-    family: dict[str, Any] = {}
-    for each in settings.families:
-        family.setdefault(_afi_keyword(each[0]), []).append((each, settings.prefix_limit.get(each, 0)))
-    return family
+    by_afi: dict[str, Any] = {}
+    for family in settings.families:
+        by_afi.setdefault(_afi_keyword(family[0]), []).append((family, settings.prefix_limit.get(family, 0)))
+    return by_afi
 
 
 def _add_path(settings: NeighborSettings) -> dict[str, Any] | None:
@@ -148,21 +153,52 @@ def _api(api: dict[str, Any], names: Iterator[int]) -> dict[str, Any]:
 
 
 def _routes(routes: list[Any]) -> dict[str, Any]:
-    """The static and announce sections which print the routes, each where a statement reads it back.
+    """The static, announce and flow sections which print the routes, each where a statement reads it back.
 
-    The order of the routes is kept within a section, not across them: a route only an announce
-    family writes follows the static routes.
+    The order of the routes is kept within a section, not across them. A flow section makes
+    every route of the neighbor count twice (legacy: it keeps the list of routes, which the
+    neighbor adds again): when the routes hold such doubles, one of each is printed and the
+    flow routes go in a flow section, which doubles them again on reading; otherwise the flow
+    routes are printed as announce lines, which do not.
     """
-    from exabgp.bgp.message.update.nlri import RTC
+    from exabgp.bgp.message.update.nlri import RTC, VPLS, Flow
+    from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
     from exabgp.configuration.grammar.tree.announce import announce_family
+    from exabgp.configuration.grammar.tree.flow import action_pairs, block_printable
+    from exabgp.configuration.grammar.tree.static import Unprintable
 
-    static: dict[str, list[Any]] = {'_routes': [], '_attributes': [], '_rtc': []}
+    unique = list({id(route): route for route in routes}.values())
+    flow_section = len(unique) != len(routes)
+    static: dict[str, list[Any]] = {'_routes': [], '_attributes': [], '_rtc': [], '_sr-policy': []}
     announce: dict[str, dict[str, list[Any]]] = {}
-    for route in routes:
-        if isinstance(route.nlri, Empty):
+    flows: list[Any] = []
+    flow_lines: list[Any] = []
+    for route in unique if flow_section else routes:
+        if isinstance(route.nlri, Flow):
+            try:
+                action_pairs(route)
+            except ValueError as exc:
+                raise Unprintable(str(exc)) from None
+            if flow_section and not route.nlri.rules and route.nexthop is IP.NoNextHop:
+                # no match: only the one-line route of a flow section writes it
+                flow_lines.append([route])
+            elif flow_section and block_printable(route):
+                flows.append(route)
+            else:
+                safi_keyword = 'flow-vpn' if route.nlri.safi == SAFI.flow_vpn else 'flow'
+                announce.setdefault(route.nlri.afi.name(), {}).setdefault(f'_{safi_keyword}', []).append([route])
+        elif route.nlri.safi in (SAFI.mup, SAFI.mcast_vpn):
+            safi_keyword = route.nlri.safi.name()
+            announce.setdefault(route.nlri.afi.name(), {}).setdefault(f'_{safi_keyword}', []).append([route])
+        elif isinstance(route.nlri, VPLS):
+            announce.setdefault('l2vpn', {}).setdefault('_vpls', []).append([route])
+        elif isinstance(route.nlri, Empty):
             static['_attributes'].append([route])
         elif isinstance(route.nlri, RTC):
             static['_rtc'].append([route])
+        elif isinstance(route.nlri, SRPolicyNLRI):
+            # the static statement reads either family, taking it from the endpoint
+            static['_sr-policy'].append([route])
         elif (place := announce_family(route)) is not None:
             announce.setdefault(place[0], {}).setdefault(f'_{place[1]}', []).append([route])
         else:
@@ -170,6 +206,8 @@ def _routes(routes: list[Any]) -> dict[str, Any]:
     printed: dict[str, Any] = {'static': static}
     if announce:
         printed['announce'] = announce
+    if flow_section:
+        printed['flow'] = {'_routes': flows, '_line': flow_lines}
     return printed
 
 
@@ -208,4 +246,6 @@ def neighbor_values(settings: NeighborSettings, context: dict[str, Any]) -> tupl
         nexthop.setdefault(entry[0].name(), []).append(entry)
     if nexthop:
         values['nexthop'] = nexthop
+    if settings.operational:
+        values['operational'] = {STATEMENTS: [(kind(message), message) for message in settings.operational]}
     return settings.session.peer_address, {keyword: value for keyword, value in values.items() if value is not None}

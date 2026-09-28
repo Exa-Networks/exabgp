@@ -58,6 +58,12 @@ class Words:
     def word(self) -> str:
         return self.take().word
 
+    def expect(self, keyword: str) -> None:
+        """Consume `keyword`, ValueError when the next word is another (the legacy `consume`)."""
+        word = self.word()
+        if word != keyword:
+            raise ValueError(f"expected '{keyword}' but found '{word}' instead")
+
     def rest(self) -> list[Token]:
         """Everything left, consumed."""
         left = list(self._tokens[self._index :])

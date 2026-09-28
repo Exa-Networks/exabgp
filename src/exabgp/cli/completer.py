@@ -25,7 +25,7 @@ from exabgp.cli.command_schema import get_command_spec
 from exabgp.cli.formatter import OutputFormatter
 from exabgp.cli.fuzzy import FuzzyMatcher
 from exabgp.cli.history import HistoryTracker
-from exabgp.cli.schema_bridge import ValueTypeCompletionEngine
+from exabgp.configuration.grammar.describe import route_help
 from exabgp.reactor.api.command.registry import CommandRegistry
 
 
@@ -118,7 +118,6 @@ class CommandCompleter:
             FrequencyProvider(self.history_tracker) if self.history_tracker else {}
         )
         self.fuzzy_matcher = FuzzyMatcher(frequency_provider=freq_provider)
-        self.schema_engine = ValueTypeCompletionEngine()
 
     def _get_rl_replace_line(self) -> Callable[..., None] | None:
         """Try to get rl_replace_line function from readline library via ctypes"""
@@ -1257,17 +1256,12 @@ class CommandCompleter:
                         value_spec = cmd_spec.options[match]
                         desc = value_spec.description
 
-                        # Get syntax hint from schema engine
-                        syntax_hint = self.schema_engine.get_syntax_help(
-                            value_spec.value_type, include_description=False
-                        )
-
-                        # Get example (prefer from spec, fallback to schema engine)
-                        example = None
-                        if value_spec.examples:
-                            example = value_spec.examples[0]
-                        else:
-                            example = self.schema_engine.get_example_value(value_spec.value_type)
+                        # the syntax and an example from the configuration grammar, which reads the route
+                        grammar = route_help(match)
+                        syntax_hint = grammar.hint if grammar else None
+                        example = value_spec.examples[0] if value_spec.examples else None
+                        if example is None and grammar is not None:
+                            example = grammar.example or None
 
                         self._add_completion_metadata(match, desc, 'keyword', syntax_hint=syntax_hint, example=example)
                     else:

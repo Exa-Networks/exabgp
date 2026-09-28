@@ -1,0 +1,450 @@
+"""flow.py
+
+    flow {
+        route [<name>] {
+            rd <rd>; path-information <id>; next-hop <ip>;
+            match { source <prefix>; destination-port >1024; ... }
+            then { discard; rate-limit <n>; redirect <target>; community ...; ... }
+            scope { interface-set <set>; }
+        }
+        route <match and action> ...;
+    }
+    announce { ipv4|ipv6 { flow <match and action> ...; flow-vpn ...; } }
+
+What a flow route matches and does is declared once, in FLOW_VALUES, and read the same in
+the block, the one-line route and the announce families, with the target each gives it.
+
+Copyright (c) 2009-2026 Exa Networks. All rights reserved.
+License: 3-clause BSD. (See the COPYRIGHT file)
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any
+
+from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.bgp.message.update.nlri import Flow
+from exabgp.bgp.message.update.nlri.flow import (
+    FlowAnyPort,
+    FlowDestinationPort,
+    FlowDSCP,
+    FlowFlowLabel,
+    FlowFragment,
+    FlowICMPCode,
+    FlowICMPType,
+    FlowIPProtocol,
+    FlowNextHeader,
+    FlowPacketLength,
+    FlowSourcePort,
+    FlowTCPFlag,
+    FlowTrafficClass,
+)
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.settings import FlowSettings
+from exabgp.configuration.grammar.error import ConfigError
+from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
+from exabgp.configuration.grammar.tree.static import MAX_ROUTE_VALUES, ROUTE_VALUES, ROUTES, action, store_routes
+from exabgp.configuration.grammar.types import flow as types
+from exabgp.configuration.grammar.types.base import Printed, Type
+from exabgp.configuration.grammar.words import Words
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
+from exabgp.rib.route import Route
+
+OPS = 'flow-ops'  # the values of the flow route block being read, in their order
+
+
+@dataclass(frozen=True)
+class FlowValue:
+    type: Type[Any]
+    # 'rule' added to the NLRI, 'set' an NLRI field, 'nexthop', 'nexthop-attribute' (an address and
+    # a community), 'attribute', or 'nothing'
+    target: str
+    field: str = ''
+
+
+MATCH: dict[str, FlowValue] = {
+    'source': FlowValue(types.SOURCE, 'rule'),
+    'source-ipv4': FlowValue(types.SOURCE, 'rule'),
+    'source-ipv6': FlowValue(types.SOURCE, 'rule'),
+    'destination': FlowValue(types.DESTINATION, 'rule'),
+    'destination-ipv4': FlowValue(types.DESTINATION, 'rule'),
+    'destination-ipv6': FlowValue(types.DESTINATION, 'rule'),
+    'protocol': FlowValue(types.condition('protocol', FlowIPProtocol, ['tcp', '[ udp tcp ]', '=6']), 'rule'),
+    'next-header': FlowValue(types.condition('next-header', FlowNextHeader, ['tcp']), 'rule'),
+    'port': FlowValue(types.condition('port', FlowAnyPort, ['25', '[ =80 >8080&<8088 ]']), 'rule'),
+    'destination-port': FlowValue(types.condition('destination-port', FlowDestinationPort, ['=80']), 'rule'),
+    'source-port': FlowValue(types.condition('source-port', FlowSourcePort, ['>1024']), 'rule'),
+    'icmp-type': FlowValue(types.condition('icmp-type', FlowICMPType, ['8']), 'rule'),
+    'icmp-code': FlowValue(types.condition('icmp-code', FlowICMPCode, ['0']), 'rule'),
+    'tcp-flags': FlowValue(types.condition('tcp-flags', FlowTCPFlag, ['syn', '[ syn ack ]']), 'rule'),
+    'packet-length': FlowValue(types.condition('packet-length', FlowPacketLength, ['>200&<300']), 'rule'),
+    'dscp': FlowValue(types.condition('dscp', FlowDSCP, ['10']), 'rule'),
+    'traffic-class': FlowValue(types.condition('traffic-class', FlowTrafficClass, ['10']), 'rule'),
+    'fragment': FlowValue(types.condition('fragment', FlowFragment, ['is-fragment']), 'rule'),
+    'flow-label': FlowValue(types.condition('flow-label', FlowFlowLabel, ['>100&<2000']), 'rule'),
+}
+
+THEN: dict[str, FlowValue] = {
+    'accept': FlowValue(types.ACCEPT, 'nothing'),
+    'discard': FlowValue(types.DISCARD, 'attribute'),
+    'rate-limit': FlowValue(types.RATE_LIMIT, 'attribute'),
+    'redirect': FlowValue(types.REDIRECT, 'nexthop-attribute'),
+    'redirect-to-nexthop': FlowValue(types.REDIRECT_TO_NEXTHOP, 'attribute'),
+    'redirect-to-nexthop-ietf': FlowValue(types.REDIRECT_TO_NEXTHOP_IETF, 'attribute'),
+    'redirect-to-nexthop-simpson': FlowValue(types.REDIRECT_TO_NEXTHOP_SIMPSON, 'attribute'),
+    'copy': FlowValue(types.COPY, 'nexthop-attribute'),
+    'copy-simpson': FlowValue(types.COPY_SIMPSON, 'nexthop-attribute'),
+    'redirect-simpson': FlowValue(types.REDIRECT_SIMPSON, 'nexthop-attribute'),
+    'mark': FlowValue(types.MARK, 'attribute'),
+    'action': FlowValue(types.ACTION, 'attribute'),
+    'community': FlowValue(ROUTE_VALUES['community'].type, 'attribute'),
+    'large-community': FlowValue(ROUTE_VALUES['large-community'].type, 'attribute'),
+    'extended-community': FlowValue(ROUTE_VALUES['extended-community'].type, 'attribute'),
+}
+
+SCOPE: dict[str, FlowValue] = {'interface-set': FlowValue(types.INTERFACE_SET, 'attribute')}
+
+ROUTE: dict[str, FlowValue] = {
+    'rd': FlowValue(ROUTE_VALUES['rd'].type, 'set', 'rd'),
+    'route-distinguisher': FlowValue(ROUTE_VALUES['rd'].type, 'set', 'rd'),
+    'path-information': FlowValue(ROUTE_VALUES['path-information'].type, 'set', 'addpath'),
+    'next-hop': FlowValue(types.FLOW_NEXTHOP, 'nexthop'),
+}
+
+# legacy: a one-line route reads no next-hop, and sets `route-distinguisher` on a field of that
+# name, which is no field: the value is lost
+LINE = {
+    **MATCH,
+    **THEN,
+    **SCOPE,
+    **ROUTE,
+    'route-distinguisher': FlowValue(ROUTE_VALUES['rd'].type, 'set', 'route-distinguisher'),
+}
+del LINE['next-hop']
+
+
+class FlowRoute:
+    """A flow route being built: the legacy parser changed the NLRI in place, so this does too."""
+
+    def __init__(self) -> None:
+        self.nlri = Flow.make_flow()
+        self.attributes = AttributeCollection()
+        self.nexthop: IP = IP.NoNextHop
+
+    def apply(self, spec: FlowValue, value: Any, line: bool) -> None:
+        if spec.target == 'rule':
+            for rule in value:
+                if not self.nlri.add(rule):
+                    raise ValueError(self.nlri.family_conflict(rule))
+        elif spec.target == 'set':
+            try:
+                setattr(self.nlri, spec.field, value)
+            except AttributeError:
+                # legacy: the one-line `route-distinguisher` names no field, and the route fails
+                raise ValueError(f'a flow route has no {spec.field}') from None
+        elif spec.target == 'nexthop':
+            if value:
+                self.nexthop = value
+        elif spec.target == 'nexthop-attribute':
+            ip, attribute = value
+            # legacy: a one-line route takes the address even when there is none
+            if ip or line:
+                self.nexthop = ip
+            self.attributes.add(attribute)
+        elif spec.target == 'attribute':
+            self.attributes.add(value)
+
+    def route(self) -> Route:
+        nlri = self.nlri
+        if nlri.rd is not RouteDistinguisher.NORD and nlri.safi != SAFI.flow_vpn:
+            vpn = Flow.make_flow(nlri.afi, SAFI.flow_vpn)
+            vpn._rd_override = nlri._rd_override
+            vpn._rules_cache = nlri._rules_cache
+            vpn._packed_stale = True
+            vpn.addpath = nlri.addpath
+            nlri = vpn
+        return Route(nlri, self.attributes, nexthop=self.nexthop)
+
+
+class FlowLine(Type[list[Route]]):
+    """`<keyword> <value> ...`: a flow route on one line."""
+
+    name = 'flow route'
+
+    def parse(self, words: Words) -> list[Route]:
+        built = FlowRoute()
+        for _ in range(MAX_ROUTE_VALUES):
+            where = words.where()
+            keyword = words.word()
+            if not keyword:
+                return [built.route()]
+            spec = LINE.get(keyword)
+            if spec is None:
+                raise ConfigError(where, f'flow route: unknown command "{keyword}"', expected=sorted(LINE))
+            value = spec.type.parse(words)
+            try:
+                built.apply(spec, value, line=True)
+            except ValueError as exc:
+                raise ConfigError(where, str(exc)) from None
+        raise ConfigError(words.where(), f'a flow route holds at most {MAX_ROUTE_VALUES} values')
+
+    def render(self, value: list[Route]) -> list[str]:
+        # a one-line route has no next-hop, and matches what it is given: nothing is possible
+        return [word for route in value for word in announce_flow_words(route)]
+
+    def hint(self) -> str:
+        return '<match> <value> ... <action> <value> ...'
+
+    def examples(self) -> list[str]:
+        return []
+
+
+# --------------------------------------------------------------------------- printing
+
+MAX_PRINTED_WORDS = 4096  # the text of one flow NLRI, far past a real one
+IPV6_PREFIXES = ('source-ipv6', 'destination-ipv6')
+
+
+def rule_pairs(nlri: Any) -> list[tuple[str, list[str]]]:
+    """The keyword and value words of the text of a flow NLRI, which reads back as the same rules."""
+    from exabgp.configuration.grammar.lexer import lex_command
+
+    words = [token.word for token in lex_command(f'{nlri};')[0].words][1:]
+    assert len(words) < MAX_PRINTED_WORDS, 'the text of a flow NLRI is short'
+    pairs: list[tuple[str, list[str]]] = []
+    index = 0
+    while index < len(words):
+        keyword = words[index]
+        if words[index + 1] == '[':
+            end = words.index(']', index + 1)
+            pairs.append((keyword, words[index + 1 : end + 1]))
+            index = end + 1
+        else:
+            pairs.append((keyword, [words[index + 1]]))
+            index += 2
+    return pairs
+
+
+def action_pairs(route: Route) -> list[tuple[str, list[str]]]:
+    """The actions of a flow route, as keyword and words; ValueError when one has no statement."""
+    from exabgp.bgp.message.update.attribute import Attribute, GenericAttribute
+    from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHopIPv6IETF, TrafficRedirectIPv6
+    from exabgp.configuration.grammar.types.bgp import HexAttribute
+    from exabgp.configuration.grammar.types.base import Syntax
+
+    actions: list[tuple[str, list[str]]] = []
+    attribute: Any
+    for code, attribute in route.attributes.items():
+        if isinstance(attribute, GenericAttribute):
+            actions.append(('attribute', HexAttribute().render(attribute)))
+        elif code == Attribute.CODE.EXTENDED_COMMUNITY:
+            hexes = ['0x' + bytes(each.community).hex() for each in attribute.communities]
+            actions.append(('extended-community', [Syntax('['), *hexes, Syntax(']')]))
+        elif code in (Attribute.CODE.COMMUNITY, Attribute.CODE.LARGE_COMMUNITY):
+            keyword = 'community' if code == Attribute.CODE.COMMUNITY else 'large-community'
+            actions.append((keyword, str(attribute).split() or ['[', ']']))
+        elif code == Attribute.CODE.IPV6_EXTENDED_COMMUNITY:
+            for each in attribute.communities:
+                if isinstance(each, TrafficRedirectIPv6):
+                    address, number = str(each).split()[-1][1:].split(']:')
+                    actions.append(('redirect', [Syntax('['), address, Syntax(']'), f':{number}']))
+                elif isinstance(each, TrafficNextHopIPv6IETF):
+                    name, address = str(each).split()[:2]
+                    actions.append(('copy' if name.startswith('copy') else 'redirect-to-nexthop-ietf', [address]))
+                else:
+                    raise ValueError(f'no statement writes the IPv6 extended community {each}')
+        else:
+            raise ValueError(f'no flow statement writes the attribute {code}')
+    return actions
+
+
+def _printed(words: list[str]) -> list[Any]:
+    return [Printed(words)]
+
+
+def route_values(route: Route) -> tuple[Any, dict[str, Any]]:
+    """The statements of the route block which reads back as `route`."""
+    nlri: Any = route.nlri
+    match: dict[str, Any] = {}
+    values: dict[str, Any] = {'match': match, 'then': {}}
+    for keyword, words in rule_pairs(nlri):
+        if keyword in ('rd', 'path-information'):
+            values[f'_{keyword}'] = _printed(words)
+        else:
+            match.setdefault(f'_{keyword}', []).extend(_printed(words))
+    for keyword, words in action_pairs(route):
+        values['then'].setdefault(f'_{keyword}', []).extend(_printed(words))
+    if route.nexthop is not IP.NoNextHop:
+        values['_next-hop'] = _printed(['self' if route.nexthop.SELF else str(route.nexthop)])
+    return '', values
+
+
+def block_printable(route: Route) -> bool:
+    """Whether a route block reads back as the route: its family follows from its prefixes and rd."""
+    nlri: Any = route.nlri
+    pairs = [keyword for keyword, _ in rule_pairs(nlri)]
+    if nlri.safi == SAFI.flow_vpn and 'rd' not in pairs:
+        return False
+    if any(keyword == 'attribute' for keyword, _ in action_pairs(route)):
+        return False
+    has_ipv6_prefix = any(keyword in IPV6_PREFIXES for keyword in pairs)
+    return bool(nlri.afi == AFI.ipv6) == has_ipv6_prefix
+
+
+def announce_flow_words(route: Route) -> list[str]:
+    """The words after `flow` or `flow-vpn` in an announce family which read back as `route`."""
+    if route.nexthop is not IP.NoNextHop:
+        raise ValueError('an announce flow route has no next-hop statement')
+    words: list[str] = []
+    for keyword, value in rule_pairs(route.nlri) + action_pairs(route):
+        words.extend([keyword, *value])
+    return words
+
+
+# --------------------------------------------------------------------------- the route block
+
+
+def _opened(context: dict[str, Any]) -> None:
+    context[OPS] = []
+
+
+def _store_op(spec: FlowValue) -> Any:
+    def store(values: dict[str, Any], value: Any, context: dict[str, Any]) -> None:
+        context.setdefault(OPS, []).append((spec, value))
+
+    return store
+
+
+def _leaves(values: dict[str, FlowValue]) -> tuple[Leaf, ...]:
+    return tuple(
+        Leaf(keyword, spec.type, field=f'_{keyword}', store=_store_op(spec)) for keyword, spec in values.items()
+    )
+
+
+class _Ignored(Type[str]):
+    """The name of a flow route block: read and kept by nobody."""
+
+    name = 'route name'
+
+    def parse(self, words: Words) -> str:
+        return words.word()
+
+    def render(self, value: str) -> list[str]:
+        return [value] if value else []
+
+    def hint(self) -> str:
+        return '[<name>]'
+
+    def examples(self) -> list[str]:
+        return ['', 'name']
+
+
+def _route(name: Any, values: dict[str, Any], context: dict[str, Any]) -> list[Route]:
+    built = FlowRoute()
+    for spec, value in context.pop(OPS, []):
+        built.apply(spec, value, line=False)
+    if not built.nlri.rules:
+        raise ValueError('a flow route needs at least one match, or it matches every packet')
+    route = built.route()
+    context.setdefault(ROUTES, []).append(route)
+    return [route]
+
+
+def _flow(name: Any, values: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
+    # legacy: the flow section keeps the very list of the routes not yet taken, and the
+    # neighbor adds them from it after taking them: each is announced twice
+    values['routes'] = context.setdefault(ROUTES, [])
+    return values
+
+
+ROUTE_BLOCK = Block(
+    'route',
+    field='_routes',
+    build=_route,
+    keep=Keep.EXTEND,
+    name=_Ignored(),
+    opened=_opened,
+    doc='a flow route, what it matches and what it does',
+    # the blocks first: printed in this order, a redirect in `then` is read before `next-hop`
+    children=(
+        Block('match', field='match', children=_leaves(MATCH), doc='what the route matches'),
+        Block('then', field='then', children=_leaves(THEN), doc='what is done with what matches'),
+        Block('scope', field='scope', children=_leaves(SCOPE)),
+        *_leaves(ROUTE),
+    ),
+    unbuild=lambda route, context: route_values(route),
+)
+
+FLOW = Block(
+    'flow',
+    field='flow',
+    build=_flow,
+    doc='FlowSpec routes (RFC 8955, RFC 8956)',
+    children=(Leaf('route', FlowLine(), field='_line', store=store_routes), ROUTE_BLOCK),
+)
+
+# --------------------------------------------------------------------------- announce families
+
+ANNOUNCE_FLOW: dict[str, FlowValue] = {
+    'rd': FlowValue(ROUTE_VALUES['rd'].type, 'set', 'rd'),
+    'path-information': FlowValue(ROUTE_VALUES['path-information'].type, 'set', 'path_info'),
+    **MATCH,
+    **THEN,
+    **SCOPE,
+    'attribute': FlowValue(ROUTE_VALUES['attribute'].type, 'attribute'),
+}
+
+
+class AnnounceFlowLine(Type[list[Route]]):
+    """`flow|flow-vpn <keyword> <value> ...` of an announce address family."""
+
+    def __init__(self, afi: AFI, safi: SAFI) -> None:
+        self.afi = afi
+        self.safi = safi
+        self.name = f'{afi.name()} {safi.name()} route'
+
+    def parse(self, words: Words) -> list[Route]:
+        settings = FlowSettings()
+        settings.action = action(words)
+        settings.afi, settings.safi = self.afi, self.safi
+        attributes = AttributeCollection()
+        for _ in range(MAX_ROUTE_VALUES):
+            where = words.where()
+            keyword = words.word()
+            if not keyword:
+                return [Route(Flow.from_settings(settings), attributes, nexthop=settings.nexthop)]
+            spec = ANNOUNCE_FLOW.get(keyword)
+            if spec is None:
+                raise ConfigError(where, f"Unknown command '{keyword}'", expected=sorted(ANNOUNCE_FLOW))
+            try:
+                self._apply(settings, attributes, spec, spec.type.parse(words))
+            except ValueError as exc:
+                raise ConfigError(where, str(exc)) from None
+        raise ConfigError(words.where(), f'a flow route holds at most {MAX_ROUTE_VALUES} values')
+
+    @staticmethod
+    def _apply(settings: FlowSettings, attributes: AttributeCollection, spec: FlowValue, value: Any) -> None:
+        if spec.target == 'rule':
+            for rule in value:
+                settings.add_rule(rule)
+        elif spec.target == 'set':
+            settings.set(spec.field, value)
+        elif spec.target == 'nexthop-attribute':
+            ip, attribute = value
+            if ip:
+                settings.nexthop = ip
+            if attribute:
+                attributes.add(attribute)
+        elif spec.target == 'attribute':
+            attributes.add(value)
+
+    def render(self, value: list[Route]) -> list[str]:
+        return [word for route in value for word in announce_flow_words(route)]
+
+    def hint(self) -> str:
+        return '<match> <value> ... <action> <value> ...'
+
+    def examples(self) -> list[str]:
+        return []

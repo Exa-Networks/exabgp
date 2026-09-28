@@ -19,7 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterator
 
-from config_grammar.forms_neighbor import NEIGHBOR_DOCUMENTS, NEIGHBOR_FORMS, SECTION_NEEDS
+from config_grammar.forms_neighbor import BOOLEANS, NEIGHBOR_DOCUMENTS, NEIGHBOR_FORMS, SECTION_NEEDS
 from config_grammar.forms_route import (
     ANNOUNCE_FAMILIES,
     ANNOUNCE_FORMS,
@@ -30,7 +30,12 @@ from config_grammar.forms_route import (
     ROUTE_VALUE_FORMS,
     RTC_FORMS,
 )
+from config_grammar.forms_flow import FLOW_DOCUMENT_BODIES, MATCH_FORMS, ROUTE_FORMS, SCOPE_FORMS, THEN_FORMS
+from config_grammar.forms_l2vpn import L2VPN_DOCUMENT_BODIES, L2VPN_LEVEL_FORMS, VPLS, VPLS_BLOCK, VPLS_VALUE_FORMS
 from config_grammar.forms_neighbor import _N
+from config_grammar.forms_operational import OPERATIONAL_DOCUMENT_BODIES, OPERATIONAL_FORMS
+from config_grammar.forms_select import SELECT_FORMS
+from config_grammar.forms_sr_policy import SR_POLICY_FORMS
 from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.tree.root import ROOT
 
@@ -93,10 +98,9 @@ class Form:
 
 # written out here rather than taken from the grammar: the generated forms only check the
 # spellings the grammar knows, these check the grammar knows every spelling legacy takes
-BOOLEAN_SPELLINGS = ['true', 'false', 'enable', 'disable', 'enabled', 'disabled', 'yes', 'no', '1', '0', 'TRUE', 'No']
 
 HAND: list[Form] = [
-    *[Form(('process',), f'respawn {spelling}') for spelling in BOOLEAN_SPELLINGS],
+    *[Form(('process',), f'respawn {spelling}') for spelling in BOOLEANS],
     Form(('process',), 'respawn'),
     *[Form(('process',), f'encoder {spelling}') for spelling in ['text', 'json', 'TEXT', 'Json']],
     *[Form(('process',), f'on-exit {spelling}') for spelling in ['withdraw', 'keep', 'KEEP']],
@@ -233,9 +237,181 @@ def _rtc_documents() -> list[tuple[str, bool]]:
     return documents
 
 
+def select_forms() -> list[Form]:
+    forms = []
+    for afi, family, route, valid in SELECT_FORMS:
+        forms.append(Form(('neighbor', 'announce', afi), f'{family} {route}', valid))
+        forms.append(Form(('template', 'neighbor', 'announce', afi), f'{family} {route}', None))
+    return forms
+
+
+def _sr_policy_path(place: str) -> tuple[str, ...]:
+    return ('static',) if place == 'static' else ('announce', place)
+
+
+def sr_policy_forms() -> list[Form]:
+    """Without its families a neighbor refuses some routes and not others: compared only, bar the refused."""
+    forms = []
+    for place, route, valid in SR_POLICY_FORMS:
+        path = _sr_policy_path(place)
+        forms.append(Form(('neighbor', *path), f'sr-policy {route}', None if valid else False))
+        forms.append(Form(('template', 'neighbor', *path), f'sr-policy {route}', None))
+    return forms
+
+
+def _sr_policy_documents() -> list[tuple[str, bool]]:
+    families = 'family { ipv4 sr-policy; ipv6 sr-policy; }'
+    documents = []
+    for place, route, valid in SR_POLICY_FORMS:
+        section = f'sr-policy {route};'
+        for keyword in reversed(_sr_policy_path(place)):
+            section = f'{keyword} {{ {section} }}'
+        documents.append((f'neighbor 127.0.0.1 {{ {_N} {families} {section} }}', valid))
+        template = f'template {{ neighbor t {{ {section} }} }} neighbor 127.0.0.1 {{ inherit t; {_N} {families} }}'
+        documents.append((template, valid))
+    return documents
+
+
 def all_forms() -> list[Form]:
-    return generated() + HAND + neighbor_forms() + route_forms() + announce_forms()
+    return (
+        generated()
+        + HAND
+        + neighbor_forms()
+        + route_forms()
+        + announce_forms()
+        + flow_forms()
+        + l2vpn_forms()
+        + select_forms()
+        + sr_policy_forms()
+        + operational_forms()
+    )
 
 
 DOCUMENTS.extend(_rtc_documents())
+DOCUMENTS.extend(_sr_policy_documents())
 DOCUMENTS.append((NEIGHBOR.replace('{inner}', NETMASK_DOCUMENT_BODY).replace('{{', '{').replace('}}', '}'), True))
+
+
+def flow_forms() -> list[Form]:
+    """Each flow value in its block of a route block, and each match in a one-line route."""
+    forms = []
+    route = ('neighbor', 'flow', 'route')
+    for block, entries in (('match', MATCH_FORMS), ('then', THEN_FORMS), ('scope', SCOPE_FORMS)):
+        for statement, valid in entries:
+            forms.append(Form(route + (block,), statement, valid))
+            forms.append(Form(('template', 'neighbor', 'flow', 'route', block), statement, None))
+    for statement, valid in ROUTE_FORMS:
+        forms.append(Form(route, statement, valid))
+        forms.append(Form(('template', 'neighbor', 'flow', 'route'), statement, None))
+    for statement, _ in MATCH_FORMS + THEN_FORMS + SCOPE_FORMS:
+        forms.append(Form(('neighbor', 'flow'), f'route destination 10.0.0.0/24 {statement}', None))
+        forms.append(Form(('neighbor', 'announce', 'ipv4'), f'flow destination 10.0.0.0/24 {statement}', None))
+    forms.append(Form(('neighbor', 'flow'), 'route nothing 1', False))
+    forms.append(Form(('neighbor', 'announce', 'ipv4'), 'flow nothing 1', False))
+    forms.append(Form(('neighbor', 'announce', 'ipv4'), 'flow-vpn nothing 1', False))
+    forms.append(Form(('neighbor', 'announce', 'ipv6'), 'flow-vpn nothing 1', False))
+    forms.append(Form(('neighbor', 'announce', 'ipv4'), 'flow-vpn rd 1:1 destination 10.0.0.0/24', None))
+    forms.append(Form(('neighbor', 'announce', 'ipv6'), 'flow destination 2001:db8::/32', None))
+    forms.append(Form(('neighbor', 'announce', 'ipv6'), 'flow-vpn rd 1:1 destination 2001:db8::/32', None))
+    forms.append(Form(('neighbor', 'announce', 'ipv6'), 'flow nothing 1', False))
+    for afi in ('ipv4', 'ipv6'):
+        forms.append(Form(('template', 'neighbor', 'announce', afi), 'flow destination 10.0.0.0/24', None))
+        forms.append(Form(('template', 'neighbor', 'announce', afi), 'flow-vpn rd 1:1 destination 10.0.0.0/24', None))
+    forms.append(Form(('template', 'neighbor', 'flow'), 'route destination 10.0.0.0/24', None))
+    return forms
+
+
+_FLOW_ROUTE = 'flow {{ route r {{ %s }} }}'
+WRAPPERS[('neighbor', 'flow', 'route')] = {
+    '': NEIGHBOR.replace('{inner}', _FLOW_ROUTE % 'match {{ destination 10.0.0.0/24; }} {form};')
+}
+WRAPPERS[('neighbor', 'flow', 'route', 'match')] = {
+    '': NEIGHBOR.replace('{inner}', _FLOW_ROUTE % 'match {{ {form}; }}')
+}
+for _block in ('then', 'scope'):
+    WRAPPERS[('neighbor', 'flow', 'route', _block)] = {
+        '': NEIGHBOR.replace(
+            '{inner}', _FLOW_ROUTE % ('match {{ destination 10.0.0.0/24; }} %s {{ {form}; }}' % _block)
+        )
+    }
+_TEMPLATE_FLOW = (
+    'template {{ neighbor t {{ %s }} }} neighbor 127.0.0.1 {{ inherit t; '
+    + _N.replace('{', '{{').replace('}', '}}')
+    + ' }}'
+)
+WRAPPERS[('template', 'neighbor', 'flow', 'route')] = {
+    '': _TEMPLATE_FLOW % (_FLOW_ROUTE % 'match {{ destination 10.0.0.0/24; }} {form};')
+}
+WRAPPERS[('template', 'neighbor', 'flow', 'route', 'match')] = {
+    '': _TEMPLATE_FLOW % (_FLOW_ROUTE % 'match {{ {form}; }}')
+}
+for _block in ('then', 'scope'):
+    WRAPPERS[('template', 'neighbor', 'flow', 'route', _block)] = {
+        '': _TEMPLATE_FLOW % (_FLOW_ROUTE % ('match {{ destination 10.0.0.0/24; }} %s {{ {form}; }}' % _block))
+    }
+
+DOCUMENTS.extend(
+    (NEIGHBOR.replace('{inner}', body).replace('{{', '{').replace('}}', '}'), valid)
+    for body, valid in FLOW_DOCUMENT_BODIES
+)
+
+
+def l2vpn_forms() -> list[Form]:
+    """Each VPLS value on a one-line route, in a vpls block, in an announce family; the l2vpn level."""
+    forms = []
+    for value, valid in VPLS_VALUE_FORMS:
+        forms.append(Form(('neighbor', 'l2vpn'), f'vpls {VPLS} {value}', valid))
+        forms.append(Form(('neighbor', 'l2vpn', 'vpls'), value, valid))
+        forms.append(Form(('neighbor', 'announce', 'l2vpn'), f'vpls {VPLS} {value}', valid))
+        forms.append(Form(('template', 'neighbor', 'l2vpn'), f'vpls {VPLS} {value}', None))
+        forms.append(Form(('template', 'neighbor', 'l2vpn', 'vpls'), value, None))
+        forms.append(Form(('template', 'neighbor', 'announce', 'l2vpn'), f'vpls {VPLS} {value}', None))
+    for statement, valid in L2VPN_LEVEL_FORMS:
+        forms.append(Form(('neighbor', 'l2vpn'), statement.rstrip(), valid))
+        forms.append(Form(('template', 'neighbor', 'l2vpn'), statement.rstrip(), None))
+    return forms
+
+
+_VPLS_BLOCK = VPLS_BLOCK.replace('{', '{{').replace('}', '}}')
+WRAPPERS[('neighbor', 'l2vpn', 'vpls')] = {
+    '': NEIGHBOR.replace('{inner}', 'l2vpn {{ vpls site {{ ' + _VPLS_BLOCK + ' {form}; }} }}')
+}
+# a statement of the l2vpn section follows a vpls route, which it may change; a route stands alone
+WRAPPERS[('neighbor', 'l2vpn')] = {
+    '': NEIGHBOR.replace('{inner}', f'l2vpn {{{{ vpls {VPLS}; {{form}}; }}}}'),
+    'vpls': NEIGHBOR.replace('{inner}', 'l2vpn {{ {form}; }}'),
+}
+WRAPPERS[('template', 'neighbor', 'l2vpn', 'vpls')] = {
+    '': _TEMPLATE_FLOW % ('l2vpn {{ vpls site {{ ' + _VPLS_BLOCK + ' {form}; }} }}')
+}
+WRAPPERS[('template', 'neighbor', 'l2vpn')] = {
+    '': _TEMPLATE_FLOW % f'l2vpn {{{{ vpls {VPLS}; {{form}}; }}}}',
+    'vpls': _TEMPLATE_FLOW % 'l2vpn {{ {form}; }}',
+}
+
+DOCUMENTS.extend(
+    (NEIGHBOR.replace('{inner}', body).replace('{{', '{').replace('}}', '}'), valid)
+    for body, valid in L2VPN_DOCUMENT_BODIES
+)
+
+
+def operational_forms() -> list[Form]:
+    forms = []
+    for statement, valid in OPERATIONAL_FORMS:
+        forms.append(Form(('neighbor', 'operational'), statement, valid))
+        forms.append(Form(('template', 'neighbor', 'operational'), statement, None))
+    return forms
+
+
+DOCUMENTS.extend(
+    (NEIGHBOR.replace('{inner}', body).replace('{{', '{').replace('}}', '}'), valid)
+    for body, valid in OPERATIONAL_DOCUMENT_BODIES
+)
+# the messages of the neighbor, then those of its template
+DOCUMENTS.append(
+    (
+        'template { neighbor t { operational { rpcq afi ipv4 safi unicast sequence 3; } } } '
+        f'neighbor 127.0.0.1 {{ inherit t; {_N} operational {{ apcq afi ipv4 safi unicast sequence 4; }} }}',
+        True,
+    )
+)

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import subprocess
 
 import pytest
@@ -37,6 +38,9 @@ from exabgp.configuration.core.parser import Tokeniser
 from exabgp.configuration.flow.parser import dscp, flow_label, fragment, protocol, traffic_class
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPv4
+
+# the legacy parser writes `line 8: <statement>`, the grammar `<file>:8:10: <message>`
+NAMES_A_LINE = re.compile(r'line \d+|:\d+:\d+: ')
 
 ROOT = pathlib.Path(__file__).parent.parent.parent
 
@@ -135,4 +139,4 @@ neighbor 127.0.0.1 {
     )
     combined = result.stdout + result.stderr
     assert result.returncode != 0, combined[-1500:]
-    assert 'dscp' in combined and 'line ' in combined, combined[-1500:]
+    assert 'dscp' in combined and NAMES_A_LINE.search(combined), combined[-1500:]

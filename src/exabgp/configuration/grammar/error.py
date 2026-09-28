@@ -62,3 +62,7 @@ def suggest(word: str, candidates: list[str]) -> list[str]:
     lowered = word.lower()
     scored = sorted((distance(lowered, candidate.lower()), candidate) for candidate in candidates)
     return [candidate for score, candidate in scored if score <= MAX_SUGGESTION_DISTANCE][:MAX_SUGGESTIONS]
+
+
+# what building a route from its words may raise, each turned into a ConfigError at the route
+ROUTE_ERRORS = (ValueError, OSError, IndexError, KeyError, TypeError)

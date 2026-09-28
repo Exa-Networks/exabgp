@@ -94,81 +94,81 @@ def inherit(values: dict[str, Any], templates: dict[str, dict[str, Any]]) -> Non
         transfer(templates.get(name, {}), values)
 
 
-def families(local: dict[str, Any]) -> list[FamilyTuple]:
-    configured = local.get('family', {})
+def families(values: dict[str, Any]) -> list[FamilyTuple]:
+    configured = values.get('family', {})
     # `all` asks for every family exabgp knows, RTC included; no family block gets the default set
     if 'all' in configured:
         return NLRI.known_families()
     found: list[FamilyTuple] = []
-    for afi in SAFIS:
+    for afi_keyword in SAFIS:
         # a family named in two family blocks is negotiated once
-        found.extend(family for family in configured.get(afi, []) if family not in found)
+        found.extend(family for family in configured.get(afi_keyword, []) if family not in found)
     return found or default_families()
 
 
-def check_mandatory(local: dict[str, Any]) -> None:
-    missing = [name for name in MANDATORY if name not in local]
+def check_mandatory(values: dict[str, Any]) -> None:
+    missing = [name for name in MANDATORY if name not in values]
     if missing:
         raise ValueError('incomplete neighbor, missing {}'.format(', '.join(missing)))
-    tcp_ao = local.get('tcp-ao', {})
+    tcp_ao = values.get('tcp-ao', {})
     if tcp_ao:
         missing = [name for name in TCP_AO_MANDATORY if name not in tcp_ao]
         if missing:
             raise ValueError('incomplete tcp-ao, missing {}'.format(', '.join(missing)))
 
 
-def check_role(local: dict[str, Any]) -> None:
-    if 'role' not in local:
+def check_role(values: dict[str, Any]) -> None:
+    if 'role' not in values:
         return
-    if 'local' not in local['role']:
+    if 'local' not in values['role']:
         raise ValueError('incomplete role, missing local')
-    if local.get('local-as') is None or local.get('peer-as') is None:
+    if values.get('local-as') is None or values.get('peer-as') is None:
         raise ValueError('role requires explicit local-as and peer-as; auto is not allowed')
-    if not local['local-as'] or not local['peer-as']:
+    if not values['local-as'] or not values['peer-as']:
         raise ValueError('role requires nonzero explicit local-as and peer-as')
-    if local['local-as'] == local['peer-as']:
+    if values['local-as'] == values['peer-as']:
         raise ValueError('role requires unequal local-as and peer-as (eBGP only)')
 
 
-def check_confederation(local: dict[str, Any]) -> None:
-    if 'confederation' not in local:
+def check_confederation(values: dict[str, Any]) -> None:
+    if 'confederation' not in values:
         return
-    confederation = local['confederation']
+    confederation = values['confederation']
     if 'identifier' not in confederation:
         raise ValueError('incomplete confederation, missing identifier')
-    if not local.get('local-as') or not local.get('peer-as'):
+    if not values.get('local-as') or not values.get('peer-as'):
         raise ValueError('confederation requires explicit local-as and peer-as; auto is not allowed')
-    if local['local-as'] == confederation['identifier']:
+    if values['local-as'] == confederation['identifier']:
         raise ValueError('local-as is the Member-AS Number, it can not be the confederation identifier')
     if confederation['identifier'] in tuple(confederation.get('members', ())):
         raise ValueError('the confederation identifier can not also be a member')
 
 
-def session(local: dict[str, Any]) -> SessionSettings:
-    tcp_ao = local.get('tcp-ao', {})
-    role = local.get('role', {})
-    confederation = local.get('confederation', {})
+def session(values: dict[str, Any]) -> SessionSettings:
+    tcp_ao = values.get('tcp-ao', {})
+    role = values.get('role', {})
+    confederation = values.get('confederation', {})
     settings = SessionSettings(
-        peer_address=local['peer-address'],
-        local_as=local['local-as'] if local['local-as'] is not None else ASN(0),
-        peer_as=local['peer-as'] if local['peer-as'] is not None else ASN(0),
-        local_address=local.get('local-address'),
-        router_id=local.get('router-id'),
-        md5_password=local.get('md5-password', ''),
-        md5_base64=local.get('md5-base64', False),
+        peer_address=values['peer-address'],
+        local_as=values['local-as'] if values['local-as'] is not None else ASN(0),
+        peer_as=values['peer-as'] if values['peer-as'] is not None else ASN(0),
+        local_address=values.get('local-address'),
+        router_id=values.get('router-id'),
+        md5_password=values.get('md5-password', ''),
+        md5_base64=values.get('md5-base64', False),
         tcp_ao_keyid=tcp_ao.get('keyid'),
         tcp_ao_algorithm=tcp_ao.get('algorithm', ''),
         tcp_ao_password=tcp_ao.get('password', ''),
         tcp_ao_base64=tcp_ao.get('base64', False),
-        connect=local.get('connect', 0),
-        listen=local.get('listen', 0),
-        passive=local.get('passive', False),
-        source_interface=local.get('source-interface', ''),
-        outgoing_ttl=local.get('outgoing-ttl'),
-        incoming_ttl=local.get('incoming-ttl'),
-        local_link_local=local.get('local-link-local'),
+        connect=values.get('connect', 0),
+        listen=values.get('listen', 0),
+        passive=values.get('passive', False),
+        source_interface=values.get('source-interface', ''),
+        outgoing_ttl=values.get('outgoing-ttl'),
+        incoming_ttl=values.get('incoming-ttl'),
+        local_link_local=values.get('local-link-local'),
         # legacy: with an auto-discovered local address, md5-ip is dropped even when given
-        md5_ip=local.get('md5-ip') if local.get('local-address') is not None else None,
+        md5_ip=values.get('md5-ip') if values.get('local-address') is not None else None,
     )
     if role:
         settings.role = role['local']
@@ -180,42 +180,46 @@ def session(local: dict[str, Any]) -> SessionSettings:
     return settings
 
 
-def capability(local: dict[str, Any]) -> NeighborCapability:
-    configured = local.get('capability', {})
-    cap = NeighborCapability()
-    cap.required = frozenset(code for name, code in REQUIRABLE.items() if configured.get(name) == REQUIRE)
-    values = {name: True if value == REQUIRE else value for name, value in configured.items()}
+def capability(values: dict[str, Any]) -> NeighborCapability:
+    configured = values.get('capability', {})
+    neighbor_capability = NeighborCapability()
+    neighbor_capability.required = frozenset(
+        code for name, code in REQUIRABLE.items() if configured.get(name) == REQUIRE
+    )
+    given = {name: True if value == REQUIRE else value for name, value in configured.items()}
     for name, attribute in TRISTATE_CAPABILITIES.items():
-        if name in values:
-            setattr(cap, attribute, TriState.from_bool(values[name]))
-    if 'add-path' in values:
-        cap.add_path = values['add-path']
-    if 'route-refresh' in values:
-        cap.route_refresh = 2 if values['route-refresh'] else 0  # REFRESH.NORMAL or 0
-    if 'software-version' in values:
-        cap.software_version = 'exabgp' if values['software-version'] else None
-    if values.get('link-local-nexthop') is not None:
-        cap.link_local_nexthop = TriState.from_bool(values['link-local-nexthop'])
-    if 'link-local-prefer' in values:
-        cap.link_local_prefer = values['link-local-prefer']
-    graceful = values.get('graceful-restart', None)
+        if name in given:
+            setattr(neighbor_capability, attribute, TriState.from_bool(given[name]))
+    if 'add-path' in given:
+        neighbor_capability.add_path = given['add-path']
+    if 'route-refresh' in given:
+        neighbor_capability.route_refresh = 2 if given['route-refresh'] else 0  # REFRESH.NORMAL or 0
+    if 'software-version' in given:
+        neighbor_capability.software_version = 'exabgp' if given['software-version'] else None
+    if given.get('link-local-nexthop') is not None:
+        neighbor_capability.link_local_nexthop = TriState.from_bool(given['link-local-nexthop'])
+    if 'link-local-prefer' in given:
+        neighbor_capability.link_local_prefer = given['link-local-prefer']
+    graceful = given.get('graceful-restart', None)
     if graceful is False:
-        cap.graceful_restart = GracefulRestartConfig.disabled()
-    elif isinstance(graceful, int) and 'graceful-restart' in values:
+        neighbor_capability.graceful_restart = GracefulRestartConfig.disabled()
+    elif isinstance(graceful, int) and 'graceful-restart' in given:
         # 0 is enabled with the hold-time as restart time, filled in when the neighbor is made
-        cap.graceful_restart = GracefulRestartConfig.with_time(graceful)
-    return cap
+        neighbor_capability.graceful_restart = GracefulRestartConfig.with_time(graceful)
+    return neighbor_capability
 
 
-def addpaths(local: dict[str, Any], cap: NeighborCapability, negotiated: list[FamilyTuple]) -> list[FamilyTuple]:
-    if not cap.add_path:
+def addpaths(
+    values: dict[str, Any], neighbor_capability: NeighborCapability, negotiated: list[FamilyTuple]
+) -> list[FamilyTuple]:
+    if not neighbor_capability.add_path:
         return []
-    add_path = local.get('add-path', {})
+    add_path = values.get('add-path', {})
     if not add_path:
         return list(negotiated)
     found: list[FamilyTuple] = []
-    for afi in SAFIS:
-        for family, limit in add_path.get(afi, []):
+    for afi_keyword in SAFIS:
+        for family, limit in add_path.get(afi_keyword, []):
             if family not in negotiated:
                 log.debug(
                     lazymsg('skipping add-path family {family} as it is not negotiated', family=family), 'configuration'
@@ -223,24 +227,24 @@ def addpaths(local: dict[str, Any], cap: NeighborCapability, negotiated: list[Fa
                 continue
             found.append(family)
             if limit > 0:
-                cap.paths_limit_per_family[family] = limit
+                neighbor_capability.paths_limit_per_family[family] = limit
     return found
 
 
 def nexthops(
-    local: dict[str, Any], cap: NeighborCapability, negotiated: list[FamilyTuple]
+    values: dict[str, Any], neighbor_capability: NeighborCapability, negotiated: list[FamilyTuple]
 ) -> list[tuple[AFI, SAFI, AFI]]:
     # the capability is on when a nexthop block is present, unless it was set explicitly
-    nexthop = local.get('nexthop', {})
-    if cap.nexthop.is_unset() and nexthop:
-        cap.nexthop = TriState.TRUE
-    if not cap.nexthop.is_enabled():
+    nexthop = values.get('nexthop', {})
+    if neighbor_capability.nexthop.is_unset() and nexthop:
+        neighbor_capability.nexthop = TriState.TRUE
+    if not neighbor_capability.nexthop.is_enabled():
         return []
     found: list[tuple[AFI, SAFI, AFI]] = []
-    for afi in nexthop:
-        for entry in nexthop[afi]:
-            afi_, safi, nexthop_afi = entry
-            if (afi_, safi) not in negotiated or (nexthop_afi, safi) not in negotiated:
+    for afi_keyword in nexthop:
+        for entry in nexthop[afi_keyword]:
+            afi, safi, nexthop_afi = entry
+            if (afi, safi) not in negotiated or (nexthop_afi, safi) not in negotiated:
                 log.debug(lazymsg('nexthop.skipped {entry} reason=not_negotiated', entry=entry), 'configuration')
                 continue
             found.append(entry)
@@ -266,32 +270,32 @@ def api(apis: dict[str, Any]) -> dict[str, Any]:
     return built
 
 
-def policy(local: dict[str, Any], settings: NeighborSettings) -> None:
+def policy(values: dict[str, Any], settings: NeighborSettings) -> None:
     """The BGP policy leaves, where the neighbor keeps them."""
-    hold_time = local.get('hold-time')
+    hold_time = values.get('hold-time')
     if hold_time is not None:
         settings.hold_time = HoldTime(hold_time)
     for keyword in ('description', 'rate-limit', 'host-name', 'domain-name', 'group-updates', 'as-set'):
-        if local.get(keyword) is not None:
-            setattr(settings, keyword.replace('-', '_'), local[keyword])
+        if values.get(keyword) is not None:
+            setattr(settings, keyword.replace('-', '_'), values[keyword])
     for keyword in ('auto-flush', 'adj-rib-in', 'adj-rib-out', 'manual-eor', 'shutdown'):
-        if local.get(keyword) is not None:
-            setattr(settings, keyword.replace('-', '_'), local[keyword])
+        if values.get(keyword) is not None:
+            setattr(settings, keyword.replace('-', '_'), values[keyword])
 
 
-def neighbor_settings(local: dict[str, Any]) -> NeighborSettings:
-    check_mandatory(local)
-    negotiated = families(local)
-    check_role(local)
-    check_confederation(local)
-    cap = capability(local)
-    settings = NeighborSettings(session=session(local), capability=cap, families=negotiated)
-    policy(local, settings)
-    settings.addpaths = addpaths(local, cap, negotiated)
-    limits = local.get('family', {}).get('prefix-limit', [])
+def neighbor_settings(values: dict[str, Any]) -> NeighborSettings:
+    check_mandatory(values)
+    negotiated = families(values)
+    check_role(values)
+    check_confederation(values)
+    neighbor_capability = capability(values)
+    settings = NeighborSettings(session=session(values), capability=neighbor_capability, families=negotiated)
+    policy(values, settings)
+    settings.addpaths = addpaths(values, neighbor_capability, negotiated)
+    limits = values.get('family', {}).get('prefix-limit', [])
     settings.prefix_limit = {family: limit for family, limit in limits if family in negotiated}
-    settings.nexthops = nexthops(local, cap, negotiated)
-    if cap.route_refresh and not settings.adj_rib_out:
+    settings.nexthops = nexthops(values, neighbor_capability, negotiated)
+    if neighbor_capability.route_refresh and not settings.adj_rib_out:
         log.warning(
             lazymsg(
                 'neighbor.route_refresh.adj_rib_out peer={peer} action=auto_enabled reason=route_refresh_requires_cache',
@@ -300,5 +304,5 @@ def neighbor_settings(local: dict[str, Any]) -> NeighborSettings:
             'configuration',
         )
         settings.adj_rib_out = True
-    settings.api = api(local.get('api', {}))
+    settings.api = api(values.get('api', {}))
     return settings

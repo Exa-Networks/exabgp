@@ -53,7 +53,7 @@ from exabgp.logger import lazymsg, log
 
 # the sections of an API command the grammar reads when selected; the others are read by the
 # legacy parser until the grammar declares them (plan/wip-config-grammar.md)
-GRAMMAR_COMMAND_SECTIONS = frozenset({'static', 'ipv4', 'ipv6'})
+GRAMMAR_COMMAND_SECTIONS = frozenset({'static', 'ipv4', 'ipv6', 'flow', 'l2vpn'})
 
 # Mapping for config keywords that don't match parser section names
 # Format: (parent_section_name, keyword) -> target_section_name
@@ -704,10 +704,11 @@ class Configuration(_Configuration):
                         if api[key]:
                             self.processes[process].setdefault(key, []).append(neighbor.session.router_id)
 
-    def partial(self, section: str, text: str, action: str = 'announce') -> bool:
+    def partial(self, section: str, text: str, action: str = 'announce', parser: str = '') -> bool:
+        """Read an API command, with `parser` or the one exabgp_debug_parser selects."""
         self._cleanup()  # this perform a big cleanup (may be able to be smarter)
         self._clear()
-        if getenv().debug.parser == 'grammar' and section in GRAMMAR_COMMAND_SECTIONS:
+        if (parser or getenv().debug.parser) == 'grammar' and section in GRAMMAR_COMMAND_SECTIONS:
             return self._partial_grammar(section, text, action)
         self.parser.set_api(text if text.endswith(';') or text.endswith('}') else text + ' ;')
         self.parser.set_action(action)

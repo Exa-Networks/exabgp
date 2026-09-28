@@ -17,14 +17,11 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.configuration.configuration import Configuration
-from exabgp.configuration.grammar.engine import NotMigrated
-from exabgp.configuration.grammar.read import read_file, read_text
-from exabgp.configuration.settings import ConfigurationSettings
 
 LEGACY = 'legacy'
 GRAMMAR = 'grammar'
@@ -86,10 +83,15 @@ def neighbor_state(neighbor: Neighbor) -> dict[str, Any]:
     state['session'] = _dataclass_state(neighbor.session)
     state['capability'] = _dataclass_state(neighbor.capability)
     state['routes'] = [route_state(route) for route in neighbor.routes]
-    state['asm'] = {family: str(message) for family, message in neighbor.asm.items()}
-    state['messages'] = [str(message) for message in neighbor.messages]
+    state['asm'] = {family: _operational_state(message) for family, message in neighbor.asm.items()}
+    state['messages'] = [_operational_state(message) for message in neighbor.messages]
     state['rib'] = (neighbor.rib.name, neighbor.rib.enabled)
     return state
+
+
+def _operational_state(message: Any) -> tuple[str, Any, Any]:
+    """The text of an operational message leaves out its sequence and router-id."""
+    return str(message), getattr(message, 'sequence', None), getattr(message, 'routerid', None)
 
 
 def outcome(configuration: Configuration) -> Accepted:
@@ -114,27 +116,11 @@ def legacy_file(path: str) -> tuple[Outcome, Configuration]:
     return _read(Configuration([path]), LEGACY)
 
 
-def _declared(read: Callable[[str], ConfigurationSettings], source: str) -> bool:
-    """Whether the grammar reads the configuration; NotMigrated when it uses an undeclared section.
-
-    A refusal for any other reason is reported by the reload which follows, with its message.
-    """
-    try:
-        read(source)
-    except NotMigrated:
-        raise
-    except (ValueError, OSError):
-        return False
-    return True
-
-
 def grammar_text(text: str) -> tuple[Outcome, Configuration]:
-    _declared(read_text, text)
     return _read(Configuration([text], text=True), GRAMMAR)
 
 
 def grammar_file(path: str) -> tuple[Outcome, Configuration]:
-    _declared(read_file, path)
     return _read(Configuration([path]), GRAMMAR)
 
 

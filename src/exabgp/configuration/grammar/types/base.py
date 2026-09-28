@@ -27,6 +27,10 @@ class Syntax(str):
     __slots__ = ()
 
 
+class Printed(list[str]):
+    """A value given to the printer as its words already, where the route holds the text of it."""
+
+
 class Type(ABC, Generic[T]):
     name = 'value'  # how an error refers to what was expected
 

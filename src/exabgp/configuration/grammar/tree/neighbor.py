@@ -24,6 +24,9 @@ from exabgp.configuration.grammar.nodes import Block, Collect, Keep, Leaf
 from exabgp.configuration.grammar.tree.family import ADD_PATH, FAMILY, NEXTHOP
 from exabgp.configuration.grammar.tree.resolve import inherit, neighbor_settings
 from exabgp.configuration.grammar.tree.announce import ANNOUNCE_BLOCK, STATIC
+from exabgp.configuration.grammar.tree.flow import FLOW
+from exabgp.configuration.grammar.tree.l2vpn import L2VPN_SECTION
+from exabgp.configuration.grammar.tree.operational import OPERATIONAL
 from exabgp.configuration.grammar.tree.static import ROUTES
 from exabgp.configuration.grammar.tree.unresolve import neighbor_values
 from exabgp.configuration.grammar.tree.session import (
@@ -53,9 +56,6 @@ from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPRange
 from exabgp.util.psk import guessed_as_base64
-
-# the sections a neighbor has which the grammar does not declare yet
-PENDING = frozenset({'flow', 'l2vpn', 'operational'})
 
 MD5_BASE64_AUTO_REMOVED = (
     "'auto' guessed whether md5-password was base64 by looking at the password, and a "
@@ -174,13 +174,29 @@ LEAVES = (
     Leaf('inherit', Inherit(), field='inherit', collect=Collect.EXTEND),
 )
 
-SECTIONS = (FAMILY, CAPABILITY, TCP_AO, ROLE, CONFEDERATION, ADD_PATH, NEXTHOP, API, STATIC, ANNOUNCE_BLOCK)
+SECTIONS = (
+    FAMILY,
+    CAPABILITY,
+    TCP_AO,
+    ROLE,
+    CONFEDERATION,
+    ADD_PATH,
+    NEXTHOP,
+    API,
+    STATIC,
+    ANNOUNCE_BLOCK,
+    FLOW,
+    L2VPN_SECTION,
+    OPERATIONAL,
+)
 
 
 def _check(neighbor: Neighbor, context: dict[str, Any]) -> None:
     """The checks the legacy parser made on the Neighbor it built."""
     interface = neighbor.session.source_interface
-    if interface and (len(interface) > MAX_INTERFACE_NAME or any(c.isspace() for c in interface) or '/' in interface):
+    if interface and len(interface) > MAX_INTERFACE_NAME:
+        raise ValueError(f'source-interface {interface} is longer than {MAX_INTERFACE_NAME} characters')
+    if interface and (any(c.isspace() for c in interface) or '/' in interface):
         raise ValueError(f'source-interface {interface} is not a valid interface name')
     session = neighbor.session
     if not session.auto_discovery and session.local_address.is_link_local():
@@ -225,6 +241,7 @@ def _neighbor(name: Any, values: dict[str, Any], context: dict[str, Any]) -> Nei
         route for section in ('static', 'l2vpn', 'flow') for route in values.get(section, {}).get('routes', [])
     ]
     settings.routes += values.get('routes', [])
+    settings.operational = list(values.get('operational', {}).get('routes', []))
     neighbor = Neighbor.from_settings(settings, rib=False)
     _check(neighbor, context)
     _check_routes(neighbor)
@@ -281,7 +298,6 @@ NEIGHBOR = Block(
     name=IP_RANGE,
     doc='a BGP peer',
     children=LEAVES + SECTIONS,
-    pending=PENDING,
     unbuild=neighbor_values,
 )
 
@@ -297,7 +313,6 @@ TEMPLATE = Block(
             keep=Keep.NAMED,
             name=TemplateName(),
             children=LEAVES + SECTIONS,
-            pending=PENDING,
         ),
     ),
 )

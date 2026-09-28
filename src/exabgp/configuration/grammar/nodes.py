@@ -116,8 +116,8 @@ class Block:
     missing: str = 'missing {names}'
     # checks and rewrites once every statement of the block is read, raises ValueError
     finish: Callable[[dict[str, Any]], None] | None = None
-    # sections the legacy parser reads here and the grammar does not declare yet
-    pending: frozenset[str] = frozenset()
+    # called with the read context when the block opens, before any of its statements
+    opened: Callable[[dict[str, Any]], None] | None = None
     # for printing: (what was built, context of the whole print) -> (name, values by field,
     # as the statements give them)
     unbuild: Callable[[Any, dict[str, Any]], tuple[Any, dict[str, Any]]] | None = None
@@ -130,7 +130,6 @@ class Block:
             index: dict[str, Any] = self._leaves if isinstance(child, Leaf) else self._blocks
             assert child.keyword not in index, f'{child.keyword} declared twice in {self.keyword}'
             index[child.keyword] = child
-        assert not self.pending & (set(self._leaves) | set(self._blocks)), 'a keyword is declared or pending'
 
     def leaf(self, keyword: str) -> Leaf | None:
         return self._leaves.get(keyword)

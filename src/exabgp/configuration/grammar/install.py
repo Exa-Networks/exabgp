@@ -11,24 +11,33 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from exabgp.bgp.message.operational import OperationalFamily
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.neighbor.settings import NeighborSettings
 from exabgp.protocol.ip import IPRange
 
 
-def _init(neighbor: Neighbor, neighbors: dict[str, Neighbor]) -> None:
+def _init(neighbor: Neighbor, operational: list[OperationalFamily], neighbors: dict[str, Neighbor]) -> None:
     families = neighbor.families()
     for route in neighbor.routes:
         route = neighbor.resolve_self(route)
         if route.nlri.family().afi_safi() in families:
             neighbor.rib.outgoing.add_to_rib_watchdog(route)
+    for message in operational:
+        family = message.family()
+        if family not in families:
+            continue
+        if message.name == 'ASM':
+            neighbor.asm[family] = message
+        else:
+            neighbor.messages.append(message)
     neighbors[neighbor.name()] = neighbor
 
 
-def install(settings: list[NeighborSettings]) -> dict[str, Neighbor]:
+def install(neighbor_settings: list[NeighborSettings]) -> dict[str, Neighbor]:
     """The neighbors by name; one per family for a multi-session neighbor."""
     neighbors: dict[str, Neighbor] = {}
-    for each in settings:
+    for each in neighbor_settings:
         neighbor = Neighbor.from_settings(each, rib=False)
         neighbor.routes = [neighbor.resolve_self(route) for route in neighbor.routes]
         # the peer-address of a configured neighbor is always a range, read by IP_RANGE
@@ -39,8 +48,8 @@ def install(settings: list[NeighborSettings]) -> dict[str, Neighbor]:
                 session = deepcopy(neighbor)
                 session.make_rib()
                 session.rib.outgoing.families = {family}
-                _init(session, neighbors)
+                _init(session, each.operational, neighbors)
             continue
         neighbor.make_rib()
-        _init(neighbor, neighbors)
+        _init(neighbor, each.operational, neighbors)
     return neighbors

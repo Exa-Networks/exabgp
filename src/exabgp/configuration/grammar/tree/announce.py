@@ -20,7 +20,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import LocalPreference, MED, NextHop, NextHopSelf
@@ -29,17 +28,20 @@ from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, RTC, Label
 from exabgp.bgp.message.update.nlri.settings import INETSettings, RTCSettings
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Leaf
+from exabgp.configuration.grammar.tree.l2vpn import VPLSLine
+from exabgp.configuration.grammar.tree.sr_policy import SRPolicyLine
 from exabgp.configuration.grammar.tree.static import (
-    ANNOUNCE,
+    MAX_ROUTE_VALUES,
     ROUTES,
     ROUTE_VALUES,
     RouteValue,
     Unprintable,
-    _take_routes,
+    action,
     attribute_words,
     normalize,
     route_words,
     static_block,
+    store_routes,
 )
 from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Type
@@ -216,7 +218,7 @@ RTC_VALUES: dict[str, RouteValue] = {
 
 
 @dataclass(frozen=True)
-class Family:
+class AnnounceSafi:
     """What an announce family reads, and the NLRI it builds."""
 
     values: dict[str, RouteValue]
@@ -224,32 +226,28 @@ class Family:
     prefix: bool = True  # the route starts with its prefix
 
 
-FAMILIES: dict[str, Family] = {
-    'unicast': Family(PATH_VALUES, INET),
-    'multicast': Family(IP_VALUES, INET),
-    'nlri-mpls': Family(LABEL_VALUES, Label),
-    'mpls-vpn': Family(VPN_VALUES, IPVPN),
-    'rtc': Family(RTC_VALUES, RTC, prefix=False),
+ANNOUNCE_SAFIS: dict[str, AnnounceSafi] = {
+    'unicast': AnnounceSafi(PATH_VALUES, INET),
+    'multicast': AnnounceSafi(IP_VALUES, INET),
+    'nlri-mpls': AnnounceSafi(LABEL_VALUES, Label),
+    'mpls-vpn': AnnounceSafi(VPN_VALUES, IPVPN),
+    'rtc': AnnounceSafi(RTC_VALUES, RTC, prefix=False),
 }
-
-# a route holds a handful of values, each given once or a few times
-MAX_ROUTE_VALUES = 256
 
 
 class AnnounceLine(Type[list[Route]]):
     """`[<prefix>] <keyword> <value> ...` of one family of one address family."""
 
-    def __init__(self, afi: AFI, safi: SAFI, family: Family) -> None:
+    def __init__(self, afi: AFI, safi: SAFI, announce_safi: AnnounceSafi) -> None:
         self.afi = afi
         self.safi = safi
-        self.family = family
+        self.announce_safi = announce_safi
         self.name = f'{afi.name()} {safi.name()} route'
 
     def parse(self, words: Words) -> list[Route]:
-        action = Action.ANNOUNCE if words.context.get(ANNOUNCE, True) else Action.WITHDRAW
-        settings: Any = RTCSettings() if self.family.nlri is RTC else INETSettings()
-        settings.action = action
-        if self.family.prefix:
+        settings: Any = RTCSettings() if self.announce_safi.nlri is RTC else INETSettings()
+        settings.action = action(words)
+        if self.announce_safi.prefix:
             # legacy: a prefix of the other address family is taken, the route is of the block's
             prefix = bgp.Prefix().parse(words)
             settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask)
@@ -260,12 +258,12 @@ class AnnounceLine(Type[list[Route]]):
             keyword = words.word()
             if not keyword:
                 break
-            spec = self.family.values.get(keyword)
+            spec = self.announce_safi.values.get(keyword)
             if spec is None:
-                raise ConfigError(where, f"Unknown command '{keyword}'", expected=sorted(self.family.values))
+                raise ConfigError(where, f"Unknown command '{keyword}'", expected=sorted(self.announce_safi.values))
             _apply(settings, attributes, spec, spec.type.parse(words))
         try:
-            nlri = self.family.nlri.from_settings(settings)
+            nlri = self.announce_safi.nlri.from_settings(settings)
         except ValueError as exc:
             raise ConfigError(words.where(), str(exc)) from None
         return [Route(nlri, attributes, nexthop=settings.nexthop)]
@@ -274,7 +272,7 @@ class AnnounceLine(Type[list[Route]]):
         return [word for route in value for word in announce_words(route)]
 
     def hint(self) -> str:
-        return '<prefix> next-hop <ip>|self [<attribute> <value> ...]' if self.family.prefix else '...'
+        return '<prefix> next-hop <ip>|self [<attribute> <value> ...]' if self.announce_safi.prefix else '...'
 
     def examples(self) -> list[str]:
         return []
@@ -293,7 +291,7 @@ def _apply(settings: Any, attributes: AttributeCollection, spec: RouteValue, val
         attributes.add(value)
 
 
-def _announce(values: dict[str, Any], routes: list[Route], context: dict[str, Any]) -> None:
+def _store_announced(values: dict[str, Any], routes: list[Route], context: dict[str, Any]) -> None:
     values.setdefault(ANNOUNCED, []).extend(routes)
 
 
@@ -308,7 +306,10 @@ def _refused_family(keyword: str) -> Leaf:
     return Leaf(keyword, Refused(keyword), field='_refused')
 
 
-def _address_block(keyword: str, afi: AFI, families: tuple[str, ...], pending: frozenset[str]) -> Block:
+def _address_block(keyword: str, afi: AFI, safi_keywords: tuple[str, ...]) -> Block:
+    from exabgp.configuration.grammar.tree.flow import AnnounceFlowLine
+    from exabgp.configuration.grammar.tree.select import MUP_TYPES, MVPN_TYPES, SelectLine, mup_values
+
     return Block(
         keyword,
         field=keyword,
@@ -316,16 +317,32 @@ def _address_block(keyword: str, afi: AFI, families: tuple[str, ...], pending: f
         children=(
             *(
                 Leaf(
-                    family,
-                    AnnounceLine(afi, SAFI.from_string(family), FAMILIES[family]),
-                    field=f'_{family}',
-                    store=_announce,
+                    safi_keyword,
+                    AnnounceLine(afi, SAFI.from_string(safi_keyword), ANNOUNCE_SAFIS[safi_keyword]),
+                    field=f'_{safi_keyword}',
+                    store=_store_announced,
                 )
-                for family in families
+                for safi_keyword in safi_keywords
             ),
+            *(
+                Leaf(
+                    safi_keyword,
+                    AnnounceFlowLine(afi, SAFI.from_string(safi_keyword)),
+                    field=f'_{safi_keyword}',
+                    store=_store_announced,
+                )
+                for safi_keyword in ('flow', 'flow-vpn')
+            ),
+            Leaf('mup', SelectLine(afi, SAFI.mup, MUP_TYPES, mup_values()), field='_mup', store=_store_announced),
+            Leaf(
+                'mcast-vpn',
+                SelectLine(afi, SAFI.mcast_vpn, MVPN_TYPES, IP_VALUES),
+                field='_mcast-vpn',
+                store=_store_announced,
+            ),
+            Leaf('sr-policy', SRPolicyLine(afi), field='_sr-policy', store=_store_announced),
             _refused_family('labeled-unicast'),
         ),
-        pending=pending,
     )
 
 
@@ -333,15 +350,18 @@ IPV4 = _address_block(
     'ipv4',
     AFI.ipv4,
     ('unicast', 'multicast', 'nlri-mpls', 'mpls-vpn', 'rtc'),
-    frozenset({'mcast-vpn', 'flow', 'flow-vpn', 'mup', 'sr-policy'}),
 )
 IPV6 = _address_block(
     'ipv6',
     AFI.ipv6,
     ('unicast', 'multicast', 'nlri-mpls', 'mpls-vpn'),
-    frozenset({'mcast-vpn', 'flow', 'flow-vpn', 'mup', 'sr-policy'}),
 )
-L2VPN = Block('l2vpn', field='l2vpn', build=_address_family, pending=frozenset({'vpls'}))
+L2VPN = Block(
+    'l2vpn',
+    field='l2vpn',
+    build=_address_family,
+    children=(Leaf('vpls', VPLSLine(), field='_vpls', store=_store_announced),),
+)
 
 ANNOUNCE_BLOCK = Block('announce', field='announce', doc='routes by address family', children=(IPV4, IPV6, L2VPN))
 
@@ -378,10 +398,15 @@ def announce_family(route: Route) -> tuple[str, str] | None:
     if normalize(nlri) is nlri and nlri.afi == IP.toafi(prefix):
         if isinstance(nlri, Label) or nlri.safi == IP.tosafi(prefix):
             return None
-    family = 'mpls-vpn' if isinstance(nlri, IPVPN) else 'nlri-mpls' if isinstance(nlri, Label) else nlri.safi.name()
-    return nlri.afi.name(), family
+    safi_keyword = (
+        'mpls-vpn' if isinstance(nlri, IPVPN) else 'nlri-mpls' if isinstance(nlri, Label) else nlri.safi.name()
+    )
+    return nlri.afi.name(), safi_keyword
 
 
 STATIC = static_block(
-    (Leaf('rtc', AnnounceLine(AFI.ipv4, SAFI.rtc, FAMILIES['rtc']), field='_rtc', store=_take_routes),)
+    (
+        Leaf('rtc', AnnounceLine(AFI.ipv4, SAFI.rtc, ANNOUNCE_SAFIS['rtc']), field='_rtc', store=store_routes),
+        Leaf('sr-policy', SRPolicyLine(None), field='_sr-policy', store=store_routes, doc='an SR policy route'),
+    )
 )

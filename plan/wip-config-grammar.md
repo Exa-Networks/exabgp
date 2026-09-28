@@ -393,18 +393,18 @@ sections, and reports the rest as skipped with the missing section named.
 
 ### Phase 0: groundwork
 
-- [ ] `grammar/tokens.py`: positioned tokens from `format.tokens()`, errors carry
+- [x] `grammar/tokens.py`: positioned tokens from `format.tokens()`, errors carry
       `file:line:column`
-- [ ] `grammar/error.py`
-- [ ] `grammar/types/base.py`, `basic.py`, `network.py`, each type with `examples()`, unit
+- [x] `grammar/error.py`
+- [x] `grammar/types/base.py`, `basic.py`, `network.py`, each type with `examples()`, unit
       and property tests
-- [ ] `grammar/nodes.py`, `engine.py`, `render.py`
+- [x] `grammar/nodes.py`, `engine.py`, `render.py`
 - [x] `exabgp_debug_parser` switch, default `legacy` (`Configuration.reload(parser)`)
 - [x] `configuration validate --parser grammar|legacy|both`
-- [ ] differential test harness (2.8), with the equality check; verify `Neighbor.__eq__`
+- [x] differential test harness (2.8), with the equality check; verify `Neighbor.__eq__`
       covers every field and extend it where it does not
-- [ ] forms corpus skeleton and coverage test (2.9)
-- [ ] round-trip harness (2.10)
+- [x] forms corpus skeleton and coverage test (2.9)
+- [x] round-trip harness (2.10)
 - [x] fix the reported line number in the legacy parser (commit 2978fbb38)
 
 ### Phase 1: neighbor, template and the blocks inside them
@@ -466,26 +466,39 @@ legacy functions.
 
 ### Phase 4: the rest of the families
 
-- [ ] flow (`match`, `then`, `scope`, the one-liner)
-- [ ] l2vpn / vpls
-- [ ] mup, mvpn (`Select`)
-- [ ] sr-policy
-- [ ] operational
+- [x] flow (`match`, `then`, `scope`, the one-liner, `announce ipv4|ipv6 flow|flow-vpn`)
+      (`grammar/types/flow.py`, `grammar/tree/flow.py`)
+- [x] l2vpn / vpls, and `announce { l2vpn { vpls ...; } }` (`grammar/tree/l2vpn.py`)
+- [x] mup, mvpn (`grammar/tree/select.py`)
+- [x] sr-policy, static and announce (`grammar/tree/sr_policy.py`); printed from the sub-TLV
+      objects, the TunnelEncap text is not configuration syntax
+- [x] operational (`grammar/tree/operational.py`); `NeighborSettings.operational` carries the
+      messages to `grammar/install.py`, which files them as `_init_neighbor` did
+- [x] round trip over every `etc/exabgp/*.conf` and fixture (`test_roundtrip.py`), 112 files,
+      none skipped
 
 Exit: every configuration and every API command in the repository parses under both
 parsers to the same result, and the coverage test reports no keyword without forms.
 
 ### Phase 5: complete, with both parsers (milestone commit)
 
-- [ ] default `exabgp_configuration_parser` to `grammar`
+- [x] default `exabgp_debug_parser` to `grammar` (`environment/config.py`); `Configuration.partial()`
+      takes an explicit `parser` like `reload()`
 - [ ] `test_everything` passes with `grammar` as the default, and the differential suite
       passes with both
-- [ ] `cli/schema_bridge.py` switched to `describe.py`
-- [ ] a unit test over the import graph: the grammar package imports nothing from the
-      legacy modules
-- [ ] **freeze the legacy results**: for every input of 2.8 and every form of 2.9, store
+- [x] the CLI completer takes its hints and examples from `grammar/describe.py` (`route_help`);
+      `cli/schema_bridge.py` is no longer used by the CLI and goes with the legacy parser
+- [x] a unit test over the import graph: the grammar package imports nothing from the
+      legacy modules (`test_imports.py`, direct imports: every exabgp module reaches
+      `Configuration` through the reactor until phase 6 rewires it)
+- [x] **freeze the legacy results**: for every input of 2.8 and every form of 2.9, store
       what the legacy parser produced (`to_dict()` JSON and the encoded UPDATE bytes, or
       "rejected") as golden fixtures under `tests/unit/configuration/forms/expected/`.
+      Done as digests: `tests/unit/configuration/forms/expected/legacy.json` maps each of the
+      5817 inputs (forms, documents, files, API commands) to a digest of its outcome
+      (`config_grammar/frozen.py`, checked by `test_frozen.py`). A digest rather than
+      `to_dict()` and UPDATE bytes: the outcome compared is the one of `compare.py`, and the
+      whole file stays at 228 KB
       Once the legacy parser is gone the forms and differential tests compare against
       these files, so they keep proving the behaviour was preserved
 - [ ] commit, when Thomas asks: this commit holds both parsers and is the point to come
@@ -509,9 +522,9 @@ is then replaced by documenting the switch and keeping both parsers tested.
 
 ### Phase 7: generated documentation
 
-- [ ] `exabgp configuration syntax [section]`
+- [x] `exabgp configuration syntax [section ...] [--json]` (`application/syntax.py`)
 - [ ] man page and wiki reference pages generated, reviewed by hand before publishing
-- [ ] `.claude/exabgp/` codebase docs updated for the new package
+- [x] `.claude/exabgp/` codebase docs updated for the new package (`CONFIGURATION_GRAMMAR.md`)
 
 ---
 
@@ -587,6 +600,22 @@ Each is pinned by a form or document in `tests/unit/config_grammar/forms.py`.
 | `next-hop self` in an announce family is IPv4 whatever the family | `announce { ipv6 { unicast ... next-hop self; } }` | `announce.AnnounceNextHop` |
 | a prefix of the other address family is taken, and builds a route no one can show | `announce { ipv4 { unicast 2001:db8::/48 ... } }` | `announce.AnnounceLine` |
 | a file ending on a continuation line repeats its last piece | `run /bin/cat \` at EOF | lexer `_file_lines` |
+| a `flow` section keeps the neighbor's list of routes, which the neighbor adds again: every route counts twice | `flow { route r { ... } }` | `flow._flow`, unresolve `_routes` |
+| a trailing `&` in a flow match is refused inside brackets only | | `types/flow._expression` |
+| IPv6-only flow components are accepted while the family is not set yet | | `types/flow` |
+| a one-line flow `route-distinguisher` sets a field which does not exist and is refused | | `tree/flow.LINE` |
+| an IPv6 `copy` next to another is dropped as a duplicate attribute | | `tree/flow.FlowRoute` |
+| an attribute given in the `l2vpn` section goes to the last route read, a static one included, and fails when there is none | `l2vpn { vpls ...; origin igp; }` | `l2vpn._last_route` |
+| the `l2vpn` section takes every route not yet taken, those read before it included | | `l2vpn._l2vpn` |
+| a VPLS value given at the `l2vpn` level is refused | `l2vpn { endpoint 5; }` | `l2vpn._NoSetter` |
+| the MUP `next-hop self` takes the family of the context; an IPv4 next-hop is mapped into IPv6 for an IPv6 route, which carries no next-hop attribute | | `select.MupNextHop` |
+| an sr-policy route ignores what follows its sub-TLVs | `sr-policy ... preference 1 garbage words;` | `sr_policy.sr_policy_route` |
+| the static `sr-policy` takes its family from the endpoint, IPv4 when it has none | | `sr_policy._endpoint_afi` |
+| an operational message reads exactly two words per value and ignores the rest; `router-id` takes the place of a value, so it is never accepted | `rpcq afi ipv4 safi unicast router-id 1.2.3.4 sequence 5;` is refused | `operational._values` |
+| the advisory of an operational message is not checked against its maximum length | | `operational.CONVERT` |
+| a sequence may be negative, and 0 is no sequence | `sequence -1;` | `operational.CONVERT` |
+| a second `operational` block replaces the messages of the first, unless it is empty | | `operational._operational` |
+| a template's operational messages are added after the neighbor's own | | `resolve.transfer` |
 
 ---
 
@@ -607,6 +636,13 @@ that could not be avoided. It decides the phase 6 gate.
   IPv6 `/32` route is refused "can only use ip ranges for the peer address with passive
   neighbors". The host-bit check of prefixes can be wrong the same way. Both parsers go
   through it; pinned as NETMASK_DOCUMENT_BODY in the forms. To fix on its own, with its test.
+- configuration errors: the grammar positions an error as `<file>:<line>:<column>: <message>`
+  (`line <line>:<column>:` for text), where the legacy parser wrote `line <line>: <the
+  statement>` and named the section (`neighbor/flow/route`). Some messages are worded
+  differently too (`'jsn' is not a valid encoder`). Tests which checked the legacy form now
+  accept either (`test_configuration_error_line.py` checks each parser's own)
+- `exabgp schema export` still prints the legacy schema; `exabgp configuration syntax --json`
+  prints the grammar's. Switching `schema export` changes its output
 - candidate, not done: `str(neighbor)` from `render()` would change the text of
   `show neighbor configuration`. Today's printer writes `rate-limit disable`, which neither
   parser reads back.
@@ -646,6 +682,30 @@ that could not be avoided. It decides the phase 6 gate.
 - 2026-09-27: if the API changed as a side effect, keeping the legacy parser as a user
   choice is decided at the end (section 7, phase 6 gate)
 
+- 2026-09-28: phase 4 complete: flow, l2vpn, mup, mvpn, sr-policy, operational; no keyword is
+  pending, `NotMigrated` is never raised by the tree any more. 8500+ grammar tests; every
+  `etc/exabgp/*.conf` and fixture reads the same with both parsers and prints back to a
+  configuration both parsers read the same. `compare` now also compares the sequence and
+  router-id of operational messages, which their text leaves out
+
+- 2026-09-28: phase 5 and 7 work: grammar is the default parser; frozen legacy results;
+  import test; `describe.py` (syntax, keyword help, JSON schema) behind the CLI completer
+  and `exabgp configuration syntax`; `CONFIGURATION_GRAMMAR.md`. Under the grammar default,
+  14 unit tests failed on error wording and position format: wording aligned with the
+  legacy messages (prefix-limit, source-interface), position tests made parser-aware
+- phase 7 left: the man page syntax block and the wiki pages are to be generated from
+  `exabgp configuration syntax` and reviewed by Thomas (the hand written block has errors,
+  `rate-limit <enable | disable>` where a number is read)
+
+- 2026-09-28: naming pass over the grammar package (asked by Thomas): one name per concept
+  (`family` is only a FamilyTuple, `afi_keyword`/`safi_keyword` for spellings, `values`
+  for the neighbor values rather than the legacy `local`, `nexthop`, `word` for converter
+  arguments, `_store_<what>` callbacks), duplicated helpers shared (`Words.expect`,
+  `static.action`, `static.store_routes`, `MAX_ROUTE_VALUES`, `error.ROUTE_ERRORS`,
+  `INDENT`). Conventions written in `.claude/exabgp/CONFIGURATION_GRAMMAR.md`. Left as
+  they are: `Statement.words` (tokens, not words), the `...Type` suffix of some value
+  types in `types/bgp.py`, the context key constants (no common scheme yet)
+
 ## Failures
 
 (none yet)
@@ -656,7 +716,11 @@ that could not be avoided. It decides the phase 6 gate.
 
 ## Resume Point
 
-Start phase 0. The survey script used for section 1:
+Phase 5 done but for its commit, which waits for Thomas (`pending` / `NotMigrated` removed,
+the grammar is the default). Then the phase 6 gate: review section 7 with Thomas. Phase 7:
+the man page block and wiki pages from `exabgp configuration syntax`, reviewed by Thomas.
+
+The survey script used for section 1:
 
 ```python
 import importlib, pkgutil

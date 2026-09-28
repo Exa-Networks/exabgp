@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import re
 import subprocess
 
 import pytest
@@ -29,6 +30,9 @@ from exabgp.bgp.message.update.nlri.settings import FlowSettings
 from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPv4
+
+# the legacy parser writes `line 8: <statement>`, the grammar `<file>:8:10: <message>`
+NAMES_A_LINE = re.compile(r'line \d+|:\d+:\d+: ')
 
 ROOT = pathlib.Path(__file__).parent.parent.parent
 
@@ -143,7 +147,7 @@ def test_the_configuration_refuses_the_mix(tmp_path, text, shape) -> None:
     combined = result.stdout + result.stderr
     assert result.returncode != 0, f'mixed {shape} was accepted'
     assert '2001:db8::/32' in combined, combined[-1500:]
-    assert 'line ' in combined
+    assert NAMES_A_LINE.search(combined)
     assert 'Traceback' not in combined
 
 

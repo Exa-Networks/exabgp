@@ -17,7 +17,6 @@ from exabgp.logger import log, lazymsg
 
 from exabgp.configuration import compare
 from exabgp.configuration.check import check_generation
-from exabgp.configuration.grammar.engine import NotMigrated
 
 
 def setargs(sub: argparse.ArgumentParser) -> None:
@@ -91,10 +90,7 @@ def _load(configuration: str, location: str, parser: str) -> Configuration:
             _fail(f'{configuration} is not a valid config file: {config.error!s}')
         return config
 
-    try:
-        outcome, grammar = compare.grammar_file(location)
-    except NotMigrated as exc:
-        _fail(f'{configuration} can not be read by the grammar parser yet: {exc}')
+    outcome, grammar = compare.grammar_file(location)
     if parser == compare.BOTH:
         legacy_outcome, _ = compare.legacy_file(location)
         difference = compare.difference(legacy_outcome, outcome)
