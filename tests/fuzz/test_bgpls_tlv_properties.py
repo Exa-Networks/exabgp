@@ -401,10 +401,9 @@ class TestARecognisedTlvValidatesItsSubTlvLengths:
         one_parseable_line(emitted, f'TLV {scode} with no sub-TLV')
 
 
-class TestKnownGaps:
-    """Demonstrated rather than described, per qa/rfc/README.md."""
+class TestRepeatedSubTlv:
+    """Once a demonstrated gap; merge_subtlvs now keeps every occurrence."""
 
-    @pytest.mark.xfail(strict=True, reason='RFC 9552 8.2.2: a repeated sub-TLV is silently dropped')
     def test_a_repeated_sub_tlv_does_not_lose_the_first_one(self) -> None:
         """`_unpack_data` joins its sub-TLV renders into a string and calls json.loads on it.
 
@@ -412,8 +411,7 @@ class TestKnownGaps:
         `json.loads` keeps the last: the first sub-TLV leaves the process without a trace.
         RFC 9552 8.2.2 forbids refusing the attribute over which sub-TLVs it includes, so the
         answer is not a `Notify` but an array, the way `LinkState.json()` answers a repeated
-        TLV.  That is a change to how the member is shaped, so it is recorded here rather than
-        made alongside the length checks.
+        TLV.
         """
         first = pack('!HH', SRV6_SID_STRUCTURE_TLV, 4) + bytes([1, 2, 3, 4])
         second = pack('!HH', SRV6_SID_STRUCTURE_TLV, 4) + bytes([9, 9, 9, 9])
@@ -429,3 +427,12 @@ def test_the_registry_this_file_sweeps_is_populated() -> None:
     package before collection for exactly this reason.
     """
     assert len(TLVS) >= LSID_FLOOR, f'only {len(TLVS)} BGP-LS TLVs are registered: {TLVS}'
+
+
+def test_a_repeated_sub_tlv_keeps_both_occurrences_in_order() -> None:
+    """The array holds the first occurrence then the second, so neither is lost."""
+    first = pack('!HH', SRV6_SID_STRUCTURE_TLV, 4) + bytes([1, 2, 3, 4])
+    second = pack('!HH', SRV6_SID_STRUCTURE_TLV, 4) + bytes([9, 9, 9, 9])
+    emitted, _, _ = render(1106, SRV6_ENDX_FIXED + first + second)
+
+    assert emitted.index('"loc_block_len": 1') < emitted.index('"loc_block_len": 9'), emitted

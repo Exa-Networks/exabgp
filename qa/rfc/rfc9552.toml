@@ -97,23 +97,18 @@ asks which NLRI type the attribute arrived with.
 id = "rfc9552#5.1-nlri-tlvs-ascending-order"
 section = "5.1"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "positive-only"
 text = """
 To compare NLRIs with unknown TLVs, all TLVs within the NLRI MUST be
 ordered in ascending order by TLV Type.
 """
 note = """
-Not checked anywhere.  `BGPLS.iter_tlvs` walks the sequence and validates every boundary
-but never compares one type to the next, and neither `NODE.unpack_bgpls_nlri` nor the link
-and prefix decoders sort or reject.
-
-Recorded positive-only because the requirement as written binds the encoder, and exabgp
-has no BGP-LS encoder to bind: an NLRI it emits is the peer's own bytes, kept verbatim in
-`_packed` and returned unchanged by `pack_nlri`, so exabgp neither creates nor repairs an
-ordering.  The receiver's half of it is the seventh bullet of section 8.2.2, recorded
-separately as rfc9552#8.2.2-nlri-syntactic-validation, and the demonstration of the gap
-lives on that entry.
+LINK.unpack_bgpls_nlri compares each NLRI TLV type with the one before and refuses a lower
+one, as NodeDescriptor.unpack_descriptors already did for the sub-TLVs of a Node
+Descriptor. Both raise NLRIDiscard: the length still frames the NLRI, so under 8.2.2 only
+that NLRI is dropped (see rfc9552#8.2.2-nlri-discard). TLVs of one type in a row are
+allowed, as the section permits several of a type.
 """
 
 [[requirement]]
@@ -275,7 +270,7 @@ NLRI on the contents of a field.
 id = "rfc9552#8.2.2-nlri-discard"
 section = "8.2.2"
 level = "MUST"
-status = "gap"
+status = "required"
 polarity = "negative-only"
 text = """
 When the error that is determined allows for the router to skip the
@@ -285,19 +280,12 @@ it MUST handle such malformed NLRIs as 'NLRI discard' (i.e.,
 processing similar to what is described in Section 5.4 of [RFC7606]).
 """
 note = """
-exabgp has no 'NLRI discard' for this family.  Every error `BGPLS.unpack_nlri` and the
-decoders under it find is a `Notify`, and a Notify from the NLRI decode path is a
-NOTIFICATION and a session reset; there is no path which drops one NLRI out of an
-MP_REACH and keeps the others.  The example the RFC gives, a TLV ordering violation, is
-detected now, in `NodeDescriptor.unpack_descriptors`, and answered with the Notify this
-family answers everything with: the detection landed, the 'NLRI discard' reaction it asks
-for did not.
-
-Negative-only: 'NLRI discard' is a reaction to a malformed NLRI, so there is no well
-formed input which exercises it.  What is owed is now exactly one thing rather than two:
-the ordering violation the RFC names as its example is found, and the answer to it is a
-session reset where the RFC asks for the rest of the MP_REACH to be kept.  There is no
-test on this entry because there is no input which would pass it.
+NLRIDiscard, a Notify subclass, is raised for a rule broken inside an NLRI whose length is
+honest (the ordering and single-occurrence rules of 5.1 and 5.2.1). BGPLS.unpack_nlri,
+which has read and checked that length, records how many octets the NLRI took, and the
+MP_REACH_NLRI loop (MPRNLRI) logs the NLRI as discarded, steps over it and goes on with
+the next one. A length the decoder cannot trust still resets the session, and an
+NLRIDiscard with nothing recording its length is a Notify like any other.
 """
 
 [[requirement]]

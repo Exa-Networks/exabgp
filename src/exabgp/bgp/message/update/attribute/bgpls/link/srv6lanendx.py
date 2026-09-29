@@ -15,7 +15,7 @@ from typing import Callable, ClassVar, Protocol, Self
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import unpack_subtlvs
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import merge_subtlvs, unpack_subtlvs
 from exabgp.protocol.ip import IP, IPv6
 from exabgp.util.types import Buffer
 
@@ -106,7 +106,7 @@ class Srv6(FlagLS):
             'algorithm': algorithm,
             'weight': weight,
             'sid': sid,
-            **json.loads('{' + ', '.join(subtlvs) + '}'),
+            **merge_subtlvs(subtlvs),
         }
 
 

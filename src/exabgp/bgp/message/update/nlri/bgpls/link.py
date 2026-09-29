@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     pass
 
+from exabgp.bgp.message.notification import NLRIDiscard
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
@@ -207,7 +208,12 @@ class LINK(BGPLS):
 
         # Validate TLVs can be parsed (logging unknown TLVs)
         # Offset by 4-byte header: TLVs start at byte 13 (4 + 1 + 8)
+        previous = 0
         for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
+            # RFC 9552 5.1: the TLVs of the NLRI are in ascending order of their type
+            if tlv_type < previous:
+                raise NLRIDiscard(f'BGP-LS link NLRI TLV {tlv_type} follows {previous}, not in ascending order')
+            previous = tlv_type
             if tlv_type == TLV_LOCAL_NODE_DESC:
                 # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
                 NodeDescriptor.unpack_descriptors(value, proto_id)

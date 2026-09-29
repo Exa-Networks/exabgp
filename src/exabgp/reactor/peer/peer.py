@@ -69,6 +69,10 @@ from exabgp.util.enumeration import TriState
 FORCE_GRACEFUL = True
 
 
+# RFC 5492 3: the NOTIFICATION a speaker which predates capabilities sends for them
+UNSUPPORTED_OPTIONAL_PARAMETER = (2, 4)
+
+
 class Interrupted(Exception):
     pass
 
@@ -235,6 +239,9 @@ class Peer:
         # Restart session, and the session its stale routes were received on
         self._restart_timer: asyncio.TimerHandle | None = None
         self._restart_negotiated: Negotiated | None = None
+        # RFC 5492 3: the peer refused an OPEN for its Capabilities Optional Parameter
+        # (Unsupported Optional Parameter, 2/4), so our OPENs to it carry none from now on
+        self.capabilities_refused = False
 
     def id(self) -> str:
         return 'peer-{}'.format(self.neighbor.uid)
@@ -1012,6 +1019,9 @@ class Peer:
 
         # THE PEER NOTIFIED US OF AN ERROR
         except NotificationReceived as notification:
+            if (notification.code, notification.subcode) == UNSUPPORTED_OPTIONAL_PARAMETER:
+                self.capabilities_refused = True
+                log.warning(lazymsg('open.capabilities.refused action=retry-without-capabilities'), self.id())
             # Check if maximum connection attempts reached
             if not self.can_reconnect():
                 log.debug(

@@ -19,7 +19,6 @@
 | Plan | Description |
 |------|-------------|
 | `type-safety/` | MyPy error reduction |
-| `wip-rfc-gap-fixes.md` | Close the RFC ledger gaps, each shown by a strict xfail test (2 of 8 areas done) |
 
 ### Planning (plan-)
 
@@ -129,6 +128,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-rfc-gap-fixes.md` | 2026-09-29 | Every RFC ledger gap outside multisession closed: 8 areas, from outgoing policy to BGP-LS |
 | `done-route-refresh-borr.md` | 2026-09-27 | Received End-of-RIB reset the session; RFC 7313 section 4 BoRR/EoRR |
 | `done-unsent-notifications.md` | 2026-09-27 | (2,7) via `capability require`, (6,1) via `family prefix-limit`, RFC 4486 enrolled |
 | `done-notification-text.md` | 2026-09-27 | NOTIFICATION names per IANA, RFC-defined Data field, wrong subcodes, API teardown |

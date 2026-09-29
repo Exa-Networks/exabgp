@@ -6,10 +6,8 @@ sentence is a MUST or a SHALL.  tests/unit/test_rfc7606_prescribed_action.py pin
 action half of seven of those rows; this file pins the malformation half, the rows that
 file does not reach, and the negative side of all of them.
 
-Two rows fail and carry xfail:
-
-  7.2  a Path Segment Length of zero is accepted instead of being treated as malformed
-  7.3  a NEXT_HOP path attribute of sixteen bytes is accepted instead of being malformed
+The 7.2 zero Path Segment Length and the 7.3 sixteen byte NEXT_HOP rows, which once failed
+and carried xfail, are met.
 
 The "if received from an external neighbor, discard it" halves of 7.5, 7.9 and 7.10 are
 tested against three sessions: an EBGP one, where the attribute goes whatever its length,

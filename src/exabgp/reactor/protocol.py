@@ -403,12 +403,13 @@ class Protocol:
         else:
             raise RuntimeError('no ASN available for the OPEN message')
 
+        # RFC 5492 3: SHOULD retry without the Capabilities Optional Parameter once refused
+        if self.peer.capabilities_refused:
+            capabilities = Capabilities()
+        else:
+            capabilities = Capabilities().new(self.neighbor, self.peer._restarted, local_as=local_as)
         sent_open = Open.make_open(
-            Version(4),
-            local_as,
-            self.neighbor.hold_time,
-            self.neighbor.session.router_id,
-            Capabilities().new(self.neighbor, self.peer._restarted, local_as=local_as),
+            Version(4), local_as, self.neighbor.hold_time, self.neighbor.session.router_id, capabilities
         )
 
         # we do not buffer open message in purpose

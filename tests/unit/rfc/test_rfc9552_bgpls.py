@@ -243,11 +243,6 @@ def test_descending_order_does_not_excuse_a_tlv_which_runs_past_the_value() -> N
 
 
 @pytest.mark.rfc('rfc9552#5.1-nlri-tlvs-ascending-order')
-@pytest.mark.xfail(
-    strict=True,
-    raises=pytest.fail.Exception,
-    reason='gap: the NLRI level TLVs of a Link NLRI are never compared one type to the next',
-)
 def test_a_link_nlri_whose_tlvs_are_not_ascending_is_not_taken_as_well_formed() -> None:
     """Sub-TLV order is checked inside a Node Descriptor; the TLVs around it are not.
 
@@ -406,11 +401,6 @@ def test_node_descriptor_sub_tlvs_out_of_ascending_order_are_refused() -> None:
 
 
 @pytest.mark.rfc('rfc9552#8.2.2-nlri-discard', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    raises=Notify,
-    reason='gap: a skippable BGP-LS NLRI error is a Notify and a session reset, never an NLRI discard',
-)
 def test_an_nlri_violating_the_ordering_rule_is_discarded_and_the_next_one_kept() -> None:
     """The example 8.2.2 gives itself: the ordering rule broken, the length still honest.
 

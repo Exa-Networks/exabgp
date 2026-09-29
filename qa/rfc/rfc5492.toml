@@ -80,7 +80,7 @@ reactor's delay loop as before; this sentence is not about those.
 id = "rfc5492#3-reconnect-without-the-capabilities-parameter"
 section = "3"
 level = "SHOULD"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 In this case, the speaker SHOULD attempt to
@@ -88,12 +88,11 @@ re-establish a BGP connection with the peer without sending to the
 peer the Capabilities Optional Parameter.
 """
 note = """
-Nothing in the reactor reads the subcode of a received NOTIFICATION to decide what the
-next OPEN carries. Peer.new_open builds the same Capabilities object from the neighbour
-configuration on every attempt, so a peer which answers our OPEN with Unsupported
-Optional Parameter is retried identically for ever and the session never comes up. The
-peer this protects against is a pre-RFC-2842 speaker, which is why it has not bitten,
-but the fallback is not there.
+A NOTIFICATION (2, 4), Unsupported Optional Parameter, received from the peer sets
+Peer.capabilities_refused, and every OPEN Protocol.new_open sends to that peer afterwards
+carries no Capabilities Optional Parameter. The session is retried, not stopped. It lasts
+as long as the Peer, so a reload which rebuilds the neighbour offers the capabilities again.
+Any other NOTIFICATION leaves the OPEN as it was.
 """
 
 [[requirement]]

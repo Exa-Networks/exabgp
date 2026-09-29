@@ -10,7 +10,7 @@ from __future__ import annotations
 from struct import unpack
 from typing import Any
 
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPv6
 from exabgp.protocol.iso import ISO
@@ -182,14 +182,13 @@ class NodeDescriptor:
         previous: int | None = None
         while data:
             descriptor, remaining = cls.unpack_node(data, igp)
+            # RFC 9552 8.2.2: a rule broken inside a length which still frames the NLRI
             if previous is not None and descriptor.node_type == previous:
-                raise Notify(3, 10, f'BGP-LS node descriptor sub-tlv {descriptor.node_type} is present more than once')
+                raise NLRIDiscard(f'BGP-LS node descriptor sub-tlv {descriptor.node_type} is present more than once')
             if previous is not None and descriptor.node_type < previous:
-                raise Notify(
-                    3,
-                    10,
+                raise NLRIDiscard(
                     f'BGP-LS node descriptor sub-tlv {descriptor.node_type} follows {previous}, '
-                    f'which is not the ascending order required',
+                    f'which is not the ascending order required'
                 )
             previous = descriptor.node_type
             descriptors.append(descriptor)

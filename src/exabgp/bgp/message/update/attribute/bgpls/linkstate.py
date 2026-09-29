@@ -561,3 +561,27 @@ class FlagLS(BaseLS):
         cls.check(data)
         # We only support IS-IS for now.
         return cls(data)
+
+
+def merge_subtlvs(fragments: list[str]) -> dict[str, object]:
+    """The JSON fragments of unpack_subtlvs as one object, a repeated sub-TLV kept.
+
+    Joined into one string and loaded, a member written twice kept only its last value, so
+    the first of two sub-TLVs of one code left the process without a trace. RFC 9552 8.2.2
+    does not let the attribute be refused over which sub-TLVs it holds, so a repeated
+    member becomes an array of every occurrence, as LinkState.json() answers a repeated TLV.
+    """
+    merged: dict[str, object] = {}
+    repeated: set[str] = set()
+    for fragment in fragments:
+        for key, value in json.loads('{' + fragment + '}').items():
+            if key not in merged:
+                merged[key] = value
+                continue
+            if key not in repeated:
+                merged[key] = [merged[key]]
+                repeated.add(key)
+            occurrences = merged[key]
+            assert isinstance(occurrences, list), 'a repeated member holds every occurrence'
+            occurrences.append(value)
+    return merged

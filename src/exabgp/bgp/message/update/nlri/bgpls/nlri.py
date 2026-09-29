@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
@@ -266,6 +266,7 @@ class BGPLS(NLRI):
         # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
         # Identifier in front of every NLRI of this family, and it has to come off
         # before the NLRI is read.
+        original_size = len(data)
         path_info, data = NLRI.consume_path_information(data, addpath)
         # BGP-LS NLRI header: type(2) + length(2) = 4 bytes minimum
         if len(data) < 4:
@@ -283,6 +284,19 @@ class BGPLS(NLRI):
         if len(data) < length + 4:
             raise Notify.short(3, 10, 'BGP-LS NLRI', length + 4, len(data))
 
+        try:
+            klass = cls._decoded(code, length, data, safi)
+        except NLRIDiscard as discard:
+            # the length was read and checked above, so the next NLRI starts past this one
+            discard.skip = original_size - len(data) + length + 4
+            assert discard.skip > 0, 'a discarded NLRI is stepped over, not re-read'
+            raise
+        klass.addpath = path_info
+        return klass, data[length + 4 :]
+
+    @classmethod
+    def _decoded(cls, code: int, length: int, data: Buffer, safi: SAFI) -> 'BGPLS':
+        """The NLRI of `code` from its framed bytes, parsed now rather than lazily."""
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:
                 # Only this branch reads a route distinguisher, so only this branch needs
@@ -308,15 +322,12 @@ class BGPLS(NLRI):
             wire_format = bytes(data[0 : length + 4])
             klass = GenericBGPLS(code, wire_format)
 
-        klass.addpath = path_info
-
         # the descriptors parse lazily, so a sub-tlv this decoder cannot read used to be
         # accepted here and fail later in the API writer calling json(): a raw exception
         # several layers from the wire, where nothing treats it as a protocol error.
         # Parse now, so a malformed sub-tlv is the NOTIFICATION it always should have been
         klass.check()
-
-        return klass, data[length + 4 :]
+        return klass
 
     def check(self) -> None:
         """Parse eagerly whatever this NLRI parses lazily, at the boundary.

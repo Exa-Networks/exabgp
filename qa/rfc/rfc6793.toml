@@ -50,17 +50,12 @@ field of the "support for four-octet AS number capability" in lieu of
 the "My Autonomous System" field of the OPEN message.
 """
 note = """
-exabgp only substitutes the capability value when the My Autonomous System field holds
-AS_TRANS: negotiated.py reads `if self.peer_as == AS_TRANS and self.asn4`. The sentence
-has no such condition, and a peer whose two fields disagree is exactly the case it
-exists to settle. The negative test says which one we take today and is xfail.
-
-Making the substitution unconditional was tried and reverted, not because it is wrong but
-because of what it turns up: tests/unit/rfc/test_rfc9234_roles_and_otc.py builds the
-peer's OPEN by copying the capabilities we sent, so its four-octet capability carries our
-local AS while its My Autonomous System field carries the peer's. Only the unconditional
-reading notices, and twenty-one role tests then fail on a Bad Peer AS. The fixture is what
-needs fixing first; the behaviour change is one line in _negotiate.
+Negotiated._negotiate takes the peer's AS from its four-octet AS capability whenever both
+ends exchanged it, whatever My Autonomous System holds, AS_TRANS or not. The fixtures which
+built the peer's OPEN by copying our capabilities, and so claimed our AS in it, now give
+the peer its own (test_rfc9234_roles_and_otc, test_rfc1997_communities,
+test_rfc9012_tunnel_encap, test_rfc5492_unsupported_capability). The Bad Peer AS message
+now prints the AS it compared, which is the capability's.
 """
 
 [[requirement]]

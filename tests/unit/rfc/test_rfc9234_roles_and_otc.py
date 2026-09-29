@@ -19,6 +19,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.capability.role import Role, RoleValue
@@ -90,6 +91,8 @@ def negotiate(neighbor: Neighbor, peer_role: RoleValue | None) -> Negotiated:
     """
     sent = our_capabilities(neighbor)
     received = Capabilities(sent)
+    # the peer's OPEN, not a copy of ours: RFC 6793 4.1 reads its AS from the capability
+    received[Capability.CODE.FOUR_BYTES_ASN] = ASN4(ASN(PEER_AS))
     received.pop(Capability.CODE.ROLE, None)
     if peer_role is not None:
         received[Capability.CODE.ROLE] = Role(peer_role)

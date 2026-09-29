@@ -4,6 +4,16 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Change: the AS of a peer which sent the four-octet AS capability is the capability's value
+   whatever the OPEN's My Autonomous System field holds (RFC 6793 4.1), not only when that
+   field is AS_TRANS. A peer whose two fields disagree is now judged by the capability.
+ * Feature: a peer refusing our OPEN with Unsupported Optional Parameter (2/4) is sent OPENs
+   with no capabilities from then on (RFC 5492 3), rather than the same refused OPEN again.
+ * Fix: a BGP-LS NLRI breaking an ordering rule inside an honest length (a Link NLRI's TLVs
+   or a Node Descriptor's sub-TLVs not ascending, or repeated) is discarded and the rest of
+   the UPDATE kept (RFC 9552 8.2.2), instead of the session being reset.
+ * Incompatible: a sub-TLV repeated inside a BGP-LS SRv6 End.X or LAN End.X SID is an array
+   of every occurrence in the JSON API; the first used to be lost.
  * Feature: the EVPN ESI Label (0x06/0x01) and ES-Import Route Target (0x06/0x02) extended
    communities of RFC 7432 are decoded, printed ("esi-label:<label>:<mode>",
    "es-import:<mac>") and re-encoded; they were a hex blob.

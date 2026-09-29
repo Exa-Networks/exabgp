@@ -5,7 +5,7 @@ The ledger these tests are joined to is qa/rfc/rfc6793.toml.
 The document has two halves. Generating updates for a two-octet peer is arithmetic exabgp
 gets right: AS_TRANS in the AS_PATH, AS4_PATH beside it with no confederation segment in
 it, and neither of them when every AS number is mappable. Reading updates back is the half
-which took the longest to get right, and the xfail markers left below are all on it.
+which took the longest to get right.
 
 Everything drives the real attribute parser: wire bytes into AttributeCollection.unpack,
 or a real ASPath and Aggregator into pack_attribute against a real Negotiated.
@@ -218,10 +218,6 @@ def test_the_capability_value_is_used_when_my_as_is_as_trans() -> None:
 
 
 @pytest.mark.rfc('rfc6793#4.1-capability-value-in-lieu-of-my-as', polarity='negative')
-@pytest.mark.xfail(
-    strict=True,
-    reason='negotiated.py substitutes the capability value only when My Autonomous System is AS_TRANS, so a peer whose two fields disagree is taken at its two-octet word',
-)
 def test_the_capability_value_wins_when_my_as_disagrees_with_it() -> None:
     """ "In lieu of" has no condition on it. Where the two fields differ, the capability rules."""
     negotiated = negotiate(local=65001, my_autonomous_system=65002, capability_as=int(ALSO_NON_MAPPABLE))

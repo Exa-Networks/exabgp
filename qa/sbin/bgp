@@ -942,33 +942,35 @@ class Message:
             open = self.header + self.body[:8] + byte_id + self.body[9:]
             return self._add_capa66(add_capa66, open)
 
-        # Check if peer supports Four-Octet Autonomous System (RFC6793)
-        opt_params = self.body[10:]
+        # RFC 6793 4.1: the peer takes our AS from the four-octet AS capability, so it has to
+        # be ours, not the copy of the client's this OPEN is built from. Every capability of
+        # every Capabilities parameter is looked at: the first alone missed it when the client
+        # sent several capabilities in one parameter, which exabgp does.
+        opt_params = bytearray(self.body[10:])
         offset = 0
-        open = ''
-
-        while offset < len(opt_params):
+        while offset + 2 <= len(opt_params):
             param_type = opt_params[offset]
             param_len = opt_params[offset + 1]
             if param_type == 2:  # Capabilities Optional Parameter
-                cap_code = opt_params[offset + 2]
-                if cap_code == 65:  # Support for 4 octet AS number capability
-                    open = (
-                        self.header
-                        + self.body[0:1]
-                        + pack('!H', asn)
-                        + self.body[3:8]
-                        + pack('!H', byte_id)[1:]
-                        + self.body[9:10]
-                        + opt_params[: offset + 2 + 2]
-                        + pack('!I', asn)
-                        + opt_params[offset + 2 + 2 + 4 :]
-                    )
-                    return self._add_capa66(add_capa66, open)
+                inner = offset + 2
+                end = inner + param_len
+                while inner + 2 <= end:
+                    cap_code, cap_len = opt_params[inner], opt_params[inner + 1]
+                    if cap_code == 65 and cap_len == 4:  # Support for 4 octet AS number capability
+                        opt_params[inner + 2 : inner + 6] = pack('!I', asn)
+                    inner += 2 + cap_len
             offset += param_len + 2
 
-        # No "Support for 4 octet AS number capability" found simply replace the 16-bit ASN number field.
-        open = self.header + self.body[0:1] + pack('!H', asn) + self.body[3:8] + pack('!H', byte_id)[1:] + self.body[9:]
+        two_octet = asn if asn <= 0xFFFF else 23456  # AS_TRANS for a four octet AS
+        open = (
+            self.header
+            + self.body[0:1]
+            + pack('!H', two_octet)
+            + self.body[3:8]
+            + pack('!H', byte_id)[1:]
+            + self.body[9:10]
+            + bytes(opt_params)
+        )
         return self._add_capa66(add_capa66, open)
 
 

@@ -47,6 +47,8 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability.asn4 import ASN4
+from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update, UpdateCollection
 from exabgp.bgp.message.update.attribute import Attribute
@@ -246,9 +248,16 @@ def established(neighbor: Neighbor, peer_as: int) -> Negotiated:
     negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
     negotiated.sent(Open.make_open(Version(4), ASN(LOCAL_AS), HoldTime(180), RouterID(OUR_ADDRESS), sent))
     negotiated.received(
-        Open.make_open(Version(4), ASN(peer_as), HoldTime(180), RouterID(LEARNED_FROM), Capabilities(sent))
+        Open.make_open(Version(4), ASN(peer_as), HoldTime(180), RouterID(LEARNED_FROM), theirs(sent, peer_as))
     )
     return negotiated
+
+
+def theirs(sent: Capabilities, peer_as: int) -> Capabilities:
+    """The peer's capabilities, ours copied with its own AS: RFC 6793 4.1 reads the AS there."""
+    capabilities = Capabilities(sent)
+    capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(ASN(peer_as))
+    return capabilities
 
 
 def received(communities: list[bytes]) -> UpdateCollection:

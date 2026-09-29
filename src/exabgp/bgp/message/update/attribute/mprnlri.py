@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.collection import RoutedNLRI
 
 from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
 from exabgp.bgp.message.update.nlri import NLRI
@@ -57,6 +57,14 @@ def _log_discarded(nlri: NLRI, reason: str) -> None:
     """
     log.warning(
         lazymsg('update.route.discarded nlri={nlri} reason="{reason}"', nlri=nlri, reason=reason),
+        'parser',
+    )
+
+
+def _log_discarded_bytes(discard: NLRIDiscard) -> None:
+    """An NLRI which could not be built at all, so only its reason can be named."""
+    log.warning(
+        lazymsg('update.nlri.discarded octets={n} reason="{reason}"', n=discard.skip, reason=discard.detail),
         'parser',
     )
 
@@ -138,9 +146,17 @@ class MPRNLRI(Attribute, Family):
         def nlri_generator() -> Iterator[NLRI]:
             nonlocal nlri_data
             while nlri_data:
-                nlri_result, left_result = NLRI.unpack_nlri(
-                    self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._addpath, Negotiated.UNSET
-                )
+                try:
+                    nlri_result, left_result = NLRI.unpack_nlri(
+                        self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._addpath, Negotiated.UNSET
+                    )
+                except NLRIDiscard as discard:
+                    # RFC 9552 8.2.2: framed but broken inside, so only this NLRI goes
+                    if not discard.skip:
+                        raise
+                    _log_discarded_bytes(discard)
+                    nlri_data = nlri_data[discard.skip :]
+                    continue
 
                 if nlri_result is not NLRI.INVALID:
                     reason = nlri_result.discard_on_receipt()

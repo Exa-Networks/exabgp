@@ -10,7 +10,7 @@ So every test here is about a decoder being too strict rather than too lax, whic
 opposite of the usual shape.  `TunnelEncap` sets `TREAT_AS_WITHDRAW`, which is what stops a
 `Notify` out of its sub-TLV walk reaching the peer as a NOTIFICATION, and a decoder which
 refuses a sub-TLV's value raises `MalformedSubTLV` instead, which keeps the bytes as an
-unrecognised sub-TLV.  What is still owed carries xfail.
+unrecognised sub-TLV.
 
 A repeated sub-TLV is the one place two of these tolerances pull apart: the repeat is
 disregarded in the json and still present in the bytes we would re-advertise.  RFC 8669 6
@@ -27,6 +27,8 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability.asn4 import ASN4
+from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
@@ -119,7 +121,10 @@ neighbor 192.0.2.1 {{
     # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
     negotiated.neighbor.enforce_first_as = False
     negotiated.sent(Open.make_open(Version(4), ASN(LOCAL_AS), HoldTime(180), RouterID('192.0.2.2'), capabilities))
-    negotiated.received(Open.make_open(Version(4), ASN(peer_as), HoldTime(180), RouterID('192.0.2.1'), capabilities))
+    theirs = Capabilities(capabilities)
+    # the peer's OPEN, not a copy of ours: RFC 6793 4.1 reads its AS from the capability
+    theirs[Capability.CODE.FOUR_BYTES_ASN] = ASN4(ASN(peer_as))
+    negotiated.received(Open.make_open(Version(4), ASN(peer_as), HoldTime(180), RouterID('192.0.2.1'), theirs))
     return negotiated
 
 

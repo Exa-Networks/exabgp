@@ -1,6 +1,6 @@
 # Closing the RFC ledger gaps
 
-🔄 **Status:** In progress, 3 of 8 areas done
+✅ **Status:** Completed 2026-09-29, all 8 areas; only the multisession draft keeps gaps (out of scope)
 **Branch:** ~~`claude/pensive-rubin-95pg84` (merged with main at `afe4003`)~~ squash-merged as
 #1432 (`acbcf24`). From 2026-09-28 the work continues on the local machine, on `main`,
 uncommitted until Thomas asks.
@@ -58,8 +58,8 @@ env exabgp_log_enable=false uv run pytest tests/unit/rfc -q -rx | grep XFAIL
 | 4 | RFC 8277 Multiple Labels Capability | ✅ | `9220b94` |
 | 5 | FlowSpec | ✅ | `e778145`, `7a59c04` |
 | 6 | Graceful Restart receiving procedures | ✅ | `c36aeba` |
-| 7 | EVPN and Prefix-SID | ✅ uncommitted | |
-| 8 | BGP-LS, capability retry, four-octet AS | ❌ todo | |
+| 7 | EVPN and Prefix-SID | ✅ | `0166c4d` |
+| 8 | BGP-LS, capability retry, four-octet AS | ✅ | this commit |
 
 ### Done, and the decisions taken
 
@@ -310,6 +310,24 @@ Each area below is independent. Do one per commit. The xfail tests named are the
   (its negative side is missing too).
 
 ---
+
+**Area 8 as implemented (2026-09-29):**
+- RFC 6793 4.1: `_negotiate` takes the peer AS from the capability whenever both sent it.
+  The fixtures copying our capabilities into the peer's OPEN (rfc9234, rfc1997, rfc9012,
+  rfc5492) now give the peer its own four-octet AS; the Bad Peer AS message prints the AS
+  it compared.
+- RFC 5492 3: `Peer.capabilities_refused` set on a received (2, 4); `Protocol.new_open`
+  then sends no Capabilities parameter. The xfail fixture never raised the NOTIFICATION
+  (an AsyncMock returns a Notification message); it now raises NotificationReceived.
+- RFC 9552: `NLRIDiscard(Notify)` for ordering/single-occurrence rules (LINK TLVs, Node
+  Descriptor sub-TLVs); `BGPLS.unpack_nlri` sets `skip`; the MPRNLRI loop steps over it.
+  `merge_subtlvs` keeps a repeated sub-TLV as an array (the fuzz xfail).
+- The functional test server (qa/sbin/bgp) built its OPEN from the client's and rewrote
+  the four-octet AS capability only when it was the first capability of a parameter;
+  exabgp sends several in one, so conf-ebgp and conf-confederation answered with our own
+  AS in it. It now rewrites it wherever it is (and sends AS_TRANS for a four-octet AS).
+  test_negotiated_local_as's mocked peer needed `capabilities_refused=False`.
+- Every rule mutated and caught. No gap is left in qa/rfc outside the multisession draft.
 
 ## Verifying
 

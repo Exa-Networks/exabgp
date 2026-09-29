@@ -1,13 +1,12 @@
 """RFC 4360, and what is not in it.
 
-This file carries one `@pytest.mark.rfc()`, on a strict xfail, and the scarcity is the
-finding rather than an oversight.  RFC 4360 has exactly five sentences with an RFC 2119
+This file carries one `@pytest.mark.rfc()`, and the scarcity is the finding rather than an
+oversight.  RFC 4360 has exactly five sentences with an RFC 2119
 keyword in them: one MUST NOT about best path selection, two MUST NOTs addressed to IANA about allocating
 codepoints, two MAYs about propagating a received route, and a SHOULD/SHOULD NOT pair
 about stripping non-transitive communities at an AS boundary.  Not one of them binds a
 decoder, and exabgp has neither a decision process nor a propagation path for four of the
-five to apply to.  qa/rfc/rfc4360.toml records all five, all as not-applicable or gap,
-with the reason for each.
+five to apply to.  qa/rfc/rfc4360.toml records all five, with the reason for each.
 
 The rule this document is usually cited for is not in it.  Section 2 says "Each Extended
 Community is encoded as an 8-octet quantity" flatly, with no keyword, exactly as RFC 1997

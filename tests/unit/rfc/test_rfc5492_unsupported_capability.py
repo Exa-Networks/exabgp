@@ -15,9 +15,10 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.notification import Notification, Notify
+from exabgp.bgp.message.notification import Notification, NotificationReceived, Notify
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities, Capability
+from exabgp.bgp.message.open.capability.asn4 import ASN4 as ASN4Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
@@ -78,6 +79,9 @@ def negotiate(neighbor: Neighbor, withheld: set[int]) -> Negotiated:
     for code, capability in sent.items():
         if code not in withheld:
             received[code] = capability
+    if ASN4 in received:
+        # the peer's OPEN, not a copy of ours: RFC 6793 4.1 reads its AS from the capability
+        received[ASN4] = ASN4Capability(neighbor.session.peer_as)
     negotiated = Negotiated(neighbor, Direction.OUT)
     negotiated.sent(Open.make_open(Version(4), neighbor.session.local_as, HoldTime(90), RouterID('192.0.2.2'), sent))
     negotiated.received(
@@ -287,11 +291,6 @@ async def test_a_peering_ended_for_another_reason_is_still_restarted(monkeypatch
 
 
 @pytest.mark.rfc('rfc5492#3-reconnect-without-the-capabilities-parameter')
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason='the received subcode is not read: Protocol.new_open builds the same Capabilities on every attempt',
-)
 @pytest.mark.asyncio
 async def test_after_unsupported_optional_parameter_the_next_open_has_no_capabilities() -> None:
     """A pre-RFC 2842 speaker answers an OPEN carrying capabilities with (2, 4).
@@ -303,7 +302,8 @@ async def test_after_unsupported_optional_parameter_the_next_open_has_no_capabil
     neighbor = parsed_neighbor('asn4 enable; route-refresh enable;')
     peer = Peer(neighbor, Mock())
     refusal = Notification.make_notification(OPEN_MESSAGE_ERROR, UNSUPPORTED_OPTIONAL_PARAMETER)
-    peer._establish = AsyncMock(side_effect=refusal)  # type: ignore[method-assign]
+    # raised, as the reactor raises it when it reads the NOTIFICATION
+    peer._establish = AsyncMock(side_effect=NotificationReceived(refusal))  # type: ignore[method-assign]
 
     await peer._run()
 
@@ -313,3 +313,21 @@ async def test_after_unsupported_optional_parameter_the_next_open_has_no_capabil
     retry.write = AsyncMock()  # type: ignore[method-assign]
     sent = (await retry.new_open()).pack_message(retry.negotiated)
     assert sent[OPTIONAL_PARAMETERS_LENGTH_OFFSET] == 0, f'the retried OPEN still carries parameters: {sent.hex()}'
+
+
+@pytest.mark.rfc('rfc5492#3-reconnect-without-the-capabilities-parameter', polarity='negative')
+@pytest.mark.asyncio
+async def test_after_another_open_error_the_next_open_still_has_its_capabilities() -> None:
+    """Only (2, 4) says the Capabilities parameter was the problem."""
+    neighbor = parsed_neighbor('asn4 enable; route-refresh enable;')
+    peer = Peer(neighbor, Mock())
+    refusal = Notification.make_notification(OPEN_MESSAGE_ERROR, 2)
+    peer._establish = AsyncMock(side_effect=NotificationReceived(refusal))  # type: ignore[method-assign]
+
+    await peer._run()
+
+    retry = Protocol(peer)
+    retry.connection = Mock()
+    retry.write = AsyncMock()  # type: ignore[method-assign]
+    sent = (await retry.new_open()).pack_message(retry.negotiated)
+    assert sent[OPTIONAL_PARAMETERS_LENGTH_OFFSET] != 0, 'the capabilities were dropped over another error'

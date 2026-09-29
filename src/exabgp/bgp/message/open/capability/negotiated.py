@@ -155,7 +155,9 @@ class Negotiated:
             self.local_as = ASN(sent_capa[Capability.CODE.FOUR_BYTES_ASN])
 
         self.peer_as = self.received_open.asn
-        if self.peer_as == AS_TRANS and self.asn4:
+        # RFC 6793 4.1: the capability's AS number is used "in lieu of" My Autonomous System,
+        # with no condition on what that field holds: AS_TRANS or not, the capability rules
+        if self.asn4:
             self.peer_as = ASN(recv_capa[Capability.CODE.FOUR_BYTES_ASN])
         self._negotiate_role(sent_capa, recv_capa)
 
@@ -291,7 +293,8 @@ class Negotiated:
             return (
                 2,
                 2,
-                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.received_open.asn, neighbor.session.peer_as),
+                # the AS compared, which RFC 6793 4.1 has the capability give when there is one
+                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.peer_as, neighbor.session.peer_as),
             )
 
         # RFC 6286 : https://tools.ietf.org/html/rfc6286

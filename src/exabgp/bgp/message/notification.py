@@ -330,3 +330,17 @@ class Notify(Exception):
         # Subcode 0 is "Unspecific" (RFC 4271 4.5): it names nothing the code does not
         names = code_name if self.subcode == 0 else f'{code_name} / {subcode_name}'
         return f'{names}: {self.detail}' if self.detail else names
+
+
+class NLRIDiscard(Notify):
+    """An error inside one NLRI whose length is honest: that NLRI is dropped, not the session.
+
+    RFC 9552 8.2.2 (and RFC 7606 5.4's "NLRI discard"): when a rule inside the NLRI is
+    broken but its length still says where it ends, the NLRI is discarded and the rest of
+    the UPDATE processed. The decoder which knows where the NLRI ends sets `skip`, the
+    octets it took; where nothing does, it is a Notify like any other and resets the session.
+    """
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(3, 10, detail)
+        self.skip = 0
