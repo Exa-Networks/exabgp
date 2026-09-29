@@ -594,17 +594,6 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         return cls.unpack(attrs.packed, negotiated)
 
     @staticmethod
-    def flag_attribute_content(data: Buffer) -> tuple[int, int, Buffer]:
-        flag = Attribute.Flag(data[0])
-        attr = data[1]
-
-        if flag & Attribute.Flag.EXTENDED_LENGTH:
-            length = unpack('!H', data[2:4])[0]
-            return flag, attr, data[4 : length + 4]
-        length = data[2]
-        return flag, attr, data[3 : length + 3]
-
-    @staticmethod
     def _dropped_on_receipt(negotiated: Negotiated) -> frozenset[int]:
         """The attributes this session removes from an UPDATE before decoding them.
 
@@ -1110,21 +1099,25 @@ class Attributes:
         Note:
             Requires self._context to be set. If not set, raises RuntimeError.
             Invalid attributes are skipped (logged but not yielded).
+            A header or value running past the end of the bytes raises Notify 3/1.
         """
         if self._context is None:
             raise RuntimeError('Attributes.__iter__() requires negotiated context')
 
         data: Buffer = self._packed
+        # bounded: every pass consumes at least a three byte header, or raises
         while data:
+            if len(data) < 3:
+                raise Notify.short(3, 1, 'path attribute header', 3, len(data))
             flag = data[0]
             code = data[1]
 
-            if flag & Attribute.Flag.EXTENDED_LENGTH:
-                length = unpack('!H', data[2:4])[0]
-                offset = 4
-            else:
-                length = data[2]
-                offset = 3
+            offset = 4 if flag & Attribute.Flag.EXTENDED_LENGTH else 3
+            if len(data) < offset:
+                raise Notify.short(3, 1, 'extended length path attribute header', offset, len(data))
+            length = unpack('!H', data[2:4])[0] if offset == 4 else data[2]
+            if len(data) < offset + length:
+                raise Notify.short(3, 1, f'path attribute {code}', offset + length, len(data))
 
             # Pass buffer slice to attribute - it stores and parses lazily
             value_slice = data[offset : offset + length]
