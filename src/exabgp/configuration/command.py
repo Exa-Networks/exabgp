@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import contextlib
 import json
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -567,6 +568,303 @@ def format_rtc_nlri(nlri_info: dict[str, Any]) -> str | None:
     return f'origin-as {nlri_info.get("origin", 0)} route-target {target}'
 
 
+def _label_argument(nlri_info: dict[str, Any]) -> list[str]:
+    """The `label` argument for the first label of the NLRI, or nothing when it has none.
+
+    The JSON gives a label stack either flat or as a list of lists, depending on the family.
+    """
+    labels = nlri_info.get('label')
+    if not labels:
+        return []
+    first = labels[0][0] if isinstance(labels[0], list) else labels[0]
+    return [f'label {first}']
+
+
+def _flow_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
+    """FlowSpec, through format_flow_announce."""
+    commands: list[str] = []
+    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
+    for nexthop, nlris in nexthops.items():
+        for nlri_info in nlris:
+            cmd = format_flow_announce(afi, nexthop, nlri_info, attributes)
+            if cmd:
+                commands.append(cmd)
+    return commands
+
+
+def _mvpn_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
+    """MCAST-VPN: the routes of one next hop go in one `group` when there are several."""
+    commands: list[str] = []
+    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
+    for nexthop, nlris in nexthops.items():
+        if len(nlris) > 1:
+            group_cmds = []
+            for nlri_info in nlris:
+                cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
+                if cmd:
+                    group_cmds.append(cmd)
+            if len(group_cmds) > 1:
+                commands.append('group ' + ' ; '.join(group_cmds))
+            elif group_cmds:
+                commands.append(group_cmds[0])
+        else:
+            for nlri_info in nlris:
+                cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
+                if cmd:
+                    commands.append(cmd)
+    return commands
+
+
+def _mup_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
+    """MUP, through format_mup_announce."""
+    commands: list[str] = []
+    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
+    for nexthop, nlris in nexthops.items():
+        for nlri_info in nlris:
+            cmd = format_mup_announce(afi, nexthop, nlri_info, attributes)
+            if cmd:
+                commands.append(cmd)
+    return commands
+
+
+def _vpls_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
+    """VPLS, one command per NLRI."""
+    commands: list[str] = []
+    for nexthop, nlris in nexthops.items():
+        for nlri_info in nlris:
+            rd = nlri_info.get('rd', '')
+            endpoint = nlri_info.get('endpoint', 0)
+            base = nlri_info.get('base', 0)
+            offset = nlri_info.get('offset', 0)
+            size = nlri_info.get('size', 0)
+            cmd_parts = [
+                f'announce vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop {nexthop}'
+            ]
+            cmd_parts.extend(format_attributes(attributes))
+            commands.append(' '.join(cmd_parts))
+    return commands
+
+
+def _rtc_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
+    """RTC (RFC 4684); a route the configuration cannot express is left out."""
+    commands: list[str] = []
+    for nexthop, nlris in nexthops.items():
+        for nlri_info in nlris:
+            fields = format_rtc_nlri(nlri_info)
+            if fields is None:
+                continue
+            cmd_parts = [f'announce ipv4 rtc {fields} next-hop {nexthop}']
+            cmd_parts.extend(format_attributes(attributes))
+            commands.append(' '.join(cmd_parts))
+    return commands
+
+
+def _sr_policy_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
+    """SR-Policy, its tunnel read from the tunnel-encap attribute."""
+    commands: list[str] = []
+    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
+    tunnel_encap = attributes.get('tunnel-encap', {})
+    sr = tunnel_encap.get('sr-policy', {}) if isinstance(tunnel_encap, dict) else {}
+    for nexthop, nlris in nexthops.items():
+        for nlri_info in nlris:
+            distinguisher = nlri_info.get('distinguisher', 0)
+            color = nlri_info.get('color', 0)
+            endpoint = nlri_info.get('endpoint', '')
+            cmd_parts = [
+                f'announce {afi} sr-policy distinguisher {distinguisher} color {color} endpoint {endpoint} next-hop {nexthop}'
+            ]
+            cmd_parts.extend(_format_sr_policy_tunnel(sr))
+            commands.append(' '.join(cmd_parts))
+    return commands
+
+
+def _standard_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
+    """Every other family: an End-of-RIB, several NLRI in one `attributes` command, or one each."""
+    commands: list[str] = []
+    for nexthop, nlris in nexthops.items():
+        # Check for EOR
+        if nlris and isinstance(nlris, list) and len(nlris) == 1:
+            nlri_item = nlris[0]
+            if isinstance(nlri_item, str) and nlri_item == 'eor':
+                commands.append(f'announce eor {family}')
+                continue
+            if isinstance(nlri_item, dict) and 'eor' in nlri_item:
+                eor_info = nlri_item['eor']
+                if isinstance(eor_info, dict):
+                    afi = eor_info.get('afi', 'ipv4')
+                    safi = eor_info.get('safi', 'unicast')
+                    commands.append(f'announce eor {afi} {safi}')
+                continue
+
+        # Multi-NLRI: use 'attributes' syntax
+        if len(nlris) > 1:
+            path_info = nlris[0].get('path-information') if nlris else None
+            all_same_path = all(n.get('path-information') == path_info for n in nlris)
+
+            cmd_parts = ['announce attributes']
+            if path_info and all_same_path:
+                cmd_parts.append(f'path-information {path_info}')
+            cmd_parts.append(f'next-hop {nexthop}')
+            cmd_parts.extend(format_attributes(attributes))
+            cmd_parts.append('nlri')
+            for nlri_info in nlris:
+                nlri = nlri_info.get('nlri', '')
+                cmd_parts.append(nlri)
+            commands.append(' '.join(cmd_parts))
+        else:
+            # Single NLRI
+            for nlri_info in nlris:
+                nlri = nlri_info.get('nlri', '')
+                api_family = family_to_api_format(family)
+                cmd_parts = [f'announce {api_family} {nlri} next-hop {nexthop}']
+
+                if 'path-information' in nlri_info:
+                    cmd_parts.append(f'path-information {nlri_info["path-information"]}')
+
+                if 'rd' in nlri_info:
+                    cmd_parts.append(f'rd {nlri_info["rd"]}')
+
+                cmd_parts.extend(_label_argument(nlri_info))
+
+                cmd_parts.extend(format_attributes(attributes))
+                commands.append(' '.join(cmd_parts))
+    return commands
+
+
+def _announce_commands(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
+    """The API commands announcing what one family of the UPDATE carries, in order."""
+    if 'flow' in family:
+        return _flow_announces(family, nexthops, attributes)
+    if 'mcast-vpn' in family:
+        return _mvpn_announces(family, nexthops, attributes)
+    if 'mup' in family:
+        return _mup_announces(family, nexthops, attributes)
+    if 'vpls' in family:
+        return _vpls_announces(family, nexthops, attributes)
+    if family == 'ipv4 rtc':
+        return _rtc_announces(family, nexthops, attributes)
+    if 'sr-policy' in family:
+        return _sr_policy_announces(family, nexthops, attributes)
+    return _standard_announces(family, nexthops, attributes)
+
+
+def _formatted_withdraws(
+    formatter: Callable[..., str | None], family: str, nlris: list[Any], attributes: dict[str, Any], use_group: bool
+) -> list[str]:
+    """FlowSpec, MUP and MCAST-VPN withdrawals, which are written by their announce formatter.
+
+    The next hop comes from the attributes, as a withdrawal carries none of its own.  With
+    `use_group` the attributes go in a `group` in front instead of on the withdrawal.
+    """
+    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
+    nexthop = attributes.get('next-hop', '0.0.0.0')
+    commands: list[str] = []
+    for nlri_info in nlris:
+        if not isinstance(nlri_info, dict):
+            continue
+        if use_group:
+            cmd = formatter(afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True)
+            if cmd:
+                commands.append(f'group {format_withdraw_attributes(attributes)} ; {cmd}')
+        else:
+            cmd = formatter(afi, nexthop, nlri_info, attributes, action='withdraw')
+            if cmd:
+                commands.append(cmd)
+    return commands
+
+
+def _rtc_withdraws(family: str, nlris: list[Any]) -> list[str]:
+    """RTC (RFC 4684); a route the configuration cannot express is left out."""
+    commands: list[str] = []
+    for nlri_info in nlris:
+        fields = format_rtc_nlri(nlri_info) if isinstance(nlri_info, dict) else None
+        if fields is not None:
+            commands.append(f'withdraw ipv4 rtc {fields}')
+    return commands
+
+
+def _vpls_withdraws(family: str, nlris: list[Any]) -> list[str]:
+    """VPLS, one command per NLRI."""
+    commands: list[str] = []
+    for nlri_info in nlris:
+        if isinstance(nlri_info, dict):
+            rd = nlri_info.get('rd', '')
+            endpoint = nlri_info.get('endpoint', 0)
+            base = nlri_info.get('base', 0)
+            offset = nlri_info.get('offset', 0)
+            size = nlri_info.get('size', 0)
+            cmd_parts = [
+                f'withdraw vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop 0.0.0.0'
+            ]
+            commands.append(' '.join(cmd_parts))
+    return commands
+
+
+def _sr_policy_withdraws(family: str, nlris: list[Any]) -> list[str]:
+    """SR-Policy, one command per NLRI."""
+    commands: list[str] = []
+    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
+    for nlri_info in nlris:
+        if isinstance(nlri_info, dict):
+            distinguisher = nlri_info.get('distinguisher', 0)
+            color = nlri_info.get('color', 0)
+            endpoint = nlri_info.get('endpoint', '')
+            commands.append(f'withdraw {afi} sr-policy distinguisher {distinguisher} color {color} endpoint {endpoint}')
+    return commands
+
+
+def _standard_withdraws(family: str, nlris: list[Any], attributes: dict[str, Any], use_group: bool) -> list[str]:
+    """Every other family, one command per NLRI, its attributes in a `group` when asked."""
+    commands: list[str] = []
+    api_family = family_to_api_format(family)
+    for nlri_info in nlris:
+        if isinstance(nlri_info, dict):
+            nlri = nlri_info.get('nlri', '')
+            cmd_parts = [f'withdraw {api_family} {nlri}']
+
+            if 'rd' in nlri_info:
+                cmd_parts.append(f'rd {nlri_info["rd"]}')
+
+            cmd_parts.extend(_label_argument(nlri_info))
+
+            if use_group:
+                attr_cmd = format_withdraw_attributes(attributes)
+                withdraw_cmd = ' '.join(cmd_parts)
+                commands.append(f'group {attr_cmd} ; {withdraw_cmd}')
+            else:
+                cmd_parts.extend(format_attributes(attributes))
+                commands.append(' '.join(cmd_parts))
+        else:
+            commands.append(f'withdraw {api_family} {nlri_info}')
+    return commands
+
+
+def _withdraw_commands(family: str, nlris: list[Any], attributes: dict[str, Any], use_group: bool) -> list[str]:
+    """The API commands withdrawing what one family of the UPDATE carries, in order.
+
+    With `use_group` the attributes a withdrawal carries go in a `group` in front of it.
+    """
+    if family == 'ipv4 rtc':
+        return _rtc_withdraws(family, nlris)
+
+    if 'flow' in family:
+        return _formatted_withdraws(format_flow_announce, family, nlris, attributes, use_group)
+
+    if 'mup' in family:
+        return _formatted_withdraws(format_mup_announce, family, nlris, attributes, use_group)
+
+    if 'mcast-vpn' in family:
+        return _formatted_withdraws(format_mvpn_announce, family, nlris, attributes, use_group)
+
+    if 'vpls' in family:
+        return _vpls_withdraws(family, nlris)
+
+    if 'sr-policy' in family:
+        return _sr_policy_withdraws(family, nlris)
+
+    return _standard_withdraws(family, nlris, attributes, use_group)
+
+
 def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool = False) -> list[str]:
     """Decode BGP UPDATE hex to API command string(s).
 
@@ -603,266 +901,14 @@ def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool 
 
     # Process announces
     for family, nexthops in announce.items():
-        # Handle FlowSpec
-        if 'flow' in family:
-            afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-            for nexthop, nlris in nexthops.items():
-                for nlri_info in nlris:
-                    cmd = format_flow_announce(afi, nexthop, nlri_info, attributes)
-                    if cmd:
-                        commands.append(cmd)
-            continue
-
-        # Handle MCAST-VPN
-        if 'mcast-vpn' in family:
-            afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-            for nexthop, nlris in nexthops.items():
-                if len(nlris) > 1:
-                    group_cmds = []
-                    for nlri_info in nlris:
-                        cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
-                        if cmd:
-                            group_cmds.append(cmd)
-                    if len(group_cmds) > 1:
-                        commands.append('group ' + ' ; '.join(group_cmds))
-                    elif group_cmds:
-                        commands.append(group_cmds[0])
-                else:
-                    for nlri_info in nlris:
-                        cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
-                        if cmd:
-                            commands.append(cmd)
-            continue
-
-        # Handle MUP
-        if 'mup' in family:
-            afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-            for nexthop, nlris in nexthops.items():
-                for nlri_info in nlris:
-                    cmd = format_mup_announce(afi, nexthop, nlri_info, attributes)
-                    if cmd:
-                        commands.append(cmd)
-            continue
-
-        # Handle VPLS
-        if 'vpls' in family:
-            for nexthop, nlris in nexthops.items():
-                for nlri_info in nlris:
-                    rd = nlri_info.get('rd', '')
-                    endpoint = nlri_info.get('endpoint', 0)
-                    base = nlri_info.get('base', 0)
-                    offset = nlri_info.get('offset', 0)
-                    size = nlri_info.get('size', 0)
-                    cmd_parts = [
-                        f'announce vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop {nexthop}'
-                    ]
-                    cmd_parts.extend(format_attributes(attributes))
-                    commands.append(' '.join(cmd_parts))
-            continue
-
-        # Handle RTC (RFC 4684)
-        if family == 'ipv4 rtc':
-            for nexthop, nlris in nexthops.items():
-                for nlri_info in nlris:
-                    fields = format_rtc_nlri(nlri_info)
-                    if fields is None:
-                        continue
-                    cmd_parts = [f'announce ipv4 rtc {fields} next-hop {nexthop}']
-                    cmd_parts.extend(format_attributes(attributes))
-                    commands.append(' '.join(cmd_parts))
-            continue
-
-        # Handle SR-Policy
-        if 'sr-policy' in family:
-            afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-            tunnel_encap = attributes.get('tunnel-encap', {})
-            sr = tunnel_encap.get('sr-policy', {}) if isinstance(tunnel_encap, dict) else {}
-            for nexthop, nlris in nexthops.items():
-                for nlri_info in nlris:
-                    distinguisher = nlri_info.get('distinguisher', 0)
-                    color = nlri_info.get('color', 0)
-                    endpoint = nlri_info.get('endpoint', '')
-                    cmd_parts = [
-                        f'announce {afi} sr-policy distinguisher {distinguisher} color {color} endpoint {endpoint} next-hop {nexthop}'
-                    ]
-                    cmd_parts.extend(_format_sr_policy_tunnel(sr))
-                    commands.append(' '.join(cmd_parts))
-            continue
-
-        # Standard families
-        for nexthop, nlris in nexthops.items():
-            # Check for EOR
-            if nlris and isinstance(nlris, list) and len(nlris) == 1:
-                nlri_item = nlris[0]
-                if isinstance(nlri_item, str) and nlri_item == 'eor':
-                    commands.append(f'announce eor {family}')
-                    continue
-                if isinstance(nlri_item, dict) and 'eor' in nlri_item:
-                    eor_info = nlri_item['eor']
-                    if isinstance(eor_info, dict):
-                        afi = eor_info.get('afi', 'ipv4')
-                        safi = eor_info.get('safi', 'unicast')
-                        commands.append(f'announce eor {afi} {safi}')
-                    continue
-
-            # Multi-NLRI: use 'attributes' syntax
-            if len(nlris) > 1:
-                path_info = nlris[0].get('path-information') if nlris else None
-                all_same_path = all(n.get('path-information') == path_info for n in nlris)
-
-                cmd_parts = ['announce attributes']
-                if path_info and all_same_path:
-                    cmd_parts.append(f'path-information {path_info}')
-                cmd_parts.append(f'next-hop {nexthop}')
-                cmd_parts.extend(format_attributes(attributes))
-                cmd_parts.append('nlri')
-                for nlri_info in nlris:
-                    nlri = nlri_info.get('nlri', '')
-                    cmd_parts.append(nlri)
-                commands.append(' '.join(cmd_parts))
-            else:
-                # Single NLRI
-                for nlri_info in nlris:
-                    nlri = nlri_info.get('nlri', '')
-                    api_family = family_to_api_format(family)
-                    cmd_parts = [f'announce {api_family} {nlri} next-hop {nexthop}']
-
-                    if 'path-information' in nlri_info:
-                        cmd_parts.append(f'path-information {nlri_info["path-information"]}')
-
-                    if 'rd' in nlri_info:
-                        cmd_parts.append(f'rd {nlri_info["rd"]}')
-
-                    if 'label' in nlri_info:
-                        labels = nlri_info['label']
-                        if labels:
-                            if isinstance(labels[0], list):
-                                cmd_parts.append(f'label {labels[0][0]}')
-                            else:
-                                cmd_parts.append(f'label {labels[0]}')
-
-                    cmd_parts.extend(format_attributes(attributes))
-                    commands.append(' '.join(cmd_parts))
+        commands.extend(_announce_commands(family, nexthops, attributes))
 
     # Process withdraws
     # Check if we need to use 'group' for extra attributes
     use_group = has_extra_withdraw_attributes(attributes)
 
     for family, nlris in withdraw.items():
-        if family == 'ipv4 rtc':
-            for nlri_info in nlris:
-                fields = format_rtc_nlri(nlri_info) if isinstance(nlri_info, dict) else None
-                if fields is not None:
-                    commands.append(f'withdraw ipv4 rtc {fields}')
-            continue
-
-        if 'flow' in family:
-            afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-            for nlri_info in nlris:
-                if isinstance(nlri_info, dict):
-                    nexthop = attributes.get('next-hop', '0.0.0.0')
-                    if use_group:
-                        # Skip attributes in withdraw - they're in the group attributes command
-                        cmd = format_flow_announce(
-                            afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True
-                        )
-                        if cmd:
-                            attr_cmd = format_withdraw_attributes(attributes)
-                            commands.append(f'group {attr_cmd} ; {cmd}')
-                    else:
-                        cmd = format_flow_announce(afi, nexthop, nlri_info, attributes, action='withdraw')
-                        if cmd:
-                            commands.append(cmd)
-            continue
-
-        if 'mup' in family:
-            afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-            for nlri_info in nlris:
-                if isinstance(nlri_info, dict):
-                    nexthop = attributes.get('next-hop', '0.0.0.0')
-                    if use_group:
-                        cmd = format_mup_announce(
-                            afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True
-                        )
-                        if cmd:
-                            attr_cmd = format_withdraw_attributes(attributes)
-                            commands.append(f'group {attr_cmd} ; {cmd}')
-                    else:
-                        cmd = format_mup_announce(afi, nexthop, nlri_info, attributes, action='withdraw')
-                        if cmd:
-                            commands.append(cmd)
-            continue
-
-        if 'mcast-vpn' in family:
-            afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-            for nlri_info in nlris:
-                if isinstance(nlri_info, dict):
-                    nexthop = attributes.get('next-hop', '0.0.0.0')
-                    if use_group:
-                        cmd = format_mvpn_announce(
-                            afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True
-                        )
-                        if cmd:
-                            attr_cmd = format_withdraw_attributes(attributes)
-                            commands.append(f'group {attr_cmd} ; {cmd}')
-                    else:
-                        cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes, action='withdraw')
-                        if cmd:
-                            commands.append(cmd)
-            continue
-
-        if 'vpls' in family:
-            for nlri_info in nlris:
-                if isinstance(nlri_info, dict):
-                    rd = nlri_info.get('rd', '')
-                    endpoint = nlri_info.get('endpoint', 0)
-                    base = nlri_info.get('base', 0)
-                    offset = nlri_info.get('offset', 0)
-                    size = nlri_info.get('size', 0)
-                    cmd_parts = [
-                        f'withdraw vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop 0.0.0.0'
-                    ]
-                    commands.append(' '.join(cmd_parts))
-            continue
-
-        if 'sr-policy' in family:
-            afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-            for nlri_info in nlris:
-                if isinstance(nlri_info, dict):
-                    distinguisher = nlri_info.get('distinguisher', 0)
-                    color = nlri_info.get('color', 0)
-                    endpoint = nlri_info.get('endpoint', '')
-                    commands.append(
-                        f'withdraw {afi} sr-policy distinguisher {distinguisher} color {color} endpoint {endpoint}'
-                    )
-            continue
-
-        api_family = family_to_api_format(family)
-        for nlri_info in nlris:
-            if isinstance(nlri_info, dict):
-                nlri = nlri_info.get('nlri', '')
-                cmd_parts = [f'withdraw {api_family} {nlri}']
-
-                if 'rd' in nlri_info:
-                    cmd_parts.append(f'rd {nlri_info["rd"]}')
-
-                if 'label' in nlri_info:
-                    labels = nlri_info['label']
-                    if labels:
-                        if isinstance(labels[0], list):
-                            cmd_parts.append(f'label {labels[0][0]}')
-                        else:
-                            cmd_parts.append(f'label {labels[0]}')
-
-                if use_group:
-                    attr_cmd = format_withdraw_attributes(attributes)
-                    withdraw_cmd = ' '.join(cmd_parts)
-                    commands.append(f'group {attr_cmd} ; {withdraw_cmd}')
-                else:
-                    cmd_parts.extend(format_attributes(attributes))
-                    commands.append(' '.join(cmd_parts))
-            else:
-                commands.append(f'withdraw {api_family} {nlri_info}')
+        commands.extend(_withdraw_commands(family, nlris, attributes, use_group))
 
     # Attributes-only UPDATE (no announce, no withdraw, just attributes)
     if not commands and attributes:
