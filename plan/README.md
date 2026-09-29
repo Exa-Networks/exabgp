@@ -127,6 +127,8 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-hostname-length.md` | 2026-09-29 | HostName truncation split UTF-8 characters, Software length counted characters; 64 byte cap kept |
+| `done-cve-exa-style-followup.md` | 2026-09-29 | GHSA-jcrv-p53f-v5w5 follow-up: the rest of the CWE-116 class, 19 findings across the API stream |
 | `done-config-grammar.md` | 2026-09-29 | The configuration grammar replaces the hand parsers; syntax, man page, wiki, JSON Schema and YANG from it |
 | `done-route-refresh-length.md` | 2026-09-29 | RFC 7313 5 Invalid Message Length was answered 1/2 by the header check; now 7/1 |
 | `done-message-interface.md` | 2026-09-29 | One tested contract for every BGP message class; Notify by composition, Operational bytes-first |

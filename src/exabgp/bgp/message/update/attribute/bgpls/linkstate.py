@@ -48,7 +48,7 @@ class LSClass(Protocol):
 class LinkState(Attribute):
     """BGP-LS attribute containing link-state TLVs (RFC 7752).
 
-    Stores raw bytes and parses TLVs on demand via ls_attrs property.
+    Stores the raw bytes; unpack_attribute parses the TLVs once, through ls_attrs, and caches them.
     Uses registry pattern for TLV type dispatch.
     """
 
