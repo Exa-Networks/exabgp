@@ -614,8 +614,12 @@ class Control:
                 reading.append(self.server_socket.fileno())
             return reading
         if self.client_fd:
-            # Legacy single-client mode
-            return [self._stdin, self.client_fd]
+            # Legacy single-client mode. The server socket stays polled so that a second
+            # client is told why it cannot connect, rather than left in the accept queue.
+            reading = [self._stdin, self.client_fd]
+            if self.server_socket:
+                reading.append(self.server_socket.fileno())
+            return reading
         if self.server_socket:
             return [self._stdin, self.server_socket.fileno()]
         return None

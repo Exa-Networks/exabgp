@@ -72,8 +72,8 @@ Pinning found two defects, left as they are because a split changes no behaviour
 
 - single client mode stops polling the listening socket while a client is connected, so the
   "another CLI client is already connected" refusal (`_accept_single`) never runs: a second
-  CLI hangs, unanswered, until the first leaves.
-  `test_a_second_client_waits_for_the_first_to_leave` pins what it does today.
+  CLI hangs, unanswered, until the first leaves. Fixed after the split: the server socket
+  stays polled, and `test_a_second_client_is_turned_away` fails without it.
 - multi client mode never sets `ClientConnection.uuid`, so `_disconnect_client` never tells
   the daemon `bye <uuid>`. `test_a_client_leaving_frees_its_place_and_says_nothing` pins it.
 

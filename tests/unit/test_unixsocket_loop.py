@@ -154,25 +154,24 @@ def test_a_command_is_forwarded_once_its_newline_arrives(single: Helper) -> None
     assert single.daemon_reads() == 'show adj-rib out'
 
 
-def test_a_second_client_waits_for_the_first_to_leave(single: Helper) -> None:
-    # The loop stops polling the listening socket while a client is connected, so the
-    # "another CLI client is already connected" branch never runs: the second client sits
-    # in the kernel's accept queue, unanswered, until the first leaves.
+def test_a_second_client_is_turned_away(single: Helper) -> None:
+    # The loop used to stop polling the listening socket while a client was connected, so
+    # this refusal never ran: the second client sat in the kernel's accept queue, unanswered,
+    # and the CLI reported a daemon which was not responding rather than the reason.
     first = single.connect()
     first.sendall(b'one\n')
     assert single.daemon_reads() == 'one'
 
     second = single.connect()
     second.sendall(b'two\n')
+    assert received(second, b'error: another CLI client is already connected\ndone\n') == (
+        b'error: another CLI client is already connected\ndone\n'
+    )
+    assert second.recv(4096) == b''
     single.daemon_hears_nothing()
-    nothing_received(second)
 
     first.sendall(b'three\n')
     assert single.daemon_reads() == 'three'
-
-    first.close()
-    assert single.daemon_reads() == 'bye'
-    assert single.daemon_reads() == 'two'
 
 
 def test_a_client_leaving_says_bye_and_frees_the_socket(single: Helper) -> None:
