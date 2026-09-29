@@ -9,6 +9,7 @@ establishment, message exchange, and teardown using real socket pairs.
 Created: 2025-11-08
 """
 
+import asyncio
 import os
 import socket
 import struct
@@ -53,9 +54,24 @@ def mock_logger() -> Generator[None, None, None]:
 from exabgp.bgp.message import Message  # noqa: E402
 from exabgp.protocol.family import AFI  # noqa: E402
 from exabgp.reactor.network import tcp  # noqa: E402
-from exabgp.reactor.network.error import LostConnection, NotConnected  # noqa: E402
+from exabgp.reactor.network.connection import Connection  # noqa: E402
+from exabgp.reactor.network.error import LostConnection, NotConnected, NotifyError  # noqa: E402
 from exabgp.reactor.network.incoming import Incoming  # noqa: E402
 from exabgp.reactor.network.outgoing import Outgoing  # noqa: E402
+from exabgp.util.types import Buffer  # noqa: E402
+
+
+# Long enough for a message already queued on loopback, short enough to fail a hung read.
+READ_SECONDS = 5.0
+# How long one non-blocking attempt waits before letting the test do something else.
+POLL_SECONDS = 0.05
+
+
+def read_one(
+    connection: Connection, timeout_seconds: float = READ_SECONDS
+) -> tuple[int, int, Buffer, Buffer, NotifyError | None]:
+    """One message through reader_async, the reader the daemon uses."""
+    return asyncio.run(asyncio.wait_for(connection.reader_async(), timeout_seconds))
 
 
 class MockBGPServer:
@@ -378,12 +394,7 @@ class TestOutgoingConnectionLifecycle:
             time.sleep(0.2)
 
             # Read the message
-            reader = outgoing.reader()
-            length, msg_type, header, body, error = next(reader)
-
-            # Skip waiting states
-            while length == 0 and error is None:
-                length, msg_type, header, body, error = next(reader)
+            length, msg_type, header, body, error = read_one(outgoing)
 
             assert error is None, 'Should not have error'
             assert length == 19, 'KEEPALIVE is 19 bytes'
@@ -427,10 +438,7 @@ class TestOutgoingConnectionLifecycle:
             time.sleep(0.2)
 
             # 3. Receive server OPEN
-            reader = outgoing.reader()
-            length, msg_type, header, body, error = next(reader)
-            while length == 0 and error is None:
-                length, msg_type, header, body, error = next(reader)
+            length, msg_type, header, body, error = read_one(outgoing)
 
             assert error is None
             assert msg_type == 1, 'Should receive OPEN (type 1)'
@@ -445,10 +453,7 @@ class TestOutgoingConnectionLifecycle:
             time.sleep(0.1)
 
             # 5. Receive KEEPALIVE
-            reader = outgoing.reader()
-            length, msg_type, header, body, error = next(reader)
-            while length == 0 and error is None:
-                length, msg_type, header, body, error = next(reader)
+            length, msg_type, header, body, error = read_one(outgoing)
 
             assert error is None
             assert msg_type == 4, 'Should receive KEEPALIVE (type 4)'
@@ -511,12 +516,7 @@ class TestIncomingConnectionLifecycle:
                 time.sleep(0.1)
 
                 # Read the message
-                reader = incoming.reader()
-                length, msg_type, header, body, error = next(reader)
-
-                # Skip waiting states
-                while length == 0 and error is None:
-                    length, msg_type, header, body, error = next(reader)
+                length, msg_type, header, body, error = read_one(incoming)
 
                 assert error is None
                 assert length == 19
@@ -599,17 +599,12 @@ class TestConnectionErrorScenarios:
                 # Create Incoming connection
                 incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
 
-                # Start reading (will wait for data)
-                reader = incoming.reader()
-
                 # Close the client socket
                 client_sock.close()
 
                 # Try to read - should raise LostConnection
                 with pytest.raises(LostConnection):
-                    for _ in range(10):
-                        next(reader)
-                        time.sleep(0.1)
+                    read_one(incoming)
 
         finally:
             if incoming:
@@ -636,15 +631,9 @@ class TestConnectionErrorScenarios:
                 time.sleep(0.1)
 
                 # Read should detect error
-                reader = incoming.reader()
-                length, msg_type, header, body, error = next(reader)
-
-                while length == 0 and error is None:
-                    length, msg_type, header, body, error = next(reader)
+                length, msg_type, header, body, error = read_one(incoming)
 
                 # Should have a NotifyError
-                from exabgp.reactor.network.error import NotifyError
-
                 assert isinstance(error, NotifyError)
                 assert error.code == 1  # Message Header Error
                 assert error.subcode == 1  # Connection Not Synchronized
@@ -700,8 +689,11 @@ class TestConnectionConcurrency:
 
                 # Try to receive
                 if messages_received < 3:
-                    reader = outgoing.reader()
-                    length, msg_type, header, body, error = next(reader)
+                    try:
+                        length, msg_type, header, body, error = read_one(outgoing, POLL_SECONDS)
+                    except TimeoutError:
+                        # Nothing arrived yet; the partial read is kept for the next try
+                        length = 0
                     if length > 0:
                         messages_received += 1
 

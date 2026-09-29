@@ -15,6 +15,8 @@ from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.reactor.network.error import LostConnection, NotifyError
+from tests.wire_reader import read_message
 
 pytestmark = pytest.mark.fuzz
 
@@ -161,43 +163,18 @@ def test_nested_config_blocks(nesting_level: int) -> None:
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=100)
 def test_connection_reader_robustness(data: bytes) -> None:
     """Test BGP connection reader doesn't crash on random binary data."""
-    from exabgp.reactor.network.connection import Connection
-    from unittest.mock import MagicMock
-
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
-
-    def mock_reader(num_bytes: int):
-        if len(data) < num_bytes:
-            yield b''
-            return
-        yield data[:num_bytes]
-
-    connection._reader = mock_reader
-
     try:
-        reader = connection.reader()
-        result = next(reader)
+        length, msg_type, header, body, error = read_message(data)
+    except LostConnection:
+        # The peer closed before sending the whole message
+        return
 
-        # Try to consume a few iterations
-        for _ in range(5):
-            if result == (0, 0, b'', b'', None):
-                result = next(reader)
-            else:
-                break
-
-        length, msg_type, header, body, error = result
-
-        # Should either parse successfully or return an error
-        if error:
-            from exabgp.reactor.network.error import NotifyError
-
-            assert isinstance(error, NotifyError)
-        elif length > 0:
-            assert 19 <= length <= 4096
-            assert len(header) == 19
-    except Notify:
-        pass
+    # Should either parse successfully or return an error
+    if error:
+        assert isinstance(error, NotifyError)
+    else:
+        assert 19 <= length <= 4096
+        assert len(header) == 19
 
 
 @pytest.mark.fuzz
@@ -209,9 +186,6 @@ def test_connection_reader_robustness(data: bytes) -> None:
 @settings(deadline=None, max_examples=100)
 def test_bgp_header_validation(valid_marker: bool, length: int, msg_type: int) -> None:
     """Test BGP message header validation."""
-    from exabgp.reactor.network.connection import Connection
-    from unittest.mock import MagicMock
-
     # Build BGP header
     marker = b'\xff' * 16 if valid_marker else b'\x00' * 16
     header_data = marker + struct.pack('!H', length) + bytes([msg_type])
@@ -221,34 +195,18 @@ def test_bgp_header_validation(valid_marker: bool, length: int, msg_type: int) -
     body_data = b'\x00' * body_size
     data = header_data + body_data
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
+    result_length, result_type, header, body, error = read_message(data)
 
-    def mock_reader(num_bytes: int):
-        if len(data) < num_bytes:
-            yield b''
-            return
-        yield data[:num_bytes]
-
-    connection._reader = mock_reader
-
-    try:
-        reader = connection.reader()
-
-        # Consume results
-        for result in reader:
-            result_length, result_type, header, body, error = result
-            if result_length > 0 or error is not None:
-                break
-
-        # Validate results
-        if valid_marker and 19 <= length <= 4096 and 1 <= msg_type <= 5:
-            # Should parse successfully (though msg body might be invalid)
-            if error is None:
-                assert result_length == length
-                assert result_type == msg_type
-    except Notify:
-        pass
+    if not valid_marker:
+        assert error is not None
+        assert (error.code, error.subcode) == (1, 1)
+    elif error is None:
+        # Should parse successfully (though msg body might be invalid)
+        assert result_length == length
+        assert result_type == msg_type
+        assert len(body) == body_size
+    else:
+        assert (error.code, error.subcode) == (1, 2)
 
 
 @pytest.mark.fuzz
@@ -365,40 +323,21 @@ def test_whitespace_only_config(whitespace: str) -> None:
 @settings(deadline=None, max_examples=20)
 def test_truncated_bgp_header(truncate_at: int) -> None:
     """Test handling of truncated BGP message headers."""
-    from exabgp.reactor.network.connection import Connection
-    from unittest.mock import MagicMock
-
     # Valid BGP KEEPALIVE header
     valid_header = b'\xff' * 16 + struct.pack('!H', 19) + b'\x04'
 
     # Truncate it
     truncated = valid_header[:truncate_at]
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
+    if truncate_at < 19:
+        # The peer closed before sending the whole header
+        with pytest.raises(LostConnection):
+            read_message(truncated)
+        return
 
-    def mock_reader(num_bytes: int):
-        if len(truncated) < num_bytes:
-            yield b''
-            return
-        yield truncated[:num_bytes]
-
-    connection._reader = mock_reader
-
-    try:
-        reader = connection.reader()
-
-        for result in reader:
-            result_length, result_type, header, body, error = result
-            if result_length > 0 or error is not None:
-                break
-
-        # Should handle truncation gracefully
-        if truncate_at < 19:
-            # Not enough data - should wait or error
-            assert result_length == 0 or error is not None
-    except Notify:
-        pass
+    result_length, result_type, header, body, error = read_message(truncated)
+    assert error is None
+    assert (result_length, result_type) == (19, 4)
 
 
 @pytest.mark.fuzz

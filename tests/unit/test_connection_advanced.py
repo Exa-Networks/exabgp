@@ -8,11 +8,11 @@ Tests generator-based I/O, BGP message validation, multi-packet assembly, and bu
 Created: 2025-11-08
 """
 
+import asyncio
 import pytest
 import os
 import socket
 import struct
-from typing import Any
 from unittest.mock import Mock, patch
 
 # Set up environment before importing ExaBGP modules
@@ -30,70 +30,56 @@ from exabgp.reactor.network.error import (
     errno,
 )
 from exabgp.bgp.message import Message
+from tests.wire_reader import loopback_connection, read_message, read_messages
+
+# Long enough that the read is certainly waiting on the event loop when the data arrives.
+DELIVERY_DELAY_SECONDS = 0.05
 
 
-class TestGeneratorBasedReader:
-    """Test _reader() generator-based I/O method"""
+class TestSocketReader:
+    """Test _reader_async(), which reads an exact number of bytes off the socket"""
 
     def test_reader_no_socket_raises_not_connected(self) -> None:
-        """Test _reader() raises NotConnected when no socket"""
+        """Test _reader_async() raises NotConnected when no socket"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        gen = conn._reader(10)
         with pytest.raises(NotConnected) as exc_info:
-            next(gen)
+            asyncio.run(conn._reader_async(10))
 
         assert 'closed TCP connection' in str(exc_info.value)
 
-    def test_reader_zero_bytes_yields_empty(self) -> None:
-        """Test _reader(0) yields empty memoryview immediately"""
+    def test_reader_zero_bytes_returns_empty(self) -> None:
+        """Test _reader_async(0) returns an empty memoryview immediately"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
         conn.io = Mock()
 
-        gen = conn._reader(0)
-        result = next(gen)
+        result = asyncio.run(conn._reader_async(0))
 
         assert result == b''
         # Should not call recv_into for zero bytes
         conn.io.recv_into.assert_not_called()
 
     def test_reader_waits_for_socket_ready(self) -> None:
-        """Test _reader() yields empty memoryview while waiting for data"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        """Test _reader_async() waits on the event loop until data arrives"""
+        ours, theirs = socket.socketpair()
+        conn = loopback_connection(ours)
 
-        mock_sock = Mock()
-        mock_sock.fileno.return_value = 5
-        conn.io = mock_sock
+        async def read_after_delay() -> memoryview:
+            # Nothing is buffered when the read starts: the first recv_into would block
+            asyncio.get_running_loop().call_later(DELIVERY_DELAY_SECONDS, theirs.send, b'test')
+            return await conn._reader_async(4)
 
-        # Create a mock poller that returns not ready first, then ready
-        poll_results = [[], [(5, 1)]]  # First not ready, then POLLIN
-
-        def recv_into_side_effect(buffer: memoryview) -> int:
-            """Mock recv_into: writes data to buffer and returns bytes written"""
-            data = b'test'
-            buffer[: len(data)] = data
-            return len(data)
-
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.side_effect = poll_results
-            mock_poll.return_value = mock_poller
-
-            mock_sock.recv_into.side_effect = recv_into_side_effect
-
+        try:
             with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(4)
-
-                # First yield should be empty (waiting)
-                result = next(gen)
-                assert result == b''
-
-                # Second yield should return data
-                result = next(gen)
-                assert result == b'test'
+                result = asyncio.run(read_after_delay())
+            assert result == b'test'
+            assert conn._read_buffer is None
+        finally:
+            conn.close()
+            theirs.close()
 
     def test_reader_assembles_partial_reads(self) -> None:
-        """Test _reader() assembles data from multiple recv_into() calls"""
+        """Test _reader_async() assembles data from multiple recv_into() calls"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -112,67 +98,33 @@ class TestGeneratorBasedReader:
 
         mock_sock.recv_into.side_effect = recv_into_side_effect
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]  # Always ready
-            mock_poll.return_value = mock_poller
+        with patch('exabgp.reactor.network.connection.log'):
+            result = asyncio.run(conn._reader_async(10))
 
-            with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(10)
-
-                # Skip waiting yields
-                result = b''
-                for data in gen:
-                    if data:
-                        result = data
-                        break
-
-                assert result == b'testdata12'
-                assert mock_sock.recv_into.call_count == 2
+        assert result == b'testdata12'
+        assert mock_sock.recv_into.call_count == 2
 
     def test_reader_handles_blocking_error(self) -> None:
-        """Test _reader() handles EAGAIN/EWOULDBLOCK errors"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        """Test _reader_async() waits through EAGAIN and keeps what it already read"""
+        ours, theirs = socket.socketpair()
+        conn = loopback_connection(ours)
 
-        mock_sock = Mock()
-        mock_sock.fileno.return_value = 5
-        conn.io = mock_sock
+        async def read_in_two_parts() -> memoryview:
+            # The first half is buffered; the second arrives after recv_into saw EAGAIN
+            theirs.send(b'da')
+            asyncio.get_running_loop().call_later(DELIVERY_DELAY_SECONDS, theirs.send, b'ta')
+            return await conn._reader_async(4)
 
-        # First call raises EAGAIN, second succeeds
-        call_count = [0]
-
-        def recv_into_side_effect(buffer: memoryview) -> int:
-            call_count[0] += 1
-            if call_count[0] == 1:
-                raise OSError(errno.EAGAIN, 'Would block')
-            data = b'data'
-            buffer[: len(data)] = data
-            return len(data)
-
-        mock_sock.recv_into.side_effect = recv_into_side_effect
-
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]  # Always ready
-            mock_poll.return_value = mock_poller
-
+        try:
             with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.log'):
-                    gen = conn._reader(4)
-
-                    # Should yield empty on EAGAIN
-                    result = next(gen)
-                    if result == b'':
-                        result = next(gen)
-
-                    # Eventually should get data
-                    while result == b'':
-                        result = next(gen)
-
-                    assert result == b'data'
+                result = asyncio.run(read_in_two_parts())
+            assert result == b'data'
+        finally:
+            conn.close()
+            theirs.close()
 
     def test_reader_raises_lost_connection_on_empty_recv(self) -> None:
-        """Test _reader() raises LostConnection when recv_into returns 0"""
+        """Test _reader_async() raises LostConnection when recv_into returns 0"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -180,22 +132,17 @@ class TestGeneratorBasedReader:
         conn.io = mock_sock
         mock_sock.recv_into.return_value = 0  # Connection closed (recv_into returns 0)
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
+        with patch('exabgp.reactor.network.connection.log'):
+            with pytest.raises(LostConnection) as exc_info:
+                asyncio.run(conn._reader_async(10))
 
-            with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(10)
-
-                with pytest.raises(LostConnection) as exc_info:
-                    for _ in gen:
-                        pass
-
-                assert 'closed by the remote end' in str(exc_info.value)
+        assert 'closed by the remote end' in str(exc_info.value)
+        # The connection is closed, and the half read message forgotten with it
+        assert conn.io is None
+        assert conn._read_buffer is None
 
     def test_reader_raises_too_slow_on_timeout(self) -> None:
-        """Test _reader() raises TooSlowError on socket timeout"""
+        """Test _reader_async() raises TooSlowError on socket timeout"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -203,22 +150,17 @@ class TestGeneratorBasedReader:
         conn.io = mock_sock
         mock_sock.recv_into.side_effect = socket.timeout('timed out')
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
+        with patch('exabgp.reactor.network.connection.log'):
+            with pytest.raises(TooSlowError) as exc_info:
+                asyncio.run(conn._reader_async(10))
 
-            with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(10)
-
-                with pytest.raises(TooSlowError) as exc_info:
-                    for _ in gen:
-                        pass
-
-                assert 'Timeout' in str(exc_info.value)
+        assert 'Timeout' in str(exc_info.value)
+        # The connection is closed, and the half read message forgotten with it
+        assert conn.io is None
+        assert conn._read_buffer is None
 
     def test_reader_raises_lost_connection_on_fatal_error(self) -> None:
-        """Test _reader() raises LostConnection on fatal socket errors"""
+        """Test _reader_async() raises LostConnection on fatal socket errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -226,17 +168,14 @@ class TestGeneratorBasedReader:
         conn.io = mock_sock
         mock_sock.recv_into.side_effect = OSError(errno.ECONNRESET, 'Connection reset')
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
+        with patch('exabgp.reactor.network.connection.log'):
+            with pytest.raises(LostConnection) as exc_info:
+                asyncio.run(conn._reader_async(10))
 
-            with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(10)
-
-                with pytest.raises(LostConnection):
-                    for _ in gen:
-                        pass
+        assert 'issue reading on the socket' in str(exc_info.value)
+        # The connection is closed, and the half read message forgotten with it
+        assert conn.io is None
+        assert conn._read_buffer is None
 
 
 class TestGeneratorBasedWriter:
@@ -393,22 +332,11 @@ class TestBGPHeaderValidation:
     """Test BGP message header validation with error conditions"""
 
     def test_reader_validates_marker(self) -> None:
-        """Test reader() validates BGP marker field"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+        """Test reader_async() validates BGP marker field"""
         # Invalid marker (all zeros instead of all 0xFF)
-        invalid_header = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
+        header_data = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
 
-        def mock_reader(num_bytes: Any):
-            if num_bytes == 19:
-                yield invalid_header
-            else:
-                yield b''
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -416,22 +344,11 @@ class TestBGPHeaderValidation:
         assert error.subcode == 1  # Connection Not Synchronized
 
     def test_reader_validates_length_minimum(self) -> None:
-        """Test reader() rejects length < 19"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+        """Test reader_async() rejects length < 19"""
         # Length = 18 (below minimum)
-        invalid_header = Message.MARKER + struct.pack('!H', 18) + b'\x01'
+        header_data = Message.MARKER + struct.pack('!H', 18) + b'\x01'
 
-        def mock_reader(num_bytes: Any):
-            if num_bytes == 19:
-                yield invalid_header
-            else:
-                yield b''
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -441,121 +358,72 @@ class TestBGPHeaderValidation:
         assert error.data == struct.pack('!H', 18)
 
     def test_reader_validates_length_maximum(self) -> None:
-        """Test reader() rejects length > msg_size"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+        """Test reader_async() rejects length > msg_size"""
         # Length = 4097 (above default maximum of 4096)
-        invalid_header = Message.MARKER + struct.pack('!H', 4097) + b'\x01'
+        header_data = Message.MARKER + struct.pack('!H', 4097) + b'\x01'
 
-        def mock_reader(num_bytes: Any):
-            if num_bytes == 19:
-                yield invalid_header
-            else:
-                yield b''
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
         assert error.code == 1  # Message Header Error
         assert error.subcode == 2  # Bad Message Length
+        # RFC 4271 6.1: the Data field "MUST contain the erroneous Length field"
+        assert error.data == struct.pack('!H', 4097)
 
     def test_reader_validates_keepalive_length(self) -> None:
-        """Test reader() validates KEEPALIVE must be exactly 19 bytes"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+        """Test reader_async() validates KEEPALIVE must be exactly 19 bytes"""
         # KEEPALIVE with length 20 (should be exactly 19)
-        invalid_header = Message.MARKER + struct.pack('!H', 20) + b'\x04'
+        header_data = Message.MARKER + struct.pack('!H', 20) + b'\x04' + b'\x00'
 
-        def mock_reader(num_bytes: Any):
-            if num_bytes == 19:
-                yield invalid_header
-            elif num_bytes == 1:
-                yield b'\x00'
-            else:
-                yield b''
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
         assert error.code == 1  # Message Header Error
         assert error.subcode == 2  # Bad Message Length
+        # RFC 4271 6.1: the Data field "MUST contain the erroneous Length field"
+        assert error.data == struct.pack('!H', 20)
 
     def test_reader_validates_open_minimum_length(self) -> None:
-        """Test reader() validates OPEN must be >= 29 bytes"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+        """Test reader_async() validates OPEN must be >= 29 bytes"""
         # OPEN with length 28 (below minimum of 29)
-        invalid_header = Message.MARKER + struct.pack('!H', 28) + b'\x01'
+        header_data = Message.MARKER + struct.pack('!H', 28) + b'\x01' + b'\x00' * 9
 
-        def mock_reader(num_bytes: Any):
-            if num_bytes == 19:
-                yield invalid_header
-            else:
-                yield b''
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
         assert error.code == 1  # Message Header Error
         assert error.subcode == 2  # Bad Message Length
+        # RFC 4271 6.1: the Data field "MUST contain the erroneous Length field"
+        assert error.data == struct.pack('!H', 28)
 
     def test_reader_validates_update_minimum_length(self) -> None:
-        """Test reader() validates UPDATE must be >= 23 bytes"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+        """Test reader_async() validates UPDATE must be >= 23 bytes"""
         # UPDATE with length 22 (below minimum of 23)
-        invalid_header = Message.MARKER + struct.pack('!H', 22) + b'\x02'
+        header_data = Message.MARKER + struct.pack('!H', 22) + b'\x02' + b'\x00' * 3
 
-        def mock_reader(num_bytes: Any):
-            if num_bytes == 19:
-                yield invalid_header
-            else:
-                yield b''
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
         assert error.code == 1  # Message Header Error
         assert error.subcode == 2  # Bad Message Length
+        # RFC 4271 6.1: the Data field "MUST contain the erroneous Length field"
+        assert error.data == struct.pack('!H', 22)
 
     def test_reader_accepts_valid_keepalive(self) -> None:
-        """Test reader() accepts valid KEEPALIVE message"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+        """Test reader_async() accepts valid KEEPALIVE message"""
         # Valid KEEPALIVE: marker + length(19) + type(4)
-        valid_header = Message.MARKER + struct.pack('!H', 19) + b'\x04'
+        header_data = Message.MARKER + struct.pack('!H', 19) + b'\x04'
 
-        def mock_reader(num_bytes: Any):
-            if num_bytes == 19:
-                yield valid_header
-            else:
-                yield b''
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data)
 
         assert error is None
         assert length == 19
         assert msg_type == 4
-        assert header == valid_header
+        assert header == header_data
         assert body == b''
 
 
@@ -563,104 +431,60 @@ class TestMultiPacketAssembly:
     """Test multi-packet message assembly"""
 
     def test_reader_assembles_message_with_body(self) -> None:
-        """Test reader() assembles header and body into complete message"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        # OPEN message with 10-byte body (total length 29)
-        header_data = Message.MARKER + struct.pack('!H', 29) + b'\x01'
+        """Test reader_async() assembles header and body into complete message"""
+        header_data = Message.MARKER + struct.pack('!H', 29) + bytes([1])
         body_data = b'\x04\xac\x10\x00\x01\x00\xb4\xc0\xa8\x01'  # 10 bytes
 
-        reads = [header_data, body_data]
-        read_index = [0]
-
-        def mock_reader(num_bytes: Any):
-            data = reads[read_index[0]]
-            read_index[0] += 1
-            yield data
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data + body_data)
 
         assert error is None
         assert length == 29
         assert msg_type == 1
-        assert len(header) == 19
-        assert len(body) == 10
+        assert header == header_data
         assert body == body_data
 
     def test_reader_handles_large_update_message(self) -> None:
-        """Test reader() handles large UPDATE messages"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        """Test reader_async() handles large UPDATE messages"""
+        header_data = Message.MARKER + struct.pack('!H', 1000) + bytes([2])
+        body_data = b'\x00' * (1000 - 19)
 
-        # Large UPDATE message (1000 bytes total)
-        body_size = 1000 - 19
-        header_data = Message.MARKER + struct.pack('!H', 1000) + b'\x02'
-        body_data = b'\x00' * body_size
-
-        reads = [header_data, body_data]
-        read_index = [0]
-
-        def mock_reader(num_bytes: Any):
-            data = reads[read_index[0]]
-            read_index[0] += 1
-            yield data
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data + body_data)
 
         assert error is None
         assert length == 1000
         assert msg_type == 2
-        assert len(body) == body_size
+        assert header == header_data
+        assert body == body_data
 
-    def test_reader_yields_waiting_during_assembly(self) -> None:
-        """Test reader() yields waiting state during message assembly"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+    def test_reader_waits_between_header_and_body(self) -> None:
+        """Test reader_async() waits for a body which arrives after its header"""
+        ours, theirs = socket.socketpair()
+        conn = loopback_connection(ours)
         header_data = Message.MARKER + struct.pack('!H', 29) + b'\x01'
         body_data = b'\x00' * 10
 
-        # Simulate waiting by yielding empty first, then data
-        call_count = [0]
+        async def read_split_message() -> tuple:
+            theirs.send(header_data)
+            asyncio.get_running_loop().call_later(DELIVERY_DELAY_SECONDS, theirs.send, body_data)
+            return await conn.reader_async()
 
-        def mock_reader(num_bytes: Any):
-            call_count[0] += 1
-            if call_count[0] == 1:
-                # First call for header - yield empty then data
-                yield b''
-                yield header_data
-            else:
-                # Second call for body - yield empty then data
-                yield b''
-                yield body_data
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-
-        # First result should be waiting state
-        result = next(gen)
-        assert result == (0, 0, b'', b'', None)
-
-        # Continue to final result
-        result = next(gen)
-        while result == (0, 0, b'', b'', None):
-            result = next(gen)
-
-        length, msg_type, header, body, error = result
-        assert error is None
-        assert length == 29
+        try:
+            with patch('exabgp.reactor.network.connection.log'):
+                length, msg_type, header, body, error = asyncio.run(read_split_message())
+            assert error is None
+            assert length == 29
+            assert body == body_data
+            assert conn._read_header is None
+        finally:
+            conn.close()
+            theirs.close()
 
 
 class TestBufferManagement:
     """Test buffer management scenarios"""
 
     def test_reader_handles_incremental_header_reads(self) -> None:
-        """Test _reader() assembles header from small incremental reads"""
+        """Test _reader_async() assembles header from small incremental reads"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -679,25 +503,14 @@ class TestBufferManagement:
 
         mock_sock.recv_into.side_effect = recv_into_side_effect
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]  # Always ready
-            mock_poll.return_value = mock_poller
+        with patch('exabgp.reactor.network.connection.log'):
+            result = asyncio.run(conn._reader_async(19))
 
-            with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(19)
-
-                result = b''
-                for data in gen:
-                    if data:
-                        result = data
-                        break
-
-                assert result == header_bytes
-                assert mock_sock.recv_into.call_count == 19
+        assert result == header_bytes
+        assert mock_sock.recv_into.call_count == 19
 
     def test_reader_handles_variable_chunk_sizes(self) -> None:
-        """Test _reader() handles variable-size recv_into() chunks"""
+        """Test _reader_async() handles variable-size recv_into() chunks"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -721,22 +534,11 @@ class TestBufferManagement:
 
         mock_sock.recv_into.side_effect = recv_into_side_effect
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]  # Always ready
-            mock_poll.return_value = mock_poller
+        with patch('exabgp.reactor.network.connection.log'):
+            result = asyncio.run(conn._reader_async(20))
 
-            with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(20)
-
-                result = b''
-                for data in gen:
-                    if data:
-                        result = data
-                        break
-
-                assert result == b'12345678abcdefghijkl'
-                assert mock_sock.recv_into.call_count == 5
+        assert result == b'12345678abcdefghijkl'
+        assert mock_sock.recv_into.call_count == 5
 
     def test_writer_handles_incremental_sends(self) -> None:
         """Test writer() handles incremental send() results"""
@@ -768,7 +570,7 @@ class TestBufferManagement:
                 assert mock_sock.send.call_count == 4
 
     def test_reader_buffer_boundary_conditions(self) -> None:
-        """Test _reader() handles exact buffer boundaries"""
+        """Test _reader_async() handles exact buffer boundaries"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -784,40 +586,18 @@ class TestBufferManagement:
 
         mock_sock.recv_into.side_effect = recv_into_side_effect
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
+        with patch('exabgp.reactor.network.connection.log'):
+            result = asyncio.run(conn._reader_async(100))
 
-            with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(100)
-
-                result = b''
-                for chunk in gen:
-                    if chunk:
-                        result = chunk
-                        break
-
-                assert result == data
-                assert len(result) == 100
+        assert result == data
+        assert len(result) == 100
 
     def test_reader_empty_body_message(self) -> None:
-        """Test reader() handles message with no body (header only)"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+        """Test reader_async() handles message with no body (header only)"""
         # KEEPALIVE has no body, just header
         header_data = Message.MARKER + struct.pack('!H', 19) + b'\x04'
 
-        def mock_reader(num_bytes: Any):
-            if num_bytes == 19:
-                yield header_data
-            else:
-                yield b''
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data)
 
         assert error is None
         assert length == 19
@@ -826,30 +606,7 @@ class TestBufferManagement:
 
 
 class TestPollingMechanisms:
-    """Test reading() and writing() polling mechanisms"""
-
-    def test_reading_registers_poller_once(self) -> None:
-        """Test reading() registers poller only once"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        mock_sock = Mock()
-        mock_sock.fileno.return_value = 5
-        conn.io = mock_sock
-
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
-
-            # First call should register
-            conn.reading()
-            assert mock_poll.call_count == 1
-            assert mock_poller.register.call_count == 1
-
-            # Second call should reuse poller
-            conn.reading()
-            assert mock_poll.call_count == 1
-            assert mock_poller.register.call_count == 1
+    """Test the writing() polling mechanism used by writer()"""
 
     def test_writing_registers_poller_once(self) -> None:
         """Test writing() registers poller only once"""
@@ -874,27 +631,6 @@ class TestPollingMechanisms:
             assert mock_poll.call_count == 1
             assert mock_poller.register.call_count == 1
 
-    def test_reading_detects_hangup(self) -> None:
-        """Test reading() detects POLLHUP event"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        mock_sock = Mock()
-        mock_sock.fileno.return_value = 5
-        conn.io = mock_sock
-
-        with patch('select.poll') as mock_poll:
-            import select
-
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, select.POLLHUP)]
-            mock_poll.return_value = mock_poller
-
-            result = conn.reading()
-
-            assert result is True
-            # Poller should be cleared on hangup
-            assert conn._rpoller == {}
-
     def test_writing_detects_error(self) -> None:
         """Test writing() detects POLLERR event"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
@@ -915,15 +651,6 @@ class TestPollingMechanisms:
             assert result is True
             # Poller should be cleared on error
             assert conn._wpoller == {}
-
-    def test_reading_returns_false_when_no_socket(self) -> None:
-        """Test reading() returns False when io is None"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        conn.io = None
-
-        result = conn.reading()
-
-        assert result is False
 
     def test_writing_returns_false_when_no_socket(self) -> None:
         """Test writing() returns False when io is None"""
@@ -948,7 +675,6 @@ class TestConnectionBasics:
         assert conn.io is None
         assert conn.established is False
         assert conn.msg_size == 4096  # INITIAL_SIZE
-        assert conn._rpoller == {}
         assert conn._wpoller == {}
 
     def test_init_ipv6_connection(self) -> None:
@@ -1083,55 +809,31 @@ class TestExtendedMessageSize:
         assert conn.msg_size == 65535
 
     def test_reader_validates_against_current_msg_size(self) -> None:
-        """Test reader() validates length against current msg_size"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        conn.msg_size = 100  # Small limit for testing
-
+        """Test reader_async() validates length against current msg_size"""
         # Message with length 101 (exceeds msg_size)
-        invalid_header = Message.MARKER + struct.pack('!H', 101) + b'\x02'
+        header_data = Message.MARKER + struct.pack('!H', 101) + b'\x02'
 
-        def mock_reader(num_bytes: Any):
-            if num_bytes == 19:
-                yield invalid_header
-            else:
-                yield b''
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data, msg_size=100)
 
         assert error is not None
         assert isinstance(error, NotifyError)
         assert error.code == 1  # Message Header Error
         assert error.subcode == 2  # Bad Message Length
+        # RFC 4271 6.1: the Data field "MUST contain the erroneous Length field"
+        assert error.data == struct.pack('!H', 101)
 
     def test_reader_accepts_extended_size_when_configured(self) -> None:
-        """Test reader() accepts large messages when extended size configured"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        conn.msg_size = 65535  # Extended message size
+        """Test reader_async() accepts large messages when extended size configured"""
+        header_data = Message.MARKER + struct.pack('!H', 5000) + bytes([2])
+        body_data = b'\x00' * (5000 - 19)
 
-        # Large UPDATE message (5000 bytes)
-        body_size = 5000 - 19
-        header_data = Message.MARKER + struct.pack('!H', 5000) + b'\x02'
-        body_data = b'\x00' * body_size
-
-        reads = [header_data, body_data]
-        read_index = [0]
-
-        def mock_reader(num_bytes: Any):
-            data = reads[read_index[0]]
-            read_index[0] += 1
-            yield data
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data + body_data, msg_size=65535)
 
         assert error is None
         assert length == 5000
         assert msg_type == 2
+        assert header == header_data
+        assert body == body_data
 
 
 class TestErrorPropagation:
@@ -1165,31 +867,24 @@ class TestErrorPropagation:
                     assert 'Problem while writing data' in str(exc_info.value)
 
     def test_reader_propagates_fatal_error(self) -> None:
-        """Test _reader() propagates fatal socket errors"""
+        """Test _reader_async() propagates fatal socket errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
+        mock_sock.recv_into.side_effect = OSError(errno.ECONNREFUSED, 'Connection refused')
 
-        error = OSError(errno.ECONNREFUSED, 'Connection refused')
-        error.errno = errno.ECONNREFUSED
-        mock_sock.recv_into.side_effect = error
+        with patch('exabgp.reactor.network.connection.log'):
+            with pytest.raises(LostConnection) as exc_info:
+                asyncio.run(conn._reader_async(10))
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
-
-            with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(10)
-
-                with pytest.raises(LostConnection):
-                    for _ in gen:
-                        pass
+        assert 'issue reading on the socket' in str(exc_info.value)
+        # Socket should be closed
+        assert conn.io is None
 
     def test_reader_clears_socket_on_error(self) -> None:
-        """Test _reader() clears socket on connection loss"""
+        """Test _reader_async() clears socket on connection loss"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
@@ -1197,212 +892,110 @@ class TestErrorPropagation:
         conn.io = mock_sock
         mock_sock.recv_into.return_value = 0  # Connection closed (recv_into returns 0)
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
+        with patch('exabgp.reactor.network.connection.log'):
+            with pytest.raises(LostConnection) as exc_info:
+                asyncio.run(conn._reader_async(10))
 
-            with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(10)
-
-                with pytest.raises(LostConnection):
-                    for _ in gen:
-                        pass
-
-                # Socket should be closed
-                assert conn.io is None
+        assert 'closed by the remote end' in str(exc_info.value)
+        # Socket should be closed
+        assert conn.io is None
 
 
 class TestNotificationErrorTypes:
     """Test different BGP NOTIFICATION error codes"""
 
     def test_reader_connection_not_synchronized_error(self) -> None:
-        """Test reader() generates connection not synchronized error"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+        """Test reader_async() generates connection not synchronized error"""
         # Invalid marker
-        invalid_header = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
+        header_data = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
 
-        def mock_reader(num_bytes: Any):
-            yield invalid_header if num_bytes == 19 else b''
+        length, msg_type, header, body, error = read_message(header_data)
 
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        _, _, _, _, error = next(gen)
-
+        assert error is not None
+        assert isinstance(error, NotifyError)
         assert error.code == 1  # Message Header Error
         assert error.subcode == 1  # Connection Not Synchronized
 
     def test_reader_bad_message_length_too_small(self) -> None:
-        """Test reader() generates bad message length error for too small"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
+        """Test reader_async() generates bad message length error for too small"""
         # Length 10 (below minimum 19)
-        invalid_header = Message.MARKER + struct.pack('!H', 10) + b'\x01'
+        header_data = Message.MARKER + struct.pack('!H', 10) + b'\x01'
 
-        def mock_reader(num_bytes: Any):
-            yield invalid_header if num_bytes == 19 else b''
+        length, msg_type, header, body, error = read_message(header_data)
 
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        _, _, _, _, error = next(gen)
-
+        assert error is not None
+        assert isinstance(error, NotifyError)
         assert error.code == 1  # Message Header Error
         assert error.subcode == 2  # Bad Message Length
+        # RFC 4271 6.1: the Data field "MUST contain the erroneous Length field"
+        assert error.data == struct.pack('!H', 10)
 
     def test_reader_bad_message_length_too_large(self) -> None:
-        """Test reader() generates bad message length error for too large"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
+        """Test reader_async() generates bad message length error for too large"""
+        # Length 65535 (the largest the field holds, above the 4096 maximum)
+        header_data = Message.MARKER + struct.pack('!H', 65535) + b'\x01'
 
-        # Length 100000 (way above maximum)
-        invalid_header = Message.MARKER + struct.pack('!H', 65535) + b'\x01'
-        # Note: struct.pack('!H', 100000) would overflow, using max uint16
+        length, msg_type, header, body, error = read_message(header_data)
 
-        def mock_reader(num_bytes: Any):
-            yield invalid_header if num_bytes == 19 else b''
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        _, _, _, _, error = next(gen)
-
+        assert error is not None
+        assert isinstance(error, NotifyError)
         assert error.code == 1  # Message Header Error
         assert error.subcode == 2  # Bad Message Length
+        # RFC 4271 6.1: the Data field "MUST contain the erroneous Length field"
+        assert error.data == struct.pack('!H', 65535)
 
 
 class TestConcurrentReaderWriter:
     """Test concurrent reader and writer operations"""
-
-    def test_reading_and_writing_use_separate_pollers(self) -> None:
-        """Test reading() and writing() maintain separate pollers"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        mock_sock = Mock()
-        mock_sock.fileno.return_value = 5
-        conn.io = mock_sock
-
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
-
-            # Register for reading
-            conn.reading()
-            read_poller = conn._rpoller.get(mock_sock)
-
-            # Register for writing
-            conn.writing()
-            write_poller = conn._wpoller.get(mock_sock)
-
-            # Should have separate pollers
-            assert read_poller is not None
-            assert write_poller is not None
-            assert mock_poll.call_count == 2
-
-    def test_poller_cleanup_on_socket_close(self) -> None:
-        """Test pollers are cleared when connection closes"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        mock_sock = Mock()
-        conn.io = mock_sock
-        conn._rpoller = {mock_sock: Mock()}
-        conn._wpoller = {mock_sock: Mock()}
-
-        with patch('exabgp.reactor.network.connection.log'):
-            conn.close()
-
-        # Pollers should still reference old socket
-        # (they'll be recreated on next use with new socket)
-        assert conn.io is None
 
 
 class TestMessageTypeValidation:
     """Test validation of different BGP message types"""
 
     def test_reader_accepts_notification_message(self) -> None:
-        """Test reader() accepts NOTIFICATION message"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        # NOTIFICATION message (type 3) with 2-byte body
-        header_data = Message.MARKER + struct.pack('!H', 21) + b'\x03'
+        """Test reader_async() accepts NOTIFICATION message"""
+        header_data = Message.MARKER + struct.pack('!H', 21) + bytes([3])
         body_data = b'\x01\x01'  # Error code and subcode
 
-        reads = [header_data, body_data]
-        read_index = [0]
-
-        def mock_reader(num_bytes: Any):
-            data = reads[read_index[0]]
-            read_index[0] += 1
-            yield data
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data + body_data)
 
         assert error is None
         assert length == 21
         assert msg_type == 3
-        assert len(body) == 2
+        assert header == header_data
+        assert body == body_data
 
     def test_reader_accepts_route_refresh_message(self) -> None:
-        """Test reader() accepts ROUTE_REFRESH message"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        # ROUTE_REFRESH message (type 5) with 4-byte body
-        header_data = Message.MARKER + struct.pack('!H', 23) + b'\x05'
+        """Test reader_async() accepts ROUTE_REFRESH message"""
+        header_data = Message.MARKER + struct.pack('!H', 23) + bytes([5])
         body_data = b'\x00\x01\x00\x01'  # AFI, Reserved, SAFI
 
-        reads = [header_data, body_data]
-        read_index = [0]
-
-        def mock_reader(num_bytes: Any):
-            data = reads[read_index[0]]
-            read_index[0] += 1
-            yield data
-
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
+        length, msg_type, header, body, error = read_message(header_data + body_data)
 
         assert error is None
         assert length == 23
         assert msg_type == 5
-        assert len(body) == 4
+        assert header == header_data
+        assert body == body_data
 
 
 class TestEdgeCasesAndDefensiveMode:
     """Test edge cases and defensive mode error injection"""
 
     def test_reader_handles_undefined_socket_error(self) -> None:
-        """Test _reader() handles undefined socket errors"""
+        """Test _reader_async() handles undefined socket errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
+        mock_sock.recv_into.side_effect = OSError(999, 'Undefined error')
 
-        # Create an undefined socket error (not in block or fatal lists)
-        error = OSError(999, 'Undefined error')
-        error.errno = 999
-        mock_sock.recv_into.side_effect = error
+        with patch('exabgp.reactor.network.connection.log'):
+            with pytest.raises(NetworkError) as exc_info:
+                asyncio.run(conn._reader_async(10))
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, 1)]
-            mock_poll.return_value = mock_poller
-
-            with patch('exabgp.reactor.network.connection.log'):
-                gen = conn._reader(10)
-
-                with pytest.raises(NetworkError) as exc_info:
-                    for _ in gen:
-                        pass
-
-                assert 'Problem while reading data' in str(exc_info.value)
+        assert 'Problem while reading data' in str(exc_info.value)
 
     def test_writer_handles_undefined_socket_error(self) -> None:
         """Test writer() handles undefined socket errors"""
@@ -1437,89 +1030,41 @@ class TestEdgeCasesAndDefensiveMode:
                     # Should have yielded at least one False
                     assert False in results
 
-    def test_reader_stops_iteration_after_notify_error(self) -> None:
-        """Test reader() stops iteration after yielding NotifyError"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        # Invalid marker to trigger NotifyError
+    def test_reader_keeps_no_state_after_notify_error(self) -> None:
+        """Test reader_async() keeps no half read message after NotifyError"""
         invalid_header = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
+        keepalive = Message.MARKER + struct.pack('!H', 19) + b'\x04'
 
-        def mock_reader(num_bytes: Any):
-            yield invalid_header
+        refused, following = read_messages(invalid_header + keepalive, 2)
 
-        conn._reader = mock_reader
+        assert isinstance(refused[4], NotifyError)
+        # The next read parses the next header, not a body the refused header promised
+        assert following[:2] == (19, 4)
+        assert following[4] is None
 
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
-
-        assert error is not None
-        assert isinstance(error, NotifyError)
-
-        # Generator should stop after yielding error
-        with pytest.raises(StopIteration):
-            next(gen)
-
-    def test_reader_stops_after_invalid_length(self) -> None:
-        """Test reader() stops after detecting invalid length"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        # Length too small
+    def test_reader_keeps_no_state_after_invalid_length(self) -> None:
+        """Test reader_async() keeps no half read message after an invalid length"""
         invalid_header = Message.MARKER + struct.pack('!H', 18) + b'\x01'
+        keepalive = Message.MARKER + struct.pack('!H', 19) + b'\x04'
 
-        def mock_reader(num_bytes: Any):
-            yield invalid_header
+        refused, following = read_messages(invalid_header + keepalive, 2)
 
-        conn._reader = mock_reader
+        assert isinstance(refused[4], NotifyError)
+        # The next read parses the next header, not a body the refused header promised
+        assert following[:2] == (19, 4)
+        assert following[4] is None
 
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
-
-        assert error is not None
-        assert isinstance(error, NotifyError)
-
-        # Generator should stop
-        with pytest.raises(StopIteration):
-            next(gen)
-
-    def test_reader_stops_after_validator_failure(self) -> None:
-        """Test reader() stops after message type validator fails"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        # UPDATE with invalid length (too small)
+    def test_reader_keeps_no_state_after_validator_failure(self) -> None:
+        """Test reader_async() keeps no half read message after the message type check fails"""
         invalid_header = Message.MARKER + struct.pack('!H', 22) + b'\x02'
+        keepalive = Message.MARKER + struct.pack('!H', 19) + b'\x04'
 
-        def mock_reader(num_bytes: Any):
-            yield invalid_header
+        refused, following = read_messages(invalid_header + keepalive, 2)
 
-        conn._reader = mock_reader
-
-        gen = conn.reader()
-        length, msg_type, header, body, error = next(gen)
-
-        assert error is not None
-        assert isinstance(error, NotifyError)
-
-        # Generator should stop
-        with pytest.raises(StopIteration):
-            next(gen)
-
-    def test_reading_returns_false_when_not_ready(self) -> None:
-        """Test reading() returns False when no data available"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        mock_sock = Mock()
-        mock_sock.fileno.return_value = 5
-        conn.io = mock_sock
-
-        with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
-            # Return empty list - no events
-            mock_poller.poll.return_value = []
-            mock_poll.return_value = mock_poller
-
-            result = conn.reading()
-
-            assert result is False
+        assert isinstance(refused[4], NotifyError)
+        # The next read parses the next header, not a body the refused header promised
+        assert following[:2] == (19, 4)
+        assert following[4] is None
 
     def test_writing_returns_false_when_not_ready(self) -> None:
         """Test writing() returns False when socket not writable"""
@@ -1538,26 +1083,6 @@ class TestEdgeCasesAndDefensiveMode:
             result = conn.writing()
 
             assert result is False
-
-    def test_reading_detects_pollnval(self) -> None:
-        """Test reading() detects POLLNVAL event and clears poller"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-
-        mock_sock = Mock()
-        mock_sock.fileno.return_value = 5
-        conn.io = mock_sock
-
-        with patch('select.poll') as mock_poll:
-            import select
-
-            mock_poller = Mock()
-            mock_poller.poll.return_value = [(5, select.POLLNVAL)]
-            mock_poll.return_value = mock_poller
-
-            result = conn.reading()
-
-            assert result is True
-            assert conn._rpoller == {}
 
     def test_writing_detects_pollnval(self) -> None:
         """Test writing() detects POLLNVAL event and clears poller"""

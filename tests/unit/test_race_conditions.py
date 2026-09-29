@@ -9,6 +9,7 @@ connection state transitions, polling races, and message queue ordering.
 Created: 2025-11-08
 """
 
+import asyncio
 import pytest
 import os
 import socket
@@ -27,6 +28,10 @@ from exabgp.reactor.network.error import (
     NetworkError,
     errno,
 )
+from tests.wire_reader import loopback_connection
+
+# Short: the read is expected to time out, and every test waits this long.
+READ_DEADLINE_SECONDS = 0.05
 
 
 class TestSimultaneousBidirectionalConnections:
@@ -83,8 +88,8 @@ class TestSimultaneousBidirectionalConnections:
             mock_poll.return_value = mock_poller
             mock_poller.poll.return_value = []
 
-            # Trigger poller registration by checking reading status
-            conn.reading()
+            # Trigger poller registration by checking writing status
+            conn.writing()
 
             # Close first socket
             with patch('exabgp.reactor.network.connection.log'):
@@ -171,7 +176,7 @@ class TestConnectionResetDuringIO:
     def test_reset_during_message_read(self) -> None:
         """Test connection reset during message reception.
 
-        Scenario: Connection closes while _reader() generator is active
+        Scenario: Connection closes while _reader_async() is reading
         Expected: Proper error propagation, buffer cleanup
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
@@ -182,25 +187,19 @@ class TestConnectionResetDuringIO:
         # Mock recv_into to return 0 (connection closed)
         mock_sock.recv_into.return_value = 0
 
-        # Create reader generator
-        reader_gen = conn._reader(19)  # BGP header size
+        with patch('exabgp.reactor.network.connection.log'):
+            # Should raise LostConnection
+            with pytest.raises(LostConnection) as exc_info:
+                asyncio.run(conn._reader_async(19))  # BGP header size
 
-        with patch('select.poll') as mock_poll:
-            with patch('exabgp.reactor.network.connection.log'):
-                mock_poller = MagicMock()
-                mock_poll.return_value = mock_poller
-                mock_poller.poll.return_value = [(8, 1)]  # POLLIN
-
-                # Should raise LostConnection
-                with pytest.raises(LostConnection) as exc_info:
-                    next(reader_gen)
-
-                assert 'TCP connection was closed' in str(exc_info.value)
+        assert 'TCP connection was closed' in str(exc_info.value)
+        assert conn.io is None
+        assert conn._read_buffer is None
 
     def test_close_during_active_reader(self) -> None:
-        """Test explicit close() while reader generator is active.
+        """Test explicit close() between creating a read and running it.
 
-        Scenario: close() called while waiting for data in _reader()
+        Scenario: close() called after _reader_async() was created, before it runs
         Expected: Reader detects closed socket and raises NotConnected
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
@@ -209,22 +208,15 @@ class TestConnectionResetDuringIO:
         conn.io = mock_sock
 
         # Start reader
-        reader_gen = conn._reader(100)
+        read = conn._reader_async(100)
 
-        # Mock recv_into to block (would wait for data)
-        mock_sock.recv_into.return_value = 0
+        # Explicitly close connection
+        conn.close()
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = MagicMock()
-            mock_poll.return_value = mock_poller
-            mock_poller.poll.return_value = []  # No data ready
-
-            # Explicitly close connection
-            conn.close()
-
-            # Next reader iteration should fail
-            with pytest.raises(NotConnected):
-                next(reader_gen)
+        # Running the read should fail
+        with pytest.raises(NotConnected):
+            asyncio.run(read)
+        mock_sock.recv_into.assert_not_called()
 
 
 class TestRapidConnectDisconnectCycles:
@@ -276,7 +268,7 @@ class TestRapidConnectDisconnectCycles:
                     mock_poller = MagicMock()
                     mock_poll.return_value = mock_poller
                     mock_poller.poll.return_value = []
-                    _ = conn.reading()
+                    _ = conn.writing()
 
                 # Close and verify io is None (connection closed)
                 conn.close()
@@ -320,10 +312,10 @@ class TestRapidConnectDisconnectCycles:
 class TestPollingStateRaces:
     """Test race conditions in polling state management"""
 
-    def test_concurrent_reading_writing_calls(self) -> None:
-        """Test concurrent calls to reading() and writing().
+    def test_repeated_writing_calls(self) -> None:
+        """Test repeated calls to writing().
 
-        Scenario: Multiple checks of reading/writing status
+        Scenario: Multiple checks of writing status
         Expected: Consistent poller state, no corruption
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
@@ -334,22 +326,20 @@ class TestPollingStateRaces:
         with patch('select.poll') as mock_poll:
             mock_poller = MagicMock()
             mock_poll.return_value = mock_poller
+            mock_poller.poll.return_value = []
 
-            # Call reading and writing multiple times
             for _ in range(5):
-                is_reading = conn.reading()
-                is_writing = conn.writing()
+                assert conn.writing() is False
 
-            # Verify poller state is consistent
-            # Should have entries for fd 15
-            assert 15 in conn._rpoller or not is_reading
-            assert 15 in conn._wpoller or not is_writing
+            # One poller, registered once, for this socket
+            assert list(conn._wpoller) == [mock_sock]
+            mock_poll.assert_called_once()
 
-    def test_poller_state_after_socket_error(self) -> None:
-        """Test poller cleanup after socket errors.
+    def test_state_after_socket_error(self) -> None:
+        """Test cleanup after socket errors.
 
-        Scenario: Socket error during poll operation
-        Expected: Poller state cleared for that fd
+        Scenario: Socket error during a read
+        Expected: Connection closed and the partial read forgotten
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
         mock_sock = MagicMock(spec=socket.socket)
@@ -359,42 +349,30 @@ class TestPollingStateRaces:
         # Mock recv_into to raise socket error
         mock_sock.recv_into.side_effect = OSError(errno.ECONNRESET, 'Connection reset')
 
-        reader_gen = conn._reader(10)
+        # Should raise LostConnection and close
+        with pytest.raises(LostConnection):
+            asyncio.run(conn._reader_async(10))
 
-        with patch('select.poll') as mock_poll:
-            mock_poller = MagicMock()
-            mock_poll.return_value = mock_poller
-            mock_poller.poll.return_value = [(16, 1)]
+        assert conn.io is None
+        assert conn._read_buffer is None
+        mock_sock.close.assert_called_once()
 
-            # Should raise LostConnection and clear poller
-            with pytest.raises(LostConnection):
-                next(reader_gen)
+    def test_read_deadline_handling(self) -> None:
+        """Test a read which times out waiting for data.
 
-        # Poller should be cleaned up
-        assert 16 not in conn._rpoller
-
-    def test_poll_timeout_handling(self) -> None:
-        """Test timeout handling in polling operations.
-
-        Scenario: Poll times out waiting for I/O readiness
-        Expected: Proper timeout detection, generator yields correctly
+        Scenario: The caller's deadline expires before any byte arrives
+        Expected: TimeoutError, connection kept open for the next read
         """
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
-        mock_sock.fileno.return_value = 17
-        conn.io = mock_sock
+        ours, theirs = socket.socketpair()
+        conn = loopback_connection(ours)
+        try:
+            with pytest.raises(TimeoutError):
+                asyncio.run(asyncio.wait_for(conn._reader_async(10), READ_DEADLINE_SECONDS))
 
-        reader_gen = conn._reader(10)
-
-        with patch('select.poll') as mock_poll:
-            mock_poller = MagicMock()
-            mock_poll.return_value = mock_poller
-            # Return empty list (timeout)
-            mock_poller.poll.return_value = []
-
-            # Should yield empty bytes on timeout
-            result = next(reader_gen)
-            assert result == b''
+            assert conn.io is ours
+        finally:
+            conn.close()
+            theirs.close()
 
 
 class TestMessageQueueOrderingRaces:
@@ -467,26 +445,17 @@ class TestMessageQueueOrderingRaces:
 
         mock_sock.recv_into.side_effect = recv_into_side_effect
 
-        # Create reader for BGP message
-        reader_gen = conn.reader()
+        with patch('exabgp.reactor.network.connection.log'):
+            # Read should assemble complete message
+            result = asyncio.run(conn.reader_async())
 
-        with patch('select.poll') as mock_poll:
-            with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.log'):
-                    mock_poller = MagicMock()
-                    mock_poll.return_value = mock_poller
-                    mock_poller.poll.return_value = [(26, 1)]  # POLLIN
-
-                    # Read should assemble complete message
-                    result = next(reader_gen)
-                    # First yield is waiting for header (empty memoryview)
-                    while result[0] == 0:
-                        result = next(reader_gen)
-
-                    # Verify we got a complete message structure
-                    # Result is (length, msg_type, header, body, error)
-                    assert result[0] == 19  # Message length
-                    assert result[1] == 4  # KEEPALIVE type
+        # Verify we got a complete message structure
+        # Result is (length, msg_type, header, body, error)
+        assert result[0] == 19  # Message length
+        assert result[1] == 4  # KEEPALIVE type
+        assert result[2] == bgp_msg
+        assert result[4] is None
+        assert mock_sock.recv_into.call_count == 2
 
     def test_buffer_state_consistency(self) -> None:
         """Test buffer state remains consistent during concurrent operations.
@@ -514,26 +483,14 @@ class TestMessageQueueOrderingRaces:
 
         mock_sock.recv_into.side_effect = recv_into_side_effect
 
-        reader_gen = conn._reader(100)
+        with patch('exabgp.reactor.network.connection.log'):
+            # _reader_async accumulates the chunks until complete
+            result = asyncio.run(conn._reader_async(100))
 
-        with patch('select.poll') as mock_poll:
-            with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.log'):
-                    mock_poller = MagicMock()
-                    mock_poll.return_value = mock_poller
-                    mock_poller.poll.return_value = [(27, 1)]
-
-                    # Read all chunks - _reader will accumulate until complete
-                    result = None
-                    for data in reader_gen:
-                        if data and len(data) == 100:
-                            result = data
-                            break
-
-                    # Should have assembled all data
-                    assert result is not None
-                    assert len(result) == 100
-                    assert result == test_data
+        # Should have assembled all data
+        assert len(result) == 100
+        assert result == test_data
+        assert mock_sock.recv_into.call_count == len(chunks)
 
 
 class TestConnectionStateTransitionRaces:
@@ -598,9 +555,8 @@ class TestConnectionStateTransitionRaces:
             conn.close()
 
         # Attempt to read - should raise NotConnected
-        reader_gen = conn._reader(10)
         with pytest.raises(NotConnected):
-            next(reader_gen)
+            asyncio.run(conn._reader_async(10))
 
         # Attempt to write - writer returns True when no socket (line 179-182)
         writer_gen = conn.writer(b'test')

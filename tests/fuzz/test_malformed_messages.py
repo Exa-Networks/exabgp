@@ -17,9 +17,11 @@ Test Categories:
 import pytest
 import struct
 from typing import Any
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 from hypothesis import given, strategies as st, settings, HealthCheck, assume
 from exabgp.bgp.message.notification import Notify
+from exabgp.reactor.network.error import LostConnection
+from tests.wire_reader import read_message
 
 pytestmark = pytest.mark.fuzz
 
@@ -78,7 +80,6 @@ def create_mock_negotiated() -> Any:
 @settings(deadline=None, max_examples=100)
 def test_invalid_marker_single_byte(byte_value: int, position: int) -> None:
     """Test that a single invalid byte in marker is detected."""
-    from exabgp.reactor.network.connection import Connection
     from exabgp.reactor.network.error import NotifyError
 
     # Create marker with one bad byte
@@ -88,16 +89,7 @@ def test_invalid_marker_single_byte(byte_value: int, position: int) -> None:
 
     header = create_bgp_header(bytes(marker), 19, 4)  # KEEPALIVE
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
-
-    def mock_reader(num_bytes: int) -> Any:
-        yield header[:num_bytes] if num_bytes <= len(header) else header
-
-    connection._reader = mock_reader
-
-    reader = connection.reader()
-    length, msg_type, hdr, body, error = next(reader)
+    length, msg_type, hdr, body, error = read_message(header)
 
     # Should detect invalid marker
     assert error is not None
@@ -111,22 +103,12 @@ def test_invalid_marker_single_byte(byte_value: int, position: int) -> None:
 @settings(deadline=None, max_examples=100)
 def test_random_marker_pattern(marker_pattern: bytes) -> None:
     """Test various random marker patterns."""
-    from exabgp.reactor.network.connection import Connection
     from exabgp.reactor.network.error import NotifyError
 
     is_valid = marker_pattern == b'\xff' * 16
     header = create_bgp_header(marker_pattern, 19, 4)
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
-
-    def mock_reader(num_bytes: int) -> Any:
-        yield header[:num_bytes] if num_bytes <= len(header) else header
-
-    connection._reader = mock_reader
-
-    reader = connection.reader()
-    length, msg_type, hdr, body, error = next(reader)
+    length, msg_type, hdr, body, error = read_message(header)
 
     if is_valid:
         assert error is None
@@ -143,21 +125,11 @@ def test_random_marker_pattern(marker_pattern: bytes) -> None:
 @settings(deadline=None, max_examples=19)
 def test_length_too_small(length: int) -> None:
     """Test that length < 19 is rejected."""
-    from exabgp.reactor.network.connection import Connection
     from exabgp.reactor.network.error import NotifyError
 
     header = create_bgp_header(b'\xff' * 16, length, 4)
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
-
-    def mock_reader(num_bytes: int) -> Any:
-        yield header[:num_bytes] if num_bytes <= len(header) else header
-
-    connection._reader = mock_reader
-
-    reader = connection.reader()
-    length_result, msg_type, hdr, body, error = next(reader)
+    length_result, msg_type, hdr, body, error = read_message(header)
 
     # Should reject length < 19
     assert error is not None
@@ -171,7 +143,6 @@ def test_length_too_small(length: int) -> None:
 @settings(deadline=None, max_examples=50)
 def test_length_too_large(length: int) -> None:
     """Test that length > 4096 is rejected (default max)."""
-    from exabgp.reactor.network.connection import Connection
     from exabgp.reactor.network.error import NotifyError
 
     header = create_bgp_header(b'\xff' * 16, length, 4)
@@ -179,16 +150,7 @@ def test_length_too_large(length: int) -> None:
     body = b'\x00' * min(length - 19, 100)
     data = header + body
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
-
-    def mock_reader(num_bytes: int) -> Any:
-        yield data[:num_bytes] if num_bytes <= len(data) else data
-
-    connection._reader = mock_reader
-
-    reader = connection.reader()
-    length_result, msg_type, hdr, body_result, error = next(reader)
+    length_result, msg_type, hdr, body_result, error = read_message(data)
 
     # Should reject length > 4096
     assert error is not None
@@ -466,7 +428,6 @@ def test_notification_shutdown_longer_than_rfc8203_allowed(shutdown_len: int) ->
 @settings(deadline=None, max_examples=50)
 def test_keepalive_with_extra_data(extra_bytes: bytes) -> None:
     """Test KEEPALIVE with extra data (should have empty body)."""
-    from exabgp.reactor.network.connection import Connection
     from exabgp.reactor.network.error import NotifyError
 
     # KEEPALIVE must be exactly 19 bytes
@@ -474,19 +435,7 @@ def test_keepalive_with_extra_data(extra_bytes: bytes) -> None:
     header = create_bgp_header(b'\xff' * 16, length, 4)
     data = header + extra_bytes
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
-
-    def mock_reader(num_bytes: int) -> Any:
-        yield data[:num_bytes] if num_bytes <= len(data) else data
-
-    connection._reader = mock_reader
-
-    reader = connection.reader()
-    for result in reader:
-        length_result, msg_type, hdr, body, error = result
-        if length_result > 0 or error is not None:
-            break
+    length_result, msg_type, hdr, body, error = read_message(data)
 
     # KEEPALIVE with extra data should be rejected
     assert error is not None
@@ -506,7 +455,6 @@ def test_keepalive_with_extra_data(extra_bytes: bytes) -> None:
 @settings(deadline=None, max_examples=100)
 def test_length_body_mismatch(claimed_length: int, actual_body_size: int) -> None:
     """Test handling of length field mismatches."""
-    from exabgp.reactor.network.connection import Connection
 
     # Don't test when they match (that's valid)
     body_size_expected = claimed_length - 19
@@ -516,40 +464,17 @@ def test_length_body_mismatch(claimed_length: int, actual_body_size: int) -> Non
     body = b'\x00' * actual_body_size
     data = header + body
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
-
-    bytes_provided = 0
-
-    def mock_reader(num_bytes: int) -> Any:
-        nonlocal bytes_provided
-        if bytes_provided >= len(data):
-            yield b''
-            return
-        chunk = data[bytes_provided : bytes_provided + num_bytes]
-        bytes_provided += num_bytes
-        yield chunk
-
-    connection._reader = mock_reader
-
-    reader = connection.reader()
-
     try:
-        for result in reader:
-            length_result, msg_type, hdr, body_result, error = result
-            if length_result > 0 or error is not None:
-                break
-            # Prevent infinite loop
-            if bytes_provided > len(data) + 100:
-                break
+        length_result, msg_type, hdr, body_result, error = read_message(data)
+    except LostConnection:
+        # The peer closed before sending the body its header promised
+        assert actual_body_size < body_size_expected
+        return
 
-        # Should either get error or incomplete data
-        if actual_body_size < body_size_expected:
-            # Not enough data - should wait or error
-            pass
-    except StopIteration:
-        # Expected - not enough data
-        pass
+    if error is None:
+        # Bytes past the claimed length stay on the socket for the next read
+        assert length_result == claimed_length
+        assert len(body_result) == body_size_expected
 
 
 # =============================================================================
@@ -560,20 +485,10 @@ def test_length_body_mismatch(claimed_length: int, actual_body_size: int) -> Non
 @pytest.mark.fuzz
 def test_message_exactly_19_bytes() -> None:
     """Test message with exactly minimum length (19 bytes)."""
-    from exabgp.reactor.network.connection import Connection
 
     header = create_bgp_header(b'\xff' * 16, 19, 4)  # Valid KEEPALIVE
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
-
-    def mock_reader(num_bytes: int) -> Any:
-        yield header[:num_bytes] if num_bytes <= len(header) else header
-
-    connection._reader = mock_reader
-
-    reader = connection.reader()
-    length, msg_type, hdr, body, error = next(reader)
+    length, msg_type, hdr, body, error = read_message(header)
 
     assert error is None
     assert length == 19
@@ -584,27 +499,12 @@ def test_message_exactly_19_bytes() -> None:
 @pytest.mark.fuzz
 def test_message_exactly_4096_bytes() -> None:
     """Test message with exactly maximum length (4096 bytes)."""
-    from exabgp.reactor.network.connection import Connection
 
     header = create_bgp_header(b'\xff' * 16, 4096, 2)  # UPDATE at max size
     body = b'\x00' * (4096 - 19)
     data = header + body
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
-
-    def mock_reader(num_bytes: int) -> Any:
-        yield data[:num_bytes] if num_bytes <= len(data) else data
-
-    connection._reader = mock_reader
-
-    reader = connection.reader()
-
-    # May need multiple iterations to read full message
-    for result in reader:
-        length, msg_type, hdr, body_result, error = result
-        if length > 0 or error is not None:
-            break
+    length, msg_type, hdr, body_result, error = read_message(data)
 
     assert error is None
     assert length == 4096
@@ -617,7 +517,6 @@ def test_message_exactly_4096_bytes() -> None:
 @settings(deadline=None, max_examples=5)
 def test_all_valid_message_types(msg_type: int) -> None:
     """Test all valid message types are accepted."""
-    from exabgp.reactor.network.connection import Connection
 
     # Use appropriate minimum length for each type
     min_lengths = {1: 29, 2: 23, 3: 21, 4: 19, 5: 23}  # OPEN  # UPDATE  # NOTIFICATION  # KEEPALIVE  # ROUTE_REFRESH
@@ -627,20 +526,7 @@ def test_all_valid_message_types(msg_type: int) -> None:
     body = b'\x00' * (length - 19)
     data = header + body
 
-    connection = Connection(1, '127.0.0.1', '127.0.0.1')
-    connection.io = MagicMock()
-
-    def mock_reader(num_bytes: int) -> Any:
-        yield data[:num_bytes] if num_bytes <= len(data) else data
-
-    connection._reader = mock_reader
-
-    reader = connection.reader()
-
-    for result in reader:
-        length_result, type_result, hdr, body_result, error = result
-        if length_result > 0 or error is not None:
-            break
+    length_result, type_result, hdr, body_result, error = read_message(data)
 
     # Header parsing should succeed (body may be invalid)
     # For KEEPALIVE, length must be exactly 19
