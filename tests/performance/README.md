@@ -28,12 +28,6 @@ Tests the raw parsing performance of BGP messages.
   - Single message parsing
   - Batch processing (1,000 messages)
 
-- `TestConnectionReaderPerformance`: Connection.reader() method benchmarks
-  - Single UPDATE processing
-  - Batch UPDATE processing (100 messages)
-  - Mixed message types
-  - Large UPDATE messages (50 messages with 100 routes each)
-
 - `TestHighVolumeParsingStress`: Extreme volume stress tests
   - 10,000 KEEPALIVE messages
   - 5,000 UPDATE messages

@@ -4,14 +4,8 @@ Created by Thomas Mangin on 2009-09-06.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 
-ASYNC I/O MIGRATION (2025-11-17):
-
-This module supports both generator-based and async I/O:
-- Original: _reader(), writer(), reader() - generator-based (KEPT)
-- New: _reader_async(), writer_async(), reader_async() - async-based (ADDED)
-
-The async methods use asyncio.sock_recv()/sock_sendall() for I/O.
-Both approaches coexist during migration. State machines remain generators.
+Messages are read with reader_async() and written with writer_async(), both on asyncio.
+writer() is the generator Incoming.notification() still uses to refuse an unconfigured peer.
 """
 
 from __future__ import annotations
@@ -61,7 +55,6 @@ class Connection:
 
         self.io: socket.socket | None = None
         self.established: bool = False
-        self._rpoller: dict[socket.socket, select.poll] = {}
         self._wpoller: dict[socket.socket, select.poll] = {}
 
         # A read interrupted by its caller's deadline has already taken bytes out of the
@@ -121,25 +114,6 @@ class Connection:
             log.warning(lazymsg('connection.close.error error={e}', e=exc), source=self.session())
         self.io = None
 
-    def reading(self) -> bool:
-        if self.io is None:
-            return False
-
-        poller = self._rpoller.get(self.io, None)
-        if poller is None:
-            poller = select.poll()
-            poller.register(self.io, select.POLLIN | select.POLLPRI | select.POLLHUP | select.POLLNVAL | select.POLLERR)
-            self._rpoller = {self.io: poller}
-
-        ready = False
-        for _, event in poller.poll(0):
-            if event & select.POLLIN or event & select.POLLPRI:
-                ready = True
-            elif event & select.POLLHUP or event & select.POLLERR or event & select.POLLNVAL:
-                self._rpoller = {}
-                ready = True
-        return ready
-
     def writing(self) -> bool:
         if self.io is None:
             return False
@@ -158,81 +132,6 @@ class Connection:
                 self._wpoller = {}
                 ready = True
         return ready
-
-    def _reader(self, number: int) -> Iterator[memoryview]:
-        """Read exactly 'number' bytes from socket using zero-copy buffer.
-
-        Uses recv_into() to write directly to a pre-allocated buffer,
-        avoiding intermediate allocations. Returns a memoryview for
-        zero-copy slicing by downstream consumers.
-        """
-        # The function must not be called if it does not return with no data with a smaller size as parameter
-        if not self.io:
-            self.close()
-            raise NotConnected('Trying to read on a closed TCP connection')
-        if number == 0:
-            yield memoryview(b'')
-            return
-
-        while not self.reading():
-            yield memoryview(b'')
-
-        # Pre-allocate buffer for the entire read
-        buffer = bytearray(number)
-        view = memoryview(buffer)
-        offset = 0
-        reported = ''
-
-        while True:
-            try:
-                while True:
-                    if self.defensive and random.randint(0, 2):
-                        raise OSError(errno.EAGAIN, 'raising network error on purpose')
-
-                    # Use recv_into for zero-copy read directly into buffer
-                    nbytes = self.io.recv_into(view[offset:])
-                    if not nbytes:
-                        self.close()
-                        log.warning(
-                            lazymsg('tcp.session.lost name={n} peer={p}', n=self.name(), p=self.peer), self.session()
-                        )
-                        raise LostConnection('the TCP connection was closed by the remote end')
-
-                    offset += nbytes
-                    if offset >= number:
-                        log.debug(lazyformat('received TCP payload', bytes(view)), self.session())
-                        yield view
-                        return
-
-                    yield memoryview(b'')
-            except socket.timeout as exc:
-                self.close()
-                log.warning(lazymsg('tcp.timeout name={n} peer={p}', n=self.name(), p=self.peer), self.session())
-                raise TooSlowError(f'Timeout while reading data from the network ({errstr(exc)})') from None
-            except OSError as exc:
-                if exc.args[0] in error.block:
-                    message = f'{self.name()} {self.peer} blocking io problem mid-way through reading a message {errstr(exc)}, trying to complete'
-                    if message != reported:
-                        reported = message
-                        log.debug(
-                            lazymsg(
-                                'tcp.blocking.read name={n} peer={p} error={e}',
-                                n=self.name(),
-                                p=self.peer,
-                                e=errstr(exc),
-                            ),
-                            self.session(),
-                        )
-                    yield memoryview(b'')
-                elif exc.args[0] in error.fatal:
-                    self.close()
-                    raise LostConnection(f'issue reading on the socket: {errstr(exc)}') from None
-                # what error could it be !
-                else:
-                    log.critical(
-                        lazymsg('tcp.read.error name={n} peer={p}', n=self.name(), p=self.peer), self.session()
-                    )
-                    raise NetworkError(f'Problem while reading data from the network ({errstr(exc)})') from None
 
     async def _recv_with_progress(self, view: memoryview) -> int:
         """One sock_recv_into which cannot lose bytes to a same-tick cancellation.
@@ -441,48 +340,6 @@ class Connection:
             else:
                 log.critical(lazymsg('tcp.write.error name={n} peer={p}', n=self.name(), p=self.peer), self.session())
                 raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})') from None
-
-    def reader(self) -> Iterator[tuple[int, int, Buffer, Buffer, NotifyError | None]]:
-        """Read BGP message header and body with zero-copy buffers.
-
-        Returns memoryview for header and body to enable zero-copy slicing
-        by downstream message parsers.
-        """
-        # _reader returns the whole number requested or nothing and then stops
-        for header in self._reader(Message.HEADER_LEN):
-            if not header:
-                yield 0, 0, memoryview(b''), memoryview(b''), None
-
-        if header[:16] != Message.MARKER:
-            report = 'The packet received does not contain a BGP marker'
-            yield 0, 0, header, memoryview(b''), NotifyError(1, 1, report)
-            return
-
-        msg = header[18]
-        length = int.from_bytes(header[16:18], 'big')
-
-        if length < Message.HEADER_LEN or length > self.msg_size:
-            report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-            yield length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
-            return
-
-        if Message.header_refuses(msg, length):
-            # RFC 4271 6.1: the Data field MUST contain the erroneous Length field
-            report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-            yield length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
-            return
-
-        number = length - Message.HEADER_LEN
-
-        if not number:
-            yield length, msg, header, memoryview(b''), None
-            return
-
-        for body in self._reader(number):
-            if not body:
-                yield 0, 0, memoryview(b''), memoryview(b''), None
-
-        yield length, msg, header, body, None
 
     async def reader_async(self) -> tuple[int, int, Buffer, Buffer, NotifyError | None]:
         """Read BGP message header and body with zero-copy buffers (async version).
