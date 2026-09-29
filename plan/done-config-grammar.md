@@ -1,6 +1,6 @@
 # Configuration grammar: define every keyword once, derive everything else
 
-**Status:** 🔄 Active
+**Status:** ✅ Completed
 **Created:** 2026-09-27
 **Last Updated:** 2026-09-27
 
@@ -484,7 +484,7 @@ parsers to the same result, and the coverage test reports no keyword without for
 
 - [x] default `exabgp_debug_parser` to `grammar` (`environment/config.py`); `Configuration.partial()`
       takes an explicit `parser` like `reload()`
-- [ ] `test_everything` passes with `grammar` as the default, and the differential suite
+- [x] `test_everything` passes with `grammar` as the default, and the differential suite
       passes with both
 - [x] the CLI completer takes its hints and examples from `grammar/describe.py` (`route_help`);
       `cli/schema_bridge.py` is no longer used by the CLI and goes with the legacy parser
@@ -501,8 +501,8 @@ parsers to the same result, and the coverage test reports no keyword without for
       whole file stays at 228 KB
       Once the legacy parser is gone the forms and differential tests compare against
       these files, so they keep proving the behaviour was preserved
-- [ ] commit, when Thomas asks: this commit holds both parsers and is the point to come
-      back to if the removal shows a problem
+- [x] commit, when Thomas asks: this commit holds both parsers and is the point to come
+      back to if the removal shows a problem (95f03e1e3)
 
 ### Phase 6: remove the legacy parser and the switch
 
@@ -559,25 +559,30 @@ What outside the parser uses it (source scan, 15,490 lines to remove, 35 test fi
   before the error (legacy) or none (grammar); the reactor then stopped every API program not
   in it. The configuration is now left as it was (`tests/unit/test_reload_keeps_processes.py`,
   which fails on 40c34c239)
-- [ ] `test_everything` passes
-- [ ] commit, when Thomas asks
+- [x] `test_everything` passes
+- [x] commit, when Thomas asks (b30698a1d)
 
 ### Phase 7: generated documentation
 
 - [x] `exabgp configuration syntax [section ...] [--json]` (`application/syntax.py`)
-- [ ] man page and wiki reference pages generated, reviewed by hand before publishing
+- [x] man page and wiki reference pages generated: the syntax block of `exabgp.conf.5`
+      between two markers (`qa/bin/update_man_syntax`, held by
+      `tests/unit/test_man_configuration_syntax.py`), the prose kept by hand; the wiki page
+      `Configuration/Syntax-Reference.md` generated whole (`qa/bin/update_wiki_syntax`),
+      linked from the hand-written pages, committed in the wiki (50cf9c3), not pushed:
+      Thomas publishes it
 - [x] `.claude/exabgp/` codebase docs updated for the new package (`CONFIGURATION_GRAMMAR.md`)
 
 ---
 
 ## 4. Open decisions
 
-1. **Command name** for the generated syntax: `exabgp configuration syntax` or a
-   `--help` on `configuration validate`?
-2. **Documentation source of truth.** Generated man page replaces the hand-written one, or
-   the generated reference is included in it with the prose kept by hand?
-3. **Switch name.** `exabgp_configuration_parser = grammar|legacy` is proposed; it only
-   lives during development, so any name that fits the environment section naming will do.
+1. ~~**Command name** for the generated syntax~~ Settled: `exabgp configuration syntax`
+   (with `--json` and `--yang`).
+2. ~~**Documentation source of truth.**~~ Settled 2026-09-29 by Thomas: the syntax block of
+   `exabgp.conf.5` is generated, the prose sections stay written by hand; the wiki reference
+   is generated too, and committed to the wiki repository for him to publish.
+3. ~~**Switch name.**~~ Moot: the switch went with the legacy parser (b30698a1d).
 
 Settled: strictness (preserve). 5.0 compatibility is not a separate goal: the grammar
 parser replaces main's parser and must match it, and main's parser already reads 5.0
@@ -780,6 +785,28 @@ that could not be avoided. It decides the phase 6 gate.
   `tests/unit/test_path_info_range.py`. Open: the JSON Schema is 395 KB, the route values are
   repeated for each announce family; identical containers could share one `$defs` entry
 
+- 2026-09-28, committed after the plan was last written: phase 5 (95f03e1e3), the data model
+  (40c34c239), phase 6 (b30698a1d, 57 files, the switch and `configuration validate --parser`
+  removed). Then, outside the phases: route refresh and enhanced route refresh configured
+  apart (edfcc782b), typed contexts shared by reading and printing (5c699fc6e), `Section` and
+  `Store` (c6741b655), `Collector` (ecbaaff25), `Configuration.serialise()` (b531b4f5c),
+  `RouteStatement` (580a5c372), `Target` (ddc65f51b), the 256 route values bound (bfe9efc80).
+- 2026-09-29: Thomas asked to complete the plan: the JSON Schema shares identical containers
+  (it was 509 KB), the man page syntax block and the wiki reference generated.
+  - JSON Schema: `json_schema.share` moves every container of 256 octets or more which comes
+    out the same in several places to `$defs`, the largest first: 509 KB -> 174 KB. The
+    document is built once per section (`describe._json_document`, cached): sharing costs
+    0.13 s, and the tests build it hundreds of times.
+  - YANG: `yang.share` makes a grouping of a repeated container body, and of a repeated list
+    member whole; a list key stays in the list: 261 KB -> 97 KB.
+  - Both tests went red with sharing disabled. The first version of the YANG test read the
+    module's own threshold, so raising it switched both off and the test stayed green: each
+    test now has its own number.
+  - Man page: the block printed from the grammar, a note too wide put above its statement,
+    a statement too wide carried on indented lines (at a space, or after a `|`). The old
+    block had `rate-limit <enable | disable>` and `encoding`; `mandoc -T lint` reports
+    nothing new. The grammar's `a ipv4 family` became `an ipv4 family`.
+
 ## Failures
 
 (none yet)
@@ -790,9 +817,9 @@ that could not be avoided. It decides the phase 6 gate.
 
 ## Resume Point
 
-Phase 5 done but for its commit, which waits for Thomas (`pending` / `NotMigrated` removed,
-the grammar is the default). Then the phase 6 gate: review section 7 with Thomas. Phase 7:
-the man page block and wiki pages from `exabgp configuration syntax`, reviewed by Thomas.
+Complete. Phases 0 to 7 done; the wiki commit (50cf9c3 in the wiki repository) waits for
+Thomas to push it. The naming items left as they were (`Statement.words`, the `...Type`
+suffix, the context key constants) stay a deliberate choice, not work owed.
 
 The survey script used for section 1:
 

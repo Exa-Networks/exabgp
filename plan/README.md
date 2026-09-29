@@ -24,7 +24,6 @@
 
 | Plan | Description |
 |------|-------------|
-| `wip-config-grammar.md` | Meta-defined configuration grammar: one declaration per keyword, parser/errors/docs/output derived |
 | `plan-github-setup-improvements.md` | GitHub templates, SECURITY.md, PR template |
 | `plan-fix-resolve-self-deepcopy.md` | Fix resolve_self() memory duplication |
 | `plan-rib-optimisation.md` | RIB memory optimization |
@@ -128,6 +127,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-config-grammar.md` | 2026-09-29 | The configuration grammar replaces the hand parsers; syntax, man page, wiki, JSON Schema and YANG from it |
 | `done-route-refresh-length.md` | 2026-09-29 | RFC 7313 5 Invalid Message Length was answered 1/2 by the header check; now 7/1 |
 | `done-message-interface.md` | 2026-09-29 | One tested contract for every BGP message class; Notify by composition, Operational bytes-first |
 | `done-rfc-gap-fixes.md` | 2026-09-29 | Every RFC ledger gap outside multisession closed: 8 areas, from outgoing policy to BGP-LS |

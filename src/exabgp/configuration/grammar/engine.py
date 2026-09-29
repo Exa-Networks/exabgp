@@ -3,7 +3,7 @@
 Read statements against a tree of nodes and build what it declares.
 
 The engine keeps the legacy parser's behaviour, accidents included, until each accident
-is decided on (plan/wip-config-grammar.md, section 6). Those it reproduces are marked
+is decided on (plan/done-config-grammar.md, section 6). Those it reproduces are marked
 `legacy:` below.
 
 Copyright (c) 2009-2026 Exa Networks. All rights reserved.

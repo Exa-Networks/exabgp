@@ -9,7 +9,7 @@ JSON schema and the CLI completion hints all come from that one declaration.
 
 It replaced the legacy parser (`configuration/core`, `static/`, `flow/`, `neighbor/`, ...),
 removed once every configuration and API command read the same with both; see
-`plan/wip-config-grammar.md`. The API command tokeniser is `reactor/api/tokeniser.py`.
+`plan/done-config-grammar.md`. The API command tokeniser is `reactor/api/tokeniser.py`.
 
 ---
 
