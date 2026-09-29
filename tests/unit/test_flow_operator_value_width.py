@@ -155,3 +155,47 @@ def test_a_notify_is_not_how_a_wide_value_is_answered(session: Any) -> None:
             )
         except Notify as raised:  # noqa: PERF203 - the loop body is the assertion
             pytest.fail(f'a {width} octet value was refused with Notify {raised.code}/{raised.subcode}')
+
+
+# (family, component type, octets the component encodes).  The operator may announce a
+# wider value than the component encodes, and that is still read, but the value itself
+# must fit: a protocol of 262 matches no packet, and `index()` packs the rules again, so
+# `bytes([262])` raised ValueError on the first route stored.
+ENCODED_WIDTHS = [
+    (AFI.ipv4, 0x03, 1),  # protocol
+    (AFI.ipv4, 0x04, 2),  # port
+    (AFI.ipv4, 0x05, 2),  # destination-port
+    (AFI.ipv4, 0x06, 2),  # source-port
+    (AFI.ipv4, 0x07, 1),  # icmp-type
+    (AFI.ipv4, 0x08, 1),  # icmp-code
+    (AFI.ipv4, 0x09, 2),  # tcp-flags
+    (AFI.ipv4, 0x0A, 2),  # packet-length
+    (AFI.ipv4, 0x0B, 1),  # dscp
+    (AFI.ipv6, 0x03, 1),  # next-header
+    (AFI.ipv6, 0x0B, 1),  # traffic-class
+    (AFI.ipv6, 0x0D, 4),  # flow-label
+]
+
+
+def decoded(afi: AFI, payload: bytes) -> Any:
+    nlri, _left = Flow.unpack_nlri(afi, SAFI.flow_ip, bytes([len(payload)]) + payload, Action.ANNOUNCE, None)
+    return nlri
+
+
+@pytest.mark.parametrize(('afi', 'component', 'octets'), ENCODED_WIDTHS)
+def test_a_value_too_large_for_its_component_is_refused(afi: AFI, component: int, octets: int) -> None:
+    too_large = 1 << (8 * octets)
+
+    nlri = decoded(afi, rules(component, octets * 2, too_large))
+
+    assert nlri is None, f'component {component} kept a value of {too_large}: {nlri}'
+
+
+@pytest.mark.parametrize(('afi', 'component', 'octets'), ENCODED_WIDTHS)
+def test_the_largest_value_sent_wide_decodes_and_packs(afi: AFI, component: int, octets: int) -> None:
+    largest = (1 << (8 * octets)) - 1
+
+    nlri = decoded(afi, rules(component, octets * 2, largest))
+
+    assert nlri is not None, f'component {component} refused {largest} sent in a wider value'
+    assert nlri.index()
