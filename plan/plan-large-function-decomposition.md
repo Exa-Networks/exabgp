@@ -1,6 +1,6 @@
 # Decompose the largest functions
 
-**Status:** 📋 Planning (needs sign-off per MANDATORY_REFACTORING_PROTOCOL)
+**Status:** 🔄 In progress (step 0 done)
 **Created:** 2026-09-29
 **From:** `done-review-quality-sweep.md` item 32, and the deferred structural cleanup of
 `done-rfc9234-roles-otc.md`
@@ -45,8 +45,8 @@ regenerate them to match.
 One function at a time, following TESTING_BEFORE_REFACTORING_PROTOCOL.md then
 MANDATORY_REFACTORING_PROTOCOL.md:
 
-0. [ ] `UpdateCollection.messages`: pin its output over the encoding corpus and the API
-       encode vectors, then split by family, before mypyc phase 5 measures it
+0. [x] `UpdateCollection.messages`: 282 → 55 lines, six helpers, all under 70 (signed off
+       2026-09-29)
 1. [ ] `decode_to_api_command`: pin its output over the encoding corpus, then split by family
 2. [ ] `loop`: pin the socket protocol with the CLI tests, then split by state
 3. [ ] `_get_completions`: pin completions per context, then split by context
@@ -54,6 +54,23 @@ MANDATORY_REFACTORING_PROTOCOL.md:
 5. [ ] Lower the `long_function` ceiling by what each removes
 
 ## Progress
+
+**Step 0, 2026-09-29.** Split into `_classify_announces` (56), `_classify_withdraws` (33),
+`_attribute_sets` (55), `_v4_withdraw_messages` (28), `_v4_announce_messages` (54) and
+`_mp_family_messages` (67), one extraction per step, each followed by ruff, mypy, the unit
+suite and both API encode runs: 11364 unit passed, 385/0 and 411/0 at every step, the same
+as the baseline plus the two tests added first. Those pin the attributes-only UPDATE (an
+Empty NLRI), the one path of the method no test built.
+
+The two early `return`s in the IPv4 passes still end the whole method; the generators return
+False for them. They look as if they could drop an MP family which would fit, and cannot:
+an MP UPDATE always needs more room than the IPv4 one (the MP attribute header, AFI/SAFI and
+next hop outweigh the seven octets of NEXT_HOP it saves), so a budget too small for IPv4 is
+too small for MP too. `long_function` ceiling 69 → 68.
+
+`./qa/bin/test_everything`: 25/25 in 10m32s. A first run failed only at exa-style with 69
+long functions against 68, while another session was editing `capabilities.py`; the
+checker counted 68 again straight after, and the rerun passed.
 
 ## Failures
 
@@ -63,4 +80,4 @@ Sign-off on the split of each function before it starts.
 
 ## Resume Point
 
-Step 0, after sign-off.
+Step 1, `decode_to_api_command`, after sign-off of its split.
