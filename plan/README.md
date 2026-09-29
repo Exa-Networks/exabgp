@@ -48,6 +48,10 @@
 | `plan-documentation-review.md` | Documentation review |
 | `plan-llgr.md` | Long-Lived Graceful Restart (RFC 9494, issue #292) |
 | `plan-mypyc.md` | Compile the hot path with mypyc, pure Python kept as reference |
+| `plan-connection-reader-removal.md` | Delete the dead sync `Connection.reader()`, retarget 68 test calls (before mypyc phase 7) |
+| `plan-large-function-decomposition.md` | Split the three largest functions (570, 365, 304 lines) |
+| `plan-gtsm-shared-listener.md` | `incoming-ttl` on a listening socket shared by several neighbours |
+| `plan-agent-instructions.md` | AGENTS.md, evidence rule, plan journal, `.claude/backups` cleanup (decisions needed) |
 
 ### Completed (done-) and Directories
 
@@ -127,6 +131,8 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-attribute-json-signature.md` | 2026-09-29 | `Attribute.json(*args, **kwargs)` typed as `json(compact: bool = False)`; dead `multiple` branches removed |
+| `done-review-quality-sweep.md` | 2026-09-29 | In depth review: RFC 7606/8669 fixes, CLI exit codes, GTSM, ADD-PATH decode, RFC ledger; open items moved to their own plans |
 | `done-hostname-length.md` | 2026-09-29 | HostName truncation split UTF-8 characters, Software length counted characters; 64 byte cap kept |
 | `done-cve-exa-style-followup.md` | 2026-09-29 | GHSA-jcrv-p53f-v5w5 follow-up: the rest of the CWE-116 class, 19 findings across the API stream |
 | `done-config-grammar.md` | 2026-09-29 | The configuration grammar replaces the hand parsers; syntax, man page, wiki, JSON Schema and YANG from it |

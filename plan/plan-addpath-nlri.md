@@ -8,26 +8,33 @@
 
 Extend ADD-PATH support to NLRI types that currently lack it. ADD-PATH (RFC 7911) allows multiple paths per prefix, useful for path diversity and fast convergence.
 
-## Current State
+## Current State, 2026-09-29
 
-ADD-PATH already works for:
-- ✅ `inet` (IPv4/IPv6 unicast)
-- ✅ `label` (labeled unicast)
-- ✅ `ipvpn` (VPNv4/VPNv6)
+Decoding: every family consumes the path identifier since `2142b4cc1` (EVPN, BGP-LS,
+MVPN, MUP, SR-Policy) and `038e9a6f8` (FlowSpec, VPLS, RTC).
+
+Encoding: only the families in `Capabilities._ADD_PATH` write one, and that list is what
+we offer, so a peer is never told to expect an identifier we do not send.
+`tests/unit/test_addpath_families_encode_path_id.py` holds the list to the encoders.
+
+| Family | Encodes | In `_ADD_PATH` |
+|---|---|---|
+| `inet`, `label`, `ipvpn` | ✅ | ✅ |
+| FlowSpec (issue #1140) | ✅ | ✅ |
+| EVPN | ❌ TODO in `pack_nlri` | ❌ |
+| BGP-LS | ❌ TODO in `pack_nlri` | ❌ |
+| MVPN | ❌ TODO in `pack_nlri` | ❌ |
+| VPLS | ❌ TODO in `pack_nlri` | ❌ |
+| MUP | ❌ (removed from `_ADD_PATH` because it did not encode) | ❌ |
+| SR-Policy | ❌ | ❌ |
+| RTC | ❌ | ❌ |
+
+Found by the 2026-09-24 quality sweep (item 33 of `done-review-quality-sweep.md`).
 
 ## Scope
 
-NLRI types needing ADD-PATH support:
-
-| File | NLRI Type | Complexity | Notes |
-|------|-----------|------------|-------|
-| `nlri/bgpls/nlri.py:107` | BGP-LS | Medium | Link-state NLRI |
-| `nlri/flow.py:652` | FlowSpec | High | Builder pattern, complex |
-| `nlri/vpls.py:89` | VPLS | Low | Simple structure |
-| `nlri/evpn/nlri.py:84` | EVPN | Medium | Multiple route types |
-| `nlri/mvpn/nlri.py:76` | MVPN | Medium | Multicast VPN |
-| `nlri/mup/nlri.py:79` | MUP | Low | Mobile User Plane |
-| `nlri/bgpls/srv6sid.py:129` | SRv6 SID | Low | Segment Routing |
+Per family: `pack_nlri` writes the identifier when `negotiated.addpath.send()` says so,
+a round-trip test, and the family added to `_ADD_PATH` **in the same change**.
 
 ## Implementation Pattern
 
@@ -99,4 +106,4 @@ uv run pytest tests/unit/nlri/test_<type>.py -v
 
 ---
 
-**Last Updated:** 2025-12-04
+**Last Updated:** 2026-09-29
