@@ -9,6 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import copy
+import functools
 from collections import Counter
 from dataclasses import dataclass, field, replace
 from typing import Any
@@ -223,7 +225,14 @@ def needed(block: Block, prefix: str = '', depth: int = 0) -> tuple[str, ...]:
 
 
 def json_document(block: Block, title: str) -> dict[str, Any]:
-    """The JSON Schema of what `block` reads."""
+    """The JSON Schema of what `block` reads, a copy the caller may change."""
+    return copy.deepcopy(_json_document(block, title))
+
+
+# the grammar tree is built once, at import, and never changes: nor does its schema, whose
+# sharing of identical containers costs a tenth of a second
+@functools.lru_cache(maxsize=64)
+def _json_document(block: Block, title: str) -> dict[str, Any]:
     return json_schema.document(model(block), title)
 
 

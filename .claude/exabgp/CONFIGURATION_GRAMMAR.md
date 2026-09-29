@@ -91,6 +91,11 @@ Every type says what its value is with `shape()`: the value exabgp keeps and pri
 spellings it accepts (`1.1` is the AS number 65537, `enable` is `true`). The model follows
 YANG, so both `exabgp configuration syntax --json` and `--yang` are printed from it.
 
+A container which comes out the same in several places is declared once: a `$defs` entry
+referenced by `$ref` in the JSON Schema (`json_schema.share`), a `grouping` and `uses` in
+YANG (`yang.share`, which moves a whole list into its grouping, and keeps a list key out of
+one). The route values of every announce family are shared this way.
+
 A number is a `Number` (`types/word.py`) declaring its ranges once; the check, the hint, the
 examples and the model come from them. Where the range belongs to the wire format it is taken
 from the class which packs it: `MED.MAX` and `LocalPreference.MAX` come from `WIDTH = 4` of

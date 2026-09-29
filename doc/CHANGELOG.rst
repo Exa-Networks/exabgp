@@ -4,6 +4,10 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Change: "exabgp configuration syntax --json" declares a section which comes out the
+   same in several places once, under $defs, and refers to it: the route values of every
+   announce family were repeated, and the schema was 509 KB (now 174 KB). "--yang" does the
+   same with groupings (261 KB, now 97 KB).
  * Fix: a ROUTE-REFRESH which is not 23 octets, from a peer which sent the Enhanced Route
    Refresh capability, is answered with ROUTE-REFRESH Message Error / Invalid Message Length
    (7/1) and the whole message as its data, as RFC 7313 section 5 asks. The header check

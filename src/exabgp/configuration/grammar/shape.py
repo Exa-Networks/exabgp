@@ -85,6 +85,11 @@ class Shape:
         return _replace(self, description=description) if description else self
 
 
+def replaced(shape: Shape, **changes: Any) -> Shape:
+    """`shape` with some of its fields changed."""
+    return _replace(shape, **changes)
+
+
 def _replace(shape: Shape, **changes: Any) -> Shape:
     values = {name: getattr(shape, name) for name in shape.__dataclass_fields__}
     values.update(changes)

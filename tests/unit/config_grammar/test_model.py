@@ -9,6 +9,7 @@ without any third party validator.
 from __future__ import annotations
 
 import gc
+import json
 import re
 from typing import Any, Iterator
 
@@ -202,15 +203,68 @@ def test_the_json_schema_is_well_formed() -> None:
             assert each['minimum'] <= each['maximum']
 
 
+def _dereferenced(document: dict[str, Any], schema: dict[str, Any]) -> dict[str, Any]:
+    """The schema itself, or the one of `$defs` it is only a reference to."""
+    while set(schema) == {'$ref'}:
+        schema = document['$defs'][schema['$ref'].removeprefix('#/$defs/')]
+    return schema
+
+
+def _at(document: dict[str, Any], schema: dict[str, Any], *keys: str) -> dict[str, Any]:
+    for key in keys:
+        schema = _dereferenced(document, schema)[key]
+    return _dereferenced(document, schema)
+
+
 def test_the_json_schema_types_med_as_a_number() -> None:
-    neighbor = json_document(ROOT, 'ExaBGP configuration')['$defs']['neighbor']
-    med = neighbor['properties']['static']['properties']['route']['items']['properties']['med']
+    document = json_document(ROOT, 'ExaBGP configuration')
+    route = _at(document, document['$defs']['neighbor'], 'properties', 'static', 'properties', 'route', 'items')
+    med = _at(document, route, 'properties', 'med')
     assert med == {
         'type': 'integer',
         'minimum': 0,
         'maximum': 4294967295,
         'description': 'MULTI_EXIT_DISC, RFC 4271 5.1.4: the lower is preferred',
     }
+
+
+# its own number, not the module's: a test reading the threshold the code shares by says
+# nothing when that threshold is what is wrong
+JSON_REPEATED_OCTETS = 256
+
+
+def _containers(node: Any, depth: int = 0) -> Iterator[dict[str, Any]]:
+    """Every object schema of the document, those inside $defs included."""
+    assert depth < MAX_DEPTH * 4
+    if isinstance(node, dict):
+        if 'properties' in node:
+            yield node
+        for each in node.values():
+            yield from _containers(each, depth + 1)
+    elif isinstance(node, list):
+        for each in node:
+            yield from _containers(each, depth + 1)
+
+
+def test_an_identical_container_is_declared_once() -> None:
+    """The route values of every announce family were repeated, and the schema was 509 KB."""
+    document = json_document(ROOT, 'ExaBGP configuration')
+    seen: dict[str, int] = {}
+    for container in _containers(document):
+        text = json.dumps(container, sort_keys=True)
+        if len(text) >= JSON_REPEATED_OCTETS:
+            seen[text] = seen.get(text, 0) + 1
+    repeated = [text[:80] for text, count in seen.items() if count > 1]
+    assert repeated == []
+
+
+def test_a_shared_container_is_referenced_where_it_was_copied() -> None:
+    """What was moved to $defs is used from more than one place, and every reference resolves."""
+    document = json_document(ROOT, 'ExaBGP configuration')
+    text = json.dumps(document)
+    for name in document['$defs']:
+        assert text.count(f'"#/$defs/{name}"') >= 2 or name == 'neighbor', name
+    assert len(document['$defs']) > 1, 'nothing was shared, the route values are copied again'
 
 
 # --------------------------------------------------------------------------- YANG
@@ -245,6 +299,35 @@ def test_the_yang_module_is_well_formed() -> None:
             assert argument in BUILT_IN or argument in INET, argument
         if keyword == 'pattern':
             re.compile(argument.strip("'"))
+
+
+# its own number, not the module's: a test reading the threshold the code shares by says
+# nothing when that threshold is what is wrong
+YANG_REPEATED_LINES = 8
+
+
+def _yang_bodies(lines: list[str]) -> Iterator[tuple[str, ...]]:
+    """The body of every container and list, its lines without their indentation."""
+    for start, line in enumerate(lines):
+        if not line.strip().startswith(('container ', 'list ')) or not line.endswith('{'):
+            continue
+        indent = len(line) - len(line.lstrip())
+        body: list[str] = []
+        for inner in lines[start + 1 :]:
+            if inner.strip() == '}' and len(inner) - len(inner.lstrip()) == indent:
+                break
+            body.append(inner.strip())
+        yield tuple(body)
+
+
+def test_an_identical_yang_container_is_a_grouping() -> None:
+    """The route values of every announce family were printed again for each of them."""
+    seen: dict[tuple[str, ...], int] = {}
+    for body in _yang_bodies(yang_module(ROOT)):
+        if len(body) >= YANG_REPEATED_LINES:
+            seen[body] = seen.get(body, 0) + 1
+    repeated = [body[:3] for body, count in seen.items() if count > 1]
+    assert repeated == []
 
 
 def test_every_yang_list_has_a_key_it_defines() -> None:
