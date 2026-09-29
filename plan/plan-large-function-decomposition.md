@@ -47,13 +47,25 @@ MANDATORY_REFACTORING_PROTOCOL.md:
 
 0. [x] `UpdateCollection.messages`: 282 → 55 lines, six helpers, all under 70 (signed off
        2026-09-29)
-1. [ ] `decode_to_api_command`: pin its output over the encoding corpus, then split by family
+1. [x] `decode_to_api_command`: 304 → 52 lines, fifteen helpers, largest 51 (signed off
+       2026-09-29)
 2. [ ] `loop`: pin the socket protocol with the CLI tests, then split by state
 3. [ ] `_get_completions`: pin completions per context, then split by context
 4. [ ] The other six from the RFC 9234 table, one at a time, same protocol
 5. [ ] Lower the `long_function` ceiling by what each removes
 
 ## Progress
+
+**Step 1, 2026-09-29.** Coverage of `./qa/bin/test_api_encode --self-check`, the 411 vectors
+which decode through this function, showed it never ran the End-of-RIB forms, RTC, SR-Policy
+or ungrouped FlowSpec/MUP/MCAST-VPN withdrawals, a flat label, a string withdrawal or an
+attributes-only UPDATE. `tests/unit/test_decode_to_api_command_paths.py` pins those first,
+23 tests on hand built JSON with the formatters stubbed, all passing on the unsplit code.
+Then one change per step, unit suite, both API encode runs and the new tests after each:
+`_label_argument` (the label logic was copied into announce and withdraw), the announce
+side (dispatch plus seven family helpers), the withdraw side (dispatch plus
+`_formatted_withdraws`, which replaces three identical FlowSpec, MUP and MCAST-VPN blocks,
+and four family helpers). `long_function` 68 → 67.
 
 **Step 0, 2026-09-29.** Split into `_classify_announces` (56), `_classify_withdraws` (33),
 `_attribute_sets` (55), `_v4_withdraw_messages` (28), `_v4_announce_messages` (54) and
@@ -80,4 +92,4 @@ Sign-off on the split of each function before it starts.
 
 ## Resume Point
 
-Step 1, `decode_to_api_command`, after sign-off of its split.
+Step 2, `unixsocket.py` `loop`, after sign-off of its split.
