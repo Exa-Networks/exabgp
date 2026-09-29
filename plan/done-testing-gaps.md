@@ -129,6 +129,8 @@ Found doing it: `domain()` returns the **first** label of the FQDN, the host aga
 has since 2015. It is the default domain name of the Hostname capability. Pinned with a
 strict xfail; the fix changes what every installation without a configured
 `domain-name` sends, so it has its own plan, `plan-dns-domain-name.md`.
+Corrected the same day: the daemon never uses that default, so nothing reached the wire;
+fixed, see `done-dns-domain-name.md`.
 
 **8** Found by the full suite run which verified 6 and 7.
 `test_api_terminate.py::test_a_helper_past_its_respawn_limit_is_lost` failed once and

@@ -51,7 +51,6 @@
 | `plan-connection-reader-removal.md` | Delete the dead sync `Connection.reader()`, retarget 68 test calls (before mypyc phase 7) |
 | `plan-large-function-decomposition.md` | Split the three largest functions (570, 365, 304 lines) |
 | `plan-gtsm-shared-listener.md` | `incoming-ttl` on a listening socket shared by several neighbours |
-| `plan-dns-domain-name.md` | The default Hostname domain is the host label; fix or document (decision needed) |
 | `plan-agent-instructions.md` | AGENTS.md, evidence rule, plan journal, `.claude/backups` cleanup (decisions needed) |
 
 ### Completed (done-) and Directories
@@ -132,6 +131,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-dns-domain-name.md` | 2026-09-29 | `domain()` returned the host label; fixed, never reached the wire |
 | `done-testing-gaps.md` | 2026-09-29 | Gaps #1425/#1426 exposed; RIB cache and DNS cache leaking between tests |
 | `done-attribute-json-signature.md` | 2026-09-29 | `Attribute.json(*args, **kwargs)` typed as `json(compact: bool = False)`; dead `multiple` branches removed |
 | `done-review-quality-sweep.md` | 2026-09-29 | In depth review: RFC 7606/8669 fixes, CLI exit codes, GTSM, ADD-PATH decode, RFC ledger; open items moved to their own plans |
