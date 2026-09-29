@@ -12,6 +12,7 @@ exited was never noticed at all.
 
 from __future__ import annotations
 
+import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -72,7 +73,13 @@ def test_a_respawned_helper_is_not_lost(processes) -> None:
 
 
 @pytest.mark.parametrize('processes', [(True, False)], indirect=True)
-def test_a_helper_past_its_respawn_limit_is_lost(processes) -> None:
+def test_a_helper_past_its_respawn_limit_is_lost(processes, monkeypatch: pytest.MonkeyPatch) -> None:
+    # respawns are counted per time bucket, int(time.time()) & respawn_timemask; a loop
+    # which straddled a bucket boundary restarted the count and the helper was never lost,
+    # which a loaded full suite run hit. The clock is held so every death lands in one bucket.
+    monkeypatch.setattr(
+        'exabgp.reactor.api.processes.time', SimpleNamespace(time=lambda: 1_000_000.0, sleep=time.sleep)
+    )
     for _ in range(processes.respawn_number + 1):
         processes._handle_problem('helper')
 
