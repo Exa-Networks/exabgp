@@ -9,12 +9,15 @@ from unittest.mock import patch, Mock
 
 from typing import Any
 
+import pytest
+
 from exabgp.util.dictionary import Dictionary
 from exabgp.util.enumeration import Enumeration, enum
 from exabgp.util.usage import usage
 from exabgp.util.errstr import errstr
 from exabgp.util.ip import isipv4, isipv6, isip
 from exabgp.util.od import od
+from exabgp.util import dns
 from exabgp.util.dns import host, domain
 
 
@@ -256,58 +259,54 @@ class TestOD:
 
 
 class TestDNS:
-    """Test DNS-related functions"""
+    """host() and domain() cache what the resolver said in module globals.
+
+    These tests used to leave that cache as they found it, so whichever ran first on a
+    worker decided the answer for the rest of the process.  Under xdist the first one was
+    sometimes a test patching the resolver with a bare MagicMock, which was then cached as
+    the host name: this class failed, and so could anything later building a default
+    HostName capability.  Each test now starts from an empty cache and puts it back.
+    """
+
+    @pytest.fixture(autouse=True)
+    def empty_cache(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # the module level names are not mangled; spelled as strings so the class body
+        # does not mangle them either
+        monkeypatch.setattr(dns, '__host_name', '')
+        monkeypatch.setattr(dns, '__domain_name', '')
 
     def test_host(self) -> None:
-        """Test host() returns a hostname"""
         result = host()
         assert isinstance(result, str)
         assert len(result) > 0
-        # Should not contain dots (short hostname)
-        # or be localhost if no hostname available
-        assert '.' not in result or result == 'localhost'
+        assert '.' not in result
 
     def test_host_caching(self) -> None:
-        """Test host() caches result"""
-        result1 = host()
-        result2 = host()
-        assert result1 == result2
+        with patch('exabgp.util.dns.socket.gethostname', return_value='first') as resolver:
+            assert host() == 'first'
+            resolver.return_value = 'second'
+            assert host() == 'first'
+            assert resolver.call_count == 1
 
     def test_domain(self) -> None:
-        """Test domain() returns a domain name"""
         result = domain()
         assert isinstance(result, str)
         assert len(result) > 0
 
     def test_domain_caching(self) -> None:
-        """Test domain() caches result"""
-        result1 = domain()
-        result2 = domain()
-        assert result1 == result2
+        with patch('exabgp.util.dns.socket.getfqdn', return_value='first.example.com') as resolver:
+            assert domain() == domain()
+            assert resolver.call_count == 1
 
-    @patch('exabgp.util.dns.socket.gethostname')
-    def test_host_with_mock(self, mock_gethostname: Any) -> None:
-        """Test host() with mocked socket.gethostname"""
-        # Mock to return a FQDN
-        mock_gethostname.return_value = 'testhost.example.com'
-        # Can't easily test due to module caching, but verify it returns a string
-        result = host()
-        assert isinstance(result, str)
-        assert len(result) > 0
+    def test_host_keeps_the_first_label(self) -> None:
+        with patch('exabgp.util.dns.socket.gethostname', return_value='testhost.example.com'):
+            assert host() == 'testhost'
 
-    @patch('exabgp.util.dns.socket.gethostname')
-    def test_host_empty(self, mock_gethostname: Any) -> None:
-        """Test host() when gethostname returns empty"""
-        # This test verifies the function handles empty hostname gracefully
-        # Due to module-level caching, we can't easily reset state
-        # Just verify the function works
-        result = host()
-        assert isinstance(result, str)
+    def test_host_empty(self) -> None:
+        with patch('exabgp.util.dns.socket.gethostname', return_value=''):
+            assert host() == 'localhost'
 
-    @patch('exabgp.util.dns.socket.getfqdn')
-    def test_domain_with_mock(self, mock_getfqdn: Any) -> None:
-        """Test domain() with mocked socket.getfqdn"""
-        # Verify domain() returns a string value
-        result = domain()
-        assert isinstance(result, str)
-        assert len(result) > 0
+    @pytest.mark.xfail(strict=True, reason='domain() has returned the first label of the FQDN since 2015')
+    def test_domain_is_what_follows_the_host(self) -> None:
+        with patch('exabgp.util.dns.socket.getfqdn', return_value='testhost.example.com'):
+            assert domain() == 'example.com'
