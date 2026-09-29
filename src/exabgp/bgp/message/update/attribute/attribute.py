@@ -243,7 +243,7 @@ class Attribute:
             raise NotImplementedError(f'{type(self).__name__} must override _comparable() or keep _packed')
         return (self.ID, self.FLAG, bytes(packed))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         """Same attribute, same value.
 
         This compared the ID and the FLAG and never the value, so any two extended
@@ -257,22 +257,30 @@ class Attribute:
             return NotImplemented
         return self._comparable() == other._comparable()
 
-    def __ne__(self, other: Any) -> bool:
+    def __ne__(self, other: object) -> bool:
         equal = self.__eq__(other)
         if equal is NotImplemented:
             return NotImplemented
         return not equal
 
-    def __lt__(self, other: Any) -> bool:
+    def __lt__(self, other: object) -> bool:
+        if not isinstance(other, Attribute):
+            return NotImplemented
         return bool(self.ID < other.ID)
 
-    def __le__(self, other: Any) -> bool:
+    def __le__(self, other: object) -> bool:
+        if not isinstance(other, Attribute):
+            return NotImplemented
         return bool(self.ID <= other.ID)
 
-    def __gt__(self, other: Any) -> bool:
+    def __gt__(self, other: object) -> bool:
+        if not isinstance(other, Attribute):
+            return NotImplemented
         return bool(self.ID > other.ID)
 
-    def __ge__(self, other: Any) -> bool:
+    def __ge__(self, other: object) -> bool:
+        if not isinstance(other, Attribute):
+            return NotImplemented
         return bool(self.ID >= other.ID)
 
     @classmethod

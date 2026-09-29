@@ -7,7 +7,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -128,7 +128,7 @@ class Type2SessionTransformedRoute(MUP):
     def index(self) -> bytes:
         return MUP.index(self)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, Type2SessionTransformedRoute)
             and self.rd == other.rd
@@ -137,8 +137,10 @@ class Type2SessionTransformedRoute(MUP):
             and self.endpoint_ip == other.endpoint_ip
         )
 
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    def __ne__(self, other: object) -> bool:
+        # `not NotImplemented` is a DeprecationWarning today and a TypeError from 3.14
+        equal = self.__eq__(other)
+        return equal if equal is NotImplemented else not equal
 
     def __str__(self) -> str:
         return '{}:{}:{}:{}:{}:'.format(

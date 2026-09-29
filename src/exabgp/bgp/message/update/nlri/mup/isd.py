@@ -7,7 +7,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from exabgp.util.types import Buffer
 
@@ -94,7 +94,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
     def index(self) -> bytes:
         return MUP.index(self)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         return (
             isinstance(other, InterworkSegmentDiscoveryRoute)
             and self.rd == other.rd
@@ -102,8 +102,10 @@ class InterworkSegmentDiscoveryRoute(MUP):
             and self.prefix_ip == other.prefix_ip
         )
 
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
+    def __ne__(self, other: object) -> bool:
+        # `not NotImplemented` is a DeprecationWarning today and a TypeError from 3.14
+        equal = self.__eq__(other)
+        return equal if equal is NotImplemented else not equal
 
     def __str__(self) -> str:
         return '{}:{}:{}{}'.format(self._prefix(), self.rd._str(), self.prefix_ip, '/%d' % self.prefix_ip_len)

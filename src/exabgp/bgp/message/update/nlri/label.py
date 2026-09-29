@@ -348,7 +348,7 @@ class LabelBase(INET):
         # _packed includes everything: [addpath?][mask][labels][prefix]
         return len(self._packed)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
         # Compare complete wire format (includes labels)
         return INET.__eq__(self, other)
 

@@ -61,7 +61,9 @@ class MUP(NLRI):
         # _packed includes 4-byte header: arch_type(1) + route_type(2) + length(1)
         return len(self._packed)
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, MUP):
+            return NotImplemented
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
 
     def __str__(self) -> str:
