@@ -28,12 +28,14 @@ import asyncio
 import time
 from collections import defaultdict
 from collections.abc import AsyncGenerator
-from typing import TYPE_CHECKING, Any, Generator, Iterator, cast
+from typing import TYPE_CHECKING, Any, Generator, Iterator, NoReturn, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.reactor.loop import Reactor
     from exabgp.reactor.network.incoming import Incoming
+    from exabgp.reactor.peer.context import PeerContext
+    from exabgp.reactor.peer.handlers import RouteRefreshHandler, UpdateHandler
 
 # import traceback
 from exabgp.bgp.fsm import FSM
@@ -828,6 +830,105 @@ class Peer:
         """Check if there's pending work that requires immediate attention."""
         return bool(new_routes or message is not None or self.neighbor.messages or self.neighbor.eor)
 
+    def _session_context(self, routes_per_iteration: int) -> PeerContext:
+        """The context the inbound message handlers share for this session."""
+        assert self.proto is not None
+        refresh_enhanced = self.proto.negotiated.refresh == REFRESH.ENHANCED
+
+        from exabgp.reactor.peer.context import PeerContext
+
+        return PeerContext(
+            proto=self.proto,
+            neighbor=self.neighbor,
+            negotiated=self.proto.negotiated,
+            refresh_enhanced=refresh_enhanced,
+            routes_per_iteration=routes_per_iteration,
+            peer_id=self.id(),
+            stats=self.stats,
+        )
+
+    def _announce_session_up(self) -> None:
+        """Log the session up, count it, and tell the API processes."""
+        assert self.proto is not None
+        assert self.proto.connection is not None
+        log.info(
+            lazymsg('peer.connected peer={p} connection={c}', p=self.id(), c=self.proto.connection.name()),
+            'reactor',
+        )
+        self.stats['up'] += 1
+        self._announce_up_to_the_api()
+
+    def _reannounce_asm(self) -> None:
+        """Re-announce ASM messages on restart, for the families this neighbor has."""
+        for family in self.neighbor.asm:
+            if family in self.neighbor.families():
+                self.neighbor.messages.appendleft(self.neighbor.asm[family])
+
+    def _restore_outgoing_rib(self) -> None:
+        """Initialize the outgoing RIB with the routes of the previous configuration."""
+        previous = self.neighbor.previous.routes if self.neighbor.previous else []
+        current = self.neighbor.routes
+        self.neighbor.rib.outgoing.replace_restart(previous, current)
+        self.neighbor.previous = None
+
+    def _apply_reload(self) -> None:
+        """Move the outgoing RIB to the routes of a configuration reloaded while established."""
+        if self._neighbor:
+            pending = self._neighbor
+            previous = pending.previous.routes if pending.previous else []
+            current = pending.routes
+            self.neighbor.rib.outgoing.replace_reload(previous, current)
+            pending.previous = None
+            self._neighbor = None
+
+    async def _read_message_or_none(self) -> Message | None:
+        """Read the next message, or None when none arrived within 100ms."""
+        assert self.proto is not None
+        message: Message | None
+        try:
+            message = await asyncio.wait_for(self.proto.read_message(), timeout=0.1)
+        except asyncio.TimeoutError:
+            message = None
+            await asyncio.sleep(0)
+        return message
+
+    def _log_changed_statistics(self) -> None:
+        """Log every statistic which changed since the last time we asked."""
+        for counter_line in self.stats.changed_statistics():
+            log.info(lazymsg('statistics.changed info={counter_line}', counter_line=counter_line), 'statistics')
+
+    async def _handle_inbound(
+        self,
+        ctx: PeerContext,
+        message: Message,
+        update_handler: UpdateHandler,
+        route_refresh_handler: RouteRefreshHandler,
+    ) -> None:
+        """Give a received message to the handler which takes it, if any does."""
+        if update_handler.can_handle(message):
+            await update_handler.handle_async(ctx, message)
+        elif route_refresh_handler.can_handle(message):
+            await route_refresh_handler.handle_async(ctx, message)
+
+    def _raise_session_end(self) -> NoReturn:
+        """Close quietly if Graceful Restart was negotiated, else raise the teardown which ended the loop."""
+        assert self.proto is not None
+        assert self.proto.negotiated.sent_open is not None
+        # Graceful restart handling
+        log.debug(
+            lazymsg('async.mainloop.ended graceful_restart={gr}', gr=bool(self.neighbor.capability.graceful_restart)),
+            self.id(),
+        )
+        if self.neighbor.capability.graceful_restart and self.proto.negotiated.sent_open.capabilities.announced(
+            Capability.CODE.GRACEFUL_RESTART,
+        ):
+            log.error(lazymsg('session.closing reason=graceful_restart'), self.id())
+            self._close('graceful restarted negotiated, closing without sending any notification')
+            raise NetworkError('closing')
+
+        assert self._teardown is not None
+        raise self._teardown
+
     async def _main(self) -> int:
         """Main BGP message processing loop using async I/O.
 
@@ -844,51 +945,35 @@ class Peer:
         # Initialize session state, keeping what a Graceful Restart retained (RFC 4724 4.2)
         self._resume_incoming()
         self._end_of_rib_sent = set()
-        include_withdraw = False
         send_eor = not self.neighbor.manual_eor
-        new_routes: AsyncGenerator[None, None] | None = None
         routes_per_iteration = 1 if self.neighbor.rate_limit > 0 else 25
-        refresh_enhanced = self.proto.negotiated.refresh == REFRESH.ENHANCED
 
         # Create context for handlers
-        from exabgp.reactor.peer.context import PeerContext
-        from exabgp.reactor.peer.handlers import UpdateHandler, RouteRefreshHandler
-
-        ctx = PeerContext(
-            proto=self.proto,
-            neighbor=self.neighbor,
-            negotiated=self.proto.negotiated,
-            refresh_enhanced=refresh_enhanced,
-            routes_per_iteration=routes_per_iteration,
-            peer_id=self.id(),
-            stats=self.stats,
-        )
-        update_handler = UpdateHandler()
-        route_refresh_handler = RouteRefreshHandler(self.resend)
+        ctx = self._session_context(routes_per_iteration)
 
         # Announce to the process BGP is up
-        log.info(
-            lazymsg('peer.connected peer={p} connection={c}', p=self.id(), c=self.proto.connection.name()),
-            'reactor',
-        )
-        self.stats['up'] += 1
-        self._announce_up_to_the_api()
-
-        # Re-announce ASM messages on restart
-        for family in self.neighbor.asm:
-            if family in self.neighbor.families():
-                self.neighbor.messages.appendleft(self.neighbor.asm[family])
-
+        self._announce_session_up()
+        self._reannounce_asm()
         send_ka = KA(self.proto.connection.session, self.proto)
-
-        # Initialize RIB with previous routes
-        previous = self.neighbor.previous.routes if self.neighbor.previous else []
-        current = self.neighbor.routes
-        self.neighbor.rib.outgoing.replace_restart(previous, current)
-        self.neighbor.previous = None
+        self._restore_outgoing_rib()
 
         self._delay.reset()
         log.debug(lazymsg('async.mainloop.started'), self.id())
+
+        await self._main_loop(ctx, send_ka, routes_per_iteration, send_eor)
+        self._raise_session_end()
+
+    async def _main_loop(self, ctx: PeerContext, send_ka: KA, routes_per_iteration: int, send_eor: bool) -> None:
+        """Read, handle and send until a teardown is asked for, or an exception ends the session."""
+        assert self.proto is not None
+        assert self.recv_timer is not None
+        include_withdraw = False
+        new_routes: AsyncGenerator[None, None] | None = None
+
+        from exabgp.reactor.peer.handlers import UpdateHandler, RouteRefreshHandler
+
+        update_handler = UpdateHandler()
+        route_refresh_handler = RouteRefreshHandler(self.resend)
 
         # Timing instrumentation for peer message loop
         peer_loop_timer = LoopTimer(f'peer_main_{self.id()}', warn_threshold_ms=50)
@@ -898,38 +983,22 @@ class Peer:
                 peer_loop_timer.start()
 
                 # Handle configuration reload
-                if self._neighbor:
-                    pending = self._neighbor
-                    previous = pending.previous.routes if pending.previous else []
-                    current = pending.routes
-                    self.neighbor.rib.outgoing.replace_reload(previous, current)
-                    pending.previous = None
-                    self._neighbor = None
+                self._apply_reload()
                 ctx.neighbor = self.neighbor
 
                 # Read message with timeout
-                message: Message | None
-                try:
-                    message = await asyncio.wait_for(self.proto.read_message(), timeout=0.1)
-                except asyncio.TimeoutError:
-                    message = None
-                    await asyncio.sleep(0)
+                message = await self._read_message_or_none()
 
                 # Keepalive handling
                 self.recv_timer.check_ka(message)
                 await send_ka.send_if_needed()
 
                 # Log statistics changes
-                for counter_line in self.stats.changed_statistics():
-                    log.info(lazymsg('statistics.changed info={counter_line}', counter_line=counter_line), 'statistics')
+                self._log_changed_statistics()
 
                 # Process inbound messages using handlers
-                if message is None:
-                    pass
-                elif update_handler.can_handle(message):
-                    await update_handler.handle_async(ctx, message)
-                elif route_refresh_handler.can_handle(message):
-                    await route_refresh_handler.handle_async(ctx, message)
+                if message is not None:
+                    await self._handle_inbound(ctx, message, update_handler, route_refresh_handler)
 
                 # Send outbound messages using async helpers
                 await self._send_operational_messages()
@@ -958,21 +1027,6 @@ class Peer:
         except Exception as exc:
             log.error(lazyexc('async.mainloop.exception error={exc}', exc), self.id())
             raise
-
-        # Graceful restart handling
-        log.debug(
-            lazymsg('async.mainloop.ended graceful_restart={gr}', gr=bool(self.neighbor.capability.graceful_restart)),
-            self.id(),
-        )
-        if self.neighbor.capability.graceful_restart and self.proto.negotiated.sent_open.capabilities.announced(
-            Capability.CODE.GRACEFUL_RESTART,
-        ):
-            log.error(lazymsg('session.closing reason=graceful_restart'), self.id())
-            self._close('graceful restarted negotiated, closing without sending any notification')
-            raise NetworkError('closing')
-
-        assert self._teardown is not None
-        raise self._teardown
 
     async def _run(self) -> None:
         """Main peer loop using async/await"""
