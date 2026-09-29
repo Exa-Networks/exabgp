@@ -276,6 +276,9 @@ class IPrefix6(IPrefix, IComponent, IPv6):
 class IOperation(IComponent):
     # need to implement encode which encode the value of the operator
 
+    # one more than the largest value `encode` can write
+    VALUE_LIMIT = 1 << 64
+
     def __init__(self, operations, value):
         self.operations = operations
         self.value = value
@@ -299,6 +302,8 @@ class IOperation(IComponent):
 
 
 class IOperationByte(IOperation):
+    VALUE_LIMIT = 1 << 8
+
     def encode(self, value):
         return 1, bytes([value])
 
@@ -307,6 +312,8 @@ class IOperationByte(IOperation):
 
 
 class IOperationByteShort(IOperation):
+    VALUE_LIMIT = 1 << 16
+
     def encode(self, value):
         if value < (1 << 8):
             return 1, bytes([value])
@@ -314,6 +321,8 @@ class IOperationByteShort(IOperation):
 
 
 class IOperationByteShortLong(IOperation):
+    VALUE_LIMIT = 1 << 32
+
     def encode(self, value):
         if value < (1 << 8):
             return 1, bytes([value])
@@ -941,5 +950,13 @@ class Flow(NLRI):
             if len(bgp) < size:
                 raise Notify(3, 10, 'flow component %d announces a %d byte value with %d left' % (what, size, len(bgp)))
             value, bgp = bgp[:size], bgp[size:]
-            nlri.add(klass(operator, klass.decoder(value)))
+            decoded_value = klass.decoder(value)
+            # The width is the sender's choice, the value is not: a protocol of 262 matches
+            # no packet, and index() packs the rules again, where bytes([262]) raised
+            # ValueError on the first route stored. RFC 8955 4.2 makes it malformed.
+            if decoded_value >= klass.VALUE_LIMIT:
+                raise Notify(
+                    3, 10, 'flow component %d has a value of %d, too large for its field' % (what, decoded_value)
+                )
+            nlri.add(klass(operator, decoded_value))
         return bgp
