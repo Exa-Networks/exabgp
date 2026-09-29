@@ -392,7 +392,11 @@ class JSON:
             return str(nlri.v4_json(compact=self.compact, nexthop=nexthop))
         return str(nlri.json(compact=self.compact))
 
-    def _update(self, update_msg: UpdateCollection, include_meta: bool = True) -> dict[str, str]:
+    @staticmethod
+    def _update_by_family(
+        update_msg: UpdateCollection,
+    ) -> tuple[dict[FamilyTuple, dict[str, list[tuple[NLRI, IP]]]], dict[FamilyTuple, list[NLRI]]]:
+        """Group the announced NLRI by family then next-hop, and the withdrawn ones by family."""
         # plus stores: family -> nexthop_string -> list of (nlri, nexthop_ip) tuples
         plus: dict[FamilyTuple, dict[str, list[tuple[NLRI, IP]]]] = {}
         minus: dict[FamilyTuple, list[NLRI]] = {}
@@ -414,8 +418,12 @@ class JSON:
             # Process withdraws - no nexthop needed
             for nlri in update_msg.withdraws:
                 minus.setdefault(nlri.family().afi_safi(), []).append(nlri)
-        leaks = update_msg.route_leaks if include_meta and not update_msg.IS_EOR else None
+        return plus, minus
 
+    def _announce_sections(
+        self, plus: dict[FamilyTuple, dict[str, list[tuple[NLRI, IP]]]], leaks: dict[FamilyTuple, RouteLeak] | None
+    ) -> list[str]:
+        """Render each family's announced NLRI as a `"<afi> <safi>": { "<next-hop>": [ ... ] }` member."""
         add = []
         for family in plus:
             leak = leaks.get(family) if leaks else None
@@ -430,7 +438,10 @@ class JSON:
             s += m[:-2]
             s += ' }'
             add.append(s)
+        return add
 
+    def _withdraw_sections(self, minus: dict[FamilyTuple, list[NLRI]]) -> list[str]:
+        """Render each family's withdrawn NLRI as a `"<afi> <safi>": [ ... ]` member."""
         remove = []
         for family in minus:
             nlris = minus[family]
@@ -439,6 +450,13 @@ class JSON:
             s += ', '.join(self._nlri_to_json(nlri) for nlri in nlris)
             s += ' ]'
             remove.append(s)
+        return remove
+
+    def _update(self, update_msg: UpdateCollection, include_meta: bool = True) -> dict[str, str]:
+        plus, minus = self._update_by_family(update_msg)
+        leaks = update_msg.route_leaks if include_meta and not update_msg.IS_EOR else None
+        add = self._announce_sections(plus, leaks)
+        remove = self._withdraw_sections(minus)
 
         nlri_str = ''
         if not add and not remove:
