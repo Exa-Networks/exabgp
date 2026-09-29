@@ -2,7 +2,7 @@
 
 **Status:** ✅ Completed
 **Started:** 2026-09-08
-**Last Updated:** 2026-09-08
+**Last Updated:** 2026-09-29
 
 ## Why
 
@@ -27,6 +27,9 @@ reload does to the peers and the listening sockets was not tested at all.
 | 3 | `reactor/loop.py` and `reactor/listener.py` under mutmut | ✅ |
 | 4 | audit `tests/fuzz` for `st.binary()` draws which reach their case by luck | ✅ |
 | 5 | a real reload scenario, as `qa/bin/check_reload_cleanup` | ✅ |
+| 6 | `test_otc_parsing` fails after `test_configuration_export` on the same worker | ✅ |
+| 7 | `tests/unit/test_util.py::TestDNS` flakes under xdist | ✅ |
+| 8 | `test_api_terminate` respawn limit flakes on a bucket boundary | ✅ |
 
 ## Decisions
 
@@ -94,6 +97,46 @@ exercises it.
 a real daemon over a real socket. With the #1425 fix reverted it reports the two symptoms
 from the report and exits 1.
 
+**6** Moved from `done-message-interface.md`.
+`tests/unit/test_otc_parsing.py::test_inline_encode_literal_otc[ipv4...]` fails whenever
+`tests/unit/configuration/test_configuration_export.py` (or `config_grammar/test_roundtrip.py`)
+ran before it on the same worker. Reproduced on a HEAD worktree during the message interface
+work: a test isolation bug, some state one leaves behind which the other reads.
+
+Bisected to one test: `test_configuration_can_be_serialized[conf-no-asn4.conf]`. The state
+is `RIB._cache`, which keeps each neighbour's RIB by name for the life of the process so a
+reloading daemon keeps the routes the API gave it. That file configures neighbour
+127.0.0.1 with a static route; the in-process `exabgp encode` of the OTC test builds a
+neighbour of the same name, inherited the route, printed two UPDATEs, and the test decoded
+the second as garbage ("invalid mask 255"). Not a production defect: `exabgp encode` is its
+own process. `tests/conftest.py` now gives every test back the cache it started with, and
+`tests/unit/test_rib_cache_isolation.py` runs the failing pair in a fresh process. The
+`config_grammar/test_roundtrip.py` ordering passes too.
+
+**7** Seen in `done-message-interface.md` and `done-notification-text.md`.
+`tests/unit/test_util.py::TestDNS` fails intermittently under xdist, before and after
+unrelated changes.
+
+`host()` and `domain()` cache the resolver's answer in module globals, and nothing reset
+them. `test_host_empty` and `test_domain_with_mock` patched the resolver with a bare
+MagicMock and no return value; when one ran first on a worker the MagicMock was cached as
+the host name, for the class and for anything later building a default `HostName`.
+Reproduced every time with `test_host_empty` then `test_host`, `-p no:randomly`. The class
+now empties the cache per test with `monkeypatch`, and the mocked tests set a return value
+and assert what comes back. Five `-n 4` runs clean.
+
+Found doing it: `domain()` returns the **first** label of the FQDN, the host again, and
+has since 2015. It is the default domain name of the Hostname capability. Pinned with a
+strict xfail; the fix changes what every installation without a configured
+`domain-name` sends, so it has its own plan, `plan-dns-domain-name.md`.
+
+**8** Found by the full suite run which verified 6 and 7.
+`test_api_terminate.py::test_a_helper_past_its_respawn_limit_is_lost` failed once and
+passed alone. `Processes` counts respawns per time bucket, `int(time.time()) &
+respawn_timemask`, so six deaths straddling a bucket boundary split the count and the
+helper was never lost. Shown with a stepped clock across the boundary: `lost()` is `[]`.
+The test now holds the clock. The production behaviour is as designed: a limit per window.
+
 ## Resume point
 
-All five done. Nothing committed yet. `./qa/bin/test_everything` passes with 24 stages.
+All eight done. `./qa/bin/test_everything` passes with 25 stages.

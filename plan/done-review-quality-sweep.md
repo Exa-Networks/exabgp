@@ -59,7 +59,7 @@ mypyc will not compile was not urgent. Each item is done, closed, or has its own
 | 22 | dead `Connection.reader()` | `plan-connection-reader-removal.md`: 68 test calls, not the ~20 estimated (mypyc relevant, phase 7) |
 | 23 | `Negotiated.validate()` rejections | done: `tests/unit/rfc/test_rfc4271_open.py` |
 | 25 | MP End-of-RIB detection | done: `tests/unit/rfc/test_rfc4724_graceful_restart.py` decodes it per family |
-| 26 | `Listener.new_connections` | done: under mutmut, see `wip-testing-gaps.md` item 3 |
+| 26 | `Listener.new_connections` | done: under mutmut, see `done-testing-gaps.md` item 3 |
 | 27 to 30 | agent instructions, housekeeping | `plan-agent-instructions.md`: agreed but conflicts with the global `ai/rules/` layout and with sessions still writing to `.claude/backups/` |
 | 31 | RFC ledger | done, see below; 32 RFCs now |
 | 32 | three largest functions | `plan-large-function-decomposition.md` (not mypyc relevant: uncompiled modules) |
