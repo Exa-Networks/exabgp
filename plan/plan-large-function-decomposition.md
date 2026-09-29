@@ -75,7 +75,11 @@ Pinning found two defects, left as they are because a split changes no behaviour
   CLI hangs, unanswered, until the first leaves. Fixed after the split: the server socket
   stays polled, and `test_a_second_client_is_turned_away` fails without it.
 - multi client mode never sets `ClientConnection.uuid`, so `_disconnect_client` never tells
-  the daemon `bye <uuid>`. `test_a_client_leaving_frees_its_place_and_says_nothing` pins it.
+  the daemon `bye <uuid>`. Removed rather than repaired: `bye` released the daemon's one CLI
+  slot, which the multi client commit (075004e89) replaced by a list of clients nothing reads,
+  and the `done` answering it is routed to whichever client asked last. The helper sends no
+  `bye` in either mode, the daemon keeps no client list, and its `bye` command only answers
+  `done`, for the CLI which sends it on quit.
 
 **Step 1, 2026-09-29.** Coverage of `./qa/bin/test_api_encode --self-check`, the 411 vectors
 which decode through this function, showed it never ran the End-of-RIB forms, RTC, SR-Policy
@@ -113,4 +117,4 @@ Sign-off on the split of each function before it starts.
 
 ## Resume Point
 
-Step 3, `_get_completions`, after sign-off of its split. The two unixsocket defects above wait on Thomas: fix them, each with the test which fails without it, or leave them.
+Step 3, `_get_completions`, after sign-off of its split.

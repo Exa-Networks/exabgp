@@ -46,10 +46,6 @@ class MockReactor:
         self.daemon_start_time: float = time.time()
         self.exit_code: int = self.Exit.unknown
 
-        # Active CLI client tracking
-        self.active_client_uuid: Optional[str] = None
-        self.active_client_last_ping: float = 0.0
-
         # Rate limiting
         self.max_loop_time: float = 1.0
         self._sleep_time: float = 0.01
@@ -209,12 +205,6 @@ class TestReactorInit:
         """Test that peers dict starts empty."""
         reactor = MockReactor()
         assert reactor._peers == {}
-
-    def test_init_no_active_client(self) -> None:
-        """Test that no active client at init."""
-        reactor = MockReactor()
-        assert reactor.active_client_uuid is None
-        assert reactor.active_client_last_ping == 0.0
 
 
 class TestPreventSpin:

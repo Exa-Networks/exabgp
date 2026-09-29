@@ -227,12 +227,12 @@ def ping(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comman
     """Lightweight health check - responds with 'pong <UUID>' and active status
 
     Defaults to JSON output unless 'text' keyword is explicitly used.
+
+    The CLI sends "ping <client_uuid> <client_start_time>". Both are accepted and unused:
+    the daemon once let one CLI in at a time by them, and keeps no list of clients now,
+    since one at a time is the socket helper's job. So every client is active.
     """
-    # Parse client UUID and start time if provided
-    # Format: "ping <client_uuid> <client_start_time>"
     parts = command.strip().split()
-    client_uuid = None
-    client_start_time = None
 
     # Check if 'text' keyword is explicitly used in the command line
     # Default to JSON unless text is explicitly requested
@@ -241,35 +241,7 @@ def ping(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comman
     else:
         output_json = True
 
-    if len(parts) >= 2:
-        client_uuid = parts[0]
-        try:
-            client_start_time = float(parts[1])
-        except ValueError:
-            # a client which sends a start time we cannot read is treated as one which
-            # sent none at all, which is what client_start_time staying None means below
-            log.debug(
-                lazymsg('api.client.bad.start.time client={uuid} value={value}', uuid=client_uuid, value=parts[1]),
-                'api',
-            )
-
-    # Multi-client support: all clients are active
     is_active = True
-    if client_uuid and client_start_time is not None:
-        import time
-
-        current_time = time.time()
-        client_timeout = 15  # seconds - 10s ping interval + 5s grace
-
-        # Clean up stale clients (no ping received within timeout)
-        stale_uuids = [
-            uuid for uuid, last_ping in reactor.active_clients.items() if current_time - last_ping > client_timeout
-        ]
-        for uuid in stale_uuids:
-            del reactor.active_clients[uuid]
-
-        # Update this client's ping time (all clients are active in multi-client mode)
-        reactor.active_clients[client_uuid] = current_time
 
     if output_json:
         response = {'pong': reactor.daemon_uuid, 'active': is_active}
@@ -281,19 +253,10 @@ def ping(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comman
 
 
 def bye(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
-    """Handle client disconnect - cleanup client tracking
+    """Acknowledge a client leaving: the CLI sends "bye" when it quits, and waits for done.
 
-    Format: "bye <client_uuid>"
-    Called by socket server when a client disconnects.
+    It once released the daemon's one CLI slot, and there is no slot to release any more.
     """
-    # Parse client UUID if provided
-    parts = command.strip().split()
-    client_uuid = parts[0] if parts else None
-
-    # Remove client from active clients tracking
-    if client_uuid and client_uuid in reactor.active_clients:
-        del reactor.active_clients[client_uuid]
-
     reactor.processes.answer_done_sync(service)
     return True
 

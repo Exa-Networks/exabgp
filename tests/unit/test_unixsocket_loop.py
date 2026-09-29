@@ -174,12 +174,15 @@ def test_a_second_client_is_turned_away(single: Helper) -> None:
     assert single.daemon_reads() == 'three'
 
 
-def test_a_client_leaving_says_bye_and_frees_the_socket(single: Helper) -> None:
+def test_a_client_leaving_frees_the_socket_and_says_nothing(single: Helper) -> None:
+    # The helper used to tell the daemon 'bye', which released a lock on the CLI the daemon
+    # no longer has; all it still did was draw a 'done', which a client connecting in time
+    # took as the answer to its own first command.
     first = single.connect()
     first.sendall(b'one\n')
     assert single.daemon_reads() == 'one'
     first.close()
-    assert single.daemon_reads() == 'bye'
+    single.daemon_hears_nothing()
 
     # what the daemon says with no client connected goes nowhere
     single.daemon_says(b'stale\n')
@@ -256,7 +259,7 @@ def test_a_client_past_the_maximum_is_turned_away(multi: Helper) -> None:
 
 
 def test_a_client_leaving_frees_its_place_and_says_nothing(multi: Helper) -> None:
-    # a client is only named to the daemon by a uuid nothing in the loop sets, so no bye
+    # no bye either: its 'done' would be routed to whichever client asked last
     first = multi.connect()
     second = multi.connect()
     first.sendall(b'one\n')

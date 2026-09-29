@@ -65,8 +65,6 @@ class ClientConnection:
 
     socket: socket.socket
     fd: int
-    uuid: str | None = None  # From initial ping command
-    last_ping: float = 0.0
     write_queue: deque[bytes] = field(default_factory=deque)
     connected_at: float = 0.0
 
@@ -352,22 +350,16 @@ class Control:
         signal.signal(signal.SIGTERM, self.terminate)
         return True
 
-    def _disconnect_client(self, fd: int, standard_out: int | None = None) -> None:
-        """Disconnect a specific client (multi-client mode)."""
+    def _disconnect_client(self, fd: int) -> None:
+        """Disconnect a specific client (multi-client mode).
+
+        The daemon is not told: it keeps no list of clients, and the 'done' answering a
+        'bye' would be routed to whichever client asked last, as the end of its command.
+        """
         if fd not in self.clients:
             return
 
         client = self.clients[fd]
-
-        # Notify reactor that client disconnected
-        if standard_out is not None and client.uuid:
-            try:
-                os.write(standard_out, f'bye {client.uuid}\n'.encode())
-            except OSError as exc:
-                # The reactor holds this uuid as a live client until it is told otherwise, and
-                # keeps queueing responses for a client which is no longer there.
-                sys.stderr.write(f'cannot tell exabgp that client {client.uuid} is gone: {exc}\n')
-                sys.stderr.flush()
 
         # A close which fails is a socket the client has already torn down, which is the state
         # closing it was meant to reach.
@@ -580,12 +572,12 @@ class Control:
                 data = self.clients[client_fd].socket.recv(number)
                 if not data:
                     # EOF - client closed
-                    self._disconnect_client(client_fd, self._stdout)
+                    self._disconnect_client(client_fd)
                 return data
             except OSError as exc:
                 if exc.errno in error.block:
                     return b''
-                self._disconnect_client(client_fd, self._stdout)
+                self._disconnect_client(client_fd)
                 return b''
 
         return reader
@@ -689,16 +681,9 @@ class Control:
         if not (self.client_fd and not self.client_socket):
             return False
 
-        # Cleanup happened in socket_reader/socket_writer
-        # Notify reactor that client disconnected (clears active_client_uuid)
-        try:
-            os.write(self._stdout, b'bye\n')
-        except OSError as exc:
-            # The reactor keeps the disconnected client as the active one until it is told
-            # otherwise, and answers the next client's commands to a socket which is gone.
-            sys.stderr.write(f'cannot tell exabgp that the client is gone: {exc}\n')
-            sys.stderr.flush()
-
+        # Cleanup happened in socket_reader/socket_writer. The daemon is not told: it keeps
+        # no list of clients, and the 'done' answering a 'bye' could reach the next client
+        # as the answer to its first command.
         self._forget(self.client_fd)
         self._write[self._stdin] = None
         self.client_fd = None  # Clear fd after cleanup
@@ -739,7 +724,7 @@ class Control:
                 except OSError as exc:
                     if exc.errno not in error.block:
                         # Client disconnected
-                        self._disconnect_client(client_fd, self._stdout)
+                        self._disconnect_client(client_fd)
                         self._forget(client_fd)
                     break  # a blocked socket is tried again next time round
                 if sent != len(line):

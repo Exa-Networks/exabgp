@@ -21,9 +21,6 @@ class MockReactor:
         self._peers = {}
         self.processes = MockProcesses()
 
-        # Active CLI client tracking (multi-client support)
-        self.active_clients = {}  # uuid -> last_ping_time
-
 
 class MockProcesses:
     """Mock Processes for testing command output"""
@@ -176,63 +173,31 @@ class TestCommandIntegration:
         # UUIDs should match
         assert ping_uuid == status_data['uuid']
 
-    def test_ping_client_replacement(self):
-        """Test that multiple clients can be active simultaneously (multi-client support)"""
+    def test_every_client_is_active(self):
+        """The daemon keeps no list of CLI clients: one at a time is the socket helper's job.
+
+        It used to record each client's uuid and last ping, first to let only one CLI in and
+        then, once any number could be, for nothing, since nothing read the list.
+        """
         from exabgp.reactor.api.command.reactor import ping
 
         reactor = MockReactor()
-        service = 'test-service'
+        for command in ('client-1 1000.0 text', 'client-2 2000.0 text', 'client-1 1000.0 text'):
+            reactor.processes.written_data = []
+            ping(None, reactor, 'test-service', [], command, use_json=False)
+            assert reactor.processes.written_data == [f'pong {reactor.daemon_uuid} active=true', 'done']
 
-        # Client 1 connects first (using text mode for easier assertion)
-        # New signature: ping(self, reactor, service, peers, command, use_json)
-        ping(None, reactor, service, [], 'client-1 1000.0 text', use_json=False)
-        client1_output = reactor.processes.written_data[0]
-        assert 'active=true' in client1_output
-        assert 'client-1' in reactor.active_clients
-
-        # Client 2 connects - should also be active (multi-client support)
-        reactor.processes.written_data = []
-        ping(None, reactor, service, [], 'client-2 2000.0 text', use_json=False)
-        client2_output = reactor.processes.written_data[0]
-        assert 'active=true' in client2_output
-
-        # Both clients are tracked
-        assert 'client-1' in reactor.active_clients
-        assert 'client-2' in reactor.active_clients
-
-        # Client 1 still active
-        reactor.processes.written_data = []
-        ping(None, reactor, service, [], 'client-1 1000.0 text', use_json=False)
-        client1_still_active = reactor.processes.written_data[0]
-        assert 'active=true' in client1_still_active
-
-        # Client 2 also still active
-        reactor.processes.written_data = []
-        ping(None, reactor, service, [], 'client-2 2000.0 text', use_json=False)
-        client2_still_active = reactor.processes.written_data[0]
-        assert 'active=true' in client2_still_active
-
-    def test_ping_client_timeout_replacement(self):
-        """Test that timed-out clients are automatically cleaned up"""
+    def test_a_ping_with_an_unreadable_start_time_is_answered(self):
         from exabgp.reactor.api.command.reactor import ping
 
         reactor = MockReactor()
-        service = 'test-service'
+        ping(None, reactor, 'test-service', [], 'client-1 later text', use_json=False)
+        assert reactor.processes.written_data == [f'pong {reactor.daemon_uuid} active=true', 'done']
 
-        # Client 1 connects first (using text mode for easier assertion)
-        # New signature: ping(self, reactor, service, peers, command, use_json)
-        ping(None, reactor, service, [], 'client-1 1000.0 text', use_json=False)
-        assert 'active=true' in reactor.processes.written_data[0]
-        assert 'client-1' in reactor.active_clients
+    def test_bye_is_acknowledged(self):
+        """The CLI sends bye when it quits, and waits for the done."""
+        from exabgp.reactor.api.command.reactor import bye
 
-        # Simulate 20 seconds passing for client-1 (timed out - no ping for >15s)
-        reactor.active_clients['client-1'] = time.time() - 20
-
-        # Client 2 connects - should be active, and client-1 should be cleaned up
-        reactor.processes.written_data = []
-        ping(None, reactor, service, [], 'client-2 2000.0 text', use_json=False)
-        output = reactor.processes.written_data[0]
-        assert 'active=true' in output
-        assert 'client-2' in reactor.active_clients
-        # Client 1 should have been removed due to timeout
-        assert 'client-1' not in reactor.active_clients
+        reactor = MockReactor()
+        assert bye(None, reactor, 'test-service', [], 'client-1', use_json=False) is True
+        assert reactor.processes.written_data == ['done']
