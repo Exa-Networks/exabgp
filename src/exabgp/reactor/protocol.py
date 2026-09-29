@@ -14,6 +14,7 @@ from collections.abc import AsyncGenerator
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
+    from exabgp.reactor.network.error import NotifyError
     from exabgp.reactor.network.incoming import Incoming
     from exabgp.reactor.peer import Peer
 
@@ -226,39 +227,13 @@ class Protocol:
     async def read_message(self) -> Message | None:
         """Read one BGP message using async I/O, or None when there is nothing to process."""
         assert self.connection is not None
-        packets = self._api['receive-packets']
-        consolidate = self._api['receive-consolidate']
-        parsed = self._api['receive-parsed']
 
         # Read message using async I/O
         length, msg_id, header, body, notify = await self.connection.reader_async()
 
         # internal issue
         if notify:
-            code = 'receive-{}'.format(Message.CODE.NOTIFICATION.SHORT)
-            # Convert NotifyError to Notify for API and exception.  Connection fills the
-            # Data field where an RFC defines it (RFC 4271 6.1, the erroneous Length field
-            # of a Bad Message Length); its sentence stays in our log
-            notify_msg = Notify(notify.code, notify.subcode, str(notify), data=notify.data or None)
-            if self._api.get(code, False):
-                if consolidate:
-                    self.peer.reactor.processes.notification(
-                        self.peer.neighbor,
-                        'receive',
-                        notify_msg.notification,
-                        bytes(header),
-                        bytes(body),
-                        self.negotiated,
-                    )
-                elif parsed:
-                    self.peer.reactor.processes.notification(
-                        self.peer.neighbor, 'receive', notify_msg.notification, b'', b'', self.negotiated
-                    )
-                elif packets:
-                    self.peer.reactor.processes.packets(
-                        self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self.negotiated
-                    )
-            raise notify_msg
+            raise self._header_error(notify, msg_id, header, body)
 
         # RFC 4271 6.1: if the Type field is not recognised the Error Subcode MUST be Bad
         # Message Type.  Message.unpack answers the same 1/3 but is never reached for these
@@ -272,40 +247,11 @@ class Protocol:
         if not length:
             return None
 
-        current_msg_id = msg_id
-        log.debug(
-            lazymsg('message.received type={t}', t=Message.CODE.name(current_msg_id)),
-            self._session(),
-        )
+        for_api = self._count_received(msg_id, header, body)
 
-        code = 'receive-{}'.format(Message.CODE.short(msg_id))
-        self.peer.stats[code] += 1
-        for_api = self._api.get(code, False)
+        message = self._decode(msg_id, body)
 
-        if for_api and packets and not consolidate:
-            self.peer.reactor.processes.packets(
-                self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self.negotiated
-            )
-
-        try:
-            message = Message.unpack(msg_id, body, self.negotiated)
-        except (KeyboardInterrupt, SystemExit, Notify):
-            raise
-        except Exception as exc:
-            current_msg_id = msg_id
-            log.debug(lazymsg('message.decode.failed type={t}', t=current_msg_id), self._session())
-            current_exc = exc
-            log.debug(lazymsg('message.decode.error error={e}', e=str(current_exc)), self._session())
-            log.debug(lazymsg('message.decode.traceback trace={t}', t=traceback.format_exc()), self._session())
-            raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id) from None
-            # raise Notify(5,0,'unknown message received')
-
-        # the one decoder registered for the type is Update's, and it returns an Update
-        update = cast(Update, message) if message.ID == Message.CODE.UPDATE else None
-        revalidated: list[UpdateCollection] = []
-        if update is not None:
-            update.data.classify_otc(self.negotiated)
-            revalidated = validate_flows(self.neighbor, update.data)
+        revalidated = self._check_update(message)
 
         if for_api:
             self._tell_api_received(message, header, body, revalidated)
@@ -317,6 +263,73 @@ class Protocol:
         # rest of the UPDATE. The Discard marker the parser leaves behind records that it
         # happened, for the API; it is not a reason to ignore the routes beside it.
         return message
+
+    def _count_received(self, msg_id: int, header: Buffer, body: Buffer) -> bool:
+        """Log and count a message received, return if the API asked for its type."""
+        log.debug(lazymsg('message.received type={t}', t=Message.CODE.name(msg_id)), self._session())
+
+        code = 'receive-{}'.format(Message.CODE.short(msg_id))
+        self.peer.stats[code] += 1
+        # the API entries are the lists of processes which asked, so only their truth is kept
+        for_api = bool(self._api.get(code, False))
+
+        # the raw packets are told before decoding, so a message which fails to decode is seen
+        if for_api and self._api['receive-packets'] and not self._api['receive-consolidate']:
+            self.peer.reactor.processes.packets(
+                self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self.negotiated
+            )
+        return for_api
+
+    def _check_update(self, message: Message) -> list[UpdateCollection]:
+        """Classify the OTC of an UPDATE and return the flows its routes revalidated."""
+        if message.ID != Message.CODE.UPDATE:
+            return []
+        # the one decoder registered for the type is Update's, and it returns an Update
+        update = cast(Update, message)
+        update.data.classify_otc(self.negotiated)
+        return validate_flows(self.neighbor, update.data)
+
+    def _decode(self, msg_id: int, body: Buffer) -> Message:
+        """Decode the body of a message, a decoder failing on it is a header error."""
+        try:
+            return Message.unpack(msg_id, body, self.negotiated)
+        except (KeyboardInterrupt, SystemExit, Notify):
+            raise
+        except Exception as exc:
+            log.debug(lazymsg('message.decode.failed type={t}', t=msg_id), self._session())
+            log.debug(lazymsg('message.decode.error error={e}', e=str(exc)), self._session())
+            log.debug(lazymsg('message.decode.traceback trace={t}', t=traceback.format_exc()), self._session())
+            raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id) from None
+
+    def _header_error(self, notify: 'NotifyError', msg_id: int, header: Buffer, body: Buffer) -> Notify:
+        """Turn an error found reading the header into the Notify to raise, telling the API."""
+        consolidate = self._api['receive-consolidate']
+        parsed = self._api['receive-parsed']
+        packets = self._api['receive-packets']
+        code = 'receive-{}'.format(Message.CODE.NOTIFICATION.SHORT)
+        # Convert NotifyError to Notify for API and exception.  Connection fills the
+        # Data field where an RFC defines it (RFC 4271 6.1, the erroneous Length field
+        # of a Bad Message Length); its sentence stays in our log
+        notify_msg = Notify(notify.code, notify.subcode, str(notify), data=notify.data or None)
+        if self._api.get(code, False):
+            if consolidate:
+                self.peer.reactor.processes.notification(
+                    self.peer.neighbor,
+                    'receive',
+                    notify_msg.notification,
+                    bytes(header),
+                    bytes(body),
+                    self.negotiated,
+                )
+            elif parsed:
+                self.peer.reactor.processes.notification(
+                    self.peer.neighbor, 'receive', notify_msg.notification, b'', b'', self.negotiated
+                )
+            elif packets:
+                self.peer.reactor.processes.packets(
+                    self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self.negotiated
+                )
+        return notify_msg
 
     def _tell_api_received(
         self, message: Message, header: Buffer, body: Buffer, revalidated: list[UpdateCollection]
