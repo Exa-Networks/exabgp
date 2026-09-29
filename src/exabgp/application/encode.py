@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import sys
 import argparse
+from typing import TYPE_CHECKING, NoReturn
 
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.setup import create_minimal_configuration
@@ -28,6 +29,9 @@ from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.update.attribute.otc import OTCSelf
 
 from exabgp.logger import log
+
+if TYPE_CHECKING:
+    from exabgp.bgp.neighbor import Neighbor
 
 
 def setargs(sub: argparse.ArgumentParser) -> None:
@@ -51,19 +55,28 @@ def main() -> int:
     return cmdline(parser.parse_args())
 
 
-def cmdline(cmdarg: argparse.Namespace) -> int:
-    if not cmdarg.route and not cmdarg.configuration:
-        sys.stdout.write('Environment values are:\n{}\n\n'.format('\n'.join(' - {}'.format(_) for _ in Env.default())))
-        sys.stdout.write('Usage: exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4"\n')
-        sys.stdout.write('       exabgp encode -c myconfig.conf\n\n')
-        sys.stdout.write('Examples:\n')
-        sys.stdout.write('  exabgp encode "route 10.0.0.0/24 next-hop 192.168.1.1"\n')
-        sys.stdout.write('  exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4 origin igp as-path [65000 65001]"\n')
-        sys.stdout.write('  exabgp encode -f "ipv6 unicast" "route 2001:db8::/32 next-hop 2001:db8::1"\n')
-        sys.stdout.write('  exabgp encode -n "route 10.0.0.0/24 next-hop 1.2.3.4"  # NLRI only\n')
-        sys.stdout.flush()
-        sys.exit(1)
+def _exit_with(message: str) -> NoReturn:
+    """Write the message on stdout and exit with an error code."""
+    sys.stdout.write(f'{message}\n')
+    sys.stdout.flush()
+    sys.exit(1)
 
+
+def _write_usage() -> None:
+    """Write the environment values and how to call encode."""
+    sys.stdout.write('Environment values are:\n{}\n\n'.format('\n'.join(' - {}'.format(_) for _ in Env.default())))
+    sys.stdout.write('Usage: exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4"\n')
+    sys.stdout.write('       exabgp encode -c myconfig.conf\n\n')
+    sys.stdout.write('Examples:\n')
+    sys.stdout.write('  exabgp encode "route 10.0.0.0/24 next-hop 192.168.1.1"\n')
+    sys.stdout.write('  exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4 origin igp as-path [65000 65001]"\n')
+    sys.stdout.write('  exabgp encode -f "ipv6 unicast" "route 2001:db8::/32 next-hop 2001:db8::1"\n')
+    sys.stdout.write('  exabgp encode -n "route 10.0.0.0/24 next-hop 1.2.3.4"  # NLRI only\n')
+    sys.stdout.flush()
+
+
+def _setup_environment(cmdarg: argparse.Namespace) -> None:
+    """Configure the environment and logging for an offline encoder."""
     env = getenv()
     env.bgp.passive = True
     env.log.parser = True
@@ -81,85 +94,99 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
     log.init(env)
     trace_interceptor(env.debug.pdb)
 
+
+def _load_configuration(path: str) -> Configuration:
+    """Read the configuration file, exit if it does not load."""
+    configuration = Configuration([getconf(path)])
+    reloaded = configuration.reload()
+    if not reloaded:
+        _exit_with(f'configuration error: {configuration.error}')
+    return configuration
+
+
+def _configuration_from_route(cmdarg: argparse.Namespace) -> Configuration:
+    """Build a one neighbor configuration and add the route text to its RIB."""
+    # Use programmatic configuration setup with routes
+    configuration = create_minimal_configuration(
+        local_as=cmdarg.local_as,
+        peer_as=cmdarg.peer_as,
+        families=cmdarg.family,
+        add_path=cmdarg.path_information,
+    )
+    routes = configuration.parse_route_text(cmdarg.route)
+    if not routes:
+        raise ValueError(f'Failed to parse route: {cmdarg.route}')
+    for route in routes:
+        if type(route.attributes.get(OTCSelf.ID)) is OTCSelf:
+            raise ValueError('OTC self and role names require a real neighbor: use encode -c or a literal OTC ASN')
+
+    added = False
+    for neighbor in configuration.neighbors.values():
+        for route in routes:
+            if route.nlri.family().afi_safi() in neighbor.families():
+                neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route))
+                added = True
+    if not added:
+        raise ValueError(f'Failed to parse route: {cmdarg.route}')
+    return configuration
+
+
+def _encode_neighbor(neighbor: Neighbor, cmdarg: argparse.Namespace) -> None:
+    """Write the routes in the neighbor's RIB, as UPDATE messages or NLRI only."""
+    _, negotiated_out = _negotiated(neighbor)
+
+    if not neighbor.rib.enabled:
+        return
+
+    # Trigger route processing
+    for _ in neighbor.rib.outgoing.updates(False):
+        pass
+
+    # Get routes and encode them
+    for route in neighbor.rib.outgoing.cached_routes():
+        if cmdarg.nlri_only:
+            # Output only NLRI bytes
+            packed = route.nlri.pack_nlri(negotiated_out)
+            sys.stdout.write(packed.hex().upper())
+            sys.stdout.write('\n')
+        else:
+            # Output full UPDATE message(s)
+            for packed in UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes).messages(
+                negotiated_out
+            ):
+                if cmdarg.no_header:
+                    # Skip 19-byte BGP header (16 marker + 2 length + 1 type)
+                    packed = packed[19:]
+                sys.stdout.write(packed.hex().upper())
+                sys.stdout.write('\n')
+
+
+def cmdline(cmdarg: argparse.Namespace) -> int:
+    if not cmdarg.route and not cmdarg.configuration:
+        _write_usage()
+        sys.exit(1)
+
+    _setup_environment(cmdarg)
+
     # Build configuration
     if cmdarg.configuration:
-        # Use config file
-        configuration = Configuration([getconf(cmdarg.configuration)])
-        reloaded = configuration.reload()
-        if not reloaded:
-            sys.stdout.write(f'configuration error: {configuration.error}\n')
-            sys.stdout.flush()
-            sys.exit(1)
+        configuration = _load_configuration(cmdarg.configuration)
     else:
-        # Use programmatic configuration setup with routes
         try:
-            configuration = create_minimal_configuration(
-                local_as=cmdarg.local_as,
-                peer_as=cmdarg.peer_as,
-                families=cmdarg.family,
-                add_path=cmdarg.path_information,
-            )
-            routes = configuration.parse_route_text(cmdarg.route)
-            if not routes:
-                raise ValueError(f'Failed to parse route: {cmdarg.route}')
-            for route in routes:
-                if type(route.attributes.get(OTCSelf.ID)) is OTCSelf:
-                    raise ValueError(
-                        'OTC self and role names require a real neighbor: use encode -c or a literal OTC ASN'
-                    )
-
-            added = False
-            for neighbor in configuration.neighbors.values():
-                for route in routes:
-                    if route.nlri.family().afi_safi() in neighbor.families():
-                        neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route))
-                        added = True
-            if not added:
-                raise ValueError(f'Failed to parse route: {cmdarg.route}')
+            configuration = _configuration_from_route(cmdarg)
         except ValueError as e:
-            sys.stdout.write(f'configuration error: {e}\n')
-            sys.stdout.flush()
-            sys.exit(1)
+            _exit_with(f'configuration error: {e}')
 
     if not configuration.neighbors:
-        sys.stdout.write('no neighbor defined in configuration\n')
-        sys.stdout.flush()
-        sys.exit(1)
+        _exit_with('no neighbor defined in configuration')
 
     # Process each neighbor and encode their routes
     for name in configuration.neighbors.keys():
         neighbor = configuration.neighbors[name]
         try:
-            _, negotiated_out = _negotiated(neighbor)
-
-            if not neighbor.rib.enabled:
-                continue
-
-            # Trigger route processing
-            for _ in neighbor.rib.outgoing.updates(False):
-                pass
-
-            # Get routes and encode them
-            for route in neighbor.rib.outgoing.cached_routes():
-                if cmdarg.nlri_only:
-                    # Output only NLRI bytes
-                    packed = route.nlri.pack_nlri(negotiated_out)
-                    sys.stdout.write(packed.hex().upper())
-                    sys.stdout.write('\n')
-                else:
-                    # Output full UPDATE message(s)
-                    for packed in UpdateCollection(
-                        [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
-                    ).messages(negotiated_out):
-                        if cmdarg.no_header:
-                            # Skip 19-byte BGP header (16 marker + 2 length + 1 type)
-                            packed = packed[19:]
-                        sys.stdout.write(packed.hex().upper())
-                        sys.stdout.write('\n')
+            _encode_neighbor(neighbor, cmdarg)
         except ValueError as e:
-            sys.stdout.write(f'configuration error: {e}\n')
-            sys.stdout.flush()
-            sys.exit(1)
+            _exit_with(f'configuration error: {e}')
 
     sys.stdout.flush()
     return 0
