@@ -52,6 +52,8 @@
 | `plan-large-function-decomposition.md` | Split the ten largest functions, `UpdateCollection.messages` first (compiled by mypyc) |
 | `plan-gtsm-shared-listener.md` | `incoming-ttl` on a listening socket shared by several neighbours |
 | `plan-agent-instructions.md` | AGENTS.md, evidence rule, plan journal, `.claude/backups` cleanup (decisions needed) |
+| `plan-multisession.md` | Cisco code 131 (fixed); one session per family (main fixed, 5.0 won't fix) |
+| `wip-flowspec-wide-value.md` | One-octet flow components decoded from a wider value crash on `pack()` |
 
 ### Completed (done-) and Directories
 

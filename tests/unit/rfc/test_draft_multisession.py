@@ -224,6 +224,30 @@ def test_a_real_cisco_open_decodes_its_multisession_capability() -> None:
     assert not message.capabilities.announced(MULTISESSION)
 
 
+def test_we_offer_the_cisco_code_in_the_layout_cisco_sends() -> None:
+    """We only ever sent 68, so a Cisco peer, which offers 131 alone, saw no code it knew."""
+    for neighbor in neighbours('capability { multi-session enable; }'):
+        capabilities = Capabilities().new(neighbor, False)
+        cisco = capabilities[Capability.CODE.MULTISESSION_CISCO]
+        assert isinstance(cisco, MultiSession)
+        assert cisco.extract_capability_bytes() == [bytes([0x00])]
+        assert '"variant": "Cisco"' in cisco.json()
+        assert '"variant": "RFC"' in capabilities[MULTISESSION].json()
+
+
+def test_a_real_cisco_open_negotiates_multisession() -> None:
+    """Neither code was on both sides, and as we had announced 68 the answer was 2/9 to a
+    peer which had asked for multisession."""
+    message = Message.unpack(int(Message.CODE.OPEN), CISCO_OPEN_BODY, Negotiated.UNSET)
+    assert isinstance(message, Open)
+    (neighbor, _) = neighbours('capability { multi-session enable; }')
+    sent = Capabilities().new(neighbor, False)
+    # the capture's router offers IPv4 unicast only, as the first per-family session does
+    assert list(sent[MULTIPROTOCOL]) == [(AFI.ipv4, SAFI.unicast)]
+
+    assert negotiate(sent, message.capabilities) is True
+
+
 # ==============================================================================
 # Negotiation
 # ==============================================================================
