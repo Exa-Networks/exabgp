@@ -1,6 +1,6 @@
 # Decompose the largest functions
 
-**Status:** 🔄 In progress (step 0 done)
+**Status:** 🔄 In progress (steps 0 to 2 done)
 **Created:** 2026-09-29
 **From:** `done-review-quality-sweep.md` item 32, and the deferred structural cleanup of
 `done-rfc9234-roles-otc.md`
@@ -49,12 +49,33 @@ MANDATORY_REFACTORING_PROTOCOL.md:
        2026-09-29)
 1. [x] `decode_to_api_command`: 304 → 52 lines, fifteen helpers, largest 51 (signed off
        2026-09-29)
-2. [ ] `loop`: pin the socket protocol with the CLI tests, then split by state
+2. [x] `loop`: 365 → 47 lines, twenty-two helpers, largest 23 (signed off 2026-09-29)
 3. [ ] `_get_completions`: pin completions per context, then split by context
 4. [ ] The other six from the RFC 9234 table, one at a time, same protocol
 5. [ ] Lower the `long_function` ceiling by what each removes
 
 ## Progress
+
+**Step 2, 2026-09-29.** `./qa/bin/functional cli` drives the single client mode only, and no
+test ran the multi client one, so `tests/unit/test_unixsocket_loop.py` pins both first: 10
+tests running the helper as a subprocess, with its stdin and stdout as the daemon's end and a
+real Unix socket for the clients. Then nine steps, each followed by ruff, mypy, the pin tests,
+the other unixsocket tests and `functional cli`: `forget` (three copies of the buffer
+clean-up), `_turn_away` (the two identical refusals), the buffers onto `self` with `_grow`,
+`_consume` and `_forget` as methods, `_enable_ack`, the readers and writers as methods,
+`_reading_list`, `_accept` with `_accept_multi` and `_accept_single`, `_read_multi` and
+`_read_single`, and the write side as `_route_daemon_output`, `_flush_client_queues`,
+`_forward_client_commands`, `_write_single` and the `_forward_lines` they share. Unit suite
+11414 passed. `long_function` 66 → 65.
+
+Pinning found two defects, left as they are because a split changes no behaviour:
+
+- single client mode stops polling the listening socket while a client is connected, so the
+  "another CLI client is already connected" refusal (`_accept_single`) never runs: a second
+  CLI hangs, unanswered, until the first leaves.
+  `test_a_second_client_waits_for_the_first_to_leave` pins what it does today.
+- multi client mode never sets `ClientConnection.uuid`, so `_disconnect_client` never tells
+  the daemon `bye <uuid>`. `test_a_client_leaving_frees_its_place_and_says_nothing` pins it.
 
 **Step 1, 2026-09-29.** Coverage of `./qa/bin/test_api_encode --self-check`, the 411 vectors
 which decode through this function, showed it never ran the End-of-RIB forms, RTC, SR-Policy
@@ -92,4 +113,4 @@ Sign-off on the split of each function before it starts.
 
 ## Resume Point
 
-Step 2, `unixsocket.py` `loop`, after sign-off of its split.
+Step 3, `_get_completions`, after sign-off of its split. The two unixsocket defects above wait on Thomas: fix them, each with the test which fails without it, or leave them.

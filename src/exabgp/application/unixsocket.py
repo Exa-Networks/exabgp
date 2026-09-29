@@ -282,6 +282,16 @@ class Control:
         self.client_socket: socket.socket | None = None
         self.client_fd: int | None = None
 
+        # The daemon's end: its commands go out on stdout, its answers come in on stdin
+        self._stdin = 0
+        self._stdout = 1
+
+        # What loop() reads from each descriptor, where it forwards it, and what it holds
+        self._read: dict[int, Callable[[int], bytes]] = {}
+        self._write: dict[int, Callable[[bytes], int] | None] = {}
+        self._backlog: dict[int, Backlog] = {}
+        self._store: dict[int, bytes] = {}
+
     def init(self) -> bool:
         """Initialize socket server."""
         # Remove stale socket file if it exists
@@ -425,6 +435,23 @@ class Control:
         self.cleanup()
         sys.exit(0)
 
+    @staticmethod
+    def _turn_away(new_socket: socket.socket, message: bytes) -> None:
+        """Tell a client we cannot serve why, then close it."""
+        try:
+            new_socket.setblocking(True)
+            new_socket.sendall(message)
+            # A client which has already hung up cannot be half closed, and the close below
+            # is all we wanted from it.
+            with contextlib.suppress(OSError):
+                new_socket.shutdown(socket.SHUT_WR)
+            new_socket.close()
+        except OSError:
+            # The rejection could not be delivered, so dropping the connection has to say it
+            # instead.
+            with contextlib.suppress(OSError):
+                new_socket.close()
+
     def read_on(self, reading: list[int | None]) -> list[int]:
         """Poll file descriptors for readable data."""
         sleep_time = 1000  # 1 second timeout
@@ -449,21 +476,47 @@ class Control:
                     sys.exit(1)
         return ready
 
-    def loop(self) -> None:
-        """Main event loop."""
-        standard_in = sys.stdin.fileno()
-        standard_out = sys.stdout.fileno()
+    def _grow(self, source: int, chunk: bytes) -> None:
+        """store only grows here, so the cap is only checked here.
 
-        # Enable ACK for this CLI control process (v6 API format)
+        It used to be checked in the first branch of _consume() alone, and the three
+        drains below appended to store without it.
+        """
+        self._store[source] += chunk
+        if command_too_large(self._store[source]):
+            sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
+            sys.stderr.flush()
+            sys.exit(1)
+
+    def _forget(self, fd: int) -> None:
+        """Drop the buffers of a client which has gone."""
+        self._read.pop(fd, None)
+        self._write.pop(fd, None)
+        self._backlog.pop(fd, None)
+        self._store.pop(fd, None)
+
+    def _consume(self, source: int) -> None:
+        if not self._backlog[source] and b'\n' not in self._store[source]:
+            self._grow(source, self._read[source](1024))
+        else:
+            self._backlog[source].append(self._read[source](1024))
+            # Memory limit check, on the bytes queued and not on the number of sources
+            if self._backlog[source].nbytes + len(self._store[source]) > MAX_BACKLOG_SIZE:
+                sys.stderr.write('using too much memory - exiting\n')
+                sys.stderr.flush()
+                sys.exit(1)
+
+    def _enable_ack(self) -> None:
+        """Enable ACK for this CLI control process (v6 API format)."""
         try:
-            os.write(standard_out, b'session ack enable\n')
+            os.write(self._stdout, b'session ack enable\n')
             # Read and discard the 'done' response
             poller = select.poll()
-            poller.register(standard_in, select.POLLIN)
+            poller.register(self._stdin, select.POLLIN)
             if poller.poll(1000):
                 response = b''
                 while b'\n' not in response:
-                    chunk = os.read(standard_in, 1024)
+                    chunk = os.read(self._stdin, 1024)
                     if not chunk:
                         break
                     response += chunk
@@ -473,98 +526,262 @@ class Control:
             sys.stderr.write(f'cannot enable API acknowledgements: {exc}\n')
             sys.stderr.flush()
 
-        def std_reader(number: int) -> bytes:
-            try:
-                return os.read(standard_in, number)
-            except OSError as exc:
-                if exc.errno in error.block:
-                    return b''
-                sys.exit(1)
+    def _std_reader(self, number: int) -> bytes:
+        try:
+            return os.read(self._stdin, number)
+        except OSError as exc:
+            if exc.errno in error.block:
+                return b''
+            sys.exit(1)
 
-        def std_writer(line: bytes) -> int:
-            try:
-                return os.write(standard_out, line)
-            except OSError as exc:
-                if exc.errno in error.block:
-                    return 0
-                sys.exit(1)
+    def _std_writer(self, line: bytes) -> int:
+        try:
+            return os.write(self._stdout, line)
+        except OSError as exc:
+            if exc.errno in error.block:
+                return 0
+            sys.exit(1)
 
-        def socket_reader(number: int) -> bytes:
-            if not self.client_socket:
+    def _socket_reader(self, number: int) -> bytes:
+        if not self.client_socket:
+            return b''
+        try:
+            data = self.client_socket.recv(number)
+            if not data:
+                # Empty read means client closed connection (EOF)
+                self.cleanup_client()
+            return data
+        except OSError as exc:
+            if exc.errno in error.block:
+                return b''
+            # Client disconnected with error
+            self.cleanup_client()
+            return b''
+
+    def _socket_writer(self, line: bytes) -> int:
+        if not self.client_socket:
+            return 0
+        try:
+            return self.client_socket.send(line)
+        except OSError as exc:
+            if exc.errno in error.block:
+                return 0
+            # Client disconnected
+            self.cleanup_client()
+            return 0
+
+    def _client_reader(self, client_fd: int) -> Callable[[int], bytes]:
+        """What reads one client's commands in multi client mode."""
+
+        def reader(number: int) -> bytes:
+            if client_fd not in self.clients:
                 return b''
             try:
-                data = self.client_socket.recv(number)
+                data = self.clients[client_fd].socket.recv(number)
                 if not data:
-                    # Empty read means client closed connection (EOF)
-                    self.cleanup_client()
+                    # EOF - client closed
+                    self._disconnect_client(client_fd, self._stdout)
                 return data
             except OSError as exc:
                 if exc.errno in error.block:
                     return b''
-                # Client disconnected with error
-                self.cleanup_client()
+                self._disconnect_client(client_fd, self._stdout)
                 return b''
 
-        def socket_writer(line: bytes) -> int:
-            if not self.client_socket:
-                return 0
+        return reader
+
+    def _client_writer(self, client_fd: int) -> Callable[[bytes], int]:
+        """What forwards one client's commands to the daemon, and marks it as the one to answer."""
+
+        def writer(line: bytes) -> int:
+            # Fix 2: Use thread-safe setter for active client
+            self.response_router.set_active_client(client_fd)
             try:
-                return self.client_socket.send(line)
+                return os.write(self._stdout, line)
             except OSError as exc:
                 if exc.errno in error.block:
                     return 0
-                # Client disconnected
-                self.cleanup_client()
-                return 0
-
-        # File descriptors to monitor
-        server_fd = self.server_socket.fileno() if self.server_socket else None
-        reading: list[int | None] = [standard_in, server_fd]
-
-        # Data structures for buffering
-        read: dict[int, Callable[[int], bytes]] = {standard_in: std_reader}
-        write: dict[int, Callable[[bytes], int] | None] = {
-            standard_in: None
-        }  # Will be set to socket_writer when client connects
-        backlog: dict[int, Backlog] = {standard_in: Backlog()}
-        store: dict[int, bytes] = {standard_in: b''}
-
-        def grow(source: int, chunk: bytes) -> None:
-            """store only grows here, so the cap is only checked here.
-
-            It used to be checked in the first branch of consume() alone, and the three
-            drains below appended to store without it.
-            """
-            store[source] += chunk
-            if command_too_large(store[source]):
-                sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
-                sys.stderr.flush()
                 sys.exit(1)
 
-        def consume(source: int) -> None:
-            if not backlog[source] and b'\n' not in store[source]:
-                grow(source, read[source](1024))
+        return writer
+
+    def _reading_list(self) -> list[int | None] | None:
+        """The descriptors to poll in this state, or None once the server socket is closed."""
+        if self.multi_client_mode:
+            # Multi-client mode: monitor all client FDs
+            reading: list[int | None] = [self._stdin, *self.clients.keys()]
+            if self.server_socket:
+                reading.append(self.server_socket.fileno())
+            return reading
+        if self.client_fd:
+            # Legacy single-client mode
+            return [self._stdin, self.client_fd]
+        if self.server_socket:
+            return [self._stdin, self.server_socket.fileno()]
+        return None
+
+    def _accept(self, server_socket: socket.socket) -> bool:
+        """Take the connection waiting on the server socket, False if that failed."""
+        try:
+            new_socket, _ = server_socket.accept()
+            if self.multi_client_mode:
+                self._accept_multi(new_socket)
             else:
-                backlog[source].append(read[source](1024))
-                # Memory limit check, on the bytes queued and not on the number of sources
-                if backlog[source].nbytes + len(store[source]) > MAX_BACKLOG_SIZE:
-                    sys.stderr.write('using too much memory - exiting\n')
-                    sys.stderr.flush()
-                    sys.exit(1)
+                self._accept_single(new_socket)
+        except OSError:
+            return False
+        return True
+
+    def _accept_multi(self, new_socket: socket.socket) -> None:
+        if len(self.clients) >= self.max_clients:
+            # Max clients reached - reject
+            self._turn_away(new_socket, b'error: maximum concurrent clients reached\ndone\n')
+            return
+
+        new_socket.setblocking(False)
+        new_fd = new_socket.fileno()
+        self.clients[new_fd] = ClientConnection(socket=new_socket, fd=new_fd)
+
+        # Initialize data structures for client
+        self._read[new_fd] = self._client_reader(new_fd)
+        self._write[new_fd] = self._client_writer(new_fd)
+        self._backlog[new_fd] = Backlog()
+        self._store[new_fd] = b''
+
+    def _accept_single(self, new_socket: socket.socket) -> None:
+        if self.client_socket:
+            # Already have a client - reject immediately
+            self._turn_away(new_socket, b'error: another CLI client is already connected\ndone\n')
+            return
+
+        self.client_socket = new_socket
+        self.client_socket.setblocking(False)
+        self.client_fd = self.client_socket.fileno()
+
+        # Initialize data structures for client
+        self._read[self.client_fd] = self._socket_reader
+        self._write[self.client_fd] = self._std_writer  # Forward socket commands to ExaBGP stdout
+        self._backlog[self.client_fd] = Backlog()
+        self._store[self.client_fd] = b''
+
+        # Update write destinations
+        self._write[self._stdin] = self._socket_writer  # Forward ExaBGP responses to socket
+
+    def _read_multi(self, ready: list[int]) -> None:
+        for client_fd in list(self.clients.keys()):
+            if client_fd in ready:
+                self._consume(client_fd)
+                # Check if client disconnected
+                if client_fd not in self.clients:
+                    # Cleanup happened in socket reader
+                    self._forget(client_fd)
+
+    def _read_single(self, ready: list[int]) -> bool:
+        """Read the client's commands, True if it has left."""
+        if not (self.client_fd and self.client_fd in ready):
+            return False
+        self._consume(self.client_fd)
+        # Check if client disconnected (empty read)
+        if not (self.client_fd and not self.client_socket):
+            return False
+
+        # Cleanup happened in socket_reader/socket_writer
+        # Notify reactor that client disconnected (clears active_client_uuid)
+        try:
+            os.write(self._stdout, b'bye\n')
+        except OSError as exc:
+            # The reactor keeps the disconnected client as the active one until it is told
+            # otherwise, and answers the next client's commands to a socket which is gone.
+            sys.stderr.write(f'cannot tell exabgp that the client is gone: {exc}\n')
+            sys.stderr.flush()
+
+        self._forget(self.client_fd)
+        self._write[self._stdin] = None
+        self.client_fd = None  # Clear fd after cleanup
+        return True
+
+    def _forward_lines(self, source: int, writer: Callable[[bytes], int]) -> None:
+        """Hand each complete line held for source to writer, until one is not taken."""
+        while b'\n' in self._store[source]:
+            line, rest = self._store[source].split(b'\n', 1)
+            sent = writer(line + b'\n')
+            if sent:
+                self._store[source] = rest
+                continue
+            break
+
+        if self._backlog.get(source):
+            self._grow(source, self._backlog[source].popleft())
+
+    def _route_daemon_output(self) -> None:
+        """Multi client: queue each line from the daemon for the client(s) it is for."""
+        while b'\n' in self._store[self._stdin]:
+            line, rest = self._store[self._stdin].split(b'\n', 1)
+            self.response_router.route_response(line + b'\n', self.clients)
+            self._store[self._stdin] = rest
+
+        if self._backlog[self._stdin]:
+            self._grow(self._stdin, self._backlog[self._stdin].popleft())
+
+    def _flush_client_queues(self) -> None:
+        for client_fd in list(self.clients.keys()):
+            if client_fd not in self.clients:
+                continue
+            client = self.clients[client_fd]
+            while client.write_queue:
+                line = client.write_queue[0]
+                try:
+                    sent = client.socket.send(line)
+                except OSError as exc:
+                    if exc.errno not in error.block:
+                        # Client disconnected
+                        self._disconnect_client(client_fd, self._stdout)
+                        self._forget(client_fd)
+                    break  # a blocked socket is tried again next time round
+                if sent != len(line):
+                    # Partial send - update buffer
+                    client.write_queue[0] = line[sent:]
+                    break
+                client.write_queue.popleft()
+
+    def _forward_client_commands(self) -> None:
+        """Multi client: pass each client's complete commands to the daemon."""
+        for client_fd in list(self.clients.keys()):
+            if client_fd not in self.clients or client_fd not in self._store:
+                continue
+            writer = self._write.get(client_fd)
+            if writer:
+                self._forward_lines(client_fd, writer)
+
+    def _write_single(self) -> None:
+        """Single client: forward both ways, or drop what the daemon says with no one to hear it."""
+        for source in list(self._store.keys()):
+            if source not in self._store:
+                continue
+            writer = self._write.get(source)
+            if not writer:
+                # No client connected, discard data
+                self._store[source] = b''
+                self._backlog[source].clear()
+                continue
+            self._forward_lines(source, writer)
+
+    def loop(self) -> None:
+        """Main event loop."""
+        standard_in = self._stdin = sys.stdin.fileno()
+        self._stdout = sys.stdout.fileno()
+
+        self._enable_ack()
+
+        # Data structures for buffering
+        self._read = {standard_in: self._std_reader}
+        self._write = {standard_in: None}  # Will be set to socket_writer when client connects
+        self._backlog = {standard_in: Backlog()}
+        self._store = {standard_in: b''}
 
         while True:
-            # Update reading list based on connection state
-            if self.multi_client_mode:
-                # Multi-client mode: monitor all client FDs
-                reading = [standard_in] + list(self.clients.keys())
-                if self.server_socket:
-                    reading.append(self.server_socket.fileno())
-            elif self.client_fd:
-                # Legacy single-client mode
-                reading = [standard_in, self.client_fd]
-            elif self.server_socket:
-                reading = [standard_in, self.server_socket.fileno()]
-            else:
+            reading = self._reading_list()
+            if reading is None:
                 # Server socket closed during cleanup - exit gracefully
                 break
 
@@ -575,245 +792,27 @@ class Control:
                 continue
 
             # Accept new client connection
-            if self.server_socket and self.server_socket.fileno() in ready:
-                try:
-                    new_socket, _ = self.server_socket.accept()
-
-                    if self.multi_client_mode:
-                        # Multi-client mode
-                        if len(self.clients) >= self.max_clients:
-                            # Max clients reached - reject
-                            try:
-                                new_socket.setblocking(True)
-                                new_socket.sendall(b'error: maximum concurrent clients reached\ndone\n')
-                                # A client which has already hung up cannot be half closed, and
-                                # the close below is all we wanted from it.
-                                with contextlib.suppress(OSError):
-                                    new_socket.shutdown(socket.SHUT_WR)
-                                new_socket.close()
-                            except OSError:
-                                # The rejection could not be delivered, so dropping the
-                                # connection has to say it instead.
-                                with contextlib.suppress(OSError):
-                                    new_socket.close()
-                        else:
-                            # Accept new client
-                            new_socket.setblocking(False)
-                            new_fd = new_socket.fileno()
-
-                            # Create client connection
-                            client = ClientConnection(socket=new_socket, fd=new_fd)
-                            self.clients[new_fd] = client
-
-                            # Create per-client socket reader/writer with client-specific fd
-                            def make_socket_reader(client_fd: int) -> Callable[[int], bytes]:
-                                def reader(number: int) -> bytes:
-                                    if client_fd not in self.clients:
-                                        return b''
-                                    try:
-                                        data = self.clients[client_fd].socket.recv(number)
-                                        if not data:
-                                            # EOF - client closed
-                                            self._disconnect_client(client_fd, standard_out)
-                                        return data
-                                    except OSError as exc:
-                                        if exc.errno in error.block:
-                                            return b''
-                                        self._disconnect_client(client_fd, standard_out)
-                                        return b''
-
-                                return reader
-
-                            def make_std_writer_for_client(client_fd: int) -> Callable[[bytes], int]:
-                                def writer(line: bytes) -> int:
-                                    # Fix 2: Use thread-safe setter for active client
-                                    self.response_router.set_active_client(client_fd)
-                                    try:
-                                        return os.write(standard_out, line)
-                                    except OSError as exc:
-                                        if exc.errno in error.block:
-                                            return 0
-                                        sys.exit(1)
-
-                                return writer
-
-                            # Initialize data structures for client
-                            read[new_fd] = make_socket_reader(new_fd)
-                            write[new_fd] = make_std_writer_for_client(new_fd)
-                            backlog[new_fd] = Backlog()
-                            store[new_fd] = b''
-                    else:
-                        # Single-client mode (legacy)
-                        if self.client_socket:
-                            # Already have a client - reject immediately
-                            try:
-                                new_socket.setblocking(True)
-                                new_socket.sendall(b'error: another CLI client is already connected\ndone\n')
-                                # A client which has already hung up cannot be half closed, and
-                                # the close below is all we wanted from it.
-                                with contextlib.suppress(OSError):
-                                    new_socket.shutdown(socket.SHUT_WR)
-                                new_socket.close()
-                            except OSError:
-                                # The rejection could not be delivered, so dropping the
-                                # connection has to say it instead.
-                                with contextlib.suppress(OSError):
-                                    new_socket.close()
-                        else:
-                            # No client - accept this connection
-                            self.client_socket = new_socket
-                            self.client_socket.setblocking(False)
-                            self.client_fd = self.client_socket.fileno()
-
-                            # Initialize data structures for client
-                            read[self.client_fd] = socket_reader
-                            write[self.client_fd] = std_writer  # Forward socket commands to ExaBGP stdout
-                            backlog[self.client_fd] = Backlog()
-                            store[self.client_fd] = b''
-
-                            # Update write destinations
-                            write[standard_in] = socket_writer  # Forward ExaBGP responses to socket
-                except OSError:
-                    continue
+            if self.server_socket and self.server_socket.fileno() in ready and not self._accept(self.server_socket):
+                continue
 
             # Read from client sockets
             if self.multi_client_mode:
-                # Multi-client mode: check all clients
-                for client_fd in list(self.clients.keys()):
-                    if client_fd in ready:
-                        consume(client_fd)
-                        # Check if client disconnected
-                        if client_fd not in self.clients:
-                            # Cleanup happened in socket reader
-                            # Remove from data structures
-                            if client_fd in read:
-                                del read[client_fd]
-                            if client_fd in write:
-                                del write[client_fd]
-                            if client_fd in backlog:
-                                del backlog[client_fd]
-                            if client_fd in store:
-                                del store[client_fd]
-            else:
-                # Legacy single-client mode
-                if self.client_fd and self.client_fd in ready:
-                    consume(self.client_fd)
-                    # Check if client disconnected (empty read)
-                    if self.client_fd and not self.client_socket:
-                        # Cleanup happened in socket_reader/socket_writer
-                        # Notify reactor that client disconnected (clears active_client_uuid)
-                        try:
-                            os.write(standard_out, b'bye\n')
-                        except OSError as exc:
-                            # The reactor keeps the disconnected client as the active one until
-                            # it is told otherwise, and answers the next client's commands to a
-                            # socket which is gone.
-                            sys.stderr.write(f'cannot tell exabgp that the client is gone: {exc}\n')
-                            sys.stderr.flush()
-
-                        # Remove client from data structures
-                        if self.client_fd in read:
-                            del read[self.client_fd]
-                        if self.client_fd in write:
-                            del write[self.client_fd]
-                        if self.client_fd in backlog:
-                            del backlog[self.client_fd]
-                        if self.client_fd in store:
-                            del store[self.client_fd]
-                        write[standard_in] = None
-                        self.client_fd = None  # Clear fd after cleanup
-                        continue
+                self._read_multi(ready)
+            elif self._read_single(ready):
+                # the client left, and nothing is left to forward this time round
+                continue
 
             # Read from stdin (ExaBGP responses)
             if standard_in in ready:
-                consume(standard_in)
+                self._consume(standard_in)
 
             # Write pending data
             if self.multi_client_mode:
-                # Multi-client mode: route responses to appropriate clients
-                # Process stdin responses (from ExaBGP)
-                while b'\n' in store[standard_in]:
-                    line, rest = store[standard_in].split(b'\n', 1)
-                    # Route this response to appropriate client(s)
-                    self.response_router.route_response(line + b'\n', self.clients)
-                    store[standard_in] = rest
-
-                if backlog[standard_in]:
-                    grow(standard_in, backlog[standard_in].popleft())
-
-                # Flush client write queues
-                for client_fd in list(self.clients.keys()):
-                    if client_fd not in self.clients:
-                        continue
-                    client = self.clients[client_fd]
-                    while client.write_queue:
-                        line = client.write_queue[0]
-                        try:
-                            sent = client.socket.send(line)
-                            if sent == len(line):
-                                client.write_queue.popleft()
-                            else:
-                                # Partial send - update buffer
-                                client.write_queue[0] = line[sent:]
-                                break
-                        except OSError as exc:
-                            if exc.errno in error.block:
-                                break  # Would block, try later
-                            else:
-                                # Client disconnected
-                                self._disconnect_client(client_fd, standard_out)
-                                # Remove from data structures
-                                if client_fd in read:
-                                    del read[client_fd]
-                                if client_fd in write:
-                                    del write[client_fd]
-                                if client_fd in backlog:
-                                    del backlog[client_fd]
-                                if client_fd in store:
-                                    del store[client_fd]
-                                break
-
-                # Process client commands (write to stdout)
-                for client_fd in list(self.clients.keys()):
-                    if client_fd not in self.clients or client_fd not in store:
-                        continue
-                    writer = write.get(client_fd)
-                    if not writer:
-                        continue
-
-                    while b'\n' in store[client_fd]:
-                        line, rest = store[client_fd].split(b'\n', 1)
-                        sent = writer(line + b'\n')
-                        if sent:
-                            store[client_fd] = rest
-                            continue
-                        break
-
-                    if backlog.get(client_fd):
-                        grow(client_fd, backlog[client_fd].popleft())
+                self._route_daemon_output()
+                self._flush_client_queues()
+                self._forward_client_commands()
             else:
-                # Legacy single-client mode
-                sources = list(store.keys())
-                for source in sources:
-                    if source not in store:
-                        continue
-                    writer = write.get(source)
-                    if not writer:
-                        # No client connected, discard data
-                        store[source] = b''
-                        backlog[source].clear()
-                        continue
-
-                    while b'\n' in store[source]:
-                        line, rest = store[source].split(b'\n', 1)
-                        sent = writer(line + b'\n')
-                        if sent:
-                            store[source] = rest
-                            continue
-                        break
-
-                    if backlog[source]:
-                        grow(source, backlog[source].popleft())
+                self._write_single()
 
     def run(self) -> None:
         """Run the socket server."""
