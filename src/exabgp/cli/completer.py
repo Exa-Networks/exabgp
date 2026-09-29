@@ -40,6 +40,60 @@ class CompletionItem:
     example: str | None = None  # Example value (e.g., '192.0.2.1')
 
 
+# The first word: API commands ('session' is the CLI's own protocol with the daemon, and not
+# offered), display format prefixes, CLI settings and the ways out
+_API_COMMANDS = {
+    'daemon': 'Daemon control (shutdown, reload, restart, status)',
+    'peer': 'Peer operations (announce, withdraw, show, teardown)',
+    'rib': 'RIB operations (show, flush, clear)',
+    'system': 'System commands (help, version, crash, queue-status, api)',
+}
+_DISPLAY_FORMATS = {
+    'json': 'Display output as JSON',
+    'text': 'Display output as text tables',
+}
+_CLI_SETTINGS = {
+    'history': 'Show command history',
+    'set': 'Set CLI options (display, sync)',
+}
+_EXIT_COMMANDS = {
+    'exit': 'Exit the CLI',
+    'quit': 'Exit the CLI',
+}
+
+# v4 action-first commands. They exist in the registry for backward compatibility but are not
+# offered by the v6-only CLI, which has an equivalent for each:
+#   show → peer show, rib show
+#   announce/withdraw → peer * announce/withdraw
+#   clear/flush → rib clear/flush
+#   teardown → peer * teardown
+#   shutdown/reload/restart → daemon shutdown/reload/restart
+#   reset → session reset
+#   help/version → system help/version
+#   enable-ack/disable-ack/silence-ack → session ack enable/disable/silence
+_V4_BLOCKED_COMMANDS = frozenset(
+    {
+        'show',
+        'announce',
+        'withdraw',
+        'clear',
+        'flush',
+        'teardown',
+        'shutdown',
+        'reload',
+        'restart',
+        'reset',
+        'help',
+        'version',
+        'crash',
+        'enable-ack',
+        'disable-ack',
+        'silence-ack',
+        '#',
+    }
+)
+
+
 class CommandCompleter:
     """Tab completion for ExaBGP commands using readline with dynamic command discovery"""
 
@@ -520,6 +574,62 @@ class CommandCompleter:
 
         return []
 
+    def _first_word_completions(self, text: str) -> list[str]:
+        """The first word, offered in groups with a blank line between them."""
+        # the order the candidates are filtered in, which fuzzy matching may rank by
+        candidates = list(_API_COMMANDS) + list(_DISPLAY_FORMATS) + list(_CLI_SETTINGS) + list(_EXIT_COMMANDS)
+        matches = self._filter_candidates(candidates, text)
+
+        # If no matches, try multi-character abbreviation expansion
+        # E.g., 'dst' → 'daemon status', 'ssh' → 'session shutdown'
+        if not matches and len(text) >= 2:
+            matches = self._try_multi_char_abbreviation(text)
+            if matches:
+                return matches
+
+        # the order they are displayed in
+        groups = (
+            (_API_COMMANDS, 'command'),
+            (_CLI_SETTINGS, 'command'),
+            (_DISPLAY_FORMATS, 'option'),
+            (_EXIT_COMMANDS, 'command'),
+        )
+        ordered_matches: list[str] = []
+        for described, item_type in groups:
+            group = sorted(m for m in matches if m in described)
+            if group and ordered_matches:
+                ordered_matches.append('')  # Blank line separator
+            for m in group:
+                self._add_completion_metadata(m, described[m], item_type)
+                ordered_matches.append(m)
+        return ordered_matches
+
+    def _display_prefix_completions(self, text: str) -> list[str]:
+        """Just "json " or "text ": every base command, with fuzzy matching."""
+        matches = self._filter_candidates(self.base_commands, text)
+        # v6 API top-level command descriptions
+        v6_descriptions = {
+            'peer': 'Peer operations (announce, withdraw, show, teardown)',
+            'daemon': 'Daemon control (shutdown, reload, restart, status)',
+            'session': 'Session management (ack, sync, ping, reset, bye)',
+            'system': 'System commands (help, version, crash, queue-status, api)',
+            'rib': 'RIB operations (show, flush, clear)',
+        }
+        for match in matches:
+            if match in v6_descriptions:
+                self._add_completion_metadata(match, v6_descriptions[match], 'command')
+            else:
+                desc = self.registry.get_command_description(match)
+                self._add_completion_metadata(match, desc, 'command')
+        return matches
+
+    def _offer(self, described: dict[str, str], text: str, item_type: str) -> list[str]:
+        """Filter the candidates by what was typed, and describe each one offered."""
+        matches = self._filter_candidates(list(described), text)
+        for match in matches:
+            self._add_completion_metadata(match, described[match], item_type)
+        return matches
+
     def _get_completions(self, tokens: list[str], text: str) -> list[str]:
         """
         Get list of completions based on current context
@@ -536,317 +646,349 @@ class CommandCompleter:
 
         # If no tokens yet, complete base commands + display format prefix
         if not tokens:
-            # Define command groups with descriptions
-            # Group 1: API commands (sorted alphabetically)
-            # Note: 'session' is internal CLI-daemon protocol, not exposed to users
-            api_commands = {
-                'daemon': 'Daemon control (shutdown, reload, restart, status)',
-                'peer': 'Peer operations (announce, withdraw, show, teardown)',
-                'rib': 'RIB operations (show, flush, clear)',
-                'system': 'System commands (help, version, crash, queue-status, api)',
-            }
-            # Group 2: Display format prefixes
-            display_formats = {
-                'json': 'Display output as JSON',
-                'text': 'Display output as text tables',
-            }
-            # Group 3: CLI settings
-            cli_settings = {
-                'history': 'Show command history',
-                'set': 'Set CLI options (display, sync)',
-            }
-            # Group 4: Exit commands
-            exit_commands = {
-                'exit': 'Exit the CLI',
-                'quit': 'Exit the CLI',
-            }
-
-            # Collect all candidates
-            all_candidates = (
-                list(api_commands.keys())
-                + list(display_formats.keys())
-                + list(cli_settings.keys())
-                + list(exit_commands.keys())
-            )
-
-            # Use fuzzy filtering
-            matches = self._filter_candidates(all_candidates, text)
-
-            # If no matches, try multi-character abbreviation expansion
-            # E.g., 'dst' → 'daemon status', 'ssh' → 'session shutdown'
-            if not matches and len(text) >= 2:
-                matches = self._try_multi_char_abbreviation(text)
-                if matches:
-                    return matches
-
-            # Sort matches into groups for display
-            api_matches = sorted([m for m in matches if m in api_commands])
-            settings_matches = sorted([m for m in matches if m in cli_settings])
-            format_matches = sorted([m for m in matches if m in display_formats])
-            exit_matches = sorted([m for m in matches if m in exit_commands])
-
-            # Build ordered result with group markers
-            ordered_matches = []
-            for m in api_matches:
-                self._add_completion_metadata(m, api_commands[m], 'command')
-                ordered_matches.append(m)
-            if settings_matches and api_matches:
-                ordered_matches.append('')  # Blank line separator
-            for m in settings_matches:
-                self._add_completion_metadata(m, cli_settings[m], 'command')
-                ordered_matches.append(m)
-            if format_matches and (api_matches or settings_matches):
-                ordered_matches.append('')  # Blank line separator
-            for m in format_matches:
-                self._add_completion_metadata(m, display_formats[m], 'option')
-                ordered_matches.append(m)
-            if exit_matches and (api_matches or settings_matches or format_matches):
-                ordered_matches.append('')  # Blank line separator
-            for m in exit_matches:
-                self._add_completion_metadata(m, exit_commands[m], 'command')
-                ordered_matches.append(m)
-
-            return ordered_matches
+            return self._first_word_completions(text)
 
         # Check if first token is display format prefix - if so, strip it for completion
         # Example: "json show" → complete as if tokens = ["show"]
         if tokens and tokens[0].lower() in ('json', 'text'):
             # Strip display prefix and complete normally
             if len(tokens) == 1:
-                # Just "json " or "text " - suggest all base commands with fuzzy matching
-                matches = self._filter_candidates(self.base_commands, text)
-                # v6 API top-level command descriptions
-                v6_descriptions = {
-                    'peer': 'Peer operations (announce, withdraw, show, teardown)',
-                    'daemon': 'Daemon control (shutdown, reload, restart, status)',
-                    'session': 'Session management (ack, sync, ping, reset, bye)',
-                    'system': 'System commands (help, version, crash, queue-status, api)',
-                    'rib': 'RIB operations (show, flush, clear)',
-                }
-                for match in matches:
-                    if match in v6_descriptions:
-                        self._add_completion_metadata(match, v6_descriptions[match], 'command')
-                    else:
-                        desc = self.registry.get_command_description(match)
-                        self._add_completion_metadata(match, desc, 'command')
-                return matches
-            else:
-                # "json show ..." - strip prefix and continue with rest
-                tokens = tokens[1:]
+                return self._display_prefix_completions(text)
+            # "json show ..." - strip prefix and continue with rest
+            tokens = tokens[1:]
 
         # Expand shortcuts in tokens using CommandShortcuts
         expanded_tokens = CommandShortcuts.expand_token_list(tokens.copy())
 
-        # Handle "peer <ip|*> <command>" prefix - v6 API syntax
-        if len(expanded_tokens) >= 2 and expanded_tokens[0] == 'peer':
-            selector = expanded_tokens[1]
-            # Check for IP address or wildcard selector
-            if self._is_ip_address(selector) or selector == '*':
-                # For "announce" and "withdraw", keep peer prefix for v6 API
-                if len(expanded_tokens) >= 3 and expanded_tokens[2] in ('announce', 'withdraw'):
-                    # "peer * announce route ..." stays as-is
-                    pass
+        found = self._noun_first_completions(expanded_tokens, text)
+        if found is not None:
+            return found
 
+        found = self._peer_completions(expanded_tokens, text)
+        if found is not None:
+            return found
+
+        found = self._route_context_completions(expanded_tokens, text)
+        if found is not None:
+            return found
+
+        # Check if completing peer-targeted command
+        if self._is_peer_command(expanded_tokens):
+            return self._complete_peer_command(expanded_tokens, text)
+
+        found = self._set_completions(expanded_tokens, text)
+        if found is not None:
+            return found
+
+        if len(expanded_tokens) >= 2:
+            # Special case: 'show neighbor' can filter by IP even though neighbor=False
+            if expanded_tokens[0] == 'show' and expanded_tokens[1] == 'neighbor':
+                return self._show_neighbor_completions(expanded_tokens, text)
+            found = self._trailing_keyword_completions(expanded_tokens, text)
+            if found is not None:
+                return found
+
+        # v6 API: Block v4 action-first commands from leaking through command tree
+        if expanded_tokens and expanded_tokens[0] in _V4_BLOCKED_COMMANDS:
+            return []  # Block v4 commands - use v6 equivalents
+
+        # Navigate command tree (only for commands not handled above)
+        return self._tree_completions(expanded_tokens, text)
+
+    def _tree_completions(self, tokens: list[str], text: str) -> list[str]:
+        """Walk the command tree along the tokens, and offer what follows."""
+        current_level: Any = self.command_tree
+
+        for i, token in enumerate(tokens):
+            if isinstance(current_level, dict):
+                if token in current_level:
+                    current_level = current_level[token]
+                elif '__options__' in current_level:
+                    # At a command with options
+                    options = current_level['__options__']
+                    if isinstance(options, list):
+                        return sorted(self._tree_options(options, text))
+                else:
+                    return self._tree_partial_token(tokens, i, current_level)
+            elif isinstance(current_level, list):
+                # At a leaf node (list of options)
+                return sorted(self._tree_options(current_level, text))
+
+        return self._tree_level_completions(tokens, text, current_level)
+
+    def _tree_options(self, options: list[str], text: str) -> list[str]:
+        """The options which start with what was typed, each described, in their order."""
+        matches = []
+        for opt in options:
+            if opt.startswith(text):
+                matches.append(opt)
+                desc = self.registry.get_option_description(opt)
+                self._add_completion_metadata(opt, desc, 'option')
+        return matches
+
+    def _tree_partial_token(self, tokens: list[str], i: int, level: dict[str, Any]) -> list[str]:
+        """tokens[i] is not a word at this level: the words it starts, if it is the last token."""
+        # Token not in tree, try partial match
+        matches = [cmd for cmd in level.keys() if cmd.startswith(tokens[i]) and cmd != '__options__']
+
+        # Filter out legacy hyphenated commands
+        if 'announce' in tokens[:i]:
+            matches = [m for m in matches if m != 'route-refresh']
+
+        # Filter out 'neighbor' and 'adj-rib' after 'show' - use new syntax instead
+        if i == 1 and tokens[0] == 'show':
+            matches = [m for m in matches if m not in ('neighbor', 'adj-rib')]
+
+        if matches and i == len(tokens) - 1:
+            # Last token being completed - these are subcommands
+            # Build full command path for description lookup
+            cmd_prefix = ' '.join(tokens[:i]) + ' ' if i > 0 else ''
+            for match in matches:
+                full_cmd = cmd_prefix + match
+                desc = self.registry.get_command_description(full_cmd.strip())
+                self._add_completion_metadata(match, desc, 'command')
+            return sorted(matches)
+        return []
+
+    def _tree_level_completions(self, tokens: list[str], text: str, level: Any) -> list[str]:
+        """Every token was a word of the tree: what the level they lead to offers."""
+        # After navigating, see what's available at current level
+        if isinstance(level, dict):
+            matches = [cmd for cmd in level.keys() if cmd.startswith(text) and cmd != '__options__']
+
+            # Filter out legacy hyphenated commands (e.g., "route-refresh" when "route" exists)
+            # This keeps CLI clean and user-friendly
+            filtered_matches = []
+            for match in matches:
+                # Skip if this is a hyphenated command and we have "announce route" in context
+                if '-' in match and 'announce' in tokens:
+                    # Check if this is "route-refresh" - skip it
+                    if match == 'route-refresh':
+                        continue
+                # Filter out 'neighbor' and 'adj-rib' after 'show' - use new syntax instead
+                if match in ('neighbor', 'adj-rib') and len(tokens) == 1 and tokens[0] == 'show':
+                    continue
+                filtered_matches.append(match)
+            matches = filtered_matches
+
+            # Add metadata for commands with descriptions
+            # Build full command path for description lookup
+            cmd_prefix = ' '.join(tokens) + ' ' if tokens else ''
+            for match in matches:
+                full_cmd = (cmd_prefix + match).strip()
+                desc = self.registry.get_command_description(full_cmd)
+                self._add_completion_metadata(match, desc, 'command')
+
+            # Add options if available
+            if '__options__' in level:
+                options = level['__options__']
+                if isinstance(options, list):
+                    matches.extend(self._tree_options(options, text))
+
+            return sorted(matches)
+        elif isinstance(level, list):
+            return sorted(self._tree_options(level, text))
+
+        return []
+
+    def _noun_first_completions(self, tokens: list[str], text: str) -> list[str] | None:
+        """daemon, rib and system: their sub-commands, or None for any other command."""
         # Handle noun-first command completions
-        if len(expanded_tokens) >= 1:
-            first_token = expanded_tokens[0]
+        if len(tokens) >= 1:
+            first_token = tokens[0]
 
             # Daemon commands: daemon <shutdown|reload|restart|status>
             if first_token == 'daemon':
-                if len(expanded_tokens) == 1:
-                    candidates = ['shutdown', 'reload', 'restart', 'status']
-                    matches = self._filter_candidates(candidates, text)
-                    for match in matches:
-                        desc = {
+                if len(tokens) == 1:
+                    return self._offer(
+                        {
                             'shutdown': 'Shutdown ExaBGP daemon',
                             'reload': 'Reload configuration',
                             'restart': 'Restart daemon',
                             'status': 'Show daemon status',
-                        }.get(match, '')
-                        self._add_completion_metadata(match, desc, 'command')
-                    return matches
+                        },
+                        text,
+                        'command',
+                    )
 
             # Note: 'session' commands (ack, sync, reset, ping, bye) are internal
             # CLI-daemon protocol and not exposed in autocomplete
 
             # RIB commands: rib <show|flush|clear>
             elif first_token == 'rib':
-                if len(expanded_tokens) == 1:
-                    candidates = ['show', 'flush', 'clear']
-                    matches = self._filter_candidates(candidates, text)
-                    for match in matches:
-                        desc = {
-                            'show': 'Show RIB entries',
-                            'flush': 'Flush RIB entries',
-                            'clear': 'Clear RIB entries',
-                        }.get(match, '')
-                        self._add_completion_metadata(match, desc, 'command')
-                    return matches
-                elif len(expanded_tokens) == 2:
+                if len(tokens) == 1:
+                    return self._offer(
+                        {'show': 'Show RIB entries', 'flush': 'Flush RIB entries', 'clear': 'Clear RIB entries'},
+                        text,
+                        'command',
+                    )
+                elif len(tokens) == 2:
                     # rib show <in|out>
-                    if expanded_tokens[1] == 'show':
-                        candidates = ['in', 'out']
-                        matches = self._filter_candidates(candidates, text)
-                        for match in matches:
-                            desc = {'in': 'Adj-RIB-In (received)', 'out': 'Adj-RIB-Out (advertised)'}.get(match, '')
-                            self._add_completion_metadata(match, desc, 'option')
-                        return matches
+                    if tokens[1] == 'show':
+                        return self._offer(
+                            {'in': 'Adj-RIB-In (received)', 'out': 'Adj-RIB-Out (advertised)'}, text, 'option'
+                        )
                     # rib flush <out>
-                    elif expanded_tokens[1] == 'flush':
+                    elif tokens[1] == 'flush':
                         candidates = ['out']
                         matches = self._filter_candidates(candidates, text)
                         self._add_completion_metadata('out', 'Flush outbound RIB', 'option')
                         return matches
                     # rib clear <in|out>
-                    elif expanded_tokens[1] == 'clear':
-                        candidates = ['in', 'out']
-                        matches = self._filter_candidates(candidates, text)
-                        for match in matches:
-                            desc = {'in': 'Clear inbound RIB', 'out': 'Clear outbound RIB'}.get(match, '')
-                            self._add_completion_metadata(match, desc, 'option')
-                        return matches
+                    elif tokens[1] == 'clear':
+                        return self._offer({'in': 'Clear inbound RIB', 'out': 'Clear outbound RIB'}, text, 'option')
 
             # System commands: system <help|version|crash|queue-status|api>
             elif first_token == 'system':
-                if len(expanded_tokens) == 1:
-                    candidates = ['help', 'version', 'crash', 'queue-status', 'api']
-                    matches = self._filter_candidates(candidates, text)
-                    for match in matches:
-                        desc = {
+                if len(tokens) == 1:
+                    return self._offer(
+                        {
                             'help': 'Show available commands',
                             'version': 'Show ExaBGP version',
                             'crash': 'Crash daemon (debug only)',
                             'queue-status': 'Show write queue status',
                             'api': 'API version management',
-                        }.get(match, '')
-                        self._add_completion_metadata(match, desc, 'command')
-                    return matches
-                elif len(expanded_tokens) == 2:
+                        },
+                        text,
+                        'command',
+                    )
+                elif len(tokens) == 2:
                     # system api <version>
-                    if expanded_tokens[1] == 'api':
+                    if tokens[1] == 'api':
                         candidates = ['version']
                         matches = self._filter_candidates(candidates, text)
                         self._add_completion_metadata('version', 'Show/set API version', 'option')
                         return matches
+        return None
 
+    def _peer_completions(self, tokens: list[str], text: str) -> list[str] | None:
+        """peer list, peer <ip|*> and their actions, or None when this is not one of them."""
         # Handle "peer" completions - v6 API syntax
         # Supports:
         #   peer list - list all peers
         #   peer <ip> show [summary|extensive|configuration] - show peer info
         #   peer <ip|*> announce/withdraw/teardown - peer actions
-        if len(expanded_tokens) >= 1 and expanded_tokens[0] == 'peer':
-            if len(expanded_tokens) == 1:
-                # After "peer", suggest 'list', wildcard, or peer IPs
-                matches = []
+        if len(tokens) >= 1 and tokens[0] == 'peer':
+            if len(tokens) == 1:
+                return self._peer_first_completions(text)
+            if len(tokens) == 2:
+                return self._peer_selector_completions(tokens, text)
+            return self._peer_action_completions(tokens, text)
+        return None
 
-                # 'list' shows all peers
-                if 'list'.startswith(text):
-                    matches.append('list')
-                    self._add_completion_metadata('list', 'List all peers', 'command')
+    def _peer_first_completions(self, text: str) -> list[str]:
+        """After "peer": 'list', the wildcard, or a peer address."""
+        # After "peer", suggest 'list', wildcard, or peer IPs
+        matches = []
 
-                if '*'.startswith(text):
-                    matches.append('*')
-                    self._add_completion_metadata('*', 'All peers (for announce/withdraw/teardown)', 'option')
+        # 'list' shows all peers
+        if 'list'.startswith(text):
+            matches.append('list')
+            self._add_completion_metadata('list', 'List all peers', 'command')
 
-                # Add peer IPs
-                peer_data = self._get_neighbor_data()
-                for ip, info in peer_data.items():
-                    if ip.startswith(text):
-                        matches.append(ip)
-                        self._add_completion_metadata(ip, info, 'neighbor')
-                return sorted(matches)
+        if '*'.startswith(text):
+            matches.append('*')
+            self._add_completion_metadata('*', 'All peers (for announce/withdraw/teardown)', 'option')
 
-            elif len(expanded_tokens) == 2:
-                second = expanded_tokens[1]
+        # Add peer IPs
+        peer_data = self._get_neighbor_data()
+        for ip, info in peer_data.items():
+            if ip.startswith(text):
+                matches.append(ip)
+                self._add_completion_metadata(ip, info, 'neighbor')
+        return sorted(matches)
 
-                # "peer <ip>" - suggest show and actions
-                if self._is_ip_address(second):
-                    actions = ['show', 'announce', 'withdraw', 'teardown', 'disable', 'enable']
-                    matches = self._filter_candidates(actions, text)
-                    for match in matches:
-                        desc = {
-                            'show': 'Show peer information',
-                            'announce': 'Announce routes to peer',
-                            'withdraw': 'Withdraw routes from peer',
-                            'teardown': 'Tear down BGP session',
-                            'disable': 'Shut the session down until enabled',
-                            'enable': 'Let a disabled session connect again',
-                        }.get(match, '')
-                        self._add_completion_metadata(match, desc, 'command')
-                    return matches
+    def _peer_selector_completions(self, tokens: list[str], text: str) -> list[str] | None:
+        """After "peer <ip>" or "peer *": the actions."""
+        second = tokens[1]
 
-                # "peer *" - suggest actions (including show for all peers)
-                if second == '*':
-                    actions = ['announce', 'withdraw', 'show', 'teardown', 'disable', 'enable']
-                    matches = self._filter_candidates(actions, text)
-                    for match in matches:
-                        desc = {
-                            'announce': 'Announce routes to all peers',
-                            'withdraw': 'Withdraw routes from all peers',
-                            'show': 'Show all peers information',
-                            'teardown': 'Tear down all BGP sessions',
-                            'disable': 'Shut all sessions down until enabled',
-                            'enable': 'Let all disabled sessions connect again',
-                        }.get(match, '')
-                        self._add_completion_metadata(match, desc, 'command')
-                    return matches
+        # "peer <ip>" - suggest show and actions
+        if self._is_ip_address(second):
+            return self._offer(
+                {
+                    'show': 'Show peer information',
+                    'announce': 'Announce routes to peer',
+                    'withdraw': 'Withdraw routes from peer',
+                    'teardown': 'Tear down BGP session',
+                    'disable': 'Shut the session down until enabled',
+                    'enable': 'Let a disabled session connect again',
+                },
+                text,
+                'command',
+            )
 
-            elif len(expanded_tokens) >= 3:
-                selector = expanded_tokens[1]
-                action = expanded_tokens[2]
+        # "peer *" - suggest actions (including show for all peers)
+        if second == '*':
+            return self._offer(
+                {
+                    'announce': 'Announce routes to all peers',
+                    'withdraw': 'Withdraw routes from all peers',
+                    'show': 'Show all peers information',
+                    'teardown': 'Tear down all BGP sessions',
+                    'disable': 'Shut all sessions down until enabled',
+                    'enable': 'Let all disabled sessions connect again',
+                },
+                text,
+                'command',
+            )
+        return None
 
-                # "peer <ip> show" - suggest format options
-                if self._is_ip_address(selector) and action == 'show':
-                    if len(expanded_tokens) == 3:
-                        options = ['summary', 'extensive', 'configuration']
-                        matches = self._filter_candidates(options, text)
-                        for match in matches:
-                            desc = {
-                                'summary': 'Brief summary view',
-                                'extensive': 'Detailed view',
-                                'configuration': 'Show configuration',
-                            }.get(match, '')
-                            self._add_completion_metadata(match, desc, 'option')
-                        return matches
+    def _peer_action_completions(self, tokens: list[str], text: str) -> list[str] | None:
+        """After "peer <ip> show" or "peer <selector> announce|withdraw"."""
+        selector = tokens[1]
+        action = tokens[2]
 
-                if (self._is_ip_address(selector) or selector == '*') and action in ('announce', 'withdraw'):
-                    # After "peer <selector> announce/withdraw", suggest subcommands
-                    if len(expanded_tokens) == 3:
-                        subcommands = (
-                            ['route', 'route-refresh', 'eor', 'flow', 'vpls']
-                            if action == 'announce'
-                            else ['route', 'flow', 'vpls']
-                        )
-                        matches = self._filter_candidates(subcommands, text)
-                        for match in matches:
-                            desc = {
-                                'route': 'IPv4/IPv6 unicast route',
-                                'route-refresh': 'Route refresh request',
-                                'eor': 'End-of-RIB marker',
-                                'flow': 'FlowSpec rule',
-                                'vpls': 'VPLS route',
-                            }.get(match, '')
-                            self._add_completion_metadata(match, desc, 'command')
-                        return matches
+        # "peer <ip> show" - suggest format options
+        if self._is_ip_address(selector) and action == 'show':
+            if len(tokens) == 3:
+                return self._offer(
+                    {
+                        'summary': 'Brief summary view',
+                        'extensive': 'Detailed view',
+                        'configuration': 'Show configuration',
+                    },
+                    text,
+                    'option',
+                )
 
+        if (self._is_ip_address(selector) or selector == '*') and action in ('announce', 'withdraw'):
+            # After "peer <selector> announce/withdraw", suggest subcommands
+            if len(tokens) == 3:
+                subcommands = (
+                    ['route', 'route-refresh', 'eor', 'flow', 'vpls']
+                    if action == 'announce'
+                    else ['route', 'flow', 'vpls']
+                )
+                described = {
+                    'route': 'IPv4/IPv6 unicast route',
+                    'route-refresh': 'Route refresh request',
+                    'eor': 'End-of-RIB marker',
+                    'flow': 'FlowSpec rule',
+                    'vpls': 'VPLS route',
+                }
+                return self._offer({name: described[name] for name in subcommands}, text, 'command')
+        return None
+
+    def _route_context_completions(self, tokens: list[str], text: str) -> list[str] | None:
+        """route <prefix> offers its attributes, announce route offers refresh; None otherwise."""
         # Check if we have "announce route <ip-prefix>" or "withdraw route <ip-prefix>"
         # In this case, suggest route attributes (next-hop, as-path, etc.)
         # This must come BEFORE _is_peer_command check (which would return base commands)
-        if len(expanded_tokens) >= 3 and 'route' in expanded_tokens:
+        if len(tokens) >= 3 and 'route' in tokens:
             # The membership test above is what makes index() safe, so nothing here can
             # raise: the guarded call it used to sit inside hid that rather than said it.
-            route_idx = expanded_tokens.index('route')
+            route_idx = tokens.index('route')
             # Check if token after 'route' looks like IP/prefix
-            if route_idx < len(expanded_tokens) - 1:
-                potential_prefix = expanded_tokens[route_idx + 1]
+            if route_idx < len(tokens) - 1:
+                potential_prefix = tokens[route_idx + 1]
                 if self._is_ip_or_prefix(potential_prefix):
                     # We have "route <ip-prefix>", suggest route attributes
-                    return self._complete_route_spec(expanded_tokens, text)
+                    return self._complete_route_spec(tokens, text)
 
         # Special case: "announce route" - suggest "refresh" keyword only
         # This must come BEFORE _is_peer_command check
         # Note: v6 API uses "peer * announce route" syntax
-        if len(expanded_tokens) >= 2 and expanded_tokens[-1] == 'route' and 'announce' in expanded_tokens:
+        if len(tokens) >= 2 and tokens[-1] == 'route' and 'announce' in tokens:
             matches = []
 
             # Suggest "refresh" for "announce route refresh"
@@ -855,241 +997,96 @@ class CommandCompleter:
                 self._add_completion_metadata('refresh', 'Send route refresh request', 'command')
 
             return sorted(matches)
+        return None
 
-        # Check if completing peer-targeted command
-        if self._is_peer_command(expanded_tokens):
-            return self._complete_peer_command(expanded_tokens, text)
-
+    def _set_completions(self, tokens: list[str], text: str) -> list[str] | None:
+        """set display and set sync, or None when the command is not 'set'."""
         # Check for specific command patterns
-        if len(expanded_tokens) >= 1:
+        if len(tokens) >= 1:
             # Builtin CLI command: 'set display' / 'set sync'
             # Note: 'set encoding' removed - v6 API is JSON-only
-            if expanded_tokens[0] == 'set':
-                if len(expanded_tokens) == 1:
+            if tokens[0] == 'set':
+                if len(tokens) == 1:
                     # After 'set', suggest 'display' or 'sync'
-                    candidates = ['display', 'sync']
-                    matches = self._filter_candidates(candidates, text)
-                    for match in matches:
-                        if match == 'display':
-                            self._add_completion_metadata('display', 'Set display format', 'option')
-                        elif match == 'sync':
-                            self._add_completion_metadata('sync', 'Set sync mode for announce/withdraw', 'option')
-                    return matches
-                elif len(expanded_tokens) == 2:
-                    setting = expanded_tokens[1]
+                    return self._offer(
+                        {'display': 'Set display format', 'sync': 'Set sync mode for announce/withdraw'}, text, 'option'
+                    )
+                elif len(tokens) == 2:
+                    setting = tokens[1]
                     if setting in ('display',):
                         # After 'set display', suggest 'json' or 'text'
                         # Note: 'set encoding' removed - v6 API is JSON-only
-                        candidates = ['json', 'text']
-                        matches = self._filter_candidates(candidates, text)
-                        for match in matches:
-                            if match == 'json':
-                                self._add_completion_metadata('json', 'Show raw JSON', 'option')
-                            elif match == 'text':
-                                self._add_completion_metadata('text', 'Format as tables', 'option')
-                        return matches
+                        return self._offer({'json': 'Show raw JSON', 'text': 'Format as tables'}, text, 'option')
                     elif setting == 'sync':
                         # After 'set sync', suggest 'on' or 'off'
-                        candidates = ['on', 'off']
-                        matches = self._filter_candidates(candidates, text)
-                        for match in matches:
-                            if match == 'on':
-                                self._add_completion_metadata('on', 'Wait for routes on wire before ACK', 'option')
-                            elif match == 'off':
-                                self._add_completion_metadata('off', 'Return ACK immediately (default)', 'option')
-                        return matches
+                        return self._offer(
+                            {'on': 'Wait for routes on wire before ACK', 'off': 'Return ACK immediately (default)'},
+                            text,
+                            'option',
+                        )
                 # 'set' with other tokens - no more completions
                 return []
+        return None
 
-        if len(expanded_tokens) >= 2:
-            # Special case: 'show neighbor' can filter by IP even though neighbor=False
-            if expanded_tokens[0] == 'show' and expanded_tokens[1] == 'neighbor':
-                # After 'show neighbor', suggest options AND neighbor IPs
-                neighbor_data = self._get_neighbor_data()
+    def _show_neighbor_completions(self, tokens: list[str], text: str) -> list[str]:
+        """show neighbor: its options, and the neighbor addresses until one is given."""
+        # After 'show neighbor', suggest options AND neighbor IPs
+        neighbor_data = self._get_neighbor_data()
 
-                # Get command tree options (summary, extensive, configuration)
-                metadata = self.registry.get_command_metadata('show neighbor')
-                options = list(metadata.options) if metadata and metadata.options else []
+        # Get command tree options (summary, extensive, configuration)
+        metadata = self.registry.get_command_metadata('show neighbor')
+        options = list(metadata.options) if metadata and metadata.options else []
 
-                # Note: v6 API is JSON-only, so we don't offer 'json' as a suffix option
+        # Note: v6 API is JSON-only, so we don't offer 'json' as a suffix option
 
-                # Filter options with fuzzy matching
-                option_matches = self._filter_candidates(options, text)
-                for opt in option_matches:
-                    desc = self.registry.get_option_description(opt)
-                    self._add_completion_metadata(opt, desc, 'option')
+        # Filter options with fuzzy matching
+        option_matches = self._filter_candidates(options, text)
+        for opt in option_matches:
+            desc = self.registry.get_option_description(opt)
+            self._add_completion_metadata(opt, desc, 'option')
 
-                # Only add neighbor IPs if one isn't already specified
-                # Example: "show neighbor" → suggest IPs, but "show neighbor 127.0.0.1" → don't suggest IPs again
-                ip_already_specified = len(expanded_tokens) >= 3 and self._is_ip_address(expanded_tokens[2])
+        # Only add neighbor IPs if one isn't already specified
+        # Example: "show neighbor" → suggest IPs, but "show neighbor 127.0.0.1" → don't suggest IPs again
+        ip_already_specified = len(tokens) >= 3 and self._is_ip_address(tokens[2])
 
-                if not ip_already_specified:
-                    # Filter neighbor IPs with fuzzy matching
-                    neighbor_ips = list(neighbor_data.keys())
-                    ip_matches = self._filter_candidates(neighbor_ips, text)
-                    for ip in ip_matches:
-                        info = neighbor_data[ip]
-                        self._add_completion_metadata(ip, info, 'neighbor')
+        if not ip_already_specified:
+            # Filter neighbor IPs with fuzzy matching
+            neighbor_ips = list(neighbor_data.keys())
+            ip_matches = self._filter_candidates(neighbor_ips, text)
+            for ip in ip_matches:
+                info = neighbor_data[ip]
+                self._add_completion_metadata(ip, info, 'neighbor')
 
-                # Combine options and IPs (both already sorted by _filter_candidates)
-                all_matches = option_matches + ip_matches if not ip_already_specified else option_matches
-                return all_matches
+        # Combine options and IPs (both already sorted by _filter_candidates)
+        all_matches = option_matches + ip_matches if not ip_already_specified else option_matches
+        return all_matches
 
-            # AFI/SAFI completion for eor and route refresh
-            if expanded_tokens[-1] in ('eor', 'refresh'):
-                # Check if this is "announce route refresh" or similar
-                if len(expanded_tokens) >= 2 and expanded_tokens[-2] == 'route':
-                    return self._complete_afi_safi(expanded_tokens, text)
-                elif expanded_tokens[-1] == 'eor':
-                    return self._complete_afi_safi(expanded_tokens, text)
+    def _trailing_keyword_completions(self, tokens: list[str], text: str) -> list[str] | None:
+        """What the last keyword asks for: a family, a route attribute or a neighbor filter."""
+        # AFI/SAFI completion for eor and route refresh
+        if tokens[-1] in ('eor', 'refresh'):
+            # Check if this is "announce route refresh" or similar
+            if len(tokens) >= 2 and tokens[-2] == 'route':
+                return self._complete_afi_safi(tokens, text)
+            elif tokens[-1] == 'eor':
+                return self._complete_afi_safi(tokens, text)
 
-            # Route specification hints - but NOT for withdraw route
-            # (user needs to type IP/prefix first before any attributes)
-            if expanded_tokens[-1] in ('route', 'ipv4', 'ipv6'):
-                # Check if this is "withdraw route" or "neighbor X withdraw route"
-                if expanded_tokens[-1] == 'route':
-                    # Look backwards for "withdraw" command (but not "announce" - handled above)
-                    if 'withdraw' in expanded_tokens:
-                        # Don't auto-complete after withdraw route commands
-                        # User must type IP/prefix first
-                        return []
-                return self._complete_route_spec(expanded_tokens, text)
-
-            # Neighbor filter completion
-            if 'neighbor' in expanded_tokens and self._is_ip_address(expanded_tokens[-1]):
-                return self._complete_neighbor_filters(text)
-
-        # v6 API: Block v4 action-first commands from leaking through command tree
-        # These commands exist in the registry for backward compatibility but shouldn't
-        # be exposed in v6-only CLI. They have v6 equivalents:
-        #   show → peer show, rib show
-        #   announce/withdraw → peer * announce/withdraw
-        #   clear/flush → rib clear/flush
-        #   teardown → peer * teardown
-        #   shutdown/reload/restart → daemon shutdown/reload/restart
-        #   reset → session reset
-        #   help/version → system help/version
-        #   enable-ack/disable-ack/silence-ack → session ack enable/disable/silence
-        v4_blocked_commands = {
-            'show',
-            'announce',
-            'withdraw',
-            'clear',
-            'flush',
-            'teardown',
-            'shutdown',
-            'reload',
-            'restart',
-            'reset',
-            'help',
-            'version',
-            'crash',
-            'enable-ack',
-            'disable-ack',
-            'silence-ack',
-            '#',
-        }
-        if expanded_tokens and expanded_tokens[0] in v4_blocked_commands:
-            return []  # Block v4 commands - use v6 equivalents
-
-        # Navigate command tree (only for commands not handled above)
-        current_level = self.command_tree
-
-        for i, token in enumerate(expanded_tokens):
-            if isinstance(current_level, dict):
-                if token in current_level:
-                    current_level = current_level[token]
-                elif '__options__' in current_level:
-                    # At a command with options
-                    options = current_level['__options__']
-                    if isinstance(options, list):
-                        matches = []
-                        for opt in options:
-                            if opt.startswith(text):
-                                matches.append(opt)
-                                desc = self.registry.get_option_description(opt)
-                                self._add_completion_metadata(opt, desc, 'option')
-                        return sorted(matches)
-                else:
-                    # Token not in tree, try partial match
-                    matches = [cmd for cmd in current_level.keys() if cmd.startswith(token) and cmd != '__options__']
-
-                    # Filter out legacy hyphenated commands
-                    if 'announce' in expanded_tokens[:i]:
-                        matches = [m for m in matches if m != 'route-refresh']
-
-                    # Filter out 'neighbor' and 'adj-rib' after 'show' - use new syntax instead
-                    if i == 1 and expanded_tokens[0] == 'show':
-                        matches = [m for m in matches if m not in ('neighbor', 'adj-rib')]
-
-                    if matches and i == len(expanded_tokens) - 1:
-                        # Last token being completed - these are subcommands
-                        # Build full command path for description lookup
-                        cmd_prefix = ' '.join(expanded_tokens[:i]) + ' ' if i > 0 else ''
-                        for match in matches:
-                            full_cmd = cmd_prefix + match
-                            desc = self.registry.get_command_description(full_cmd.strip())
-                            self._add_completion_metadata(match, desc, 'command')
-                        return sorted(matches)
+        # Route specification hints - but NOT for withdraw route
+        # (user needs to type IP/prefix first before any attributes)
+        if tokens[-1] in ('route', 'ipv4', 'ipv6'):
+            # Check if this is "withdraw route" or "neighbor X withdraw route"
+            if tokens[-1] == 'route':
+                # Look backwards for "withdraw" command (but not "announce" - handled above)
+                if 'withdraw' in tokens:
+                    # Don't auto-complete after withdraw route commands
+                    # User must type IP/prefix first
                     return []
-            elif isinstance(current_level, list):
-                # At a leaf node (list of options)
-                matches = []
-                for opt in current_level:
-                    if opt.startswith(text):
-                        matches.append(opt)
-                        desc = self.registry.get_option_description(opt)
-                        self._add_completion_metadata(opt, desc, 'option')
-                return sorted(matches)
+            return self._complete_route_spec(tokens, text)
 
-        # After navigating, see what's available at current level
-        if isinstance(current_level, dict):
-            matches = [cmd for cmd in current_level.keys() if cmd.startswith(text) and cmd != '__options__']
-
-            # Filter out legacy hyphenated commands (e.g., "route-refresh" when "route" exists)
-            # This keeps CLI clean and user-friendly
-            filtered_matches = []
-            for match in matches:
-                # Skip if this is a hyphenated command and we have "announce route" in context
-                if '-' in match and 'announce' in expanded_tokens:
-                    # Check if this is "route-refresh" - skip it
-                    if match == 'route-refresh':
-                        continue
-                # Filter out 'neighbor' and 'adj-rib' after 'show' - use new syntax instead
-                if match in ('neighbor', 'adj-rib') and len(expanded_tokens) == 1 and expanded_tokens[0] == 'show':
-                    continue
-                filtered_matches.append(match)
-            matches = filtered_matches
-
-            # Add metadata for commands with descriptions
-            # Build full command path for description lookup
-            cmd_prefix = ' '.join(expanded_tokens) + ' ' if expanded_tokens else ''
-            for match in matches:
-                full_cmd = (cmd_prefix + match).strip()
-                desc = self.registry.get_command_description(full_cmd)
-                self._add_completion_metadata(match, desc, 'command')
-
-            # Add options if available
-            if '__options__' in current_level:
-                options = current_level['__options__']
-                if isinstance(options, list):
-                    for opt in options:
-                        if opt.startswith(text):
-                            matches.append(opt)
-                            desc = self.registry.get_option_description(opt)
-                            self._add_completion_metadata(opt, desc, 'option')
-
-            return sorted(matches)
-        elif isinstance(current_level, list):
-            matches = []
-            for opt in current_level:
-                if opt.startswith(text):
-                    matches.append(opt)
-                    desc = self.registry.get_option_description(opt)
-                    self._add_completion_metadata(opt, desc, 'option')
-            return sorted(matches)
-
-        return []
+        # Neighbor filter completion
+        if 'neighbor' in tokens and self._is_ip_address(tokens[-1]):
+            return self._complete_neighbor_filters(text)
+        return None
 
     def _is_peer_command(self, tokens: list[str]) -> bool:
         """Check if command targets a specific peer using registry metadata"""
