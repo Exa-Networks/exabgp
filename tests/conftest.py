@@ -16,6 +16,13 @@ and pytest cannot write its cache, so every LATER test using tmp_path errors at 
 rather than failing on anything it tested.  It looks like a bug in whichever test happens
 to run next.  A relative path read anywhere after it resolves against / for the same
 reason.
+
+RIB._cache is process wide on purpose: a daemon reloading its configuration finds each
+neighbour's RIB by name and keeps the routes the API gave it.  Across tests that means a
+neighbour named like one an earlier test configured inherits that test's routes.  Measured:
+after test_configuration_export loaded conf-no-asn4.conf, `exabgp encode` run in process
+printed its own UPDATE and that file's static route as well, and test_otc_parsing decoded
+the second message as garbage.
 """
 
 from __future__ import annotations
@@ -26,6 +33,8 @@ from collections.abc import Iterator
 
 import pytest
 
+from exabgp.rib import RIB
+
 
 @pytest.fixture(autouse=True)
 def restore_process_state() -> Iterator[None]:
@@ -35,12 +44,15 @@ def restore_process_state() -> Iterator[None]:
     cwd = os.getcwd()
     umask = os.umask(0o022)
     os.umask(umask)
+    ribs = dict(RIB._cache)
     try:
         yield
     finally:
         sys.excepthook = excepthook
         sys.argv = argv
         os.umask(umask)
+        RIB._cache.clear()
+        RIB._cache.update(ribs)
         try:
             os.chdir(cwd)
         except OSError:
