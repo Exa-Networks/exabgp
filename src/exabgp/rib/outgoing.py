@@ -737,6 +737,14 @@ class OutgoingRIB(Cache):
         if route.nlri.family().afi_safi() not in MEMBERSHIP_FILTERED_FAMILIES:
             return True
         targets = route.attributes.route_targets()
+        # Not optimised, on purpose: O(memberships x route targets) for each route, so
+        # O(VPN routes x memberships x route targets) for a batch, and membership_changed()
+        # replays the whole VPN adj-rib-out for any change. 200k routes and 2k memberships
+        # is some 400M admits() per replay. The fix, if a large deployment needs it, is an
+        # index by Route Target (exact match for a 96 bit membership, one table per prefix
+        # length for the partial ones and the default) and the reverse, Route Target to the
+        # routes carrying it, so a change replays only those routes. Left out because the
+        # option is off by default and a few hundred memberships cost nothing.
         if self.membership is not None:
             for member in self.membership.cached_routes([RTC_FAMILY]):
                 # the cache holds only RTC NLRI under the RTC family
