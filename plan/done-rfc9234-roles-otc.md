@@ -1,14 +1,34 @@
 # RFC 9234 - BGP Roles and Only-To-Customer (OTC)
 
-**Current status:** Reviewed Role/OTC implementation, tests and documentation.
-Non-OTC review corrections are retained as 17 independent preceding commits.
-Existing code structure is retained; structural/Exa Style cleanup remains a separate
-patch set. This is partial RFC 9234 support without ingress insertion.
-**Last updated:** 2026-09-17.
+**Status:** ✅ Done. Full RFC 9234 support, ingress OTC insertion included (see Outcome).
+**Last updated:** 2026-09-29.
 **Issue:** [#1346](https://github.com/Exa-Networks/exabgp/issues/1346)
 **RFC:** [RFC 9234](https://www.rfc-editor.org/rfc/rfc9234.html)
 **Reference implementation:** ze, `internal/component/bgp/plugins/role/`
 **Created:** 2026-09-02
+
+## Outcome, 2026-09-29
+
+The rest of this plan is the history of the work and is kept as written. Where it says
+the support is partial, or that implementation is unstarted, it describes a state which
+no longer holds:
+
+- **Feature committed** as `d96ee8951` (2026-09-17), after 17 separate non-OTC commits.
+- **Ingress OTC insertion is implemented.** RFC 9234 5 procedure 3, the one piece this
+  plan deliberately left to helpers, was added by `done-rfc-gap-fixes.md`:
+  `UpdateCollection.classify_otc` adds OTC(remote AS) on a copy of the attributes for a
+  route from a Provider, a Peer or an RS. `qa/rfc/rfc9234.toml` carries it as
+  `required`, proven both ways in `tests/unit/rfc/test_rfc9234_roles_and_otc.py`.
+  The helper responsibility described below is no longer needed.
+- **The deferred packing bug does not reproduce.** The mixed IPv6 announce and withdraw
+  with `msg_size = 96` (Deferred structural cleanup, below) now encodes as two UPDATEs of
+  59 and 84 bytes, both routes kept.
+- **The deferred structural cleanup** moved to `plan-large-function-decomposition.md`,
+  which lists the seven functions still over the limit. The Exa Style ceilings quoted
+  below (91, 100) are 69 and 0 today.
+- **Still out of scope:** a route suppressed with `otc none` is indistinguishable from an
+  unmarked one in `show adj-rib out` and in JSON, because every `INTERNAL` attribute is
+  hidden; and ze parity validation, which is work in the ze repository.
 
 ## Overview and conformance boundary
 
