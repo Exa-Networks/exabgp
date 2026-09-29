@@ -45,20 +45,25 @@ class HostName(Capability):
             json.dumps(self.domain_name),
         )
 
+    @classmethod
+    def _truncate(cls, name: str) -> bytes:
+        """The name as UTF-8, cut to HOSTNAME_MAX_LEN bytes without splitting a character.
+
+        Cutting the bytes alone could end the name half way through a character, and the
+        receiver then refuses the capability as invalid UTF-8, as our own decoder does.
+        """
+        return name.encode('utf-8')[: cls.HOSTNAME_MAX_LEN].decode('utf-8', 'ignore').encode('utf-8')
+
     def extract_capability_bytes(self) -> list[bytes]:
         # Return empty list (not [b'']) when no hostname - capability should not be sent
         if not self.host_name:
             return []
 
-        hostname = self.host_name.encode('utf-8')
-        if len(hostname) > self.HOSTNAME_MAX_LEN:
-            hostname = hostname[: self.HOSTNAME_MAX_LEN]
+        hostname = self._truncate(self.host_name)
         ret = bytes([len(hostname)]) + hostname
 
         if self.domain_name:
-            domainname = self.domain_name.encode('utf-8')
-            if len(domainname) > self.HOSTNAME_MAX_LEN:
-                domainname = domainname[: self.HOSTNAME_MAX_LEN]
+            domainname = self._truncate(self.domain_name)
             ret += bytes([len(domainname)]) + domainname
         else:
             ret += bytes([0]) + b''

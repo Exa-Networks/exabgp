@@ -35,7 +35,9 @@ class Software(Capability):
         return '{{ "software": {} }}'.format(json.dumps(self.software_version))
 
     def extract_capability_bytes(self) -> list[bytes]:
-        return [bytes([len(self.software_version)]) + self.software_version.encode('utf-8')]
+        # the length is in bytes: a decoded peer version may hold characters wider than one
+        encoded = self.software_version.encode('utf-8')
+        return [bytes([len(encoded)]) + encoded]
 
     @classmethod
     def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613

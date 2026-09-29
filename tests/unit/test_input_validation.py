@@ -198,6 +198,25 @@ def test_hostname_capability_rejects_invalid_utf8() -> None:
         HostName.unpack_capability(HostName(), b'\x04\xff\xfe\xfd\xfc\x00', None)
 
 
+def test_hostname_capability_truncates_on_a_character_boundary() -> None:
+    """Cutting at 64 bytes used to split the 'é', and the capability sent was not UTF-8."""
+    for name in ('a' * 63 + 'é', 'é' * 40, 'a' * 62 + '€'):
+        packed = HostName(name, name).extract_capability_bytes()[0]
+        decoded = HostName.unpack_capability(HostName(), packed, None)
+        assert isinstance(decoded, HostName)
+        assert name.startswith(decoded.host_name)
+        assert name.startswith(decoded.domain_name)
+        assert len(decoded.host_name.encode('utf-8')) <= HostName.HOSTNAME_MAX_LEN
+
+
+def test_software_capability_length_counts_bytes() -> None:
+    """A decoded version wider than ASCII used to be sent with its length in characters."""
+    decoded = Software.unpack_capability(Software(), b'\x09r\xc3\xa9seau/1', None)
+    assert isinstance(decoded, Software)
+    packed = decoded.extract_capability_bytes()[0]
+    assert packed == b'\x09r\xc3\xa9seau/1'
+
+
 def test_software_capability_rejects_invalid_utf8() -> None:
     with pytest.raises(Notify):
         Software.unpack_capability(Software(), b'\x04\xff\xfe\xfd\xfc', None)
