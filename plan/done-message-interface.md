@@ -16,11 +16,13 @@ the functional encoding and decoding tests are the proof.
 Message
   ID: ClassVar[_MessageCode]          the type octet (RFC 4271 4.1)
   TYPE: ClassVar[bytes]               derived from ID by __init_subclass__, never declared
+  FIXED_SIZE                          the body every message of the type has
   LENGTH_MIN / LENGTH_MAX             whole message, header included, replaces Message.Length
+                                      (LENGTH_MIN derived from FIXED_SIZE)
   _packed                             the body, the one source of truth
   __init__(packed)                    trusted bytes, asserts invariants
-  make_<name>(fields...)              the only way to build from fields
-  unpack_message(body, negotiated)    peer bytes, raises Notify, returns cls
+  make_<name>(fields...)              builds from fields (Operational also has from_values)
+  unpack_message(body, negotiated)    peer bytes, raises Notify, returns an instance
   pack_body(negotiated) -> Buffer     what a subclass implements
   pack_message(negotiated) -> bytes   @final: header + pack_body
   __eq__ / __hash__                   on (ID, body), in the base
@@ -37,8 +39,8 @@ Message
   `processes._update` stops casting.
 - **UpdateCollection is not a Message.** It builds UPDATEs; it frames them with the
   module level helper rather than by inheriting `_message`.
-- **Notify is composition, not a subclass with another constructor.** (step 6, design
-  confirmed when reached)
+- **Notify is composition, not a subclass with another constructor.** Thomas chose it in
+  step 6: "composition, fix .data".
 - **Operational is bytes-first.** Router-id and sequence left at zero mean "fill at send",
   which is what the current code already does with falsy values.
 - **No `__slots__`** in this work: Notification is also an Exception, and mypyc is its own
@@ -76,10 +78,11 @@ Message
   to return the `_UPDATE` placeholder, which no caller read.
 - 252 (the old NOP code) is no longer in `Message.CODE.MESSAGES`, so the reactor refuses it
   with Bad Message Type at its membership check, the answer `Message.unpack` gave anyway.
-- An UPDATE carrying INTERNAL_DISCARD still returns None, so it does not restart the hold
-  timer, as before. RFC 4271 says a received UPDATE does restart it: not changed here.
+- An UPDATE carrying INTERNAL_DISCARD still returned None here, so it did not restart the
+  hold timer. Fixed after this step by acbcf24f1 (#1432): the UPDATE is returned, its
+  other routes processed (RFC 7606 2).
 - `tests/unit/test_singleton_copy.py` `MIN_COMPARISONS_FOUND` lowered 18 -> 16: the four
-  `Scheduling` comparisons left with the class. Flag it to Thomas.
+  `Scheduling` comparisons left with the class.
 - `scheduling.py` deleted with Thomas's permission.
 
 ## Notes from steps 3 to 5
@@ -140,10 +143,7 @@ Message
 
 ## Flakes which are not this work (both fail at HEAD)
 
-- `tests/unit/test_util.py::TestDNS` under xdist.
-- `tests/unit/test_otc_parsing.py::test_inline_encode_literal_otc[ipv4...]` fails whenever
-  `tests/unit/configuration/test_configuration_export.py` (or `config_grammar/test_roundtrip.py`)
-  ran before it on the same worker. Reproduced on a HEAD worktree: a test isolation bug.
+Moved to `wip-testing-gaps.md` (tasks 6 and 7), where they stay open.
 
 ## Recent Failures
 
@@ -154,6 +154,8 @@ Message
 
 ## Resume Point
 
-Done. Committed as f2a84e65b..253548b86 (six commits, one per step, each green with
-`test_everything`). The ROUTE-REFRESH 7/1 found in step 3 is fixed in 2cacf8d75,
+Done. Committed as f2a84e65b..253548b86, six commits, each green with `test_everything`:
+f2a84e65b steps 1 and 2, e21f61004 the "ask the object" rule, 6844f8436 steps 3 to 5,
+2a8a1725a step 6, a72265694 step 7, 253548b86 step 8.
+The ROUTE-REFRESH 7/1 found in step 3 is fixed in 2cacf8d75,
 see `done-route-refresh-length.md`.

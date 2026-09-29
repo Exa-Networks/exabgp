@@ -2,7 +2,7 @@
 
 **Status:** 🚧 In progress
 **Started:** 2026-09-25
-**Last Updated:** 2026-09-27
+**Last Updated:** 2026-09-29
 **Trees:** `main` (6.0.0, development) and `../5.0` (production). Separate clones, ~190 commits diverged.
 
 ## Why this file exists
@@ -15,6 +15,11 @@ decision. Nothing is "probably fine".
 The divergence does not run the way a stable branch suggests. 5.0 is **ahead** of main on
 the ASPath data model and on the fuzz corpus, and **behind** on the consumers of both.
 Neither tree is a superset of the other, so parity has to be argued file by file.
+
+**5.0 is in maintenance mode (Thomas, 2026-09-29).** Its test suite stays as it is: no new
+tests, no ported tests, no fuzz or sweep work in 5.0. Parity flows one way now, from 5.0 into
+main. The one exception: when an issue is fixed in 5.0, the fix adds a regression test that
+fails without it.
 
 ---
 
@@ -89,6 +94,8 @@ main  9863 passed, 2 skipped, 7 xfailed, 0 failed   tests/fuzz 498 -> 2975
 
 ## 3. 5.0: production hardening
 
+Bug fixes only. Testing improvements in 5.0 are out of scope, see the maintenance note at the top.
+
 | # | task | status | note |
 |---|---|---|---|
 | 2.1 | sweep main's 114 unit-only files for bugs 5.0 still has | ✅ done 2026-09-25 | 8 more defects fixed, 7 confirmed and left. See §12. |
@@ -102,9 +109,9 @@ main  9863 passed, 2 skipped, 7 xfailed, 0 failed   tests/fuzz 498 -> 2975
 | 2.12 | `socket.SO_BINDTODEVICE = 25`, and an empty `source-interface` bound to `'\0'` | ✅ fixed 2026-09-25 | `8805ef45e`. The NUL bind was live; the mutation is latent. See §15. |
 | 2.13 | unreachable duplicate `except OSError` handlers | ✅ fixed 2026-09-25 | `ef49cff45`. Four pairs in `cli.py`, not two. See §15. |
 | 2.14 | the control process hung for ever on a pipe it could not open | ✅ fixed 2026-09-25 | `ef49cff45`. Reachable in production, measured. See §15. |
-| 2.6 | MP_REACH-first ordering not ported | ⏸ blocked | 91 captures need re-recording |
+| 2.6 | MP_REACH-first ordering not ported | ⚪ decided 2026-09-29: not ported | Thomas: 5.0 keeps its attribute order. 91 captures would need re-recording for no user-visible gain on a maintenance branch. |
 | 2.7 | dead `src/exabgp/cli/` VyOS prototype | ✅ removed 2026-09-25 | 6 files, `git rm`. `exabgp-cli` verified still working. |
-| 2.8 | `src/exabgp/conf/yang/` now orphaned | ❓ decision | the deleted prototype was its only importer from outside |
+| 2.8 | `src/exabgp/conf/yang/` now orphaned | ✅ removed from 5.0 2026-09-29 (staged, uncommitted) | nothing lost: main already has the same code, annotated, in `lab/conf/yang/` (`d5fb87c34`), and a byte-identical `data/`. 5.0's `data/` now has no user; waiting on Thomas. |
 
 ### Already fixed and pushed (commits `2114ec208`, `a8683597e`)
 
@@ -147,7 +154,7 @@ over; seven sites moved Notify 3/0 → 3/9.
 | 3.5 | `doc/README.rst` stale | 🟢 open |
 | 3.14 | main: `check_fifo` reported to the daemon, and `open_writer` had a dead handler | ✅ fixed 2026-09-26 | `0bc6c6e10`. 5.0 had both closed already. See §17. |
 | 3.6 | 5.0 attribute cache is process-wide and keyed on wire bytes only | ✅ fixed 2026-09-25 | `709706aa9`. Moved onto `Negotiated`. See §16. |
-| 3.13 | `qa/bin/functional encoding` is red ~5 runs in 10, **5.0 only** | 🔴 measured 2026-09-26, not fixed | three API tests, announce/withdraw ordering under load. See §22. |
+| 3.13 | `qa/bin/functional encoding` is red ~5 runs in 10, **5.0 only** | ✅ fixed 2026-09-29 (uncommitted) | main's event barriers backported, and they found a 5.0 EOR JSON regression. See §22. |
 | 3.15 | 5.0: `exabgp validate` crashes on a flow route with no match block | 🔴 confirmed, not fixed |
 | 3.7 | 5.0: one peer's OPEN rewrites every other session's capability variant | ✅ fixed 2026-09-26 | 5.0 `7b0e71f61`. main was already correct. |
 | 3.8 | 5.0: a labelled NLRI with no S bit closes the session (RFC 8277 §2.2 says ignore it) | ✅ fixed 2026-09-26 | 5.0, agent report. main already had the block at `inet.py:453`. |
@@ -158,8 +165,8 @@ over; seven sites moved Notify 3/0 → 3/9.
 | 3.16 | 5.0 tolerates a zero-length MULTISESSION value where main answers `Notify(2, 0)` | ❓ decision | the trees now disagree; one should change |
 | 3.17 | 5.0 `MultiSession.extract()` is not draft §4 conformant | 🟢 parity | main fixed it in `7a7bdeea3`; wrong bytes, right meaning |
 | 3.16 | ~~decision~~ decided 2026-09-27: main stays strict, `Notify(2, 0)` | ✅ decided, divergence kept | invalid encoding gets 2/0 even without a MUST. 5.0 stays lenient (stable branch). See §24. |
-| 3.18 | multi-session with N families keeps one neighbour, not N | 🔴 confirmed, not fixed, **both trees** | every per-family copy has the same `Neighbor.name()`. Strict xfail in `tests/unit/rfc/test_draft_multisession.py`. See §24. |
-| 3.19 | exabgp never sends Cisco code 131, so a Cisco multisession peer gets `Notify(2, 9)` | ❓ decision, not reproduced against a router | inferred from `negotiated.py` and `capabilities._session`. See §24. |
+| 3.18 | multi-session with N families keeps one neighbour, not N | ✅ main fixed `f644fa735` 2026-09-28; ⚪ 5.0 won't fix (Thomas, 2026-09-29: not used, niche) | every per-family copy has the same `Neighbor.name()`. Strict xfail in `tests/unit/rfc/test_draft_multisession.py`. See §24. |
+| 3.19 | exabgp never sends Cisco code 131, so a Cisco multisession peer gets `Notify(2, 9)` | ✅ fixed both trees 2026-09-29 (uncommitted), see `plan/plan-multisession.md` | inferred from `negotiated.py` and `capabilities._session`. See §24. |
 
 All of 3.6 to 3.12 are now fixed. They were each **reproduced by running**, not inferred, and deliberately left:
 three agents were in the tree at once, and 3.8 has an interop question worth a human. §12
@@ -172,8 +179,8 @@ No rename, no removal, no retype of an existing key.
 
 ## 5. Waiting on Thomas
 
-1. ~~Delete 5.0's `src/exabgp/cli/`~~ done. `src/exabgp/conf/yang/` (7 files) is now
-   orphaned by it: imports cleanly, nothing references it. Delete or keep?
+1. ~~Delete 5.0's `src/exabgp/cli/`~~ done. ~~`src/exabgp/conf/yang/`~~ removed from 5.0,
+   2026-09-29 (2.8). Still open: delete 5.0's `data/`, whose only reader was that code?
 2. ~~Open an issue for the respawn limiter~~ fixed instead, §10.
 3. **RFC 9552 §5.2 and the BGP-LS VPN route distinguisher.** The quotable sentence ("The
    Total NLRI Length field contains the cumulative length ... For VPN applications, it also
@@ -652,12 +659,15 @@ attribute code asserting nothing escapes the parser as a raw exception. It is wh
   wire-reachable path found today.
 - The fixed-size qualifier helpers (`ESI`, `EthernetTag`, `MAC`, `RouteDistinguisher`, `Labels`)
   truncate or raise `struct.error` on short input where main raises `Notify(3,10)`, but every
-  caller in 5.0 validates the length first. Hardening gap, not live.
+  caller in 5.0 validates the length first. Hardening gap, not live. **Ignored (Thomas,
+  2026-09-29).**
 - `NLRI.__eq__` raises on a non-NLRI where `cidr.py` already returns `NotImplemented`. Not
-  reachable from `src/`; inconsistent with the tree's own settled contract.
+  reachable from `src/`; inconsistent with the tree's own settled contract. **Ignored (Thomas,
+  2026-09-29).**
 - A FlowSpec protocol value above 255 in a wide field decodes and then raises `ValueError` from
   `IOperationByte.encode` (`bytes([262])`) when rendered. **Present in both trees**: main uses
-  the same `_number` decoder and the same `encode`.
+  the same `_number` decoder and the same `encode`. **main: `plan/plan-flowspec-wide-value.md`
+  (reproduced 2026-09-29: it is `pack()` that raises, `str()` works). 5.0 keeps it.**
 - BGP-LS opaque TLVs (1025/1097/1157) publish arbitrary IGP bytes as lossy text; hex would
   retype a published key, and 5.0's `test_bgpls_json_escaping.py` asserts the text form.
   Reported, not touched.
@@ -1352,6 +1362,25 @@ Not fixed. Diagnosing a concurrency race in a production reactor is its own piec
 guessing at it under load is how a plausible wrong fix gets written. What this section buys is
 that the next person starts from three named tests, a signature, a rate and the isolation
 result rather than from "intermittent".
+
+### Fixed, 2026-09-29
+
+Wrong diagnosis above: the scripts were at fault, not the reactor. They drove the daemon with
+`time.sleep()` and moved on after a timed-out ACK. main's `49f00bc15` is backported to 5.0:
+`exabgp_api.py` plus `api-mvpn`, `api-rib`, `api-rr-rib` and `api-teardown`, all waiting on the
+events the daemon reports (`send { parsed; update; }`, `neighbor-changes`, `respawn false`).
+
+- The barriers found a 5.0 regression: `bc2c16ed3` (after the 5.0.13 tag, unreleased) made every EOR line
+  an API process receives `{ { "eor": ... } }`, which is not JSON. Fixed in `json.py`, with
+  a regression test in `tests/unit/test_eor_json.py`; the line is back to its 5.0.12 shape.
+- 5.0 reports an EOR as `message.eor`, not inside `update.announce`, so 5.0's
+  `exabgp_api.py` counts it there.
+- `api-teardown` has to wait for each session's EOR before the teardown: the peer expects
+  the EOR before the NOTIFICATION, stops listening when it is not, and the daemon then
+  reconnects into nothing and is left behind. main's script does not wait for it.
+- Measured afterwards: 20 full runs, 1 failure, in `api-attributes-path`, which still sleeps.
+  `api-rr`, `api-vpls` and test `k` failed in earlier batches taken under load 50 to 100.
+  Those are not converted in main either.
 
 ---
 
