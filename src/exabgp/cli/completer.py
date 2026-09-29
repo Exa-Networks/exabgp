@@ -711,7 +711,7 @@ class CommandCompleter:
                 else:
                     return self._tree_partial_token(tokens, i, current_level)
             elif isinstance(current_level, list):
-                # At a leaf node (list of options)
+                # The tree has no list leaves: this is '__options__', typed as if it were a word
                 return sorted(self._tree_options(current_level, text))
 
         return self._tree_level_completions(tokens, text, current_level)
@@ -730,14 +730,9 @@ class CommandCompleter:
         """tokens[i] is not a word at this level: the words it starts, if it is the last token."""
         # Token not in tree, try partial match
         matches = [cmd for cmd in level.keys() if cmd.startswith(tokens[i]) and cmd != '__options__']
-
-        # Filter out legacy hyphenated commands
-        if 'announce' in tokens[:i]:
-            matches = [m for m in matches if m != 'route-refresh']
-
-        # Filter out 'neighbor' and 'adj-rib' after 'show' - use new syntax instead
-        if i == 1 and tokens[0] == 'show':
-            matches = [m for m in matches if m not in ('neighbor', 'adj-rib')]
+        # 'announce' (and so 'route-refresh') is only under 'peer', completed before the tree
+        # is walked, and 'show' is not in the tree: there is nothing to filter out
+        assert tokens[0] != 'peer', 'peer commands are completed before the tree is walked'
 
         if matches and i == len(tokens) - 1:
             # Last token being completed - these are subcommands
@@ -752,44 +747,32 @@ class CommandCompleter:
 
     def _tree_level_completions(self, tokens: list[str], text: str, level: Any) -> list[str]:
         """Every token was a word of the tree: what the level they lead to offers."""
-        # After navigating, see what's available at current level
-        if isinstance(level, dict):
-            matches = [cmd for cmd in level.keys() if cmd.startswith(text) and cmd != '__options__']
-
-            # Filter out legacy hyphenated commands (e.g., "route-refresh" when "route" exists)
-            # This keeps CLI clean and user-friendly
-            filtered_matches = []
-            for match in matches:
-                # Skip if this is a hyphenated command and we have "announce route" in context
-                if '-' in match and 'announce' in tokens:
-                    # Check if this is "route-refresh" - skip it
-                    if match == 'route-refresh':
-                        continue
-                # Filter out 'neighbor' and 'adj-rib' after 'show' - use new syntax instead
-                if match in ('neighbor', 'adj-rib') and len(tokens) == 1 and tokens[0] == 'show':
-                    continue
-                filtered_matches.append(match)
-            matches = filtered_matches
-
-            # Add metadata for commands with descriptions
-            # Build full command path for description lookup
-            cmd_prefix = ' '.join(tokens) + ' ' if tokens else ''
-            for match in matches:
-                full_cmd = (cmd_prefix + match).strip()
-                desc = self.registry.get_command_description(full_cmd)
-                self._add_completion_metadata(match, desc, 'command')
-
-            # Add options if available
-            if '__options__' in level:
-                options = level['__options__']
-                if isinstance(options, list):
-                    matches.extend(self._tree_options(options, text))
-
-            return sorted(matches)
-        elif isinstance(level, list):
+        if isinstance(level, list):
+            # The tree has no list leaves: only '__options__', typed as if it were a word, leads here
             return sorted(self._tree_options(level, text))
+        assert isinstance(level, dict), 'the command tree is made of dicts, and lists under __options__'
 
-        return []
+        # After navigating, see what's available at current level
+        matches = [cmd for cmd in level.keys() if cmd.startswith(text) and cmd != '__options__']
+        # 'announce' (and so 'route-refresh') is only under 'peer', completed before the tree
+        # is walked, and 'show' is not in the tree: there is nothing to filter out
+        assert not tokens or tokens[0] != 'peer', 'peer commands are completed before the tree is walked'
+
+        # Add metadata for commands with descriptions
+        # Build full command path for description lookup
+        cmd_prefix = ' '.join(tokens) + ' ' if tokens else ''
+        for match in matches:
+            full_cmd = (cmd_prefix + match).strip()
+            desc = self.registry.get_command_description(full_cmd)
+            self._add_completion_metadata(match, desc, 'command')
+
+        # Add options if available
+        if '__options__' in level:
+            options = level['__options__']
+            if isinstance(options, list):
+                matches.extend(self._tree_options(options, text))
+
+        return sorted(matches)
 
     def _noun_first_completions(self, tokens: list[str], text: str) -> list[str] | None:
         """daemon, rib and system: their sub-commands, or None for any other command."""
@@ -1029,37 +1012,22 @@ class CommandCompleter:
         return None
 
     def _show_neighbor_completions(self, tokens: list[str], text: str) -> list[str]:
-        """show neighbor: its options, and the neighbor addresses until one is given."""
-        # After 'show neighbor', suggest options AND neighbor IPs
+        """show neighbor: the neighbor addresses, until one is given."""
         neighbor_data = self._get_neighbor_data()
 
-        # Get command tree options (summary, extensive, configuration)
-        metadata = self.registry.get_command_metadata('show neighbor')
-        options = list(metadata.options) if metadata and metadata.options else []
+        # 'show neighbor' is not a registry command, so it has no options to offer alongside
+        assert self.registry.get_command_metadata('show neighbor') is None, 'show neighbor has options to offer'
 
-        # Note: v6 API is JSON-only, so we don't offer 'json' as a suffix option
-
-        # Filter options with fuzzy matching
-        option_matches = self._filter_candidates(options, text)
-        for opt in option_matches:
-            desc = self.registry.get_option_description(opt)
-            self._add_completion_metadata(opt, desc, 'option')
-
-        # Only add neighbor IPs if one isn't already specified
+        # Only offer neighbor IPs if one isn't already specified
         # Example: "show neighbor" → suggest IPs, but "show neighbor 127.0.0.1" → don't suggest IPs again
-        ip_already_specified = len(tokens) >= 3 and self._is_ip_address(tokens[2])
+        if len(tokens) >= 3 and self._is_ip_address(tokens[2]):
+            return []
 
-        if not ip_already_specified:
-            # Filter neighbor IPs with fuzzy matching
-            neighbor_ips = list(neighbor_data.keys())
-            ip_matches = self._filter_candidates(neighbor_ips, text)
-            for ip in ip_matches:
-                info = neighbor_data[ip]
-                self._add_completion_metadata(ip, info, 'neighbor')
-
-        # Combine options and IPs (both already sorted by _filter_candidates)
-        all_matches = option_matches + ip_matches if not ip_already_specified else option_matches
-        return all_matches
+        # Filter neighbor IPs with fuzzy matching
+        ip_matches = self._filter_candidates(list(neighbor_data.keys()), text)
+        for ip in ip_matches:
+            self._add_completion_metadata(ip, neighbor_data[ip], 'neighbor')
+        return ip_matches
 
     def _trailing_keyword_completions(self, tokens: list[str], text: str) -> list[str] | None:
         """What the last keyword asks for: a family, a route attribute or a neighbor filter."""
