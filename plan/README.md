@@ -128,6 +128,8 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-route-refresh-length.md` | 2026-09-29 | RFC 7313 5 Invalid Message Length was answered 1/2 by the header check; now 7/1 |
+| `done-message-interface.md` | 2026-09-29 | One tested contract for every BGP message class; Notify by composition, Operational bytes-first |
 | `done-rfc-gap-fixes.md` | 2026-09-29 | Every RFC ledger gap outside multisession closed: 8 areas, from outgoing policy to BGP-LS |
 | `done-route-refresh-borr.md` | 2026-09-27 | Received End-of-RIB reset the session; RFC 7313 section 4 BoRR/EoRR |
 | `done-unsent-notifications.md` | 2026-09-27 | (2,7) via `capability require`, (6,1) via `family prefix-limit`, RFC 4486 enrolled |

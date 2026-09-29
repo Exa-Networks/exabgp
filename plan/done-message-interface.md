@@ -1,8 +1,8 @@
 # BGP message interface: one explicit contract for every message
 
-**Status:** 🔄 Active
+**Status:** ✅ Completed
 **Started:** 2026-09-28
-**Last Updated:** 2026-09-28
+**Last Updated:** 2026-09-29
 
 ## Goal
 
@@ -56,7 +56,7 @@ Message
 | 5 | EOR(Update), UpdateCollection out of Message, EOR marker as a field | unit + functional | ✅ |
 | 6 | Notification / Notify | unit + functional | ✅ |
 | 7 | Operational bytes-first, UPPER constants, registry raises on duplicate, sequence bug | unit + functional | ✅ |
-| 8 | Spec: `.claude/exabgp/BGP_MESSAGE_INTERFACE.md` table per message, contract test green | `./qa/bin/test_everything` | ⏳ |
+| 8 | Spec: `.claude/exabgp/BGP_MESSAGE_INTERFACE.md` table per message, contract test green | `./qa/bin/test_everything` | ✅ |
 
 ## Bugs found on the way
 
@@ -154,4 +154,6 @@ Message
 
 ## Resume Point
 
-All steps done; waiting for Thomas's review. Nothing committed.
+Done. Committed as f2a84e65b..253548b86 (six commits, one per step, each green with
+`test_everything`). The ROUTE-REFRESH 7/1 found in step 3 is fixed in 2cacf8d75,
+see `done-route-refresh-length.md`.
