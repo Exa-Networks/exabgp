@@ -273,7 +273,7 @@ class TestDNS:
         # the module level names are not mangled; spelled as strings so the class body
         # does not mangle them either
         monkeypatch.setattr(dns, '__host_name', '')
-        monkeypatch.setattr(dns, '__domain_name', '')
+        monkeypatch.setattr(dns, '__domain_name', None)
 
     def test_host(self) -> None:
         result = host()
@@ -289,9 +289,7 @@ class TestDNS:
             assert resolver.call_count == 1
 
     def test_domain(self) -> None:
-        result = domain()
-        assert isinstance(result, str)
-        assert len(result) > 0
+        assert isinstance(domain(), str)
 
     def test_domain_caching(self) -> None:
         with patch('exabgp.util.dns.socket.getfqdn', return_value='first.example.com') as resolver:
@@ -306,7 +304,22 @@ class TestDNS:
         with patch('exabgp.util.dns.socket.gethostname', return_value=''):
             assert host() == 'localhost'
 
-    @pytest.mark.xfail(strict=True, reason='domain() has returned the first label of the FQDN since 2015')
-    def test_domain_is_what_follows_the_host(self) -> None:
-        with patch('exabgp.util.dns.socket.getfqdn', return_value='testhost.example.com'):
-            assert domain() == 'example.com'
+    @pytest.mark.parametrize(
+        'fqdn,expected',
+        [
+            ('testhost.example.com', 'example.com'),
+            ('testhost.example.com.', 'example.com'),
+            ('testhost.local', 'local'),
+            ('testhost', ''),
+            ('', ''),
+        ],
+    )
+    def test_domain_is_what_follows_the_host(self, fqdn: str, expected: str) -> None:
+        # it returned the first label, the host again, until 2026-09-29
+        with patch('exabgp.util.dns.socket.getfqdn', return_value=fqdn):
+            assert domain() == expected
+
+    def test_no_domain_is_cached_too(self) -> None:
+        with patch('exabgp.util.dns.socket.getfqdn', return_value='testhost') as resolver:
+            assert domain() == domain() == ''
+            assert resolver.call_count == 1
