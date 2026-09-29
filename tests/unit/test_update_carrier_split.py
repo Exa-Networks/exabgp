@@ -38,6 +38,7 @@ from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.update.nlri import collection as nlri_collection
 from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.empty import Empty
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -615,3 +616,33 @@ def test_a_family_which_can_hold_no_nlri_at_all_is_reported_once(monkeypatch) ->
     assert len(reported) == 1, f'three routes were refused in {len(reported)} log lines'
     assert 'afi=ipv6 safi=unicast' in reported[0], 'the log does not say which family was refused'
     assert 'nlri_count=3' in reported[0], 'the log does not say how many routes were dropped'
+
+
+# ------------------------------------ the attributes-only UPDATE, pinned before messages() is split
+
+
+def test_an_empty_nlri_sends_the_attributes_alone() -> None:
+    """An Empty NLRI and nothing else is one UPDATE carrying the path attributes and no route.
+
+    It is the one shape of messages() the other tests here never build, and it returns
+    before any of the passes below it run, so splitting the method could lose it unseen.
+    """
+    negotiated = session()
+    attributes = next_hop_attributes()
+    messages = generated(
+        [RoutedNLRI(Empty(AFI.ipv4, SAFI.unicast), IP.from_string('192.0.2.1'))], [], attributes, negotiated
+    )
+
+    assert len(messages) == 1
+    assert carriers(messages[0]) == [], 'an attributes-only UPDATE carried a route'
+    assert attribute_codes(messages[0]) == attribute_codes_of(attributes.pack_attribute(negotiated, with_default=True))
+
+
+def test_an_empty_nlri_with_no_attributes_sends_nothing() -> None:
+    assert generated([RoutedNLRI(Empty(AFI.ipv4, SAFI.unicast), IP.from_string('192.0.2.1'))], []) == []
+
+
+def attribute_codes_of(packed: bytes) -> list[int]:
+    """The codes of a packed attribute field, by framing it as an UPDATE of its own."""
+    body = (0).to_bytes(2, 'big') + len(packed).to_bytes(2, 'big') + packed
+    return attribute_codes(bytes(BGP_HEADER_SIZE) + body)
