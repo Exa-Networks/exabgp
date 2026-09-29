@@ -4,6 +4,9 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: the configuration syntax in exabgp.conf(5) is printed from the parser. The page
+   written by hand said "rate-limit <enable | disable>" where a number of UPDATE messages
+   per second is read, and "encoding" for the statement called "encoder".
  * Change: "exabgp configuration syntax --json" declares a section which comes out the
    same in several places once, under $defs, and refers to it: the route values of every
    announce family were repeated, and the schema was 509 KB (now 174 KB). "--yang" does the

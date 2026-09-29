@@ -118,6 +118,9 @@ A statement given several times (a route, a family) says so with `Leaf(multiple=
 5. Make it print back: `tree/unresolve.py` for a neighbor value, through the codec owning it.
 6. Add forms in `tests/unit/config_grammar/forms*.py`: one accepted and one refused per
    keyword are enforced by `test_forms.py`.
+7. Run `qa/bin/update_man_syntax`: the syntax block of `doc/man/exabgp.conf.5` is printed
+   from the grammar and `test_man_configuration_syntax.py` fails until it is. The wiki page
+   `Configuration/Syntax-Reference.md` is printed by `qa/bin/update_wiki_syntax <wiki>`.
 
 Whether each form is accepted was recorded against the legacy parser, and what every input
 made is frozen (`tests/unit/configuration/forms/expected/legacy.json`, `test_frozen.py`). A
@@ -134,6 +137,8 @@ and the commit says so. The accidents the grammar reproduces are listed in the p
 | `test_model.py` | the data model: every Number reads its bounds, no number is a string, JSON Schema and YANG well formed |
 | `test_imports.py` | the grammar imports no configuration module but its own and settings |
 | `test_describe.py` | the syntax help and schema cover every keyword |
+| `tests/unit/test_man_configuration_syntax.py` | the man page syntax block is what the grammar prints |
+| `tests/unit/test_wiki_syntax_page.py` | the wiki syntax page has every section and statement |
 
 Regenerate the frozen results only for a change of behaviour made on purpose:
 

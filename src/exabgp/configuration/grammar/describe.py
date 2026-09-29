@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import copy
 import functools
+import textwrap
 from collections import Counter
 from dataclasses import dataclass, field, replace
 from typing import Any
@@ -100,6 +101,45 @@ def syntax(block: Block, depth: int = 0, seen: dict[tuple[int, ...], str] | None
         lines.append(indent + _opening(child))
         lines.extend(syntax(child, depth + 1, seen))
         lines.append(indent + '}')
+    return lines
+
+
+MANUAL_INDENT = '    '  # a tab in a man page literal block is eight columns
+
+
+def manual(lines: list[str], width: int) -> list[str]:
+    """The syntax as a man page shows it: spaces for tabs, a note too wide above its statement."""
+    found: list[str] = []
+    for line in lines:
+        depth = len(line) - len(line.lstrip(INDENT))
+        text = line[depth:]
+        indent = MANUAL_INDENT * depth
+        statement, marker, note = text.partition('  # ')
+        if not marker or len(indent + text) <= width:
+            found.append(indent + text)
+            continue
+        found.extend(f'{indent}# {each}' for each in textwrap.wrap(note, width - len(indent) - 2))
+        found.extend(_wrapped(statement, indent, width))
+    return found
+
+
+def _wrapped(statement: str, indent: str, width: int) -> list[str]:
+    """A statement too wide for a line, carried on lines indented further.
+
+    It breaks at a space, or inside a word after a `|`: `unicast|multicast|...` has none.
+    """
+    pieces: list[tuple[str, str]] = []  # each piece, and what joins it to the one before
+    for word in statement.split(' '):
+        parts = word.split('|')
+        pieces.append((parts[0] + ('|' if len(parts) > 1 else ''), ' '))
+        pieces.extend((part + ('|' if index < len(parts) - 2 else ''), '') for index, part in enumerate(parts[1:]))
+    lines = [indent]
+    for piece, joint in pieces:
+        room = width - len(lines[-1])
+        if lines[-1].strip() and len(joint + piece) > room:
+            lines.append(indent + MANUAL_INDENT * 2)
+            joint = ''
+        lines[-1] += (joint if lines[-1].strip() else '') + piece
     return lines
 
 

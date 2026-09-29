@@ -362,7 +362,7 @@ FAMILY = Block(
                 field=afi_keyword,
                 store=FamilyStore(afi_keyword),
                 multiple=True,
-                doc=f'a {afi_keyword} family to negotiate',
+                doc=f'an {afi_keyword} family to negotiate',
             )
             for afi_keyword in SAFIS
         ),

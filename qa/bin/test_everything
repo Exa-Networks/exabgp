@@ -515,6 +515,8 @@ NOT_A_GATE = {
     'rmpyc': 'deletes .pyc files',
     'sync_requirements.sh': 'regenerates qa/requirements.txt',
     'test_everything': 'this file',
+    'update_man_syntax': 'rewrites doc/man/exabgp.conf.5, which test_man_configuration_syntax.py gates',
+    'update_wiki_syntax': 'writes a page of the wiki, another repository',
 }
 
 _qa_bin = Path(__file__).resolve().parent
