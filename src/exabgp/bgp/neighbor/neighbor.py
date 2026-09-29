@@ -418,7 +418,9 @@ class Neighbor:
 
         nexthop = route.nexthop  # Use route.nexthop, not nlri.nexthop
 
-        # Skip if not a SELF type
+        # A next hop the operator wrote is sent as written, whoever it belongs to. This is by
+        # design: exabgp injects routes on behalf of other routers, so it is not "the
+        # advertising PE" of RFC 7432 11.1, which the ledger records as not-applicable.
         if not nexthop.SELF:
             return route
 

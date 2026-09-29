@@ -342,7 +342,12 @@ class MPNLRICollection:
         # Only apply LLNH logic for IPv6 families
         if family_key[0] != AFI.ipv6:
             return nh_rd + nh_packed
+        return nh_rd + self._ipv6_next_hop(nlri_nexthop, nh_packed, negotiated)
 
+    @staticmethod
+    def _ipv6_next_hop(nlri_nexthop: IP, packed: Buffer, negotiated: 'Negotiated') -> bytes:
+        """The IPv6 next hop, 16 octets or global then link-local, 32 (draft-ietf-idr-linklocal-capability)."""
+        nh_packed = bytes(packed)
         is_nh_link_local = nlri_nexthop.is_link_local()
 
         # Check if LLNH capability is negotiated
@@ -355,31 +360,31 @@ class MPNLRICollection:
             if is_nh_link_local:
                 raise RuntimeError('a link-local next-hop needs the link-local next-hop capability')
             # Without LLNH, just send the nexthop as-is
-            return nh_rd + nh_packed
+            return nh_packed
 
         # Check if session is multihop - link-local not usable beyond 1 hop
         # RFC draft-ietf-idr-linklocal-capability: exclude LLA for non-directly-connected peers
         if negotiated.is_multihop():
             if is_nh_link_local:
                 raise RuntimeError('a link-local next-hop can not reach a multihop peer')
-            return nh_rd + nh_packed
+            return nh_packed
 
         # Get link-local address if available
         link_local = negotiated.link_local_address()
 
         # Case 1: Nexthop is already link-local - send as 16-byte (with LLNH negotiated)
         if is_nh_link_local:
-            return nh_rd + nh_packed
+            return nh_packed
 
         # Case 2: Nexthop is global, and we have a link-local to include
         # Wire format is ALWAYS: Global (16 bytes) + Link-local (16 bytes)
         # The link-local-prefer config affects receiver's forwarding decision, not wire order
         if link_local is not None:
             lla_packed = link_local.pack_ip()
-            return nh_rd + nh_packed + lla_packed
+            return nh_packed + lla_packed
 
         # Case 3: Global nexthop, no link-local available - send as 16-byte
-        return nh_rd + nh_packed
+        return nh_packed
 
     def _fragmented(
         self,
