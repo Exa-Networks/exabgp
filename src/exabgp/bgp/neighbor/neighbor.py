@@ -517,127 +517,71 @@ Neighbor {peer-address}
     summary_header: ClassVar[str] = 'Peer            AS        up/down state       |     #sent     #recvd    #pfx_in'
     summary_template: ClassVar[str] = '%-15s %-7s %9s %-12s %10d %10d'
 
+    # The api flags of a process, by the key neighbor.api files them under, and the word printed for each.
+    _api_global: ClassVar[dict[str, str]] = {
+        'neighbor-changes': 'neighbor-changes',
+        'negotiated': 'negotiated',
+        'fsm': 'fsm',
+        'signal': 'signal',
+    }
+
+    _api_receive: ClassVar[dict[str, str]] = {
+        'receive-packets': 'packets',
+        'receive-parsed': 'parsed',
+        'receive-consolidate': 'consolidate',
+        f'receive-{Message.CODE.NOTIFICATION.SHORT}': 'notification',
+        f'receive-{Message.CODE.OPEN.SHORT}': 'open',
+        f'receive-{Message.CODE.KEEPALIVE.SHORT}': 'keepalive',
+        f'receive-{Message.CODE.UPDATE.SHORT}': 'update',
+        f'receive-{Message.CODE.ROUTE_REFRESH.SHORT}': 'refresh',
+        f'receive-{Message.CODE.OPERATIONAL.SHORT}': 'operational',
+    }
+
+    _api_send: ClassVar[dict[str, str]] = {
+        'send-packets': 'packets',
+        'send-parsed': 'parsed',
+        'send-consolidate': 'consolidate',
+        f'send-{Message.CODE.NOTIFICATION.SHORT}': 'notification',
+        f'send-{Message.CODE.OPEN.SHORT}': 'open',
+        f'send-{Message.CODE.KEEPALIVE.SHORT}': 'keepalive',
+        f'send-{Message.CODE.UPDATE.SHORT}': 'update',
+        f'send-{Message.CODE.ROUTE_REFRESH.SHORT}': 'refresh',
+        f'send-{Message.CODE.OPERATIONAL.SHORT}': 'operational',
+    }
+
     @classmethod
     def configuration(cls, neighbor: Neighbor, with_routes: bool = True) -> str:
-        routes_str = ''
-        if with_routes:
-            routes_str += '\nstatic { '
-            for route in neighbor.rib.outgoing.queued_routes():
-                routes_str += f'\n\t\t{route.extensive()}'
-            routes_str += '\n}'
+        """The neighbor as configuration text, for display: not every line of it reads back."""
+        routes_str = cls._configuration_routes(neighbor) if with_routes else ''
+        families = cls._configuration_families(neighbor)
+        nexthops = cls._configuration_nexthops(neighbor)
+        addpaths = cls._configuration_addpaths(neighbor)
 
-        families = ''
-        for afi, safi in neighbor.families():
-            limit = neighbor.prefix_limit.get((afi, safi), 0)
-            prefix_limit = f' prefix-limit {limit}' if limit else ''
-            families += f'\n\t\t{afi.name()} {safi.name()}{prefix_limit};'
-
-        nexthops = ''
-        for afi, safi, nexthop in neighbor.nexthops():
-            nexthops += f'\n\t\t{afi.name()} {safi.name()} {nexthop.name()};'
-
-        addpaths = ''
-        for afi, safi in neighbor.addpaths():
-            limit = neighbor.capability.paths_limit_per_family.get((afi, safi), 0)
-            if limit > 0:
-                addpaths += f'\n\t\t{afi.name()} {safi.name()} limit {limit};'
-            else:
-                addpaths += f'\n\t\t{afi.name()} {safi.name()};'
-
-        codes = Message.CODE
-
-        _extension_global = {
-            'neighbor-changes': 'neighbor-changes',
-            'negotiated': 'negotiated',
-            'fsm': 'fsm',
-            'signal': 'signal',
-        }
-
-        _extension_receive = {
-            'receive-packets': 'packets',
-            'receive-parsed': 'parsed',
-            'receive-consolidate': 'consolidate',
-            f'receive-{codes.NOTIFICATION.SHORT}': 'notification',
-            f'receive-{codes.OPEN.SHORT}': 'open',
-            f'receive-{codes.KEEPALIVE.SHORT}': 'keepalive',
-            f'receive-{codes.UPDATE.SHORT}': 'update',
-            f'receive-{codes.ROUTE_REFRESH.SHORT}': 'refresh',
-            f'receive-{codes.OPERATIONAL.SHORT}': 'operational',
-        }
-
-        _extension_send = {
-            'send-packets': 'packets',
-            'send-parsed': 'parsed',
-            'send-consolidate': 'consolidate',
-            f'send-{codes.NOTIFICATION.SHORT}': 'notification',
-            f'send-{codes.OPEN.SHORT}': 'open',
-            f'send-{codes.KEEPALIVE.SHORT}': 'keepalive',
-            f'send-{codes.UPDATE.SHORT}': 'update',
-            f'send-{codes.ROUTE_REFRESH.SHORT}': 'refresh',
-            f'send-{codes.OPERATIONAL.SHORT}': 'operational',
-        }
-
-        apis = ''
-
-        for process in neighbor.api.get('processes', []) if neighbor.api else []:
-            _global = []
-            _receive = []
-            _send = []
-
-            for api, name in _extension_global.items():
-                _global.extend(
-                    [
-                        f'\t\t{name};\n',
-                    ]
-                    if neighbor.api and process in neighbor.api[api]
-                    else [],
-                )
-
-            for api, name in _extension_receive.items():
-                _receive.extend(
-                    [
-                        f'\t\t\t{name};\n',
-                    ]
-                    if neighbor.api and process in neighbor.api[api]
-                    else [],
-                )
-
-            for api, name in _extension_send.items():
-                _send.extend(
-                    [
-                        f'\t\t\t{name};\n',
-                    ]
-                    if neighbor.api and process in neighbor.api[api]
-                    else [],
-                )
-
-            _api = '\tapi {\n'
-            _api += f'\t\tprocesses [ {process} ];\n'
-            _api += ''.join(_global)
-            if _receive:
-                _api += '\t\treceive {\n'
-                _api += ''.join(_receive)
-                _api += '\t\t}\n'
-            if _send:
-                _api += '\t\tsend {\n'
-                _api += ''.join(_send)
-                _api += '\t\t}\n'
-            _api += '\t}\n'
-
-            apis += _api
-
-        md5_base64_str = 'true' if neighbor.session.md5_base64 else 'false'
-        cap = neighbor.capability
-        add_path_str = AddPath().named(cap.add_path) if cap.add_path else 'disable'
-        graceful_str = str(cap.graceful_restart.time) if cap.graceful_restart.is_enabled() else 'disable'
-
-        def state(enabled: bool, code: int) -> str:
-            if code in cap.required:
-                return 'require'
-            return 'enable' if enabled else 'disable'
+        apis = cls._configuration_apis(neighbor)
 
         returned = (
             f'neighbor {neighbor.session.peer_address} {{\n'
+            + cls._configuration_statements(neighbor)
+            + cls._configuration_role(neighbor)
+            + cls._configuration_confederation(neighbor)
+            + cls._configuration_capability(neighbor.capability)
+            + f'\tfamily {{{families}\n'
+            f'\t}}\n'
+            f'\tnexthop {{{nexthops}\n'
+            f'\t}}\n'
+            f'\tadd-path {{{addpaths}\n'
+            f'\t}}\n' + f'{apis}{routes_str}'
+            f'}}'
+        )
+
+        return returned.replace('\t', '  ')
+
+    @staticmethod
+    def _configuration_statements(neighbor: Neighbor) -> str:
+        """The single line statements of the neighbor, those left at their default included."""
+        md5_base64_str = 'true' if neighbor.session.md5_base64 else 'false'
+
+        return (
             f'\tdescription "{neighbor.description}";\n'
             f'\trouter-id {neighbor.session.router_id};\n'
             f'\thost-name {neighbor.host_name};\n'
@@ -667,9 +611,94 @@ Neighbor {peer-address}
             + (f'\tmd5-ip "{neighbor.session.md5_ip}";\n' if not neighbor.session.auto_discovery else '')
             + (f'\toutgoing-ttl {neighbor.session.outgoing_ttl};\n' if neighbor.session.outgoing_ttl else '')
             + (f'\tincoming-ttl {neighbor.session.incoming_ttl};\n' if neighbor.session.incoming_ttl else '')
-            + cls._configuration_role(neighbor)
-            + cls._configuration_confederation(neighbor)
-            + f'\tcapability {{\n'
+        )
+
+    @classmethod
+    def _configuration_apis(cls, neighbor: Neighbor) -> str:
+        """One api block per process, each with the flags set for that process."""
+        apis = ''
+        for process in neighbor.api.get('processes', []) if neighbor.api else []:
+            apis += cls._configuration_api(neighbor, process)
+        return apis
+
+    @classmethod
+    def _configuration_api(cls, neighbor: Neighbor, process: str) -> str:
+        """The api block of one process, its receive and send blocks left out when empty."""
+        _global = cls._api_flags(neighbor, process, cls._api_global, '\t\t')
+        _receive = cls._api_flags(neighbor, process, cls._api_receive, '\t\t\t')
+        _send = cls._api_flags(neighbor, process, cls._api_send, '\t\t\t')
+
+        _api = '\tapi {\n'
+        _api += f'\t\tprocesses [ {process} ];\n'
+        _api += ''.join(_global)
+        if _receive:
+            _api += '\t\treceive {\n'
+            _api += ''.join(_receive)
+            _api += '\t\t}\n'
+        if _send:
+            _api += '\t\tsend {\n'
+            _api += ''.join(_send)
+            _api += '\t\t}\n'
+        _api += '\t}\n'
+        return _api
+
+    @staticmethod
+    def _api_flags(neighbor: Neighbor, process: str, extension: dict[str, str], indent: str) -> list[str]:
+        """The lines of the flags in extension which are set for process."""
+        return [f'{indent}{name};\n' for api, name in extension.items() if process in neighbor.api[api]]
+
+    @staticmethod
+    def _configuration_routes(neighbor: Neighbor) -> str:
+        """The routes queued in the outgoing RIB, as a static block."""
+        routes_str = '\nstatic { '
+        for route in neighbor.rib.outgoing.queued_routes():
+            routes_str += f'\n\t\t{route.extensive()}'
+        routes_str += '\n}'
+        return routes_str
+
+    @staticmethod
+    def _configuration_families(neighbor: Neighbor) -> str:
+        """The lines of the family block, with the prefix-limit of the families which have one."""
+        families = ''
+        for afi, safi in neighbor.families():
+            limit = neighbor.prefix_limit.get((afi, safi), 0)
+            prefix_limit = f' prefix-limit {limit}' if limit else ''
+            families += f'\n\t\t{afi.name()} {safi.name()}{prefix_limit};'
+        return families
+
+    @staticmethod
+    def _configuration_nexthops(neighbor: Neighbor) -> str:
+        """The lines of the nexthop block."""
+        nexthops = ''
+        for afi, safi, nexthop in neighbor.nexthops():
+            nexthops += f'\n\t\t{afi.name()} {safi.name()} {nexthop.name()};'
+        return nexthops
+
+    @staticmethod
+    def _configuration_addpaths(neighbor: Neighbor) -> str:
+        """The lines of the add-path block, with the limit of the families which have one."""
+        addpaths = ''
+        for afi, safi in neighbor.addpaths():
+            limit = neighbor.capability.paths_limit_per_family.get((afi, safi), 0)
+            if limit > 0:
+                addpaths += f'\n\t\t{afi.name()} {safi.name()} limit {limit};'
+            else:
+                addpaths += f'\n\t\t{afi.name()} {safi.name()};'
+        return addpaths
+
+    @classmethod
+    def _configuration_capability(cls, cap: NeighborCapability) -> str:
+        """The capability block, a capability the peer must also announce said as require."""
+        add_path_str = AddPath().named(cap.add_path) if cap.add_path else 'disable'
+        graceful_str = str(cap.graceful_restart.time) if cap.graceful_restart.is_enabled() else 'disable'
+
+        def state(enabled: bool, code: int) -> str:
+            if code in cap.required:
+                return 'require'
+            return 'enable' if enabled else 'disable'
+
+        return (
+            '\tcapability {\n'
             f'\t\tasn4 {state(cap.asn4.is_enabled(), CapabilityCode.FOUR_BYTES_ASN)};\n'
             + ''.join(f'\t\t{keyword} {word};\n' for keyword, word in cap.route_refresh_statements())
             + f'\t\tgraceful-restart {graceful_str};\n'
@@ -680,19 +709,8 @@ Neighbor {peer-address}
             f'\t\toperational {state(cap.operational.is_enabled(), CapabilityCode.OPERATIONAL)};\n'
             f'\t\taigp {"enable" if cap.aigp.is_enabled() else "disable"};\n'
             + cls._configuration_capability_optional(cap)
-            + f'\t}}\n'
-            f'\tfamily {{{families}\n'
-            f'\t}}\n'
-            f'\tnexthop {{{nexthops}\n'
-            f'\t}}\n'
-            f'\tadd-path {{{addpaths}\n'
-            f'\t}}\n' + f'{apis}{routes_str}'
-            f'}}'
+            + '\t}\n'
         )
-
-        # '\t\treceive {\n%s\t\t}\n' % receive if receive else '',
-        # '\t\tsend {\n%s\t\t}\n' % send if send else '',
-        return returned.replace('\t', '  ')
 
     @staticmethod
     def _configuration_capability_optional(cap: NeighborCapability) -> str:
