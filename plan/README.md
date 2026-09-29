@@ -49,7 +49,6 @@
 | `plan-llgr.md` | Long-Lived Graceful Restart (RFC 9494, issue #292) |
 | `plan-mypyc.md` | Compile the hot path with mypyc, pure Python kept as reference |
 | `plan-connection-reader-removal.md` | Delete the dead sync `Connection.reader()`, retarget 68 test calls (before mypyc phase 7) |
-| `plan-large-function-decomposition.md` | Split the ten largest functions, `UpdateCollection.messages` first (compiled by mypyc) |
 | `plan-gtsm-shared-listener.md` | `incoming-ttl` on a listening socket shared by several neighbours |
 | `plan-agent-instructions.md` | AGENTS.md, evidence rule, plan journal, `.claude/backups` cleanup (decisions needed) |
 | `plan-multisession.md` | Cisco code 131 (fixed); one session per family (main fixed, 5.0 won't fix) |
@@ -133,6 +132,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-large-function-decomposition.md` | 2026-09-29 | The ten largest functions split, `long_function` 69 → 58 |
 | `done-rfc9234-roles-otc.md` | 2026-09-29 | BGP Roles and OTC, ingress insertion included; outcome note added, cleanup moved on |
 | `done-dns-domain-name.md` | 2026-09-29 | `domain()` returned the host label; fixed, never reached the wire |
 | `done-testing-gaps.md` | 2026-09-29 | Gaps #1425/#1426 exposed; RIB cache and DNS cache leaking between tests |

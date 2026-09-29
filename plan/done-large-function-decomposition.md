@@ -1,6 +1,6 @@
 # Decompose the largest functions
 
-**Status:** 🔄 In progress (steps 0 to 2 done)
+**Status:** ✅ Complete (all steps done 2026-09-29)
 **Created:** 2026-09-29
 **From:** `done-review-quality-sweep.md` item 32, and the deferred structural cleanup of
 `done-rfc9234-roles-otc.md`
@@ -50,11 +50,77 @@ MANDATORY_REFACTORING_PROTOCOL.md:
 1. [x] `decode_to_api_command`: 304 → 52 lines, fifteen helpers, largest 51 (signed off
        2026-09-29)
 2. [x] `loop`: 365 → 47 lines, twenty-two helpers, largest 23 (signed off 2026-09-29)
-3. [ ] `_get_completions`: pin completions per context, then split by context
-4. [ ] The other six from the RFC 9234 table, one at a time, same protocol
-5. [ ] Lower the `long_function` ceiling by what each removes
+3. [x] `_get_completions`: 570 → 64 lines (half of it the docstring and dispatch comments), eighteen helpers, largest 69 (signed off 2026-09-29)
+4. [x] The other six from the RFC 9234 table, one at a time, same protocol: `configuration`
+       175 → 25, `_main` 145 → 33, `_serialize_value` 128 → 53, `cmdline` 112 → 29,
+       `read_message` 94 → 39, `_update` 74 → 32
+5. [x] Lower the `long_function` ceiling by what each removes: 64 → 58
 
 ## Progress
+
+**Step 4, 2026-09-29.** Five agents in parallel, one file set each, same method: branch
+coverage first, a pin test file for every reachable path the existing tests missed (passing
+on the unsplit code), a golden corpus outside the tree where outputs could be enumerated, then
+one extraction per step with ruff, mypy, the pins and the module's tests after each.
+
+| Function | Lines | Pins | Corpus |
+|---|---|---|---|
+| `Neighbor.configuration` | 175 → 25, 8 helpers | `test_neighbor_configuration_paths.py`, 12 | 133 neighbors of 112 configs, identical |
+| `Peer._main` | 145 → 33, 10 helpers, largest 64 | `test_peer_main_paths.py`, 17 | none: collaborators recorded, loop order pinned |
+| `_serialize_value` | 128 → 53, 5 helpers | `test_serialize_value_paths.py`, 37 | 60 values and 112 configs, identical |
+| `encode.cmdline` | 112 → 29, 6 helpers | `test_encode_cmdline_paths.py`, 26 | 118 `exabgp encode` runs, identical |
+| `Protocol.read_message` | 94 → 39, 4 helpers | `test_read_message_paths.py`, 26 | none: mutants checked red |
+| `JSON._update` | 74 → 32, 3 helpers | `test_json_update_paths.py`, 12 | API encode 385/0 and 411/0 |
+
+`_main` and `read_message` are on mypyc's phase 7 list: their helpers are plain methods, no
+closures, no `Any`. `_main` now builds its two handlers at the top of the loop helper, after
+the session up announce rather than before; their constructors only set attributes.
+
+The completer's unreachable lines went too, each with the assert or comment which says why:
+the options of `show neighbor` (no registry metadata), the tree walk's filters on `announce`
+and `show`, and the walk's final `return []`. The list branches of the walk stayed: typing the
+literal `__options__` walks onto an options list, which the corpus had not tried, and
+`test_typing_the_options_key_walks_onto_the_options_list` now pins it.
+
+Oddities pinned rather than fixed, each a candidate for its own change:
+
+- `_main` is declared `-> int` and never returns: every path raises.
+- `read_message` answers a body which failed to decode with `Notify(1, 0, 'can not decode update
+  message of type "N"')`, "update" whatever the type and a header error for a body; a header
+  NotifyError without data puts its text in the NOTIFICATION data field, where the code comment
+  says it stays in the log.
+- `JSON._update` keeps an End-of-RIB return no real UPDATE reaches, which would write invalid JSON.
+- `Neighbor.configuration` is display text, not configuration which reads back: blank lines
+  before `passive`, `listen` and `connect`, `static { ` closed on the neighbor's `}}`, routes
+  without the `route` keyword, empty `host-name ;` and `source-interface ;`.
+- `_serialize_value` leaves Counter values and dict keys unconverted, and passes bytearray, set
+  and frozenset through, on which `config_to_json` raises.
+- `exabgp encode`: `-c /nonexistent.conf` reports "Is a directory", everything after the first
+  `route` of `"route A; route B"` is dropped, a route argument is ignored with `-c`, and `-n`
+  overrides `--no-header`.
+
+**Step 3, 2026-09-29.** Branch coverage of the completer tests showed the rib, system and set
+sub-completions, the command tree walk, the neighbor filters, the AFI/SAFI and route refresh
+hand-offs and the multi-character abbreviation never ran. `tests/unit/cli/test_completer_contexts.py`
+pins them, 38 tests on a completer whose neighbor list is a fixed table. Alongside, a golden
+corpus kept out of the tree (120492 token/text inputs: every pair of 61 words, triples and
+quadruples of the likeliest ones, and every command tree path with one or two words more),
+recording the matches and every metadata field, was compared after each step: 0 differences
+throughout. It caught one slip, a `token` left behind by the extraction of the tree walk,
+which the committed tests caught as well.
+
+Steps: `_offer` (thirteen filter-and-describe blocks), `_first_word_completions` with the
+groups as module constants, `_display_prefix_completions`, the `peer <ip|*>` block which ended
+in `pass` removed, `_noun_first_completions`, `_peer_completions` split by word count into
+three, `_route_context_completions`, `_set_completions`, `_show_neighbor_completions`,
+`_trailing_keyword_completions`, `_V4_BLOCKED_COMMANDS`, and the tree walk as
+`_tree_completions`, `_tree_partial_token`, `_tree_level_completions` and `_tree_options`.
+Unit suite 11452 passed. `long_function` 65 → 64.
+
+Lines no input reaches with today's registry, left for a commit of their own: `show neighbor`
+has no metadata, so its options branch never runs; `announce` is in the tree only under `peer`,
+which never reaches the walk, and `show` is refused before it, so the walk's four filters on
+them never run; and the tree has no list leaves, so neither list branch runs.
 
 **Step 2, 2026-09-29.** `./qa/bin/functional cli` drives the single client mode only, and no
 test ran the multi client one, so `tests/unit/test_unixsocket_loop.py` pins both first: 10
@@ -117,4 +183,4 @@ Sign-off on the split of each function before it starts.
 
 ## Resume Point
 
-Step 3, `_get_completions`, after sign-off of its split.
+None: the plan is complete. The oddities above are the follow-up.
