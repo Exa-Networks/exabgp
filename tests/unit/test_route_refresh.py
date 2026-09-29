@@ -278,18 +278,21 @@ def test_route_refresh_unpack_through_message_class() -> None:
 # ==============================================================================
 
 
-def test_route_refresh_unpack_invalid_data_length() -> None:
-    """Test that invalid data length raises Notify error.
+@pytest.mark.parametrize('enhanced,answer', [(True, (7, 1)), (False, (1, 2))])
+def test_route_refresh_unpack_invalid_data_length(enhanced: bool, answer: tuple[int, int]) -> None:
+    """ROUTE_REFRESH must be exactly 4 bytes.
 
-    ROUTE_REFRESH must be exactly 4 bytes.
+    RFC 7313 5 answers Invalid Message Length once the peer sent the Enhanced Route Refresh
+    capability; without it the answer is Bad Message Length.
     """
-    # Too short (3 bytes)
-    data = b'\x00\x01\x00'
+    negotiated = create_negotiated()
+    negotiated.received_open = Mock()
+    negotiated.received_open.capabilities.announced = Mock(return_value=enhanced)
 
     with pytest.raises(Notify) as exc_info:
-        RouteRefresh.unpack_message(data, create_negotiated())
+        RouteRefresh.unpack_message(b'\x00\x01\x00', negotiated)
 
-    assert (exc_info.value.code, exc_info.value.subcode) == (7, 1)
+    assert (exc_info.value.code, exc_info.value.subcode) == answer
 
 
 def test_route_refresh_unpack_empty_data() -> None:

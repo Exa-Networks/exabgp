@@ -128,6 +128,9 @@ class Message:
     # the whole message, header included; the session's own maximum is checked apart
     LENGTH_MIN: ClassVar[int] = HEADER_LEN
     LENGTH_MAX: ClassVar[int] = EXTENDED_MAX
+    # whether the header check answers a length outside those bounds (RFC 4271 6.1, Bad
+    # Message Length), or leaves it to the decoder, for a type whose RFC gives its own error
+    HEADER_CHECKS_LENGTH: ClassVar[bool] = True
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -193,6 +196,18 @@ class Message:
         if klass is None:
             return length >= cls.HEADER_LEN
         return klass.LENGTH_MIN <= length <= klass.LENGTH_MAX
+
+    @classmethod
+    def header_refuses(cls, code: int, length: int) -> bool:
+        """Whether the header check answers this length itself, with Bad Message Length.
+
+        Not for a type whose decoder answers a wrong length with an error its RFC gives:
+        the header would answer first, and the peer would never be told the right thing.
+        """
+        klass = cls.registered_message.get(code)
+        if klass is not None and not klass.HEADER_CHECKS_LENGTH:
+            return length < cls.HEADER_LEN
+        return not cls.length_valid(code, length)
 
     @staticmethod
     def string(code: int | None) -> str:

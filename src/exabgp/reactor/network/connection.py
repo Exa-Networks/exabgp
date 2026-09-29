@@ -466,7 +466,7 @@ class Connection:
             yield length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
             return
 
-        if not Message.length_valid(msg, length):
+        if Message.header_refuses(msg, length):
             # RFC 4271 6.1: the Data field MUST contain the erroneous Length field
             report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
             yield length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
@@ -513,7 +513,7 @@ class Connection:
                 report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
                 return length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
 
-            if not Message.length_valid(msg, length):
+            if Message.header_refuses(msg, length):
                 # RFC 4271 6.1: the Data field MUST contain the erroneous Length field
                 report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
                 return length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))

@@ -259,9 +259,12 @@ Code of "ROUTE-REFRESH Message Error" and the subcode of "Invalid
 Message Length".
 """
 note = """
-exabgp applies the check to every ROUTE-REFRESH, whatever the subtype and whether or not
-the capability was received.  A body which is not four octets has no subtype which can be
-trusted to decide otherwise, and RFC 2918 defines the message as exactly four.
+Once the peer's OPEN carried the capability, exabgp applies the check to every
+ROUTE-REFRESH, whatever the subtype: a body which is not four octets has no subtype which
+can be trusted to decide otherwise.  Without the capability section 5 does not apply, RFC
+2918 gives no error, and the answer is Bad Message Length as RFC 4271 6.1 gives the other
+types.  The tests read the message through a real connection: the header check used to
+answer 1/2 first, so a peer was never sent the 7/1 a test of the decoder alone proved.
 """
 
 [[requirement]]

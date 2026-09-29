@@ -19,6 +19,7 @@ and is built from fields by one factory.
 | `FIXED_SIZE` | `ClassVar[int]` | the octets of the body every message of the type has |
 | `LENGTH_MIN` | `ClassVar[int]` | `HEADER_LEN + FIXED_SIZE`, derived; declaring it fails |
 | `LENGTH_MAX` | `ClassVar[int]` | the whole message, header included; 65535 unless the type says less |
+| `HEADER_CHECKS_LENGTH` | `ClassVar[bool]` | True: the header answers a length outside the bounds with 1/2. False: the decoder does, for a type whose RFC gives its own error (ROUTE-REFRESH) |
 | `_packed` | `Buffer` | the body, the one source of truth |
 | `__init__(packed)` | constructor | trusted bytes only: what a factory built or `unpack_message` checked |
 | `make_<name>(...)` | classmethod | builds the body from fields |
@@ -29,6 +30,9 @@ and is built from fields by one factory.
 
 `Message.length_valid(code, length)` asks the registered class for its bounds. A type
 nobody registered is bounded by the header only: it is refused by its type (1/3).
+`Message.header_refuses(code, length)` is what the connection asks: the same, except for a
+type with `HEADER_CHECKS_LENGTH` False, whose decoder must then refuse every other length
+(the contract test checks it does).
 
 `Message.frame(code, body)` is the framing, for code which builds a body without an
 instance (`UpdateCollection.messages()`).
@@ -99,7 +103,7 @@ Checked by the connection, before any decoder (`reactor/network/connection.py`):
 | Condition | NOTIFICATION |
 |---|---|
 | the marker is not all ones | 1/1 |
-| length below 19, above the session maximum, or outside the type's bounds | 1/2, Data: the length field |
+| length below 19, above the session maximum, or outside the type's bounds (not ROUTE-REFRESH) | 1/2, Data: the length field |
 | a type with no decoder | 1/3, Data: the type octet |
 
 Checked by the decoder (`unpack_message`):
@@ -112,7 +116,8 @@ Checked by the decoder (`unpack_message`):
 | UPDATE | see `UpdateCollection._parse_payload` and RFC 7606 | 3/x, or treat-as-withdraw |
 | NOTIFICATION | never: RFC 4271 6.5 forbids answering one | a short body is read as 0/0 |
 | KEEPALIVE | a body | 1/2 (the header check refuses it first) |
-| ROUTE-REFRESH | a body other than 4 octets | 7/1, Data: the message (the header check refuses it first with 1/2) |
+| ROUTE-REFRESH | a body other than 4 octets, the peer's OPEN carried Enhanced Route Refresh | 7/1, Data: the whole message (RFC 7313 5) |
+| ROUTE-REFRESH | a body other than 4 octets, without that capability | 1/2, Data: the length field |
 | OPERATIONAL | shorter than its header or than its length says | 5/0 |
 | OPERATIONAL | too short for its group's layout | 5/0 |
 

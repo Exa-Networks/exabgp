@@ -4,6 +4,11 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: a ROUTE-REFRESH which is not 23 octets, from a peer which sent the Enhanced Route
+   Refresh capability, is answered with ROUTE-REFRESH Message Error / Invalid Message Length
+   (7/1) and the whole message as its data, as RFC 7313 section 5 asks. The header check
+   answered first with Bad Message Length (1/2), so the 7/1 was never sent. Without the
+   capability the answer is still 1/2.
  * Change: the AS of a peer which sent the four-octet AS capability is the capability's value
    whatever the OPEN's My Autonomous System field holds (RFC 6793 4.1), not only when that
    field is AS_TRANS. A peer whose two fields disagree is now judged by the capability.

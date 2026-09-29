@@ -15,24 +15,16 @@ tested through a real connection here rather than against a decoder.
 
 from __future__ import annotations
 
-import asyncio
-import socket
-from collections import defaultdict
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
 from exabgp.bgp.message import KeepAlive, Message, NotificationReceived, Notify, Open
 from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, RouterID, Version
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.neighbor import Neighbor
-from exabgp.protocol.family import AFI
-from exabgp.reactor.network.outgoing import Outgoing
-from exabgp.reactor.protocol import Protocol
-
-MARKER = bytes([0xFF] * 16)
+from rfc.message_wire import MARKER, header
+from rfc.message_wire import read_wire as _read
 
 MESSAGE_HEADER_ERROR = 1
 CONNECTION_NOT_SYNCHRONIZED = 1
@@ -43,47 +35,6 @@ OPEN = 1
 UPDATE = 2
 NOTIFICATION = 3
 KEEPALIVE = 4
-
-# read_message indexes these three rather than using .get, so a Neighbor built outside the
-# configuration parser has to carry them before it can be read from.
-API_KEYS = ('receive-packets', 'receive-consolidate', 'receive-parsed')
-
-
-def header(length: int, message_type: int) -> bytes:
-    """A well formed header, for whatever the caller wants to be wrong about."""
-    return MARKER + pack('!H', length) + bytes([message_type])
-
-
-def _read(wire: bytes) -> Message:
-    """Hand `wire` to a real connection and a real Protocol, and return what came back.
-
-    The only stand-in is the Peer, which read_message uses for its statistics counter and
-    for the API fan-out we switch off above.  Everything which looks at the bytes is the
-    production code.
-    """
-
-    async def run() -> Message:
-        neighbor = Neighbor()
-        for key in API_KEYS:
-            neighbor.api[key] = False
-        peer = Mock()
-        peer.neighbor = neighbor
-        peer.stats = defaultdict(int)
-
-        protocol = Protocol(peer)
-        ours, theirs = socket.socketpair()
-        ours.setblocking(False)
-        connection = Outgoing(AFI.ipv4, 'peer', 'local')
-        connection.io = ours
-        protocol.connection = connection
-        try:
-            theirs.sendall(wire)
-            return await protocol.read_message()
-        finally:
-            theirs.close()
-            connection.close()
-
-    return asyncio.run(run())
 
 
 def refused(wire: bytes) -> Notify:

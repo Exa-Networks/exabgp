@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.protocol.family import AFI, SAFI
 
 # =================================================================== Notification
@@ -51,6 +52,8 @@ class RouteRefresh(Message):
 
     FIXED_SIZE = 4  # RFC 2918 3: AFI, Reserved (the RFC 7313 Message Subtype) and SAFI
     LENGTH_MAX = Message.HEADER_LEN + FIXED_SIZE
+    # RFC 7313 5 gives a wrong length an error of its own, which only the decoder can pick
+    HEADER_CHECKS_LENGTH = False
 
     def __init__(self, packed: Buffer) -> None:
         if len(packed) != self.FIXED_SIZE:
@@ -90,11 +93,27 @@ class RouteRefresh(Message):
 
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> RouteRefresh:
-        # RFC 7313 5: the Data field "MUST contain the complete ROUTE-REFRESH message",
-        # and the header held nothing the body does not give back: marker, length, type.
         # An unknown subtype is not an error here, the RFC says it is ignored, which is
         # RouteRefreshHandler's decision since only it knows what was negotiated
         if len(data) != cls.FIXED_SIZE:
-            message = cls.MARKER + pack('!H', cls.HEADER_LEN + len(data)) + cls.TYPE + bytes(data)
-            raise Notify(7, 1, f'ROUTE-REFRESH body of {len(data)} octets', data=message)
+            raise cls._wrong_length(data, negotiated)
         return cls(data)
+
+    @classmethod
+    def _wrong_length(cls, data: Buffer, negotiated: Negotiated) -> Notify:
+        """What a body which is not four octets is answered with, which depends on the peer.
+
+        RFC 7313 5 "is applicable only when a BGP speaker has received the Enhanced Route
+        Refresh Capability", so it is the peer's OPEN which is asked, not what was
+        negotiated.  Then Invalid Message Length, whatever the subtype: a body of the wrong
+        size has no subtype to trust.  The Data field "MUST contain the complete
+        ROUTE-REFRESH message", and the header held nothing the body does not give back.
+
+        Without it RFC 2918 gives no error, and the answer is the one RFC 4271 6.1 gives
+        the other types: Bad Message Length, the Data field the Length field.
+        """
+        received = negotiated.received_open
+        if received is not None and received.capabilities.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH):
+            return Notify(7, 1, f'ROUTE-REFRESH body of {len(data)} octets', data=cls.frame(cls.ID, data))
+        length = cls.HEADER_LEN + len(data)
+        return Notify(1, 2, f'ROUTE-REFRESH body of {len(data)} octets', data=pack('!H', length))

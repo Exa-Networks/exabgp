@@ -18,7 +18,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import KeepAlive, Message, Notification, Open, Update
+from exabgp.bgp.message import KeepAlive, Message, Notification, Notify, Open, Update
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.capabilities import Capabilities
@@ -189,6 +189,34 @@ def test_the_length_is_within_the_bounds_of_the_class(sample: Message) -> None:
 )
 def test_length_rules(code: int, length: int, valid: bool) -> None:
     assert Message.length_valid(code, length) is valid
+
+
+@pytest.mark.parametrize(
+    'code,length,refused',
+    [
+        (Message.CODE.KEEPALIVE, 20, True),
+        (Message.CODE.OPEN, 28, True),
+        # RFC 7313 5 answers a ROUTE-REFRESH of the wrong length itself, so the header does not
+        (Message.CODE.ROUTE_REFRESH, 22, False),
+        (Message.CODE.ROUTE_REFRESH, 24, False),
+        (Message.CODE.ROUTE_REFRESH, 18, True),
+    ],
+)
+def test_the_header_refuses_what_no_decoder_answers(code: int, length: int, refused: bool) -> None:
+    assert Message.header_refuses(code, length) is refused
+
+
+@pytest.mark.parametrize('klass', classes(), ids=lambda klass: klass.__qualname__)
+def test_a_decoder_which_takes_over_the_length_check_answers_every_wrong_length(klass: type[Message]) -> None:
+    """What the header lets through for such a type, its decoder must refuse with Notify."""
+    if klass.HEADER_CHECKS_LENGTH or klass.ID not in Message.registered_message:
+        return
+    decoder = Message.registered_message[klass.ID]
+    for body_size in range(klass.FIXED_SIZE + 8):
+        if Message.HEADER_LEN + body_size == klass.LENGTH_MIN:
+            continue
+        with pytest.raises(Notify):
+            decoder.unpack_message(bytes(body_size), negotiated())
 
 
 def test_messages_are_equal_by_their_bytes() -> None:
