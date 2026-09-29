@@ -111,7 +111,7 @@ class ClusterList(Attribute):
             return '[ {} ]'.format(' '.join([str(_) for _ in clusters]))
         return '{}'.format(clusters[0])
 
-    def json(self) -> str:
+    def json(self, compact: bool = False) -> str:
         return '[ {} ]'.format(', '.join(['"{}"'.format(str(_)) for _ in self.clusters]))
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:

@@ -120,7 +120,7 @@ class Aggregator(Attribute):
     def __repr__(self) -> str:
         return f'{self.asn}:{self.speaker}'
 
-    def json(self) -> str:
+    def json(self, compact: bool = False) -> str:
         return '{ "asn" : %d, "speaker" : "%s" }' % (self.asn, self.speaker)
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:

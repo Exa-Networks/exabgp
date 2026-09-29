@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from exabgp.util.types import Buffer
 from struct import pack
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type
+from typing import TYPE_CHECKING, Callable, ClassVar, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -220,8 +220,12 @@ class Attribute:
         """Unpack attribute from wire format. Must be overridden by subclasses."""
         raise NotImplementedError(f'{cls.__name__} must implement unpack_attribute()')
 
-    def json(self, *args: Any, **kwargs: Any) -> str:
-        """Return JSON representation. Must be overridden by subclasses."""
+    def json(self, compact: bool = False) -> str:
+        """Return JSON representation. Must be overridden by subclasses.
+
+        `compact` is only read by BGP-LS; every other attribute accepts it and ignores it,
+        so a caller can hold any attribute and pass it.
+        """
         raise NotImplementedError(f'{self.__class__.__name__} must implement json()')
 
     def _comparable(self) -> tuple[int, int, object]:

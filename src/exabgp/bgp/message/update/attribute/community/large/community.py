@@ -113,7 +113,7 @@ class LargeCommunity(Attribute):
     def __hash__(self) -> int:
         return hash(self._packed)
 
-    def json(self) -> str:
+    def json(self, compact: bool = False) -> str:
         return '[ %d, %d , %d ]' % unpack('!LLL', self._packed)
 
     def pack_attribute(self, negotiated: Negotiated) -> Buffer:

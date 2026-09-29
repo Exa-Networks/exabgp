@@ -57,7 +57,7 @@ class OTC(Attribute):
     def __repr__(self) -> str:
         return str(self.asn)
 
-    def json(self) -> str:
+    def json(self, compact: bool = False) -> str:
         return str(self.asn)
 
     def __hash__(self) -> int:
@@ -84,7 +84,7 @@ class OTCSelf(Attribute):
     def __repr__(self) -> str:
         return 'self' if self.role == RoleValue.NO_ROLE else str(self.role)
 
-    def json(self) -> str:
+    def json(self, compact: bool = False) -> str:
         return f'"{self}"'
 
     def __hash__(self) -> int:
@@ -112,7 +112,7 @@ class OTCNone(Attribute):
     def __repr__(self) -> str:
         return ''
 
-    def json(self) -> str:
+    def json(self, compact: bool = False) -> str:
         return ''
 
     def __hash__(self) -> int:

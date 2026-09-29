@@ -70,7 +70,7 @@ class TunnelEncap(Attribute):
         value = b''.join(tlv.pack() for tlv in self.tunnel_tlvs)
         return self._attribute(value)
 
-    def json(self, compact: bool | None = None) -> str:
+    def json(self, compact: bool = False) -> str:
         parts = ', '.join(tlv.json() for tlv in self.tunnel_tlvs)
         return '{' + parts + '}'
 

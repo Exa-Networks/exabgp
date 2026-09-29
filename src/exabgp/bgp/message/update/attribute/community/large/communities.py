@@ -131,7 +131,7 @@ class LargeCommunities(Attribute):
             return repr(communities[0])
         return ''
 
-    def json(self) -> str:
+    def json(self, compact: bool = False) -> str:
         return '[ {} ]'.format(', '.join(community.json() for community in self.communities))
 
     @classmethod

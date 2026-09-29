@@ -127,7 +127,7 @@ class PrefixSid(Attribute):
         # only difference between what arrived and what leaves is the discarded repeat.
         return cls(sr_attrs=sr_attrs, packed=b''.join(bytes(_) for _ in kept))
 
-    def json(self, compact: bool | None = None) -> str:
+    def json(self, compact: bool = False) -> str:
         content: str = ', '.join(d.json() for d in self.sr_attrs)
         return f'{{ {content} }}'
 

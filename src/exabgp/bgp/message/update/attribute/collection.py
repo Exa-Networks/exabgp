@@ -163,7 +163,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
     # sending identical bytes had the second handed the first one's interpretation. See
     # unpack() and tests/unit/test_attribute_cache_per_session.py.
 
-    representation: ClassVar[dict[int, tuple[str, str, str | tuple[str, ...], str, str]]] = {
+    representation: ClassVar[dict[int, tuple[str, str, str, str, str]]] = {
         # key:  (how, default, name, text_presentation, json_presentation),
         Attribute.CODE.ORIGIN: ('string', '', 'origin', '%s', '%s'),
         Attribute.CODE.AS_PATH: ('list', '', 'as-path', '%s', '%s'),
@@ -224,8 +224,6 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 value = str(attribute)
                 if value:  # Skip empty lists (e.g., empty AS_PATH)
                     yield ' {} {}'.format(name, presentation % value)
-            elif how == 'multiple':
-                yield ' {} {}'.format(name[0], presentation % str(attribute))
             else:
                 yield ' {} {}'.format(name, presentation % str(attribute))
 
@@ -281,11 +279,6 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 json_value = attribute.json()
                 if json_value != '{}':  # Skip empty lists (e.g., empty AS_PATH)
                     yield '"{}": {}'.format(name, presentation % json_value)
-            elif how == 'multiple':
-                for n in name:
-                    value = attribute.json(n)
-                    if value:
-                        yield '"{}": {}'.format(n, presentation % value)
             elif how == 'inet':
                 yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute)))
             # Should never be ran

@@ -220,7 +220,7 @@ class ASPath(Attribute):
             parts.append(part)
         return ' '.join(parts)
 
-    def json(self) -> str:
+    def json(self, compact: bool = False) -> str:
         jason = {}
         for pos, content in enumerate(self.aspath):
             jason[pos] = {

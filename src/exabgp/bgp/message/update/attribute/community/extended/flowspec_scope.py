@@ -78,7 +78,7 @@ class InterfaceSet(ExtendedCommunity):
         str_direction = self.names.get(self.direction, str(self.direction))
         return 'interface-set:{}:{}:{}'.format(str_direction, str(self.asn), str(self.target))
 
-    def json(self) -> str:
+    def json(self, compact: bool = False) -> str:
         h = 0x00
         for byte in self._packed:
             h <<= 8

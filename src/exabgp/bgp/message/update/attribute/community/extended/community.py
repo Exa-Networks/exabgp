@@ -182,7 +182,7 @@ class ExtendedCommunityBase(Attribute):
         """
         return self._described() or self._hexadecimal()
 
-    def json(self) -> str:
+    def json(self, compact: bool = False) -> str:
         return '{{ "value": {}, "string": {} }}'.format(self._value(), json.dumps(self._description()))
 
     def __repr__(self) -> str:
