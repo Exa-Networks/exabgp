@@ -488,6 +488,11 @@ class IOperation(IComponent):
     def encode(self, value: BaseValue) -> tuple[int, Buffer]:
         raise NotImplementedError('this method must be implemented by subclasses')
 
+    @classmethod
+    def value_limit(cls) -> int:
+        """One more than the largest value `encode` can write, the widest of VALUE_SIZES."""
+        return 1 << (8 * max(cls.VALUE_SIZES))
+
     # def decode (self, value):
     # 	raise NotImplementedError('this method must be implemented by subclasses')
 
@@ -1225,6 +1230,15 @@ class Flow(NLRI):
                     % (what, length, len(value_bytes)),
                 )
             adding_val = klass.decoder(value_bytes)
+            # The width is the sender's choice, the value is not: a protocol of 262 matches
+            # no packet, could not be packed again, and would reach the API as a filter the
+            # configuration refuses. RFC 8955 section 4.2 makes it a malformed NLRI.
+            if adding_val >= klass.value_limit():
+                raise Notify(
+                    3,
+                    10,
+                    'flow component %d has a value of %d, too large for the field it matches' % (what, adding_val),
+                )
             # klass is an IOperation subclass taking (operator, value); the decoder is typed
             # as returning object, so the value is narrowed before it is used
             if issubclass(klass, IOperation) and isinstance(adding_val, BaseValue):

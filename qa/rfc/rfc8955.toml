@@ -23,7 +23,10 @@
 #     contains an unknown component type, is considered malformed and error handling
 #     according to Section 10 is performed."  No keyword.  exabgp does refuse an unknown
 #     component type, and does not refuse a zero length NLRI: `01 00` decodes to a flow
-#     with no component at all, which matches every packet on the internet.
+#     with no component at all, which matches every packet on the internet.  It also
+#     refuses a value too large for the field its component matches (a protocol of 262
+#     sent in two octets), which it could neither match nor pack again; the tests are
+#     the section 4.2.1.1 "value too large" ones in tests/unit/rfc/test_rfc8955_flowspec.py.
 #
 #   - section 4.2.2, the component encodings themselves, <type, length, prefix> and
 #     <type, [op, value]+>.  Declarative prose throughout.

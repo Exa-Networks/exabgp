@@ -684,6 +684,68 @@ def test_the_reserved_bits_of_a_fragment_bitmask_are_ignored_on_decoding() -> No
     assert str(dirty) == str(clean)
 
 
+# ==================================================== section 4.2.1.1, a value wider than its field
+
+# The operator octet lets a sender announce a value of 1, 2, 4 or 8 octets whatever the
+# component, and exabgp reads any of them: refusing a port of 80 sent in four octets once
+# dropped a real route.  What it cannot do is keep a value too large for the field it
+# matches.  IP protocol is one octet in the packet, a port two, a flow label four, so a
+# protocol of 262 can never match anything, cannot be packed again (`bytes([262])`
+# raises), and is rendered to the API as a filter the configuration grammar refuses.
+# RFC 8955 section 4.2 calls an NLRI "not encoded as specified here" malformed, without a
+# keyword, so these tests carry no rfc() marker.
+LEN_FOUR = 0x20
+LEN_EIGHT = 0x30
+
+WIDER: dict[int, tuple[int, int]] = {  # field octets: the next width up, and its length bits
+    1: (2, LEN_TWO),
+    2: (4, LEN_FOUR),
+    4: (8, LEN_EIGHT),
+}
+
+# (family, component type, octets of the field it matches)
+FIELD_WIDTHS: list[tuple[AFI, int, int]] = [
+    (AFI.ipv4, 0x03, 1),  # protocol
+    (AFI.ipv4, 0x04, 2),  # port
+    (AFI.ipv4, 0x05, 2),  # destination-port
+    (AFI.ipv4, 0x06, 2),  # source-port
+    (AFI.ipv4, 0x07, 1),  # icmp-type
+    (AFI.ipv4, 0x08, 1),  # icmp-code
+    (AFI.ipv4, 0x09, 2),  # tcp-flags
+    (AFI.ipv4, 0x0A, 2),  # packet-length
+    (AFI.ipv6, 0x03, 1),  # next-header
+    (AFI.ipv6, 0x0B, 1),  # traffic-class
+    (AFI.ipv6, 0x0D, 4),  # flow-label
+]
+
+
+def widened(what: int, field_octets: int, value: int) -> bytes:
+    """One component whose value is sent one width wider than the field it matches."""
+    octets, length_bits = WIDER[field_octets]
+    return bytes([what, EOL | length_bits | NumericOperator.EQ]) + value.to_bytes(octets, 'big')
+
+
+@pytest.mark.parametrize(('afi', 'what', 'field_octets'), FIELD_WIDTHS)
+def test_a_value_too_large_for_its_field_is_refused(afi: AFI, what: int, field_octets: int) -> None:
+    too_large = 1 << (8 * field_octets)
+
+    flow = decoded(afi, widened(what, field_octets, too_large))
+
+    assert flow is None, f'component {what} kept a value of {too_large}: {flow}'
+
+
+@pytest.mark.parametrize(('afi', 'what', 'field_octets'), FIELD_WIDTHS)
+def test_the_largest_value_of_a_field_sent_wide_still_decodes_and_packs(afi: AFI, what: int, field_octets: int) -> None:
+    largest = (1 << (8 * field_octets)) - 1
+
+    flow = decoded(afi, widened(what, field_octets, largest))
+
+    assert flow is not None, f'component {what} refused {largest} sent in a wider value'
+    [component] = flow.rules[what]
+    packed = bytes(component.pack())
+    assert int.from_bytes(packed[1:], 'big') == largest
+
+
 # ==================================================== section 6, validation
 
 UPDATE_MESSAGE_ERROR = 3
