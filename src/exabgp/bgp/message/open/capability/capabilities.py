@@ -187,8 +187,13 @@ class Capabilities(dict):
     def _session(self, neighbor):
         if not neighbor['capability']['multi-session']:
             return
-        # XXX: FIXME: should it not be the RFC version ?
         self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
+        # A Cisco router offers 131 alone, with a flags octet and no Session Id. Offering only
+        # the draft code left no code on both sides, and the session was refused with 2/9.
+        # A peer which does not know 131 ignores it (RFC 5492 section 3).
+        cisco = MultiSession()
+        cisco.ID = Capability.CODE.MULTISESSION_CISCO
+        self[Capability.CODE.MULTISESSION_CISCO] = cisco
 
     def new(self, neighbor, restarted, local_as=None):
         self._protocol(neighbor)

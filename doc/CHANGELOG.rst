@@ -11,6 +11,10 @@ Version 5.0.14:
  * Fix: sending or receiving an OPERATIONAL message no longer raises
    KeyError on missing peer counters. Both counters reset when the
    session closes or the peer stops.
+ * Fix: with multi-session enabled, ExaBGP also offers the Cisco
+   capability code (131), with a flags octet and no Session Id. Offering
+   only the draft code (68) caused a Cisco peer offering 131 alone to be
+   refused with NOTIFICATION 2/9.
  * Fix: end-of-RIB NLRI JSON is a complete object, including when used
    in a list. The API response builder no longer double-wraps that
    object. The public end-of-RIB API layout remains
