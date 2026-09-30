@@ -5,8 +5,9 @@
 Created for comprehensive test coverage improvement
 """
 
+from exabgp.bgp.neighbor import Neighbor
+
 import pytest
-from unittest.mock import Mock
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.protocol.family import AFI, SAFI, Family
@@ -19,8 +20,7 @@ from exabgp.protocol.ip import IP
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 

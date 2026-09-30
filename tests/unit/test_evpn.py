@@ -8,7 +8,8 @@ Tests cover all EVPN route types defined in RFC 7432:
 - Route Type 5: IP Prefix Advertisement (Prefix)
 """
 
-from unittest.mock import Mock
+from exabgp.bgp.neighbor import Neighbor
+
 
 import pytest
 
@@ -30,8 +31,7 @@ from exabgp.protocol.ip import IP
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -69,7 +69,7 @@ class TestEthernetAD:
         route = EthernetAD.make_ethernetad(rd, esi, etag, label)
         packed = route.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
         assert isinstance(unpacked, EthernetAD)
@@ -182,7 +182,7 @@ class TestMAC:
         route = MAC.make_mac(rd, esi, etag, mac, maclen, label, ip)
         packed = route.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
         assert isinstance(unpacked, MAC)
@@ -203,7 +203,7 @@ class TestMAC:
         route = MAC.make_mac(rd, esi, etag, mac, maclen, label, None)
         packed = route.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
         assert isinstance(unpacked, MAC)
@@ -224,7 +224,7 @@ class TestMAC:
         route = MAC.make_mac(rd, esi, etag, mac, maclen, label, ip)
         packed = route.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
         assert isinstance(unpacked, MAC)
@@ -346,7 +346,7 @@ class TestMulticast:
         route = Multicast.make_multicast(rd, etag, ip)
         packed = route.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
         assert isinstance(unpacked, Multicast)
@@ -363,7 +363,7 @@ class TestMulticast:
         route = Multicast.make_multicast(rd, etag, ip)
         packed = route.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
         assert isinstance(unpacked, Multicast)
@@ -450,7 +450,7 @@ class TestEthernetSegment:
         route = EthernetSegment.make_ethernetsegment(rd, esi, ip)
         packed = route.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
         assert isinstance(unpacked, EthernetSegment)
@@ -466,7 +466,7 @@ class TestEthernetSegment:
         route = EthernetSegment.make_ethernetsegment(rd, esi, ip)
         packed = route.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
         assert isinstance(unpacked, EthernetSegment)
@@ -587,7 +587,7 @@ class TestPrefix:
         route = Prefix.make_prefix(rd, esi, etag, label, ip, iplen, gwip)
         packed = route.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
         assert isinstance(unpacked, Prefix)
@@ -609,7 +609,7 @@ class TestPrefix:
         route = Prefix.make_prefix(rd, esi, etag, label, ip, iplen, gwip)
         packed = route.pack_nlri(create_negotiated())
 
-        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = EVPN.unpack_nlri(AFI.l2vpn, SAFI.evpn, packed, Action.UNSET, False, create_negotiated())
 
         assert len(leftover) == 0
         assert isinstance(unpacked, Prefix)

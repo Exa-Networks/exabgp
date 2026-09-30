@@ -62,7 +62,7 @@ class OriginASNIP(Origin):
         Origin.__init__(self, packed)
 
     @classmethod
-    def make_origin(cls, asn: ASN, ip: str, transitive: bool = True) -> OriginASNIP:
+    def make_origin(cls, asn: ASN | int, ip: str, transitive: bool = True) -> OriginASNIP:
         """Create OriginASNIP from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
         packed = pack('!BBH4s', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), IPv4.pton(ip))
@@ -99,7 +99,7 @@ class OriginIPASN(Origin):
         Origin.__init__(self, packed)
 
     @classmethod
-    def make_origin(cls, ip: str, asn: ASN, transitive: bool = True) -> OriginIPASN:
+    def make_origin(cls, ip: str, asn: ASN | int, transitive: bool = True) -> OriginIPASN:
         """Create OriginIPASN from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
         packed = pack('!BB4sH', type_byte, cls.COMMUNITY_SUBTYPE, IPv4.pton(ip), int(asn))
@@ -136,7 +136,7 @@ class OriginASN4Number(Origin):
         Origin.__init__(self, packed)
 
     @classmethod
-    def make_origin(cls, asn: ASN, number: int, transitive: bool = True) -> OriginASN4Number:
+    def make_origin(cls, asn: ASN | int, number: int, transitive: bool = True) -> OriginASN4Number:
         """Create OriginASN4Number from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
         packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), number)

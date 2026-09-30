@@ -42,7 +42,7 @@ class TestNotifyException(unittest.TestCase):
 
         unknown_code = 255
         with self.assertRaises(Notify) as cm:
-            Message.klass(unknown_code)
+            Message.klass(Message.CODE.of(unknown_code))
         notify_exc = cm.exception
         # RFC 4271 6.1: an unrecognised Type field is Bad Message Type.  This used to be
         # 2/4, Unsupported Optional Parameter, which is an OPEN error about something else

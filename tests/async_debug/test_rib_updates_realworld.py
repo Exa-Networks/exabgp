@@ -11,6 +11,8 @@ This test mimics the EXACT pattern used in ExaBGP:
 The goal is to find the exact failure mode that affects test T.
 """
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import asyncio
 import inspect
 from collections import deque
@@ -111,7 +113,7 @@ class MockProtocol:
         updates = self.rib.updates(False)
         number = 0
         for update in updates:
-            for message in update.messages(None, include_withdraw):
+            for message in update.messages(Negotiated.UNSET, include_withdraw):
                 number += 1
                 print(f'    [Protocol] Sending message {number}: {message}')
                 await self.send_async(message)

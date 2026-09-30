@@ -17,11 +17,14 @@ Test Categories:
 import pytest
 import struct
 from typing import Any
-from unittest.mock import Mock
 from hypothesis import given, strategies as st, settings, HealthCheck, assume
 from exabgp.bgp.message.notification import Notify
 from exabgp.reactor.network.error import LostConnection
 from tests.wire_reader import read_message
+from tests import negotiation
+from exabgp.bgp.message.open.asn import ASN
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
 
 pytestmark = pytest.mark.fuzz
 
@@ -47,24 +50,14 @@ def create_bgp_header(marker: bytes, length: int, msg_type: int) -> bytes:
 
 def create_mock_negotiated() -> Any:
     """Create a minimal mock Negotiated object for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
-    neighbor.session = Mock()
-    neighbor.session.local_address = Mock()
-    neighbor.session.local_address.afi = 1  # IPv4
-    neighbor.session.local_address.top = Mock(return_value=b'\x7f\x00\x00\x01')
-
-    negotiated = Mock()
-    negotiated.neighbor = neighbor
-    negotiated.families = [(1, 1)]  # IPv4 unicast
-    negotiated.asn4 = True
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65001
-    negotiated.aigp = False
-    negotiated.msg_size = 4096
-    negotiated.required = Mock(return_value=False)  # No AddPath
-
-    return negotiated
+    return negotiation.negotiated(
+        [(AFI.ipv4, SAFI.unicast)],
+        asn4=True,
+        local_as=ASN(65000),
+        peer_as=ASN(65001),
+        aigp=False,
+        msg_size=4096,
+    )
 
 
 # =============================================================================
@@ -177,7 +170,7 @@ def test_invalid_message_type(msg_type: int) -> None:
     # down as the contract.  RFC 4271 6.1 says an unrecognised Type field is Bad Message
     # Type, and Message.unpack now says so
     with pytest.raises(Notify) as caught:
-        Message.unpack(msg_type, data, negotiated)
+        Message.unpack(Message.CODE.of(msg_type), data, negotiated)
 
     assert caught.value.code == 1  # Message Header Error
     assert caught.value.subcode == 3  # Bad Message Type

@@ -26,6 +26,7 @@ from exabgp.bgp.message.open.capability.unknown import UnknownCapability
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.util.enumeration import TriState
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 IPV4_UNICAST: FamilyTuple = (AFI.ipv4, SAFI.unicast)
 IPV6_UNICAST: FamilyTuple = (AFI.ipv6, SAFI.unicast)
@@ -108,7 +109,7 @@ def test_a_capability_we_have_no_decoder_for_is_kept_as_unknown() -> None:
     capabilities = Capabilities.unpack(optional_parameters(parameter([(UNASSIGNED_CODE, b'\x01\x02')])))
 
     assert UNASSIGNED_CODE in capabilities
-    assert isinstance(capabilities[UNASSIGNED_CODE], UnknownCapability)
+    assert isinstance(capabilities[CapabilityCode(UNASSIGNED_CODE)], UnknownCapability)
 
 
 @pytest.mark.rfc('rfc5492#3-unknown-capability-must-be-ignored', polarity='negative')
@@ -317,4 +318,4 @@ def test_an_unknown_capability_without_its_fallback_is_our_bug_not_the_peers(mon
     """
     monkeypatch.setattr(Capability, 'unknown_capability', None)
     with pytest.raises(RuntimeError):
-        Capability.klass(0xFE)
+        Capability.klass(CapabilityCode(0xFE))

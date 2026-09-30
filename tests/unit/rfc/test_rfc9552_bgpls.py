@@ -136,7 +136,6 @@ def mp_reach(nlris: bytes) -> MPRNLRI:
     """
     negotiated = session()
     negotiated.families = [(AFI.bgpls, SAFI.bgp_ls)]
-    negotiated.required.return_value = False
     value = pack('!HB', int(AFI.bgpls), int(SAFI.bgp_ls)) + bytes([len(ROUTER_ID)]) + ROUTER_ID + b'\x00' + nlris
     reach = MPRNLRI.unpack_attribute(value, negotiated)
     assert isinstance(reach, MPRNLRI)

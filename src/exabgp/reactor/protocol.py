@@ -46,6 +46,7 @@ from exabgp.protocol.ip import IP
 from exabgp.reactor.network.outgoing import Outgoing
 from exabgp.rib.flow_validation import validate_flows
 from exabgp.util.types import Buffer
+from exabgp.bgp.message.message import MessageCode
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
@@ -186,9 +187,7 @@ class Protocol:
                 self.peer.reactor.processes.message(message.ID, self.peer, direction, message, b'', b'', negotiated=neg)
         else:
             if packets:
-                self.peer.reactor.processes.packets(
-                    self.peer.neighbor, direction, int(message.ID), raw[:19], raw[19:], neg
-                )
+                self.peer.reactor.processes.packets(self.peer.neighbor, direction, message.ID, raw[:19], raw[19:], neg)
             if parsed:
                 self.peer.reactor.processes.message(message.ID, self.peer, direction, message, b'', b'', negotiated=neg)
 
@@ -211,7 +210,7 @@ class Protocol:
     async def send(self, raw: bytes) -> None:
         """Send raw BGP message using async I/O."""
         assert self.connection is not None
-        code: str = 'send-{}'.format(Message.CODE.short(raw[18]))
+        code: str = 'send-{}'.format(Message.CODE.short(Message.CODE.of(raw[18])))
         self.peer.stats[code] += 1
 
         await self.connection.writer_async(raw)
@@ -242,7 +241,7 @@ class Protocol:
         # right error nor the right message.
         if msg_id not in Message.CODE.MESSAGES:
             # and the Data field MUST contain the erroneous Type field, the octet itself
-            raise Notify(MESSAGE_HEADER_ERROR, BAD_MESSAGE_TYPE, f'type {msg_id}', data=bytes([msg_id]))
+            raise Notify(MESSAGE_HEADER_ERROR, BAD_MESSAGE_TYPE, f'type {msg_id.value}', data=bytes([msg_id.value]))
 
         if not length:
             return None
@@ -264,7 +263,7 @@ class Protocol:
         # happened, for the API; it is not a reason to ignore the routes beside it.
         return message
 
-    def _count_received(self, msg_id: int, header: Buffer, body: Buffer) -> bool:
+    def _count_received(self, msg_id: MessageCode, header: Buffer, body: Buffer) -> bool:
         """Log and count a message received, return if the API asked for its type."""
         log.debug(lazymsg('message.received type={t}', t=Message.CODE.name(msg_id)), self._session())
 
@@ -289,7 +288,7 @@ class Protocol:
         update.data.classify_otc(self.negotiated)
         return validate_flows(self.neighbor, update.data)
 
-    def _decode(self, msg_id: int, body: Buffer) -> Message:
+    def _decode(self, msg_id: MessageCode, body: Buffer) -> Message:
         """Decode the body of a message, a decoder failing on it is a header error."""
         try:
             return Message.unpack(msg_id, body, self.negotiated)
@@ -299,9 +298,9 @@ class Protocol:
             log.debug(lazymsg('message.decode.failed type={t}', t=msg_id), self._session())
             log.debug(lazymsg('message.decode.error error={e}', e=str(exc)), self._session())
             log.debug(lazymsg('message.decode.traceback trace={t}', t=traceback.format_exc()), self._session())
-            raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id) from None
+            raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id.value) from None
 
-    def _header_error(self, notify: 'NotifyError', msg_id: int, header: Buffer, body: Buffer) -> Notify:
+    def _header_error(self, notify: 'NotifyError', msg_id: MessageCode, header: Buffer, body: Buffer) -> Notify:
         """Turn an error found reading the header into the Notify to raise, telling the API."""
         consolidate = self._api['receive-consolidate']
         parsed = self._api['receive-parsed']

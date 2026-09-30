@@ -62,7 +62,7 @@ def test_flow_fragment_with_a_two_byte_value_does_not_crash(family: tuple[AFI, S
     if safi == SAFI.flow_vpn:
         payload = bytes(8) + payload
     data = bytes([len(payload)]) + payload
-    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     assert nlri is not NLRI.INVALID, 'a fragment component may carry a two byte value'
     assert 'fragment' in parsed(nlri.json())
 
@@ -82,7 +82,7 @@ def test_flow_truncated_before_its_end_of_list_is_refused(family: tuple[AFI, SAF
     if safi == SAFI.flow_vpn:
         payload = bytes(8) + payload
     data = bytes([len(payload)]) + payload
-    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     assert nlri is NLRI.INVALID
 
 
@@ -101,7 +101,7 @@ def test_flow_with_no_component_is_dropped(family: tuple[AFI, SAFI]) -> None:
     if safi == SAFI.flow_vpn:
         payload = bytes(8) + payload
     data = bytes([len(payload)]) + payload
-    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     assert nlri is NLRI.INVALID
 
 
@@ -119,7 +119,7 @@ def test_flow_rule_which_renders_empty_still_emits_json(family: tuple[AFI, SAFI]
     if safi == SAFI.flow_vpn:
         payload = bytes(8) + payload
     data = bytes([len(payload)]) + payload
-    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     if nlri is NLRI.INVALID:
         return
     parsed(nlri.json())
@@ -127,7 +127,7 @@ def test_flow_rule_which_renders_empty_still_emits_json(family: tuple[AFI, SAFI]
 
 
 def _addpath(data: bytes) -> Capability:
-    code: CapabilityCode = CapabilityCode.ADD_PATH
+    code: CapabilityCode = Capability.CODE.ADD_PATH
     klass = Capability.klass(code)
     return klass.unpack_capability(klass(), data, code)
 
@@ -313,7 +313,9 @@ def test_evpn_ethernet_ad_without_a_label_stack_still_emits_json() -> None:
     property tests in tests/fuzz once they started checking that json() parses.
     """
     payload = bytes(22)
-    nlri, _ = NLRI.unpack_nlri(AFI.l2vpn, SAFI.evpn, bytes([1, len(payload)]) + payload, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(
+        AFI.l2vpn, SAFI.evpn, bytes([1, len(payload)]) + payload, Action.ANNOUNCE, False, Negotiated.UNSET
+    )
     assert nlri is not NLRI.INVALID
     assert parsed(nlri.json())['code'] == 1
 
@@ -322,7 +324,7 @@ def test_evpn_ethernet_ad_without_a_label_stack_still_emits_json() -> None:
 def test_evpn_route_json_has_no_stray_separator(code: int, payload: bytes) -> None:
     try:
         nlri, _ = NLRI.unpack_nlri(
-            AFI.l2vpn, SAFI.evpn, bytes([code, len(payload)]) + payload, Action.ANNOUNCE, None, None
+            AFI.l2vpn, SAFI.evpn, bytes([code, len(payload)]) + payload, Action.ANNOUNCE, False, Negotiated.UNSET
         )
     except Notify:
         return  # refusing the route is a fine answer, it is a stray comma we are after
@@ -475,7 +477,7 @@ def test_flow_accepts_every_value_width_the_rfc_defines(width: int, operator: in
     """
     component = bytes([0x05, operator]) + value  # destination-port
     data = bytes([len(component)]) + component
-    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     assert nlri is not NLRI.INVALID, f'a {width} byte value was dropped'
     assert parsed(nlri.json())['destination-port'] == ['=80']
 

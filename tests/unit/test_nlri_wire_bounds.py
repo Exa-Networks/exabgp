@@ -16,7 +16,7 @@ from exabgp.protocol.family import AFI, SAFI
 
 
 def decode(afi: AFI, safi: SAFI, data: bytes) -> NLRI:
-    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     return nlri
 
 
@@ -49,7 +49,7 @@ def test_inet_ipv6_mask_larger_than_the_family_raises_notify(mask: int) -> None:
 def test_inet_truncated_path_information_raises_notify(mask: int = 24) -> None:
     """add-path used to raise ValueError when the path-id was truncated."""
     with pytest.raises(Notify):
-        NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, b'\x00\x00\x01', Action.ANNOUNCE, True, None)
+        NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, b'\x00\x00\x01', Action.ANNOUNCE, True, Negotiated.UNSET)
 
 
 @pytest.mark.parametrize('safi', [SAFI.nlri_mpls, SAFI.mpls_vpn])
@@ -215,7 +215,7 @@ def test_bgpls_vpn_generic_consumes_only_what_it_announces() -> None:
     """The bytes past the announced length belong to the next NLRI, not to this one."""
     wire = bytes(4) + b'\xde\xad\xbe\xef'
 
-    nlri, left = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls_vpn, wire, Action.ANNOUNCE, None, None)
+    nlri, left = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls_vpn, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
 
     assert bytes(left) == b'\xde\xad\xbe\xef', 'a zero length NLRI consumed more than its header'
     assert bytes(nlri.pack_nlri(Negotiated.UNSET)) == bytes(4)
@@ -230,13 +230,13 @@ def test_flow_component_value_cut_short_is_rejected() -> None:
     """A numeric component announcing more bytes than are left reached the value
     decoder with an empty string, which raised TypeError out of ord()."""
     # a two byte component: 0x03 is the protocol, whose operator byte announces no value
-    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, b'\x02\x03\x00', Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, b'\x02\x03\x00', Action.ANNOUNCE, False, Negotiated.UNSET)
     assert nlri is NLRI.INVALID
 
 
 def test_flow_component_with_its_value_still_decodes() -> None:
     # component 3 (protocol) with a one byte value, end of list set
-    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, b'\x03\x03\x81\x06', Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, b'\x03\x03\x81\x06', Action.ANNOUNCE, False, Negotiated.UNSET)
     assert nlri is not NLRI.INVALID
     assert 'protocol' in nlri.json()
 
@@ -252,7 +252,7 @@ def test_flow_component_value_wider_than_it_encodes_still_decodes(length_bits: i
     """
     components = bytes([0x03, 0x80 | length_bits | 0x01]) + bytes(width - 1) + bytes([0x06])
     data = bytes([len(components)]) + components
-    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     assert nlri is not NLRI.INVALID
     assert 'protocol' in nlri.json()
 
@@ -261,6 +261,6 @@ def test_flow_port_accepts_the_two_byte_value_it_holds() -> None:
     # component 4 (any port), operator announces a two byte value, end of list set
     components = bytes([0x04, 0x91, 0x1F, 0x90])
     data = bytes([len(components)]) + components
-    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.flow_ip, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     assert nlri is not NLRI.INVALID
     assert '8080' in nlri.json()

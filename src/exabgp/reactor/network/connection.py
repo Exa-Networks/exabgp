@@ -25,6 +25,7 @@ from exabgp.logger import log, lazymsg
 from exabgp.logger import lazyformat
 
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import MessageCode
 
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno
@@ -37,6 +38,9 @@ from exabgp.reactor.network.error import NotifyError
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 
 from exabgp.protocol.family import AFI
+
+# the type returned with an error found in the header, in place of the one it carries
+UNREAD = MessageCode(0)
 
 # from .error import *
 
@@ -64,7 +68,7 @@ class Connection:
         self._read_offset_bytes: int = 0
         self._read_header: memoryview | None = None
         self._read_length_bytes: int = 0
-        self._read_message_type: int = 0
+        self._read_message_type: MessageCode = UNREAD
 
         self.id: int = self.identifier.get(self.direction, 1)
 
@@ -74,7 +78,7 @@ class Connection:
         self._read_offset_bytes = 0
         self._read_header = None
         self._read_length_bytes = 0
-        self._read_message_type = 0
+        self._read_message_type = UNREAD
 
     def success(self) -> int:
         identifier = self.identifier.get(self.direction, 1) + 1
@@ -341,7 +345,7 @@ class Connection:
                 log.critical(lazymsg('tcp.write.error name={n} peer={p}', n=self.name(), p=self.peer), self.session())
                 raise NetworkError(f'Problem while writing data to the network ({errstr(exc)})') from None
 
-    async def reader_async(self) -> tuple[int, int, Buffer, Buffer, NotifyError | None]:
+    async def reader_async(self) -> tuple[int, MessageCode, Buffer, Buffer, NotifyError | None]:
         """Read BGP message header and body with zero-copy buffers (async version).
 
         Uses asyncio for I/O operations with recv_into() for zero-copy reads.
@@ -361,19 +365,19 @@ class Connection:
 
             if header[:16] != Message.MARKER:
                 report = 'The packet received does not contain a BGP marker'
-                return 0, 0, header, memoryview(b''), NotifyError(1, 1, report)
+                return 0, UNREAD, header, memoryview(b''), NotifyError(1, 1, report)
 
-            msg = header[18]
+            msg = Message.CODE.of(header[18])
             length = int.from_bytes(header[16:18], 'big')
 
             if length < Message.HEADER_LEN or length > self.msg_size:
                 report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-                return length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
+                return length, UNREAD, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
 
             if Message.header_refuses(msg, length):
                 # RFC 4271 6.1: the Data field MUST contain the erroneous Length field
                 report = f'{Message.CODE.name(msg)} has an invalid message length of {length}'
-                return length, 0, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
+                return length, UNREAD, header, memoryview(b''), NotifyError(1, 2, report, bytes(header[16:18]))
 
             if length == Message.HEADER_LEN:
                 return length, msg, header, memoryview(b''), None
@@ -393,6 +397,6 @@ class Connection:
 
         self._read_header = None
         self._read_length_bytes = 0
-        self._read_message_type = 0
+        self._read_message_type = UNREAD
 
         return length, msg, header, body, None

@@ -19,6 +19,8 @@ open question behind the MT-ID reserved bits - would do precisely that.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 from copy import deepcopy
 from struct import pack
 
@@ -72,7 +74,7 @@ IDS = [row[0] for row in SEEDS]
 
 def decoded(afi: AFI, safi: SAFI, data: bytes) -> NLRI | None:
     try:
-        nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+        nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     except Notify:
         return None
     return None if nlri is NLRI.INVALID else nlri

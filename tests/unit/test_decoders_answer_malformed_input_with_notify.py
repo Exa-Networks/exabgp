@@ -36,7 +36,6 @@ from __future__ import annotations
 import random
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
@@ -49,6 +48,7 @@ from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
 
 # buffers which fall off the end of something a decoder is about to read
 MALFORMED: tuple[bytes, ...] = (
@@ -149,11 +149,7 @@ FAMILY_IDS: list[str] = ['{}/{}'.format(afi, safi) for afi, safi in FAMILIES]
 
 def session() -> Any:
     """A negotiated session which agreed nothing, which is what a decoder starts from."""
-    negotiated = Mock()
-    negotiated.asn4 = False
-    negotiated.families = []
-    negotiated.nexthop = []
-    return negotiated
+    return negotiation.negotiated([], asn4=False)
 
 
 @pytest.mark.parametrize('afi,safi', FAMILIES, ids=FAMILY_IDS)
@@ -254,7 +250,7 @@ def test_a_message_decoder_raises_notify_and_not_something_else(message_type: in
     wrong: list[str] = []
     for body in MESSAGE_BODIES:
         try:
-            Message.unpack(message_type, body, negotiated)
+            Message.unpack(Message.CODE.of(message_type), body, negotiated)
         except Notify:
             continue
         except Exception as exc:

@@ -14,7 +14,8 @@ The section has no RFC 2119 keyword, so these tests carry no rfc() marker.
 
 from __future__ import annotations
 
-from unittest.mock import Mock
+from exabgp.bgp.neighbor import Neighbor
+
 
 import pytest
 
@@ -33,8 +34,7 @@ FULL = bytes([96]) + ORIGIN + TARGET
 
 
 def negotiated() -> Negotiated:
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.IN)
 
 

@@ -18,6 +18,8 @@ against a correct fix -- INVALID is the observable peer-facing effect of the fix
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import pytest
 
 from exabgp.bgp.message import Action
@@ -30,7 +32,7 @@ from exabgp.protocol.family import AFI, SAFI
 def decode_vpn(payload: bytes) -> NLRI:
     """Wrap payload with its wire length prefix and decode as flow_vpn."""
     data = bytes([len(payload)]) + payload
-    nlri, _ = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_vpn, data, Action.ANNOUNCE, None, None)
+    nlri, _ = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_vpn, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     return nlri
 
 
@@ -49,7 +51,9 @@ def test_flow_vpn_payload_shorter_than_rd_is_rejected(length: int) -> None:
 
 def test_flow_vpn_three_byte_payload_no_longer_becomes_a_fake_protocol_rule() -> None:
     """The exact probe from the finding: RD bytes must not be read as a filter rule."""
-    nlri, _ = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_vpn, bytes([0x03, 0x03, 0x81, 0x06]), Action.ANNOUNCE, None, None)
+    nlri, _ = Flow.unpack_nlri(
+        AFI.ipv4, SAFI.flow_vpn, bytes([0x03, 0x03, 0x81, 0x06]), Action.ANNOUNCE, False, Negotiated.UNSET
+    )
     assert nlri is NLRI.INVALID
 
 
@@ -70,6 +74,8 @@ def test_flow_vpn_with_full_rd_and_a_rule_still_decodes() -> None:
 
 def test_plain_flow_ip_three_byte_payload_is_unaffected() -> None:
     """SAFI.flow (non-VPN) has no RD to strip; the new check must not touch it."""
-    nlri, _ = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, bytes([0x03, 0x03, 0x81, 0x06]), Action.ANNOUNCE, None, None)
+    nlri, _ = Flow.unpack_nlri(
+        AFI.ipv4, SAFI.flow_ip, bytes([0x03, 0x03, 0x81, 0x06]), Action.ANNOUNCE, False, Negotiated.UNSET
+    )
     assert nlri is not NLRI.INVALID
     assert 'protocol' in nlri.json()

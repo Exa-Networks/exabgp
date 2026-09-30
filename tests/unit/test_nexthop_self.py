@@ -22,6 +22,7 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPSelf, IPv4, IPv6
 from exabgp.rib.outgoing import OutgoingRIB
 from exabgp.rib.route import Route
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 class TestNextHopSelfSentinel:
@@ -100,20 +101,18 @@ class TestNextHopSelfSentinel:
 
     def test_pack_attribute_raises_before_resolution(self) -> None:
         """NextHopSelf.pack_attribute() raises ValueError before resolve()."""
-        from unittest.mock import Mock
 
         sentinel = NextHopSelf(AFI.ipv4)
-        mock_negotiated = Mock()
+        mock_negotiated = Negotiated.UNSET
         with pytest.raises(ValueError, match='before resolve'):
             sentinel.pack_attribute(mock_negotiated)
 
     def test_pack_attribute_works_on_resolved(self) -> None:
         """Returned NextHop from resolve() can be packed."""
-        from unittest.mock import Mock
 
         sentinel = NextHopSelf(AFI.ipv4)
         resolved = sentinel.resolve(IPv4.from_string('192.168.1.1'))
-        mock_negotiated = Mock()
+        mock_negotiated = Negotiated.UNSET
 
         # Resolved NextHop should pack successfully
         result = resolved.pack_attribute(mock_negotiated)

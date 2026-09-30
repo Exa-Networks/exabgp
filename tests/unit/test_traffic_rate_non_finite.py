@@ -34,13 +34,13 @@ See https://github.com/Exa-Networks/exabgp/issues/1426.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update import Update
@@ -49,6 +49,7 @@ from exabgp.bgp.message.update.attribute.community.extended.communities import E
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRatePackets
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
 
 TRAFFIC_RATE_TYPE = 0x80
 TRAFFIC_RATE_SUBTYPE = 0x06
@@ -83,31 +84,20 @@ def community(subtype: int, rate_bits: int) -> bytes:
 
 
 def negotiated() -> Any:
-    session = Mock()
-    session.asn4 = False
-    session.addpath = Mock()
-    session.addpath.receive = Mock(return_value=False)
-    session.addpath.send = Mock(return_value=False)
-    session.required = Mock(return_value=False)
-    session.families = [(AFI.ipv4, SAFI.flow_ip)]
-    session.nexthop = []
-    session.msg_size = 4096
-    session.direction = Action.ANNOUNCE
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value=False)
-    neighbor.session.local_address = None
-    session.neighbor = neighbor
-    session.attribute_cache = None
-    session.attribute_cache_packed = b''
-    session.attribute_cache_enabled = False
-    return session
+    return negotiation.negotiated(
+        [(AFI.ipv4, SAFI.flow_ip)],
+        asn4=False,
+        msg_size=4096,
+        attribute_cache_enabled=False,
+        session=negotiation.neighbor(local_address=None),
+    )
 
 
 @pytest.mark.parametrize('rate_bits', NON_FINITE_RATES, ids=NON_FINITE_IDS)
 def test_a_non_finite_traffic_rate_is_refused_by_the_decoder(rate_bits: int) -> None:
     """The decoder must not hand back a rate its own repr cannot print."""
     with pytest.raises(Notify) as raised:
-        TrafficRate.unpack_attribute(community(TRAFFIC_RATE_SUBTYPE, rate_bits), None)
+        TrafficRate.unpack_attribute(community(TRAFFIC_RATE_SUBTYPE, rate_bits), Negotiated.UNSET)
 
     assert raised.value.code == 3, 'a malformed UPDATE is an UPDATE error'
     assert raised.value.subcode == 9, 'the extended community attribute is optional'
@@ -121,7 +111,7 @@ def test_a_non_finite_packet_rate_is_refused_by_the_decoder(rate_bits: int) -> N
     straight through: every comparison against a NaN is false, so `max` returns it.
     """
     with pytest.raises(Notify):
-        TrafficRatePackets.unpack_attribute(community(TRAFFIC_RATE_PACKETS_SUBTYPE, rate_bits), None)
+        TrafficRatePackets.unpack_attribute(community(TRAFFIC_RATE_PACKETS_SUBTYPE, rate_bits), Negotiated.UNSET)
 
 
 @pytest.mark.parametrize('rate_bits', NON_FINITE_RATES, ids=NON_FINITE_IDS)
@@ -186,14 +176,14 @@ def test_a_finite_rate_still_decodes_and_renders(rate_bits: int, expected: str) 
     line under it are unchanged: the clamp is on the rendering, not on the wire bytes, so
     what the peer sent is still what we would send back.
     """
-    decoded = TrafficRate.unpack_attribute(community(TRAFFIC_RATE_SUBTYPE, rate_bits), None)
+    decoded = TrafficRate.unpack_attribute(community(TRAFFIC_RATE_SUBTYPE, rate_bits), Negotiated.UNSET)
 
     assert repr(decoded) == expected
-    assert bytes(decoded.pack_attribute(Mock())) == community(TRAFFIC_RATE_SUBTYPE, rate_bits)
+    assert bytes(decoded.pack_attribute(Negotiated.UNSET)) == community(TRAFFIC_RATE_SUBTYPE, rate_bits)
 
 
 def test_a_finite_packet_rate_still_decodes_and_renders() -> None:
-    decoded = TrafficRatePackets.unpack_attribute(community(TRAFFIC_RATE_PACKETS_SUBTYPE, 0x447A0000), None)
+    decoded = TrafficRatePackets.unpack_attribute(community(TRAFFIC_RATE_PACKETS_SUBTYPE, 0x447A0000), Negotiated.UNSET)
 
     assert decoded.rate == 1000.0
     assert repr(decoded) == 'rate-limit:1000:packets'

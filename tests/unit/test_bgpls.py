@@ -14,9 +14,10 @@ RFC 7752: North-Bound Distribution of Link-State and Traffic Engineering (TE) In
 RFC 9514: Border Gateway Protocol - Link State (BGP-LS) Extensions for Segment Routing over IPv6 (SRv6)
 """
 
+from exabgp.bgp.neighbor import Neighbor
+
 import pytest
 from struct import pack
-from unittest.mock import Mock
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction
@@ -32,6 +33,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
 
 
 def with_bgpls_header(code: int, payload: bytes) -> bytes:
@@ -47,8 +49,7 @@ def with_bgpls_header(code: int, payload: bytes) -> bytes:
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -899,7 +900,7 @@ class TestBGPLSUnpack:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, False, create_negotiated())
 
         assert isinstance(nlri, NODE)
         assert nlri.CODE == 1
@@ -918,7 +919,7 @@ class TestBGPLSUnpack:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, False, create_negotiated())
 
         assert isinstance(nlri, LINK)
         assert nlri.CODE == 2
@@ -936,7 +937,7 @@ class TestBGPLSUnpack:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, False, create_negotiated())
 
         assert isinstance(nlri, PREFIXv4)
         assert nlri.CODE == 3
@@ -954,7 +955,7 @@ class TestBGPLSUnpack:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, False, create_negotiated())
 
         assert isinstance(nlri, PREFIXv6)
         assert nlri.CODE == 4
@@ -968,7 +969,7 @@ class TestBGPLSUnpack:
             b'\x01\x02\x03\x04'
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, False, create_negotiated())
 
         assert isinstance(nlri, GenericBGPLS)
         assert nlri.route_code == 153
@@ -987,7 +988,7 @@ class TestBGPLSUnpack:
             b'\xff\xff\xff\xff'  # Leftover data
         )
 
-        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, None, create_negotiated())
+        nlri, leftover = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, bgp_data, Action.UNSET, False, create_negotiated())
 
         assert isinstance(nlri, NODE)
         assert leftover == b'\xff\xff\xff\xff'
@@ -1499,7 +1500,7 @@ class TestBGPLSLinkStateAttribute:
 
         # TLV: 1155 (PrefixMetric), Length: 4, Value: 20
         data = b'\x04\x83\x00\x04\x00\x00\x00\x14'
-        negotiated = Mock()
+        negotiated = negotiation.negotiated(())
         attr = LinkState.unpack_attribute(data, negotiated)
 
         assert len(attr.ls_attrs) == 1
@@ -1517,7 +1518,7 @@ class TestBGPLSLinkStateAttribute:
             b'\x04\x83\x00\x04\x00\x00\x00\x14'  # PrefixMetric
             b'\x04\x81\x00\x04\x00\x00\xff\xfe'  # IgpTags
         )
-        negotiated = Mock()
+        negotiated = negotiation.negotiated(())
         attr = LinkState.unpack_attribute(data, negotiated)
 
         assert len(attr.ls_attrs) == 2
@@ -1530,7 +1531,7 @@ class TestBGPLSLinkStateAttribute:
 
         # Single attribute: PrefixMetric
         data = b'\x04\x83\x00\x04\x00\x00\x00\x14'
-        negotiated = Mock()
+        negotiated = negotiation.negotiated(())
         attr = LinkState.unpack_attribute(data, negotiated)
 
         json_output = attr.json()
@@ -1542,7 +1543,7 @@ class TestBGPLSLinkStateAttribute:
 
         # Unknown TLV: 9999, Length: 4, Value: 0x01020304
         data = b'\x27\x0f\x00\x04\x01\x02\x03\x04'
-        negotiated = Mock()
+        negotiated = negotiation.negotiated(())
         attr = LinkState.unpack_attribute(data, negotiated)
 
         assert len(attr.ls_attrs) == 1

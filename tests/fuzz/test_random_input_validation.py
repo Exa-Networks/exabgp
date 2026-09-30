@@ -17,6 +17,7 @@ import struct
 from exabgp.bgp.message.notification import Notify
 from exabgp.reactor.network.error import LostConnection, NotifyError
 from tests.wire_reader import read_message
+from exabgp.bgp.message import Message
 
 pytestmark = pytest.mark.fuzz
 
@@ -337,7 +338,7 @@ def test_truncated_bgp_header(truncate_at: int) -> None:
 
     result_length, result_type, header, body, error = read_message(truncated)
     assert error is None
-    assert (result_length, result_type) == (19, 4)
+    assert (result_length, result_type) == (19, Message.CODE.KEEPALIVE)
 
 
 @pytest.mark.fuzz

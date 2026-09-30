@@ -36,6 +36,7 @@ from exabgp.reactor.peer.handlers import RouteRefreshHandler, UpdateHandler
 from exabgp.reactor.peer.peer import Peer
 from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
+from exabgp.bgp.message.message import MessageCode
 
 SLOW = object()  # a read which does not answer within the 0.1s _main waits for
 
@@ -43,7 +44,7 @@ SLOW = object()  # a read which does not answer within the 0.1s _main waits for
 class Received:
     """A message as read_message returns it: only its ID is looked at by _main."""
 
-    def __init__(self, code: int, label: str) -> None:
+    def __init__(self, code: MessageCode, label: str) -> None:
         self.ID = code
         self.label = label
 

@@ -42,6 +42,8 @@ Phase 5: Mixed Community Types (tests 27-30)
   - Set operations
 """
 
+from exabgp.bgp.neighbor import Neighbor
+
 import struct
 from typing import Any
 from unittest.mock import Mock
@@ -54,8 +56,7 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -235,7 +236,7 @@ def test_route_target_asn2_number() -> None:
     assert packed[1] == 0x02  # Subtype 0x02
 
     # Unpack and verify
-    unpacked = RouteTargetASN2Number.unpack_attribute(packed, None)  # type: ignore[arg-type]
+    unpacked = RouteTargetASN2Number.unpack_attribute(packed, Negotiated.UNSET)
     assert unpacked.asn == asn
     assert unpacked.number == number
 
@@ -268,7 +269,7 @@ def test_route_target_ip_number() -> None:
     assert packed[1] == 0x02  # Subtype 0x02
 
     # Unpack and verify
-    unpacked = RouteTargetIPNumber.unpack_attribute(packed, None)  # type: ignore[arg-type]
+    unpacked = RouteTargetIPNumber.unpack_attribute(packed, Negotiated.UNSET)
     assert str(unpacked.ip) == ip
     assert unpacked.number == number
 
@@ -302,7 +303,7 @@ def test_route_target_asn4_number() -> None:
     assert packed[1] == 0x02  # Subtype 0x02
 
     # Unpack and verify
-    unpacked = RouteTargetASN4Number.unpack_attribute(packed, None)  # type: ignore[arg-type]
+    unpacked = RouteTargetASN4Number.unpack_attribute(packed, Negotiated.UNSET)
     assert unpacked.asn == asn
     assert unpacked.number == number
 
@@ -344,7 +345,7 @@ def test_extended_community_base_parsing() -> None:
     # Type 0x0F (unknown), Subtype 0xFF (unknown)
     unknown_data = struct.pack('!BB', 0x0F, 0xFF) + b'\x00\x01\x02\x03\x04\x05'
 
-    ec = ExtendedCommunity.unpack_attribute(unknown_data, None)  # type: ignore[arg-type]
+    ec = ExtendedCommunity.unpack_attribute(unknown_data, Negotiated.UNSET)
 
     # Should store raw bytes
     assert len(ec) == 8
@@ -512,14 +513,14 @@ def test_flowspec_packet_rate_community() -> None:
     assert packed[0] == 0x80
     assert packed[1] == 0x0C
 
-    unpacked = TrafficRatePackets.unpack_attribute(packed, None)  # type: ignore[arg-type]
+    unpacked = TrafficRatePackets.unpack_attribute(packed, Negotiated.UNSET)
     assert unpacked.asn == ASN(0)
     assert unpacked.rate == 1000
     assert repr(unpacked) == 'rate-limit:1000:packets'
 
     # Negative decoded FlowSpec packet rates must be treated as discard.
     packed = struct.pack('!BBHf', 0x80, 0x0C, 0, -1.5)
-    unpacked = TrafficRatePackets.unpack_attribute(packed, None)  # type: ignore[arg-type]
+    unpacked = TrafficRatePackets.unpack_attribute(packed, Negotiated.UNSET)
 
     assert unpacked.asn == ASN(0)
     assert unpacked.rate == 0
@@ -616,7 +617,7 @@ def test_rt_record_community() -> None:
     # Create RT Record - format similar to Route Target
     data = struct.pack('!BB', 0x00, 0x13) + struct.pack('!HL', 65000, 100)
 
-    rt_record = RouteTargetASN2Number.unpack_attribute(data, None)  # type: ignore[arg-type]
+    rt_record = RouteTargetASN2Number.unpack_attribute(data, Negotiated.UNSET)
 
     # Verify basic properties
     assert len(rt_record) == 8

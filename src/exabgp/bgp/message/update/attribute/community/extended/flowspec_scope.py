@@ -52,7 +52,7 @@ class InterfaceSet(ExtendedCommunity):
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
-    def make_interface_set(cls, asn: ASN, target: int, direction: int, transitive: bool = True) -> InterfaceSet:
+    def make_interface_set(cls, asn: ASN | int, target: int, direction: int, transitive: bool = True) -> InterfaceSet:
         """Create InterfaceSet from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
         new_target = (direction << 14) + target

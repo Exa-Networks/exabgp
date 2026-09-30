@@ -1434,7 +1434,7 @@ class Processes:
         self,
         neighbor: 'Neighbor',
         direction: str,
-        category: int,
+        category: MessageCode,
         header: bytes,
         body: bytes,
         negotiated: Negotiated,

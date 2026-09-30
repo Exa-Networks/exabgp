@@ -13,6 +13,8 @@ Phase 3: Tests for UpdateSerializer
 """
 
 import pytest
+from tests import negotiation
+from exabgp.bgp.message.open.asn import ASN
 
 
 # ==============================================================================
@@ -126,7 +128,6 @@ def test_update_collection_roundtrip() -> None:
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.protocol.ip import IP
     from exabgp.protocol.family import AFI, SAFI
-    from unittest.mock import Mock
     import socket
 
     # Create a simple UPDATE with one IPv4 route
@@ -147,17 +148,9 @@ def test_update_collection_roundtrip() -> None:
     collection = UpdateCollection(announces=[routed], withdraws=[], attributes=attrs)
 
     # Create mock negotiated
-    negotiated = Mock()
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65000  # iBGP
-    negotiated.asn4 = True
-    negotiated.msg_size = 4096
-    negotiated.families = [(AFI.ipv4, SAFI.unicast)]
-    negotiated.required = Mock(return_value=False)
-    negotiated.addpath = Mock()
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.nlri_context = Mock(return_value=Mock(addpath=False))
+    negotiated = negotiation.negotiated(
+        [(AFI.ipv4, SAFI.unicast)], local_as=ASN(65000), peer_as=ASN(65000), asn4=True, msg_size=4096
+    )
 
     # Get wire format via messages()
     messages = list(collection.messages(negotiated))
@@ -201,16 +194,12 @@ def test_attributes_wire_from_packed() -> None:
 def test_attributes_wire_from_set() -> None:
     """Test AttributesWire.from_set() creates wire container from AttributeCollection."""
     from exabgp.bgp.message.update.attribute import AttributesWire, AttributeCollection, Origin
-    from unittest.mock import Mock
 
     attr_set = AttributeCollection()
     attr_set.add(Origin.from_int(Origin.IGP))
 
     # Create mock negotiated - use same ASN for iBGP (simpler case)
-    negotiated = Mock()
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65000  # Same ASN = iBGP, avoids AS_PATH prepend
-    negotiated.asn4 = True
+    negotiated = negotiation.negotiated((), local_as=ASN(65000), peer_as=ASN(65000), asn4=True)
 
     # Call with with_default=False to avoid complex default attribute generation
     wire_attrs = AttributesWire.from_set(attr_set, negotiated)
@@ -224,7 +213,7 @@ def test_attributes_wire_from_set() -> None:
 def test_attributes_wire_unpack_attributes_lazy() -> None:
     """Test AttributesWire.unpack_attributes() returns AttributeCollection."""
     from exabgp.bgp.message.update.attribute import AttributesWire, AttributeCollection
-    from unittest.mock import Mock, patch
+    from unittest.mock import patch
 
     # ORIGIN attribute
     packed = bytes([0x40, 0x01, 0x01, 0x00])
@@ -232,11 +221,7 @@ def test_attributes_wire_unpack_attributes_lazy() -> None:
     with patch('exabgp.bgp.message.update.attribute.collection.log'):
         attrs = AttributesWire(packed)
 
-        negotiated = Mock()
-        negotiated.asn4 = False
-        negotiated.families = []
-        negotiated.addpath = Mock()
-        negotiated.addpath.receive = Mock(return_value=False)
+        negotiated = negotiation.negotiated([], asn4=False)
 
         unpacked = attrs.unpack_attributes(negotiated)
 
@@ -260,19 +245,13 @@ def test_pack_messages_returns_update_objects() -> None:
     """Test UpdateCollection.pack_messages() returns iterator of Update."""
     from exabgp.bgp.message.update import UpdateCollection, Update
     from exabgp.bgp.message.update.attribute import AttributeCollection
-    from unittest.mock import Mock
 
     # Create UpdateCollection
     attrs = AttributeCollection()
     update_data = UpdateCollection(announces=[], withdraws=[], attributes=attrs)
 
     # Create mock negotiated
-    negotiated = Mock()
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65001
-    negotiated.asn4 = True
-    negotiated.msg_size = 4096
-    negotiated.families = []
+    negotiated = negotiation.negotiated([], local_as=ASN(65000), peer_as=ASN(65001), asn4=True, msg_size=4096)
 
     result = list(update_data.pack_messages(negotiated))
 
@@ -287,19 +266,13 @@ def test_messages_returns_bytes() -> None:
     """Test UpdateCollection.messages() returns iterator of bytes."""
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.attribute import AttributeCollection
-    from unittest.mock import Mock
 
     # Create UpdateCollection
     attrs = AttributeCollection()
     update_data = UpdateCollection(announces=[], withdraws=[], attributes=attrs)
 
     # Create mock negotiated
-    negotiated = Mock()
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65001
-    negotiated.asn4 = True
-    negotiated.msg_size = 4096
-    negotiated.families = []
+    negotiated = negotiation.negotiated([], local_as=ASN(65000), peer_as=ASN(65001), asn4=True, msg_size=4096)
 
     result = list(update_data.messages(negotiated))
 
@@ -322,17 +295,11 @@ def test_update_data_messages_still_works() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.attribute import AttributeCollection
-    from unittest.mock import Mock
 
     attrs = AttributeCollection()
     update_data = UpdateCollection(announces=[], withdraws=[], attributes=attrs)
 
-    negotiated = Mock()
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65001
-    negotiated.asn4 = True
-    negotiated.msg_size = 4096
-    negotiated.families = []
+    negotiated = negotiation.negotiated([], local_as=ASN(65000), peer_as=ASN(65001), asn4=True, msg_size=4096)
 
     # Should work without errors
     result = list(update_data.messages(negotiated))

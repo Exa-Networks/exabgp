@@ -13,13 +13,13 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-from unittest.mock import Mock
-
 import pytest
 
 from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv6, IP
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from tests import negotiation
 
 
 # ==============================================================================
@@ -32,14 +32,13 @@ def create_mock_negotiated(
     link_local_address: IP | None = None,
     link_local_prefer: bool = False,
     is_multihop: bool = False,
-) -> Mock:
-    """Create a mock Negotiated object for testing."""
-    negotiated = Mock()
-    negotiated.linklocal_nexthop = linklocal_nexthop
-    negotiated.link_local_address = Mock(return_value=link_local_address)
-    negotiated.link_local_prefer = Mock(return_value=link_local_prefer)
-    negotiated.is_multihop = Mock(return_value=is_multihop)
-    return negotiated
+) -> Negotiated:
+    """A negotiated session whose neighbor holds these link-local settings."""
+    session = negotiation.neighbor()
+    session.session.local_link_local = link_local_address
+    session.capability.link_local_prefer = link_local_prefer
+    session.session.outgoing_ttl = 2 if is_multihop else None
+    return negotiation.negotiated((), linklocal_nexthop=linklocal_nexthop, session=session)
 
 
 def create_collection() -> MPNLRICollection:

@@ -125,7 +125,7 @@ def test_every_nlri_family_decoder_is_reached(monkeypatch: pytest.MonkeyPatch) -
     for afi, safi in sorted(set(NLRI.known_families()), key=lambda f: (int(f[0]), int(f[1]))):
         for length in range(0, 24):
             try:
-                NLRI.unpack_nlri(afi, safi, bytes([length]) + bytes(length), Action.ANNOUNCE, None, None)
+                NLRI.unpack_nlri(afi, safi, bytes([length]) + bytes(length), Action.ANNOUNCE, False, Negotiated.UNSET)
             except Notify:
                 continue
             except Exception:  # noqa: BLE001 - the property tests judge this, we only count

@@ -19,8 +19,9 @@ from exabgp.protocol.family import AFI
 from exabgp.reactor.network.connection import Connection
 from exabgp.reactor.network.error import NotifyError
 from exabgp.util.types import Buffer
+from exabgp.bgp.message.message import MessageCode
 
-ReadResult = tuple[int, int, Buffer, Buffer, NotifyError | None]
+ReadResult = tuple[int, MessageCode, Buffer, Buffer, NotifyError | None]
 
 # RFC 4271 4.1: the largest message a session without Extended Message may carry.
 STANDARD_MSG_SIZE_BYTES = 4096

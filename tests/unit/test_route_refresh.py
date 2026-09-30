@@ -8,15 +8,18 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
+from exabgp.bgp.neighbor import Neighbor
+
 import pytest
 import struct
-from unittest.mock import Mock
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
+from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
 
 
 # ==============================================================================
@@ -26,8 +29,7 @@ from exabgp.protocol.family import AFI, SAFI
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -267,7 +269,7 @@ def test_route_refresh_unpack_through_message_class() -> None:
     message_type = Message.CODE.ROUTE_REFRESH
     data = struct.pack('!HBB', 1, 0, 1)
 
-    rr = Message.unpack(message_type, data, {})
+    rr = Message.unpack(message_type, data, Negotiated.UNSET)
 
     assert isinstance(rr, RouteRefresh)
     assert rr.afi == AFI.ipv4
@@ -286,8 +288,7 @@ def test_route_refresh_unpack_invalid_data_length(enhanced: bool, answer: tuple[
     capability; without it the answer is Bad Message Length.
     """
     negotiated = create_negotiated()
-    negotiated.received_open = Mock()
-    negotiated.received_open.capabilities.announced = Mock(return_value=enhanced)
+    negotiated.received_open = negotiation.open_message([EnhancedRouteRefresh()] if enhanced else [])
 
     with pytest.raises(Notify) as exc_info:
         RouteRefresh.unpack_message(b'\x00\x01\x00', negotiated)
@@ -573,7 +574,7 @@ def test_route_refresh_messages_iterator() -> None:
     """
     rr = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, RouteRefresh.REQUEST)
 
-    messages = list(rr.messages({}, True))
+    messages = list(rr.messages(Negotiated.UNSET, True))
 
     # Should yield exactly one message
     assert len(messages) == 1
@@ -591,7 +592,7 @@ def test_route_refresh_messages_with_different_params() -> None:
     assert len(messages1) == 1
 
     # Without negotiated params
-    messages2 = list(rr.messages({}, False))
+    messages2 = list(rr.messages(Negotiated.UNSET, False))
     assert len(messages2) == 1
 
     # Both should produce same result

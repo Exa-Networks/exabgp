@@ -8,13 +8,14 @@ reply to any earlier query.
 """
 
 from struct import unpack
-from unittest.mock import Mock
+from tests import negotiation
 
 import pytest
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.operational import Query, SequencedOperationalFamily
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 HEADER = 19
 # operational type(2) + length(2) + afi(2) + safi(1) + router-id(4), then the sequence
@@ -31,9 +32,9 @@ def sent_sequence(wire: bytes) -> int:
     return sequence
 
 
-def session(router_id: str) -> Mock:
-    negotiated = Mock()
-    negotiated.sent_open.router_id = RouterID(router_id)
+def session(router_id: str) -> Negotiated:
+    negotiated = negotiation.negotiated()
+    negotiated.sent_open = negotiation.open_message(router_id=router_id)
     return negotiated
 
 

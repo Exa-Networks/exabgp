@@ -64,6 +64,8 @@ what is here is the boundary itself.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import pytest
 
 from exabgp.bgp.message import Action
@@ -137,7 +139,7 @@ def test_a_route_off_the_wire_still_reads_its_prefix(name: str, afi: AFI, safi: 
     Every test above is satisfied by an accessor which refuses everything, so one of them
     has to decode a real route and read what it says.
     """
-    nlri, _ = NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
 
     assert str(nlri.cidr) == '10.0.0.0/24', f'{name} lost its prefix'
     # the wire carries the label shifted left by four with the flags below it, so
@@ -164,7 +166,7 @@ def test_a_route_built_by_a_factory_still_reads_its_prefix() -> None:
 def test_a_withdraw_label_keeps_its_prefix_on_a_withdraw() -> None:
     """0x800000 ends a stack only on a withdraw, which is what RFC 3107 defines it for."""
     nlri, _ = NLRI.unpack_nlri(
-        AFI.ipv4, SAFI.nlri_mpls, bytes([48]) + WITHDRAW_LABEL + PREFIX, Action.WITHDRAW, None, None
+        AFI.ipv4, SAFI.nlri_mpls, bytes([48]) + WITHDRAW_LABEL + PREFIX, Action.WITHDRAW, False, Negotiated.UNSET
     )
 
     assert str(nlri.cidr) == '10.0.0.0/24', 'a withdraw label ate the prefix off the wire'
@@ -200,7 +202,7 @@ def test_a_stack_which_never_ends_is_refused(name: str, action: Action) -> None:
     malformed on a withdraw as on an announce.
     """
     with pytest.raises(Notify, match='never ends'):
-        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, UNENDING_LABELLED, action, None, None)
+        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, UNENDING_LABELLED, action, False, Negotiated.UNSET)
 
 
 @pytest.mark.parametrize(
@@ -223,7 +225,7 @@ def test_a_length_which_leaves_no_prefix_bits_is_refused(name: str, action: Acti
     says it MUST do on transmission, and then it decodes.
     """
     with pytest.raises(Notify, match='never ends'):
-        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, bytes([24]) + UNTERMINATED + PREFIX, action, None, None)
+        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, bytes([24]) + UNTERMINATED + PREFIX, action, False, Negotiated.UNSET)
 
 
 def test_a_label_stack_of_one_field_with_no_bottom_of_stack_bit_decodes() -> None:
@@ -234,7 +236,7 @@ def test_a_label_stack_of_one_field_with_no_bottom_of_stack_bit_decodes() -> Non
     would pass equally against a decoder which had gone back to refusing everything.
     """
     nlri, rest = NLRI.unpack_nlri(
-        AFI.ipv4, SAFI.nlri_mpls, bytes([48]) + UNTERMINATED + PREFIX, Action.ANNOUNCE, None, None
+        AFI.ipv4, SAFI.nlri_mpls, bytes([48]) + UNTERMINATED + PREFIX, Action.ANNOUNCE, False, Negotiated.UNSET
     )
 
     assert str(nlri.cidr) == '10.0.0.0/24'
@@ -272,7 +274,7 @@ UNENDING_VPN6 = (
 def test_a_vpn_stack_which_never_ends_is_refused(name: str, afi: AFI, wire: bytes) -> None:
     """The half a fix to inet.py does not reach, because IPVPN decodes for itself."""
     with pytest.raises(Notify, match='never ends'):
-        NLRI.unpack_nlri(afi, SAFI.mpls_vpn, wire, Action.ANNOUNCE, None, None)
+        NLRI.unpack_nlri(afi, SAFI.mpls_vpn, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
 
 
 def test_a_second_label_may_carry_a_sentinel_value() -> None:
@@ -283,7 +285,7 @@ def test_a_second_label_may_carry_a_sentinel_value() -> None:
     stack bit refuses a route which is perfectly well formed.
     """
     wire = bytes([72]) + bytes([0x00, 0x00, 0x10]) + bytes([0x00, 0x00, 0x21]) + bytes([10, 0, 0])
-    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
 
     assert str(nlri.cidr) == '10.0.0.0/24'
     assert nlri.labels.labels == [1, 2], (
@@ -294,7 +296,7 @@ def test_a_second_label_may_carry_a_sentinel_value() -> None:
 def test_a_well_formed_vpn_route_still_decodes() -> None:
     """The refusals must not have closed the path they guard."""
     wire = bytes([112]) + bytes([0x00, 0x00, 0x11]) + RD + bytes([10, 0, 0])
-    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, wire, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
 
     assert str(nlri.cidr) == '10.0.0.0/24'
     assert nlri.labels.labels == [1]
@@ -322,7 +324,7 @@ def test_what_this_still_cannot_tell_apart_is_written_down() -> None:
     """
     # 0xc0a801: the last byte is odd, so it reads as a bottom of stack label
     wire = bytes([72]) + UNTERMINATED + SECOND_UNTERMINATED + bytes([0xC0, 0xA8, 0x01])
-    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
 
     assert str(nlri.cidr) == '0.0.0.0/0', (
         'the prefix now survives an over-long stack: the encoding gained a boundary marker, or this decoder learned something it could not know'
@@ -339,7 +341,7 @@ def test_the_same_prefix_one_bit_different_is_refused() -> None:
     wire = bytes([72]) + UNTERMINATED + SECOND_UNTERMINATED + bytes([0xC0, 0xA8, 0x00])
 
     with pytest.raises(Notify, match='never ends'):
-        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.ANNOUNCE, None, None)
+        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
 
 
 def test_the_two_label_decoders_agree() -> None:
@@ -359,7 +361,7 @@ def test_the_two_label_decoders_agree() -> None:
 
     def outcome(afi: AFI, safi: SAFI, wire: bytes) -> str:
         try:
-            nlri, _ = NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, None, None)
+            nlri, _ = NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
         except Notify:
             return 'refused'
         return str(nlri.cidr)
@@ -398,7 +400,7 @@ def test_a_sentinel_below_depth_one_no_longer_ends_a_stack() -> None:
     wire = bytes([72]) + bytes([0x00, 0x00, 0x10]) + WITHDRAW_LABEL + PREFIX
 
     with pytest.raises(Notify, match='never ends'):
-        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.WITHDRAW, None, None)
+        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.WITHDRAW, False, Negotiated.UNSET)
 
 
 def test_a_sentinel_below_depth_one_is_still_a_usable_label() -> None:
@@ -409,7 +411,7 @@ def test_a_sentinel_below_depth_one_is_still_a_usable_label() -> None:
     would pass equally if the decoder had started refusing the VALUE anywhere it appeared.
     """
     wire = bytes([96]) + bytes([0x00, 0x00, 0x10]) + WITHDRAW_LABEL + bytes([0x00, 0x00, 0x21]) + PREFIX
-    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.WITHDRAW, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, wire, Action.WITHDRAW, False, Negotiated.UNSET)
 
     assert str(nlri.cidr) == '10.0.0.0/24'
     assert nlri.labels.labels == [1, 0x800000 >> 4, 2]

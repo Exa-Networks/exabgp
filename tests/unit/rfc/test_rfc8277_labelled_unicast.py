@@ -42,6 +42,7 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.rib.route import Route
 from exabgp.util.types import Buffer
+from exabgp.bgp.message.open.capability.capability import Capability
 
 # Section 2.2: the Length field counts bits, and a label contributes 24 of them.
 LABEL_BITS = 24
@@ -525,7 +526,7 @@ def test_an_ignored_first_triple_still_wins_over_a_later_one() -> None:
 @pytest.mark.parametrize('count', [1, 2, 3])
 def test_a_multiple_labels_capability_of_whole_triples_is_accepted(count: int) -> None:
     decoded = capabilities(b''.join(triple(2 + index, safi=SAFI.nlri_mpls) for index in range(count)))
-    assert decoded.announced(MULTIPLE_LABELS)
+    assert decoded.announced(Capability.CODE.MULTIPLE_LABELS)
 
 
 @pytest.mark.rfc('rfc8277#2.1-count-zero-or-one-not-sent')
@@ -572,9 +573,9 @@ neighbor 192.0.2.2 {{
 def test_the_capability_is_sent_for_the_labelled_families_only_when_configured() -> None:
     """Unmarked: the knob.  Off, the OPEN is what it always was; on, one triple per
     labelled family, none for a family without labels."""
-    assert not neighbour_capabilities('').announced(MULTIPLE_LABELS)
+    assert not neighbour_capabilities('').announced(Capability.CODE.MULTIPLE_LABELS)
     sent = neighbour_capabilities('multiple-labels 3;')
-    assert dict(sent[MULTIPLE_LABELS]) == {LABELLED_UNICAST: 3}
+    assert dict(sent[Capability.CODE.MULTIPLE_LABELS]) == {LABELLED_UNICAST: 3}
 
 
 @pytest.mark.rfc('rfc8277#2.1-capability-supports-two-labels')

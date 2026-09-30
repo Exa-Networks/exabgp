@@ -28,6 +28,7 @@ from typing import Any, Generator
 from unittest.mock import Mock, patch
 
 import pytest
+from tests import negotiation
 
 
 # Mock logger at module level to avoid initialization issues
@@ -41,12 +42,7 @@ def mock_logger() -> Generator[None, None, None]:
 
 def create_negotiated_mock(asn4: Any = False) -> Any:
     """Create minimal mock negotiated object for testing."""
-    negotiated = Mock()
-    negotiated.asn4 = asn4
-    negotiated.addpath = Mock()
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.families = []
-    return negotiated
+    return negotiation.negotiated([], asn4=asn4)
 
 
 def create_attribute_header(flag: Any, type_code: Any, length: Any, extended: Any = False) -> Any:

@@ -5,7 +5,8 @@
 Created for comprehensive test coverage improvement
 """
 
-from unittest.mock import Mock
+from exabgp.bgp.neighbor import Neighbor
+
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -22,8 +23,7 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -76,7 +76,7 @@ class TestRTCPackUnpack:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(
-            AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.rtc, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -92,7 +92,7 @@ class TestRTCPackUnpack:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(
-            AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.rtc, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -107,7 +107,7 @@ class TestRTCPackUnpack:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = RTC.unpack_nlri(
-            AFI.ipv4, SAFI.rtc, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.rtc, packed, Action.ANNOUNCE, False, negotiated=create_negotiated()
         )
 
         # Action is no longer stored in NLRI - verify unpack worked correctly
@@ -123,7 +123,7 @@ class TestRTCPackUnpack:
             nlri = RTC.make_rtc(ASN(asn), rt)
             packed = nlri.pack_nlri(create_negotiated())
             unpacked, leftover = RTC.unpack_nlri(
-                AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
+                AFI.ipv4, SAFI.rtc, packed, Action.UNSET, False, negotiated=create_negotiated()
             )
 
             assert unpacked.origin == asn
@@ -140,7 +140,7 @@ class TestRTCPackUnpack:
             nlri = RTC.make_rtc(ASN(65000), rt)
             packed = nlri.pack_nlri(create_negotiated())
             unpacked, leftover = RTC.unpack_nlri(
-                AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
+                AFI.ipv4, SAFI.rtc, packed, Action.UNSET, False, negotiated=create_negotiated()
             )
 
             assert unpacked.rt.asn == rt.asn
@@ -153,7 +153,7 @@ class TestRTCPackUnpack:
 
         packed = nlri.pack_nlri(create_negotiated()) + b'\x01\x02\x03\x04'
         unpacked, leftover = RTC.unpack_nlri(
-            AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.rtc, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 4
@@ -328,7 +328,7 @@ class TestRTCEdgeCases:
         assert nlri.origin == 0
 
         packed = nlri.pack_nlri(create_negotiated())
-        unpacked, _ = RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated())
+        unpacked, _ = RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, packed, Action.UNSET, False, negotiated=create_negotiated())
 
         assert unpacked.origin == 0
 
@@ -340,7 +340,7 @@ class TestRTCEdgeCases:
         assert nlri.origin == 4200000000
 
         packed = nlri.pack_nlri(create_negotiated())
-        unpacked, _ = RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, packed, Action.UNSET, None, negotiated=create_negotiated())
+        unpacked, _ = RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, packed, Action.UNSET, False, negotiated=create_negotiated())
 
         assert unpacked.origin == 4200000000
 
@@ -350,7 +350,7 @@ class TestRTCEdgeCases:
         invalid_packed = b'\x10\x00\x00\xfd\xe8'  # length=16 (too short)
 
         with pytest.raises(Notify) as exc_info:
-            RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, invalid_packed, Action.UNSET, None, negotiated=create_negotiated())
+            RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, invalid_packed, Action.UNSET, False, negotiated=create_negotiated())
 
         assert 'incorrect RTC length' in str(exc_info.value)
 
@@ -362,7 +362,7 @@ class TestRTCEdgeCases:
         packed = nlri.pack_nlri(create_negotiated())
         # The implementation uses the same unpacking regardless of SAFI passed
         unpacked, _ = RTC.unpack_nlri(
-            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert unpacked.origin == 65000
@@ -386,7 +386,7 @@ class TestRTCMultipleRoutes:
         data = packed_data
         unpacked_routes = []
         for _ in range(3):
-            route, data = RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, data, Action.UNSET, None, negotiated=create_negotiated())
+            route, data = RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, data, Action.UNSET, False, negotiated=create_negotiated())
             unpacked_routes.append(route)
 
         assert len(unpacked_routes) == 3

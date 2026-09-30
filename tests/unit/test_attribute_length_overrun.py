@@ -22,14 +22,13 @@ from __future__ import annotations
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
 
 COMMUNITY = int(Attribute.CODE.COMMUNITY)
 ORIGIN = int(Attribute.CODE.ORIGIN)
@@ -61,24 +60,13 @@ MP_REACH = bytes([0x80, int(Attribute.CODE.MP_REACH_NLRI), len(MP_REACH_VALUE)])
 
 
 def negotiated(families: list[tuple[AFI, SAFI]] | None = None) -> Any:
-    session = Mock()
-    session.asn4 = False
-    session.addpath = Mock()
-    session.addpath.receive = Mock(return_value=False)
-    session.addpath.send = Mock(return_value=False)
-    session.required = Mock(return_value=False)
-    session.families = [] if families is None else families
-    session.nexthop = []
-    session.msg_size = 4096
-    session.direction = Action.ANNOUNCE
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value=False)
-    neighbor.session.local_address = None
-    session.neighbor = neighbor
-    session.attribute_cache = None
-    session.attribute_cache_packed = b''
-    session.attribute_cache_enabled = True
-    return session
+    return negotiation.negotiated(
+        [] if families is None else families,
+        asn4=False,
+        msg_size=4096,
+        attribute_cache_enabled=True,
+        session=negotiation.neighbor(local_address=None),
+    )
 
 
 def parsed(attributes: bytes) -> Any:

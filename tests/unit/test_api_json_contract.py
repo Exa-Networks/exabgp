@@ -17,6 +17,8 @@ carries. A family is its branches, not its first example.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import json as jsonlib
 
 import pytest
@@ -78,7 +80,9 @@ IDS = [row[0] for row in CONTRACT]
 
 def members(afi: AFI, safi: SAFI, data: bytes, announced: bool = True) -> set[str] | None:
     try:
-        nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE if announced else Action.WITHDRAW, None, None)
+        nlri, _ = NLRI.unpack_nlri(
+            afi, safi, data, Action.ANNOUNCE if announced else Action.WITHDRAW, False, Negotiated.UNSET
+        )
     except Notify:
         return None
     if nlri is NLRI.INVALID:

@@ -13,6 +13,8 @@ a route which changes under whoever is holding it.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 from copy import copy as shallow_copy, deepcopy
 
 import pytest
@@ -66,7 +68,7 @@ def comparable(value: object) -> object:
 
 def decoded(afi: AFI, safi: SAFI, data: bytes) -> NLRI | None:
     try:
-        nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+        nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     except Notify:
         return None
     return None if nlri is NLRI.INVALID else nlri

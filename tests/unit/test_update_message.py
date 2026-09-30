@@ -24,6 +24,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from tests import negotiation
 
 
 @pytest.fixture(autouse=True)
@@ -69,16 +70,7 @@ def mock_logger() -> Any:
 
 def create_negotiated_mock(families: Any = None, asn4: Any = False) -> Any:
     """Create a mock negotiated object with optional family support."""
-    negotiated = Mock()
-    negotiated.asn4 = asn4
-    negotiated.addpath = Mock()
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.required = Mock(return_value=False)
-    negotiated.families = families if families else []
-    negotiated.nexthop = []
-    negotiated.msg_size = 4096  # Standard BGP message size
-    return negotiated
+    return negotiation.negotiated(families if families else [], asn4=asn4, msg_size=4096)
 
 
 # ==============================================================================

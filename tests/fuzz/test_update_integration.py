@@ -18,6 +18,7 @@ from typing import Any, Generator
 from unittest.mock import Mock, patch
 
 import pytest
+from tests import negotiation
 
 pytestmark = pytest.mark.fuzz
 
@@ -40,15 +41,7 @@ def mock_logger() -> Generator[None, None, None]:
 
 def create_negotiated_mock() -> Any:
     """Create a minimal mock negotiated object."""
-    from exabgp.bgp.message.direction import Direction
-
-    negotiated = Mock()
-    negotiated.direction = Direction.IN
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.required = Mock(return_value=False)
-    negotiated.families = []
-    return negotiated
+    return negotiation.negotiated([])
 
 
 @pytest.mark.fuzz

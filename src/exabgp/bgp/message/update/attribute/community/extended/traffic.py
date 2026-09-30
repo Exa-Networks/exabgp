@@ -91,7 +91,7 @@ class TrafficRate(ExtendedCommunity):
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
-    def make_traffic_rate(cls, asn: ASN, rate: float) -> TrafficRate:
+    def make_traffic_rate(cls, asn: ASN | int, rate: float) -> TrafficRate:
         """Create TrafficRate from semantic values."""
         checked_rate(rate, 'traffic-rate')
         if rate < 0:
@@ -135,7 +135,7 @@ class TrafficRatePackets(ExtendedCommunity):
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
-    def make_traffic_rate_packets(cls, asn: ASN, rate: float) -> TrafficRatePackets:
+    def make_traffic_rate_packets(cls, asn: ASN | int, rate: float) -> TrafficRatePackets:
         """Create TrafficRatePackets from semantic values."""
         checked_rate(rate, 'traffic-rate-packets')
         if rate < 0:
@@ -228,7 +228,7 @@ class TrafficRedirect(ExtendedCommunity):
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
-    def make_traffic_redirect(cls, asn: ASN, target: int) -> TrafficRedirect:
+    def make_traffic_redirect(cls, asn: ASN | int, target: int) -> TrafficRedirect:
         """Create TrafficRedirect from semantic values."""
         packed = pack('!BBHL', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, int(asn), target)
         return cls(packed)
@@ -266,7 +266,7 @@ class TrafficRedirectASN4(ExtendedCommunity):
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
-    def make_traffic_redirect_asn4(cls, asn: ASN, target: int) -> TrafficRedirectASN4:
+    def make_traffic_redirect_asn4(cls, asn: ASN | int, target: int) -> TrafficRedirectASN4:
         """Create TrafficRedirectASN4 from semantic values."""
         packed = pack('!BBLH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, int(asn), target)
         return cls(packed)

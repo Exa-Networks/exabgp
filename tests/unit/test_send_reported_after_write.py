@@ -13,6 +13,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from exabgp.reactor.protocol import Protocol
+from exabgp.bgp.message import Message
 
 
 class Recorder:
@@ -42,7 +43,7 @@ def _protocol(order: list[str], fail: bool = False) -> Protocol:
 def test_report_follows_the_write():
     order: list[str] = []
     message = MagicMock()
-    message.ID = 2
+    message.ID = Message.CODE.UPDATE
     message.pack_message.return_value = b'\x00' * 19
 
     asyncio.run(_protocol(order).write(message, MagicMock()))
@@ -53,7 +54,7 @@ def test_report_follows_the_write():
 def test_a_failed_write_is_not_reported_as_sent():
     order: list[str] = []
     message = MagicMock()
-    message.ID = 2
+    message.ID = Message.CODE.UPDATE
     message.pack_message.return_value = b'\x00' * 19
 
     with pytest.raises(ConnectionResetError):

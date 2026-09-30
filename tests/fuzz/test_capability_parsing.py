@@ -156,7 +156,7 @@ def test_capabilities_extended_truncated(extended_len: int) -> None:
 def test_addpath_valid_entries(entry_count: int) -> None:
     """Test AddPath capability with valid entry count."""
     from exabgp.bgp.message.open.capability.addpath import AddPath
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
 
     # Each entry: AFI(2) + SAFI(1) + send_receive(1) = 4 bytes
     # Use different AFI/SAFI pairs to avoid duplicate key collapsing
@@ -175,7 +175,7 @@ def test_addpath_valid_entries(entry_count: int) -> None:
             data += bytes([3])  # send/receive
 
     instance = AddPath()
-    result = AddPath.unpack_capability(instance, data, CapabilityCode(Capability.CODE.ADD_PATH))
+    result = AddPath.unpack_capability(instance, data, Capability.CODE.ADD_PATH)
 
     assert isinstance(result, AddPath)
     # Number of unique AFI/SAFI pairs
@@ -188,7 +188,7 @@ def test_addpath_valid_entries(entry_count: int) -> None:
 def test_addpath_not_multiple_of_4(extra_bytes: int) -> None:
     """Test AddPath capability with length not multiple of 4."""
     from exabgp.bgp.message.open.capability.addpath import AddPath
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
     # Valid entry + extra bytes
@@ -197,7 +197,7 @@ def test_addpath_not_multiple_of_4(extra_bytes: int) -> None:
     instance = AddPath()
 
     try:
-        AddPath.unpack_capability(instance, data, CapabilityCode(Capability.CODE.ADD_PATH))
+        AddPath.unpack_capability(instance, data, Capability.CODE.ADD_PATH)
         # May parse first entry and fail on extra
     except Notify as e:
         # Expected - truncated entry
@@ -208,10 +208,10 @@ def test_addpath_not_multiple_of_4(extra_bytes: int) -> None:
 def test_addpath_empty() -> None:
     """Test AddPath capability with empty data."""
     from exabgp.bgp.message.open.capability.addpath import AddPath
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
 
     instance = AddPath()
-    result = AddPath.unpack_capability(instance, b'', CapabilityCode(Capability.CODE.ADD_PATH))
+    result = AddPath.unpack_capability(instance, b'', Capability.CODE.ADD_PATH)
 
     assert isinstance(result, AddPath)
     assert len(result) == 0
@@ -229,12 +229,12 @@ def test_addpath_send_receive_values(send_receive: int) -> None:
     subprocesses and in the logger.
     """
     from exabgp.bgp.message.open.capability.addpath import AddPath
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
 
     data = struct.pack('!H', 1) + bytes([1, send_receive])
 
     instance = AddPath()
-    result = AddPath.unpack_capability(instance, data, CapabilityCode(Capability.CODE.ADD_PATH))
+    result = AddPath.unpack_capability(instance, data, Capability.CODE.ADD_PATH)
 
     assert isinstance(result, AddPath)
     # what decoded has to survive everything the API and the logs ask of it
@@ -256,7 +256,7 @@ def test_addpath_send_receive_values(send_receive: int) -> None:
 def test_multiprotocol_afi_safi_values(afi: int, safi: int) -> None:
     """Test MultiProtocol capability with various AFI/SAFI values."""
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
 
     # Format: AFI(2) + reserved(1) + SAFI(1) = 4 bytes
     data = struct.pack('!H', int(afi)) + bytes([0, safi])
@@ -264,7 +264,7 @@ def test_multiprotocol_afi_safi_values(afi: int, safi: int) -> None:
     instance = MultiProtocol((0, 0))  # Dummy init
 
     try:
-        result = MultiProtocol.unpack_capability(instance, data, CapabilityCode(Capability.CODE.MULTIPROTOCOL))
+        result = MultiProtocol.unpack_capability(instance, data, Capability.CODE.MULTIPROTOCOL)
         assert isinstance(result, MultiProtocol)
     except Notify:
         pass
@@ -276,7 +276,7 @@ def test_multiprotocol_afi_safi_values(afi: int, safi: int) -> None:
 def test_multiprotocol_truncated(data_len: int) -> None:
     """Test MultiProtocol capability with truncated data."""
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
     # Less than 4 bytes
@@ -285,7 +285,7 @@ def test_multiprotocol_truncated(data_len: int) -> None:
     instance = MultiProtocol((0, 0))
 
     try:
-        MultiProtocol.unpack_capability(instance, data, CapabilityCode(Capability.CODE.MULTIPROTOCOL))
+        MultiProtocol.unpack_capability(instance, data, Capability.CODE.MULTIPROTOCOL)
     except Notify:
         # Expected - truncated
         pass
@@ -302,7 +302,7 @@ def test_multiprotocol_truncated(data_len: int) -> None:
 def test_graceful_restart_valid(family_count: int) -> None:
     """Test Graceful Restart capability with valid family entries."""
     from exabgp.bgp.message.open.capability.graceful import Graceful
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
 
     # Format: flags+time(2) + [AFI(2)+SAFI(1)+flags(1)]*n
     data = struct.pack('!H', 0x8000 | 120)  # Restart bit + 120 seconds
@@ -315,7 +315,7 @@ def test_graceful_restart_valid(family_count: int) -> None:
     instance = Graceful()
 
     try:
-        result = Graceful.unpack_capability(instance, data, CapabilityCode(Capability.CODE.GRACEFUL_RESTART))
+        result = Graceful.unpack_capability(instance, data, Capability.CODE.GRACEFUL_RESTART)
         assert isinstance(result, Graceful)
     except Notify:
         pass
@@ -325,13 +325,13 @@ def test_graceful_restart_valid(family_count: int) -> None:
 def test_graceful_restart_empty() -> None:
     """Test Graceful Restart capability with empty data."""
     from exabgp.bgp.message.open.capability.graceful import Graceful
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
     instance = Graceful()
 
     try:
-        Graceful.unpack_capability(instance, b'', CapabilityCode(Capability.CODE.GRACEFUL_RESTART))
+        Graceful.unpack_capability(instance, b'', Capability.CODE.GRACEFUL_RESTART)
     except Notify:
         # Expected - need at least 2 bytes
         pass
@@ -343,7 +343,7 @@ def test_graceful_restart_empty() -> None:
 def test_graceful_restart_not_aligned(extra_bytes: int) -> None:
     """Test Graceful Restart with entry not aligned to 4 bytes."""
     from exabgp.bgp.message.open.capability.graceful import Graceful
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
     # Header(2) + incomplete family entry
@@ -352,7 +352,7 @@ def test_graceful_restart_not_aligned(extra_bytes: int) -> None:
     instance = Graceful()
 
     try:
-        Graceful.unpack_capability(instance, data, CapabilityCode(Capability.CODE.GRACEFUL_RESTART))
+        Graceful.unpack_capability(instance, data, Capability.CODE.GRACEFUL_RESTART)
     except Notify:
         # Expected - incomplete family
         pass
@@ -369,14 +369,14 @@ def test_graceful_restart_not_aligned(extra_bytes: int) -> None:
 def test_asn4_valid_values(asn: int) -> None:
     """Test ASN4 capability with full 32-bit range."""
     from exabgp.bgp.message.open.capability.asn4 import ASN4
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
 
     data = struct.pack('!L', asn)
 
     instance = ASN4(0)
 
     try:
-        result = ASN4.unpack_capability(instance, data, CapabilityCode(Capability.CODE.FOUR_BYTES_ASN))
+        result = ASN4.unpack_capability(instance, data, Capability.CODE.FOUR_BYTES_ASN)
         assert isinstance(result, ASN4)
     except Notify:
         pass
@@ -388,7 +388,7 @@ def test_asn4_valid_values(asn: int) -> None:
 def test_asn4_truncated(data_len: int) -> None:
     """Test ASN4 capability with truncated data."""
     from exabgp.bgp.message.open.capability.asn4 import ASN4
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
     data = b'\x00' * data_len
@@ -396,7 +396,7 @@ def test_asn4_truncated(data_len: int) -> None:
     instance = ASN4(0)
 
     try:
-        ASN4.unpack_capability(instance, data, CapabilityCode(Capability.CODE.FOUR_BYTES_ASN))
+        ASN4.unpack_capability(instance, data, Capability.CODE.FOUR_BYTES_ASN)
     except Notify:
         # Expected - need 4 bytes
         pass
@@ -416,7 +416,7 @@ def test_asn4_truncated(data_len: int) -> None:
 def test_hostname_length_combinations(hostname_len: int, domain_len: int) -> None:
     """Test Hostname capability with various length combinations."""
     from exabgp.bgp.message.open.capability.hostname import HostName
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
     # Format: hostname_len(1) + hostname + domain_len(1) + domain
@@ -428,7 +428,7 @@ def test_hostname_length_combinations(hostname_len: int, domain_len: int) -> Non
     instance = HostName()
 
     try:
-        result = HostName.unpack_capability(instance, data, CapabilityCode(Capability.CODE.HOSTNAME))
+        result = HostName.unpack_capability(instance, data, Capability.CODE.HOSTNAME)
         assert isinstance(result, HostName)
     except Notify:
         # Expected for invalid lengths
@@ -439,13 +439,13 @@ def test_hostname_length_combinations(hostname_len: int, domain_len: int) -> Non
 def test_hostname_empty() -> None:
     """Test Hostname capability with empty data."""
     from exabgp.bgp.message.open.capability.hostname import HostName
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
     instance = HostName()
 
     try:
-        HostName.unpack_capability(instance, b'', CapabilityCode(Capability.CODE.HOSTNAME))
+        HostName.unpack_capability(instance, b'', Capability.CODE.HOSTNAME)
     except Notify:
         # Expected - need at least length byte
         pass
@@ -455,7 +455,7 @@ def test_hostname_empty() -> None:
 def test_hostname_truncated_hostname() -> None:
     """Test Hostname capability where hostname length exceeds data."""
     from exabgp.bgp.message.open.capability.hostname import HostName
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
     # Claim 10 bytes for hostname but provide only 5
@@ -464,7 +464,7 @@ def test_hostname_truncated_hostname() -> None:
     instance = HostName()
 
     try:
-        HostName.unpack_capability(instance, data, CapabilityCode(Capability.CODE.HOSTNAME))
+        HostName.unpack_capability(instance, data, Capability.CODE.HOSTNAME)
     except Notify:
         # Expected - truncated
         pass
@@ -481,7 +481,7 @@ def test_hostname_truncated_hostname() -> None:
 def test_nexthop_valid_entries(entry_count: int) -> None:
     """Test NextHop capability with valid entries."""
     from exabgp.bgp.message.open.capability.nexthop import NextHop
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
 
     # Each entry: AFI(2) + SAFI(2) + next-hop-AFI(2) = 6 bytes
     data = b''
@@ -493,7 +493,7 @@ def test_nexthop_valid_entries(entry_count: int) -> None:
     instance = NextHop()
 
     try:
-        result = NextHop.unpack_capability(instance, data, CapabilityCode(Capability.CODE.NEXTHOP))
+        result = NextHop.unpack_capability(instance, data, Capability.CODE.NEXTHOP)
         assert isinstance(result, NextHop)
     except Notify:
         pass
@@ -505,7 +505,7 @@ def test_nexthop_valid_entries(entry_count: int) -> None:
 def test_nexthop_not_multiple_of_6(extra_bytes: int) -> None:
     """Test NextHop capability with length not multiple of 6."""
     from exabgp.bgp.message.open.capability.nexthop import NextHop
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
     # Valid entry + extra bytes
@@ -514,7 +514,7 @@ def test_nexthop_not_multiple_of_6(extra_bytes: int) -> None:
     instance = NextHop()
 
     try:
-        NextHop.unpack_capability(instance, data, CapabilityCode(Capability.CODE.NEXTHOP))
+        NextHop.unpack_capability(instance, data, Capability.CODE.NEXTHOP)
     except Notify:
         # Expected - incomplete entry
         pass
@@ -559,7 +559,7 @@ def test_unknown_capability(code: int, value_len: int) -> None:
 def test_software_version_lengths(version_len: int) -> None:
     """Test Software Version capability with various lengths."""
     from exabgp.bgp.message.open.capability.software import Software
-    from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
     # Format: version_len(1) + version
@@ -569,7 +569,7 @@ def test_software_version_lengths(version_len: int) -> None:
     instance = Software()
 
     try:
-        result = Software.unpack_capability(instance, data, CapabilityCode(Capability.CODE.SOFTWARE_VERSION))
+        result = Software.unpack_capability(instance, data, Capability.CODE.SOFTWARE_VERSION)
         assert isinstance(result, Software)
     except Notify:
         # Expected for invalid lengths

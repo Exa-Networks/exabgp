@@ -59,6 +59,7 @@ from exabgp.reactor.network.error import LostConnection, NotConnected, NotifyErr
 from exabgp.reactor.network.incoming import Incoming  # noqa: E402
 from exabgp.reactor.network.outgoing import Outgoing  # noqa: E402
 from exabgp.util.types import Buffer  # noqa: E402
+from exabgp.bgp.message.message import MessageCode  # noqa: E402
 
 
 # Long enough for a message already queued on loopback, short enough to fail a hung read.
@@ -69,7 +70,7 @@ POLL_SECONDS = 0.05
 
 def read_one(
     connection: Connection, timeout_seconds: float = READ_SECONDS
-) -> tuple[int, int, Buffer, Buffer, NotifyError | None]:
+) -> tuple[int, MessageCode, Buffer, Buffer, NotifyError | None]:
     """One message through reader_async, the reader the daemon uses."""
     return asyncio.run(asyncio.wait_for(connection.reader_async(), timeout_seconds))
 

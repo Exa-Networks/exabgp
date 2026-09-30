@@ -31,6 +31,8 @@ Note: COMMUNITIES are extensively tested in test_communities.py (27 tests)
 Note: Multiprotocol extensions (MP_REACH/MP_UNREACH) will be in test_multiprotocol.py
 """
 
+from exabgp.bgp.neighbor import Neighbor
+
 import struct
 from typing import Any
 from unittest.mock import Mock
@@ -39,12 +41,13 @@ import pytest
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.open.asn import ASN
+from tests import negotiation
 
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -227,7 +230,7 @@ def test_nexthop_valid_ipv4() -> None:
 
     # Verify pack (flag + type + length + value)
     # Format: flag(1) + type(1) + length(1) + IPv4(4) = 7 bytes
-    packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
+    packed = nexthop.pack_attribute(Negotiated.UNSET)
     assert len(packed) == 7
     assert packed[0] == 0x40  # Transitive flag
     assert packed[1] == 3  # NEXT_HOP type code
@@ -251,7 +254,7 @@ def test_nexthop_zero_address() -> None:
     assert str(nexthop) == '0.0.0.0'  # __repr__ returns just the IP
 
     # Verify pack (flag + type + length + value)
-    packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
+    packed = nexthop.pack_attribute(Negotiated.UNSET)
     assert len(packed) == 7
     assert packed[3:] == b'\x00\x00\x00\x00'  # Value part is 0.0.0.0
 
@@ -270,7 +273,7 @@ def test_nexthop_self() -> None:
     assert str(nexthop) == '10.0.0.1'  # __repr__ returns just the IP
 
     # Verify pack (flag + type + length + value)
-    packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
+    packed = nexthop.pack_attribute(Negotiated.UNSET)
     assert len(packed) == 7
 
 
@@ -287,7 +290,7 @@ def test_nexthop_third_party() -> None:
     assert '10.0.0.254' in str(nexthop)
 
     # Verify pack (flag + type + length + value)
-    packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
+    packed = nexthop.pack_attribute(Negotiated.UNSET)
     assert len(packed) == 7
 
 
@@ -411,8 +414,7 @@ def test_aggregator_2byte_asn() -> None:
     from exabgp.protocol.ip import IPv4
 
     # Create mock negotiated WITHOUT 4-byte ASN support
-    negotiated = Mock()
-    negotiated.asn4 = False
+    negotiated = negotiation.negotiated((), asn4=False)
 
     # Create AGGREGATOR with 2-byte ASN
     asn = ASN(65000)
@@ -440,8 +442,7 @@ def test_aggregator_4byte_asn() -> None:
     from exabgp.protocol.ip import IPv4
 
     # Create mock negotiated with 4-byte ASN support
-    negotiated = Mock()
-    negotiated.asn4 = True
+    negotiated = negotiation.negotiated((), asn4=True)
 
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
@@ -465,8 +466,7 @@ def test_aggregator_as_trans() -> None:
     from exabgp.protocol.ip import IPv4
 
     # Create mock negotiated WITHOUT 4-byte ASN support
-    negotiated = Mock()
-    negotiated.asn4 = False
+    negotiated = negotiation.negotiated((), asn4=False)
 
     # Create AGGREGATOR with 4-byte ASN
     asn = ASN(4200000000)
@@ -708,10 +708,7 @@ def test_aigp_basic() -> None:
     assert aigp.aigp == metric
 
     # Create mock negotiated with AIGP support
-    negotiated = Mock()
-    negotiated.aigp = True
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65000
+    negotiated = negotiation.negotiated((), aigp=True, local_as=ASN(65000), peer_as=ASN(65000))
 
     # Verify pack (flag + type + length + TLV)
     # Format: flag(1) + type(1) + length(1) + TLV(11) = 14 bytes
@@ -850,13 +847,13 @@ def test_nexthop_pack_unpack_roundtrip() -> None:
     nexthop = NextHop.from_string(original_ip)
 
     # Pack the attribute
-    packed = nexthop.pack_attribute(None)  # type: ignore[arg-type]
+    packed = nexthop.pack_attribute(Negotiated.UNSET)
 
     # Extract just the IP address bytes (skip flag, type, length)
     ip_data = packed[3:]
 
     # Unpack to create new NextHop
-    unpacked = NextHop.unpack_attribute(ip_data, None)  # type: ignore[arg-type]
+    unpacked = NextHop.unpack_attribute(ip_data, Negotiated.UNSET)
 
     # Verify they match
     assert str(unpacked) == original_ip
@@ -902,7 +899,7 @@ def test_nexthop_empty_unpack() -> None:
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
     # Unpack empty data
-    result = NextHop.unpack_attribute(b'', None)  # type: ignore[arg-type]
+    result = NextHop.unpack_attribute(b'', Negotiated.UNSET)
 
     # Should return NextHop.UNSET singleton
     assert result is NextHop.UNSET
@@ -919,8 +916,7 @@ def test_aggregator_pack_unpack_roundtrip_2byte() -> None:
     from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.protocol.ip import IPv4
 
-    negotiated = Mock()
-    negotiated.asn4 = False
+    negotiated = negotiation.negotiated((), asn4=False)
 
     # Create original
     original_asn = ASN(65000)
@@ -947,8 +943,7 @@ def test_aggregator_pack_unpack_roundtrip_4byte() -> None:
     from exabgp.bgp.message.update.attribute.aggregator import Aggregator
     from exabgp.protocol.ip import IPv4
 
-    negotiated = Mock()
-    negotiated.asn4 = True
+    negotiated = negotiation.negotiated((), asn4=True)
 
     # Create original with 4-byte ASN
     original_asn = ASN(4200000000)
@@ -1024,7 +1019,7 @@ def test_originator_id_pack_unpack_roundtrip() -> None:
     ip_data = packed[3:]
 
     # Unpack
-    negotiated = Mock()
+    negotiated = negotiation.negotiated(())
     unpacked = OriginatorID.unpack_attribute(ip_data, negotiated)
 
     # Verify match
@@ -1093,7 +1088,7 @@ def test_cluster_list_pack_unpack_roundtrip_single() -> None:
     cluster_data = packed[3:]
 
     # Unpack
-    negotiated = Mock()
+    negotiated = negotiation.negotiated(())
     unpacked = ClusterList.unpack_attribute(cluster_data, negotiated)
 
     # Verify match
@@ -1118,7 +1113,7 @@ def test_cluster_list_pack_unpack_roundtrip_multiple() -> None:
     cluster_data = packed[3:]
 
     # Unpack
-    negotiated = Mock()
+    negotiated = negotiation.negotiated(())
     unpacked = ClusterList.unpack_attribute(cluster_data, negotiated)
 
     # Verify match
@@ -1208,10 +1203,7 @@ def test_aigp_pack_unpack_roundtrip() -> None:
     original = AIGP.from_int(metric)
 
     # Create negotiated mock with AIGP support
-    negotiated = Mock()
-    negotiated.aigp = True
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65000
+    negotiated = negotiation.negotiated((), aigp=True, local_as=ASN(65000), peer_as=ASN(65000))
 
     # Pack
     packed = original.pack_attribute(negotiated)
@@ -1245,11 +1237,7 @@ def test_aigp_no_pack_without_negotiation() -> None:
     aigp = AIGP.from_int(metric)
 
     # Without AIGP negotiation and different AS (EBGP)
-    negotiated = Mock()
-    negotiated.aigp = False
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65001
-    negotiated.is_ibgp = False  # EBGP session
+    negotiated = negotiation.negotiated((), aigp=False, local_as=ASN(65000), peer_as=ASN(65001))
 
     # Should return empty bytes
     packed = aigp.pack_attribute(negotiated)
@@ -1264,11 +1252,7 @@ def test_aigp_pack_with_same_as() -> None:
     aigp = AIGP.from_int(metric)
 
     # Same AS but no AIGP negotiation (IBGP)
-    negotiated = Mock()
-    negotiated.aigp = False
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65000
-    negotiated.is_ibgp = True  # IBGP session
+    negotiated = negotiation.negotiated((), aigp=False, local_as=ASN(65000), peer_as=ASN(65000))
 
     # Should still pack for IBGP
     packed = aigp.pack_attribute(negotiated)
@@ -1324,7 +1308,7 @@ def test_pmsi_pack_basic() -> None:
     tunnel_type = 1  # RSVP-TE P2MP LSP
     pmsi = PMSI.make_pmsi(tunnel_type, flags, label, tunnel_data)
 
-    negotiated = Mock()
+    negotiated = negotiation.negotiated(())
 
     # Pack
     packed = pmsi.pack_attribute(negotiated)
@@ -1356,7 +1340,7 @@ def test_pmsi_pack_unpack_roundtrip() -> None:
     data = struct.pack('!BB', flags, tunnel_type) + struct.pack('!L', raw_label)[1:4] + tunnel_data
 
     # Unpack
-    negotiated = Mock()
+    negotiated = negotiation.negotiated(())
     unpacked = PMSI.unpack_attribute(data, negotiated)
 
     # Verify
@@ -1475,7 +1459,7 @@ def test_pmsi_no_tunnel_pack() -> None:
 
     pmsi = PMSINoTunnel.make_no_tunnel(flags=0, label=100)
 
-    negotiated = Mock()
+    negotiated = negotiation.negotiated(())
     packed = pmsi.pack_attribute(negotiated)
 
     # Should have: flag(1) + type(1) + length(1) + flags(1) + tunnel_type(1) + label(3)
@@ -1530,7 +1514,7 @@ def test_pmsi_ingress_replication_pack() -> None:
 
     pmsi = PMSIIngressReplication.make_ingress_replication('192.168.1.1', flags=0, label=100)
 
-    negotiated = Mock()
+    negotiated = negotiation.negotiated(())
     packed = pmsi.pack_attribute(negotiated)
 
     # Should have: flag(1) + type(1) + length(1) + flags(1) + tunnel_type(1) + label(3) + IP(4)
@@ -1588,7 +1572,7 @@ def test_pmsi_raw_label_handling() -> None:
     assert pmsi.label == raw_label >> 4
 
     # Pack should preserve raw_label
-    negotiated = Mock()
+    negotiated = negotiation.negotiated(())
     packed = pmsi.pack_attribute(negotiated)
 
     # Verify packed (just ensure it doesn't crash)
@@ -1621,7 +1605,7 @@ def test_pmsi_unknown_tunnel_type() -> None:
     data = struct.pack('!BB', flags, tunnel_type) + struct.pack('!L', raw_label)[1:4] + tunnel_data
 
     # Unpack
-    negotiated = Mock()
+    negotiated = negotiation.negotiated(())
     unpacked = PMSI.unpack_attribute(data, negotiated)
 
     # Should create base PMSI with unknown tunnel type

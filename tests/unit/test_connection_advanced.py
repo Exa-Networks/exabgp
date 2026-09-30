@@ -1039,7 +1039,7 @@ class TestEdgeCasesAndDefensiveMode:
 
         assert isinstance(refused[4], NotifyError)
         # The next read parses the next header, not a body the refused header promised
-        assert following[:2] == (19, 4)
+        assert following[:2] == (19, Message.CODE.KEEPALIVE)
         assert following[4] is None
 
     def test_reader_keeps_no_state_after_invalid_length(self) -> None:
@@ -1051,7 +1051,7 @@ class TestEdgeCasesAndDefensiveMode:
 
         assert isinstance(refused[4], NotifyError)
         # The next read parses the next header, not a body the refused header promised
-        assert following[:2] == (19, 4)
+        assert following[:2] == (19, Message.CODE.KEEPALIVE)
         assert following[4] is None
 
     def test_reader_keeps_no_state_after_validator_failure(self) -> None:
@@ -1063,7 +1063,7 @@ class TestEdgeCasesAndDefensiveMode:
 
         assert isinstance(refused[4], NotifyError)
         # The next read parses the next header, not a body the refused header promised
-        assert following[:2] == (19, 4)
+        assert following[:2] == (19, Message.CODE.KEEPALIVE)
         assert following[4] is None
 
     def test_writing_returns_false_when_not_ready(self) -> None:

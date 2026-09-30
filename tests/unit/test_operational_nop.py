@@ -23,6 +23,8 @@ from exabgp.bgp.message.operational import (
 )
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 # ==============================================================================
@@ -151,7 +153,7 @@ def test_advisory_adm_encoding() -> None:
     adm = Advisory.ADM.make_advisory(AFI.ipv4, SAFI.unicast, 'Test')
 
     # Create mock negotiated object
-    negotiated = type('obj', (object,), {})()
+    negotiated = negotiation.negotiated(())
 
     msg = adm.pack_message(negotiated)
 
@@ -166,7 +168,7 @@ def test_advisory_asm_encoding() -> None:
     """Test ASM message encoding."""
     asm = Advisory.ASM.make_advisory(AFI.ipv6, SAFI.unicast, 'Message')
 
-    negotiated = type('obj', (object,), {})()
+    negotiated = negotiation.negotiated(())
     msg = asm.pack_message(negotiated)
 
     # Verify basic message structure
@@ -365,7 +367,7 @@ def test_operational_unpack_adm() -> None:
         + advisory_text  # Advisory message
     )
 
-    op = Operational.unpack_message(data, {})
+    op = Operational.unpack_message(data, Negotiated.UNSET)
 
     assert isinstance(op, Advisory.ADM)
     assert op.afi == AFI.ipv4
@@ -386,7 +388,7 @@ def test_operational_unpack_asm() -> None:
         + advisory_text  # Advisory message
     )
 
-    op = Operational.unpack_message(data, {})
+    op = Operational.unpack_message(data, Negotiated.UNSET)
 
     assert isinstance(op, Advisory.ASM)
     assert op.afi == AFI.ipv6
@@ -409,7 +411,7 @@ def test_operational_unpack_rpcq() -> None:
         + struct.pack('!L', sequence)  # Sequence (4 bytes)
     )
 
-    op = Operational.unpack_message(data, {})
+    op = Operational.unpack_message(data, Negotiated.UNSET)
 
     assert isinstance(op, Query.RPCQ)
     assert op.afi == AFI.ipv4
@@ -434,7 +436,7 @@ def test_operational_unpack_rpcp() -> None:
         + struct.pack('!L', counter)  # Counter
     )
 
-    op = Operational.unpack_message(data, {})
+    op = Operational.unpack_message(data, Negotiated.UNSET)
 
     assert isinstance(op, Response.RPCP)
     assert op.counter == counter

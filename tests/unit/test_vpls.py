@@ -5,7 +5,8 @@
 Created for comprehensive test coverage improvement
 """
 
-from unittest.mock import Mock
+from exabgp.bgp.neighbor import Neighbor
+
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -20,8 +21,7 @@ from exabgp.bgp.message.notification import Notify
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -70,7 +70,7 @@ class TestVPLSPackUnpack:
 
         packed = vpls.pack_nlri(create_negotiated())
         unpacked, leftover = VPLS.unpack_nlri(
-            AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+            AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -95,7 +95,7 @@ class TestVPLSPackUnpack:
 
             packed = vpls.pack_nlri(create_negotiated())
             unpacked, leftover = VPLS.unpack_nlri(
-                AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+                AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, False, negotiated=create_negotiated()
             )
 
             assert unpacked.endpoint == endpoint
@@ -125,7 +125,7 @@ class TestVPLSPackUnpack:
         packed = vpls.pack_nlri(create_negotiated()) + b'\x01\x02\x03\x04'
 
         with pytest.raises(Notify) as exc_info:
-            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated())
+            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, False, negotiated=create_negotiated())
 
         assert 'length is not consistent' in str(exc_info.value)
 
@@ -136,7 +136,7 @@ class TestVPLSPackUnpack:
 
         packed = vpls.pack_nlri(create_negotiated())
         unpacked, _ = VPLS.unpack_nlri(
-            AFI.l2vpn, SAFI.vpls, packed, Action.WITHDRAW, None, negotiated=create_negotiated()
+            AFI.l2vpn, SAFI.vpls, packed, Action.WITHDRAW, False, negotiated=create_negotiated()
         )
 
         # Action is no longer stored in NLRI - verify unpack worked correctly
@@ -149,7 +149,7 @@ class TestVPLSPackUnpack:
         encoded = bytearray.fromhex('0011 0001 AC1E 0504 000D 0003 0001 0008 4000 11')
 
         unpacked, leftover = VPLS.unpack_nlri(
-            AFI.l2vpn, SAFI.vpls, bytes(encoded), Action.ANNOUNCE, None, negotiated=create_negotiated()
+            AFI.l2vpn, SAFI.vpls, bytes(encoded), Action.ANNOUNCE, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -321,7 +321,7 @@ class TestVPLSEdgeCases:
 
         packed = vpls.pack_nlri(create_negotiated())
         unpacked, _ = VPLS.unpack_nlri(
-            AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+            AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, False, negotiated=create_negotiated()
         )
 
         assert unpacked.base == max_base
@@ -332,7 +332,7 @@ class TestVPLSEdgeCases:
         invalid = b'\x00\x11' + b'\x00' * 18
 
         with pytest.raises(Notify) as exc_info:
-            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, None, negotiated=create_negotiated())
+            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, False, negotiated=create_negotiated())
 
         assert 'length is not consistent' in str(exc_info.value)
 
@@ -341,7 +341,7 @@ class TestVPLSEdgeCases:
         invalid = b'\x00\x10' + b'\x00' * 16  # says 16, and every accessor needs 17
 
         with pytest.raises(Notify) as exc_info:
-            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, None, negotiated=create_negotiated())
+            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, False, negotiated=create_negotiated())
 
         assert 'needs at least 17' in str(exc_info.value)
 
@@ -354,7 +354,7 @@ class TestVPLSEdgeCases:
         """
         longer = b'\x00\x14' + b'\x00' * 20  # says 20
 
-        nlri, _ = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, longer, Action.ANNOUNCE, None, negotiated=create_negotiated())
+        nlri, _ = VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, longer, Action.ANNOUNCE, False, negotiated=create_negotiated())
         assert nlri.json()
 
     def test_pack_sets_bottom_of_stack(self) -> None:
@@ -385,7 +385,7 @@ class TestVPLSMultipleRoutes:
         for route in routes:
             packed = route.pack_nlri(create_negotiated())
             unpacked, leftover = VPLS.unpack_nlri(
-                AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+                AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, False, negotiated=create_negotiated()
             )
 
             assert len(leftover) == 0
@@ -409,7 +409,7 @@ class TestVPLSMultipleRoutes:
 
             packed = vpls.pack_nlri(create_negotiated())
             unpacked, _ = VPLS.unpack_nlri(
-                AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, None, negotiated=create_negotiated()
+                AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, False, negotiated=create_negotiated()
             )
 
             assert unpacked.rd._str() == f'{ip}:{rd_num}'

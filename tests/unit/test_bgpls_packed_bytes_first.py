@@ -22,6 +22,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import (
     GenericLSID,
     LinkState,
 )
+from tests import negotiation
 
 
 class TestBaseLSPackedBytesFirst:
@@ -210,12 +211,11 @@ class TestLinkStateUnpackWithPackedPattern:
 
     def test_linkstate_unpack_creates_packed_instances(self) -> None:
         """LinkState.unpack_attribute creates instances using packed bytes pattern"""
-        from unittest.mock import Mock
 
         # Build a TLV: Type=1155 (PrefixMetric), Length=4, Value=20
         tlv_data = b'\x04\x83\x00\x04\x00\x00\x00\x14'
 
-        negotiated = Mock()
+        negotiated = negotiation.negotiated(())
         ls = LinkState.unpack_attribute(tlv_data, negotiated)
 
         assert len(ls.ls_attrs) == 1

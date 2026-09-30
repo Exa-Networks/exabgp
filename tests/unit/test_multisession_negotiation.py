@@ -17,7 +17,8 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-from unittest.mock import Mock
+from exabgp.bgp.neighbor import Neighbor
+
 import pytest
 
 from exabgp.bgp.message.direction import Direction
@@ -40,8 +41,7 @@ from exabgp.protocol.family import AFI, SAFI
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 

@@ -221,7 +221,7 @@ def test_the_in_parser_length_checks_do_carry_the_erroneous_length() -> None:
     """
     for message_type, body in ((OPEN, bytes(5)), (KEEPALIVE, bytes(1)), (UPDATE, bytes(2))):
         with pytest.raises(Notify) as caught:
-            Message.unpack(message_type, body, Negotiated.UNSET)
+            Message.unpack(Message.CODE.of(message_type), body, Negotiated.UNSET)
         assert (caught.value.code, caught.value.subcode) == (MESSAGE_HEADER_ERROR, BAD_MESSAGE_LENGTH)
         assert caught.value.data == pack('!H', 19 + len(body))
 
@@ -251,9 +251,9 @@ def test_the_decoder_also_carries_the_erroneous_type() -> None:
     """Unmarked: Message.unpack and Message.klass give the same answer as the reactor gate."""
     unused: Any = Negotiated.UNSET
     with pytest.raises(Notify) as unpacked:
-        Message.unpack(7, b'', unused)
+        Message.unpack(Message.CODE.of(7), b'', unused)
     with pytest.raises(Notify) as looked_up:
-        Message.klass(7)
+        Message.klass(Message.CODE.of(7))
     assert unpacked.value.data == looked_up.value.data == bytes([7])
 
 
@@ -284,5 +284,5 @@ def test_the_decoder_itself_answers_bad_message_type() -> None:
     """
     unused: Any = Negotiated.UNSET
     with pytest.raises(Notify) as caught:
-        Message.unpack(7, b'', unused)
+        Message.unpack(Message.CODE.of(7), b'', unused)
     assert (caught.value.code, caught.value.subcode) == (MESSAGE_HEADER_ERROR, BAD_MESSAGE_TYPE)

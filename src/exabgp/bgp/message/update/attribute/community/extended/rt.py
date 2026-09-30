@@ -63,7 +63,7 @@ class RouteTargetASN2Number(RouteTarget):
         RouteTarget.__init__(self, packed)
 
     @classmethod
-    def make_route_target(cls, asn: ASN, number: int, transitive: bool = True) -> RouteTargetASN2Number:
+    def make_route_target(cls, asn: ASN | int, number: int, transitive: bool = True) -> RouteTargetASN2Number:
         """Create RouteTargetASN2Number from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
         packed = pack('!BBHL', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), number)
@@ -145,7 +145,7 @@ class RouteTargetASN4Number(RouteTarget):
         RouteTarget.__init__(self, packed)
 
     @classmethod
-    def make_route_target(cls, asn: ASN, number: int, transitive: bool = True) -> RouteTargetASN4Number:
+    def make_route_target(cls, asn: ASN | int, number: int, transitive: bool = True) -> RouteTargetASN4Number:
         """Create RouteTargetASN4Number from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
         packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), number)

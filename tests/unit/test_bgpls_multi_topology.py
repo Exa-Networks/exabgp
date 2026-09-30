@@ -13,6 +13,8 @@ what the decoder does with the bytes the gate just approved.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 from struct import pack
 
 import pytest
@@ -35,7 +37,7 @@ def link_with(raw: int) -> bytes:
 
 
 def decoded(raw: int):
-    nlri, _ = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, link_with(raw), Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, link_with(raw), Action.ANNOUNCE, False, Negotiated.UNSET)
     return nlri
 
 

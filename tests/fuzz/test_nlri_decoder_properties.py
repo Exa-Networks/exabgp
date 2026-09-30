@@ -43,7 +43,7 @@ def decode(afi: AFI, safi: SAFI, data: bytes) -> NLRI | None:
     Returns the decoded NLRI, or None when the decoder rejected the input.
     """
     try:
-        nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, None, None)
+        nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     except Notify:
         return None
     # the flow decoder reports a route it could not parse with the INVALID singleton,

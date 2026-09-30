@@ -17,6 +17,8 @@ import pytest
 from typing import Any, Generator
 from unittest.mock import Mock, MagicMock, patch, AsyncMock
 
+from exabgp.bgp.message import Message
+
 
 @pytest.fixture(autouse=True)
 def mock_logger() -> Generator[None, None, None]:
@@ -371,7 +373,7 @@ async def test_protocol_read_message_invalid_type(mock_peer: Any) -> None:
     protocol = Protocol(mock_peer)
 
     mock_connection = Mock()
-    mock_connection.reader_async = AsyncMock(return_value=(19, 99, b'\xff' * 19, b'', None))
+    mock_connection.reader_async = AsyncMock(return_value=(19, Message.CODE.of(99), b'\xff' * 19, b'', None))
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
@@ -786,7 +788,7 @@ async def test_protocol_new_operational(mock_peer: Any) -> None:
     # Mock operational message
     mock_operational = Mock()
     mock_operational.message = Mock(return_value=b'\xff' * 16 + b'\x00\x13\x04' + b'\x01')
-    mock_operational.ID = 4  # OPERATIONAL
+    mock_operational.ID = Message.CODE.OPERATIONAL
     mock_operational.__str__ = Mock(return_value='OPERATIONAL')
 
     await protocol.new_operational(mock_operational, protocol.negotiated)
@@ -809,7 +811,7 @@ async def test_protocol_new_refresh(mock_peer: Any) -> None:
     # Mock a refresh object
     mock_refresh = Mock()
     mock_refresh.message = Mock(return_value=b'\xff' * 16 + b'\x00\x17\x05' + b'\x00\x01\x00\x01')
-    mock_refresh.ID = 5  # ROUTE_REFRESH
+    mock_refresh.ID = Message.CODE.ROUTE_REFRESH
 
     await protocol.new_refresh(mock_refresh)
 

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from typing import Any
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.message import MessageCode
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.open import Open
     from exabgp.bgp.message.update import UpdateCollection
@@ -96,12 +97,14 @@ class Text:
         self,
         neighbor: 'Neighbor',
         direction: str,
-        category: int,
+        category: 'MessageCode',
         header: bytes,
         body: bytes,
         negotiated: 'Negotiated',
     ) -> str:
-        return f'neighbor {neighbor.session.peer_address} {direction} {category}{self._header_body(header, body)}\n'
+        return (
+            f'neighbor {neighbor.session.peer_address} {direction} {category.value}{self._header_body(header, body)}\n'
+        )
 
     def keepalive(
         self, neighbor: 'Neighbor', direction: str, header: bytes, body: bytes, negotiated: 'Negotiated'

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Protocol
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.message import MessageCode
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.open import Open
     from exabgp.bgp.message.update import UpdateCollection
@@ -88,7 +89,7 @@ class ResponseEncoder(Protocol):
         self,
         neighbor: 'Neighbor',
         direction: str,
-        category: int,
+        category: 'MessageCode',
         header: bytes,
         body: bytes,
         negotiated: 'Negotiated',

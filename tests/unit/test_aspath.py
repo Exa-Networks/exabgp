@@ -24,16 +24,14 @@ Test Coverage:
 
 import struct
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
+from tests import negotiation
 
 
 def create_negotiated_mock(asn4: Any = False) -> Any:
     """Create minimal mock negotiated object for testing."""
-    negotiated = Mock()
-    negotiated.asn4 = asn4
-    return negotiated
+    return negotiation.negotiated((), asn4=asn4)
 
 
 # =============================================================================

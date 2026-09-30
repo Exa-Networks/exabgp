@@ -12,6 +12,8 @@ that is is what makes the gap invisible.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import pytest
 
 from exabgp.bgp.message import Action
@@ -45,9 +47,9 @@ SEEDS: list[tuple[str, AFI, SAFI, bytes, bytes]] = [
 IDS = [row[0] for row in SEEDS]
 
 
-def decode(afi: AFI, safi: SAFI, data: bytes, addpath: bool | None = None) -> NLRI | None:
+def decode(afi: AFI, safi: SAFI, data: bytes, addpath: bool = False) -> NLRI | None:
     try:
-        nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, None)
+        nlri, _ = NLRI.unpack_nlri(afi, safi, data, Action.ANNOUNCE, addpath, Negotiated.UNSET)
     except Notify:
         return None
     return None if nlri is NLRI.INVALID else nlri

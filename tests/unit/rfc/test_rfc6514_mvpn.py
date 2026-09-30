@@ -26,7 +26,6 @@ import logging
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
@@ -41,6 +40,7 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.logger import log
 from exabgp.logger.option import echo, option
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
 
 # RFC 6514 section 5: the PMSI Tunnel attribute is optional transitive, so 0xC0.
 OPTIONAL_TRANSITIVE = 0xC0
@@ -67,16 +67,7 @@ LOG_LEVELS = ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')
 
 def session() -> Any:
     """A negotiated session with the attribute cache off, so tests cannot answer each other."""
-    negotiated = Mock()
-    negotiated.asn4 = False
-    negotiated.families = []
-    negotiated.nexthop = []
-    negotiated.msg_size = 4096
-    negotiated.direction = Action.ANNOUNCE
-    negotiated.attribute_cache = None
-    negotiated.attribute_cache_packed = b''
-    negotiated.attribute_cache_enabled = False
-    return negotiated
+    return negotiation.negotiated([], asn4=False, msg_size=4096, attribute_cache_enabled=False)
 
 
 def pmsi_attribute(value: bytes) -> bytes:

@@ -5,7 +5,8 @@
 Tests the packed-bytes-first pattern for NLRI collection classes.
 """
 
-from unittest.mock import Mock
+from exabgp.bgp.neighbor import Neighbor
+
 
 import pytest
 from exabgp.protocol.family import AFI, SAFI
@@ -20,8 +21,7 @@ from exabgp.protocol.ip import IP
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 

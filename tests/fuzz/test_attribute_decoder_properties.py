@@ -35,7 +35,6 @@ import json as jsonlib
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 from hypothesis import given, strategies as st
@@ -48,6 +47,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 from exabgp.protocol.family import Family
 
 from tests.fuzz.strategies import payload  # noqa: E402
+from tests import negotiation
 
 pytestmark = pytest.mark.fuzz
 
@@ -101,23 +101,13 @@ def negotiated(families: list[tuple[int, int]] | None = None) -> Any:
     session did not negotiate before they read anything else, so which families this
     session claims decides whether those two decoders are entered at all.
     """
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value=False)
-    neighbor.session = Mock()
-    neighbor.session.local_address = None
-
-    session = Mock()
-    session.neighbor = neighbor
-    session.families = [(1, 1)] if families is None else families
-    session.asn4 = True
-    session.aigp = False
-    session.msg_size = 4096
-    session.nexthop = []
-    session.required = Mock(return_value=False)
-    session.addpath = Mock()
-    session.addpath.receive = Mock(return_value=False)
-    session.addpath.send = Mock(return_value=False)
-    return session
+    return negotiation.negotiated(
+        [(1, 1)] if families is None else families,
+        asn4=True,
+        aigp=False,
+        msg_size=4096,
+        session=negotiation.neighbor(local_address=None),
+    )
 
 
 def section(flag: int, aid: int, value: bytes) -> bytes:

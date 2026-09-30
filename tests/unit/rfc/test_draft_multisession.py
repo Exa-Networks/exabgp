@@ -10,7 +10,6 @@ parsed configuration, so those tests start from configuration text.
 
 from __future__ import annotations
 
-from unittest.mock import Mock
 
 import pytest
 
@@ -85,8 +84,7 @@ def ipv4_unicast() -> tuple[int, bytes]:
 
 
 def negotiate(sent: Capabilities, recv: Capabilities) -> bool | tuple[int, int, str]:
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
     negotiated.sent(Open.make_open(Version(4), ASN(65001), HoldTime(180), RouterID('192.0.2.2'), sent))
     negotiated.received(Open.make_open(Version(4), ASN(65002), HoldTime(180), RouterID('192.0.2.1'), recv))
@@ -219,7 +217,7 @@ def test_a_real_cisco_open_decodes_its_multisession_capability() -> None:
     after it, which this class reads as an empty Session Id.  It is not a zero length
     value, so refusing one with Notify(2, 0) does not refuse a Cisco router.
     """
-    message = Message.unpack(int(Message.CODE.OPEN), CISCO_OPEN_BODY, Negotiated.UNSET)
+    message = Message.unpack(Message.CODE.OPEN, CISCO_OPEN_BODY, Negotiated.UNSET)
 
     assert isinstance(message, Open)
     capability = message.capabilities[Capability.CODE.MULTISESSION_CISCO]
@@ -242,7 +240,7 @@ def test_we_offer_the_cisco_code_in_the_layout_cisco_sends() -> None:
 def test_a_real_cisco_open_negotiates_multisession() -> None:
     """Neither code was on both sides, and as we had announced 68 the answer was 2/9 to a
     peer which had asked for multisession."""
-    message = Message.unpack(int(Message.CODE.OPEN), CISCO_OPEN_BODY, Negotiated.UNSET)
+    message = Message.unpack(Message.CODE.OPEN, CISCO_OPEN_BODY, Negotiated.UNSET)
     assert isinstance(message, Open)
     (neighbor, _) = neighbours('capability { multi-session enable; }')
     sent = Capabilities().new(neighbor, False)

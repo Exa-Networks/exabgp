@@ -28,6 +28,7 @@ from exabgp.configuration.setup import create_minimal_configuration
 from exabgp.reactor.api.response.text import Text, oneline
 from exabgp.reactor.api.response.v4.text import V4Text
 from exabgp.version import version
+from exabgp.bgp.message.open.capability.capability import Capability
 
 FORGED = 'a\nneighbor 1.2.3.4 down - forged'
 
@@ -99,7 +100,7 @@ def test_a_hostname_without_control_characters_still_decodes() -> None:
     domain_name = b'example.net'
     value = bytes([len(host_name)]) + host_name + bytes([len(domain_name)]) + domain_name
     message = Open.unpack_message(_open_with_capability(CapabilityCode.HOSTNAME, value), Negotiated.UNSET)
-    hostname = message.capabilities[CapabilityCode.HOSTNAME]
+    hostname = message.capabilities[Capability.CODE.HOSTNAME]
     assert hostname.host_name == 'router1'
     assert hostname.domain_name == 'example.net'
 

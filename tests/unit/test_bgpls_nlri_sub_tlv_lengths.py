@@ -21,6 +21,8 @@ Two rules are pinned here:
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import json as jsonlib
 from struct import pack
 
@@ -81,7 +83,7 @@ def test_a_length_the_decoder_cannot_read_is_a_protocol_error(
     for length in range(MAX_TESTED_LENGTH):
         data = descriptor(nlri_type, tlv_type, bytes(length), companion)
         try:
-            nlri, _ = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None, None)
+            nlri, _ = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, False, Negotiated.UNSET)
         except Notify:
             refused += 1
             assert length not in readable, f'{name} refuses {length} bytes, which it can read'
@@ -104,7 +106,7 @@ def test_the_error_reaches_the_peer_rather_than_the_api_writer(
     for length in sorted(set(range(MAX_TESTED_LENGTH)) - readable):
         data = descriptor(nlri_type, tlv_type, bytes(length), companion)
         with pytest.raises(Notify):
-            NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None, None)
+            NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, False, Negotiated.UNSET)
 
 
 @pytest.mark.parametrize(
@@ -127,7 +129,7 @@ def test_a_well_formed_descriptor_still_decodes_to_its_address(
     from exabgp.protocol.ip import IP
 
     data = descriptor(nlri_type, tlv_type, payload)
-    nlri, _ = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, False, Negotiated.UNSET)
 
     expected = str(IP.create_ip(payload))
     assert expected in nlri.json(), f'{name} lost {expected} on the way to the API'
@@ -174,7 +176,7 @@ def test_a_descriptor_which_decodes_reaches_the_api(
 ) -> None:
     """Accepted is not the same as kept, and only this test knows the difference."""
     data = descriptor(nlri_type, tlv_type, payload)
-    nlri, _ = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, False, Negotiated.UNSET)
 
     rendered = nlri.json()
     for value in expected:
@@ -192,7 +194,7 @@ def test_the_descriptor_renders_as_json_the_consumer_can_read(
     array of bare keys.  Nobody saw it, because the list was always empty.
     """
     data = descriptor(nlri_type, tlv_type, payload)
-    nlri, _ = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, False, Negotiated.UNSET)
 
     rendered = nlri.json()
     for candidate in (rendered, '{' + rendered + '}', '[' + rendered + ']'):

@@ -15,14 +15,13 @@ from __future__ import annotations
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
+from tests import negotiation
 
 AGGREGATOR = int(Attribute.CODE.AGGREGATOR)
 OPTIONAL_TRANSITIVE = 0xC0
@@ -33,18 +32,7 @@ LENGTHS = [0, 1, 2, 5, 6, 7, 8, 9, 20, 255]
 
 
 def negotiated() -> Any:
-    session = Mock()
-    session.asn4 = False
-    session.addpath = Mock()
-    session.addpath.receive = Mock(return_value=False)
-    session.addpath.send = Mock(return_value=False)
-    session.required = Mock(return_value=False)
-    session.families = []
-    session.nexthop = []
-    session.msg_size = 4096
-    session.direction = Action.ANNOUNCE
-    session.neighbor = {'aigp': False}
-    return session
+    return negotiation.negotiated([], asn4=False, msg_size=4096)
 
 
 def update_carrying_aggregator(length: int) -> bytes:

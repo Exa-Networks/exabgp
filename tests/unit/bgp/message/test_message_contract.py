@@ -13,8 +13,9 @@ Only the samples, which need real field values, are listed by hand, and
 
 from __future__ import annotations
 
+from exabgp.bgp.neighbor import Neighbor
+
 import inspect
-from unittest.mock import Mock
 
 import pytest
 
@@ -30,6 +31,7 @@ from exabgp.bgp.message.operational import Advisory, Operational, Query, Respons
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.bgp.message.message import MessageCode
 
 # route 10.0.0.0/24 next-hop 1.2.3.4, from `exabgp encode`
 UPDATE_BODY = bytes.fromhex('00000015400101004002004003040102030440050400000064180a0000')
@@ -39,8 +41,7 @@ WIRE_CODES = frozenset(range(1, 7))
 
 
 def negotiated() -> Negotiated:
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.IN)
 
 
@@ -152,7 +153,7 @@ def test_the_message_is_the_header_and_the_body(sample: Message) -> None:
 def test_what_is_packed_unpacks_to_the_same_message(sample: Message) -> None:
     session = negotiated()
     wire = sample.pack_message(session)
-    decoded = Message.unpack(wire[18], wire[Message.HEADER_LEN :], session)
+    decoded = Message.unpack(Message.CODE.of(wire[18]), wire[Message.HEADER_LEN :], session)
     assert type(decoded) is type(sample)
     assert decoded == sample
     assert hash(decoded) == hash(sample)
@@ -183,11 +184,11 @@ def test_the_length_is_within_the_bounds_of_the_class(sample: Message) -> None:
         (Message.CODE.OPERATIONAL, 22, False),
         (Message.CODE.OPERATIONAL, 23, True),
         # a type nobody registered is refused by its type, not by its length
-        (0xF0, 19, True),
-        (0xF0, 18, False),
+        (Message.CODE.of(0xF0), 19, True),
+        (Message.CODE.of(0xF0), 18, False),
     ],
 )
-def test_length_rules(code: int, length: int, valid: bool) -> None:
+def test_length_rules(code: MessageCode, length: int, valid: bool) -> None:
     assert Message.length_valid(code, length) is valid
 
 
@@ -202,16 +203,16 @@ def test_length_rules(code: int, length: int, valid: bool) -> None:
         (Message.CODE.ROUTE_REFRESH, 18, True),
     ],
 )
-def test_the_header_refuses_what_no_decoder_answers(code: int, length: int, refused: bool) -> None:
+def test_the_header_refuses_what_no_decoder_answers(code: MessageCode, length: int, refused: bool) -> None:
     assert Message.header_refuses(code, length) is refused
 
 
 @pytest.mark.parametrize('klass', classes(), ids=lambda klass: klass.__qualname__)
 def test_a_decoder_which_takes_over_the_length_check_answers_every_wrong_length(klass: type[Message]) -> None:
     """What the header lets through for such a type, its decoder must refuse with Notify."""
-    if klass.HEADER_CHECKS_LENGTH or klass.ID not in Message.registered_message:
+    if klass.HEADER_CHECKS_LENGTH or klass.ID.value not in Message.registered_message:
         return
-    decoder = Message.registered_message[klass.ID]
+    decoder = Message.registered_message[klass.ID.value]
     for body_size in range(klass.FIXED_SIZE + 8):
         if Message.HEADER_LEN + body_size == klass.LENGTH_MIN:
             continue

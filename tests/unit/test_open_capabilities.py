@@ -16,6 +16,8 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
+from exabgp.bgp.neighbor import Neighbor
+
 from unittest.mock import Mock
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open import Open
@@ -41,8 +43,7 @@ from exabgp.protocol.family import AFI, SAFI
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -1387,7 +1388,6 @@ def test_neighbor_capability_paths_limit_per_family_copy() -> None:
 
 def test_pathslimit_capability_per_family() -> None:
     """Test _pathslimit() emits only families with explicit limits."""
-    from unittest.mock import Mock
     from exabgp.bgp.neighbor.capability import NeighborCapability
 
     neighbor = Mock()

@@ -33,7 +33,7 @@ class IntValue:
     __slots__ = ('value',)
 
     # zero by default, as int() is: a capability is built empty, then filled by unpack
-    def __init__(self, value: int = 0) -> None:
+    def __init__(self, value: int | IntValue = 0) -> None:
         # as int() does, take anything which is an integer (another IntValue, a bool) and
         # refuse what is not (a str, a float): the value itself is always a plain int
         if type(value) is not int:

@@ -8,7 +8,8 @@ Tests cover RFC 5575 (Dissemination of Flow Specification Rules) components:
 - JSON serialization
 """
 
-from unittest.mock import Mock
+from exabgp.bgp.neighbor import Neighbor
+
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -53,8 +54,7 @@ from exabgp.bgp.message.action import Action
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -745,7 +745,7 @@ class TestFlowUnpack:
 
         # Unpack it
         flow2, leftover = Flow.unpack_nlri(
-            AFI.ipv4, SAFI.flow_ip, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.flow_ip, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert flow2 is not None
@@ -787,7 +787,7 @@ class TestFlowUnpack:
 
         # Unpack it
         flow2, leftover = Flow.unpack_nlri(
-            AFI.ipv4, SAFI.flow_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.flow_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert flow2 is not None
@@ -800,7 +800,7 @@ class TestFlowUnpack:
 
         # Should raise Notify for invalid length
         with pytest.raises(Notify):
-            Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, invalid_data, Action.UNSET, None, negotiated=create_negotiated())
+            Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, invalid_data, Action.UNSET, False, negotiated=create_negotiated())
 
     def test_flow_unpack_multiple_components(self) -> None:
         """Test unpacking flow with multiple port specifications"""
@@ -818,7 +818,7 @@ class TestFlowUnpack:
         flow1.add(port2)
 
         packed = flow1.pack_nlri(negotiated)
-        flow2, _ = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, packed, Action.UNSET, None, negotiated=create_negotiated())
+        flow2, _ = Flow.unpack_nlri(AFI.ipv4, SAFI.flow_ip, packed, Action.UNSET, False, negotiated=create_negotiated())
 
         assert flow2 is not None
         # Should have destination, protocol, and destination port rules

@@ -42,7 +42,7 @@ WELL_FORMED = bytes([4]) + pack('!H', 65000) + pack('!H', 180) + bytes([1, 2, 3,
 def test_an_open_too_short_to_read_is_a_bad_message_length(length: int) -> None:
     """Every length below the minimum, not only the empty one."""
     with pytest.raises(Notify) as caught:
-        Message.unpack(int(Message.CODE.OPEN), bytes(length), Negotiated.UNSET)
+        Message.unpack(Message.CODE.OPEN, bytes(length), Negotiated.UNSET)
 
     assert caught.value.code == MESSAGE_HEADER_ERROR, 'a short OPEN is a header error, RFC 4271 6.1'
     assert caught.value.subcode == BAD_MESSAGE_LENGTH
@@ -63,12 +63,12 @@ def test_the_boundary_is_the_rfc_minimum_and_not_what_the_class_stores() -> None
     assert Open.FIXED_SIZE == 10, 'the optional parameters length octet is mandatory'
 
     with pytest.raises(Notify):
-        Message.unpack(int(Message.CODE.OPEN), bytes(Open.FIXED_SIZE - 1), Negotiated.UNSET)
+        Message.unpack(Message.CODE.OPEN, bytes(Open.FIXED_SIZE - 1), Negotiated.UNSET)
 
     # and one octet more, the smallest legal OPEN body, is read
     smallest = bytes([4]) + pack('!H', 65000) + pack('!H', 180) + bytes([1, 2, 3, 4]) + bytes([0])
     assert len(smallest) == Open.FIXED_SIZE
-    assert Message.unpack(int(Message.CODE.OPEN), smallest, Negotiated.UNSET) is not None
+    assert Message.unpack(Message.CODE.OPEN, smallest, Negotiated.UNSET) is not None
 
 
 def test_a_long_enough_open_with_a_bad_version_is_still_an_open_error() -> None:
@@ -80,7 +80,7 @@ def test_a_long_enough_open_with_a_bad_version_is_still_an_open_error() -> None:
     wrong_version = bytes([3]) + WELL_FORMED[1:]
 
     with pytest.raises(Notify) as caught:
-        Message.unpack(int(Message.CODE.OPEN), wrong_version, Negotiated.UNSET)
+        Message.unpack(Message.CODE.OPEN, wrong_version, Negotiated.UNSET)
 
     assert caught.value.code == OPEN_MESSAGE_ERROR
     assert caught.value.subcode == UNSUPPORTED_VERSION
@@ -92,7 +92,7 @@ def test_a_well_formed_open_still_decodes() -> None:
     Both tests above are satisfied by a decoder which refuses every OPEN, so one of them
     has to read one and check what it says.
     """
-    decoded = Message.unpack(int(Message.CODE.OPEN), WELL_FORMED, Negotiated.UNSET)
+    decoded = Message.unpack(Message.CODE.OPEN, WELL_FORMED, Negotiated.UNSET)
 
     assert isinstance(decoded, Open)
     assert decoded.asn == 65000
@@ -125,7 +125,7 @@ SHORT_MESSAGES = [
 def test_the_data_field_carries_the_erroneous_length(name: str, code: int, body: int) -> None:
     """Two octets holding the header Length, which is nineteen plus the body."""
     with pytest.raises(Notify) as caught:
-        Message.unpack(code, bytes(body), Negotiated.UNSET)
+        Message.unpack(Message.CODE.of(code), bytes(body), Negotiated.UNSET)
 
     assert caught.value.code == MESSAGE_HEADER_ERROR
     assert caught.value.subcode == BAD_MESSAGE_LENGTH

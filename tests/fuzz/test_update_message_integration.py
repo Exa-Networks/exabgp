@@ -21,6 +21,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+from tests import negotiation
 
 
 @pytest.fixture(autouse=True)
@@ -66,36 +67,14 @@ def mock_logger() -> Any:
 def create_negotiated_mock(families: Any = None, asn4: Any = False, msg_size: Any = 4096) -> Any:
     """Create a mock negotiated object with configurable parameters."""
     from exabgp.protocol.family import AFI, SAFI
-    from exabgp.bgp.message.open.asn import ASN
-    from exabgp.bgp.message.direction import Direction
 
-    negotiated = Mock()
-    negotiated.direction = Direction.IN
-    negotiated.asn4 = asn4
-    negotiated.addpath = Mock()
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.required = Mock(return_value=False)
-
-    # Default families if not specified
     if families is None:
         families = [(AFI.ipv4, SAFI.unicast)]
-
-    negotiated.families = families
-    negotiated.msg_size = msg_size
-
-    # Add ASN values
-    negotiated.local_as = ASN(65000)
-    negotiated.peer_as = ASN(65001)
-
-    negotiated.nexthop = []
-    # Link-local nexthop capability (default: disabled)
-    negotiated.linklocal_nexthop = False
-    negotiated.link_local_address = Mock(return_value=None)
-    negotiated.link_local_prefer = Mock(return_value=False)
-    negotiated.is_multihop = Mock(return_value=False)
-
-    return negotiated
+    # an eBGP session decoding its own UPDATEs back: the path starts with our AS, not the
+    # peer's, so the RFC 4271 first AS check is off, as it is for qa/bin/test_json
+    session = negotiation.neighbor(local_as=65000, peer_as=65001)
+    session.enforce_first_as = False
+    return negotiation.negotiated(families, asn4=asn4, msg_size=msg_size, session=session)
 
 
 def create_inet_nlri(

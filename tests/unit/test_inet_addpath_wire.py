@@ -12,6 +12,8 @@ what a decoder accepts, it must be able to re-encode.
 
 from __future__ import annotations
 
+from exabgp.bgp.neighbor import Neighbor
+
 from unittest.mock import Mock
 
 import pytest
@@ -37,8 +39,7 @@ def negotiated(send_addpath: bool) -> Negotiated:
     thousand. If the negotiation stops working, this fails first and nothing after it is
     believed.
     """
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     result = Negotiated.make_negotiated(neighbor, Direction.OUT)
     result.addpath.send = Mock(return_value=send_addpath)  # type: ignore[method-assign]
     assert bool(result.addpath.send(AFI.ipv4, SAFI.unicast)) is send_addpath
@@ -46,7 +47,7 @@ def negotiated(send_addpath: bool) -> Negotiated:
 
 
 def decode(data: bytes, addpath: bool) -> NLRI:
-    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, addpath, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, addpath, Negotiated.UNSET)
     return nlri
 
 
@@ -100,6 +101,6 @@ def test_the_stored_bytes_survive_a_pack_and_unpack_with_add_path() -> None:
     """What arrives with a path id has to leave with the same one."""
     nlri = decode(PATH_ID + PREFIX, True)
     packed = bytes(nlri.pack_nlri(negotiated(True)))
-    again, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, packed, Action.ANNOUNCE, True, None)
+    again, _ = NLRI.unpack_nlri(AFI.ipv4, SAFI.unicast, packed, Action.ANNOUNCE, True, Negotiated.UNSET)
     assert again.index() == nlri.index()
     assert packed[:PATH_INFO_SIZE] == PATH_ID

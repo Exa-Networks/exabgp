@@ -17,15 +17,14 @@ and the ledger says so in a comment rather than in an entry.
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.clusterlist import ClusterList
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.originatorid import OriginatorID
+from tests import negotiation
 
 # RFC 4456 section 8 gives both attributes as optional non-transitive, so the flag octet
 # of RFC 4271 section 4.3 is 0x80 and not the 0xC0 the community attributes carry.
@@ -46,16 +45,7 @@ def session() -> Any:
     The cache is keyed on the packed bytes, so leaving it on would let one test's parse
     answer another test's.
     """
-    negotiated = Mock()
-    negotiated.asn4 = False
-    negotiated.families = []
-    negotiated.nexthop = []
-    negotiated.msg_size = 4096
-    negotiated.direction = Action.ANNOUNCE
-    negotiated.attribute_cache = None
-    negotiated.attribute_cache_packed = b''
-    negotiated.attribute_cache_enabled = False
-    return negotiated
+    return negotiation.negotiated([], asn4=False, msg_size=4096, attribute_cache_enabled=False)
 
 
 def attribute(code: int, value: bytes) -> bytes:

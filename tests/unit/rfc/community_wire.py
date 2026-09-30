@@ -16,11 +16,10 @@ prove the decoder noticed and prove nothing at all about what happens to the ses
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import Mock
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+from tests import negotiation
 
 # Attribute flag bytes, from RFC 4271 section 4.3.  All three community attributes are
 # optional transitive, so all three carry 0xC0.
@@ -39,16 +38,7 @@ def session() -> Any:
     would let one test's parse answer another test's, which is exactly the class of bug
     `Negotiated.attribute_cache` was moved off the class to stop.
     """
-    negotiated = Mock()
-    negotiated.asn4 = False
-    negotiated.families = []
-    negotiated.nexthop = []
-    negotiated.msg_size = 4096
-    negotiated.direction = Action.ANNOUNCE
-    negotiated.attribute_cache = None
-    negotiated.attribute_cache_packed = b''
-    negotiated.attribute_cache_enabled = False
-    return negotiated
+    return negotiation.negotiated([], asn4=False, msg_size=4096, attribute_cache_enabled=False)
 
 
 def attribute(code: int, value: bytes) -> bytes:

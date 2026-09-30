@@ -18,6 +18,8 @@ Ported from the 5.0 branch, where the same helper is spelled `_is_json_number`.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import json
 import types
 
@@ -132,7 +134,7 @@ def test_every_integer_attribute_is_covered_by_this_file() -> None:
 
 @pytest.mark.parametrize('wire', ['0208359d0f6f18f2', '0000000000000001', '0102030405060708'])
 def test_an_eight_byte_community_renders_its_own_bytes(wire: str) -> None:
-    rendered_text = repr(ExtendedCommunity.unpack_attribute(bytes.fromhex(wire), None))
+    rendered_text = repr(ExtendedCommunity.unpack_attribute(bytes.fromhex(wire), Negotiated.UNSET))
 
     if rendered_text.startswith('0x'):
         assert rendered_text[2:].lower() == wire
@@ -141,7 +143,7 @@ def test_an_eight_byte_community_renders_its_own_bytes(wire: str) -> None:
 @pytest.mark.parametrize('wire', ['000b' + '00' * 18, '0102030405060708090a0b0c0d0e0f1011121314'])
 def test_a_twenty_byte_community_keeps_its_leading_zeros(wire: str) -> None:
     """'0x{:016X}' was eight bytes wide, and one of the two registries is twenty."""
-    rendered_text = repr(ExtendedCommunityIPv6.unpack_attribute(bytes.fromhex(wire), None))
+    rendered_text = repr(ExtendedCommunityIPv6.unpack_attribute(bytes.fromhex(wire), Negotiated.UNSET))
 
     if rendered_text.startswith('0x'):
         assert rendered_text[2:].lower() == wire

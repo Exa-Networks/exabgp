@@ -23,6 +23,8 @@ to be out there.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 from struct import pack
 
 import pytest
@@ -78,7 +80,7 @@ def decode_nlri(nlri: bytes) -> object:
     testing against it would pass while the raise still escaped from a property access
     several layers downstream.
     """
-    decoded, _left = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, nlri, Action.ANNOUNCE, None, None)
+    decoded, _left = BGPLS.unpack_nlri(AFI.bgpls, SAFI.bgp_ls, nlri, Action.ANNOUNCE, False, Negotiated.UNSET)
     return decoded
 
 

@@ -17,6 +17,7 @@ Test Coverage:
 import pytest
 from typing import Generator
 from unittest.mock import Mock, patch
+from tests import negotiation
 
 pytestmark = pytest.mark.fuzz
 
@@ -38,15 +39,10 @@ def mock_logger() -> Generator[None, None, None]:
 def test_eor_ipv4_unicast_4_byte() -> None:
     """Test detection of IPv4 unicast EOR marker (4 bytes of zeros)."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.family import AFI, SAFI
 
     # Create minimal mock negotiated object
-    negotiated = Mock()
-    negotiated.direction = Direction.IN
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.required = Mock(return_value=False)
+    negotiated = negotiation.negotiated(())
 
     # 4-byte EOR marker for IPv4 unicast
     data = b'\x00\x00\x00\x00'
@@ -63,14 +59,8 @@ def test_eor_ipv4_unicast_4_byte() -> None:
 def test_eor_not_triggered_by_similar_data() -> None:
     """Test that 4 zeros elsewhere don't trigger false EOR detection."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.direction import Direction
 
-    negotiated = Mock()
-    negotiated.direction = Direction.IN
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.required = Mock(return_value=False)
-    negotiated.families = []
+    negotiated = negotiation.negotiated([])
 
     # 5 bytes - not EOR (has extra data)
     data = b'\x00\x00\x00\x00\x01'
@@ -90,14 +80,9 @@ def test_eor_not_triggered_by_similar_data() -> None:
 def test_non_eor_empty_update() -> None:
     """Test that UPDATE with just length fields is not confused with EOR."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.family import AFI, SAFI
 
-    negotiated = Mock()
-    negotiated.direction = Direction.IN
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.required = Mock(return_value=False)
+    negotiated = negotiation.negotiated(())
 
     # This is the 4-byte EOR - should be detected
     data = b'\x00\x00\x00\x00'
@@ -112,14 +97,9 @@ def test_non_eor_empty_update() -> None:
 def test_eor_detection_with_no_attributes_no_nlris() -> None:
     """Test EOR detection when UPDATE has no attributes and no NLRIs after parsing."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.family import AFI, SAFI
 
-    negotiated = Mock()
-    negotiated.direction = Direction.IN
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.required = Mock(return_value=False)
+    negotiated = negotiation.negotiated(())
 
     # Empty UPDATE: withdrawn_len=0, attr_len=0, no NLRI
     # This is the explicit 4-byte EOR format
@@ -136,15 +116,9 @@ def test_eor_detection_with_no_attributes_no_nlris() -> None:
 def test_normal_update_not_detected_as_eor() -> None:
     """Test that normal UPDATE messages are not detected as EOR."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.direction import Direction
     from exabgp.protocol.family import AFI
 
-    negotiated = Mock()
-    negotiated.direction = Direction.IN
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.required = Mock(return_value=False)
-    negotiated.families = [(AFI.ipv4, 1)]
+    negotiated = negotiation.negotiated([(AFI.ipv4, 1)])
 
     # UPDATE with some data (not EOR)
     # withdrawn_len=0, attr_len=4, 4 bytes of attributes, no NLRI

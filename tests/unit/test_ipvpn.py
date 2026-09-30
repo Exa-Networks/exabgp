@@ -5,7 +5,8 @@
 Created for comprehensive test coverage improvement
 """
 
-from unittest.mock import Mock
+from exabgp.bgp.neighbor import Neighbor
+
 
 import pytest
 
@@ -21,8 +22,7 @@ from exabgp.protocol.ip import IP
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -120,7 +120,7 @@ class TestIPVPNPackUnpack:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = IPVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -143,7 +143,7 @@ class TestIPVPNPackUnpack:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = IPVPN.unpack_nlri(
-            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -166,7 +166,7 @@ class TestIPVPNPackUnpack:
             Negotiated.UNSET
         )  # no session: RFC 8277 cuts a stack to one label on a session without the capability
         unpacked, _ = IPVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(unpacked.labels.labels) == 3
@@ -195,7 +195,7 @@ class TestIPVPNPackUnpack:
 
             packed = nlri.pack_nlri(create_negotiated())
             unpacked, _ = IPVPN.unpack_nlri(
-                AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+                AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
             )
 
             assert unpacked.cidr.mask == mask
@@ -213,7 +213,7 @@ class TestIPVPNPackUnpack:
 
         packed = nlri.pack_nlri(create_negotiated()) + b'\x01\x02\x03\x04'
         unpacked, leftover = IPVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 4
@@ -505,7 +505,7 @@ class TestIPVPNEdgeCases:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, _ = IPVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert unpacked.cidr.mask == 0
@@ -577,7 +577,7 @@ class TestIPVPNMultipleRoutes:
         unpacked_routes = []
         for _ in range(3):
             route, data = IPVPN.unpack_nlri(
-                AFI.ipv4, SAFI.mpls_vpn, data, Action.UNSET, None, negotiated=create_negotiated()
+                AFI.ipv4, SAFI.mpls_vpn, data, Action.UNSET, False, negotiated=create_negotiated()
             )
             unpacked_routes.append(route)
 
@@ -682,7 +682,7 @@ class TestIPVPNZeroPrefixEdgeCases:
         # Pack and unpack
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = IPVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -706,7 +706,7 @@ class TestIPVPNZeroPrefixEdgeCases:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, leftover = IPVPN.unpack_nlri(
-            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -740,7 +740,7 @@ class TestIPVPNIPv6MaskEdgeCases:
         # Roundtrip test
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, _ = IPVPN.unpack_nlri(
-            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert unpacked.cidr.mask == 32
@@ -764,7 +764,7 @@ class TestIPVPNIPv6MaskEdgeCases:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, _ = IPVPN.unpack_nlri(
-            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert unpacked.cidr.mask == 40
@@ -787,7 +787,7 @@ class TestIPVPNIPv6MaskEdgeCases:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, _ = IPVPN.unpack_nlri(
-            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert unpacked.cidr.mask == 64
@@ -811,7 +811,7 @@ class TestIPVPNRDTypeVariants:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, _ = IPVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert unpacked.rd._str() == '65000:12345'
@@ -829,7 +829,7 @@ class TestIPVPNRDTypeVariants:
 
         packed = nlri.pack_nlri(create_negotiated())
         unpacked, _ = IPVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert unpacked.rd._str() == '192.168.1.1:100'
@@ -853,7 +853,7 @@ class TestIPVPNMultipleLabelEdgeCases:
             Negotiated.UNSET
         )  # no session: RFC 8277 cuts a stack to one label on a session without the capability
         unpacked, _ = IPVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(unpacked.labels.labels) == 3
@@ -918,7 +918,9 @@ class TestIPVPNHighMaskValues:
         assert packed[0] == 136  # 24 (label) + 64 (RD) + 48 (prefix)
 
         # Unpack and verify round-trip
-        unpacked, leftover = IPVPN.unpack_nlri(AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, leftover = IPVPN.unpack_nlri(
+            AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, False, create_negotiated()
+        )
 
         assert len(leftover) == 0
         assert unpacked.cidr.prefix() == '2001:4b50:20c0::/48'
@@ -946,7 +948,7 @@ class TestIPVPNHighMaskValues:
         assert packed[0] == 160  # 72 (3 labels) + 64 (RD) + 24 (prefix)
 
         # Unpack and verify round-trip
-        unpacked, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, create_negotiated())
 
         assert unpacked.labels.labels == [100, 200, 300]
         assert unpacked.cidr.prefix() == '10.1.1.0/24'
@@ -967,7 +969,7 @@ class TestIPVPNHighMaskValues:
         assert packed[0] == 216  # 24 (label) + 64 (RD) + 128 (prefix)
 
         # Unpack and verify round-trip
-        unpacked, _ = IPVPN.unpack_nlri(AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, None, create_negotiated())
+        unpacked, _ = IPVPN.unpack_nlri(AFI.ipv6, SAFI.mpls_vpn, packed, Action.UNSET, False, create_negotiated())
 
         assert unpacked.cidr.mask == 128
         assert unpacked.labels.labels == [42]

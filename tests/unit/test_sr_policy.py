@@ -5,6 +5,8 @@ Unit tests for SR Policy NLRI and Tunnel Encap attribute (RFC 9830 / RFC 9012).
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import socket
 import struct
 
@@ -96,12 +98,12 @@ def test_sr_policy_nlri_ipv6_create():
 
 def test_sr_policy_nlri_ipv4_pack_unpack():
     nlri = SRPolicyNLRI.create(AFI.ipv4, distinguisher=42, color=999, endpoint='10.0.0.1')
-    packed = nlri.pack_nlri(None)
+    packed = nlri.pack_nlri(Negotiated.UNSET)
     # RFC 9830: Length(1) + Distinguisher(4) + Color(4) + Endpoint(4) = 13 bytes
     assert len(packed) == 13
     assert packed[0] == 96  # Length byte = 96 bits (12 bytes * 8)
 
-    nlri2, remaining = SRPolicyNLRI.unpack_nlri(AFI.ipv4, SAFI.sr_policy, packed, None, None, None)
+    nlri2, remaining = SRPolicyNLRI.unpack_nlri(AFI.ipv4, SAFI.sr_policy, packed, None, False, Negotiated.UNSET)
     assert remaining == b''
     assert isinstance(nlri2, SRPolicyNLRI)
     assert nlri2.distinguisher == 42
@@ -111,12 +113,12 @@ def test_sr_policy_nlri_ipv4_pack_unpack():
 
 def test_sr_policy_nlri_ipv6_pack_unpack():
     nlri = SRPolicyNLRI.create(AFI.ipv6, distinguisher=0, color=500, endpoint='fc00::1')
-    packed = nlri.pack_nlri(None)
+    packed = nlri.pack_nlri(Negotiated.UNSET)
     # RFC 9830: Length(1) + Distinguisher(4) + Color(4) + Endpoint(16) = 25 bytes
     assert len(packed) == 25
     assert packed[0] == 192  # Length byte = 192 bits (24 bytes * 8)
 
-    nlri2, remaining = SRPolicyNLRI.unpack_nlri(AFI.ipv6, SAFI.sr_policy, packed, None, None, None)
+    nlri2, remaining = SRPolicyNLRI.unpack_nlri(AFI.ipv6, SAFI.sr_policy, packed, None, False, Negotiated.UNSET)
     assert remaining == b''
     assert nlri2.distinguisher == 0
     assert nlri2.color == 500
@@ -377,7 +379,7 @@ def test_tunnel_encap_attribute_pack_unpack():
         ]
     )
     attr = TunnelEncap(tunnel_tlvs=[tunnel])
-    packed = attr.pack_attribute(None)
+    packed = attr.pack_attribute(Negotiated.UNSET)
 
     # packed includes the BGP attribute header (flags + type + length)
     # strip it to get the raw value for unpack_attribute
@@ -385,7 +387,7 @@ def test_tunnel_encap_attribute_pack_unpack():
     # The value starts after the header
     # Read past flags(1) + type(1) + length bytes
     raw_value = _strip_attr_header(packed)
-    attr2 = TunnelEncap.unpack_attribute(raw_value, None)
+    attr2 = TunnelEncap.unpack_attribute(raw_value, Negotiated.UNSET)
 
     assert len(attr2.tunnel_tlvs) == 1
     assert isinstance(attr2.tunnel_tlvs[0], SRPolicyTunnel)

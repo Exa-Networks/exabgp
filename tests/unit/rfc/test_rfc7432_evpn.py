@@ -367,7 +367,7 @@ SOMEONE_ELSES_ADDRESS = '198.51.100.7'
 @pytest.mark.rfc('rfc7432#8.2.1-esi-label-extended-community-included')
 def test_an_esi_label_extended_community_is_recognised_with_its_label() -> None:
     """A route can only carry an ESI Label exabgp knows how to read and write."""
-    decoded = ExtendedCommunity.unpack_attribute(ESI_LABEL_COMMUNITY, None)
+    decoded = ExtendedCommunity.unpack_attribute(ESI_LABEL_COMMUNITY, Negotiated.UNSET)
 
     assert bytes(decoded.pack_attribute(Negotiated.UNSET)) == ESI_LABEL_COMMUNITY
     assert decoded.registered_klass is not None
@@ -377,7 +377,7 @@ def test_an_esi_label_extended_community_is_recognised_with_its_label() -> None:
 
 @pytest.mark.rfc('rfc7432#8.1.1-es-import-route-target-carried')
 def test_an_es_import_route_target_decodes_as_a_route_target_carrying_a_mac() -> None:
-    decoded = ExtendedCommunity.unpack_attribute(ES_IMPORT_ROUTE_TARGET, None)
+    decoded = ExtendedCommunity.unpack_attribute(ES_IMPORT_ROUTE_TARGET, Negotiated.UNSET)
 
     assert bytes(decoded.pack_attribute(Negotiated.UNSET)) == ES_IMPORT_ROUTE_TARGET
     assert isinstance(decoded, RouteTarget)
@@ -415,7 +415,7 @@ def test_an_inclusive_multicast_route_keeps_the_next_hop_the_operator_wrote() ->
 @pytest.mark.parametrize('single_active', [True, False], ids=['single-active', 'all-active'])
 def test_an_esi_label_we_build_decodes_back_to_its_label_and_mode(single_active: bool) -> None:
     built = ESILabel.make_esi_label(100, single_active)
-    decoded = ExtendedCommunity.unpack_attribute(bytes(built.pack_attribute(Negotiated.UNSET)), None)
+    decoded = ExtendedCommunity.unpack_attribute(bytes(built.pack_attribute(Negotiated.UNSET)), Negotiated.UNSET)
 
     assert isinstance(decoded, ESILabel)
     assert (decoded.label, decoded.single_active) == (100, single_active)

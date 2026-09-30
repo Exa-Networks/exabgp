@@ -8,8 +8,9 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
+from exabgp.bgp.neighbor import Neighbor
+
 import pytest
-from unittest.mock import Mock
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notify
@@ -24,8 +25,7 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -98,7 +98,7 @@ def test_keepalive_unpack_valid_message() -> None:
     KEEPALIVE messages should have no payload (empty data).
     """
     data = b''
-    negotiated = {}
+    negotiated = Negotiated.UNSET
 
     keepalive = KeepAlive.unpack_message(data, negotiated)
 
@@ -113,7 +113,7 @@ def test_keepalive_unpack_through_message_class() -> None:
     """
     message_type = Message.CODE.KEEPALIVE
     data = b''
-    negotiated = {}
+    negotiated = Negotiated.UNSET
 
     keepalive = Message.unpack(message_type, data, negotiated)
 
@@ -126,7 +126,7 @@ def test_keepalive_unpack_with_direction() -> None:
     Direction shouldn't affect KEEPALIVE processing.
     """
     data = b''
-    negotiated = {}
+    negotiated = Negotiated.UNSET
 
     # Test incoming direction
     keepalive_in = KeepAlive.unpack_message(data, negotiated)
@@ -151,7 +151,7 @@ def test_keepalive_with_payload_raises_error() -> None:
     """
     # Try with single byte payload
     data = b'\x01'
-    negotiated = {}
+    negotiated = Negotiated.UNSET
 
     with pytest.raises(Notify):
         KeepAlive.unpack_message(data, negotiated)
@@ -160,7 +160,7 @@ def test_keepalive_with_payload_raises_error() -> None:
 def test_keepalive_with_multi_byte_payload_raises_error() -> None:
     """Test that KEEPALIVE with multi-byte payload raises an error."""
     data = b'\x01\x02\x03\x04'
-    negotiated = {}
+    negotiated = Negotiated.UNSET
 
     with pytest.raises(Notify):
         KeepAlive.unpack_message(data, negotiated)
@@ -178,7 +178,7 @@ def test_keepalive_with_various_invalid_payloads() -> None:
 
     for payload in invalid_payloads:
         with pytest.raises(Notify):
-            KeepAlive.unpack_message(payload, {})
+            KeepAlive.unpack_message(payload, Negotiated.UNSET)
 
 
 # ==============================================================================
@@ -196,7 +196,7 @@ def test_keepalive_encode_decode_roundtrip() -> None:
     payload = encoded[19:]
 
     # Decode
-    keepalive_decoded = KeepAlive.unpack_message(payload, {})
+    keepalive_decoded = KeepAlive.unpack_message(payload, Negotiated.UNSET)
 
     # Verify they match
     assert isinstance(keepalive_decoded, KeepAlive)
@@ -217,7 +217,7 @@ def test_keepalive_multiple_encode_decode_cycles() -> None:
 
         # Extract and decode payload
         payload = encoded[19:]
-        keepalive = KeepAlive.unpack_message(payload, {})
+        keepalive = KeepAlive.unpack_message(payload, Negotiated.UNSET)
 
         assert isinstance(keepalive, KeepAlive)
 
@@ -287,11 +287,11 @@ def test_keepalive_with_none_negotiated() -> None:
     keepalive = KeepAlive()
 
     # Should work with None
-    msg = keepalive.pack_message(None)
+    msg = keepalive.pack_message(Negotiated.UNSET)
     assert len(msg) == 19
 
     # Should work when unpacking with None
-    decoded = KeepAlive.unpack_message(b'', None)
+    decoded = KeepAlive.unpack_message(b'', Negotiated.UNSET)
     assert isinstance(decoded, KeepAlive)
 
 

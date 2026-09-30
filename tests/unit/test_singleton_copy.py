@@ -297,7 +297,7 @@ def test_nothing_builds_a_route_distinguisher_which_impersonates_NORD() -> None:
     real = 0
     singleton = 0
     for name, afi, safi, wire, must_be_real in RD_SEEDS:
-        nlri, _ = NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, None, None)
+        nlri, _ = NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
         rd = distinguisher_of(nlri)
         assert rd is not None, f'{name} carries no distinguisher, so it pins nothing'
 

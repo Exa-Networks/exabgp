@@ -17,6 +17,7 @@ from typing import Any, Callable, TYPE_CHECKING
 from exabgp.util import hexstring
 
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import MessageCode
 from exabgp.bgp.message.update.attribute.mprnlri import NextHopWithLinkLocal
 
 from exabgp.environment import getenv
@@ -305,14 +306,14 @@ class JSON:
         self,
         neighbor: 'Neighbor',
         direction: str,
-        category: int,
+        category: MessageCode,
         header: bytes,
         body: bytes,
         negotiated: 'Negotiated',
     ) -> str:
         kv_content = self._kv(
             {
-                'category': category,
+                'category': category.value,
                 'header': hexstring(header),
                 'body': hexstring(body),
             },

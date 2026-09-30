@@ -8,6 +8,8 @@ The Settings pattern enables immutable NLRI by collecting all values first,
 then creating the NLRI in a single construction step.
 """
 
+from exabgp.bgp.neighbor import Neighbor
+
 import pytest
 
 from exabgp.bgp.message.action import Action
@@ -244,7 +246,6 @@ class TestVPLSFromSettings:
 
     def test_from_settings_pack_unpack_roundtrip(self) -> None:
         """VPLS from from_settings can be packed and unpacked"""
-        from unittest.mock import Mock
 
         from exabgp.bgp.message.action import Action
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -265,8 +266,7 @@ class TestVPLSFromSettings:
         vpls = VPLS.from_settings(settings)
 
         # Create minimal negotiated using Mock (standard pattern)
-        neighbor = Mock()
-        neighbor.__getitem__ = Mock(return_value={'aigp': False})
+        neighbor = Neighbor()
         negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
 
         packed = vpls.pack_nlri(negotiated)
@@ -685,7 +685,6 @@ class TestFlowFromSettings:
           20 = prefix length (32 bits)
           C0A80001 = 192.168.0.1
         """
-        from unittest.mock import Mock
 
         from exabgp.bgp.message.direction import Direction
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -704,8 +703,7 @@ class TestFlowFromSettings:
         flow = Flow.from_settings(settings)
 
         # Create negotiated for packing
-        neighbor = Mock()
-        neighbor.__getitem__ = Mock(return_value={'aigp': False})
+        neighbor = Neighbor()
         negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
 
         # Pack and verify
@@ -734,7 +732,6 @@ class TestFlowFromSettings:
           03 81 06 = protocol TCP (6)
           05 91 0C38 = destination-port 3128
         """
-        from unittest.mock import Mock
 
         from exabgp.bgp.message.direction import Direction
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -769,8 +766,7 @@ class TestFlowFromSettings:
         flow = Flow.from_settings(settings)
 
         # Create negotiated for packing
-        neighbor = Mock()
-        neighbor.__getitem__ = Mock(return_value={'aigp': False})
+        neighbor = Neighbor()
         negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
 
         # Pack and verify

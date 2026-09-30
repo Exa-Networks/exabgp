@@ -76,7 +76,7 @@ class Parameter(IntValue):
 
 # A capability we built is keyed by its CapabilityCode, one read from a peer by the number
 # it sent, and the API JSON shows the key as it is: a name for ours, a number for theirs.
-class Capabilities(dict[CapabilityCode | int, Capability]):
+class Capabilities(dict[CapabilityCode, Capability]):
     # RFC 9072 - Extended Optional Parameters Length
     EXTENDED_LENGTH: ClassVar[int] = 0xFF  # IANA Extended Length type code - indicates extended format in use
 
@@ -281,7 +281,7 @@ class Capabilities(dict[CapabilityCode | int, Capability]):
         self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
         return self
 
-    def tlvs(self, code: CapabilityCode | int) -> bytes:
+    def tlvs(self, code: CapabilityCode) -> bytes:
         """One capability we advertise, as the <code, length, value> triples of our OPEN."""
         tlvs = b''
         for value in self[code].extract_capability_bytes():
@@ -406,8 +406,9 @@ class Capabilities(dict[CapabilityCode | int, Capability]):
 
             if key == Parameter.CAPABILITIES:
                 while value:
-                    capability, capv, value = _key_values('capability', value)
-                    capabilities[capability] = Capability.unpack(CapabilityCode(capability), capabilities, capv)
+                    octet, capv, value = _key_values('capability', value)
+                    capability = CapabilityCode(octet)
+                    capabilities[capability] = Capability.unpack(capability, capabilities, capv)
             else:
                 # RFC 4271 6.2: an Optional Parameter type we do not recognise is
                 # Unsupported Optional Parameters.  This answered 2/0 Unspecific, which the

@@ -6,7 +6,8 @@ Tests cover all MVPN route types defined in RFC 6514:
 - Route Type 7: C-Multicast Source Tree Join (SourceJoin)
 """
 
-from unittest.mock import Mock
+from exabgp.bgp.neighbor import Neighbor
+
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -30,8 +31,7 @@ from exabgp.bgp.message.update.nlri.nlri import Action
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -63,7 +63,7 @@ class TestSourceAD:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -82,7 +82,7 @@ class TestSourceAD:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
-            AFI.ipv6, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -164,7 +164,7 @@ class TestSourceAD:
         packed = bytes([5, len(invalid_data)]) + invalid_data
 
         with pytest.raises(Notify):
-            MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated())
+            MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated())
 
     def test_sourcead_invalid_source_ip_length(self) -> None:
         """Test SourceAD with invalid source IP length raises error"""
@@ -175,7 +175,7 @@ class TestSourceAD:
         packed = bytes([5, len(invalid_data)]) + invalid_data
 
         with pytest.raises(Notify):
-            MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated())
+            MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated())
 
     def test_sourcead_multicast_addresses(self) -> None:
         """Test SourceAD with various multicast group addresses"""
@@ -194,7 +194,7 @@ class TestSourceAD:
             route = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
             packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MVPN.unpack_nlri(
-                AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+                AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
             )
 
             assert str(unpacked.group) == group_str
@@ -236,7 +236,7 @@ class TestSharedJoin:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -257,7 +257,7 @@ class TestSharedJoin:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
-            AFI.ipv6, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -344,7 +344,7 @@ class TestSharedJoin:
         packed = bytes([6, len(invalid_data)]) + invalid_data
 
         with pytest.raises(Notify):
-            MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated())
+            MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated())
 
     def test_sharedjoin_various_as_numbers(self) -> None:
         """Test SharedJoin with various AS numbers"""
@@ -359,7 +359,7 @@ class TestSharedJoin:
             route = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, asn)
             packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MVPN.unpack_nlri(
-                AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+                AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
             )
 
             assert unpacked.source_as == asn
@@ -401,7 +401,7 @@ class TestSourceJoin:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -422,7 +422,7 @@ class TestSourceJoin:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MVPN.unpack_nlri(
-            AFI.ipv6, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -511,7 +511,7 @@ class TestSourceJoin:
         packed = bytes([7, len(invalid_data)]) + invalid_data
 
         with pytest.raises(Notify):
-            MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated())
+            MVPN.unpack_nlri(AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated())
 
     def test_sourcejoin_ssm_multicast(self) -> None:
         """Test SourceJoin with SSM (Source-Specific Multicast) addresses"""
@@ -524,7 +524,7 @@ class TestSourceJoin:
         route = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
         packed = route.pack_nlri(create_negotiated())
         unpacked, _ = MVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert str(unpacked.group) == '232.1.1.1'
@@ -561,7 +561,7 @@ class TestMVPNGeneric:
 
         # Should return GenericMVPN
         unpacked, leftover = MVPN.unpack_nlri(
-            AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert unpacked.route_code == 99

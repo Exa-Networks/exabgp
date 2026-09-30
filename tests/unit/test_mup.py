@@ -7,7 +7,8 @@ Tests cover all MUP route types defined in draft-mpmz-bess-mup-safi:
 - Route Type 4: Type 2 Session Transformed (T2ST)
 """
 
-from unittest.mock import Mock
+from exabgp.bgp.neighbor import Neighbor
+
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -32,8 +33,7 @@ from exabgp.bgp.message.update.nlri.nlri import Action
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 
@@ -66,7 +66,7 @@ class TestInterworkSegmentDiscoveryRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -85,7 +85,7 @@ class TestInterworkSegmentDiscoveryRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv6, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -165,7 +165,7 @@ class TestInterworkSegmentDiscoveryRoute:
             route = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_len, prefix_ip, AFI.ipv4)
             packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MUP.unpack_nlri(
-                AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+                AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
             )
 
             assert unpacked.prefix_ip_len == prefix_len
@@ -202,7 +202,7 @@ class TestDirectSegmentDiscoveryRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -219,7 +219,7 @@ class TestDirectSegmentDiscoveryRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv6, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -295,7 +295,7 @@ class TestDirectSegmentDiscoveryRoute:
         packed = b'\x01\x00\x02' + bytes([len(invalid_data)]) + invalid_data
 
         with pytest.raises(Notify):
-            MUP.unpack_nlri(AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated())
+            MUP.unpack_nlri(AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated())
 
 
 # ============================================================================
@@ -356,7 +356,7 @@ class TestType1SessionTransformedRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -388,7 +388,7 @@ class TestType1SessionTransformedRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -418,7 +418,7 @@ class TestType1SessionTransformedRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv6, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -558,7 +558,7 @@ class TestType1SessionTransformedRoute:
         packed = b'\x01\x00\x03' + bytes([len(invalid_data)]) + invalid_data
 
         with pytest.raises(Notify):
-            MUP.unpack_nlri(AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated())
+            MUP.unpack_nlri(AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated())
 
     def test_t1st_variable_prefix_lengths(self) -> None:
         """Test T1ST with various prefix lengths"""
@@ -581,7 +581,7 @@ class TestType1SessionTransformedRoute:
             )
             packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MUP.unpack_nlri(
-                AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+                AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
             )
 
             assert unpacked.prefix_ip_len == prefix_len
@@ -625,7 +625,7 @@ class TestType2SessionTransformedRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -646,7 +646,7 @@ class TestType2SessionTransformedRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -662,7 +662,7 @@ class TestType2SessionTransformedRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv6, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -681,7 +681,7 @@ class TestType2SessionTransformedRoute:
         packed = route.pack_nlri(create_negotiated())
 
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv6, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv6, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert len(leftover) == 0
@@ -768,7 +768,7 @@ class TestType2SessionTransformedRoute:
             route = Type2SessionTransformedRoute.make_t2st(rd, endpoint_len, endpoint_ip, teid_value, AFI.ipv4)
             packed = route.pack_nlri(create_negotiated())
             unpacked, _ = MUP.unpack_nlri(
-                AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+                AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
             )
 
             assert unpacked.endpoint_len == endpoint_len
@@ -807,7 +807,7 @@ class TestMUPGeneric:
 
         # Should return GenericMUP
         unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv4, SAFI.mup, packed, Action.UNSET, None, negotiated=create_negotiated()
+            AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 
         assert unpacked.route_code == 99

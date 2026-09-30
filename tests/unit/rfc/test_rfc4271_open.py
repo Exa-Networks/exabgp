@@ -134,7 +134,7 @@ def optional_parameters(*parameters: bytes) -> bytes:
 @pytest.mark.rfc('rfc4271#6.2-unsupported-version-number')
 def test_a_version_we_do_not_support_is_refused_as_such(version: int) -> None:
     with pytest.raises(Notify) as caught:
-        Message.unpack(int(Message.CODE.OPEN), open_body(version=version), Negotiated.UNSET)
+        Message.unpack(Message.CODE.OPEN, open_body(version=version), Negotiated.UNSET)
 
     assert caught.value.code == OPEN_MESSAGE_ERROR
     assert caught.value.subcode == UNSUPPORTED_VERSION_NUMBER
@@ -148,7 +148,7 @@ def test_an_unsupported_version_is_answered_with_the_version_we_support(version:
     one version, so both halves of the rule name 4.  The field held 'unsupported version: N'.
     """
     with pytest.raises(Notify) as caught:
-        Message.unpack(int(Message.CODE.OPEN), open_body(version=version), Negotiated.UNSET)
+        Message.unpack(Message.CODE.OPEN, open_body(version=version), Negotiated.UNSET)
 
     assert caught.value.data == pack('!H', 4)
 
@@ -156,7 +156,7 @@ def test_an_unsupported_version_is_answered_with_the_version_we_support(version:
 @pytest.mark.rfc('rfc4271#6.2-unsupported-version-number', polarity='negative')
 def test_version_four_is_accepted() -> None:
     """Without this a decoder which refused every OPEN would pass the test above."""
-    message = Message.unpack(int(Message.CODE.OPEN), open_body(), Negotiated.UNSET)
+    message = Message.unpack(Message.CODE.OPEN, open_body(), Negotiated.UNSET)
 
     assert isinstance(message, Open)
     assert message.version == 4
@@ -271,7 +271,7 @@ def test_a_recognised_optional_parameter_is_not_refused() -> None:
         optional_parameters(parameter(Parameter.CAPABILITIES, capability(ROUTE_REFRESH)))
     )
 
-    assert capabilities.announced(ROUTE_REFRESH), 'a well formed Capabilities parameter was dropped'
+    assert capabilities.announced(Capability.CODE.ROUTE_REFRESH), 'a well formed Capabilities parameter was dropped'
 
 
 @pytest.mark.parametrize(

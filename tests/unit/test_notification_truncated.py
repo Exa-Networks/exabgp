@@ -35,7 +35,7 @@ BODIES = [0, 1, 2, 3, 8, 40]
 @pytest.mark.parametrize('length', BODIES, ids=[f'{n} bytes' for n in BODIES])
 def test_any_notification_body_decodes_rather_than_raising(length: int) -> None:
     """Including the two lengths which used to raise ValueError out of the parser."""
-    decoded = Message.unpack(NOTIFICATION, bytes(length), Negotiated.UNSET)
+    decoded = Message.unpack(Message.CODE.of(NOTIFICATION), bytes(length), Negotiated.UNSET)
 
     assert isinstance(decoded, Notification)
 
@@ -49,7 +49,7 @@ def test_a_notification_never_decodes_into_one_we_would_send(length: int) -> Non
     for the same reason, and a decoded NOTIFICATION reaching that first handler would be
     answered rather than acted on.
     """
-    decoded = Message.unpack(NOTIFICATION, bytes(length), Negotiated.UNSET)
+    decoded = Message.unpack(Message.CODE.of(NOTIFICATION), bytes(length), Negotiated.UNSET)
 
     assert not isinstance(decoded, Notify), 'a NOTIFICATION from the peer decoded into one we would send'
 
@@ -60,7 +60,7 @@ def test_a_well_formed_notification_still_carries_its_code() -> None:
     Every test above is satisfied by a decoder which returns a zeroed Notification for
     everything, so one of them has to read what the peer actually said.
     """
-    decoded = Message.unpack(NOTIFICATION, bytes([6, 2]) + b'shutting down', Negotiated.UNSET)
+    decoded = Message.unpack(Message.CODE.of(NOTIFICATION), bytes([6, 2]) + b'shutting down', Negotiated.UNSET)
 
     assert isinstance(decoded, Notification)
     assert decoded.code == 6, 'the cease code was lost'
@@ -70,7 +70,7 @@ def test_a_well_formed_notification_still_carries_its_code() -> None:
 @pytest.mark.parametrize('length', [0, 1], ids=['empty', 'one byte'])
 def test_a_truncated_notification_says_the_peer_did_not_say_why(length: int) -> None:
     """A body with no code renders as unknown, which is accurate rather than invented."""
-    decoded = Message.unpack(NOTIFICATION, bytes(length), Negotiated.UNSET)
+    decoded = Message.unpack(Message.CODE.of(NOTIFICATION), bytes(length), Negotiated.UNSET)
 
     assert decoded.code == 0
     assert decoded.subcode == 0

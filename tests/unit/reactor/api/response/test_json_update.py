@@ -35,6 +35,7 @@ from exabgp.protocol.ip import IPv4, IPv6
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.api.response.json import JSON
+from exabgp.bgp.message import Message
 
 
 @pytest.fixture
@@ -478,7 +479,9 @@ class TestPublicJSONEventSurface:
     def test_bgp_message_events_parse_and_keep_existing_shape(self, json_encoder: JSON, api_neighbor: Mock) -> None:
         keepalive = parsed_api_event(json_encoder.keepalive(api_neighbor, 'receive', b'HEAD', b'', Negotiated.UNSET))
         packets = parsed_api_event(
-            json_encoder.packets(api_neighbor, 'receive', 2, b'\xff' * 16, b'\x00\x01', Negotiated.UNSET)
+            json_encoder.packets(
+                api_neighbor, 'receive', Message.CODE.UPDATE, b'\xff' * 16, b'\x00\x01', Negotiated.UNSET
+            )
         )
         notification = parsed_api_event(
             json_encoder.notification(
@@ -566,7 +569,9 @@ class TestEventJSONSemantics:
 
     def test_packets_event_keeps_message_object(self, json_encoder: JSON, api_neighbor: Mock) -> None:
         event = json.loads(
-            json_encoder.packets(api_neighbor, 'receive', 2, b'\xff' * 16, b'\x00\x01', Negotiated.UNSET)
+            json_encoder.packets(
+                api_neighbor, 'receive', Message.CODE.UPDATE, b'\xff' * 16, b'\x00\x01', Negotiated.UNSET
+            )
         )
 
         assert event['type'] == 'update'

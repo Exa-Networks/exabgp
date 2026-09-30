@@ -30,15 +30,13 @@ from __future__ import annotations
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.protocol.family import AFI
+from tests import negotiation
 
 TREAT_AS_WITHDRAW = 'treat-as-withdraw'
 ATTRIBUTE_DISCARD = 'attribute discard'
@@ -75,24 +73,7 @@ IDS = [f'{section}-{Attribute.CODE.name(code)}' for section, code, _, _, _ in PR
 
 def negotiated() -> Any:
     """The session state both the decode and the semantic transformation read."""
-    session = Mock()
-    session.asn4 = False
-    session.addpath = Mock()
-    session.addpath.receive = Mock(return_value=False)
-    session.addpath.send = Mock(return_value=False)
-    session.required = Mock(return_value=False)
-    session.families = []
-    session.nexthop = []
-    session.msg_size = 4096
-    session.direction = Action.ANNOUNCE
-
-    neighbour = Mock()
-    neighbour.__getitem__ = Mock(return_value={'aigp': False})
-    neighbour.session = Mock()
-    neighbour.session.local_address = Mock()
-    neighbour.session.local_address.afi = AFI.ipv4
-    session.neighbor = neighbour
-    return session
+    return negotiation.negotiated([], asn4=False, msg_size=4096)
 
 
 def update_announcing_one_route(flag: int, code: int, length: int) -> bytes:

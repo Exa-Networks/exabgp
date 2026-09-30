@@ -38,7 +38,7 @@ UNREGISTERED = [0, 7, 8, 100, 200, NOP, 255]
 def test_an_unregistered_message_type_is_a_bad_message_type(code: int) -> None:
     """Notify, with the subcode RFC 4271 6.1 names, rather than a raw AttributeError."""
     with pytest.raises(Notify) as caught:
-        Message.unpack(code, b'\x00', Negotiated.UNSET)
+        Message.unpack(Message.CODE.of(code), b'\x00', Negotiated.UNSET)
 
     assert caught.value.code == MESSAGE_HEADER_ERROR
     assert caught.value.subcode == BAD_MESSAGE_TYPE
@@ -64,7 +64,7 @@ def test_a_registered_type_is_still_dispatched_to_its_decoder(code: int) -> None
     assert code in Message.registered_message
 
     try:
-        Message.unpack(code, b'', Negotiated.UNSET)
+        Message.unpack(Message.CODE.of(code), b'', Negotiated.UNSET)
     except Notify as notify:
         assert not (notify.code == MESSAGE_HEADER_ERROR and notify.subcode == BAD_MESSAGE_TYPE), (
             f'type {code} has a decoder but was refused as unknown'

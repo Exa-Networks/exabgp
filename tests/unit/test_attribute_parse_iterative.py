@@ -31,10 +31,10 @@ recurses; this was the one path that did.
 
 from __future__ import annotations
 
-from unittest.mock import Mock
 
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # flag=OPTIONAL (0x80), aid=0xEF (registered by nothing), length=0 -- the exact probe payload.
 UNKNOWN_NON_TRANSITIVE_ATTRIBUTE = bytes([0x80, 0xEF, 0x00])
@@ -47,7 +47,7 @@ ORIGIN = int(Attribute.CODE.ORIGIN)
 ORIGIN_IGP = bytes([0x40, ORIGIN, 1, 0])
 
 
-def fake_negotiated() -> Mock:
+def fake_negotiated() -> Negotiated:
     """parse() only threads `negotiated` through to Attribute.unpack for known attributes.
 
     Every attribute this file decodes either ignores it entirely (the unknown ones never
@@ -55,7 +55,7 @@ def fake_negotiated() -> Mock:
     takes only the wire bytes), so a bare Mock is sufficient -- this is a recursion-depth
     test, not a negotiation test.
     """
-    return Mock()
+    return Negotiated.UNSET
 
 
 def test_1200_unknown_attributes_parse_without_recursion_error() -> None:

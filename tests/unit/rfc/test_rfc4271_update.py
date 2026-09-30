@@ -26,11 +26,10 @@ import logging
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import Action, Notify, Update, UpdateCollection
+from exabgp.bgp.message import Notify, Update, UpdateCollection
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
@@ -41,6 +40,7 @@ from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.logger import log
 from exabgp.logger.option import echo, option
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
 
 UPDATE_MESSAGE_ERROR = 3
 MALFORMED_ATTRIBUTE_LIST = 1
@@ -69,24 +69,7 @@ def negotiated(families: tuple[tuple[AFI, SAFI], ...] = ()) -> Any:
     Same shape as tests/unit/test_rfc7606_prescribed_action.py: everything which looks at
     the bytes below is production code, this only says what was negotiated.
     """
-    session = Mock()
-    session.asn4 = False
-    session.addpath = Mock()
-    session.addpath.receive = Mock(return_value=False)
-    session.addpath.send = Mock(return_value=False)
-    session.required = Mock(return_value=False)
-    session.families = list(families)
-    session.nexthop = []
-    session.msg_size = 4096
-    session.direction = Action.ANNOUNCE
-
-    neighbour = Mock()
-    neighbour.__getitem__ = Mock(return_value={'aigp': False})
-    neighbour.session = Mock()
-    neighbour.session.local_address = Mock()
-    neighbour.session.local_address.afi = AFI.ipv4
-    session.neighbor = neighbour
-    return session
+    return negotiation.negotiated(list(families), asn4=False, msg_size=4096)
 
 
 def body(withdrawn: bytes = b'', attributes: bytes = MANDATORY, nlri: bytes = IPV4_PREFIX) -> bytes:

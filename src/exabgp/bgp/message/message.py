@@ -95,17 +95,29 @@ class MessageCodes:
         OPERATIONAL,
     ]
 
-    @staticmethod
-    def name(message_id: int | None) -> str:
-        if message_id is None:
-            return MessageCode.names.get(message_id, 'unknown message')
-        return MessageCode.names.get(message_id, 'unknown message {}'.format(hex(int(message_id))))
+    # the known codes by their octet, so reading a message does not build its code again
+    KNOWN: ClassVar[dict[int, MessageCode]] = {
+        MessageCode.OPEN: OPEN,
+        MessageCode.UPDATE: UPDATE,
+        MessageCode.NOTIFICATION: NOTIFICATION,
+        MessageCode.KEEPALIVE: KEEPALIVE,
+        MessageCode.ROUTE_REFRESH: ROUTE_REFRESH,
+        MessageCode.OPERATIONAL: OPERATIONAL,
+    }
 
     @staticmethod
-    def short(message_id: int | None) -> str:
-        if message_id is None:
-            return MessageCode.short_names.get(message_id, 'unknown message')
-        return MessageCode.short_names.get(message_id, 'unknown message {}'.format(hex(int(message_id))))
+    def of(octet: int) -> MessageCode:
+        """The MessageCode of the type octet read from the wire."""
+        known = MessageCodes.KNOWN.get(octet)
+        return MessageCode(octet) if known is None else known
+
+    @staticmethod
+    def name(message_id: MessageCode) -> str:
+        return MessageCode.names.get(message_id.value, 'unknown message {}'.format(hex(message_id.value)))
+
+    @staticmethod
+    def short(message_id: MessageCode) -> str:
+        return MessageCode.short_names.get(message_id.value, 'unknown message {}'.format(hex(message_id.value)))
 
     def __init__(self) -> None:
         raise RuntimeError('This class can not be instantiated')
@@ -196,32 +208,32 @@ class Message:
         return hash((self.ID, bytes(self._packed)))
 
     @classmethod
-    def length_valid(cls, code: int, length: int) -> bool:
+    def length_valid(cls, code: MessageCode, length: int) -> bool:
         """Whether `length`, header included, is one a message of type `code` can have.
 
         A type nobody registered is refused by its type (RFC 4271 6.1, Bad Message Type),
         so only the header bounds it here.
         """
-        klass = cls.registered_message.get(code)
+        klass = cls.registered_message.get(code.value)
         if klass is None:
             return length >= cls.HEADER_LEN
         return klass.LENGTH_MIN <= length <= klass.LENGTH_MAX
 
     @classmethod
-    def header_refuses(cls, code: int, length: int) -> bool:
+    def header_refuses(cls, code: MessageCode, length: int) -> bool:
         """Whether the header check answers this length itself, with Bad Message Length.
 
         Not for a type whose decoder answers a wrong length with an error its RFC gives:
         the header would answer first, and the peer would never be told the right thing.
         """
-        klass = cls.registered_message.get(code)
+        klass = cls.registered_message.get(code.value)
         if klass is not None and not klass.HEADER_CHECKS_LENGTH:
             return length < cls.HEADER_LEN
         return not cls.length_valid(code, length)
 
     @staticmethod
-    def string(code: int | None) -> str:
-        return MessageCode.long_names.get(code, 'unknown')
+    def string(code: MessageCode) -> str:
+        return MessageCode.long_names.get(code.value, 'unknown')
 
     @classmethod
     def frame(cls, code: MessageCode, body: Buffer) -> bytes:
@@ -253,17 +265,18 @@ class Message:
         return klass
 
     @classmethod
-    def klass(cls, what: int) -> Type[Message]:
-        if what in cls.registered_message:
-            return cls.registered_message[what]
+    def klass(cls, what: MessageCode) -> Type[Message]:
+        klass = cls.registered_message.get(what.value)
+        if klass is not None:
+            return klass
         from exabgp.bgp.message.notification import Notify
 
         # RFC 4271 6.1: an unrecognised Type field is Bad Message Type, the same answer
         # unpack gives below.  This was 2/4, Unsupported Optional Parameter, an OPEN error
-        raise Notify(1, 3, f'type {what}', data=bytes([what]))
+        raise Notify(1, 3, f'type {what.value}', data=bytes([what.value]))
 
     @classmethod
-    def unpack(cls, message: int, data: Buffer, negotiated: Negotiated) -> Message:
+    def unpack(cls, message: MessageCode, data: Buffer, negotiated: Negotiated) -> Message:
         """Unpack a BGP message from wire format.
 
         Args:
@@ -274,8 +287,9 @@ class Message:
         Returns:
             Parsed Message subclass instance
         """
-        if message in cls.registered_message:
-            return cls.klass(message).unpack_message(data, negotiated)
+        klass = cls.registered_message.get(message.value)
+        if klass is not None:
+            return klass.unpack_message(data, negotiated)
         # klass_unknown was declared here and bound by unknown.py, which nothing imports,
         # so this line raised AttributeError for every unregistered code.  The reactor's
         # catch-all laundered it into Notify(1, 0, 'can not decode update message of type
@@ -283,4 +297,4 @@ class Message:
         # unrecognised Type field is Bad Message Type
         from exabgp.bgp.message.notification import Notify
 
-        raise Notify(1, 3, f'type {message}', data=bytes([message]))
+        raise Notify(1, 3, f'type {message.value}', data=bytes([message.value]))

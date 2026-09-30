@@ -16,6 +16,8 @@ Issue #927. RFC 8956 6.1 defines rt-redirect-ipv6, an IPv6-Address-Specific Exte
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import os
 import pathlib
 import subprocess
@@ -88,14 +90,14 @@ def validate(tmp_path, then):
 
 def test_the_community_is_type_0x000d() -> None:
     community = TrafficRedirectIPv6.make_traffic_redirect_ipv6('2001:db8::1', 100)
-    packed = bytes(community.pack_attribute(None))
+    packed = bytes(community.pack_attribute(Negotiated.UNSET))
     assert len(packed) == 20
     assert packed[:2] == b'\x00\x0d'
 
 
 def test_the_community_decodes_as_what_it_encoded() -> None:
-    packed = bytes(TrafficRedirectIPv6.make_traffic_redirect_ipv6('2001:db8::1', 100).pack_attribute(None))
-    decoded = ExtendedCommunityIPv6.unpack_attribute(packed, None)
+    packed = bytes(TrafficRedirectIPv6.make_traffic_redirect_ipv6('2001:db8::1', 100).pack_attribute(Negotiated.UNSET))
+    decoded = ExtendedCommunityIPv6.unpack_attribute(packed, Negotiated.UNSET)
     assert isinstance(decoded, TrafficRedirectIPv6)
     assert decoded.ip == '2001:db8::1'
     assert decoded.asn == 100

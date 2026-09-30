@@ -19,6 +19,8 @@ only one which both carries a distinguisher and renders it through this path.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import json as jsonlib
 from struct import pack
 
@@ -45,7 +47,7 @@ IDS = [row[0] for row in SHAPES]
 def decoded(code: int, descriptor: bytes, safi: SAFI, prefix: bytes) -> NLRI:
     body = bytes([3]) + bytes(8) + descriptor
     wire = pack('!HH', int(code), len(body) + len(prefix)) + prefix + body
-    nlri, _ = NLRI.unpack_nlri(AFI.bgpls, safi, wire, Action.ANNOUNCE, None, None)
+    nlri, _ = NLRI.unpack_nlri(AFI.bgpls, safi, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
     return nlri
 
 

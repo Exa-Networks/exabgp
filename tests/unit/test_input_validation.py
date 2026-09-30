@@ -33,6 +33,8 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.grammar.types.bgp import extended_community as _extended_community
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.psk import PSKError, decode_base64
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.open.capability.capability import Capability
 
 
 # ============================================================================
@@ -177,9 +179,8 @@ def test_as4_capability_length_is_one_it_can_read() -> None:
     it encodes. A length which encodes no ASN at all still has no reading.
     """
     from exabgp.bgp.message.open.capability import Capability
-    from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
-    code = CapabilityCode.FOUR_BYTES_ASN
+    code = Capability.CODE.FOUR_BYTES_ASN
     klass = Capability.klass(code)
     for data in (b'\xfd\xe8', b'\x00\x00\xfd\xe8'):
         assert int(klass.unpack_capability(klass(), data, code)) == 65000
@@ -189,20 +190,20 @@ def test_as4_capability_length_is_one_it_can_read() -> None:
 
 
 def test_as4_capability_accepts_four_bytes() -> None:
-    assert ASN4.unpack_capability(None, b'\x00\x00\xfd\xe8', None) == 65000
+    assert ASN4.unpack_capability(ASN4(), b'\x00\x00\xfd\xe8', Capability.CODE.FOUR_BYTES_ASN) == 65000
 
 
 def test_hostname_capability_rejects_invalid_utf8() -> None:
     """Invalid UTF-8 used to escape as UnicodeDecodeError."""
     with pytest.raises(Notify):
-        HostName.unpack_capability(HostName(), b'\x04\xff\xfe\xfd\xfc\x00', None)
+        HostName.unpack_capability(HostName(), b'\x04\xff\xfe\xfd\xfc\x00', Capability.CODE.HOSTNAME)
 
 
 def test_hostname_capability_truncates_on_a_character_boundary() -> None:
     """Cutting at 64 bytes used to split the 'é', and the capability sent was not UTF-8."""
     for name in ('a' * 63 + 'é', 'é' * 40, 'a' * 62 + '€'):
         packed = HostName(name, name).extract_capability_bytes()[0]
-        decoded = HostName.unpack_capability(HostName(), packed, None)
+        decoded = HostName.unpack_capability(HostName(), packed, Capability.CODE.HOSTNAME)
         assert isinstance(decoded, HostName)
         assert name.startswith(decoded.host_name)
         assert name.startswith(decoded.domain_name)
@@ -211,7 +212,7 @@ def test_hostname_capability_truncates_on_a_character_boundary() -> None:
 
 def test_software_capability_length_counts_bytes() -> None:
     """A decoded version wider than ASCII used to be sent with its length in characters."""
-    decoded = Software.unpack_capability(Software(), b'\x09r\xc3\xa9seau/1', None)
+    decoded = Software.unpack_capability(Software(), b'\x09r\xc3\xa9seau/1', Capability.CODE.SOFTWARE_VERSION)
     assert isinstance(decoded, Software)
     packed = decoded.extract_capability_bytes()[0]
     assert packed == b'\x09r\xc3\xa9seau/1'
@@ -219,7 +220,7 @@ def test_software_capability_length_counts_bytes() -> None:
 
 def test_software_capability_rejects_invalid_utf8() -> None:
     with pytest.raises(Notify):
-        Software.unpack_capability(Software(), b'\x04\xff\xfe\xfd\xfc', None)
+        Software.unpack_capability(Software(), b'\x04\xff\xfe\xfd\xfc', Capability.CODE.SOFTWARE_VERSION)
 
 
 # ============================================================================
@@ -301,7 +302,7 @@ def test_evpn_short_nlri_raises_notify(code: int, length: int) -> None:
     """Truncated EVPN routes used to escape as IndexError or ValueError, either
     during unpack or later when the NLRI was turned into JSON."""
     data = bytes([code, length]) + bytes(length)
-    unpack_or_notify(EVPN.unpack_nlri, AFI.l2vpn, SAFI.evpn, data, Action.ANNOUNCE, None, None)
+    unpack_or_notify(EVPN.unpack_nlri, AFI.l2vpn, SAFI.evpn, data, Action.ANNOUNCE, False, Negotiated.UNSET)
 
 
 def test_evpn_fuzz_never_raises_a_raw_exception() -> None:
@@ -309,7 +310,7 @@ def test_evpn_fuzz_never_raises_a_raw_exception() -> None:
         for length in range(0, 60):
             for _ in range(5):
                 data = bytes([code, length]) + os.urandom(length)
-                unpack_or_notify(EVPN.unpack_nlri, AFI.l2vpn, SAFI.evpn, data, Action.ANNOUNCE, None, None)
+                unpack_or_notify(EVPN.unpack_nlri, AFI.l2vpn, SAFI.evpn, data, Action.ANNOUNCE, False, Negotiated.UNSET)
 
 
 @pytest.mark.parametrize('code', [1, 2, 3, 4, 6])
@@ -318,7 +319,7 @@ def test_bgpls_short_nlri_raises_notify(code: int, length: int) -> None:
     """BGP-LS decoders used to raise bare Exception, RuntimeError, struct.error
     or AssertionError on anything malformed."""
     data = pack('!HH', int(code), length) + bytes(length)
-    unpack_or_notify(BGPLS.unpack_nlri, AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None, None)
+    unpack_or_notify(BGPLS.unpack_nlri, AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, False, Negotiated.UNSET)
 
 
 def test_bgpls_fuzz_never_raises_a_raw_exception() -> None:
@@ -326,7 +327,9 @@ def test_bgpls_fuzz_never_raises_a_raw_exception() -> None:
         for length in range(0, 60):
             for _ in range(5):
                 data = pack('!HH', int(code), length) + os.urandom(length)
-                unpack_or_notify(BGPLS.unpack_nlri, AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None, None)
+                unpack_or_notify(
+                    BGPLS.unpack_nlri, AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, False, Negotiated.UNSET
+                )
 
 
 @pytest.mark.parametrize('key', ['1:1', '1:2', '1:3', '1:4'])
@@ -336,7 +339,7 @@ def test_mup_short_nlri_raises_notify(key: str, length: int) -> None:
     arch, code = (int(_) for _ in key.split(':'))
     data = bytes([arch]) + code.to_bytes(2, 'big') + bytes([length]) + bytes(length)
     for afi in (AFI.ipv4, AFI.ipv6):
-        unpack_or_notify(MUP.unpack_nlri, afi, SAFI.mup, data, Action.ANNOUNCE, None, None)
+        unpack_or_notify(MUP.unpack_nlri, afi, SAFI.mup, data, Action.ANNOUNCE, False, Negotiated.UNSET)
 
 
 def test_mup_fuzz_never_raises_a_raw_exception() -> None:
@@ -346,7 +349,7 @@ def test_mup_fuzz_never_raises_a_raw_exception() -> None:
             for _ in range(5):
                 data = bytes([arch]) + code.to_bytes(2, 'big') + bytes([length]) + os.urandom(length)
                 for afi in (AFI.ipv4, AFI.ipv6):
-                    unpack_or_notify(MUP.unpack_nlri, afi, SAFI.mup, data, Action.ANNOUNCE, None, None)
+                    unpack_or_notify(MUP.unpack_nlri, afi, SAFI.mup, data, Action.ANNOUNCE, False, Negotiated.UNSET)
 
 
 # ============================================================================

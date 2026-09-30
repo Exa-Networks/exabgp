@@ -28,17 +28,15 @@ from __future__ import annotations
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
-from exabgp.protocol.family import AFI
+from tests import negotiation
 
 BGP_PREFIX_SID = int(Attribute.CODE.BGP_PREFIX_SID)
 OPTIONAL_TRANSITIVE = 0xC0
@@ -62,26 +60,7 @@ MALFORMED_IDS = ['label-index-3', 'srgb-4', 'srgb-9', 'srgb-1']
 
 
 def negotiated() -> Any:
-    session = Mock()
-    session.asn4 = False
-    session.addpath = Mock()
-    session.addpath.receive = Mock(return_value=False)
-    session.addpath.send = Mock(return_value=False)
-    session.required = Mock(return_value=False)
-    session.families = []
-    session.nexthop = []
-    session.msg_size = 4096
-    session.direction = Action.ANNOUNCE
-    neighbour = Mock()
-    neighbour.__getitem__ = Mock(return_value={'aigp': False})
-    neighbour.session = Mock()
-    neighbour.session.local_address = Mock()
-    neighbour.session.local_address.afi = AFI.ipv4
-    session.neighbor = neighbour
-    session.attribute_cache = None
-    session.attribute_cache_packed = b''
-    session.attribute_cache_enabled = False
-    return session
+    return negotiation.negotiated([], asn4=False, msg_size=4096, attribute_cache_enabled=False)
 
 
 def prefix_sid(tlv_type: int, declared_length: int, value: bytes) -> bytes:

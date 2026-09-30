@@ -7,8 +7,9 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+from exabgp.bgp.neighbor import Neighbor
+
 import unittest
-from unittest.mock import Mock
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -26,8 +27,7 @@ from exabgp.protocol.ip import IPv4
 
 def create_negotiated() -> Negotiated:
     """Create a Negotiated object with a mock neighbor for testing."""
-    neighbor = Mock()
-    neighbor.__getitem__ = Mock(return_value={'aigp': False})
+    neighbor = Neighbor()
     return Negotiated.make_negotiated(neighbor, Direction.OUT)
 
 

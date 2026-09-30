@@ -25,15 +25,13 @@ from __future__ import annotations
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.protocol.family import AFI
+from tests import negotiation
 
 # every combination of the flag bits a peer chooses, including EXTENDED_LENGTH, which
 # changes how the length itself is read and is where the NEXT_HOP case came from
@@ -55,24 +53,7 @@ def session() -> Any:
     aigp is enabled, or AIGP decodes to a Discard and this sweep never reaches it: the same
     trap as a corpus which cannot reach the code it claims to cover.
     """
-    negotiated = Mock()
-    negotiated.asn4 = False
-    negotiated.addpath = Mock()
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.required = Mock(return_value=False)
-    negotiated.families = []
-    negotiated.nexthop = []
-    negotiated.msg_size = 4096
-    negotiated.direction = Action.ANNOUNCE
-
-    neighbour = Mock()
-    neighbour.__getitem__ = Mock(return_value={'aigp': True})
-    neighbour.session = Mock()
-    neighbour.session.local_address = Mock()
-    neighbour.session.local_address.afi = AFI.ipv4
-    negotiated.neighbor = neighbour
-    return negotiated
+    return negotiation.negotiated([], asn4=False, msg_size=4096)
 
 
 def update_with(flag: int, code: int, size: int) -> bytes:

@@ -9,13 +9,13 @@ Attribute List, before the read.
 
 from __future__ import annotations
 
-from unittest.mock import Mock
 
 import pytest
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import Attributes
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # flag=TRANSITIVE (0x40), ORIGIN, length 1, IGP
 ORIGIN = bytes([0x40, 0x01, 0x01, 0x00])
@@ -23,7 +23,7 @@ ORIGIN = bytes([0x40, 0x01, 0x01, 0x00])
 
 def _attributes(packed: bytes) -> Attributes:
     # ORIGIN ignores negotiated, and every other case raises before Attribute.unpack
-    return Attributes(packed, Mock())
+    return Attributes(packed, Negotiated.UNSET)
 
 
 def test_a_well_formed_list_is_iterated() -> None:

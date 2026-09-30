@@ -267,6 +267,13 @@ Decided 2026-09-28:
 - Phase 3: pure Python may not get more than 5% slower than the baseline.
 - The compiled run is part of `./qa/bin/test_everything`.
 
+Decided 2026-09-30:
+
+- Tests which pass None or a Mock where a Negotiated is declared are rewritten to use a
+  real one (Negotiated.UNSET, or one built by negotiation).
+- A copy of a compiled object may share immutable state: objects are to be used as if
+  immutable. Each class is checked before its copy returns shared parts.
+
 Still open:
 
 - Whether compiled wheels become the default install or stay an explicit extra.
@@ -460,3 +467,12 @@ the compiled test run (table above). Decisions wanted from Thomas before the tes
 rewrite the Mock/None negotiated tests to real objects, or mark them pure-Python only;
 and whether copies of compiled classes may share immutable state. Nothing is committed yet:
 the plan asked for a commit per phase.
+
+### 2026-09-30: message functions take a MessageCode only
+
+- `MessageCodes.name`/`short`, `Message.length_valid`/`header_refuses`/`string`/`klass`/`unpack` take a `MessageCode`, not `int | MessageCode` (no `None` either, nothing passed it)
+- the type octet becomes a `MessageCode` where it is read: `MessageCodes.of(octet)` returns the known codes without building them again
+- `Connection.reader_async` returns a `MessageCode` (`UNREAD`, code 0, with a header error), carried through `Protocol` and `Processes.packets` (JSON and text print `category.value`)
+- tests pass `Message.CODE.X` or `Message.CODE.of(n)`
+- the same for capabilities: `Capability.unpack`, `Capabilities.announced`/`tlvs` and the `Capabilities` keys take a `CapabilityCode`; the OPEN decoder builds it from the octet once. `CapabilityCode.__init__` and `MessageCode.__init__` take an `int` only
+- compiled run after both: 260 failed (was 286), no MessageCode or CapabilityCode type error left

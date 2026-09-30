@@ -30,6 +30,7 @@ from exabgp.reactor.network.error import NotifyError
 from exabgp.reactor.peer.peer import Peer
 from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
+from exabgp.bgp.message.message import MessageCode
 
 CONFIGURATION = """
 neighbor 192.0.2.1 {
@@ -77,7 +78,7 @@ def protocol(**api: bool) -> tuple[Protocol, Mock]:
 
 
 async def read(
-    proto: Protocol, length: int, msg_id: int, header: bytes, body: bytes, notify: NotifyError | None = None
+    proto: Protocol, length: int, msg_id: MessageCode, header: bytes, body: bytes, notify: NotifyError | None = None
 ) -> tuple[Message | None, list[tuple[str, str]]]:
     """Read one message from a stand-in connection, return it and the debug lines logged."""
     proto.connection = Mock(
@@ -112,7 +113,7 @@ class TestHeaderError:
 
     async def _raised(self, proto: Protocol) -> Notify:
         with pytest.raises(Notify) as raised:
-            await read(proto, 5, 0, b'H', b'B', header_error())
+            await read(proto, 5, Message.CODE.of(0), b'H', b'B', header_error())
         return raised.value
 
     @pytest.mark.asyncio
@@ -130,7 +131,7 @@ class TestHeaderError:
         # empty data is handed to Notify as None, and Notify then sends its text instead
         proto, _ = protocol()
         with pytest.raises(Notify) as raised:
-            await read(proto, 5, 0, b'H', b'B', NotifyError(1, 1, 'marker'))
+            await read(proto, 5, Message.CODE.of(0), b'H', b'B', NotifyError(1, 1, 'marker'))
         assert (raised.value.code, raised.value.subcode, raised.value.data) == (1, 1, b'marker')
 
     @pytest.mark.asyncio
@@ -173,7 +174,7 @@ class TestHeaderError:
     async def test_header_error_wins_over_an_unknown_type(self) -> None:
         proto, _ = protocol()
         with pytest.raises(Notify) as raised:
-            await read(proto, 0, 200, b'', b'', header_error())
+            await read(proto, 0, Message.CODE.of(200), b'', b'', header_error())
         assert (raised.value.code, raised.value.subcode) == (1, 2)
 
 
@@ -182,7 +183,7 @@ class TestTypeAndLength:
     async def test_an_unknown_type_is_bad_message_type_with_the_octet(self) -> None:
         proto, reactor = protocol(receive_packets=True)
         with pytest.raises(Notify) as raised:
-            await read(proto, 19, 200, MARKER + b'\x00\x13\xc8', b'')
+            await read(proto, 19, Message.CODE.of(200), MARKER + b'\x00\x13\xc8', b'')
         assert (raised.value.code, raised.value.subcode, raised.value.data) == (1, 3, b'\xc8')
         assert str(raised.value) == str(Notify(1, 3, 'type 200', data=b'\xc8'))
         assert calls(reactor) == []
@@ -192,7 +193,7 @@ class TestTypeAndLength:
     async def test_an_unknown_type_is_refused_even_without_length(self) -> None:
         proto, _ = protocol()
         with pytest.raises(Notify) as raised:
-            await read(proto, 0, 200, b'', b'')
+            await read(proto, 0, Message.CODE.of(200), b'', b'')
         assert (raised.value.code, raised.value.subcode) == (1, 3)
 
     @pytest.mark.asyncio

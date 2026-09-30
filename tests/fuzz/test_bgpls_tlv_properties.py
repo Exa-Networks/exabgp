@@ -33,6 +33,8 @@ that corpus once it lands.
 
 from __future__ import annotations
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
 import json as jsonlib
 
 from collections.abc import Iterator
@@ -131,7 +133,7 @@ def render(scode: int, value: bytes) -> tuple[str, str, str]:
     where the reactor can answer it.  The renders are the API writer's `json()`, the same
     with `compact`, and the logger's `str()`, which reaches every TLV's `__repr__`.
     """
-    attribute = LinkState.unpack_attribute(framed(scode, value), None)
+    attribute = LinkState.unpack_attribute(framed(scode, value), Negotiated.UNSET)
     return attribute.json(), attribute.json(True), str(attribute)
 
 
@@ -250,7 +252,7 @@ def test_the_same_tlv_twice_names_its_member_once(scode: int) -> None:
     """
     value = b'\x00' * 8
     try:
-        attribute = LinkState.unpack_attribute(framed(scode, value) + framed(scode, value), None)
+        attribute = LinkState.unpack_attribute(framed(scode, value) + framed(scode, value), Negotiated.UNSET)
         emitted = attribute.json()
     except Notify:
         return

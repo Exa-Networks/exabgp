@@ -10,6 +10,7 @@ plain refresh request whatever it holds.
 """
 
 from __future__ import annotations
+from tests import negotiation
 
 from struct import pack
 from unittest.mock import Mock, patch
@@ -28,6 +29,7 @@ from exabgp.reactor.peer.context import PeerContext
 from exabgp.reactor.peer.handlers import route_refresh
 from exabgp.reactor.peer.handlers.route_refresh import RouteRefreshHandler
 from rfc.message_wire import header, read_wire
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 MESSAGE_HEADER_ERROR = 1  # RFC 4271 section 6.1
 BAD_MESSAGE_LENGTH = 2
@@ -40,8 +42,15 @@ def body(subtype: int) -> bytes:
     return pack('!HBB', int(AFI.ipv4), subtype, int(SAFI.unicast))
 
 
+def enhanced() -> Negotiated:
+    """A session whose peer announced enhanced route refresh, RFC 7313."""
+    session = negotiation.negotiated()
+    session.received_open = negotiation.open_message([EnhancedRouteRefresh()])
+    return session
+
+
 def received(subtype: int) -> RouteRefresh:
-    return RouteRefresh.unpack_message(body(subtype), Mock())
+    return RouteRefresh.unpack_message(body(subtype), enhanced())
 
 
 def handled(subtype: int, enhanced: bool) -> Mock:
@@ -60,7 +69,7 @@ def test_a_four_octet_route_refresh_is_accepted() -> None:
 @pytest.mark.parametrize('size', [0, 3, 5])
 def test_the_decoder_answers_a_body_which_is_not_four_octets(size: int) -> None:
     with pytest.raises(Notify) as raised:
-        RouteRefresh.unpack_message(bytes(size), Mock())
+        RouteRefresh.unpack_message(bytes(size), enhanced())
     assert (raised.value.code, raised.value.subcode) == (ROUTE_REFRESH_ERROR, INVALID_MESSAGE_LENGTH)
 
 
@@ -68,7 +77,7 @@ def test_the_decoder_answers_a_body_which_is_not_four_octets(size: int) -> None:
 def test_the_decoder_puts_the_complete_route_refresh_message_in_the_data(size: int) -> None:
     payload = bytes(range(size))
     with pytest.raises(Notify) as raised:
-        RouteRefresh.unpack_message(payload, Mock())
+        RouteRefresh.unpack_message(payload, enhanced())
     header = Message.MARKER + pack('!H', Message.HEADER_LEN + size) + RouteRefresh.TYPE
     assert raised.value.data == header + payload
 
