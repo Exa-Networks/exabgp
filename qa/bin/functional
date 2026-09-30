@@ -2605,9 +2605,15 @@ class DecodingTests(Tests):
                 raise ValueError(f'invalid message type: {message}')
             test.run(cmd, env=None)
 
-        # Early result check for fast tests
+        # Early result check for the tests already done. One still running is left to the
+        # event loop: success() waits at most 15 seconds for it, then fails it, and a slow
+        # start (23 one-file binaries unpacking at once on a macOS runner) takes longer.
+        running: set = set()
         for test in self.selected():
             self.display()
+            if not test.ready():
+                running.add(test)
+                continue
             test_passed = test.result(test.success())
             success = test_passed and success
             if self._verbose or test.nick in self._debug_tests:
@@ -2615,7 +2621,6 @@ class DecodingTests(Tests):
             time.sleep(0.05)
 
         # Run event loop for remaining tests
-        running = set(self.selected())
         success = self._run_event_loop(timeout, running) and success
 
         if not self._quiet:
