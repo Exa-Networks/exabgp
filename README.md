@@ -32,6 +32,7 @@ ExaBGP has a fully backward-compatible successor written in Go, called Ze (**[ze
 - [git (stable)](#git-stable)
 - [git (development)](#git-development)
 - [OS packages](#os-packages)
+- [Compiled build](#compiled-build-experimental)
 
 </td>
 <td>
@@ -209,8 +210,8 @@ python3 -m exabgp healthcheck --help
 It is also possible to download releases from GitHub:
 
 ```sh
-curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.9.tar.gz | tar zx
-cd exabgp-5.0.9
+curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.13.tar.gz | tar zx
+cd exabgp-5.0.13
 ./sbin/exabgp version
 ./sbin/exabgp --help
 
@@ -251,7 +252,7 @@ You can switch between branches or checkout specific releases:
 ```sh
 git checkout 5.0      # Stable branch
 git checkout main     # Development branch (future 6.0)
-git checkout 5.0.9    # Specific release tag
+git checkout 5.0.13   # Specific release tag
 ./sbin/exabgp version
 ```
 
@@ -323,6 +324,28 @@ autoload -Uz compinit && compinit
 mkdir -p ~/.config/fish/completions
 ./sbin/exabgp shell completion fish > ~/.config/fish/completions/exabgp.fish
 ```
+
+### Compiled build (experimental)
+
+On `main`, the message code (every BGP message, path attribute and address family) and the RIB can be compiled with [mypyc](https://mypyc.readthedocs.io/) into C extensions, from the same Python source. The compiled tree decodes, encodes and prints BGP messages between 1.4 and 2.1 times as fast:
+
+| Stage | Pure Python | Compiled | |
+|-------|-------------|----------|---|
+| decode an UPDATE of 400 prefixes | 180,400 prefixes/s | 353,200 prefixes/s | 1.96x |
+| JSON for an API process | 391,600 prefixes/s | 752,400 prefixes/s | 1.92x |
+| encode UPDATEs of every address family | 58,603 UPDATE/s | 125,363 UPDATE/s | 2.14x |
+| adj-rib-out, every address family | 276,831 UPDATE/s | 548,452 UPDATE/s | 1.98x |
+
+Measured with `./qa/bin/benchmark_codec` on an Apple M4 Max, Python 3.12. It needs a C compiler and a git checkout:
+
+```sh
+uv sync                      # brings mypy, and so mypyc
+./qa/bin/build_mypyc         # compiles into build/mypyc, the source tree is untouched
+export EXABGP_ROOT=$PWD
+env PYTHONPATH=build/mypyc .venv/bin/python -m exabgp server /etc/exabgp/exabgp.conf
+```
+
+Build again after every `git pull`, as `build/mypyc` is a copy of the source taken when it was built. `sbin/exabgp` always runs the pure Python tree. The unit test suite passes against the compiled tree, the functional suites have not been run against it yet, and there is no compiled wheel: see [doc/user/compiled-build.md](doc/user/compiled-build.md) for what is compiled, the full measurements, and how to check which tree is running.
 
 ## Upgrade
 
@@ -426,7 +449,7 @@ ExaBGP is nearly as old as Python 3: Python 3.0 was released in December 2008, t
 
 ### Version Information
 
-- **Stable**: 5.0 branch, released as 5.0.9, Python 3.8+
+- **Stable**: 5.0 branch, released as 5.0.13, Python 3.8+
 - **Development**: main branch, will become 6.0, nothing tagged yet, Python 3.12+
   - **Changes since 5.0**: Python 3.12+ required, the engine runs on asyncio, some BGP-LS JSON keys renamed
   - **New features**: interactive CLI with tab completion, shell completion, health monitoring API commands
