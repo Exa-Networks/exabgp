@@ -15,12 +15,43 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent.parent
 SUITES = ('decoding', 'encoding', 'api', 'cli')
+
+# the summary line of qa/bin/functional listing the failed tests: `failed    43 [0, 1, ...]`
+FAILED_LINE = re.compile(r'failed\s+\d+\s+\[([^\]]+)\]')
+ANSI = re.compile(r'\x1b\[[0-9;]*[A-Za-z]')
+
+
+def first_failed(output: str) -> str:
+    """The ID of the first test the summary lists as failed, or '' when none is listed."""
+    found = FAILED_LINE.search(ANSI.sub('', output))
+    return found.group(1).split(',')[0].strip() if found else ''
+
+
+def run_suite(suite: str, environment: dict[str, str]) -> int:
+    """Run a suite quietly; when it fails, run its first failed test alone to show why.
+
+    --quiet prints the summary and nothing about a failure, which leaves a CI log with no
+    cause. A test run alone prints the daemon's and the test peer's output in full.
+    """
+    functional = [sys.executable, str(ROOT / 'qa' / 'bin' / 'functional'), suite]
+    result = subprocess.run(functional + ['--quiet'], env=environment, capture_output=True, text=True)
+    sys.stdout.write(result.stdout)
+    sys.stderr.write(result.stderr)
+    sys.stdout.flush()
+    if not result.returncode:
+        return 0
+    failed = first_failed(result.stdout)
+    if failed:
+        print(f'test_wheel: the {suite} suite failed, running test {failed} alone to show why', flush=True)
+        subprocess.run(functional + [failed], env=environment)
+    return result.returncode
 
 
 def installed() -> Path:
@@ -52,12 +83,10 @@ def main() -> int:
     environment = dict(os.environ, EXABGP_TREE=str(tree), INTERPRETER=sys.executable)
     environment.pop('PYTHONPATH', None)
     for suite in SUITES:
-        result = subprocess.run(
-            [sys.executable, str(ROOT / 'qa' / 'bin' / 'functional'), suite, '--quiet'], env=environment
-        )
-        if result.returncode:
+        returncode = run_suite(suite, environment)
+        if returncode:
             print(f'test_wheel: the {suite} suite failed')
-            return result.returncode
+            return returncode
     return 0
 
 
