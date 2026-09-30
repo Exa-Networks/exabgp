@@ -4,31 +4,27 @@ Tests that pack_nlri() and unpack_nlri() properly handle the negotiated paramete
 and maintain roundtrip consistency for various NLRI types.
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
 import pytest
 from hypothesis import given, strategies as st, settings, HealthCheck
-from unittest.mock import Mock
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
 
 
 def create_negotiated(addpath_send=False, addpath_receive=False):
     """Create a Negotiated object with configurable addpath support."""
-    neighbor = Neighbor()
-    negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
-
-    # Mock addpath configuration
-    negotiated.addpath = Mock()
-    negotiated.addpath.send = Mock(return_value=addpath_send)
-    negotiated.addpath.receive = Mock(return_value=addpath_receive)
-
-    return negotiated
+    # ADD-PATH is asked per family, so both IPv4 and IPv6 unicast carry it
+    families = [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)]
+    return negotiation.negotiated(
+        families,
+        addpath_send=families if addpath_send else (),
+        addpath_receive=families if addpath_receive else (),
+        direction=Direction.OUT,
+    )
 
 
 @pytest.mark.fuzz

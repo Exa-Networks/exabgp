@@ -59,7 +59,7 @@ class UnsignedAttribute(Attribute):
         return self.ID == other.ID and self.FLAG == other.FLAG and self.value == other.value
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def __hash__(self) -> int:
         return hash(self.value)

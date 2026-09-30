@@ -17,12 +17,17 @@ import pytest
 from struct import pack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import (
-    BaseLS,
-    FlagLS,
     GenericLSID,
     LinkState,
 )
+from exabgp.bgp.message.update.attribute.bgpls.node.nodeflags import NodeFlags
+from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import PrefixMetric
 from tests import negotiation
+
+
+# The BaseLS and FlagLS behaviour is checked through registered subclasses, PrefixMetric
+# (four octets, an int) and NodeFlags (one octet of flags): the compiled build refuses a
+# class written in a test inheriting from a compiled one.
 
 
 class TestBaseLSPackedBytesFirst:
@@ -31,100 +36,33 @@ class TestBaseLSPackedBytesFirst:
     def test_basels_init_requires_packed_bytes(self) -> None:
         """BaseLS.__init__ takes packed bytes parameter"""
         packed = b'\x00\x00\x00\x14'  # 4 bytes
-
-        # Create a concrete subclass for testing
-        class TestLS(BaseLS):
-            TLV = 9998
-            JSON = 'test-ls'
-            REPR = 'TestLS'
-            LEN = 4
-
-            @property
-            def content(self) -> int:
-                from struct import unpack
-
-                return unpack('!I', self._packed)[0]
-
-            @classmethod
-            def unpack_bgpls(cls, data: bytes) -> 'TestLS':
-                cls.check(data)
-                return cls(data)
-
-        instance = TestLS(packed)
+        instance = PrefixMetric(packed)
         assert instance._packed == packed
         assert instance.content == 20  # 0x14 = 20
 
     def test_basels_stores_packed_attribute(self) -> None:
         """BaseLS stores _packed bytes attribute"""
         packed = b'\xde\xad\xbe\xef'
-
-        class TestLS(BaseLS):
-            TLV = 9997
-
-            @property
-            def content(self) -> bytes:
-                return self._packed
-
-        instance = TestLS(packed)
+        instance = PrefixMetric(packed)
         assert hasattr(instance, '_packed')
         assert instance._packed == packed
 
     def test_basels_content_property_unpacks_on_access(self) -> None:
         """BaseLS content property unpacks bytes on each access"""
-        packed = pack('!I', 12345)
-
-        class TestLS(BaseLS):
-            TLV = 9996
-            JSON = 'test-unpack'
-
-            @property
-            def content(self) -> int:
-                from struct import unpack
-
-                return unpack('!I', self._packed)[0]
-
-        instance = TestLS(packed)
+        instance = PrefixMetric(pack('!I', 12345))
         # Access content multiple times - should unpack each time
         assert instance.content == 12345
         assert instance.content == 12345
 
     def test_basels_json_uses_content_property(self) -> None:
         """BaseLS.json() uses content property"""
-        packed = pack('!I', 100)
-
-        class TestLS(BaseLS):
-            TLV = 9995
-            JSON = 'test-json'
-            REPR = 'TestJSON'
-
-            @property
-            def content(self) -> int:
-                from struct import unpack
-
-                return unpack('!I', self._packed)[0]
-
-        instance = TestLS(packed)
-        json_output = instance.json()
-        assert '"test-json": 100' in json_output
+        instance = PrefixMetric(pack('!I', 100))
+        assert '"prefix-metric": 100' in instance.json()
 
     def test_basels_repr_uses_content_property(self) -> None:
         """BaseLS.__repr__ uses content property"""
-        packed = pack('!I', 42)
-
-        class TestLS(BaseLS):
-            TLV = 9994
-            JSON = 'test-repr'
-            REPR = 'TestRepr'
-
-            @property
-            def content(self) -> int:
-                from struct import unpack
-
-                return unpack('!I', self._packed)[0]
-
-        instance = TestLS(packed)
-        repr_str = repr(instance)
-        assert 'TestRepr' in repr_str
+        repr_str = repr(PrefixMetric(pack('!I', 42)))
+        assert 'prefix_metric' in repr_str
         assert '42' in repr_str
 
 
@@ -134,47 +72,20 @@ class TestFlagLSPackedBytesFirst:
     def test_flagls_init_takes_packed_bytes(self) -> None:
         """FlagLS.__init__ takes packed bytes parameter"""
         packed = b'\x80'  # First flag bit set
-
-        class TestFlagLS(FlagLS):
-            TLV = 9993
-            FLAGS = ['A', 'B', 'C', 'D', 'RSV', 'RSV', 'RSV', 'RSV']
-            LEN = 1
-            JSON = 'test-flags'
-
-        instance = TestFlagLS(packed)
+        instance = NodeFlags(packed)
         assert instance._packed == packed
 
     def test_flagls_flags_property_unpacks_bytes(self) -> None:
         """FlagLS.flags property unpacks bytes on access"""
-        packed = b'\x80'  # 10000000 - first flag set
-
-        class TestFlagLS(FlagLS):
-            TLV = 9992
-            FLAGS = ['A', 'B', 'C', 'D', 'RSV', 'RSV', 'RSV', 'RSV']
-            LEN = 1
-            JSON = 'test-flags'
-
-        instance = TestFlagLS(packed)
-        flags = instance.flags
-        assert flags['A'] == 1
-        assert flags['B'] == 0
+        flags = NodeFlags(b'\x80').flags  # 10000000 - first flag set
+        assert flags['O'] == 1
+        assert flags['T'] == 0
 
     def test_flagls_json_uses_flags_property(self) -> None:
         """FlagLS.json() uses flags property"""
-        packed = b'\xc0'  # 11000000 - first two flags set
-
-        class TestFlagLS(FlagLS):
-            TLV = 9991
-            FLAGS = ['X', 'Y', 'Z', 'W', 'RSV', 'RSV', 'RSV', 'RSV']
-            LEN = 1
-            JSON = 'test-flag-json'
-            REPR = 'TestFlagJSON'
-
-        instance = TestFlagLS(packed)
-        json_output = instance.json()
-        assert '"test-flag-json"' in json_output
-        # Flags should be in JSON
-        assert '"X": 1' in json_output or '"X":1' in json_output
+        json_output = NodeFlags(b'\xc0').json()  # 11000000 - first two flags set
+        assert '"node-flags"' in json_output
+        assert '"O": 1' in json_output and '"T": 1' in json_output and '"E": 0' in json_output
 
 
 class TestGenericLSIDPackedBytesFirst:

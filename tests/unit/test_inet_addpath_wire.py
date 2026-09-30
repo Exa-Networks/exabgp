@@ -12,9 +12,6 @@ what a decoder accepts, it must be able to re-encode.
 
 from __future__ import annotations
 
-from exabgp.bgp.neighbor import Neighbor
-
-from unittest.mock import Mock
 
 import pytest
 
@@ -23,6 +20,7 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
 
 PATH_INFO_SIZE = 4
 PREFIX = bytes([24, 10, 0, 0])  # 10.0.0.0/24
@@ -39,9 +37,8 @@ def negotiated(send_addpath: bool) -> Negotiated:
     thousand. If the negotiation stops working, this fails first and nothing after it is
     believed.
     """
-    neighbor = Neighbor()
-    result = Negotiated.make_negotiated(neighbor, Direction.OUT)
-    result.addpath.send = Mock(return_value=send_addpath)  # type: ignore[method-assign]
+    family = (AFI.ipv4, SAFI.unicast)
+    result = negotiation.negotiated([family], addpath_send=[family] if send_addpath else [], direction=Direction.OUT)
     assert bool(result.addpath.send(AFI.ipv4, SAFI.unicast)) is send_addpath
     return result
 

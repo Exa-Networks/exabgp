@@ -10,7 +10,7 @@ from __future__ import annotations
 from exabgp.util.intvalue import IntValue
 from exabgp.util.types import Buffer
 from struct import pack
-from typing import TYPE_CHECKING, Callable, ClassVar, Type
+from typing import TYPE_CHECKING, Callable, ClassVar, Self, Type
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -254,6 +254,16 @@ class Attribute:
             raise NotImplementedError(f'{type(self).__name__} must override _comparable() or keep _packed')
         return (self.ID, self.FLAG, bytes(packed))
 
+    # An attribute is not changed once built: the builders which mutate (Communities.add,
+    # the AS_PATH segments) run on an attribute still being made. So a copy is the
+    # attribute itself, which is also the only copy the compiled build can make: copy's
+    # generic path calls the class with no argument, and every __init__ wants its bytes.
+    def __copy__(self) -> Self:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, object]) -> Self:
+        return self
+
     def __eq__(self, other: object) -> bool:
         """Same attribute, same value.
 
@@ -269,10 +279,7 @@ class Attribute:
         return self._comparable() == other._comparable()
 
     def __ne__(self, other: object) -> bool:
-        equal = self.__eq__(other)
-        if equal is NotImplemented:
-            return NotImplemented
-        return not equal
+        return not self == other
 
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, Attribute):

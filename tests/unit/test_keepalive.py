@@ -16,6 +16,7 @@ from exabgp.bgp.message.keepalive import KeepAlive
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from tests import negotiation
 
 
 # ==============================================================================
@@ -79,7 +80,7 @@ def test_keepalive_message_encoding_with_negotiated() -> None:
     should accept them without error.
     """
     keepalive = KeepAlive()
-    negotiated = {'test': 'value'}
+    negotiated = negotiation.negotiated()
     msg = keepalive.pack_message(negotiated)
 
     # Should produce same result as without negotiated params

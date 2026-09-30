@@ -82,7 +82,7 @@ class TunnelEncap(Attribute):
         return str(self) == str(other)
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> TunnelEncap:

@@ -71,7 +71,7 @@ class RouteRefresh(Capability):
         return self.code() == other.code()
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteRefresh for ordering does not make sense')

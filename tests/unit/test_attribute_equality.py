@@ -159,14 +159,10 @@ def session_with_aigp() -> object:
     both payloads come back as the same discard decision, which compares equal for a
     reason that is correct and tells you nothing about AIGP.
     """
-    from unittest.mock import Mock
+    from tests import negotiation
 
-    session = Mock()
-    session.neighbor = {'aigp': True}
-    # a Mock auto-creates a truthy attribute for anything unset, so asn4 read as True and
-    # ASPath expected four byte ASNs: the mock was answering a question nobody had set
-    session.asn4 = False
-    return session
+    # a two byte ASN session, which is what the ASPath probe widths are written for
+    return negotiation.negotiated(aigp=True, asn4=False)
 
 
 def two_decodings(klass: type[Attribute], session: object) -> tuple[Attribute, Attribute] | None:

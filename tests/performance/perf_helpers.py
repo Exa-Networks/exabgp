@@ -12,6 +12,10 @@ from unittest.mock import Mock
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.ip import IPv4
+from tests import negotiation
+from exabgp.protocol.family import AFI
+from exabgp.protocol.family import SAFI
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 def create_mock_logger() -> Any:
@@ -27,17 +31,17 @@ def create_mock_logger() -> Any:
     return logger
 
 
-def create_mock_negotiated(add_path: Any = False, extended_message: Any = False) -> Any:
-    """Create a mock negotiated capabilities object."""
-    negotiated = Mock()
-    negotiated.direction = Direction.IN
-    negotiated.families = {(1, 1)}  # IPv4 Unicast
-    negotiated.addpath = Mock()
-    negotiated.addpath.receive = Mock(return_value=add_path)
-    negotiated.addpath.send = Mock(return_value=add_path)
-    negotiated.required = Mock(return_value=add_path)
-    negotiated.extended_message = extended_message
-    return negotiated
+def create_mock_negotiated(add_path: bool = False, extended_message: bool = False) -> Negotiated:
+    """A real negotiated session for IPv4 unicast, as the compiled build refuses a Mock."""
+    family = (AFI.ipv4, SAFI.unicast)
+    addpath = [family] if add_path else []
+    return negotiation.negotiated(
+        [family],
+        addpath_send=addpath,
+        addpath_receive=addpath,
+        msg_size=65535 if extended_message else 4096,
+        direction=Direction.IN,
+    )
 
 
 def create_mock_neighbor(asn: Any = 65000, router_id: Any = '1.2.3.4') -> Any:

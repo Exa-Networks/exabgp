@@ -141,7 +141,7 @@ class NextHop(Attribute):
         return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def __len__(self) -> int:
         return len(self._packed)
@@ -153,14 +153,6 @@ class NextHop(Attribute):
 
     def __hash__(self) -> int:
         return hash(('NextHop', self._packed))
-
-    # A next hop is never changed once built (NextHopSelf.resolve() returns a new one), so
-    # a copy is the next hop itself, and UNSET keeps its identity.
-    def __copy__(self) -> 'NextHop':
-        return self
-
-    def __deepcopy__(self, memo: dict[int, object]) -> 'NextHop':
-        return self
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self._attribute(self._packed)

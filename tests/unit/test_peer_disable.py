@@ -24,6 +24,7 @@ from exabgp.reactor.api.dispatch.v4 import dispatch_v4
 from exabgp.reactor.api.dispatch.v6 import dispatch_v6
 from exabgp.reactor.loop import Reactor
 from exabgp.reactor.peer import Peer
+from tests import negotiation
 
 CEASE = 6
 ADMINISTRATIVE_SHUTDOWN = 2
@@ -31,8 +32,7 @@ CONNECTION_REJECTED = 5
 
 
 def peer(shutdown: bool = False, reactor: Mock | None = None) -> Peer:
-    neighbor = MagicMock()
-    neighbor.uid = '1'
+    neighbor = negotiation.neighbor()
     neighbor.api = {'neighbor-changes': False, 'fsm': False}
     neighbor.rib = Mock()
     neighbor.session.passive = False

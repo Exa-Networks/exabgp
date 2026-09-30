@@ -344,16 +344,6 @@ class IPVPNBase(Label):
         # _packed includes everything: [addpath?][mask][labels][rd][prefix]
         return len(self._packed)
 
-    def __eq__(self, other: object) -> bool:
-        # Compare complete wire format (includes RD)
-        return Label.__eq__(self, other)
-
-    def __ne__(self, other: object) -> bool:
-        # `not NotImplemented` is a DeprecationWarning today and a TypeError from 3.14
-        # the operator, not a call to __eq__: it answers NotImplemented the way Python does,
-        # where a compiled bool-typed local would refuse it
-        return not self == other
-
     def __hash__(self) -> int:
         # _packed includes everything (labels + RD); use _has_addpath as discriminator
         if self._has_addpath:

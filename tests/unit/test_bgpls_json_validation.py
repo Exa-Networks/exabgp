@@ -418,7 +418,7 @@ class TestBaseClassesJson:
     def test_generic_lsid_json(self) -> None:
         """GenericLSID produces valid JSON for unknown TLVs"""
         attr = GenericLSID(b'\xde\xad\xbe\xef')
-        attr.TLV = 9999  # Unknown TLV
+        attr.tlv_code = 9999  # the unknown TLV it was read from
         result = validate_json(attr.json(), 'GenericLSID')
         assert 'generic-lsid-9999' in result
 

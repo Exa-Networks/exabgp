@@ -15,7 +15,9 @@ from __future__ import annotations
 
 from exabgp.bgp.neighbor import Neighbor
 
-import inspect
+import ast
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -35,6 +37,22 @@ from exabgp.bgp.message.message import MessageCode
 
 # route 10.0.0.0/24 next-hop 1.2.3.4, from `exabgp encode`
 UPDATE_BODY = bytes.fromhex('00000015400101004002004003040102030440050400000064180a0000')
+
+
+def declared(klass: type) -> dict[str, ast.FunctionDef]:
+    """The methods the class body writes, read from its source.
+
+    Not vars(klass): the compiled build (plan/wip-mypyc.md) fills the slots of every class,
+    so vars() lists an __eq__ the source never wrote, and every compiled __init__ has the
+    signature (*args, **kwargs).
+    """
+    path = Path(sys.modules[klass.__module__].__file__ or '')
+    source = path.with_name(path.name.split('.')[0] + '.py')
+    for node in ast.walk(ast.parse(source.read_text())):
+        if isinstance(node, ast.ClassDef) and node.name == klass.__name__:
+            return {statement.name: statement for statement in node.body if isinstance(statement, ast.FunctionDef)}
+    raise AssertionError(f'{klass.__qualname__} is not in {source}')
+
 
 # the message codes RFC 4271 4.1 and its successors put on the wire
 WIRE_CODES = frozenset(range(1, 7))
@@ -124,21 +142,23 @@ def test_a_derived_field_can_not_be_declared(declared: str) -> None:
 
 @pytest.mark.parametrize('klass', classes(), ids=lambda klass: klass.__qualname__)
 def test_framing_belongs_to_the_base(klass: type[Message]) -> None:
-    assert 'pack_message' not in vars(klass)
-    assert '_message' not in vars(klass)
+    assert 'pack_message' not in declared(klass)
+    assert '_message' not in declared(klass)
 
 
 @pytest.mark.parametrize('klass', classes(), ids=lambda klass: klass.__qualname__)
 def test_equality_belongs_to_the_base(klass: type[Message]) -> None:
-    assert '__eq__' not in vars(klass)
-    assert '__ne__' not in vars(klass)
-    assert '__hash__' not in vars(klass)
+    assert '__eq__' not in declared(klass)
+    assert '__ne__' not in declared(klass)
+    assert '__hash__' not in declared(klass)
 
 
 @pytest.mark.parametrize('klass', classes(), ids=lambda klass: klass.__qualname__)
 def test_the_constructor_takes_the_body(klass: type[Message]) -> None:
-    parameters = list(inspect.signature(klass.__init__).parameters)
-    assert parameters == ['self', 'packed']
+    # the __init__ klass runs: its own, or the nearest base's which writes one
+    init = next(declared(base)['__init__'] for base in klass.__mro__ if '__init__' in declared(base))
+    assert not (init.args.vararg or init.args.kwarg or init.args.kwonlyargs)
+    assert [argument.arg for argument in init.args.args] == ['self', 'packed']
 
 
 @pytest.mark.parametrize('sample', SAMPLES, ids=IDS)

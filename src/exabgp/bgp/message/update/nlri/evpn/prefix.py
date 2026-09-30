@@ -176,7 +176,7 @@ class Prefix(EVPN):
         # esi, label and gwip must not be compared
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def __str__(self) -> str:
         return '{}:{}:{}:{}:{}{}:{}:{}'.format(

@@ -319,13 +319,23 @@ class TestNLRIPackedBaseClass:
 
     def test_nlri_base_has_packed_attribute(self) -> None:
         """Test that NLRI base class defines _packed attribute."""
+        import ast
+        import sys
+        from pathlib import Path
+
         from exabgp.bgp.message.update.nlri.nlri import NLRI
 
-        # NLRI base class should have _packed as a type annotation
-        assert '_packed' in NLRI.__annotations__
-        # Due to PEP 563 (from __future__ import annotations), the type is stored as string
+        # read from the source: a compiled class (plan/wip-mypyc.md) keeps no __annotations__
+        path = Path(sys.modules[NLRI.__module__].__file__ or '')
+        tree = ast.parse(path.with_name(path.name.split('.')[0] + '.py').read_text())
+        (body,) = [node.body for node in ast.walk(tree) if isinstance(node, ast.ClassDef) and node.name == 'NLRI']
+        annotations = {
+            node.target.id: ast.unparse(node.annotation)
+            for node in body
+            if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name)
+        }
         # Buffer is a type alias for bytes | memoryview
-        assert NLRI.__annotations__['_packed'] in (bytes, 'bytes', 'Buffer')
+        assert annotations.get('_packed') in ('bytes', 'Buffer')
 
     def test_inet_inherits_packed_from_nlri(self) -> None:
         """Test that INET uses _packed correctly."""

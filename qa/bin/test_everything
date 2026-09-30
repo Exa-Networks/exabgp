@@ -71,6 +71,7 @@ DEFAULT_TIMES: dict[str, int] = {
     'mypy': 60,
     'unit': 15,
     'optimised': 15,
+    'compiled': 330,
     'config': 2,
     'no-neighbor': 5,
     'encode-decode': 3,
@@ -164,6 +165,12 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     # every normal run and vanishes in production: the BGP-LS decoder boundary was one
     # statement of that shape, and this is the only thing which catches it.
     'optimised': 'env exabgp_log_enable=false PYTHONOPTIMIZE=1 uv run pytest ./tests/ -q',
+    # the same suite again against the mypyc build (plan/wip-mypyc.md): the compiled code
+    # checks every declared type and refuses what the interpreter lets through
+    'compiled': [
+        'uv run python qa/bin/build_mypyc',
+        'env exabgp_log_enable=false PYTHONPATH=build/mypyc uv run pytest ./tests/ -q -p no:cacheprovider',
+    ],
     'config': './sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf',
     'no-neighbor': './qa/scripts/test_no_neighbor.py',
     'encode-decode': './qa/scripts/test_encode_decode.py',
@@ -192,6 +199,7 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'mypy': 'Mypy strict type check',
     'unit': 'Unit tests (pytest)',
     'optimised': 'Unit tests with assertions removed (-O)',
+    'compiled': 'Unit tests against the mypyc build',
     'config': 'Configuration validation',
     'no-neighbor': 'No-neighbor API test',
     'encode-decode': 'Encode/decode CLI test',
@@ -221,6 +229,7 @@ TEST_ORDER = [
     'mypy',
     'unit',
     'optimised',
+    'compiled',
     'config',
     'no-neighbor',
     'encode-decode',
@@ -507,7 +516,6 @@ if _test_root.is_dir():
 # matters more than the name; an entry nobody can justify is a gate somebody demoted.
 NOT_A_GATE = {
     'benchmark_codec': 'measures, and a timing number is not a pass or a fail',
-    'build_mypyc': 'compiles the mypyc tree, becomes a gate in plan/wip-mypyc.md phase 6',
     'check_coverage': 'reports coverage, does not fail on it',
     'check_perf': 'measures, and a timing number is not a pass or a fail',
     'cover': 'wrapper around check_coverage',

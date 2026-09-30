@@ -161,7 +161,7 @@ class PMSI(Attribute):
         return self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     @staticmethod
     def name(tunnel_type: int) -> str:

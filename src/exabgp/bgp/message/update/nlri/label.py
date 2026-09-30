@@ -343,15 +343,6 @@ class LabelBase(INET):
         # _packed includes everything: [addpath?][mask][labels][prefix]
         return len(self._packed)
 
-    def __eq__(self, other: object) -> bool:
-        # Compare complete wire format (includes labels)
-        return INET.__eq__(self, other)
-
-    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
-    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
-    def __ne__(self, other: object) -> bool:
-        return not self == other
-
     def __hash__(self) -> int:
         # _packed includes everything; use _has_addpath as discriminator
         if self._has_addpath:

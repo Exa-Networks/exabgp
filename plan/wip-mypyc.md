@@ -476,3 +476,14 @@ the plan asked for a commit per phase.
 - tests pass `Message.CODE.X` or `Message.CODE.of(n)`
 - the same for capabilities: `Capability.unpack`, `Capabilities.announced`/`tlvs` and the `Capabilities` keys take a `CapabilityCode`; the OPEN decoder builds it from the octet once. `CapabilityCode.__init__` and `MessageCode.__init__` take an `int` only
 - compiled run after both: 260 failed (was 286), no MessageCode or CapabilityCode type error left
+
+### 2026-09-30: phase 6 done, the suite passes compiled
+
+- copies (decision: a copy may share immutable state): `Attribute.__copy__`/`__deepcopy__` return the attribute, as NextHop already did (it now inherits them). Attributes are only mutated while being built (`Communities.add`, the AS_PATH segments). configuration/check.py builds a second session with `_negotiated()` instead of copying a Negotiated. The neighbour deepcopy (check.py, install.py) then works compiled
+- `__ne__` everywhere is `return not self == other`: a compiled bool-typed result of `self.__eq__()` refuses NotImplemented. Label and IPVPN lost their `__eq__`/`__ne__`, which only delegated to the base
+- tests, all to real objects: the neighbour in test_protocol_handler, test_peer_disable, test_rfc4684; OPEN exchanges in the validate_open tests; the perf and fuzz session helpers; registered classes (CapabilityCode, PrefixMetric, NodeFlags, Watchdog, Withdrawn) where a test subclassed a compiled one; the Spy replaced by asserting the output an AS4_PATH gives
+- introspection read from the source where the compiled class differs: test_message_contract (`declared()`), the NLRI `__slots__` and `_packed` annotation. `__mro__` is used in tests only, never in src (Thomas)
+- `./qa/bin/test_everything` gained the `compiled` stage (build_mypyc, then pytest with PYTHONPATH=build/mypyc), about 5m30s; build_mypyc left NOT_A_GATE
+- compiled run: 14700 passed, 0 failed (was 503)
+
+Resume at phase 7: widen the compile list (rib/, then reactor framing, then the remaining NLRI families).

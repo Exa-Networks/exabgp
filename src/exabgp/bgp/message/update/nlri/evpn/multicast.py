@@ -90,7 +90,7 @@ class Multicast(EVPN):
         return IP.create_ip(self._packed[15 : 15 + iplen // 8])
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def __str__(self) -> str:
         return '{}:{}:{}:{}'.format(

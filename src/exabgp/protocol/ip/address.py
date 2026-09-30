@@ -192,7 +192,7 @@ class IP(IPBase):
         return self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def __lt__(self, other: IP) -> bool:
         return bytes(self._packed) < bytes(other._packed)

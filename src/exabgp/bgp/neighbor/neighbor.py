@@ -387,7 +387,7 @@ class Neighbor:
         )
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def ip_self(self, afi: AFI) -> IP:
         chosen = self.session.ip_self(afi)

@@ -21,7 +21,6 @@ from __future__ import annotations
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 import json
-import types
 
 import pytest
 
@@ -33,6 +32,7 @@ from exabgp.bgp.message.update.attribute.community.extended import (
 )
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.med import MED
+from tests import negotiation
 
 # Every attribute whose representation is 'integer', so every one which reaches the
 # branch under test. A new one added there is covered by the sweep at the end.
@@ -69,7 +69,7 @@ def test_aigp_renders_as_a_quoted_string() -> None:
     """AIGP prints as 0x000000000000000a, which is not a JSON number."""
     from exabgp.bgp.message.update.attribute.aigp import AIGP
 
-    attribute = AIGP.unpack_attribute(bytes.fromhex('01000b' + '000000000000000a'), types.SimpleNamespace(aigp=True))
+    attribute = AIGP.unpack_attribute(bytes.fromhex('01000b' + '000000000000000a'), negotiation.negotiated(aigp=True))
     parsed = rendered(attribute)
 
     assert parsed['aigp'] == '0x000000000000000a'

@@ -31,13 +31,13 @@ from __future__ import annotations
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
-from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+from tests import negotiation
+from exabgp.util.enumeration import TriState
 
 AIGP = int(Attribute.CODE.AIGP)
 DISCARD = int(Attribute.CODE.INTERNAL_DISCARD)
@@ -62,11 +62,10 @@ ORIGIN_IGP = bytes([WELL_KNOWN_TRANSITIVE, ORIGIN, 1, 0])
 
 def session(aigp_enabled: bool) -> Negotiated:
     """A real Negotiated, as one session's worth of negotiated state."""
-    neighbor = Mock()
-    neighbor.capability.aigp.is_enabled = Mock(return_value=aigp_enabled)
+    neighbor = negotiation.neighbor()
+    neighbor.capability.aigp = TriState.TRUE if aigp_enabled else TriState.FALSE
     negotiated = Negotiated(neighbor, Direction.IN)
     negotiated.asn4 = False
-    negotiated.direction = Action.ANNOUNCE
     return negotiated
 
 
@@ -185,7 +184,8 @@ def test_the_sentinel_mirrors_every_session_field() -> None:
     """
     real = session(aigp_enabled=True)
 
-    missing = set(vars(real)) - set(vars(Negotiated.UNSET)) - {'neighbor', 'direction'}
+    # __getstate__, not vars(): a compiled Negotiated (plan/wip-mypyc.md) has no __dict__
+    missing = set(real.__getstate__()) - set(Negotiated.UNSET.__getstate__()) - {'neighbor', 'direction'}
 
     assert not missing, f'_create_unset() does not mirror __init__: {sorted(missing)}'
 

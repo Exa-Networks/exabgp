@@ -159,7 +159,7 @@ class Role(Capability):
         return self.value == other.value
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing Role for ordering does not make sense')

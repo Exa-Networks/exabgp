@@ -128,7 +128,7 @@ class AIGPBase(Attribute):
         return self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         # AIGP is sent if explicitly enabled OR if this is an IBGP session

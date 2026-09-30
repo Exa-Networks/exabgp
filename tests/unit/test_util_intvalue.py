@@ -14,16 +14,17 @@ from typing import Any
 import pytest
 
 from exabgp.util.intvalue import IntValue, json_number
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 
-class Named(IntValue):
-    def __str__(self) -> str:
-        return 'named'
+# a subclass which names itself, the way the codes do. A real one, as the compiled build
+# refuses a class written here inheriting from the compiled IntValue
+Named = CapabilityCode
 
 
 class OldNamed(int):
     def __str__(self) -> str:
-        return 'named'
+        return CapabilityCode(int(self)).name()
 
 
 VALUES = [0, 1, 2, 255, 0x4004, 65535, 4294967295]
@@ -76,7 +77,7 @@ def test_there_is_no_index_so_every_implicit_use_is_found() -> None:
 @pytest.mark.parametrize('number', VALUES)
 def test_formatted_like_an_int_subclass(number: int) -> None:
     value, old = Named(number), OldNamed(number)
-    assert f'{value}' == f'{old}' == 'named'
+    assert f'{value}' == f'{old}' == value.name()
     assert '{}'.format(value) == '{}'.format(old)
     assert '%s' % value == '%s' % old
     assert f'{value:04x}' == f'{old:04x}'

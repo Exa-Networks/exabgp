@@ -99,7 +99,7 @@ class ClusterList(Attribute):
         return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other._packed
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def __len__(self) -> int:
         return len(self._packed)

@@ -100,7 +100,7 @@ class SharedJoin(MVPN):
         )
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def __str__(self) -> str:
         return f'{self._prefix()}:{self.rd._str()}:{self.source_as!s}:{self.source!s}:{self.group!s}'

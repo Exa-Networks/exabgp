@@ -24,22 +24,9 @@ pytestmark = pytest.mark.fuzz
 
 def negotiated_for_fuzzing() -> Any:
     """The smallest session state Update.unpack_message reads, with no family negotiated."""
-    from unittest.mock import Mock
+    from tests import negotiation
 
-    from exabgp.bgp.message import Action
-
-    negotiated = Mock()
-    negotiated.asn4 = False
-    negotiated.addpath = Mock()
-    negotiated.addpath.receive = Mock(return_value=False)
-    negotiated.addpath.send = Mock(return_value=False)
-    negotiated.required = Mock(return_value=False)
-    negotiated.families = []
-    negotiated.nexthop = []
-    negotiated.msg_size = 4096
-    negotiated.direction = Action.ANNOUNCE
-    negotiated.neighbor = {'aigp': False}
-    return negotiated
+    return negotiation.negotiated(())
 
 
 # =============================================================================

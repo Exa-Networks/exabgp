@@ -239,7 +239,7 @@ class LINK(BGPLS):
         return self._packed == other._packed and self.route_d == other.route_d
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def __str__(self) -> str:
         return self.json()

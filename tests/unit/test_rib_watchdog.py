@@ -41,23 +41,12 @@ from exabgp.bgp.message.update.attribute.origin import Origin  # noqa: E402
 from exabgp.bgp.message.update.attribute.attribute import Attribute  # noqa: E402
 from exabgp.protocol.family import AFI, SAFI  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
+from exabgp.bgp.message.update.attribute.internal import Watchdog, Withdrawn  # noqa: E402
 
 
 # ==============================================================================
 # Helper Classes and Functions
 # ==============================================================================
-
-
-class InternalWatchdog(str):
-    """Internal watchdog attribute marker."""
-
-    ID = Attribute.CODE.INTERNAL_WATCHDOG
-
-
-class InternalWithdraw:
-    """Internal withdraw attribute marker."""
-
-    ID = Attribute.CODE.INTERNAL_WITHDRAW
 
 
 def create_route(prefix: str, afi: AFI = AFI.ipv4) -> Route:
@@ -92,10 +81,10 @@ def create_watchdog_route(prefix: str, watchdog_name: str, withdraw: bool = Fals
     attrs[Origin.ID] = Origin.from_int(Origin.IGP)
 
     # Add watchdog internal attribute
-    attrs[Attribute.CODE.INTERNAL_WATCHDOG] = InternalWatchdog(watchdog_name)
+    attrs[Attribute.CODE.INTERNAL_WATCHDOG] = Watchdog(watchdog_name)
 
     if withdraw:
-        attrs[Attribute.CODE.INTERNAL_WITHDRAW] = InternalWithdraw()
+        attrs[Attribute.CODE.INTERNAL_WITHDRAW] = Withdrawn()
 
     return Route(nlri, attrs, nexthop=IP.NoNextHop)
 

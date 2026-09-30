@@ -588,7 +588,7 @@ def test_route_refresh_messages_with_different_params() -> None:
     rr = RouteRefresh.make_route_refresh(AFI.ipv6, SAFI.multicast, RouteRefresh.BEGIN)
 
     # With negotiated params
-    messages1 = list(rr.messages({'test': 'value'}, True))
+    messages1 = list(rr.messages(negotiation.negotiated(), True))
     assert len(messages1) == 1
 
     # Without negotiated params

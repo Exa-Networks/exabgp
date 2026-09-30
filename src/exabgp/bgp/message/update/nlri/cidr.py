@@ -185,11 +185,10 @@ class CIDR:
         # the negation of __eq__ rather than the same condition written out a second time:
         # two independently maintained copies of one invariant only have to agree with
         # each other to look correct, which is a mutation testing blind spot by
-        # construction, and this pair had exactly that survivor
-        equal = self.__eq__(other)
-        if equal is NotImplemented:
-            return NotImplemented
-        return not equal
+        # construction, and this pair had exactly that survivor. The operator and not a
+        # call to __eq__: it answers NotImplemented the way Python does, where a compiled
+        # bool-typed local would refuse it
+        return not self == other
 
     def _order(self) -> tuple[bytes, int]:
         """The key the ordering operators compare, address first and mask second.

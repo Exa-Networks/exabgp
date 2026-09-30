@@ -26,6 +26,7 @@ from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv4, IPv6
 from exabgp.reactor.api.response.json import JSON
+from exabgp.bgp.message.update.attribute.aspath import AS4Path
 
 LEAK = (
     '"meta": {"route-leak": {"reason": "invalid-otc", "peer-role": "customer", "peer-as": "AS1", '
@@ -131,22 +132,20 @@ def test_an_empty_update() -> None:
 
 
 def test_the_attribute_format_and_next_hop_flag_are_passed_on() -> None:
-    calls: list[dict[str, bool]] = []
-
-    class Spy(AttributeCollection):
-        def json(self, include_nexthop: bool = False, generic: bool = False) -> str:
-            calls.append({'include_nexthop': include_nexthop, 'generic': generic})
-            return '"spied": true'
-
+    # an AS4_PATH prints as its path, or as its hex in the generic format, and the next-hop
+    # is only listed with the attributes of a withdraw: each flag changes what is printed
+    attributes = AttributeCollection()
+    attributes.add(Origin.from_int(Origin.IGP))
+    attributes.add(NextHop.from_string('1.1.1.1'))
+    attributes.add(AS4Path.from_packet(bytes([2, 1, 0, 0, 0xFD, 0xE8])))
     encoder = JSON('6.0.0')
     encoder.generic_attribute_format = True
-    spied = Spy()
-    spied.add(Origin.from_int(Origin.IGP))
-    announce = UpdateCollection([RoutedNLRI(_v4('10.0.0.0'), IPv4.from_string('1.1.1.1'))], [], spied)
-    withdraw = UpdateCollection([], [_v4('10.0.0.0')], spied)
-    assert _message(announce, encoder=encoder).startswith('{ "update": { "attribute": { "spied": true }, "announce"')
-    assert _message(withdraw, encoder=encoder).startswith('{ "update": { "attribute": { "spied": true }, "withdraw"')
-    assert calls == [{'include_nexthop': False, 'generic': True}, {'include_nexthop': True, 'generic': True}]
+    announce = UpdateCollection([RoutedNLRI(_v4('10.0.0.0'), IPv4.from_string('1.1.1.1'))], [], attributes)
+    withdraw = UpdateCollection([], [_v4('10.0.0.0')], attributes)
+    announced = '"origin": "igp", "attribute-0x11-0xC0": "0x02010000fde8"'
+    withdrawn = '"origin": "igp", "next-hop": "1.1.1.1", "attribute-0x11-0xC0": "0x02010000fde8"'
+    assert _message(announce, encoder=encoder).startswith(f'{{ "update": {{ "attribute": {{ {announced} }}, "announce"')
+    assert _message(withdraw, encoder=encoder).startswith(f'{{ "update": {{ "attribute": {{ {withdrawn} }}, "withdraw"')
 
 
 def test_an_end_of_rib_collection() -> None:

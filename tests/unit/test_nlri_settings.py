@@ -249,7 +249,6 @@ class TestVPLSFromSettings:
 
         from exabgp.bgp.message.action import Action
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
-        from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
         from exabgp.bgp.message.update.nlri.settings import VPLSSettings
         from exabgp.bgp.message.update.nlri.vpls import VPLS
         from exabgp.protocol.family import AFI, SAFI
@@ -278,7 +277,7 @@ class TestVPLSFromSettings:
             SAFI.vpls,
             packed,
             Action.ANNOUNCE,
-            PathInfo.DISABLED,
+            False,
             negotiated,
         )
 

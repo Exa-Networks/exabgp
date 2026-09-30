@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -34,6 +34,7 @@ from exabgp.rib import RIB
 from exabgp.rib.route import Route
 
 from rfc import rfc7606_wire
+from tests import negotiation
 
 # RFC 4724 2: an End-of-RIB for a family other than IPv4 unicast is an UPDATE holding only an
 # empty MP_UNREACH_NLRI for that family
@@ -44,8 +45,7 @@ RTC_END_OF_RIB = bytes.fromhex('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E020000000790
 def protocol() -> Any:
     from exabgp.reactor.protocol import Protocol
 
-    neighbor = MagicMock()
-    neighbor.capability.graceful_restart.is_enabled = Mock(return_value=False)
+    neighbor = negotiation.neighbor()
     peer = Mock()
     peer.neighbor = neighbor
     peer.stats = defaultdict(int)

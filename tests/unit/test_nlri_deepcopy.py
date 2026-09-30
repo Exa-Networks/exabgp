@@ -15,7 +15,10 @@ from __future__ import annotations
 
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
+import ast
+import sys
 from copy import copy as shallow_copy, deepcopy
+from pathlib import Path
 
 import pytest
 
@@ -24,8 +27,30 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
 
+
 # one decodable NLRI per family, hand built rather than fuzzed: a copy is only interesting
 # for something which decoded
+def slots(owner: type) -> tuple[str, ...]:
+    """The __slots__ the class source writes.
+
+    A compiled class (plan/wip-mypyc.md) keeps no __slots__: its attributes are native, so
+    the names are read from the assignment in its source.
+    """
+    if '__slots__' in vars(owner):
+        return tuple(vars(owner)['__slots__'])
+    path = Path(getattr(sys.modules.get(owner.__module__), '__file__', None) or '')
+    if path.suffix == '.py' or not path.name:
+        return ()
+    tree = ast.parse(path.with_name(path.name.split('.')[0] + '.py').read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == owner.__name__:
+            for statement in node.body:
+                targets = statement.targets if isinstance(statement, ast.Assign) else []
+                if any(isinstance(target, ast.Name) and target.id == '__slots__' for target in targets):
+                    return tuple(ast.literal_eval(statement.value))
+    return ()
+
+
 SEEDS: list[tuple[AFI, SAFI, bytes, str]] = [
     (AFI.ipv4, SAFI.unicast, bytes([24, 10, 0, 0]), 'ipv4 unicast'),
     (AFI.ipv6, SAFI.unicast, bytes([32, 0x20, 0x01, 0x0D, 0xB8]), 'ipv6 unicast'),
@@ -103,7 +128,7 @@ def test_a_deepcopy_shares_no_container(afi: AFI, safi: SAFI, data: bytes, name:
     copy = deepcopy(original)
 
     for owner in type(original).__mro__:
-        for slot in getattr(owner, '__slots__', ()):
+        for slot in slots(owner):
             if not hasattr(original, slot):
                 continue
             mine, theirs = getattr(original, slot), getattr(copy, slot)
@@ -116,7 +141,7 @@ def container_slots(nlri: NLRI) -> list[str]:
     """The slots the test above actually asserts anything about."""
     found = []
     for owner in type(nlri).__mro__:
-        for slot in getattr(owner, '__slots__', ()):
+        for slot in slots(owner):
             if hasattr(nlri, slot) and isinstance(getattr(nlri, slot), (list, dict, set, bytearray)):
                 found.append(slot)
     return found
@@ -173,7 +198,7 @@ def test_a_deepcopy_carries_every_slot(afi: AFI, safi: SAFI, data: bytes, name: 
 
     checked = 0
     for owner in type(original).__mro__:
-        for slot in getattr(owner, '__slots__', ()):
+        for slot in slots(owner):
             if not hasattr(original, slot):
                 continue
             checked += 1

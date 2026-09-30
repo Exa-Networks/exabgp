@@ -18,8 +18,9 @@ PREFIX_SID = '05001900010015002001000100000000000000000000000000000000'
 def test_the_prefix_sid_package_registers_the_srv6_services() -> None:
     """In a fresh interpreter, where nothing has imported the srv6 package already."""
     probe = (
+        'from exabgp.bgp.message.open.capability.negotiated import Negotiated\n'
         'from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid\n'
-        f'attribute = PrefixSid.unpack_attribute(bytes.fromhex({PREFIX_SID!r}), None)\n'
+        f'attribute = PrefixSid.unpack_attribute(bytes.fromhex({PREFIX_SID!r}), Negotiated.UNSET)\n'
         'print(attribute.json())\n'
     )
     result = subprocess.run([sys.executable, '-c', probe], capture_output=True, text=True, check=True)

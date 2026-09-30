@@ -512,7 +512,7 @@ def test_notification_unpack_through_message_class() -> None:
     message_type = Message.CODE.NOTIFICATION
     data = b'\x03\x06Binary\x00\x01'
 
-    notif = Message.unpack(message_type, data, {})
+    notif = Message.unpack(message_type, data, Negotiated.UNSET)
 
     assert isinstance(notif, Notification)
     assert notif.code == 3

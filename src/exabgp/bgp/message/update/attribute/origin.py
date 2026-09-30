@@ -89,7 +89,7 @@ class Origin(Attribute):
         return self.ID == other.ID and self.FLAG == other.FLAG and self.origin == other.origin
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self == other
 
     def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
         return self._attribute(self._packed)

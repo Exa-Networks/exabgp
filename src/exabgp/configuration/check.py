@@ -125,8 +125,9 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
         neighbor.session.local_as = neighbor.session.peer_as or neighbor.session.local_as
         neighbor.session.peer_as = neighbor.session.local_as
         negotiated_in, negotiated_out = _negotiated(neighbor)
-        # A decoded advertisement is wire data, not a new desired export.
-        recode_negotiated = copy.copy(negotiated_out)
+        # A decoded advertisement is wire data, not a new desired export. A session of its
+        # own rather than a copy: Negotiated, compiled, has no copy (plan/wip-mypyc.md)
+        _, recode_negotiated = _negotiated(neighbor)
         recode_negotiated.role = RoleValue.NO_ROLE
 
         if not neighbor.rib.enabled:

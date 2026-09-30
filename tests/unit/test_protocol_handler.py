@@ -15,9 +15,11 @@ Test Coverage:
 
 import pytest
 from typing import Any, Generator
-from unittest.mock import Mock, MagicMock, patch, AsyncMock
+from unittest.mock import Mock, patch, AsyncMock
 
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.open.holdtime import HoldTime
+from tests import negotiation
 
 
 @pytest.fixture(autouse=True)
@@ -48,78 +50,15 @@ def mock_logger() -> Generator[None, None, None]:
 
 @pytest.fixture
 def mock_neighbor() -> Any:
-    """Create a mock neighbor configuration."""
-    neighbor = MagicMock()
-    # Set up session for connection-related config
-    neighbor.session = MagicMock()
-    neighbor.session.peer_address = Mock(
-        top=Mock(return_value='192.0.2.1'), afi=1, __str__=Mock(return_value='192.0.2.1')
+    """A real neighbor configuration: eBGP 65000 to 65001, no local address, default port."""
+    neighbor = negotiation.neighbor(
+        local_as=65000, peer_as=65001, local_address=None, peer_address='192.0.2.1', router_id='1.2.3.4'
     )
-    neighbor.session.peer_as = 65001
-    neighbor.session.local_as = 65000
-    neighbor.session.local_address = None
-    neighbor.session.router_id = Mock(__str__=Mock(return_value='1.2.3.4'))
-    neighbor.session.connect = 0  # 0 means use default port
-    neighbor.session.md5_ip = Mock(top=Mock(return_value=None))
-    neighbor.session.md5_password = None
-    neighbor.session.md5_base64 = False
-    neighbor.session.outgoing_ttl = None
-    neighbor.session.source_interface = None
-    # Non-session neighbor attributes
-    neighbor.hold_time = 180
-    neighbor.adj_rib_in = False
-    neighbor.group_updates = False
+    neighbor.session.connect = 0  # 0 means use the default port
+    neighbor.hold_time = HoldTime(180)
     neighbor.host_name = 'test-host'
     neighbor.domain_name = 'test-domain'
-    neighbor.capability = MagicMock()
-    neighbor.capability.aigp = MagicMock()
-    neighbor.capability.asn4 = MagicMock()
-    neighbor.capability.nexthop = MagicMock()
-    neighbor.capability.operational = MagicMock()
-    neighbor.capability.multi_session = MagicMock()
-    neighbor.capability.add_path = False
-    neighbor.capability.graceful_restart = MagicMock()
-    neighbor.capability.route_refresh = False
-    neighbor.capability.extended_message = MagicMock()
-    neighbor.capability.software_version = None
-    # Keep legacy __getitem__ for backward compatibility in tests that haven't been updated
-    neighbor.__getitem__ = Mock(
-        side_effect=lambda x: {
-            'peer-address': neighbor.peer_address,
-            'peer-as': neighbor.peer_as,
-            'local-as': neighbor.local_as,
-            'local-address': neighbor.local_address,
-            'router-id': neighbor.router_id,
-            'hold-time': neighbor.hold_time,
-            'connect': neighbor.connect,
-            'md5-ip': neighbor.md5_ip,
-            'md5-password': neighbor.md5_password,
-            'md5-base64': neighbor.md5_base64,
-            'outgoing-ttl': neighbor.outgoing_ttl,
-            'source-interface': neighbor.source_interface,
-            'adj-rib-in': neighbor.adj_rib_in,
-            'group-updates': neighbor.group_updates,
-            'host-name': neighbor.host_name,
-            'domain-name': neighbor.domain_name,
-            'capability': {
-                'aigp': False,
-                'asn4': True,
-                'nexthop': False,
-                'operational': False,
-                'multi-session': False,
-                'add-path': False,
-                'graceful-restart': False,
-                'route-refresh': False,
-                'extended-message': False,
-                'software-version': False,
-            },
-        }.get(x)
-    )
-    neighbor.auto_discovery = False
-    # Add required methods
-    neighbor.families = Mock(return_value=[])
-    neighbor.nexthops = Mock(return_value=[])
-    neighbor.addpaths = Mock(return_value=[])
+    # what the configuration fills in for a neighbor with no api section
     neighbor.api = {
         'neighbor-changes': False,
         'receive-packets': False,
@@ -130,8 +69,6 @@ def mock_neighbor() -> Any:
         'send-consolidate': False,
         'negotiated': False,
     }
-    # Allow iteration for mismatch checking
-    neighbor.ip_self = Mock(return_value=None)
     return neighbor
 
 
@@ -823,15 +760,19 @@ async def test_protocol_new_refresh(mock_peer: Any) -> None:
 # ==============================================================================
 
 
+def negotiate(protocol: Any, peer_as: int = 65001) -> None:
+    """Exchange OPENs on the protocol's session: ours from 65000, the peer's from peer_as."""
+    protocol.negotiated.sent(negotiation.open_message(asn=65000, router_id='1.2.3.4'))
+    protocol.negotiated.received(negotiation.open_message(asn=peer_as, router_id='192.0.2.1'))
+
+
 def test_protocol_validate_open_success(mock_peer: Any) -> None:
     """Test validate_open with valid configuration."""
     from exabgp.reactor.protocol import Protocol
 
     protocol = Protocol(mock_peer)
 
-    # Mock negotiated.validate to return None (success)
-    protocol.negotiated.validate = Mock(return_value=None)
-    protocol.negotiated.unsupported_capability = Mock(return_value=None)
+    negotiate(protocol)
     protocol.negotiated.mismatch = []
 
     # Should not raise
@@ -845,8 +786,8 @@ def test_protocol_validate_open_asn_mismatch(mock_peer: Any) -> None:
 
     protocol = Protocol(mock_peer)
 
-    # Mock negotiated.validate to return error tuple
-    protocol.negotiated.validate = Mock(return_value=(2, 2, 'ASN mismatch'))
+    # the peer opens with an AS number other than the one configured for it
+    negotiate(protocol, peer_as=65099)
 
     with pytest.raises(Notify) as exc_info:
         protocol.validate_open()
@@ -862,8 +803,7 @@ def test_protocol_validate_open_with_api_negotiated(mock_peer: Any) -> None:
     mock_peer.neighbor.api['negotiated'] = True
     protocol = Protocol(mock_peer)
 
-    protocol.negotiated.validate = Mock(return_value=None)
-    protocol.negotiated.unsupported_capability = Mock(return_value=None)
+    negotiate(protocol)
     protocol.negotiated.mismatch = []
 
     protocol.validate_open()
@@ -883,8 +823,7 @@ def test_protocol_validate_open_with_family_mismatch(mock_peer: Any) -> None:
     mock_connection.session = Mock(return_value='test-session')
     protocol.connection = mock_connection
 
-    protocol.negotiated.validate = Mock(return_value=None)
-    protocol.negotiated.unsupported_capability = Mock(return_value=None)
+    negotiate(protocol)
     protocol.negotiated.mismatch = [
         ('local', (AFI.ipv4, SAFI.mpls_vpn)),
         ('remote', (AFI.ipv6, SAFI.unicast)),
