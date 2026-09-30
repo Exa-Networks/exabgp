@@ -85,7 +85,7 @@ IDS = [f'{type(sample).__qualname__}-{index}' for index, sample in enumerate(SAM
 
 # the Not Satisfied replies of the draft share one type, 0xFFFF, and say which error they are
 # in their payload, so no decoder is registered for them: a peer's arrives as UnknownOperational
-UNDECODED = {'NS.Malformed', 'NS.Unsupported', 'NS.Maximum', 'NS.Prohibited', 'NS.Busy', 'NS.NotFound'}
+UNDECODED = {'NSMalformed', 'NSUnsupported', 'NSMaximum', 'NSProhibited', 'NSBusy', 'NSNotFound'}
 
 
 def abstract(klass: type[Message]) -> bool:
@@ -111,7 +111,7 @@ def test_every_message_is_a_wire_message(klass: type[Message]) -> None:
 
 @pytest.mark.parametrize('klass', classes(), ids=lambda klass: klass.__qualname__)
 def test_type_is_derived_from_the_id(klass: type[Message]) -> None:
-    assert klass.TYPE == bytes([klass.ID])
+    assert klass.TYPE == bytes([int(klass.ID)])
     assert klass.LENGTH_MIN == Message.HEADER_LEN + klass.FIXED_SIZE
 
 

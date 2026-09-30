@@ -16,7 +16,7 @@ from __future__ import annotations
 from typing import Any
 
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.neighbor.settings import SessionSettings
@@ -25,11 +25,12 @@ from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
 from exabgp.util.enumeration import TriState
+from exabgp.util.intvalue import IntValue
 
 MANDATORY = ('peer-address', 'local-as', 'peer-as')
 TCP_AO_MANDATORY = ('keyid', 'algorithm', 'password')
 REQUIRE = 'require'
-REQUIRABLE: dict[str, int] = {
+REQUIRABLE: dict[str, CapabilityCode] = {
     'asn4': Capability.CODE.FOUR_BYTES_ASN,
     'extended-message': Capability.CODE.EXTENDED_MESSAGE,
     'operational': Capability.CODE.OPERATIONAL,
@@ -78,7 +79,8 @@ def transfer(source: dict[str, Any], destination: dict[str, Any], depth: int = 0
             destination[key].extend(value)
         elif isinstance(value, dict):
             transfer(value, destination[key], depth + 1)
-        elif isinstance(value, (int, IP, str)):
+        # IntValue: HoldTime, ASN and the other numbers which stopped being int for mypyc
+        elif isinstance(value, (int, IntValue, IP, str)):
             destination[key] = value
         else:
             raise ValueError(
@@ -189,7 +191,7 @@ def route_refresh(neighbor_capability: NeighborCapability, configured: dict[str,
     """What the route refresh statements advertise and require; the specific one wins over route-refresh."""
     both = configured.get('route-refresh')
     advertised: dict[str, bool] = {}
-    required: set[int] = set()
+    required: set[CapabilityCode] = set()
     for keyword, code in ROUTE_REFRESH_KEYWORDS.items():
         word = configured.get(keyword, both)
         advertised[keyword] = bool(word)

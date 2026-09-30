@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from copy import deepcopy
 
 from struct import pack, unpack
 from typing import Any, ClassVar
@@ -23,7 +22,7 @@ def opt_raw_label(label: int | None, format: str = ' (%d)') -> str:
 
 
 class Labels:
-    MAX = pow(2, 20) - 1
+    MAX: ClassVar = pow(2, 20) - 1
 
     NOLABEL: ClassVar['Labels']
 
@@ -73,6 +72,11 @@ class Labels:
         if not isinstance(other, Labels):
             return False
         return self._packed == other._packed
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing Labels for ordering does not make sense')
@@ -152,12 +156,9 @@ class Labels:
         """
         if self is Labels.NOLABEL:
             return self
-        # type(self) and the whole __dict__, not Labels and _packed by name.  The default
-        # copy carried everything this object held; naming one attribute means a second one
-        # added later is silently dropped by a method nobody will think to revisit.
-        new = type(self).__new__(type(self))
-        new.__dict__.update(self.__dict__)
-        return new
+        # type(self), so a subclass copies to its own class. The constructor, not
+        # __new__ and __dict__: a mypyc class has neither. _packed is all it holds.
+        return type(self)(self._packed)
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'Labels':
         """Preserve the NOLABEL singleton across a deep copy.
@@ -166,12 +167,9 @@ class Labels:
         """
         if self is Labels.NOLABEL:
             return self
-        new = type(self).__new__(type(self))
+        # _packed is bytes and immutable, and all it holds (see __copy__)
+        new = type(self)(self._packed)
         memo[id(self)] = new
-        # deepcopy the values rather than sharing them: _packed is bytes and immutable
-        # today, and a mutable attribute added later would otherwise be shared silently
-        for attribute, value in self.__dict__.items():
-            setattr(new, attribute, deepcopy(value, memo))
         return new
 
 

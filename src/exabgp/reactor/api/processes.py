@@ -29,6 +29,7 @@ import os
 import select
 import subprocess
 import time
+from exabgp.util.intvalue import json_number
 from threading import Thread
 from typing import IO, TYPE_CHECKING, Any, Callable, Generator, TypeVar, cast
 
@@ -43,6 +44,7 @@ if TYPE_CHECKING:
     from exabgp.reactor.peer import Peer
 
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.message import MessageCode
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.configuration.cli_process import API_PREFIX
 from exabgp.reactor.api.tokeniser import formated
@@ -133,7 +135,7 @@ class Processes:
     WRITE_QUEUE_LOW_WATER: int = 100  # Resume writes when queue drops below this
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
-    _dispatch: dict[int, Any] = {}
+    _dispatch: dict[MessageCode, Any] = {}
 
     # queued in place of a command when a helper exits, so its routes are withdrawn after
     # the commands it sent before dying: lines are split on newlines, none can be this
@@ -1312,7 +1314,7 @@ class Processes:
                 import json
 
                 error_data = {'error': message}
-                self._answer_sync(service, json.dumps(error_data))
+                self._answer_sync(service, json.dumps(error_data, default=json_number))
             else:
                 self._answer_sync(service, f'error: {message}')
 
@@ -1332,7 +1334,7 @@ class Processes:
                 import json
 
                 error_data = {'error': message}
-                await self._answer(service, json.dumps(error_data))
+                await self._answer(service, json.dumps(error_data, default=json_number))
             else:
                 await self._answer(service, f'error: {message}')
 
@@ -1353,7 +1355,7 @@ class Processes:
         """
         import json
 
-        response = json.dumps(data)
+        response = json.dumps(data, default=json_number)
         await self._answer(service, response)
 
     def set_ack(self, service: str, enabled: bool) -> None:
@@ -1464,7 +1466,7 @@ class Processes:
     @silenced
     def message(
         self,
-        message_id: int,
+        message_id: MessageCode,
         peer: 'Peer',
         direction: str,
         message: Message,
@@ -1479,7 +1481,7 @@ class Processes:
 
     @staticmethod
     def register_process(
-        message_id: int, storage: dict[int, Any] = _dispatch
+        message_id: MessageCode, storage: dict[MessageCode, Any] = _dispatch
     ) -> Callable[[Callable[..., None]], Callable[..., None]]:
         def closure(function: Callable[..., None]) -> Callable[..., None]:
             def wrap(*args: Any) -> None:

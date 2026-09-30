@@ -31,7 +31,6 @@ from exabgp.util.types import Buffer
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register_evpn_route(code=3)
 class Multicast(EVPN):
     """EVPN Route Type 3: Inclusive Multicast Ethernet Tag.
 
@@ -147,3 +146,6 @@ class Multicast(EVPN):
         if self.ip:
             members.append('"ip": "{}"'.format(str(self.ip)))
         return '{{ {} }}'.format(', '.join(member for member in members if member))
+
+
+EVPN.register_evpn_route(code=3)(Multicast)

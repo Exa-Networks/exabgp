@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.util.types import Buffer
@@ -32,10 +34,9 @@ from exabgp.util.types import Buffer
 # 	RFC 7752 3.3.3.1. IGP Flags TLV
 
 
-@LinkState.register_lsid(tlv=1152, json_key='igp-flags', repr_name='IGP flags')
 class IgpFlags(FlagLS):
-    FLAGS = ['D', 'N', 'L', 'P', 'RSV', 'RSV', 'RSV', 'RSV']
-    LEN = 1
+    FLAGS: ClassVar = ['D', 'N', 'L', 'P', 'RSV', 'RSV', 'RSV', 'RSV']
+    LEN: ClassVar[int] = 1
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> IgpFlags:
@@ -57,3 +58,6 @@ class IgpFlags(FlagLS):
             (flags.get('D', 0) << 7) | (flags.get('N', 0) << 6) | (flags.get('L', 0) << 5) | (flags.get('P', 0) << 4)
         )
         return cls(bytes([flags_byte]))
+
+
+LinkState.register_lsid(tlv=1152, json_key='igp-flags', repr_name='IGP flags')(IgpFlags)

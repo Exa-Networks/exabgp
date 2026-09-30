@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.logger import log, lazymsg
@@ -17,9 +19,9 @@ from exabgp.util.types import Buffer
 
 
 class REFRESH:
-    ABSENT = 0x01
-    NORMAL = 0x02
-    ENHANCED = 0x04
+    ABSENT: ClassVar[int] = 0x01
+    NORMAL: ClassVar[int] = 0x02
+    ENHANCED: ClassVar[int] = 0x04
 
     @staticmethod
     def json(refresh: int) -> str:
@@ -38,20 +40,18 @@ class REFRESH:
         return 'REFRESH'
 
 
-@Capability.register()
-@Capability.register(Capability.CODE.ROUTE_REFRESH_CISCO)
 class RouteRefresh(Capability):
-    ID = Capability.CODE.ROUTE_REFRESH
+    ID: ClassVar = Capability.CODE.ROUTE_REFRESH
     _seen: bool = False
 
     def __str__(self) -> str:
-        if self.ID == Capability.CODE.ROUTE_REFRESH:
+        if self.code() == Capability.CODE.ROUTE_REFRESH:
             return 'Route Refresh'
         return 'Cisco Route Refresh'
 
     def json(self) -> str:
         return '{ "name": "route-refresh", "variant": "%s" }' % (
-            'RFC' if self.ID == Capability.CODE.ROUTE_REFRESH else 'Cisco'
+            'RFC' if self.code() == Capability.CODE.ROUTE_REFRESH else 'Cisco'
         )
 
     def extract_capability_bytes(self) -> list[bytes]:
@@ -68,7 +68,7 @@ class RouteRefresh(Capability):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, RouteRefresh):
             return False
-        return self.ID == other.ID
+        return self.code() == other.code()
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -86,13 +86,16 @@ class RouteRefresh(Capability):
         raise RuntimeError('comparing RouteRefresh for ordering does not make sense')
 
 
+Capability.register(Capability.CODE.ROUTE_REFRESH_CISCO)(RouteRefresh)
+Capability.register()(RouteRefresh)
+
+
 # ========================================================= EnhancedRouteRefresh
 #
 
 
-@Capability.register()
 class EnhancedRouteRefresh(Capability):
-    ID = Capability.CODE.ENHANCED_ROUTE_REFRESH
+    ID: ClassVar = Capability.CODE.ENHANCED_ROUTE_REFRESH
     _seen: bool = False
 
     def __str__(self) -> str:
@@ -111,3 +114,6 @@ class EnhancedRouteRefresh(Capability):
             log.debug(lazymsg('capability.enhanced_route_refresh.duplicate'), 'parser')
         instance._seen = True
         return instance
+
+
+Capability.register()(EnhancedRouteRefresh)

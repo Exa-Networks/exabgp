@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any
 
-from exabgp.bgp.message.open.capability.capability import Capability
+from typing import Any, ClassVar
+
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityList
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log, lazymsg
@@ -23,10 +24,8 @@ from exabgp.util.types import Buffer
 FLAGS_SIZE_BYTES = 1
 
 
-@Capability.register()
-@Capability.register(Capability.CODE.MULTISESSION_CISCO)
-class MultiSession(Capability, list[CapabilityCode]):
-    ID = Capability.CODE.MULTISESSION
+class MultiSession(CapabilityList[CapabilityCode]):
+    ID: ClassVar = Capability.CODE.MULTISESSION
     _seen: bool = False
 
     def set(self, data: list[Any]) -> MultiSession:
@@ -34,11 +33,11 @@ class MultiSession(Capability, list[CapabilityCode]):
         return self
 
     def __str__(self) -> str:
-        info = ' (RFC)' if self.ID == Capability.CODE.MULTISESSION else ''
+        info = ' (RFC)' if self.code() == Capability.CODE.MULTISESSION else ''
         return 'Multisession{} {}'.format(info, ' '.join([str(capa) for capa in self]))
 
     def json(self) -> str:
-        variant = 'RFC' if self.ID == Capability.CODE.MULTISESSION else 'Cisco'
+        variant = 'RFC' if self.code() == Capability.CODE.MULTISESSION else 'Cisco'
         return '{{ "name": "multisession", "variant": "{}", "capabilities": [{} ] }}'.format(
             variant,
             ','.join(' "{}"'.format(str(capa)) for capa in self),
@@ -84,3 +83,7 @@ class MultiSession(Capability, list[CapabilityCode]):
                 continue
             instance.append(CapabilityCode(code))
         return instance
+
+
+Capability.register(Capability.CODE.MULTISESSION_CISCO)(MultiSession)
+Capability.register()(MultiSession)

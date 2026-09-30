@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.util.types import Buffer
 from exabgp.bgp.message.notification import Notify
 
@@ -18,10 +20,10 @@ from exabgp.bgp.message.notification import Notify
 
 # Ethernet Segment Identifier
 class ESI:
-    LENGTH = 10  # RFC 7432 - Ethernet Segment Identifier is always 10 bytes
+    LENGTH: ClassVar[int] = 10  # RFC 7432 - Ethernet Segment Identifier is always 10 bytes
 
-    DEFAULT = bytes([0x00] * LENGTH)  # All zeros
-    MAX = bytes([0xFF] * LENGTH)  # All ones
+    DEFAULT: ClassVar = bytes([0x00] * LENGTH)  # All zeros
+    MAX: ClassVar = bytes([0xFF] * LENGTH)  # All ones
 
     def __init__(self, packed: Buffer) -> None:
         if len(packed) != self.LENGTH:
@@ -46,6 +48,11 @@ class ESI:
         if not isinstance(other, ESI):
             return False
         return self._packed == other._packed
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing ESI for ordering does not make sense')

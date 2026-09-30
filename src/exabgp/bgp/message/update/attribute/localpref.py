@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.unsigned import UnsignedAttribute
 
@@ -14,18 +16,20 @@ from exabgp.bgp.message.update.attribute.unsigned import UnsignedAttribute
 #
 
 
-@Attribute.register()
 class LocalPreference(UnsignedAttribute):
     """LOCAL_PREF, RFC 4271 5.1.5: four octets, higher is preferred."""
 
-    ID = Attribute.CODE.LOCAL_PREF
-    FLAG = Attribute.Flag.TRANSITIVE
-    CACHING = True
-    TREAT_AS_WITHDRAW = True
-    MANDATORY = True
-    WIDTH = 4
-    NAME = 'LocalPreference'
+    ID: ClassVar = Attribute.CODE.LOCAL_PREF
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE
+    CACHING: ClassVar[bool] = True
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
+    MANDATORY: ClassVar[bool] = True
+    WIDTH: ClassVar[int] = 4
+    NAME: ClassVar[str] = 'LocalPreference'
 
     @property
     def localpref(self) -> int:
         return self.value
+
+
+Attribute.register()(LocalPreference)

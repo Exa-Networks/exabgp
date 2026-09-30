@@ -8,8 +8,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 from struct import pack, unpack
-from typing import Any, Self, TYPE_CHECKING, Type, TypeVar
+from typing import Any, ClassVar, Self, Type, TYPE_CHECKING, TypeVar
 
 from exabgp.util.types import Buffer
 
@@ -56,8 +57,8 @@ class RTCBase(NLRI):
     __slots__ = ()  # Only _packed needed, inherited from NLRI
 
     # Wire format constants
-    PACKED_LENGTH_FULL = 13  # 1 + 4 + 8
-    PACKED_LENGTH_WILDCARD = 1
+    PACKED_LENGTH_FULL: ClassVar[int] = 13  # 1 + 4 + 8
+    PACKED_LENGTH_WILDCARD: ClassVar[int] = 1
 
     # Fixed AFI/SAFI for this single-family NLRI type
     @property
@@ -271,7 +272,6 @@ class RTCBase(NLRI):
         return nlri, data[size:]
 
 
-@NLRI.register(AFI.ipv4, SAFI.rtc)
 class RTC(RTCBase):
     """The registered form of RTCBase, which holds the code.
 
@@ -285,3 +285,6 @@ class RTC(RTCBase):
     """
 
     __slots__ = ()
+
+
+NLRI.register(AFI.ipv4, SAFI.rtc)(RTC)

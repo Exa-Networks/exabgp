@@ -45,12 +45,16 @@ class RouteTarget(ExtendedCommunity):
             return False
         return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)
 
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
 
 # ============================================================= RouteTargetASN2Number
 # RFC 4360 / RFC 7153
 
 
-@ExtendedCommunity.register_subtype
 class RouteTargetASN2Number(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
@@ -62,7 +66,7 @@ class RouteTargetASN2Number(RouteTarget):
     def make_route_target(cls, asn: ASN, number: int, transitive: bool = True) -> RouteTargetASN2Number:
         """Create RouteTargetASN2Number from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
-        packed = pack('!BBHL', type_byte, cls.COMMUNITY_SUBTYPE, asn, number)
+        packed = pack('!BBHL', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), number)
         return cls(packed)
 
     @property
@@ -85,11 +89,13 @@ class RouteTargetASN2Number(RouteTarget):
         return cls(data[:8])
 
 
+ExtendedCommunity.register_subtype(RouteTargetASN2Number)
+
+
 # ============================================================= RouteTargetIPNumber
 # RFC 4360 / RFC 7153
 
 
-@ExtendedCommunity.register_subtype
 class RouteTargetIPNumber(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     LIMIT: ClassVar[int] = 6
@@ -124,11 +130,13 @@ class RouteTargetIPNumber(RouteTarget):
         return cls(data[:8])
 
 
+ExtendedCommunity.register_subtype(RouteTargetIPNumber)
+
+
 # ======================================================== RouteTargetASN4Number
 # RFC 4360 / RFC 7153
 
 
-@ExtendedCommunity.register_subtype
 class RouteTargetASN4Number(RouteTarget):
     COMMUNITY_TYPE: ClassVar[int] = 0x02
     LIMIT: ClassVar[int] = 6
@@ -140,7 +148,7 @@ class RouteTargetASN4Number(RouteTarget):
     def make_route_target(cls, asn: ASN, number: int, transitive: bool = True) -> RouteTargetASN4Number:
         """Create RouteTargetASN4Number from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
-        packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, asn, number)
+        packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), number)
         return cls(packed)
 
     @property
@@ -161,3 +169,6 @@ class RouteTargetASN4Number(RouteTarget):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> RouteTargetASN4Number:
         return cls(data[:8])
+
+
+ExtendedCommunity.register_subtype(RouteTargetASN4Number)

@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from struct import pack, unpack
 from exabgp.util import hexstring
 
@@ -13,6 +15,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 # Minimum data length for SR Adjacency SID TLV
 # Flags (1) + Weight (1) + Reserved (2) = 4 bytes
@@ -31,10 +34,9 @@ SRADJ_MIN_LENGTH = 4
 #
 
 
-@LinkState.register_lsid(tlv=1099, json_key='sr-adjs', repr_name='Adjacency SID')
 class AdjacencySid(FlagLS):
-    FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
-    MERGE = True  # LinkState.json() groups into array
+    FLAGS: ClassVar = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
+    MERGE: ClassVar[bool] = True  # LinkState.json() groups into array
 
     # flags property is inherited from FlagLS and unpacks from _packed[0:1]
 
@@ -98,7 +100,7 @@ class AdjacencySid(FlagLS):
     def json(self, compact: bool = False) -> str:
         import json
 
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return f'"{self.JSON}": {json.dumps(self.content, default=json_number)}'
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> AdjacencySid:
@@ -148,3 +150,6 @@ class AdjacencySid(FlagLS):
                 packed += pack('!I', sid)
 
         return cls(packed)
+
+
+LinkState.register_lsid(tlv=1099, json_key='sr-adjs', repr_name='Adjacency SID')(AdjacencySid)

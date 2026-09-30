@@ -18,12 +18,13 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import merge_subtlvs, unpack_subtlvs
 from exabgp.protocol.ip import IP, IPv6
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 
 class SubSubTLV(Protocol):
     """Protocol for sub-sub-TLV classes with TLV code and unpack_bgpls method."""
 
-    TLV: int  # Class variable (mypy treats class-level annotations as instance vars)
+    TLV: ClassVar[int]
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> Self: ...
@@ -110,10 +111,9 @@ class Srv6(FlagLS):
         }
 
 
-@LinkState.register_lsid(tlv=1107, json_key='srv6-lan-endx-isis', repr_name='SRv6 LAN End.X SID ISIS')
 class Srv6LanEndXISIS(Srv6):
-    FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    MERGE = True  # LinkState.json() will group into array
+    FLAGS: ClassVar = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    MERGE: ClassVar[bool] = True  # LinkState.json() will group into array
     registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = dict()
 
     def __init__(self, packed: Buffer) -> None:
@@ -203,13 +203,15 @@ class Srv6LanEndXISIS(Srv6):
         return cls(packed)
 
     def json(self, compact: bool = False) -> str:
-        return '"srv6-lan-endx-isis": {}'.format(json.dumps(self.content))
+        return '"srv6-lan-endx-isis": {}'.format(json.dumps(self.content, default=json_number))
 
 
-@LinkState.register_lsid(tlv=1108, json_key='srv6-lan-endx-ospf', repr_name='SRv6 LAN End.X SID OSPF')
+LinkState.register_lsid(tlv=1107, json_key='srv6-lan-endx-isis', repr_name='SRv6 LAN End.X SID ISIS')(Srv6LanEndXISIS)
+
+
 class Srv6LanEndXOSPF(Srv6):
-    FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    MERGE = True  # LinkState.json() groups into array
+    FLAGS: ClassVar = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    MERGE: ClassVar[bool] = True  # LinkState.json() groups into array
     registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = dict()
 
     def __init__(self, packed: Buffer) -> None:
@@ -298,4 +300,7 @@ class Srv6LanEndXOSPF(Srv6):
         return cls(packed)
 
     def json(self, compact: bool = False) -> str:
-        return '"srv6-lan-endx-ospf": {}'.format(json.dumps(self.content))
+        return '"srv6-lan-endx-ospf": {}'.format(json.dumps(self.content, default=json_number))
+
+
+LinkState.register_lsid(tlv=1108, json_key='srv6-lan-endx-ospf', repr_name='SRv6 LAN End.X SID OSPF')(Srv6LanEndXOSPF)

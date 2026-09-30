@@ -1,0 +1,323 @@
+#!/usr/bin/env python3
+"""
+Time the message hot path on the UPDATEs captured in qa/encoding/*.ci.
+
+Every raw: UPDATE in the corpus is decoded with the negotiation of the configuration its
+test uses, then each stage below is run over the whole corpus, several times:
+
+  decode   UpdateCollection.unpack_message, what every received UPDATE goes through
+  json     the API v6 JSON of the decoded UPDATE, what every API process receives
+  encode   the decoded UPDATE packed again, what every announced route goes through
+  rib      the decoded routes added to an outgoing RIB and the UPDATEs generated from it
+
+A stage reports the best of its runs: the machine can only make a run slower, so the
+fastest is the one closest to what the code costs.
+
+This is the measurement plan/wip-mypyc.md is gated on: the same script runs against the
+pure Python tree and against the compiled one, and --compare says by how much they differ.
+
+Usage:
+    ./qa/bin/benchmark_codec                        # time every stage
+    ./qa/bin/benchmark_codec --save baseline.json   # and record the numbers
+    ./qa/bin/benchmark_codec --compare baseline.json
+    ./qa/bin/benchmark_codec --profile decode       # where one stage spends its time
+"""
+
+from __future__ import annotations
+
+import argparse
+import cProfile
+import json
+import pstats
+import sys
+import time
+from collections.abc import Callable
+from typing import Any
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.parent
+ENCODING_DIR = ROOT / 'qa' / 'encoding'
+CONFIG_DIR = ROOT / 'etc' / 'exabgp'
+
+# The compiled tree is selected with PYTHONPATH, so src/ only goes on the path when
+# nothing named exabgp is importable already.
+try:
+    import exabgp  # noqa: F401
+except ImportError:
+    sys.path.insert(0, str(ROOT / 'src'))
+sys.path.insert(0, str(Path(__file__).parent))
+
+from ci_raw import RawCapture, parse_raw  # noqa: E402
+
+from exabgp.bgp.message.open.capability.negotiated import Negotiated  # noqa: E402
+from exabgp.bgp.message.update.collection import UpdateCollection  # noqa: E402
+from exabgp.bgp.neighbor import Neighbor  # noqa: E402
+from exabgp.configuration.check import _negotiated  # noqa: E402
+from exabgp.configuration.configuration import Configuration  # noqa: E402
+from exabgp.environment import getenv  # noqa: E402
+from exabgp.reactor.api.response import Response  # noqa: E402
+from exabgp.rib.outgoing import OutgoingRIB  # noqa: E402
+from exabgp.rib.route import Route  # noqa: E402
+from exabgp.version import json as json_version  # noqa: E402
+
+STAGES = ('decode', 'json', 'encode', 'rib')
+# --refused: say why each capture left out was
+SHOW_REFUSED = '--refused' in sys.argv
+DEFAULT_RUNS = 5
+# The corpus is small (a few ms a pass), so each run replays it enough times to be
+# measured in tenths of a second, where timer resolution and noise stop mattering.
+DEFAULT_REPEAT = {'ci': 40, 'bulk': 3}
+# How many functions --profile lists, and how many modules.
+PROFILE_ROWS = 25
+
+
+class Sample:
+    """One captured UPDATE with the negotiation it was captured under."""
+
+    __slots__ = ('name', 'payload', 'neighbor', 'negotiated_in', 'negotiated_out', 'update')
+
+    def __init__(
+        self, name: str, payload: bytes, neighbor: Neighbor, negotiated: tuple[Negotiated, Negotiated]
+    ) -> None:
+        self.name = name
+        self.payload = payload
+        self.neighbor = neighbor
+        self.negotiated_in, self.negotiated_out = negotiated
+        self.update: UpdateCollection | None = None
+
+
+def _neighbor(config_file: Path) -> Neighbor | None:
+    configuration = Configuration([str(config_file)])
+    if not configuration.reload():
+        return None
+    neighbors = list(configuration.neighbors.values())
+    if not neighbors:
+        return None
+    neighbor: Neighbor = neighbors[0]
+    # The captures are what exabgp sent, so an EBGP path starts with our AS.
+    neighbor.enforce_first_as = False
+    return neighbor
+
+
+def _captures(ci_file: Path) -> tuple[Path | None, list[RawCapture]]:
+    config: Path | None = None
+    captures: list[RawCapture] = []
+    for number, line in enumerate(ci_file.read_text().splitlines(), 1):
+        if line.startswith('option:file:'):
+            config = CONFIG_DIR / line.split(':', 2)[2].strip()
+            continue
+        capture = parse_raw(line, number)
+        if isinstance(capture, RawCapture) and capture.is_update and not capture.is_end_of_rib:
+            captures.append(capture)
+    return config, captures
+
+
+# A full table arrives as large ipv4 unicast UPDATEs sharing a path, which the corpus has
+# few of: it is written to cover every family, not to look like a feed.
+BULK_UPDATES = 20
+BULK_PREFIXES = 400
+BULK_NEIGHBOR = """
+neighbor 127.0.0.1 {
+    router-id 10.0.0.2;
+    local-address 127.0.0.1;
+    local-as 65533;
+    peer-as 65534;
+    family { ipv4 unicast; }
+}
+"""
+
+
+def _bulk_payload(first: int) -> bytes:
+    as_path = bytes([2, 4]) + b''.join(asn.to_bytes(4, 'big') for asn in (65534, 174, 3356, 13335))
+    communities = b''.join(((65534 << 16) + index).to_bytes(4, 'big') for index in range(4))
+    attributes = (
+        bytes([0x40, 1, 1, 0])
+        + bytes([0x40, 2, len(as_path)])
+        + as_path
+        + bytes([0x40, 3, 4, 192, 0, 2, 1])
+        + bytes([0xC0, 8, len(communities)])
+        + communities
+    )
+    nlri = b''.join(
+        bytes([24]) + (((first + index) << 8) & 0xFFFFFFFF).to_bytes(4, 'big')[:3] for index in range(BULK_PREFIXES)
+    )
+    return (0).to_bytes(2, 'big') + len(attributes).to_bytes(2, 'big') + attributes + nlri
+
+
+def bulk_samples() -> list[Sample]:
+    configuration = Configuration([BULK_NEIGHBOR], text=True)
+    if not configuration.reload():
+        raise RuntimeError(f'the bulk neighbor does not parse: {configuration.error}')
+    neighbor: Neighbor = list(configuration.neighbors.values())[0]
+    negotiated = _negotiated(neighbor)
+    samples = []
+    for number in range(BULK_UPDATES):
+        sample = Sample(f'bulk:{number}', _bulk_payload(0x0B0000 + number * BULK_PREFIXES), neighbor, negotiated)
+        sample.update = UpdateCollection.unpack_message(sample.payload, sample.negotiated_in)
+        assert len(sample.update.announces) == BULK_PREFIXES, 'every prefix of the bulk UPDATE decodes'
+        samples.append(sample)
+    return samples
+
+
+def load_corpus() -> tuple[list[Sample], int]:
+    """Every UPDATE which decodes, and how many were left out because they did not."""
+    samples: list[Sample] = []
+    refused = 0
+    for ci_file in sorted(ENCODING_DIR.glob('*.ci')):
+        config, captures = _captures(ci_file)
+        if config is None or not config.exists() or not captures:
+            continue
+        neighbor = _neighbor(config)
+        if neighbor is None:
+            refused += len(captures)
+            if SHOW_REFUSED:
+                print(f'refused {ci_file.stem}: its configuration {config.name} did not load')
+            continue
+        negotiated = _negotiated(neighbor)
+        for capture in captures:
+            sample = Sample(
+                f'{ci_file.stem}:{capture.line_number}', bytes.fromhex(capture.payload), neighbor, negotiated
+            )
+            try:
+                sample.update = UpdateCollection.unpack_message(sample.payload, sample.negotiated_in)
+                list(sample.update.messages(sample.negotiated_out))
+            except Exception as exc:
+                # A capture this negotiation cannot round trip is a finding for the
+                # functional tests, not for a timer: it is counted and left out.
+                refused += 1
+                if SHOW_REFUSED:
+                    print(f'refused {sample.name}: {type(exc).__name__}: {exc}')
+                continue
+            samples.append(sample)
+    return samples, refused
+
+
+def _decode(samples: list[Sample]) -> None:
+    for sample in samples:
+        UpdateCollection.unpack_message(sample.payload, sample.negotiated_in)
+
+
+def _json(samples: list[Sample]) -> None:
+    encoder = Response.JSON(json_version)
+    for sample in samples:
+        assert sample.update is not None, 'load_corpus only keeps samples which decoded'
+        encoder.update(sample.neighbor, 'in', sample.update, b'', b'', Negotiated.UNSET)
+
+
+def _encode(samples: list[Sample]) -> None:
+    for sample in samples:
+        assert sample.update is not None, 'load_corpus only keeps samples which decoded'
+        for _ in sample.update.messages(sample.negotiated_out):
+            pass
+
+
+def _rib(samples: list[Sample]) -> None:
+    families = {family for sample in samples for family in sample.neighbor.families()}
+    rib = OutgoingRIB(True, families)
+    for sample in samples:
+        assert sample.update is not None, 'load_corpus only keeps samples which decoded'
+        for routed in sample.update.announces:
+            rib.add_to_rib(Route(routed.nlri, sample.update.attributes, nexthop=routed.nexthop))
+    for _ in rib.updates(False):
+        pass
+
+
+RUNNERS: dict[str, Callable[[list[Sample]], None]] = {
+    'decode': _decode,
+    'json': _json,
+    'encode': _encode,
+    'rib': _rib,
+}
+
+
+def measure(samples: list[Sample], stages: list[str], runs: int) -> dict[str, float]:
+    best: dict[str, float] = {}
+    for stage in stages:
+        runner = RUNNERS[stage]
+        runner(samples)  # warm the caches the first call fills
+        timings = []
+        for _ in range(runs):
+            started_at = time.perf_counter()
+            runner(samples)
+            timings.append(time.perf_counter() - started_at)
+        best[stage] = min(timings)
+    return best
+
+
+def profile(samples: list[Sample], stage: str) -> None:
+    profiler = cProfile.Profile()
+    profiler.enable()
+    RUNNERS[stage](samples)
+    profiler.disable()
+    stats = pstats.Stats(profiler)
+    per_module: dict[str, float] = {}
+    for (filename, _, _), (_, _, own_seconds, _, _) in stats.stats.items():
+        marker = '/exabgp/'
+        module = filename.split(marker, 1)[1] if marker in filename else '(outside exabgp)'
+        per_module[module] = per_module.get(module, 0.0) + own_seconds
+    total = sum(per_module.values()) or 1.0
+    print(f'own time per module, {stage}:')
+    for module, seconds in sorted(per_module.items(), key=lambda item: -item[1])[:PROFILE_ROWS]:
+        print(f'  {100 * seconds / total:5.1f}%  {module}')
+    print()
+    stats.sort_stats('tottime').print_stats(PROFILE_ROWS)
+
+
+def report(samples: int, best: dict[str, float], baseline: dict[str, Any] | None) -> None:
+    for stage, seconds in best.items():
+        rate = samples / seconds if seconds else 0.0
+        line = f'  {stage:<7} {seconds * 1000:9.2f} ms  {rate:10.0f} UPDATE/s'
+        if baseline and stage in baseline['seconds']:
+            # per UPDATE, so a run which left captures out still compares with one which did not
+            baseline_rate = baseline['updates'] / baseline['seconds'][stage]
+            line += f'  {rate / baseline_rate:5.2f}x baseline'
+        print(line)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--stage', action='append', choices=STAGES, help='only this stage (repeatable)')
+    parser.add_argument('--runs', type=int, default=DEFAULT_RUNS, help='runs per stage, the best is kept')
+    parser.add_argument(
+        '--repeat',
+        type=int,
+        default=None,
+        help='replay the corpus this many times per run (default: 40 for ci, 3 for bulk)',
+    )
+    parser.add_argument('--save', type=Path, help='write the timings to this JSON file')
+    parser.add_argument('--compare', type=Path, help='show the speed up against a saved JSON file')
+    parser.add_argument(
+        '--corpus', choices=('ci', 'bulk'), default='ci', help='the .ci captures, or full table shaped UPDATEs'
+    )
+    parser.add_argument('--refused', action='store_true', help='say why each capture left out was')
+    parser.add_argument('--profile', choices=STAGES, help='profile one stage instead of timing')
+    arguments = parser.parse_args()
+
+    env = getenv()
+    env.bgp.passive = True
+    env.log.enable = False
+    env.tcp.bind = []
+
+    samples, refused = load_corpus() if arguments.corpus == 'ci' else (bulk_samples(), 0)
+    if not samples:
+        print('no UPDATE in the corpus decoded, nothing to time')
+        return 1
+    samples = samples * (arguments.repeat or DEFAULT_REPEAT[arguments.corpus])
+    tree = str(Path(exabgp.__file__).parent)
+    print(f'{len(samples)} UPDATEs ({refused} captures left out), exabgp from {tree}')
+
+    if arguments.profile:
+        profile(samples, arguments.profile)
+        return 0
+
+    best = measure(samples, arguments.stage or list(STAGES), arguments.runs)
+    baseline = json.loads(arguments.compare.read_text()) if arguments.compare else None
+    report(len(samples), best, baseline)
+    if arguments.save:
+        record = {'updates': len(samples), 'tree': tree, 'seconds': best}
+        arguments.save.write_text(json.dumps(record, indent=2) + '\n')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

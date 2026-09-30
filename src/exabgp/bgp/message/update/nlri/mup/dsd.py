@@ -29,7 +29,6 @@ from exabgp.protocol.ip import IP
 # +-----------------------------------+
 
 
-@MUP.register_mup_route(archtype=1, code=2)
 class DirectSegmentDiscoveryRoute(MUP):
     NAME: ClassVar[str] = 'DirectSegmentDiscoveryRoute'
     SHORT_NAME: ClassVar[str] = 'DSD'
@@ -81,8 +80,9 @@ class DirectSegmentDiscoveryRoute(MUP):
 
     def __ne__(self, other: object) -> bool:
         # `not NotImplemented` is a DeprecationWarning today and a TypeError from 3.14
-        equal = self.__eq__(other)
-        return equal if equal is NotImplemented else not equal
+        # the operator, not a call to __eq__: it answers NotImplemented the way Python does,
+        # where a compiled bool-typed local would refuse it
+        return not self == other
 
     def __str__(self) -> str:
         return '{}:{}:{}'.format(
@@ -115,3 +115,6 @@ class DirectSegmentDiscoveryRoute(MUP):
         content += self.rd.json()
         content += ', "raw": "{}"'.format(self._raw())
         return '{{ {} }}'.format(content)
+
+
+MUP.register_mup_route(archtype=1, code=2)(DirectSegmentDiscoveryRoute)

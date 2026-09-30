@@ -27,6 +27,7 @@ from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.reactor.interrupt import Signal
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
+from exabgp.util.intvalue import IntValue, json_number
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.update.nlri import NLRI
@@ -76,7 +77,8 @@ class JSON:
             return str(obj)
         if issubclass(obj.__class__, bool):
             return 'true' if obj else 'false'
-        if issubclass(obj.__class__, int):
+        # IntValue: the numbers (HoldTime, ASN, ...) which stopped being int for mypyc
+        if issubclass(obj.__class__, (int, IntValue)):
             return str(obj)
         return json.dumps(str(obj))
 
@@ -221,9 +223,11 @@ class JSON:
                 'multisession': negotiated.multisession,
                 'operational': negotiated.operational,
                 'refresh': REFRESH.json(negotiated.refresh),
-                'families': self._json(json.dumps(families)),
-                'nexthop': self._json(json.dumps(nexthop)),
-                'add_path': self._json(json.dumps({'send': add_path_send, 'receive': add_path_receive})),
+                'families': self._json(json.dumps(families, default=json_number)),
+                'nexthop': self._json(json.dumps(nexthop, default=json_number)),
+                'add_path': self._json(
+                    json.dumps({'send': add_path_send, 'receive': add_path_receive}, default=json_number)
+                ),
             },
         )
         return {'negotiated': self._json(f'{{ {kv_content} }} ')}
@@ -387,7 +391,7 @@ class JSON:
             rendered = nlri.v4_json(compact=False, nexthop=nexthop) if self.use_v4_json else nlri.json(compact=False)
             content = json.loads(rendered)
             content.update(extra)
-            return json.dumps(content)
+            return json.dumps(content, default=json_number)
         if self.use_v4_json:
             return str(nlri.v4_json(compact=self.compact, nexthop=nexthop))
         return str(nlri.json(compact=self.compact))

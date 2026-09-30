@@ -28,7 +28,6 @@ from exabgp.bgp.message.update.attribute import (
     Aggregator,
     AS2Path,
     AtomicAggregate,
-    Attribute,
     ClusterID,
     ClusterList,
     GenericAttribute,
@@ -46,6 +45,11 @@ from exabgp.bgp.message.update.attribute.community import (
     LargeCommunities,
     LargeCommunity,
 )
+from exabgp.bgp.message.update.attribute.internal import InternalNumber, InternalText
+from exabgp.bgp.message.update.attribute.internal import Name as InternalName
+from exabgp.bgp.message.update.attribute.internal import Split as InternalSplit
+from exabgp.bgp.message.update.attribute.internal import Watchdog as InternalWatchdog
+from exabgp.bgp.message.update.attribute.internal import Withdrawn as InternalWithdraw
 from exabgp.bgp.message.update.attribute.otc import OTC, OTCSelf
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDistinguisher
 from exabgp.configuration.grammar import shape
@@ -927,15 +931,14 @@ ROUTE_DISTINGUISHER = Word(
 class Internal(Type[Any]):
     """A value exabgp keeps with the route and never sends: name, split, watchdog, withdraw.
 
-    They travel in the attribute collection under a private code, as the legacy parser made
-    them: a `str` or `int` subclass carrying the code as `ID`.
+    They travel in the attribute collection under a private code, as an InternalAttribute
+    holding the value (bgp/message/update/attribute/internal.py).
     """
 
     def __init__(
         self,
         name: str,
-        code: int,
-        base: type,
+        klass: type[InternalText] | type[InternalNumber],
         convert: Any,
         hint: str,
         examples: list[str],
@@ -944,7 +947,7 @@ class Internal(Type[Any]):
     ) -> None:
         self.name = name
         self._shape = value.described(doc)
-        self._class = type(name.title().replace('-', ''), (base,), {'ID': code})
+        self._class = klass
         self._convert = convert
         self._hint = hint
         self._examples = examples
@@ -957,7 +960,7 @@ class Internal(Type[Any]):
             raise ConfigError(where, str(exc), expected=[self._hint]) from None
 
     def render(self, value: Any) -> list[str]:
-        return [f'/{int(value)}'] if isinstance(value, int) else [str(value)]
+        return [f'/{int(value)}'] if isinstance(value, InternalNumber) else [str(value)]
 
     def hint(self) -> str:
         return self._hint
@@ -983,8 +986,7 @@ def _watchdog(word: str) -> str:
 
 NAME = Internal(
     'name',
-    Attribute.CODE.INTERNAL_NAME,
-    str,
+    InternalName,
     str,
     '<name>',
     ['route-name', ''],
@@ -993,8 +995,7 @@ NAME = Internal(
 # the length of the more specifics to announce, written /<length>
 SPLIT = Internal(
     'split',
-    Attribute.CODE.INTERNAL_SPLIT,
-    int,
+    InternalSplit,
     _split,
     '/<length>',
     ['/24', '/32'],
@@ -1003,8 +1004,7 @@ SPLIT = Internal(
 )
 WATCHDOG = Internal(
     'watchdog',
-    Attribute.CODE.INTERNAL_WATCHDOG,
-    str,
+    InternalWatchdog,
     _watchdog,
     '<name>',
     ['dog', ''],
@@ -1012,11 +1012,7 @@ WATCHDOG = Internal(
 )
 
 
-class Withdrawn:
-    ID = Attribute.CODE.INTERNAL_WITHDRAW
-
-
-WITHDRAW = Flag('withdraw', Withdrawn, 'start with the route withdrawn')
+WITHDRAW = Flag('withdraw', InternalWithdraw, 'start with the route withdrawn')
 
 
 # --------------------------------------------------------------------------- segment routing

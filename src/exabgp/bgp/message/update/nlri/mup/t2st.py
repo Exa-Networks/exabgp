@@ -47,7 +47,6 @@ MUP_T2ST_IPV4_MAX_ENDPOINT: int = 64  # Max endpoint length for IPv4 (32 IP + 32
 MUP_T2ST_IPV6_MAX_ENDPOINT: int = 160  # Max endpoint length for IPv6 (128 IP + 32 TEID)
 
 
-@MUP.register_mup_route(archtype=1, code=4)
 class Type2SessionTransformedRoute(MUP):
     NAME: ClassVar[str] = 'Type2SessionTransformedRoute'
     SHORT_NAME: ClassVar[str] = 'T2ST'
@@ -139,8 +138,9 @@ class Type2SessionTransformedRoute(MUP):
 
     def __ne__(self, other: object) -> bool:
         # `not NotImplemented` is a DeprecationWarning today and a TypeError from 3.14
-        equal = self.__eq__(other)
-        return equal if equal is NotImplemented else not equal
+        # the operator, not a call to __eq__: it answers NotImplemented the way Python does,
+        # where a compiled bool-typed local would refuse it
+        return not self == other
 
     def __str__(self) -> str:
         return '{}:{}:{}:{}:{}:'.format(
@@ -197,3 +197,6 @@ class Type2SessionTransformedRoute(MUP):
         content += '"teid": "{}", '.format(str(self.teid))
         content += '"raw": "{}"'.format(self._raw())
         return '{{ {} }}'.format(content)
+
+
+MUP.register_mup_route(archtype=1, code=4)(Type2SessionTransformedRoute)

@@ -29,6 +29,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Generator, cast
 
 from exabgp.util.types import Buffer
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -238,7 +239,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         """
         if _JSON_INTEGER.fullmatch(text.strip()):
             return text
-        return json.dumps(text)
+        return json.dumps(text, default=json_number)
 
     def _generate_json(self, include_nexthop: bool = False, generic: bool = False) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
@@ -260,7 +261,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 # For generic mode, output hex; otherwise use str() which may be human-readable
                 if generic and hasattr(attribute, '_packed'):
                     hex_value = '0x' + attribute._packed.hex()
-                    yield '"attribute-0x{:02X}-0x{:02X}": {}'.format(code, attribute.FLAG, json.dumps(hex_value))
+                    yield '"attribute-0x{:02X}-0x{:02X}": {}'.format(
+                        code, attribute.FLAG, json.dumps(hex_value, default=json_number)
+                    )
                 else:
                     yield '"attribute-0x{:02X}-0x{:02X}": {}'.format(code, attribute.FLAG, json.dumps(str(attribute)))
                 continue
@@ -274,13 +277,13 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 # line unparseable. Whether the text is a number decides how it is emitted.
                 yield '"{}": {}'.format(name, self._as_json_scalar(presentation % str(attribute)))
             elif how == 'string':
-                yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute)))
+                yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute), default=json_number))
             elif how == 'list':
                 json_value = attribute.json()
                 if json_value != '{}':  # Skip empty lists (e.g., empty AS_PATH)
                     yield '"{}": {}'.format(name, presentation % json_value)
             elif how == 'inet':
-                yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute)))
+                yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute), default=json_number))
             # Should never be ran
             else:
                 yield '"{}": {}'.format(name, presentation % str(attribute))
@@ -673,7 +676,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         while data:
             try:
                 # We do not care if the attribute are transitive or not as we do not redistribute
-                flag = Attribute.Flag(data[0])
+                flag = data[0]
                 aid = data[1]
             except IndexError:
                 self.add(TreatAsWithdraw())
@@ -708,7 +711,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
             # remove the PARTIAL bit before comparaison if the attribute is optional
             if aid in Attribute.attributes_optional:
-                flag = Attribute.Flag(flag & Attribute.Flag.MASK_PARTIAL & 0xFF)
+                flag = flag & Attribute.Flag.MASK_PARTIAL & 0xFF
                 # flag &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
 
             if aid in dropped:
@@ -961,6 +964,11 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
     def __eq__(self, other: object) -> bool:
         return self.sameValuesAs(other)
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     # BaGPipe code ..
 

@@ -13,6 +13,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 
 #      0                   1                   2                   3
@@ -28,7 +29,6 @@ from exabgp.util.types import Buffer
 MAX_NODE_NAME_LENGTH = 255  # Maximum length for node name TLV
 
 
-@LinkState.register_lsid(tlv=1026, json_key='node-name', repr_name='Node Name')
 class NodeName(BaseLS):
     @property
     def content(self) -> str:
@@ -72,4 +72,7 @@ class NodeName(BaseLS):
         return cls(data)
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return f'"{self.JSON}": {json.dumps(self.content, default=json_number)}'
+
+
+LinkState.register_lsid(tlv=1026, json_key='node-name', repr_name='Node Name')(NodeName)

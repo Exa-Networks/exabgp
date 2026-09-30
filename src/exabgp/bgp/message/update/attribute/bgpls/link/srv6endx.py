@@ -6,20 +6,22 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+
 import json
 from struct import pack, unpack
-from typing import Callable, Protocol, Self
+from typing import Callable, ClassVar, Protocol, Self
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState, merge_subtlvs, unpack_subtlvs
 from exabgp.protocol.ip import IPv6
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 
 class SubSubTLV(Protocol):
     """Protocol for sub-sub-TLV classes with TLV code and unpack_bgpls method."""
 
-    TLV: int  # Class variable (mypy treats class-level annotations as instance vars)
+    TLV: ClassVar[int]
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> Self: ...
@@ -51,11 +53,10 @@ SRV6_ENDX_MIN_LENGTH = 22
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-@LinkState.register_lsid(tlv=1106, json_key='srv6-endx', repr_name='SRv6 End.X SID')
 class Srv6EndX(FlagLS):
-    FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    MERGE = True  # LinkState.json() groups into array
-    registered_subsubtlvs: dict[int, type[SubSubTLV]] = dict()
+    FLAGS: ClassVar = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    MERGE: ClassVar[bool] = True  # LinkState.json() groups into array
+    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = dict()
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with packed bytes."""
@@ -147,4 +148,7 @@ class Srv6EndX(FlagLS):
         return cls(packed)
 
     def json(self, compact: bool = False) -> str:
-        return '"srv6-endx": {}'.format(json.dumps(self.content))
+        return '"srv6-endx": {}'.format(json.dumps(self.content, default=json_number))
+
+
+LinkState.register_lsid(tlv=1106, json_key='srv6-endx', repr_name='SRv6 End.X SID')(Srv6EndX)

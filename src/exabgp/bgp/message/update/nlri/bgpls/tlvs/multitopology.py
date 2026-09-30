@@ -88,6 +88,11 @@ class MTID:
             return NotImplemented
         return self.topologies == other.topologies
 
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
     def __lt__(self, other: MTID) -> bool:
         raise RuntimeError('Not implemented')
 

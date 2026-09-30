@@ -36,14 +36,13 @@ from exabgp.protocol.ip import IPv4
 # RFC 6514
 
 
-@Attribute.register()
 class PMSI(Attribute):
-    ID = Attribute.CODE.PMSI_TUNNEL
+    ID: ClassVar = Attribute.CODE.PMSI_TUNNEL
     # RFC 6514 5: an UPDATE carrying a malformed PMSI Tunnel attribute is treated as a
     # withdraw of its routes
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
-    FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
-    CACHING = True
+    FLAG: ClassVar = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
+    CACHING: ClassVar[bool] = True
     TUNNEL_TYPE: ClassVar[int] = -1  # Used for subclass registration
     # the size of the tunnel identifier this tunnel type carries, None when the type does
     # not constrain it (RFC 6514 section 5).  A peer which sends another size is not
@@ -208,11 +207,13 @@ class PMSI(Attribute):
         return cls.from_packet(data)
 
 
+Attribute.register()(PMSI)
+
+
 # ================================================================= PMSINoTunnel
 # RFC 6514
 
 
-@PMSI.register_tunnel_type
 class PMSINoTunnel(PMSI):
     TUNNEL_TYPE: ClassVar[int] = 0
     TUNNEL_SIZE: ClassVar[int | None] = 0
@@ -239,11 +240,13 @@ class PMSINoTunnel(PMSI):
         return ''
 
 
+PMSI.register_tunnel_type(PMSINoTunnel)
+
+
 # ======================================================= PMSIIngressReplication
 # RFC 6514
 
 
-@PMSI.register_tunnel_type
 class PMSIIngressReplication(PMSI):
     TUNNEL_TYPE: ClassVar[int] = 6
     TUNNEL_SIZE: ClassVar[int | None] = 4  # an IPv4 address
@@ -284,3 +287,6 @@ class PMSIIngressReplication(PMSI):
         """
         assert len(self.tunnel) == self.TUNNEL_SIZE, 'ingress replication holds an IPv4 address'
         return self.ip
+
+
+PMSI.register_tunnel_type(PMSIIngressReplication)

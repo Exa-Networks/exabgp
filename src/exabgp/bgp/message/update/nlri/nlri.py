@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, TypeVar
 
+from exabgp.util.mypyc import mypyc_attr
 from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
@@ -41,6 +42,8 @@ T = TypeVar('T', bound='NLRI')
 _UNPARSED: list['NLRI'] = []
 
 
+# the families other than unicast, labelled and VPN are not compiled yet (qa/bin/build_mypyc)
+@mypyc_attr(allow_interpreted_subclasses=True)
 class NLRI(Family):
     """Base class for all NLRI types.
 
@@ -70,12 +73,7 @@ class NLRI(Family):
     @classmethod
     def _create_singleton(cls, name: str) -> 'NLRI':
         """Create a singleton NLRI (INVALID or EMPTY). Called once at module load."""
-        instance = object.__new__(cls)
-        instance._afi = AFI.undefined
-        instance._safi = SAFI.undefined
-        instance.addpath = PathInfo.DISABLED
-        instance._packed = b''
-        return instance
+        return cls(AFI.undefined, SAFI.undefined)
 
     def __init__(self, afi: AFI, safi: SAFI, addpath: PathInfo = PathInfo.DISABLED) -> None:
         """Initialize NLRI base class.
@@ -244,9 +242,9 @@ class NLRI(Family):
         return self.json(compact=compact)
 
     @classmethod
-    def register(cls, afi: int, safi: int, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
+    def register(cls, afi: AFI, safi: SAFI, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
         def register_nlri(klass: Type[NLRI]) -> Type[NLRI]:
-            new: FamilyTuple = (AFI.from_int(afi), SAFI.from_int(safi))
+            new: FamilyTuple = (afi, safi)
             key = '{}/{}'.format(*new)
             if key in cls.registered_nlri:
                 if force:
@@ -291,7 +289,7 @@ class NLRI(Family):
     ) -> tuple[NLRI, Buffer]:
         a: AFI
         s: SAFI
-        a, s = AFI.from_int(afi), SAFI.from_int(safi)
+        a, s = afi, safi
         log.debug(lazynlri(a, s, addpath, bytes(data)), 'parser')
 
         key: str = '{}/{}'.format(a, s)

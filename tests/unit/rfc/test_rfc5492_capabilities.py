@@ -36,15 +36,15 @@ CAPABILITIES_PARAMETER = 2
 # use range, which is where a peer's home-grown capability would be.
 UNASSIGNED_CODE = 222
 
-MULTIPROTOCOL_IPV4_UNICAST = pack('!HBB', AFI.ipv4, 0, SAFI.unicast)
-MULTIPROTOCOL_IPV6_UNICAST = pack('!HBB', AFI.ipv6, 0, SAFI.unicast)
+MULTIPROTOCOL_IPV4_UNICAST = pack('!HBB', int(AFI.ipv4), 0, int(SAFI.unicast))
+MULTIPROTOCOL_IPV6_UNICAST = pack('!HBB', int(AFI.ipv6), 0, int(SAFI.unicast))
 
 
 def parameter(capabilities: list[tuple[int, bytes]]) -> bytes:
     """One Capabilities Optional Parameter holding these <code, length, value> triples."""
     body = b''
     for code, value in capabilities:
-        body += bytes([code, len(value)]) + value
+        body += bytes([int(code), len(value)]) + value
     return bytes([CAPABILITIES_PARAMETER, len(body)]) + body
 
 
@@ -208,9 +208,9 @@ def test_a_capability_sent_twice_identically_is_accepted() -> None:
 def test_a_repeated_instance_which_is_malformed_is_not_accepted() -> None:
     """Tolerating repetition is not tolerating anything that comes after the first copy."""
     body = (
-        bytes([Capability.CODE.MULTIPROTOCOL, 4])
+        bytes([int(Capability.CODE.MULTIPROTOCOL), 4])
         + MULTIPROTOCOL_IPV4_UNICAST
-        + bytes([Capability.CODE.MULTIPROTOCOL, 4])
+        + bytes([int(Capability.CODE.MULTIPROTOCOL), 4])
         + b'\x00\x01'
     )
     malformed = bytes([CAPABILITIES_PARAMETER, len(body)]) + body
@@ -302,7 +302,7 @@ def test_capabilities_split_across_two_parameters_are_all_read() -> None:
 def test_a_second_parameter_which_overruns_the_field_is_refused() -> None:
     """Accepting several parameters must not mean trusting each one's length field."""
     good = parameter([(Capability.CODE.MULTIPROTOCOL, MULTIPROTOCOL_IPV4_UNICAST)])
-    overrunning = bytes([CAPABILITIES_PARAMETER, 40]) + bytes([Capability.CODE.ROUTE_REFRESH, 0])
+    overrunning = bytes([CAPABILITIES_PARAMETER, 40]) + bytes([int(Capability.CODE.ROUTE_REFRESH), 0])
 
     with pytest.raises(Notify):
         Capabilities.unpack(optional_parameters(good, overrunning))

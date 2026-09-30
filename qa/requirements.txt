@@ -87,6 +87,7 @@ rich==15.0.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 ruff==0.15.10 ; sys_platform == 'darwin' or sys_platform == 'linux'
 setproctitle==1.3.7 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via mutmut
+setuptools==84.0.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 shellingham==1.5.4 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via typer
 sortedcontainers==2.4.0 ; sys_platform == 'darwin' or sys_platform == 'linux'

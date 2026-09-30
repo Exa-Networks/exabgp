@@ -26,6 +26,7 @@ from exabgp.bgp.neighbor.session import Session
 from exabgp.protocol.family import AFI, SAFI, Family, FamilyTuple
 from exabgp.protocol.ip import IP
 from exabgp.rib import RIB
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor.settings import NeighborSettings
@@ -841,7 +842,7 @@ Neighbor {peer-address}
 
     @classmethod
     def to_json(cls, answer: dict[str, Any]) -> str:
-        return json.dumps(cls.formated_dict(answer))
+        return json.dumps(cls.formated_dict(answer), default=json_number)
 
     @classmethod
     def extensive(cls, answer: dict[str, Any]) -> str:

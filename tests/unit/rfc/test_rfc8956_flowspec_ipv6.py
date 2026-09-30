@@ -91,7 +91,7 @@ def session(families: list[FamilyTuple]) -> Negotiated:
 
 def mp_reach(afi: int, safi: int, payload: bytes) -> bytes:
     """The MP_REACH_NLRI attribute value with the zero length next hop section 4 wants."""
-    return pack('!HB', afi, safi) + bytes([0]) + bytes([0]) + payload
+    return pack('!HB', int(afi), int(safi)) + bytes([0]) + bytes([0]) + payload
 
 
 def prefix_component(component_id: int, length: int, offset: int, pattern: bytes) -> bytes:

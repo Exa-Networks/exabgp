@@ -6,6 +6,8 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import json
 
 from exabgp.bgp.message.notification import Notify
@@ -14,6 +16,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEndXISIS, Srv6LanEndXOSPF
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 # Fixed data length for SRv6 SID Structure TLV (RFC 9514 Section 8)
 # LB Length (1) + LN Length (1) + Function Length (1) + Argument Length (1) = 4 bytes
@@ -31,13 +34,9 @@ SRV6_SID_STRUCTURE_LEN = 4
 #                      Figure 10: SRv6 SID Structure TLV
 
 
-@Srv6EndX.register_subsubtlv()
-@Srv6LanEndXISIS.register_subsubtlv()
-@Srv6LanEndXOSPF.register_subsubtlv()
-@LinkState.register_lsid(tlv=1252, json_key='srv6-sid-structure', repr_name='SRv6 SID Structure')
 class Srv6SidStructure(BaseLS):
-    TLV: int = 1252  # Required by SubSubTLV Protocol
-    LEN = SRV6_SID_STRUCTURE_LEN
+    TLV: ClassVar[int] = 1252  # Required by SubSubTLV Protocol
+    LEN: ClassVar = SRV6_SID_STRUCTURE_LEN
 
     @property
     def loc_block_len(self) -> int:
@@ -102,4 +101,10 @@ class Srv6SidStructure(BaseLS):
         }
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return f'"{self.JSON}": {json.dumps(self.content, default=json_number)}'
+
+
+LinkState.register_lsid(tlv=1252, json_key='srv6-sid-structure', repr_name='SRv6 SID Structure')(Srv6SidStructure)
+Srv6LanEndXOSPF.register_subsubtlv()(Srv6SidStructure)
+Srv6LanEndXISIS.register_subsubtlv()(Srv6SidStructure)
+Srv6EndX.register_subsubtlv()(Srv6SidStructure)

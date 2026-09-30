@@ -19,13 +19,12 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # =================================================================== Origin (1)
 
 
-@Attribute.register()
 class Origin(Attribute):
-    ID = Attribute.CODE.ORIGIN
-    FLAG = Attribute.Flag.TRANSITIVE
-    CACHING = True
-    TREAT_AS_WITHDRAW = True
-    MANDATORY = True
+    ID: ClassVar = Attribute.CODE.ORIGIN
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE
+    CACHING: ClassVar[bool] = True
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
+    MANDATORY: ClassVar[bool] = True
 
     IGP: ClassVar[int] = 0x00
     EGP: ClassVar[int] = 0x01
@@ -122,6 +121,9 @@ class Origin(Attribute):
         cls.cache[Attribute.CODE.ORIGIN][IGP.pack_attribute()] = IGP
         cls.cache[Attribute.CODE.ORIGIN][EGP.pack_attribute()] = EGP
         cls.cache[Attribute.CODE.ORIGIN][INC.pack_attribute()] = INC
+
+
+Attribute.register()(Origin)
 
 
 Origin.setCache()

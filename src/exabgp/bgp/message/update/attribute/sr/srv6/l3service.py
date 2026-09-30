@@ -40,7 +40,6 @@ SubTlvType = TypeVar('SubTlvType', bound=HasTLV)
 #                   Figure 1: SRv6 Service TLVs
 
 
-@PrefixSid.register_sr()
 class Srv6L3Service:
     TLV: ClassVar[int] = 5
 
@@ -75,7 +74,7 @@ class Srv6L3Service:
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, length: int) -> Srv6L3Service:
-        subtlvs: list[GenericSrv6ServiceSubTlv] = []
+        subtlvs: list[Any] = []  # the registry decodes its own classes, not the generic one
 
         # Need at least 1 byte for reserved field
         if len(data) < 1:
@@ -92,9 +91,7 @@ class Srv6L3Service:
             if len(data) < length + 3:
                 raise Notify.short(3, 1, 'SRv6 L3 Service Sub-TLV', length + 3, len(data))
             if code in cls.registered_subtlvs:
-                subtlv: GenericSrv6ServiceSubTlv = cls.registered_subtlvs[code].unpack_attribute(
-                    data[3 : length + 3], length
-                )
+                subtlv: Any = cls.registered_subtlvs[code].unpack_attribute(data[3 : length + 3], length)
             else:
                 subtlv = GenericSrv6ServiceSubTlv(data[3 : length + 3], code)
             subtlvs.append(subtlv)
@@ -115,3 +112,6 @@ class Srv6L3Service:
     def json(self, compact: bool | None = None) -> str:
         content: str = '[ ' + ', '.join(subtlv.json() for subtlv in self.subtlvs) + ' ]'
         return '"l3-service": {}'.format(content)
+
+
+PrefixSid.register_sr()(Srv6L3Service)

@@ -87,13 +87,13 @@ def advertised_asn(capabilities: Capabilities) -> int:
 def attribute(code: int, flag: int, payload: bytes) -> bytes:
     """One path attribute, in the non-extended encoding."""
     assert len(payload) < 256, 'the tests here stay inside the one octet length form'
-    return bytes([flag, code, len(payload)]) + payload
+    return bytes([int(flag), int(code), len(payload)]) + payload
 
 
 def segment(segment_type: int, asns: list[ASN], octets: int) -> bytes:
     """One AS path segment, packed with two or four octet AS numbers."""
     packer = '!L' if octets == 4 else '!H'
-    return bytes([segment_type, len(asns)]) + b''.join(pack(packer, int(asn)) for asn in asns)
+    return bytes([int(segment_type), len(asns)]) + b''.join(pack(packer, int(asn)) for asn in asns)
 
 
 def as_path(asns: list[ASN], octets: int) -> bytes:
@@ -202,7 +202,7 @@ def test_the_capability_value_is_our_as_number_in_four_octets() -> None:
 @pytest.mark.parametrize('length', [0, 1, 3, 5, 8], ids=['empty', 'one', 'three', 'five', 'eight'])
 def test_a_capability_value_which_cannot_be_an_as_number_is_refused(length: int) -> None:
     """Reading an AS number out of the wrong number of octets invents a peer identity."""
-    body = bytes([Capability.CODE.FOUR_BYTES_ASN, length]) + bytes(length)
+    body = bytes([int(Capability.CODE.FOUR_BYTES_ASN), length]) + bytes(length)
     parameter = bytes([2, len(body)]) + body
 
     with pytest.raises(Notify):
@@ -666,12 +666,12 @@ def test_an_as4_path_without_confederation_segments_is_processed_whole() -> None
 def malformed_as4_paths() -> list[tuple[str, bytes]]:
     """One AS4_PATH value per condition section 6 lists as making it malformed."""
     return [
-        ('a length below six, too small for one AS number', bytes([SEQUENCE.ID, 1]) + b'\x00\x00'),
-        ('a length which is not a multiple of two', bytes([SEQUENCE.ID, 1]) + b'\x00\x00\x00'),
-        ('a path segment length of zero', bytes([SEQUENCE.ID, 0])),
+        ('a length below six, too small for one AS number', bytes([int(SEQUENCE.ID), 1]) + b'\x00\x00'),
+        ('a length which is not a multiple of two', bytes([int(SEQUENCE.ID), 1]) + b'\x00\x00\x00'),
+        ('a path segment length of zero', bytes([int(SEQUENCE.ID), 0])),
         (
             'a path segment length inconsistent with the attribute length',
-            bytes([SEQUENCE.ID, 4]) + pack('!L', int(NON_MAPPABLE)),
+            bytes([int(SEQUENCE.ID), 4]) + pack('!L', int(NON_MAPPABLE)),
         ),
         ('a path segment type which is not defined', bytes([9, 1]) + pack('!L', int(NON_MAPPABLE))),
     ]

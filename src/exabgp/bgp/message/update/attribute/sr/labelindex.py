@@ -26,7 +26,6 @@ from exabgp.util.types import Buffer
 # 3.1.  Label-Index TLV
 
 
-@PrefixSid.register_sr()
 class SrLabelIndex:
     TLV: ClassVar[int] = 1
     LENGTH: ClassVar[int] = 7
@@ -65,3 +64,6 @@ class SrLabelIndex:
 
     def json(self, compact: bool = False) -> str:
         return '"sr-label-index": %d' % (self.labelindex)
+
+
+PrefixSid.register_sr()(SrLabelIndex)

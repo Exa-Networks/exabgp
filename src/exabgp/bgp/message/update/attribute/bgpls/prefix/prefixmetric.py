@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
@@ -23,9 +25,8 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.4
 
 
-@LinkState.register_lsid(tlv=1155, json_key='prefix-metric', repr_name='prefix_metric')
 class PrefixMetric(BaseLS):
-    LEN = 4
+    LEN: ClassVar[int] = 4
 
     @property
     def content(self) -> int:
@@ -48,3 +49,6 @@ class PrefixMetric(BaseLS):
     def unpack_bgpls(cls, data: Buffer) -> PrefixMetric:
         cls.check(data)
         return cls(data)
+
+
+LinkState.register_lsid(tlv=1155, json_key='prefix-metric', repr_name='prefix_metric')(PrefixMetric)

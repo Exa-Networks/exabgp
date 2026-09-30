@@ -47,7 +47,9 @@ from typing import (
     Type,
 )
 
+from exabgp.util.mypyc import trait
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -232,18 +234,21 @@ def _number(string: bytes) -> NumericValue:
 # Interface ..................
 
 
+@trait
 class FlowIPv4:
     """Marker class for FlowSpec components valid for IPv4."""
 
     afi: ClassVar[AFI] = AFI.ipv4
 
 
+@trait
 class FlowIPv6:
     """Marker class for FlowSpec components valid for IPv6."""
 
     afi: ClassVar[AFI] = AFI.ipv6
 
 
+@trait
 class IPrefix:
     pass
 
@@ -251,7 +256,7 @@ class IPrefix:
 # Prococol
 
 
-class IPrefix4(IPrefix, IComponent, FlowIPv4):
+class IPrefix4(IComponent, IPrefix, FlowIPv4):
     """IPv4 FlowSpec prefix using packed-bytes-first pattern.
 
     Wire format stored in _packed: [mask][truncated_ip...]
@@ -348,7 +353,7 @@ def _pattern_from_address(address: bytes, length: int, offset: int) -> bytes:
     return (matched << (size * 8 - bits)).to_bytes(size, 'big')
 
 
-class IPrefix6(IPrefix, IComponent, FlowIPv6):
+class IPrefix6(IComponent, IPrefix, FlowIPv6):
     """IPv6 FlowSpec prefix using packed-bytes-first pattern.
 
     Wire format stored in _packed: [mask][truncated_ip...]
@@ -506,7 +511,7 @@ class IOperationByte(IOperation):
     VALUE_SIZES: ClassVar[tuple[int, ...]] = (1,)
 
     def encode(self, value: BaseValue) -> tuple[int, bytes]:
-        return 1, bytes([value])
+        return 1, bytes([int(value)])
 
     # def decode (self, bgp):
     # 	return bgp[0],bgp[1:]
@@ -517,8 +522,8 @@ class IOperationByteShort(IOperation):
 
     def encode(self, value: BaseValue) -> tuple[int, bytes]:
         if value < (1 << 8):
-            return 1, bytes([value])
-        return 2, pack('!H', value)
+            return 1, bytes([int(value)])
+        return 2, pack('!H', int(value))
 
 
 class IOperationByteShortLong(IOperation):
@@ -526,10 +531,10 @@ class IOperationByteShortLong(IOperation):
 
     def encode(self, value: BaseValue) -> tuple[int, bytes]:
         if value < (1 << 8):
-            return 1, bytes([value])
+            return 1, bytes([int(value)])
         if value < (1 << 16):
-            return 2, pack('!H', value)
-        return 4, pack('!L', value)
+            return 2, pack('!H', int(value))
+        return 4, pack('!L', int(value))
 
 
 class IOperationLong(IOperation):
@@ -538,12 +543,13 @@ class IOperationLong(IOperation):
     VALUE_SIZES: ClassVar[tuple[int, ...]] = (1, 2, 4)
 
     def encode(self, value: BaseValue) -> tuple[int, bytes]:
-        return 4, pack('!L', value)
+        return 4, pack('!L', int(value))
 
 
 # String representation for Numeric and Binary Tests
 
 
+@trait
 class NumericString:
     """Mixin providing string representation for numeric operations."""
 
@@ -582,6 +588,7 @@ class NumericString:
         return self.short()
 
 
+@trait
 class BinaryString:
     """Mixin providing string representation for binary/bitmask operations."""
 
@@ -612,19 +619,19 @@ class BinaryString:
 # Components ..............................
 
 
-def converter(
-    function: Callable[[str], int | 'Protocol' | 'ICMPType' | 'ICMPCode' | 'TCPFlag'], klass: Type[BaseValue]
-) -> Callable[[str], BaseValue]:
+def converter(function: Callable[[str], int | BaseValue], klass: Type[BaseValue]) -> Callable[[str], BaseValue]:
     def _integer(value: str) -> BaseValue:
-        return klass(function(value))
+        return klass(int(function(value)))
 
     return _integer
 
 
-def decoder(function: Callable[[bytes], int], klass: Type[BaseValue] = NumericValue) -> Callable[[bytes], BaseValue]:
+def decoder(
+    function: Callable[[bytes], int | BaseValue], klass: Type[BaseValue] = NumericValue
+) -> Callable[[bytes], BaseValue]:
     def _inner(value: bytes) -> BaseValue:
         # klass is always a BaseValue subclass, return type is guaranteed
-        result: BaseValue = klass(function(value))
+        result: BaseValue = klass(int(function(value)))
         return result
 
     return _inner
@@ -644,7 +651,7 @@ def port_value(data: str) -> int:
         number = Port.from_string(data)
     except ValueError:
         raise ValueError(_str_bad_port) from None
-    return number
+    return number.value
 
 
 def _dscp(string: bytes) -> NumericValue:
@@ -680,11 +687,13 @@ def label_value(data: str) -> int:
 # Protocol Shared
 
 
+@trait
 class FlowDestination:
     ID: ClassVar[int] = 0x01
     NAME: ClassVar[str] = 'destination'
 
 
+@trait
 class FlowSource:
     ID: ClassVar[int] = 0x02
     NAME: ClassVar[str] = 'source'
@@ -819,7 +828,7 @@ def _fragment(defined_bits: int) -> Callable[[bytes], BaseValue]:
     """Build the fragment value decoder of one family, dropping the bits it reserves."""
 
     def _masked(value: bytes) -> BaseValue:
-        return Fragment(_number(value) & defined_bits)
+        return Fragment(_number(value).value & defined_bits)
 
     return _masked
 
@@ -961,10 +970,6 @@ for content in dir():
 # ..........................................................
 
 
-@NLRI.register(AFI.ipv4, SAFI.flow_ip)
-@NLRI.register(AFI.ipv6, SAFI.flow_ip)
-@NLRI.register(AFI.ipv4, SAFI.flow_vpn)
-@NLRI.register(AFI.ipv6, SAFI.flow_vpn)
 class Flow(NLRI):
     """FlowSpec NLRI for traffic filtering rules (RFC 5575) using packed-bytes-first pattern.
 
@@ -1435,7 +1440,9 @@ class Flow(NLRI):
             # quoted pieces and then repaired with .replace('""', ''): a rule which renders
             # as the empty string had its quotes deleted and left `[ , "is-fragment" ]`,
             # which is the same unreadable line the leading comma used to produce
-            members.append('"{}": [ {} ]'.format(rules[0].NAME, ', '.join(json.dumps(e) for e in elements)))
+            members.append(
+                '"{}": [ {} ]'.format(rules[0].NAME, ', '.join(json.dumps(e, default=json_number) for e in elements))
+            )
         if self.rd is not RouteDistinguisher.NORD:
             members.append(self.rd.json())
         if self.addpath is not PathInfo.DISABLED:
@@ -1445,7 +1452,7 @@ class Flow(NLRI):
     def json(self, announced: bool = True, compact: bool = False) -> str:
         """Serialize Flow NLRI to JSON (v6 format - no nexthop)."""
         members = self._json_members(compact)
-        members.append('"string": {}'.format(json.dumps(self.extensive())))
+        members.append('"string": {}'.format(json.dumps(self.extensive(), default=json_number)))
         return '{' + ', '.join(members) + ' }'
 
     def v4_json(self, compact: bool = False, nexthop: IP | None = None) -> str:
@@ -1454,7 +1461,7 @@ class Flow(NLRI):
         nh = nexthop if nexthop is not None else IP.NoNextHop
         if nh is not IP.NoNextHop:
             members.append('"next-hop": "{}"'.format(nh))
-        members.append('"string": {}'.format(json.dumps(self.extensive())))
+        members.append('"string": {}'.format(json.dumps(self.extensive(), default=json_number)))
         return '{' + ', '.join(members) + ' }'
 
     @classmethod
@@ -1513,3 +1520,9 @@ class Flow(NLRI):
             return NLRI.INVALID, over
         except IndexError:
             return NLRI.INVALID, over
+
+
+NLRI.register(AFI.ipv6, SAFI.flow_vpn)(Flow)
+NLRI.register(AFI.ipv4, SAFI.flow_vpn)(Flow)
+NLRI.register(AFI.ipv6, SAFI.flow_ip)(Flow)
+NLRI.register(AFI.ipv4, SAFI.flow_ip)(Flow)

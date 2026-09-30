@@ -69,7 +69,7 @@ def session(families: list[FamilyTuple], direction: Direction = Direction.IN) ->
 
 def mp_reach(afi: int, safi: int, nexthop: bytes, nlri: bytes, reserved: int = 0) -> bytes:
     """The MP_REACH_NLRI attribute value, as section 3 lays it out."""
-    return pack('!HB', afi, safi) + bytes([len(nexthop)]) + nexthop + bytes([reserved]) + nlri
+    return pack('!HB', int(afi), int(safi)) + bytes([len(nexthop)]) + nexthop + bytes([int(reserved)]) + nlri
 
 
 def decoded_mp_reach(payload: bytes, negotiated: Negotiated) -> MPRNLRI:
@@ -210,9 +210,9 @@ def test_a_next_hop_attribute_beside_mp_reach_does_not_reach_the_mp_nlri() -> No
     """A peer which sends both must not have its NEXT_HOP used for the MP_REACH routes."""
     negotiated = session([IPV6_UNICAST])
     attributes = (
-        bytes([Attribute.Flag.TRANSITIVE, Attribute.CODE.NEXT_HOP, 4])
+        bytes([int(Attribute.Flag.TRANSITIVE), int(Attribute.CODE.NEXT_HOP), 4])
         + bytes([192, 0, 2, 9])
-        + bytes([Attribute.Flag.OPTIONAL, Attribute.CODE.MP_REACH_NLRI])
+        + bytes([int(Attribute.Flag.OPTIONAL), int(Attribute.CODE.MP_REACH_NLRI)])
         + bytes([len(mp_reach(2, 1, bytes(15) + bytes([1]), NLRI_V6))])
         + mp_reach(2, 1, bytes(15) + bytes([1]), NLRI_V6)
     )
@@ -290,7 +290,7 @@ def test_a_correct_mp_attribute_costs_the_peer_nothing() -> None:
 
     for afi, nexthop, nlri in ((1, bytes([192, 0, 2, 1]), NLRI_V4), (2, bytes(15) + bytes([1]), NLRI_V6)):
         MPRNLRI.unpack_attribute(mp_reach(afi, 1, nexthop, nlri), negotiated)
-        MPURNLRI.unpack_attribute(pack('!HB', afi, 1) + nlri, negotiated)
+        MPURNLRI.unpack_attribute(pack('!HB', int(afi), 1) + nlri, negotiated)
 
 
 @pytest.mark.rfc('rfc4760#7-terminate-with-optional-attribute-error')
@@ -393,7 +393,7 @@ def capabilities_parameter(capabilities: list[tuple[int, bytes]]) -> bytes:
     """One OPEN Capabilities Optional Parameter holding these TLVs, with its length byte."""
     body = b''
     for code, value in capabilities:
-        body += bytes([code, len(value)]) + value
+        body += bytes([int(code), len(value)]) + value
     parameter = bytes([2, len(body)]) + body
     return bytes([len(parameter)]) + parameter
 

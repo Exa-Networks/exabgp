@@ -21,7 +21,6 @@ from exabgp.protocol.ip import IP
 # ================================================================== NextHop (3)
 
 
-@Attribute.register()
 class NextHop(Attribute):
     """Next Hop attribute (code 3).
 
@@ -29,8 +28,8 @@ class NextHop(Attribute):
     Delegates IP functionality via composition rather than inheritance.
     """
 
-    ID: int = Attribute.CODE.NEXT_HOP
-    FLAG: int = Attribute.Flag.TRANSITIVE
+    ID: ClassVar[int] = Attribute.CODE.NEXT_HOP
+    FLAG: ClassVar[int] = Attribute.Flag.TRANSITIVE
     CACHING: ClassVar[bool] = True
     SELF: ClassVar[bool] = False
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
@@ -155,24 +154,13 @@ class NextHop(Attribute):
     def __hash__(self) -> int:
         return hash(('NextHop', self._packed))
 
+    # A next hop is never changed once built (NextHopSelf.resolve() returns a new one), so
+    # a copy is the next hop itself, and UNSET keeps its identity.
     def __copy__(self) -> 'NextHop':
-        """Preserve singleton identity for UNSET."""
-        if self is NextHop.UNSET:
-            return self
-        # Use type(self) to preserve subclass (e.g., NextHopSelf)
-        new = object.__new__(type(self))
-        new.__dict__.update(self.__dict__)
-        return new
+        return self
 
     def __deepcopy__(self, memo: dict[int, object]) -> 'NextHop':
-        """Preserve singleton identity for UNSET."""
-        if self is NextHop.UNSET:
-            return self
-        # Use type(self) to preserve subclass (e.g., NextHopSelf)
-        new = object.__new__(type(self))
-        new.__dict__.update(self.__dict__)
-        memo[id(self)] = new
-        return new
+        return self
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return self._attribute(self._packed)
@@ -182,6 +170,9 @@ class NextHop(Attribute):
         if not data:
             return NextHop.UNSET
         return cls.from_packet(data)
+
+
+Attribute.register()(NextHop)
 
 
 class NextHopSelf(NextHop):
@@ -233,6 +224,11 @@ class NextHopSelf(NextHop):
 
     def __eq__(self, other: object) -> bool:
         raise RuntimeError('do not use __eq__ with NextHopSelf')
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
 
 # ==================================================================== UNSET Singleton

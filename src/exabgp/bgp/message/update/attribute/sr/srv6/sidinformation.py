@@ -49,8 +49,6 @@ SubSubTlvType = TypeVar('SubSubTlvType', bound=HasTLV)
 #            Figure 3: SRv6 SID Information Sub-TLV
 
 
-@Srv6L2Service.register()
-@Srv6L3Service.register()
 class Srv6SidInformation:
     TLV: ClassVar[int] = 1
 
@@ -95,7 +93,8 @@ class Srv6SidInformation:
             raise Notify.short(3, 1, 'SRv6 SID Information', 21, len(data))
         sid: IPv6 = IPv6.unpack_ipv6(data[1:17])
         behavior: int = unpack('!H', data[18:20])[0]
-        subsubtlvs: list[GenericSrv6ServiceDataSubSubTlv] = []
+        # what the registry decodes is its own class, not the generic one: Any, as __init__ takes
+        subsubtlvs: list[Any] = []
 
         data = data[21:]
         while data:
@@ -107,9 +106,7 @@ class Srv6SidInformation:
             if len(data) < length + 3:
                 raise Notify.short(3, 1, 'SRv6 Sub-Sub-TLV', length + 3, len(data))
             if code in cls.registered_subsubtlvs:
-                subsubtlv: GenericSrv6ServiceDataSubSubTlv = cls.registered_subsubtlvs[code].unpack_attribute(
-                    data[3 : length + 3], length
-                )
+                subsubtlv: Any = cls.registered_subsubtlvs[code].unpack_attribute(data[3 : length + 3], length)
             else:
                 subsubtlv = GenericSrv6ServiceDataSubSubTlv(data[3 : length + 3], code)
             subsubtlvs.append(subsubtlv)
@@ -148,3 +145,7 @@ class Srv6SidInformation:
             s += ', {}'.format(content)
         s += ' }'
         return s
+
+
+Srv6L3Service.register()(Srv6SidInformation)
+Srv6L2Service.register()(Srv6SidInformation)

@@ -256,7 +256,7 @@ def established(neighbor: Neighbor, peer_as: int) -> Negotiated:
 def theirs(sent: Capabilities, peer_as: int) -> Capabilities:
     """The peer's capabilities, ours copied with its own AS: RFC 6793 4.1 reads the AS there."""
     capabilities = Capabilities(sent)
-    capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(ASN(peer_as))
+    capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(peer_as)
     return capabilities
 
 

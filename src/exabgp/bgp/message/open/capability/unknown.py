@@ -16,7 +16,6 @@ from exabgp.util.types import Buffer
 #
 
 
-@Capability.unknown
 class UnknownCapability(Capability):
     capability: CapabilityCode
     data: Buffer
@@ -50,3 +49,6 @@ class UnknownCapability(Capability):
     def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:
         assert isinstance(instance, UnknownCapability)
         return instance.set(capability, data)
+
+
+Capability.unknown(UnknownCapability)

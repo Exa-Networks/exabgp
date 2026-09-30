@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
@@ -30,7 +32,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 # 	RFC 7752 3.3.2.2.  MPLS Protocol Mask TLV
 
 
-@LinkState.register_lsid(tlv=1094, json_key='mpls-mask', repr_name='MPLS Protocol mask')
 class MplsMask(FlagLS):
-    FLAGS = ['LDP', 'RSVP-TE', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    LEN = 1
+    FLAGS: ClassVar = ['LDP', 'RSVP-TE', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    LEN: ClassVar[int] = 1
+
+
+LinkState.register_lsid(tlv=1094, json_key='mpls-mask', repr_name='MPLS Protocol mask')(MplsMask)

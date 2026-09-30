@@ -24,7 +24,6 @@ from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
-from exabgp.bgp.message.open import ASN
 from exabgp.bgp.message.open import RouterID
 from exabgp.bgp.message.open import HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
@@ -96,13 +95,13 @@ def _negotiated(neighbor: Neighbor) -> tuple[Negotiated, Negotiated]:
     routerid_1 = str(neighbor.session.router_id)
     routerid_2 = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.session.router_id).split('.', -1))
 
-    o1 = Open.make_open(Version(4), ASN(local_as), HoldTime(180), RouterID(routerid_1), capa)
+    o1 = Open.make_open(Version(4), local_as, HoldTime(180), RouterID(routerid_1), capa)
     peer_capa = Capabilities(capa)
     if Capability.CODE.FOUR_BYTES_ASN in peer_capa:
-        peer_capa[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.session.peer_as)
+        peer_capa[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor.session.peer_as.value)
     if neighbor.session.role != RoleValue.NO_ROLE:
         peer_capa[Capability.CODE.ROLE] = Role(RoleValue.complement(neighbor.session.role))
-    o2 = Open.make_open(Version(4), ASN(neighbor.session.peer_as), HoldTime(180), RouterID(routerid_2), peer_capa)
+    o2 = Open.make_open(Version(4), neighbor.session.peer_as, HoldTime(180), RouterID(routerid_2), peer_capa)
     negotiated_in = Negotiated.make_negotiated(neighbor, Direction.IN)
     negotiated_out = Negotiated.make_negotiated(neighbor, Direction.OUT)
     negotiated_in.sent(o1)

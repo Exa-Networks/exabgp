@@ -74,7 +74,7 @@ def vpn_nlri(rd: bytes = RD) -> bytes:
 
 def mp_reach(next_hop: bytes, afi: AFI = AFI.ipv6, safi: SAFI = SAFI.mpls_vpn) -> bytes:
     """An MP_REACH_NLRI value: AFI, SAFI, next hop, the reserved octet, then the NLRI."""
-    return pack('!HB', afi, safi) + bytes([len(next_hop)]) + next_hop + bytes([0]) + vpn_nlri()
+    return pack('!HB', int(afi), int(safi)) + bytes([len(next_hop)]) + next_hop + bytes([0]) + vpn_nlri()
 
 
 @pytest.mark.rfc('rfc4659#3.2-afi-and-safi-values')

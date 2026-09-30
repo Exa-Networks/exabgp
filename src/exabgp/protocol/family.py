@@ -10,13 +10,15 @@ from __future__ import annotations
 from struct import pack
 from typing import ClassVar
 
+from exabgp.util.intvalue import IntValue
+from exabgp.util.mypyc import mypyc_attr
 from exabgp.util.types import Buffer
 
 # ======================================================================== AFI
 # https://www.iana.org/assignments/address-family-numbers/
 
 
-class AFI(int):
+class AFI(IntValue):
     # Constants
     UNDEFINED: ClassVar[int] = 0x00  # internal
     IPv4: ClassVar[int] = 0x01
@@ -57,10 +59,10 @@ class AFI(int):
     inet_names: ClassVar[dict[int, str]] = {}
 
     def pack_afi(self) -> bytes:
-        return pack('!H', self)
+        return pack('!H', self.value)
 
     def mask(self) -> int | None:
-        return self._masks.get(self, None)
+        return self._masks.get(self.value, None)
 
     def address_length(self) -> int:
         """Return address length in bytes.
@@ -68,12 +70,13 @@ class AFI(int):
         Raises:
             ValueError: If address length is not defined for this AFI
         """
-        if self not in self._address_lengths:
+        length = self._address_lengths.get(self.value)
+        if length is None:
             raise ValueError(f'Address length not defined for AFI {self.name()}')
-        return self._address_lengths[self]
+        return length
 
     def name(self) -> str:
-        return self._names.get(self, f'unknown-afi-{hex(self)}')
+        return self._names.get(self.value, f'unknown-afi-{hex(self.value)}')
 
     def __repr__(self) -> str:
         return self.name()
@@ -90,7 +93,7 @@ class AFI(int):
         return AFI.common.get(bytes(key), AFI.from_int(int.from_bytes(key, 'big')))
 
     @classmethod
-    def value(cls, name: str) -> AFI | None:
+    def from_name(cls, name: str) -> AFI | None:
         return cls.codes.get(name, None)
 
     @staticmethod
@@ -132,7 +135,8 @@ class AFI(int):
 
     @classmethod
     def from_int(cls, value: int) -> AFI:
-        return cls.cache.get(value, AFI(value))
+        cached = cls.cache.get(value)
+        return cached if cached is not None else AFI(value)
 
 
 # Initialize AFI class attributes after class definition
@@ -160,15 +164,15 @@ AFI.codes = dict(
     }.items()
 )
 
-AFI.cache = dict([(inst, inst) for (_, inst) in AFI.codes.items()])
-AFI.inet_names = dict([(inst, name.replace('ipv', 'inet')) for (name, inst) in AFI.codes.items()])
+AFI.cache = {inst.value: inst for inst in AFI.codes.values()}
+AFI.inet_names = {inst.value: name.replace('ipv', 'inet') for (name, inst) in AFI.codes.items()}
 
 
 # ======================================================================= SAFI
 # https://www.iana.org/assignments/safi-namespace
 
 
-class SAFI(int):
+class SAFI(IntValue):
     # Constants
     UNDEFINED: ClassVar[int] = 0  # internal
     UNICAST: ClassVar[int] = 1  # [RFC4760]
@@ -243,19 +247,20 @@ class SAFI(int):
     cache: ClassVar[dict[int, SAFI]] = {}
 
     def pack_safi(self) -> bytes:
-        return bytes([self])
+        return bytes([self.value])
 
     def name(self) -> str:
-        return self._names.get(self, f'unknown safi {int(self)}')
+        return self._names.get(self.value, f'unknown safi {self.value}')
 
+    # asked for every NLRI: a set of numbers answers without calling __eq__ per member
     def has_label(self) -> bool:
-        return self in (SAFI.nlri_mpls, SAFI.mpls_vpn, SAFI.mcast_vpn)
+        return self.value in _SAFI_WITH_LABEL
 
     def has_rd(self) -> bool:
-        return self in (SAFI.mup, SAFI.mpls_vpn, SAFI.mcast_vpn, SAFI.flow_vpn)
+        return self.value in _SAFI_WITH_RD
 
     def has_path(self) -> bool:
-        return self in (SAFI.unicast, SAFI.nlri_mpls)
+        return self.value in _SAFI_WITH_PATH
 
     def __str__(self) -> str:
         return self.name()
@@ -270,7 +275,7 @@ class SAFI(int):
         return SAFI.common.get(key, SAFI(key[0] if key else 0))
 
     @classmethod
-    def value(cls, name: str) -> SAFI | None:
+    def from_name(cls, name: str) -> SAFI | None:
         return cls.codes.get(name, None)
 
     @classmethod
@@ -279,7 +284,8 @@ class SAFI(int):
 
     @classmethod
     def from_int(cls, value: int) -> SAFI:
-        return cls.cache.get(value, SAFI(value))
+        cached = cls.cache.get(value)
+        return cached if cached is not None else SAFI(value)
 
 
 # Initialize SAFI class attributes after class definition
@@ -338,7 +344,12 @@ SAFI.codes = dict(
     }.items()
 )
 
-SAFI.cache = dict([(inst, inst) for (_, inst) in SAFI.codes.items()])
+SAFI.cache = {inst.value: inst for inst in SAFI.codes.values()}
+
+
+_SAFI_WITH_LABEL = frozenset({SAFI.NLRI_MPLS, SAFI.MPLS_VPN, SAFI.MCAST_VPN})
+_SAFI_WITH_RD = frozenset({SAFI.MUP, SAFI.MPLS_VPN, SAFI.MCAST_VPN, SAFI.FLOW_VPN})
+_SAFI_WITH_PATH = frozenset({SAFI.UNICAST, SAFI.NLRI_MPLS})
 
 
 # Type alias for (AFI, SAFI) tuple used throughout the codebase
@@ -348,6 +359,8 @@ FamilyTuple = tuple[AFI, SAFI]
 # ===================================================================== FAMILY
 
 
+# NLRI inherits it, and update/nlri is not compiled yet (qa/bin/build_mypyc)
+@mypyc_attr(allow_interpreted_subclasses=True)
 class Family:
     # Private storage for afi/safi - accessed via properties
     # Single-family NLRI types override the properties with read-only versions
@@ -394,7 +407,7 @@ class Family:
     def safi(self) -> SAFI:
         return self._safi
 
-    def __init__(self, afi: int, safi: int) -> None:
+    def __init__(self, afi: AFI, safi: SAFI) -> None:
         """Initialize Family with AFI and SAFI.
 
         Single-family subclasses (VPLS, RTC, EVPN, etc.) override afi/safi
@@ -404,8 +417,8 @@ class Family:
         For subclasses with read-only properties, _afi/_safi are still set but
         the property getter will return the constant value (ignoring the stored value).
         """
-        self._afi = AFI.from_int(afi)
-        self._safi = SAFI.from_int(safi)
+        self._afi = afi
+        self._safi = safi
 
     def has_label(self) -> bool:
         return self.safi.has_label()
@@ -462,7 +475,7 @@ class Family:
         return self.safi.name()
 
     def index(self) -> bytes:
-        return f'{self.afi:02x}{self.safi:02x}'.encode()
+        return f'{self.afi.value:02x}{self.safi.value:02x}'.encode()
 
     def __repr__(self) -> str:
         return f'{self.afi!s} {self.safi!s}'

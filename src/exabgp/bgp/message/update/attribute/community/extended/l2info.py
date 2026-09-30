@@ -23,7 +23,6 @@ from exabgp.util.types import Buffer
 # RFC 4761
 
 
-@ExtendedCommunity.register_subtype
 class L2Info(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0A
@@ -64,3 +63,6 @@ class L2Info(ExtendedCommunity):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> L2Info:
         return cls(data[:8])
+
+
+ExtendedCommunity.register_subtype(L2Info)

@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from exabgp.version import version as _version
 
 from exabgp.logger import log, lazymsg
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -51,7 +52,7 @@ def help_command(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
             'commands': commands_list,
         }
 
-        reactor.processes.write(service, json.dumps(help_data))
+        reactor.processes.write(service, json.dumps(help_data, default=json_number))
     else:
         # Text mode output
         lines = []
@@ -87,7 +88,7 @@ def help_command(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
 def shutdown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     reactor.signal.received = reactor.signal.SHUTDOWN
     if use_json:
-        reactor.processes.write(service, json.dumps({'status': 'shutdown in progress'}))
+        reactor.processes.write(service, json.dumps({'status': 'shutdown in progress'}, default=json_number))
     else:
         reactor.processes.write(service, 'shutdown in progress')
     reactor.processes.answer_done_sync(service)
@@ -97,7 +98,7 @@ def shutdown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], co
 def reload(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     reactor.signal.received = reactor.signal.RELOAD
     if use_json:
-        reactor.processes.write(service, json.dumps({'status': 'reload in progress'}))
+        reactor.processes.write(service, json.dumps({'status': 'reload in progress'}, default=json_number))
     else:
         reactor.processes.write(service, 'reload in progress')
     reactor.processes.answer_done_sync(service)
@@ -107,7 +108,7 @@ def reload(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comm
 def restart(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     reactor.signal.received = reactor.signal.RESTART
     if use_json:
-        reactor.processes.write(service, json.dumps({'status': 'restart in progress'}))
+        reactor.processes.write(service, json.dumps({'status': 'restart in progress'}, default=json_number))
     else:
         reactor.processes.write(service, 'restart in progress')
     reactor.processes.answer_done_sync(service)
@@ -116,7 +117,9 @@ def restart(self: 'API', reactor: 'Reactor', service: str, peers: list[str], com
 
 def version(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
     if use_json:
-        reactor.processes.write(service, json.dumps({'version': _version, 'application': 'exabgp'}))
+        reactor.processes.write(
+            service, json.dumps({'version': _version, 'application': 'exabgp'}, default=json_number)
+        )
     else:
         reactor.processes.write(service, f'exabgp {_version}')
     reactor.processes.answer_done_sync(service)
@@ -133,7 +136,7 @@ def reset(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comma
     reactor.asynchronous.clear(service)
 
     if use_json:
-        reactor.processes.write(service, json.dumps({'status': 'asynchronous queue cleared'}))
+        reactor.processes.write(service, json.dumps({'status': 'asynchronous queue cleared'}, default=json_number))
     else:
         reactor.processes.write(service, 'asynchronous queue cleared')
 
@@ -150,7 +153,7 @@ def queue_status(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
     stats = reactor.processes.get_queue_stats()
 
     if use_json:
-        reactor.processes.write(service, json.dumps(stats))
+        reactor.processes.write(service, json.dumps(stats, default=json_number))
     else:
         # Text format: process: N items (M bytes)
         if not stats:
@@ -245,7 +248,7 @@ def ping(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comman
 
     if output_json:
         response = {'pong': reactor.daemon_uuid, 'active': is_active}
-        reactor.processes.write(service, json.dumps(response))
+        reactor.processes.write(service, json.dumps(response, default=json_number))
     else:
         reactor.processes.write(service, f'pong {reactor.daemon_uuid} active={str(is_active).lower()}')
     reactor.processes.answer_done_sync(service)
@@ -284,7 +287,9 @@ def api_version_cmd(
             new_version = int(version_str)
             if new_version not in (4, 6):
                 if use_json:
-                    reactor.processes.write(service, json.dumps({'error': 'API version must be 4 or 6'}))
+                    reactor.processes.write(
+                        service, json.dumps({'error': 'API version must be 4 or 6'}, default=json_number)
+                    )
                 else:
                     reactor.processes.write(service, 'error: API version must be 4 or 6')
                 reactor.processes.answer_error_sync(service)
@@ -301,7 +306,8 @@ def api_version_cmd(
                             'status': 'API version set',
                             'version': new_version,
                             'note': 'effective on next process restart',
-                        }
+                        },
+                        default=json_number,
                     ),
                 )
             else:
@@ -311,7 +317,9 @@ def api_version_cmd(
 
         except ValueError:
             if use_json:
-                reactor.processes.write(service, json.dumps({'error': f'Invalid version: {version_str}'}))
+                reactor.processes.write(
+                    service, json.dumps({'error': f'Invalid version: {version_str}'}, default=json_number)
+                )
             else:
                 reactor.processes.write(service, f'error: invalid version: {version_str}')
             reactor.processes.answer_error_sync(service)
@@ -326,7 +334,8 @@ def api_version_cmd(
                     {
                         'api_version': current_version,
                         'description': 'legacy (text/json)' if current_version == 4 else 'json-only',
-                    }
+                    },
+                    default=json_number,
                 ),
             )
         else:
@@ -361,7 +370,7 @@ def status(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comm
             'start_time': reactor.daemon_start_time,
             'peers': peers_dict,
         }
-        reactor.processes.write(service, json.dumps(status_info))
+        reactor.processes.write(service, json.dumps(status_info, default=json_number))
     else:
         lines = [
             'ExaBGP Daemon Status',

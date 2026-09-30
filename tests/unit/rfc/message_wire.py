@@ -29,7 +29,7 @@ API_KEYS = ('receive-packets', 'receive-consolidate', 'receive-parsed')
 
 def header(length: int, message_type: int) -> bytes:
     """A well formed header, for whatever the caller wants to be wrong about."""
-    return MARKER + pack('!H', length) + bytes([message_type])
+    return MARKER + pack('!H', length) + bytes([int(message_type)])
 
 
 def read_wire(wire: bytes, received_open: Open | None = None) -> Message | None:

@@ -18,8 +18,8 @@ from exabgp.util.types import Buffer
 class PathInfo:
     __slots__ = ('_packed', '_disabled')
 
-    LENGTH = 4  # Path info is always 4 bytes
-    MAX = (1 << (8 * LENGTH)) - 1  # the largest path identifier, from its four octets
+    LENGTH: ClassVar[int] = 4  # Path info is always 4 bytes
+    MAX: ClassVar = (1 << (8 * LENGTH)) - 1  # the largest path identifier, from its four octets
     NOPATH: ClassVar['PathInfo']
     DISABLED: ClassVar['PathInfo']
 
@@ -50,6 +50,11 @@ class PathInfo:
         if not isinstance(other, PathInfo):
             return False
         return self._packed == other._packed
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing PathInfo for ordering does not make sense')
@@ -98,9 +103,8 @@ class PathInfo:
         # live fault: PathInfo has no subclass and its slots are fixed.  Changed because
         # naming the class here is the same habit which lost route_d one attribute later,
         # and session 5.0 found the constructor-rerun version of it in their own PathInfo.
-        new = type(self).__new__(type(self))
+        new = type(self)(self._packed)
         new._disabled = self._disabled
-        new._packed = self._packed
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'PathInfo':
@@ -113,9 +117,8 @@ class PathInfo:
         # live fault: PathInfo has no subclass and its slots are fixed.  Changed because
         # naming the class here is the same habit which lost route_d one attribute later,
         # and session 5.0 found the constructor-rerun version of it in their own PathInfo.
-        new = type(self).__new__(type(self))
+        new = type(self)(self._packed)
         new._disabled = self._disabled
-        new._packed = self._packed
         memo[id(self)] = new
         return new
 
@@ -126,10 +129,7 @@ class PathInfo:
         Used when ADD-PATH is enabled but no specific path ID is set.
         pack_path() returns 4 zero bytes, but json()/repr() return empty.
         """
-        instance = object.__new__(cls)
-        instance._disabled = False
-        instance._packed = b''
-        return instance
+        return cls(b'')
 
     @classmethod
     def _create_disabled(cls) -> 'PathInfo':
@@ -137,9 +137,8 @@ class PathInfo:
 
         Used when ADD-PATH capability is not negotiated.
         """
-        instance = object.__new__(cls)
+        instance = cls(b'')
         instance._disabled = True
-        instance._packed = b''
         return instance
 
 

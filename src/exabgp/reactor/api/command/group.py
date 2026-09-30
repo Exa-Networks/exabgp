@@ -32,6 +32,7 @@ from exabgp.reactor.api.command.announce import (
     register_flush_callbacks,
     validate_announce,
 )
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -121,7 +122,7 @@ def group_start(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
     if _is_grouping(service):
         error_msg = 'already in group block (nested groups not allowed)'
         if use_json:
-            reactor.processes.write(service, json.dumps({'error': error_msg}))
+            reactor.processes.write(service, json.dumps({'error': error_msg}, default=json_number))
         else:
             reactor.processes.write(service, f'error: {error_msg}')
         reactor.processes.answer_error_sync(service)
@@ -131,7 +132,7 @@ def group_start(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
     log.debug(lazymsg('api.group.start service={s}', s=service), 'api')
 
     if use_json:
-        reactor.processes.write(service, json.dumps({'status': 'group started'}))
+        reactor.processes.write(service, json.dumps({'status': 'group started'}, default=json_number))
     else:
         reactor.processes.write(service, 'group started')
     reactor.processes.answer_done_sync(service)
@@ -149,7 +150,7 @@ def group_end(self: 'API', reactor: 'Reactor', service: str, peers: list[str], c
     if not _is_grouping(service):
         error_msg = 'not in group block'
         if use_json:
-            reactor.processes.write(service, json.dumps({'error': error_msg}))
+            reactor.processes.write(service, json.dumps({'error': error_msg}, default=json_number))
         else:
             reactor.processes.write(service, f'error: {error_msg}')
         reactor.processes.answer_error_sync(service)
@@ -161,7 +162,7 @@ def group_end(self: 'API', reactor: 'Reactor', service: str, peers: list[str], c
     if not buffered:
         # Empty group - no-op
         if use_json:
-            reactor.processes.write(service, json.dumps({'status': 'group ended', 'commands': 0}))
+            reactor.processes.write(service, json.dumps({'status': 'group ended', 'commands': 0}, default=json_number))
         else:
             reactor.processes.write(service, 'group ended (0 commands)')
         reactor.processes.answer_done_sync(service)
@@ -195,7 +196,7 @@ def group_inline(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
     if not parts:
         error_msg = 'empty group'
         if use_json:
-            reactor.processes.write(service, json.dumps({'error': error_msg}))
+            reactor.processes.write(service, json.dumps({'error': error_msg}, default=json_number))
         else:
             reactor.processes.write(service, f'error: {error_msg}')
         reactor.processes.answer_error_sync(service)
@@ -331,7 +332,7 @@ async def _process_group(
         }
         if errors:
             response['errors'] = errors
-        reactor.processes.write(service, json.dumps(response))
+        reactor.processes.write(service, json.dumps(response, default=json_number))
     else:
         msg = f'group processed: {routes_added} announced, {routes_withdrawn} withdrawn'
         if errors:
@@ -396,7 +397,7 @@ def group_add_command(
     if not _add_to_group(service, peers, command):
         error_msg = 'group buffer limit reached, group discarded'
         if use_json:
-            reactor.processes.write(service, json.dumps({'error': error_msg}))
+            reactor.processes.write(service, json.dumps({'error': error_msg}, default=json_number))
         else:
             reactor.processes.write(service, f'error: {error_msg}')
         reactor.processes.answer_error_sync(service)

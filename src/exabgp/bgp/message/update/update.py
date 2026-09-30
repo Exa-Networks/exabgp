@@ -1,4 +1,4 @@
-"""update/__init__.py
+"""update/update.py
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -26,7 +26,6 @@ __all__ = [
     'Update',
     'UpdateCollection',
     'UpdateWire',
-    'EOR',
     'NLRICollection',
     'MPNLRICollection',
 ]
@@ -39,7 +38,6 @@ __all__ = [
 # Parsing to semantic objects (UpdateCollection) is lazy.
 
 
-@Message.register
 class Update(Message):
     """Wire-format BGP UPDATE message container (bytes-first).
 
@@ -53,9 +51,9 @@ class Update(Message):
     This is the registered BGP UPDATE message handler.
     """
 
-    ID = Message.CODE.UPDATE
+    ID: ClassVar = Message.CODE.UPDATE
     IS_EOR: ClassVar[bool] = False  # EOR, the End-of-RIB marker, says True
-    FIXED_SIZE = 4  # RFC 4271 4.3: the two length fields, withdrawn routes and path attributes
+    FIXED_SIZE: ClassVar[int] = 4  # RFC 4271 4.3: the two length fields, withdrawn routes and path attributes
 
     def __init__(self, packed: Buffer) -> None:
         """Create Update from raw payload bytes.
@@ -193,6 +191,9 @@ class Update(Message):
         log.debug(lazyformat('decoded UPDATE', '', log_parsed), 'parser')
 
         return update
+
+
+Message.register(Update)
 
 
 # Backward compatibility alias

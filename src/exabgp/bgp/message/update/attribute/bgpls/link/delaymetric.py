@@ -28,6 +28,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState, BaseLS
@@ -47,9 +49,8 @@ _MAX_LOSS_PERCENT = _MAX_24BIT * 0.000003  # ~50.331645%
 #  RFC 8571 Section 3 - Unidirectional Link Delay
 
 
-@LinkState.register_lsid(tlv=1114, json_key='unidirectional-link-delay', repr_name='Unidirectional Link Delay')
 class UnidirectionalLinkDelay(BaseLS):
-    LEN = 4
+    LEN: ClassVar[int] = 4
 
     @property
     def content(self) -> dict[str, int | bool]:
@@ -78,6 +79,11 @@ class UnidirectionalLinkDelay(BaseLS):
         return cls(bytes([flags]) + delay_bytes)
 
 
+LinkState.register_lsid(tlv=1114, json_key='unidirectional-link-delay', repr_name='Unidirectional Link Delay')(
+    UnidirectionalLinkDelay
+)
+
+
 #   0                   1                   2                   3
 #   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -88,11 +94,8 @@ class UnidirectionalLinkDelay(BaseLS):
 #  RFC 8571 Section 4 - Min/Max Unidirectional Link Delay
 
 
-@LinkState.register_lsid(
-    tlv=1115, json_key='minmax-unidirectional-link-delay', repr_name='Min/Max Unidirectional Link Delay'
-)
 class MinMaxUnidirLinkDelay(BaseLS):
-    LEN = 8
+    LEN: ClassVar[int] = 8
 
     @property
     def content(self) -> dict[str, int | bool]:
@@ -126,6 +129,11 @@ class MinMaxUnidirLinkDelay(BaseLS):
         return cls(bytes([flags]) + min_bytes + bytes([0x00]) + max_bytes)
 
 
+LinkState.register_lsid(
+    tlv=1115, json_key='minmax-unidirectional-link-delay', repr_name='Min/Max Unidirectional Link Delay'
+)(MinMaxUnidirLinkDelay)
+
+
 #   0                   1                   2                   3
 #   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -135,11 +143,8 @@ class MinMaxUnidirLinkDelay(BaseLS):
 #  NOTE: No A (anomalous) flag for this TLV per RFC 8571
 
 
-@LinkState.register_lsid(
-    tlv=1116, json_key='unidirectional-delay-variation', repr_name='Unidirectional Delay Variation'
-)
 class UnidirectionalDelayVar(BaseLS):
-    LEN = 4
+    LEN: ClassVar[int] = 4
 
     @property
     def content(self) -> int:
@@ -164,6 +169,11 @@ class UnidirectionalDelayVar(BaseLS):
         return cls(bytes([0x00]) + variation_bytes)
 
 
+LinkState.register_lsid(
+    tlv=1116, json_key='unidirectional-delay-variation', repr_name='Unidirectional Delay Variation'
+)(UnidirectionalDelayVar)
+
+
 #   0                   1                   2                   3
 #   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -173,12 +183,11 @@ class UnidirectionalDelayVar(BaseLS):
 #  Value in units of 0.000003% (range 0-50.331642%)
 
 
-@LinkState.register_lsid(tlv=1117, json_key='unidirectional-link-loss', repr_name='Unidirectional Link Loss')
 class UnidirectionalLinkLoss(BaseLS):
-    LEN = 4
+    LEN: ClassVar[int] = 4
 
     # RFC 8571: Link loss is encoded as (loss% / 0.000003), giving 24 bits for 0-50.331642%
-    _UNIT_PERCENT = 0.000003
+    _UNIT_PERCENT: ClassVar[float] = 0.000003
 
     @property
     def content(self) -> dict[str, float | bool]:
@@ -211,6 +220,11 @@ class UnidirectionalLinkLoss(BaseLS):
         return cls(bytes([flags]) + loss_bytes)
 
 
+LinkState.register_lsid(tlv=1117, json_key='unidirectional-link-loss', repr_name='Unidirectional Link Loss')(
+    UnidirectionalLinkLoss
+)
+
+
 #   0                   1                   2                   3
 #   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -220,11 +234,8 @@ class UnidirectionalLinkLoss(BaseLS):
 #  IEEE 754 single-precision float, bytes per second
 
 
-@LinkState.register_lsid(
-    tlv=1118, json_key='unidirectional-residual-bandwidth', repr_name='Unidirectional Residual Bandwidth'
-)
 class UnidirectionalResidualBw(BaseLS):
-    LEN = 4
+    LEN: ClassVar[int] = 4
 
     @property
     def content(self) -> float:
@@ -249,6 +260,11 @@ class UnidirectionalResidualBw(BaseLS):
         return cls(pack('!f', bandwidth))
 
 
+LinkState.register_lsid(
+    tlv=1118, json_key='unidirectional-residual-bandwidth', repr_name='Unidirectional Residual Bandwidth'
+)(UnidirectionalResidualBw)
+
+
 #   0                   1                   2                   3
 #   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -258,11 +274,8 @@ class UnidirectionalResidualBw(BaseLS):
 #  IEEE 754 single-precision float, bytes per second
 
 
-@LinkState.register_lsid(
-    tlv=1119, json_key='unidirectional-available-bandwidth', repr_name='Unidirectional Available Bandwidth'
-)
 class UnidirectionalAvailableBw(BaseLS):
-    LEN = 4
+    LEN: ClassVar[int] = 4
 
     @property
     def content(self) -> float:
@@ -287,6 +300,11 @@ class UnidirectionalAvailableBw(BaseLS):
         return cls(pack('!f', bandwidth))
 
 
+LinkState.register_lsid(
+    tlv=1119, json_key='unidirectional-available-bandwidth', repr_name='Unidirectional Available Bandwidth'
+)(UnidirectionalAvailableBw)
+
+
 #   0                   1                   2                   3
 #   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -296,11 +314,8 @@ class UnidirectionalAvailableBw(BaseLS):
 #  IEEE 754 single-precision float, bytes per second
 
 
-@LinkState.register_lsid(
-    tlv=1120, json_key='unidirectional-utilized-bandwidth', repr_name='Unidirectional Utilized Bandwidth'
-)
 class UnidirectionalUtilizedBw(BaseLS):
-    LEN = 4
+    LEN: ClassVar[int] = 4
 
     @property
     def content(self) -> float:
@@ -323,3 +338,8 @@ class UnidirectionalUtilizedBw(BaseLS):
         if bandwidth < 0:
             raise ValueError(f'bandwidth must be non-negative, got {bandwidth}')
         return cls(pack('!f', bandwidth))
+
+
+LinkState.register_lsid(
+    tlv=1120, json_key='unidirectional-utilized-bandwidth', repr_name='Unidirectional Utilized Bandwidth'
+)(UnidirectionalUtilizedBw)

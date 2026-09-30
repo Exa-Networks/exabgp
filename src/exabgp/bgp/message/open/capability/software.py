@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
 
 from __future__ import annotations
+
+from typing import ClassVar
 import json
 
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -15,12 +17,12 @@ from exabgp.bgp.message.open.capability.capability import decode_utf8 as _decode
 from exabgp.bgp.message.notification import Notify
 from exabgp.version import version
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 
-@Capability.register()
 class Software(Capability):
-    ID = Capability.CODE.SOFTWARE_VERSION
-    SOFTWARE_VERSION_MAX_LEN = 64
+    ID: ClassVar = Capability.CODE.SOFTWARE_VERSION
+    SOFTWARE_VERSION_MAX_LEN: ClassVar[int] = 64
 
     def __init__(self) -> None:
         software_version = f'ExaBGP/{version}'
@@ -32,7 +34,7 @@ class Software(Capability):
         return 'Software({})'.format(self.software_version)
 
     def json(self) -> str:
-        return '{{ "software": {} }}'.format(json.dumps(self.software_version))
+        return '{{ "software": {} }}'.format(json.dumps(self.software_version, default=json_number))
 
     def extract_capability_bytes(self) -> list[bytes]:
         # the length is in bytes: a decoded peer version may hold characters wider than one
@@ -50,3 +52,6 @@ class Software(Capability):
             raise Notify.short(2, 0, 'Software capability', l1 + 1, len(data))
         instance.software_version = _decode_utf8(data[1 : l1 + 1], 'software version')
         return instance
+
+
+Capability.register()(Software)

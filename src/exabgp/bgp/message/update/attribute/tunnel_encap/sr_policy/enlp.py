@@ -28,6 +28,7 @@ from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 ENLP_NAMES: dict[int, str] = {
     1: 'push-ipv4',
@@ -38,7 +39,6 @@ ENLP_NAMES: dict[int, str] = {
 ENLP_VALUES: dict[str, int] = {name: value for value, name in ENLP_NAMES.items()}
 
 
-@SubTLV.register(14)
 class ENLPSubTLV(SubTLV):
     """SR Policy Explicit NULL Label Policy Sub-TLV."""
 
@@ -70,7 +70,7 @@ class ENLPSubTLV(SubTLV):
         entitled to keep working; `"enlp-name"` is the addition, so the API reads the way
         the text output and the configuration keyword already do.
         """
-        return f'"enlp": {self.enlp}, "enlp-name": {json.dumps(self.name)}'
+        return f'"enlp": {self.enlp}, "enlp-name": {json.dumps(self.name, default=json_number)}'
 
     def __str__(self) -> str:
         return f'enlp {self.name}'
@@ -80,3 +80,6 @@ class ENLPSubTLV(SubTLV):
         if len(data) < cls.VALUE_SIZE:
             return cls(0)
         return cls(enlp=data[2], flags=data[0])
+
+
+SubTLV.register(14)(ENLPSubTLV)

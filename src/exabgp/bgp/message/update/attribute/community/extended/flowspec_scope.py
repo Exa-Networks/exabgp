@@ -22,7 +22,6 @@ from exabgp.util.types import Buffer
 # draft-ietf-idr-flowspsec-interfaceset
 
 
-@ExtendedCommunity.register_subtype
 class InterfaceSet(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x07
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x02
@@ -57,7 +56,7 @@ class InterfaceSet(ExtendedCommunity):
         """Create InterfaceSet from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
         new_target = (direction << 14) + target
-        packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, asn, new_target)
+        packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), new_target)
         return cls(packed)
 
     @property
@@ -89,3 +88,6 @@ class InterfaceSet(ExtendedCommunity):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> InterfaceSet:
         return cls(data[:8])
+
+
+ExtendedCommunity.register_subtype(InterfaceSet)

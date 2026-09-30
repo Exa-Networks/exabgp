@@ -153,7 +153,7 @@ def test_multisession_wire_encoding_unchanged() -> None:
 
 
 def test_route_refresh_equality_is_id_sensitive() -> None:
-    """RouteRefresh.__eq__ compares by `.ID` (self.ID == other.ID), and that is
+    """RouteRefresh.__eq__ compares by the wire code (`code()`, `.ID` before mypyc), and that is
     unchanged by this fix. Before the fix, this comparison was accidentally
     trivial: since neither side ever carried an instance-level ID, both `self.ID`
     and `other.ID` read the *same* mutable class attribute at comparison time --
@@ -170,7 +170,7 @@ def test_route_refresh_equality_is_id_sensitive() -> None:
     rfc_instance = Capability.unpack(CapabilityCode(CapabilityCode.ROUTE_REFRESH), session_a, b'')
     cisco_instance = Capability.unpack(CapabilityCode(CapabilityCode.ROUTE_REFRESH_CISCO), session_b, b'')
 
-    assert rfc_instance.ID != cisco_instance.ID
+    assert rfc_instance.code() != cisco_instance.code()
     assert rfc_instance != cisco_instance
     assert rfc_instance == RouteRefresh()  # bare instance falls back to the RFC class default
     assert cisco_instance != RouteRefresh()

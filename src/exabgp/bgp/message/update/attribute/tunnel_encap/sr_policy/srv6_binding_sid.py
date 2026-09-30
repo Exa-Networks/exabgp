@@ -36,7 +36,6 @@ _SRV6_BSID_FLAG_I = 0x40  # I-Flag: Drop-Upon-Invalid
 _SRV6_BSID_FLAG_B = 0x20  # B-Flag: SRv6 Endpoint Behavior & SID Structure present
 
 
-@SubTLV.register(20)
 class SRv6BindingSIDSubTLV(SubTLV):
     """SR Policy SRv6 Binding SID Sub-TLV.
 
@@ -105,3 +104,6 @@ class SRv6BindingSIDSubTLV(SubTLV):
                 endpoint_behavior = SRv6EndpointBehavior.unpack(remainder)
 
         return cls(sid=sid, flags=flags, endpoint_behavior=endpoint_behavior)
+
+
+SubTLV.register(20)(SRv6BindingSIDSubTLV)

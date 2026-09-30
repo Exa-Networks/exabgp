@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 
@@ -22,9 +24,8 @@ from exabgp.util.types import Buffer
 #   https://tools.ietf.org/html/rfc7752 sec 3.3.1.4  - Traffic Engineering RouterID
 
 
-@LinkState.register_lsid(tlv=1028, json_key='local-router-ids', repr_name='Local Router IDs', alias_tlv=1029)
 class LocalRouterId(BaseLS):
-    MERGE = True  # LinkState.json() groups into array
+    MERGE: ClassVar[bool] = True  # LinkState.json() groups into array
 
     def __init__(self, packed: Buffer) -> None:
         self._packed = packed
@@ -57,3 +58,8 @@ class LocalRouterId(BaseLS):
             LocalRouterId instance with packed wire-format bytes
         """
         return cls(IP.pton(address))
+
+
+LinkState.register_lsid(tlv=1028, json_key='local-router-ids', repr_name='Local Router IDs', alias_tlv=1029)(
+    LocalRouterId
+)

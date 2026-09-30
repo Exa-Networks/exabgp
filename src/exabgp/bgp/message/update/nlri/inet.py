@@ -206,13 +206,7 @@ class INETBase(NLRI):
         else:
             packed = cidr_packed
 
-        instance = object.__new__(cls)
-        NLRI.__init__(instance, afi, safi)
-        instance._packed = packed
-        instance._has_addpath = has_addpath
-        instance._labels = None
-        instance._rd = None
-        return instance
+        return cls(packed, afi, safi, has_addpath=has_addpath)
 
     @classmethod
     def make_route(
@@ -296,8 +290,16 @@ class INETBase(NLRI):
             return hash(self._packed)
         return hash(b'disabled' + self._packed)
 
+    @classmethod
+    def _blank(cls) -> Self:
+        """An instance for a copy to fill: mypyc cannot build one without running __init__.
+
+        (packed, afi) is what INET, Label and IPVPN all take; the copy sets every slot.
+        """
+        return cls(b'', AFI.ipv4)
+
     def __copy__(self) -> Self:
-        new = self.__class__.__new__(self.__class__)
+        new = self._blank()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # INET slots
@@ -309,7 +311,7 @@ class INETBase(NLRI):
     def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
         from copy import deepcopy
 
-        new = self.__class__.__new__(self.__class__)
+        new = self._blank()
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
@@ -504,7 +506,7 @@ class INETBase(NLRI):
 
         # a mask longer than the address family allows would index past the prefix
         if mask > IP.length(afi) * 8:
-            raise Notify(3, 10, 'invalid mask %d in NLRI prefix for %s' % (mask, AFI(afi)))
+            raise Notify(3, 10, 'invalid mask %d in NLRI prefix for %s' % (mask, afi))
 
         if not data and mask:
             raise Notify(3, 10, 'not enough data for the mask provided to decode the NLRI')
@@ -515,8 +517,7 @@ class INETBase(NLRI):
             raise Notify(
                 3,
                 10,
-                'could not decode nlri with family %s (AFI %d) %s (SAFI %d)'
-                % (AFI(afi), int(afi), SAFI(safi), int(safi)),
+                'could not decode nlri with family %s (AFI %d) %s (SAFI %d)' % (afi, int(afi), safi, int(safi)),
             )
 
         network, data = data[:size], data[size:]
@@ -538,10 +539,6 @@ class INETBase(NLRI):
         return nlri, data
 
 
-@NLRI.register(AFI.ipv4, SAFI.unicast)
-@NLRI.register(AFI.ipv6, SAFI.unicast)
-@NLRI.register(AFI.ipv4, SAFI.multicast)
-@NLRI.register(AFI.ipv6, SAFI.multicast)
 class INET(INETBase):
     """The registered form of INETBase, which holds the code.
 
@@ -555,3 +552,9 @@ class INET(INETBase):
     """
 
     __slots__ = ()
+
+
+NLRI.register(AFI.ipv6, SAFI.multicast)(INET)
+NLRI.register(AFI.ipv4, SAFI.multicast)(INET)
+NLRI.register(AFI.ipv6, SAFI.unicast)(INET)
+NLRI.register(AFI.ipv4, SAFI.unicast)(INET)

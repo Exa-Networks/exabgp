@@ -52,7 +52,7 @@ def mock_logger() -> Any:
 
     # Also mock log to avoid other issues
     with (
-        patch('exabgp.bgp.message.update.log') as mock_log,
+        patch('exabgp.bgp.message.update.update.log') as mock_log,
         patch('exabgp.bgp.message.update.nlri.nlri.log') as mock_nlri_log,
         patch('exabgp.bgp.message.update.attribute.collection.log') as mock_attr_log,
     ):
@@ -488,8 +488,8 @@ def test_update_with_mp_reach_nlri() -> None:
     # Create minimal MP_REACH_NLRI attribute (Type 14) with no actual NLRI
     # Format: AFI (2) + SAFI (1) + NH Length (1) + NH + Reserved (1) + [NLRI]
     mp_reach_value = (
-        struct.pack('!H', AFI.ipv6)  # AFI: IPv6
-        + struct.pack('!B', SAFI.unicast)  # SAFI: unicast
+        struct.pack('!H', int(AFI.ipv6))  # AFI: IPv6
+        + struct.pack('!B', int(SAFI.unicast))  # SAFI: unicast
         + struct.pack('!B', 16)  # Next-hop length: 16 bytes
         + b'\x20\x01\x0d\xb8\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01'  # IPv6 NH
         + struct.pack('!B', 0)  # Reserved, no NLRI data
@@ -527,8 +527,8 @@ def test_update_with_mp_unreach_nlri() -> None:
     # This effectively creates an EOR marker for IPv6 unicast
     # Format: AFI (2) + SAFI (1) + [Withdrawn Routes]
     mp_unreach_value = (
-        struct.pack('!H', AFI.ipv6)  # AFI: IPv6
-        + struct.pack('!B', SAFI.unicast)  # SAFI: unicast, no withdrawn routes
+        struct.pack('!H', int(AFI.ipv6))  # AFI: IPv6
+        + struct.pack('!B', int(SAFI.unicast))  # SAFI: unicast, no withdrawn routes
     )
 
     attributes = create_path_attribute(15, mp_unreach_value, optional=True, transitive=False)
@@ -580,7 +580,7 @@ def test_update_mp_reach_and_mp_unreach_together() -> None:
 
     # Create MP_UNREACH_NLRI (Type 15) with no withdrawn (simpler case)
     mp_unreach_value = (
-        struct.pack('!H', AFI.ipv6) + struct.pack('!B', SAFI.unicast)  # No withdrawn routes
+        struct.pack('!H', int(AFI.ipv6)) + struct.pack('!B', int(SAFI.unicast))  # No withdrawn routes
     )
 
     attributes = create_path_attribute(15, mp_unreach_value, optional=True, transitive=False)
@@ -610,7 +610,7 @@ def test_update_mp_unreach_only_is_valid() -> None:
 
     # Only MP_UNREACH_NLRI, no other attributes, no withdrawn routes (EOR)
     mp_unreach_value = (
-        struct.pack('!H', AFI.ipv6) + struct.pack('!B', SAFI.unicast)  # No withdrawn routes
+        struct.pack('!H', int(AFI.ipv6)) + struct.pack('!B', int(SAFI.unicast))  # No withdrawn routes
     )
 
     attributes = create_path_attribute(15, mp_unreach_value, optional=True, transitive=False)

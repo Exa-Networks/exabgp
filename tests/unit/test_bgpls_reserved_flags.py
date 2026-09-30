@@ -74,7 +74,7 @@ def seed_width(klass: type[FlagLS]) -> int | None:
 def render(code: int, payload: bytes) -> str:
     klass = Attribute.klass_by_id(Attribute.CODE.BGP_LS)
     assert klass is not None
-    return klass.unpack_attribute(pack('!HH', code, len(payload)) + payload, Negotiated.UNSET).json()
+    return klass.unpack_attribute(pack('!HH', int(code), len(payload)) + payload, Negotiated.UNSET).json()
 
 
 CODES = sorted(flag_classes())

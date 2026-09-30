@@ -377,7 +377,7 @@ def _redirect_asn(word: str) -> ExtendedCommunities:
     if asn > ASN.MAX_2BYTE:
         if number >= LOCAL_ADMIN_16:
             raise ValueError(f'asn is a 32 bits number, local administrator field can only be 16 bit {number}')
-        return ExtendedCommunities().add(TrafficRedirectASN4.make_traffic_redirect_asn4(ASN4(asn), number))
+        return ExtendedCommunities().add(TrafficRedirectASN4.make_traffic_redirect_asn4(ASN(asn), number))
     if number >= LOCAL_ADMIN_32:
         raise ValueError(f'Local administrator field is a 32 bits number, value too large {number}')
     return ExtendedCommunities().add(TrafficRedirect.make_traffic_redirect(ASN(asn), number))

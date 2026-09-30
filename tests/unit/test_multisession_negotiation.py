@@ -51,8 +51,8 @@ def pack_open_parameters(entries: list[tuple[int, bytes]]) -> bytes:
     (type 2) parameter wrapping all of them, mirroring the TLV layout Capabilities.pack_capabilities()
     itself produces (see capabilities.py).
     """
-    capability_tlvs = b''.join(bytes([code, len(value)]) + value for code, value in entries)
-    parameter = bytes([Parameter.CAPABILITIES, len(capability_tlvs)]) + capability_tlvs
+    capability_tlvs = b''.join(bytes([int(code), len(value)]) + value for code, value in entries)
+    parameter = bytes([int(Parameter.CAPABILITIES), len(capability_tlvs)]) + capability_tlvs
     return bytes([len(parameter)]) + parameter
 
 
@@ -69,7 +69,9 @@ def make_multiprotocol_capability() -> MultiProtocol:
 
 def test_multisession_unpack_capability_direct_call() -> None:
     instance = MultiSession()
-    data = bytes([0, Capability.CODE.MULTIPROTOCOL, Capability.CODE.ROUTE_REFRESH, Capability.CODE.FOUR_BYTES_ASN])
+    data = bytes(
+        [0, int(Capability.CODE.MULTIPROTOCOL), int(Capability.CODE.ROUTE_REFRESH), int(Capability.CODE.FOUR_BYTES_ASN)]
+    )
 
     result = MultiSession.unpack_capability(instance, data, Capability.CODE.MULTISESSION)
 
@@ -86,7 +88,9 @@ def test_multisession_unpack_capability_via_capabilities_unpack() -> None:
     buffer carrying a single MULTISESSION capability TLV with a 3-byte session-id
     payload -- this is the shape a real peer's OPEN message takes on the wire.
     """
-    payload = bytes([0, Capability.CODE.MULTIPROTOCOL, Capability.CODE.ROUTE_REFRESH, Capability.CODE.FOUR_BYTES_ASN])
+    payload = bytes(
+        [0, int(Capability.CODE.MULTIPROTOCOL), int(Capability.CODE.ROUTE_REFRESH), int(Capability.CODE.FOUR_BYTES_ASN)]
+    )
     wire = pack_open_parameters([(Capability.CODE.MULTISESSION, payload)])
 
     capabilities = Capabilities.unpack(wire)
@@ -108,7 +112,9 @@ def test_multisession_pack_unpack_round_trip_recovers_original_set() -> None:
     wire = caps.pack_capabilities()
     recovered = Capabilities.unpack(wire)
 
-    assert caps[Capability.CODE.MULTISESSION].extract_capability_bytes() == [bytes([0, Capability.CODE.MULTIPROTOCOL])]
+    assert caps[Capability.CODE.MULTISESSION].extract_capability_bytes() == [
+        bytes([0, int(Capability.CODE.MULTIPROTOCOL)])
+    ]
     assert set(recovered[Capability.CODE.MULTISESSION]) == {Capability.CODE.MULTIPROTOCOL}
 
     # This used to look for one capability inside its own type 2 parameter, which is what
@@ -122,7 +128,7 @@ def test_multisession_pack_unpack_round_trip_recovers_original_set() -> None:
     assert wire == pack_open_parameters(
         [
             (Capability.CODE.MULTIPROTOCOL, mp_value),
-            (Capability.CODE.MULTISESSION, bytes([0, Capability.CODE.MULTIPROTOCOL])),
+            (Capability.CODE.MULTISESSION, bytes([0, int(Capability.CODE.MULTIPROTOCOL)])),
         ]
     )
 
@@ -132,9 +138,9 @@ def test_multisession_ignores_flags_and_its_own_codes() -> None:
     data = bytes(
         [
             0x80,
-            Capability.CODE.MULTISESSION,
-            Capability.CODE.MULTISESSION_CISCO,
-            Capability.CODE.MULTIPROTOCOL,
+            int(Capability.CODE.MULTISESSION),
+            int(Capability.CODE.MULTISESSION_CISCO),
+            int(Capability.CODE.MULTIPROTOCOL),
         ]
     )
 
@@ -177,8 +183,12 @@ def test_repeated_multisession_capability_keeps_the_first_session_id() -> None:
     """
     instance = MultiSession()
 
-    MultiSession.unpack_capability(instance, bytes([0, Capability.CODE.MULTIPROTOCOL]), Capability.CODE.MULTISESSION)
-    MultiSession.unpack_capability(instance, bytes([0, Capability.CODE.ROUTE_REFRESH]), Capability.CODE.MULTISESSION)
+    MultiSession.unpack_capability(
+        instance, bytes([0, int(Capability.CODE.MULTIPROTOCOL)]), Capability.CODE.MULTISESSION
+    )
+    MultiSession.unpack_capability(
+        instance, bytes([0, int(Capability.CODE.ROUTE_REFRESH)]), Capability.CODE.MULTISESSION
+    )
 
     assert list(instance) == [Capability.CODE.MULTIPROTOCOL]
 
@@ -192,7 +202,7 @@ def test_repeated_multisession_capability_is_ignored_not_rejected() -> None:
     instance = MultiSession()
 
     MultiSession.unpack_capability(instance, bytes([0]), Capability.CODE.MULTISESSION)
-    MultiSession.unpack_capability(instance, bytes([Capability.CODE.MULTIPROTOCOL]), Capability.CODE.MULTISESSION)
+    MultiSession.unpack_capability(instance, bytes([int(Capability.CODE.MULTIPROTOCOL)]), Capability.CODE.MULTISESSION)
 
     # An empty Session ID, which Negotiated then reads as the MULTIPROTOCOL default.
     assert list(instance) == []

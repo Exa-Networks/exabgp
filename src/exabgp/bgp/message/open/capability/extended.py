@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.util.types import Buffer
@@ -15,11 +17,10 @@ from exabgp.util.types import Buffer
 #
 
 
-@Capability.register()
 class ExtendedMessage(Capability):
-    ID = Capability.CODE.EXTENDED_MESSAGE
-    INITIAL_SIZE = 4096
-    EXTENDED_SIZE = 65535
+    ID: ClassVar = Capability.CODE.EXTENDED_MESSAGE
+    INITIAL_SIZE: ClassVar[int] = 4096
+    EXTENDED_SIZE: ClassVar[int] = 65535
 
     def __str__(self) -> str:
         return 'Extended Message(%d)' % self.EXTENDED_SIZE
@@ -33,3 +34,6 @@ class ExtendedMessage(Capability):
 
     def json(self) -> str:
         return '{ "name": "extended-message", "size": %d }' % self.EXTENDED_SIZE
+
+
+Capability.register()(ExtendedMessage)

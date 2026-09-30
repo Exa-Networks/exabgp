@@ -212,7 +212,7 @@ def test_bgpls_renders_a_well_formed_tlv() -> None:
 
 
 def _tlv(code: int, payload: bytes) -> Attribute:
-    return _linkstate(struct.pack('!HH', code, len(payload)) + payload)
+    return _linkstate(struct.pack('!HH', int(code), len(payload)) + payload)
 
 
 def keys_anywhere(decoded: object) -> set[str]:
@@ -592,7 +592,7 @@ def test_operational_type_a_peer_invented_still_renders(code: int, api_neighbor,
     from exabgp.bgp.message.operational import Operational
 
     payload = b'\x00\x01\x01\xff\xfe\xfd'
-    body = struct.pack('!HH', code, len(payload)) + payload
+    body = struct.pack('!HH', int(code), len(payload)) + payload
     message = Operational.unpack_message(body, Negotiated.UNSET)
     assert message.CATEGORY == 'unknown', f'type {code} is registered; this test needs an unregistered one'
 

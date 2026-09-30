@@ -8,27 +8,29 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from struct import pack
 
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
-from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityDict
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log, lazymsg
 from exabgp.util.types import Buffer
 
 
-@Capability.register()
-class PathsLimit(Capability, dict[FamilyTuple, int]):
-    ID = Capability.CODE.PATHS_LIMIT
-    ENTRY_SIZE = 5
+class PathsLimit(CapabilityDict[FamilyTuple, int]):
+    ID: ClassVar = Capability.CODE.PATHS_LIMIT
+    ENTRY_SIZE: ClassVar[int] = 5
     # A capability's length is a single byte, and the draft tells a speaker to describe all
     # of its families in one instance of the capability. So the most a conforming peer can
     # ask for is what one instance holds. ExaBGP still merges a repeated capability, being
     # lenient about how the tuples arrive, but not about how many there can be.
-    MAX_FAMILIES = 0xFF // ENTRY_SIZE
+    MAX_FAMILIES: ClassVar = 0xFF // ENTRY_SIZE
 
     def __init__(self, families: dict[FamilyTuple, int] | None = None) -> None:
+        super().__init__()
         self._ignored_families: set[FamilyTuple] = set()
         if families:
             for (afi, safi), limit in families.items():
@@ -90,3 +92,6 @@ class PathsLimit(Capability, dict[FamilyTuple, int]):
                 continue
             instance.set_limit(afi, safi, limit)
         return instance
+
+
+Capability.register()(PathsLimit)

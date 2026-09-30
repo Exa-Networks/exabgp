@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.util.intvalue import IntValue
 from exabgp.util.types import Buffer
 from struct import pack
 from typing import TYPE_CHECKING, Callable, ClassVar, Type
@@ -24,11 +25,136 @@ ATTR_LENGTH_EXTENDED_MAX: int = 0xFF  # Maximum length for non-extended encoding
 #
 
 
+class AttributeCodes:
+    # This should move within the classes and not be here
+    # RFC 4271
+    ORIGIN: ClassVar[int] = 0x01
+    AS_PATH: ClassVar[int] = 0x02
+    NEXT_HOP: ClassVar[int] = 0x03
+    MED: ClassVar[int] = 0x04
+    LOCAL_PREF: ClassVar[int] = 0x05
+    ATOMIC_AGGREGATE: ClassVar[int] = 0x06
+    AGGREGATOR: ClassVar[int] = 0x07
+    # RFC 1997
+    COMMUNITY: ClassVar[int] = 0x08
+    # RFC 4456
+    ORIGINATOR_ID: ClassVar[int] = 0x09
+    CLUSTER_LIST: ClassVar[int] = 0x0A  # 10
+    # RFC 4760
+    MP_REACH_NLRI: ClassVar[int] = 0x0E  # 14
+    MP_UNREACH_NLRI: ClassVar[int] = 0x0F  # 15
+    # RFC 4360
+    EXTENDED_COMMUNITY: ClassVar[int] = 0x10  # 16
+    # RFC 4893
+    AS4_PATH: ClassVar[int] = 0x11  # 17
+    AS4_AGGREGATOR: ClassVar[int] = 0x12  # 18
+    # RFC6514
+    PMSI_TUNNEL: ClassVar[int] = 0x16  # 22
+    # RFC5512
+    TUNNEL_ENCAP: ClassVar[int] = 0x17  # 23
+    # RFC5701
+    IPV6_EXTENDED_COMMUNITY: ClassVar[int] = 0x19  # 25
+    AIGP: ClassVar[int] = 0x1A  # 26
+    # RFC7752
+    BGP_LS: ClassVar[int] = 0x1D  # 29
+    # draft-ietf-idr-large-community
+    LARGE_COMMUNITY: ClassVar[int] = 0x20  # 32
+    # RFC 9234
+    OTC: ClassVar[int] = 0x23  # 35
+    # draft-ietf-idr-bgp-prefix-sid
+    BGP_PREFIX_SID: ClassVar[int] = 0x28  # 40
+
+    INTERNAL_OTC_NONE: ClassVar[int] = 0xFFF9
+    INTERNAL_NAME: ClassVar[int] = 0xFFFA
+    INTERNAL_WITHDRAW: ClassVar[int] = 0xFFFB
+    INTERNAL_WATCHDOG: ClassVar[int] = 0xFFFC
+    INTERNAL_SPLIT: ClassVar[int] = 0xFFFD
+    INTERNAL_DISCARD: ClassVar[int] = 0xFFFE
+    INTERNAL_TREAT_AS_WITHDRAW: ClassVar[int] = 0xFFFF  # Treat as Withdraw
+
+    # Currently formatting is done with %-18s
+    names: ClassVar[dict[int, str]] = {
+        ORIGIN: 'origin',
+        AS_PATH: 'as-path',
+        NEXT_HOP: 'next-hop',
+        MED: 'med',  # multi-exit-disc
+        LOCAL_PREF: 'local-preference',
+        ATOMIC_AGGREGATE: 'atomic-aggregate',
+        AGGREGATOR: 'aggregator',
+        COMMUNITY: 'community',
+        LARGE_COMMUNITY: 'large-community',
+        ORIGINATOR_ID: 'originator-id',
+        CLUSTER_LIST: 'cluster-list',
+        MP_REACH_NLRI: 'mp-reach-nlri',  # multi-protocol reacheable nlri
+        MP_UNREACH_NLRI: 'mp-unreach-nlri',  # multi-protocol unreacheable nlri
+        EXTENDED_COMMUNITY: 'extended-community',
+        IPV6_EXTENDED_COMMUNITY: 'extended-community-ipv6',
+        AS4_PATH: 'as4-path',
+        AS4_AGGREGATOR: 'as4-aggregator',
+        PMSI_TUNNEL: 'pmsi-tunnel',
+        TUNNEL_ENCAP: 'tunnel-encaps',
+        AIGP: 'aigp',
+        BGP_LS: 'bgp-ls',
+        OTC: 'otc',
+        BGP_PREFIX_SID: 'bgp-prefix-sid',
+        INTERNAL_OTC_NONE: 'internal-otc-none',
+        0xFFFA: 'internal-name',
+        0xFFFB: 'internal-withdraw',
+        0xFFFC: 'internal-watchdog',
+        0xFFFD: 'internal-split',
+        0xFFFE: 'internal-discard',
+        0xFFFF: 'internal-treath-as-withdraw',
+    }
+
+    @classmethod
+    def name(cls, code: int) -> str:
+        """Return human-readable name for an attribute code."""
+        return cls.names.get(code, 'unknown-attribute-{}'.format(hex(code)))
+
+
+class AttributeFlag(IntValue):
+    EXTENDED_LENGTH: ClassVar[int] = 0x10  # .  16 - 0001 0000
+    PARTIAL: ClassVar[int] = 0x20  # .  32 - 0010 0000
+    TRANSITIVE: ClassVar[int] = 0x40  # .  64 - 0100 0000
+    OPTIONAL: ClassVar[int] = 0x80  # . 128 - 1000 0000
+
+    # RFC 4271 4.3: the lower-order four bits of the Attribute Flags octet are unused.
+    UNUSED: ClassVar[int] = 0x0F  # .  15 - 0000 1111
+
+    MASK_EXTENDED: ClassVar[int] = 0xEF  # . 239 - 1110 1111
+    MASK_PARTIAL: ClassVar[int] = 0xDF  # . 223 - 1101 1111
+    MASK_TRANSITIVE: ClassVar[int] = 0xBF  # . 191 - 1011 1111
+    MASK_OPTIONAL: ClassVar[int] = 0x7F  # . 127 - 0111 1111
+    MASK_UNUSED: ClassVar[int] = 0xF0  # . 240 - 1111 0000
+
+    def __str__(self) -> str:
+        r: list[str] = []
+        v: int = self.value
+        if v & 0x10:
+            r.append('EXTENDED_LENGTH')
+            v -= 0x10
+        if v & 0x20:
+            r.append('PARTIAL')
+            v -= 0x20
+        if v & 0x40:
+            r.append('TRANSITIVE')
+            v -= 0x40
+        if v & 0x80:
+            r.append('OPTIONAL')
+            v -= 0x80
+        if v:
+            r.append('UNKNOWN {}'.format(hex(v)))
+        return ' '.join(r)
+
+    def matches(self, value: int) -> bool:
+        return bool(self.value | 0x10 == value | 0x10)
+
+
 class Attribute:
     # we need to define ID and FLAG inside of the subclasses
     # Note: Not ClassVar so GenericAttribute can override with properties
-    ID: int = 0x00
-    FLAG: int = 0x00
+    ID: ClassVar[int] = 0x00
+    FLAG: ClassVar[int] = 0x00
 
     # Should this Attribute be cached
     CACHING: ClassVar[bool] = False
@@ -65,130 +191,11 @@ class Attribute:
 
     # ---------------------------------------------------------------------------
 
-    class CODE:
-        # This should move within the classes and not be here
-        # RFC 4271
-        ORIGIN: ClassVar[int] = 0x01
-        AS_PATH: ClassVar[int] = 0x02
-        NEXT_HOP: ClassVar[int] = 0x03
-        MED: ClassVar[int] = 0x04
-        LOCAL_PREF: ClassVar[int] = 0x05
-        ATOMIC_AGGREGATE: ClassVar[int] = 0x06
-        AGGREGATOR: ClassVar[int] = 0x07
-        # RFC 1997
-        COMMUNITY: ClassVar[int] = 0x08
-        # RFC 4456
-        ORIGINATOR_ID: ClassVar[int] = 0x09
-        CLUSTER_LIST: ClassVar[int] = 0x0A  # 10
-        # RFC 4760
-        MP_REACH_NLRI: ClassVar[int] = 0x0E  # 14
-        MP_UNREACH_NLRI: ClassVar[int] = 0x0F  # 15
-        # RFC 4360
-        EXTENDED_COMMUNITY: ClassVar[int] = 0x10  # 16
-        # RFC 4893
-        AS4_PATH: ClassVar[int] = 0x11  # 17
-        AS4_AGGREGATOR: ClassVar[int] = 0x12  # 18
-        # RFC6514
-        PMSI_TUNNEL: ClassVar[int] = 0x16  # 22
-        # RFC5512
-        TUNNEL_ENCAP: ClassVar[int] = 0x17  # 23
-        # RFC5701
-        IPV6_EXTENDED_COMMUNITY: ClassVar[int] = 0x19  # 25
-        AIGP: ClassVar[int] = 0x1A  # 26
-        # RFC7752
-        BGP_LS: ClassVar[int] = 0x1D  # 29
-        # draft-ietf-idr-large-community
-        LARGE_COMMUNITY: ClassVar[int] = 0x20  # 32
-        # RFC 9234
-        OTC: ClassVar[int] = 0x23  # 35
-        # draft-ietf-idr-bgp-prefix-sid
-        BGP_PREFIX_SID: ClassVar[int] = 0x28  # 40
-
-        INTERNAL_OTC_NONE: ClassVar[int] = 0xFFF9
-        INTERNAL_NAME: ClassVar[int] = 0xFFFA
-        INTERNAL_WITHDRAW: ClassVar[int] = 0xFFFB
-        INTERNAL_WATCHDOG: ClassVar[int] = 0xFFFC
-        INTERNAL_SPLIT: ClassVar[int] = 0xFFFD
-        INTERNAL_DISCARD: ClassVar[int] = 0xFFFE
-        INTERNAL_TREAT_AS_WITHDRAW: ClassVar[int] = 0xFFFF  # Treat as Withdraw
-
-        # Currently formatting is done with %-18s
-        names: ClassVar[dict[int, str]] = {
-            ORIGIN: 'origin',
-            AS_PATH: 'as-path',
-            NEXT_HOP: 'next-hop',
-            MED: 'med',  # multi-exit-disc
-            LOCAL_PREF: 'local-preference',
-            ATOMIC_AGGREGATE: 'atomic-aggregate',
-            AGGREGATOR: 'aggregator',
-            COMMUNITY: 'community',
-            LARGE_COMMUNITY: 'large-community',
-            ORIGINATOR_ID: 'originator-id',
-            CLUSTER_LIST: 'cluster-list',
-            MP_REACH_NLRI: 'mp-reach-nlri',  # multi-protocol reacheable nlri
-            MP_UNREACH_NLRI: 'mp-unreach-nlri',  # multi-protocol unreacheable nlri
-            EXTENDED_COMMUNITY: 'extended-community',
-            IPV6_EXTENDED_COMMUNITY: 'extended-community-ipv6',
-            AS4_PATH: 'as4-path',
-            AS4_AGGREGATOR: 'as4-aggregator',
-            PMSI_TUNNEL: 'pmsi-tunnel',
-            TUNNEL_ENCAP: 'tunnel-encaps',
-            AIGP: 'aigp',
-            BGP_LS: 'bgp-ls',
-            OTC: 'otc',
-            BGP_PREFIX_SID: 'bgp-prefix-sid',
-            INTERNAL_OTC_NONE: 'internal-otc-none',
-            0xFFFA: 'internal-name',
-            0xFFFB: 'internal-withdraw',
-            0xFFFC: 'internal-watchdog',
-            0xFFFD: 'internal-split',
-            0xFFFE: 'internal-discard',
-            0xFFFF: 'internal-treath-as-withdraw',
-        }
-
-        @classmethod
-        def name(cls, code: int) -> str:
-            """Return human-readable name for an attribute code."""
-            return cls.names.get(code, 'unknown-attribute-{}'.format(hex(code)))
+    CODE: ClassVar[type[AttributeCodes]] = AttributeCodes
 
     # ---------------------------------------------------------------------------
 
-    class Flag(int):
-        EXTENDED_LENGTH: ClassVar[int] = 0x10  # .  16 - 0001 0000
-        PARTIAL: ClassVar[int] = 0x20  # .  32 - 0010 0000
-        TRANSITIVE: ClassVar[int] = 0x40  # .  64 - 0100 0000
-        OPTIONAL: ClassVar[int] = 0x80  # . 128 - 1000 0000
-
-        # RFC 4271 4.3: the lower-order four bits of the Attribute Flags octet are unused.
-        UNUSED: ClassVar[int] = 0x0F  # .  15 - 0000 1111
-
-        MASK_EXTENDED: ClassVar[int] = 0xEF  # . 239 - 1110 1111
-        MASK_PARTIAL: ClassVar[int] = 0xDF  # . 223 - 1101 1111
-        MASK_TRANSITIVE: ClassVar[int] = 0xBF  # . 191 - 1011 1111
-        MASK_OPTIONAL: ClassVar[int] = 0x7F  # . 127 - 0111 1111
-        MASK_UNUSED: ClassVar[int] = 0xF0  # . 240 - 1111 0000
-
-        def __str__(self) -> str:
-            r: list[str] = []
-            v: int = int(self)
-            if v & 0x10:
-                r.append('EXTENDED_LENGTH')
-                v -= 0x10
-            if v & 0x20:
-                r.append('PARTIAL')
-                v -= 0x20
-            if v & 0x40:
-                r.append('TRANSITIVE')
-                v -= 0x40
-            if v & 0x80:
-                r.append('OPTIONAL')
-                v -= 0x80
-            if v:
-                r.append('UNKNOWN {}'.format(hex(v)))
-            return ' '.join(r)
-
-        def matches(self, value: int) -> bool:
-            return bool(self | 0x10 == value | 0x10)
+    Flag: ClassVar[type[AttributeFlag]] = AttributeFlag
 
     # ---------------------------------------------------------------------------
 
@@ -382,8 +389,8 @@ class Attribute:
 class TreatAsWithdraw(Attribute):
     """Pseudo-attribute indicating update should be treated as withdraw."""
 
-    ID: int = 0xFFFF
-    FLAG: int = 0x00
+    ID: ClassVar[int] = 0xFFFF
+    FLAG: ClassVar[int] = 0x00
     GENERIC: ClassVar[bool] = False
     NO_GENERATION: ClassVar[bool] = True
 
@@ -409,8 +416,8 @@ class TreatAsWithdraw(Attribute):
 class Discard(Attribute):
     """Pseudo-attribute indicating update should be discarded."""
 
-    ID: int = 0xFFFE
-    FLAG: int = 0x00
+    ID: ClassVar[int] = 0xFFFE
+    FLAG: ClassVar[int] = 0x00
     GENERIC: ClassVar[bool] = False
     NO_GENERATION: ClassVar[bool] = True
 

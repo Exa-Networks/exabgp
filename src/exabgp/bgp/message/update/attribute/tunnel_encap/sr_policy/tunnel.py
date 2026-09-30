@@ -1,4 +1,4 @@
-"""sr_policy/__init__.py
+"""sr_policy/tunnel.py
 
 SR Policy Tunnel Type TLV (type 15, RFC 9012 / RFC 9256).
 
@@ -66,7 +66,6 @@ __all__ = [
 ]
 
 
-@TunnelTypeTLV.register(_SR_POLICY_TUNNEL_TYPE)
 class SRPolicyTunnel(TunnelTypeTLV):
     """SR Policy Tunnel Type TLV (type 15).
 
@@ -110,3 +109,6 @@ class SRPolicyTunnel(TunnelTypeTLV):
     def unpack(cls, data: Buffer) -> SRPolicyTunnel:
         subtlvs = SubTLV.unpack_subtlvs(data)
         return cls(subtlvs=subtlvs)
+
+
+TunnelTypeTLV.register(_SR_POLICY_TUNNEL_TYPE)(SRPolicyTunnel)

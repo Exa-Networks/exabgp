@@ -7,8 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
+from exabgp.util.intvalue import IntValue
+
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Generator
+from typing import ClassVar, Generator, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -25,11 +28,11 @@ from exabgp.protocol.family import AFI, SAFI
 # RFC 4271 Section 4.5
 
 
-class Reserved(int):
+class Reserved(IntValue):
     # Route Refresh reserved field values (RFC 2918, RFC 7313)
-    ROUTE_REFRESH_QUERY = 0  # Normal route refresh request
-    ROUTE_REFRESH_BEGIN = 1  # Beginning of Route Refresh (BoRR)
-    ROUTE_REFRESH_END = 2  # End of Route Refresh (EoRR)
+    ROUTE_REFRESH_QUERY: ClassVar[int] = 0  # Normal route refresh request
+    ROUTE_REFRESH_BEGIN: ClassVar[int] = 1  # Beginning of Route Refresh (BoRR)
+    ROUTE_REFRESH_END: ClassVar[int] = 2  # End of Route Refresh (EoRR)
 
     def __str__(self) -> str:
         if self == self.ROUTE_REFRESH_QUERY:
@@ -41,19 +44,18 @@ class Reserved(int):
         return 'invalid'
 
 
-@Message.register
 class RouteRefresh(Message):
-    ID = Message.CODE.ROUTE_REFRESH
+    ID: ClassVar = Message.CODE.ROUTE_REFRESH
 
     # the Reserved field, the RFC 7313 Message Subtype
-    REQUEST = Reserved.ROUTE_REFRESH_QUERY
-    BEGIN = Reserved.ROUTE_REFRESH_BEGIN
-    END = Reserved.ROUTE_REFRESH_END
+    REQUEST: ClassVar = Reserved.ROUTE_REFRESH_QUERY
+    BEGIN: ClassVar = Reserved.ROUTE_REFRESH_BEGIN
+    END: ClassVar = Reserved.ROUTE_REFRESH_END
 
-    FIXED_SIZE = 4  # RFC 2918 3: AFI, Reserved (the RFC 7313 Message Subtype) and SAFI
-    LENGTH_MAX = Message.HEADER_LEN + FIXED_SIZE
+    FIXED_SIZE: ClassVar[int] = 4  # RFC 2918 3: AFI, Reserved (the RFC 7313 Message Subtype) and SAFI
+    LENGTH_MAX: ClassVar = Message.HEADER_LEN + FIXED_SIZE
     # RFC 7313 5 gives a wrong length an error of its own, which only the decoder can pick
-    HEADER_CHECKS_LENGTH = False
+    HEADER_CHECKS_LENGTH: ClassVar[bool] = False
 
     def __init__(self, packed: Buffer) -> None:
         if len(packed) != self.FIXED_SIZE:
@@ -61,10 +63,8 @@ class RouteRefresh(Message):
         self._packed = packed
 
     @classmethod
-    def make_route_refresh(cls, afi: int, safi: int, reserved: int = 0) -> 'RouteRefresh':
-        afi_obj = AFI.from_int(afi)
-        safi_obj = SAFI.from_int(safi)
-        packed = afi_obj.pack_afi() + bytes([reserved]) + safi_obj.pack_safi()
+    def make_route_refresh(cls, afi: AFI | int, safi: SAFI | int, reserved: int = 0) -> 'RouteRefresh':
+        packed = pack('!HBB', int(afi), reserved, int(safi))
         return cls(packed)
 
     @property
@@ -117,3 +117,6 @@ class RouteRefresh(Message):
             return Notify(7, 1, f'ROUTE-REFRESH body of {len(data)} octets', data=cls.frame(cls.ID, data))
         length = cls.HEADER_LEN + len(data)
         return Notify(1, 2, f'ROUTE-REFRESH body of {len(data)} octets', data=pack('!H', length))
+
+
+Message.register(RouteRefresh)

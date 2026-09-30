@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
@@ -33,7 +35,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 # 	RFC 7752 3.3.1.1. Node Flag Bits TLV
 
 
-@LinkState.register_lsid(tlv=1024, json_key='node-flags', repr_name='Node Flags')
 class NodeFlags(FlagLS):
-    FLAGS = ['O', 'T', 'E', 'B', 'R', 'V', 'RSV', 'RSV']
-    LEN = 1
+    FLAGS: ClassVar = ['O', 'T', 'E', 'B', 'R', 'V', 'RSV', 'RSV']
+    LEN: ClassVar[int] = 1
+
+
+LinkState.register_lsid(tlv=1024, json_key='node-flags', repr_name='Node Flags')(NodeFlags)

@@ -82,7 +82,7 @@ ORIGIN_IGP = bytes([WELL_KNOWN_TRANSITIVE, int(Attribute.CODE.ORIGIN), 1, 0x00])
 
 def tlv(code: int, value: bytes) -> bytes:
     """One TLV in the section 5.1 encoding: two octets of type, two of length, the value."""
-    return pack('!HH', code, len(value)) + value
+    return pack('!HH', int(code), len(value)) + value
 
 
 def descriptors() -> bytes:
@@ -98,7 +98,7 @@ def node_nlri(
 ) -> bytes:
     """A Node NLRI: type, Total NLRI Length, Protocol-ID, Identifier, descriptors."""
     payload = pack('!BQ', protocol, identifier) + tlv(LOCAL_NODE_DESCRIPTORS, descriptors() if inner is None else inner)
-    return pack('!HH', code, len(payload)) + payload
+    return pack('!HH', int(code), len(payload)) + payload
 
 
 def link_nlri(remote: bytes, ascending: bool = True) -> bytes:
@@ -162,7 +162,8 @@ def parse_attributes(value: bytes) -> AttributeCollection:
 
 def codes(attribute: LinkState) -> list[int]:
     """The TLV code of every TLV the attribute decoded, in the order they were read."""
-    return [entry.TLV for entry in attribute.ls_attrs]
+    # tlv(): the code the TLV arrived with, TLV being only the default of its class
+    return [entry.tlv() for entry in attribute.ls_attrs]
 
 
 # ==================================================== section 5.1, unknown and unexpected

@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
@@ -21,9 +23,8 @@ from exabgp.util.types import Buffer
 #  ----------------------------
 
 
-@LinkState.register_lsid(tlv=1089, json_key='maximum-link-bandwidth', repr_name='Maximum link bandwidth')
 class MaxBw(BaseLS):
-    LEN = 4
+    LEN: ClassVar[int] = 4
 
     @property
     def content(self) -> float:
@@ -40,3 +41,6 @@ class MaxBw(BaseLS):
     def unpack_bgpls(cls, data: Buffer) -> MaxBw:
         cls.check(data)
         return cls(data)
+
+
+LinkState.register_lsid(tlv=1089, json_key='maximum-link-bandwidth', repr_name='Maximum link bandwidth')(MaxBw)

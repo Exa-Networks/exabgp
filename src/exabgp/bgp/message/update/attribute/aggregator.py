@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 from exabgp.util.types import Buffer
 from struct import unpack
-from typing import TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -22,7 +23,6 @@ from exabgp.protocol.ip import IPv4
 #
 
 
-@Attribute.register()
 class Aggregator(Attribute):
     """Aggregator attribute (code 7).
 
@@ -35,10 +35,10 @@ class Aggregator(Attribute):
     - 4-byte ASN: 4 bytes ASN + 4 bytes IPv4 = 8 bytes
     """
 
-    ID = Attribute.CODE.AGGREGATOR
-    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
-    CACHING = True
-    DISCARD = True
+    ID: ClassVar = Attribute.CODE.AGGREGATOR
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    CACHING: ClassVar[bool] = True
+    DISCARD: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer, asn4: bool = True) -> None:
         """Initialize from packed wire-format bytes.
@@ -157,15 +157,17 @@ class Aggregator(Attribute):
         return cls.from_packet(data, negotiated.asn4)
 
 
+Attribute.register()(Aggregator)
+
+
 # ============================================================== AGGREGATOR (18)
 #
 
 
-@Attribute.register()
 class Aggregator4(Aggregator):
     """AS4_AGGREGATOR attribute (code 18). Always uses 4-byte ASNs."""
 
-    ID = Attribute.CODE.AS4_AGGREGATOR
+    ID: ClassVar = Attribute.CODE.AS4_AGGREGATOR
 
     def __init__(self, packed: Buffer, asn4: bool = True) -> None:
         """Initialize from packed wire-format bytes.
@@ -197,3 +199,6 @@ class Aggregator4(Aggregator):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'Aggregator4':
         return cls.from_packet(data)
+
+
+Attribute.register()(Aggregator4)

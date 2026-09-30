@@ -11,6 +11,7 @@ import json
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 #
 #     0                   1                   2                   3
@@ -26,7 +27,6 @@ from exabgp.util.types import Buffer
 #   Use of draft-tantsura-bgp-ls-segment-routing-msd-02 in this TLV is not clear
 
 
-@LinkState.register_lsid(tlv=1025, json_key='opaque', repr_name='Node Opaque attribute')
 class NodeOpaque(BaseLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> NodeOpaque:
@@ -45,7 +45,7 @@ class NodeOpaque(BaseLS):
         return bytes(self._packed).hex()
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return f'"{self.JSON}": {json.dumps(self.content, default=json_number)}'
 
     @classmethod
     def make_node_opaque(cls, data: Buffer) -> NodeOpaque:
@@ -58,3 +58,6 @@ class NodeOpaque(BaseLS):
             NodeOpaque instance with packed wire-format bytes
         """
         return cls(data)
+
+
+LinkState.register_lsid(tlv=1025, json_key='opaque', repr_name='Node Opaque attribute')(NodeOpaque)

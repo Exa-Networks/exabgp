@@ -44,7 +44,7 @@ def _serialize_ip(obj: IP) -> dict[str, Any]:
 _INT_SUBCLASSES = (TriState, RoleValue, HoldTime, ASN, AFI, SAFI)
 
 
-def _serialize_int_subclass(obj: int) -> dict[str, Any] | str:
+def _serialize_int_subclass(obj: TriState | RoleValue | HoldTime | ASN | AFI | SAFI) -> dict[str, Any] | str:
     """Convert one of _INT_SUBCLASSES, tagged with its type (a RoleValue as its string)."""
     # TriState - IntEnum subclass
     if isinstance(obj, TriState):

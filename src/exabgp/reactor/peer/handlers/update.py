@@ -84,7 +84,7 @@ class UpdateHandler(MessageHandler):
             *Notify.MAXIMUM_NUMBER_OF_PREFIXES_REACHED,
             f'more than {limit} routes received for {family[0]} {family[1]}',
             # the MAY of section 4: <AFI, SAFI> and the upper bound, as in its Figure 1
-            data=pack('!HBI', family[0], family[1], limit),
+            data=pack('!HBI', family[0].value, family[1].value, limit),
         )
 
     def _limit_withdraw(self, ctx: PeerContext, nlri: NLRI) -> None:

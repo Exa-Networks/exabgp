@@ -259,8 +259,8 @@ class API:
             tokens = formated(command).split(' ')[2:]  # skip "announce route-refresh"
         if len(tokens) != API_REFRESH_TOKEN_COUNT:
             return None
-        afi = AFI.value(tokens.pop(0))
-        safi = SAFI.value(tokens.pop(0))
+        afi = AFI.from_name(tokens.pop(0))
+        safi = SAFI.from_name(tokens.pop(0))
         if afi is None or safi is None:
             return None
         return [RouteRefresh.make_route_refresh(afi, safi)]
@@ -275,7 +275,7 @@ class API:
         number = len(tokens)
 
         if not number:
-            return Family(1, 1)
+            return Family(AFI.ipv4, SAFI.unicast)
 
         if number != API_EOR_TOKEN_COUNT:
             return False

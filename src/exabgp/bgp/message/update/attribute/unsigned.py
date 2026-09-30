@@ -30,7 +30,7 @@ class UnsignedAttribute(Attribute):
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
-        if 'WIDTH' in cls.__dict__:
+        if 'WIDTH' in vars(cls):
             cls.MAX = (1 << (BITS_PER_OCTET * cls.WIDTH)) - 1
 
     def __init__(self, packed: Buffer) -> None:

@@ -48,13 +48,12 @@ def is_ssm_group(group: IP) -> bool:
     return False
 
 
-@MVPN.register_mvpn(code=5)
 class SourceAD(MVPN):
     NAME: ClassVar[str] = 'Source Active A-D Route'
     SHORT_NAME: ClassVar[str] = 'SourceAD'
 
     # Wire format offsets (after 2-byte type+length header)
-    HEADER_SIZE = 2  # type(1) + length(1)
+    HEADER_SIZE: ClassVar[int] = 2  # type(1) + length(1)
 
     def __init__(self, packed: Buffer, afi: AFI) -> None:
         """Create SourceAD from complete wire format bytes.
@@ -159,3 +158,6 @@ class SourceAD(MVPN):
         content += '"source": "{}", '.format(str(self.source))
         content += '"group": "{}"'.format(str(self.group))
         return '{{{}}}'.format(content)
+
+
+MVPN.register_mvpn(code=5)(SourceAD)

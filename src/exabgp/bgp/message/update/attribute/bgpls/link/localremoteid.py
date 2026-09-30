@@ -23,6 +23,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState, BaseLS
@@ -32,9 +34,8 @@ from exabgp.util.types import Buffer
 _MAX_32BIT: int = 4294967295
 
 
-@LinkState.register_lsid(tlv=258, json_key='link-local-remote-identifiers', repr_name='Link Local/Remote Identifiers')
 class LinkLocalRemoteId(BaseLS):
-    LEN = 8
+    LEN: ClassVar[int] = 8
 
     @property
     def content(self) -> dict[str, int]:
@@ -60,3 +61,8 @@ class LinkLocalRemoteId(BaseLS):
         if not 0 <= remote_id <= _MAX_32BIT:
             raise ValueError(f'remote_id must be 0-{_MAX_32BIT}, got {remote_id}')
         return cls(pack('!II', local_id, remote_id))
+
+
+LinkState.register_lsid(tlv=258, json_key='link-local-remote-identifiers', repr_name='Link Local/Remote Identifiers')(
+    LinkLocalRemoteId
+)

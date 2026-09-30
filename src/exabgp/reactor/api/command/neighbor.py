@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.neighbor import NeighborTemplate
 from exabgp.logger import lazymsg, log
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -59,7 +60,7 @@ def list_neighbor(
                     }
                 )
 
-            for line in json.dumps(neighbors).split('\n'):
+            for line in json.dumps(neighbors, default=json_number).split('\n'):
                 reactor.processes.write(service, line)
                 await asyncio.sleep(0)
         except Exception as e:
@@ -236,7 +237,7 @@ def show_neighbor(
             # Log error if configuration access fails
             reactor.processes.write(service, f'# Error accessing neighbors: {e}')
 
-        for line in json.dumps(p).split('\n'):
+        for line in json.dumps(p, default=json_number).split('\n'):
             reactor.processes.write(service, line)
             await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
         await reactor.processes.answer_done(service)

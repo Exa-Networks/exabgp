@@ -286,7 +286,7 @@ class AnnounceLine(RouteStatement):
         if self.announce_safi.prefix:
             # legacy: a prefix of the other address family is taken, the route is of the block's
             prefix = bgp.Prefix().parse(words)
-            settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask)
+            settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask.value)
             settings.afi, settings.safi = self.afi, self.safi
         attributes = AttributeCollection()
         for _, spec in self.keywords(words, self.announce_safi.values):

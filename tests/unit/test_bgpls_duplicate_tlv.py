@@ -80,7 +80,7 @@ def attribute() -> type[Attribute]:
 
 
 def tlv(code: int, payload: bytes) -> bytes:
-    return pack('!HH', code, len(payload)) + payload
+    return pack('!HH', int(code), len(payload)) + payload
 
 
 def render(data: bytes) -> dict:

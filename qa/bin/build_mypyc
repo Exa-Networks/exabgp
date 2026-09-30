@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""
+Compile the hot path of ExaBGP with mypyc, into a tree next to the source.
+
+src/exabgp is copied to build/mypyc/exabgp and the modules in COMPILED are compiled
+there, so the source tree never holds a .so and the pure Python tree stays the one every
+other tool runs. Run anything against the compiled tree with:
+
+    PYTHONPATH=build/mypyc ./qa/bin/benchmark_codec
+    PYTHONPATH=build/mypyc uv run pytest tests/unit
+
+mypyc refuses some Python a plain interpreter accepts. Its errors are grouped by message
+so the count is readable, and the build fails on any of them: this is also the check that
+nothing mypyc cannot compile comes back.
+
+See plan/wip-mypyc.md.
+
+Usage:
+    ./qa/bin/build_mypyc              # compile COMPILED, fail on any mypyc error
+    ./qa/bin/build_mypyc --errors     # list every error, not only the counts
+    ./qa/bin/build_mypyc exabgp/rib   # compile these instead
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+from collections import Counter
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.parent
+SOURCE = ROOT / 'src' / 'exabgp'
+TARGET = ROOT / 'build' / 'mypyc'
+STUBS = ROOT / 'stubs'
+
+# What gets compiled, relative to TARGET. plan/wip-mypyc.md section 2.1 says why these.
+# A pattern is expanded in the copy. Of update/nlri only the unicast, labelled and VPN
+# chain is compiled: the other families still build copies with cls.__new__, which mypyc
+# cannot compile, and NLRI allows them to stay interpreted (plan/wip-mypyc.md).
+COMPILED = [
+    'exabgp/util/intvalue.py',
+    'exabgp/protocol',
+    'exabgp/bgp/message/*.py',
+    'exabgp/bgp/message/open',
+    'exabgp/bgp/message/update/*.py',
+    'exabgp/bgp/message/update/attribute',
+    'exabgp/bgp/message/update/nlri/nlri.py',
+    'exabgp/bgp/message/update/nlri/cidr.py',
+    'exabgp/bgp/message/update/nlri/inet.py',
+    'exabgp/bgp/message/update/nlri/label.py',
+    'exabgp/bgp/message/update/nlri/ipvpn.py',
+    'exabgp/bgp/message/update/nlri/qualifier',
+]
+
+# Modules left out of COMPILED's patterns
+EXCLUDED: set[str] = set()
+
+# How many distinct error messages the summary shows before cutting the list short.
+MAX_KINDS = 30
+
+_ERROR = re.compile(r'^(?P<where>[^:\s]+:\d+): error: (?P<message>.*)$')
+
+
+def _kind(message: str) -> str:
+    """An error message with the names taken out, so errors of one kind count together."""
+    return re.sub(r'"[^"]*"', '"..."', message)
+
+
+def _copy_tree() -> None:
+    if TARGET.exists():
+        shutil.rmtree(TARGET)
+    TARGET.mkdir(parents=True)
+    shutil.copytree(SOURCE, TARGET / 'exabgp', ignore=shutil.ignore_patterns('__pycache__', '*.so'))
+
+
+def _expand(modules: list[str]) -> list[str]:
+    """The files to compile: a directory is every module under it, a pattern what it matches.
+
+    A package's __init__.py stays interpreted: compiled, the package lost its __path__ and
+    `import exabgp.bgp.message.update.attribute.bgpls.link` failed with 'is not a package'.
+    They only import and re-export, so nothing is lost.
+    """
+    expanded: list[str] = []
+    for module in modules:
+        if '*' in module:
+            paths = sorted(TARGET.glob(module))
+        elif (TARGET / module).is_dir():
+            paths = sorted((TARGET / module).rglob('*.py'))
+        else:
+            paths = [TARGET / module]
+        for path in paths:
+            name = str(path.relative_to(TARGET))
+            if path.name != '__init__.py' and name not in EXCLUDED:
+                expanded.append(name)
+    return expanded
+
+
+def _compile(modules: list[str]) -> subprocess.CompletedProcess[str]:
+    mypyc = Path(sys.executable).parent / 'mypyc'
+    environment = dict(os.environ, MYPYPATH=str(STUBS))
+    command = [str(mypyc), '--config-file', str(ROOT / 'pyproject.toml'), *_expand(modules)]
+    return subprocess.run(command, cwd=TARGET, env=environment, capture_output=True, text=True)
+
+
+def _report(output: str, show_every_error: bool) -> int:
+    errors = [match for line in output.splitlines() if (match := _ERROR.match(line))]
+    if show_every_error:
+        for error in errors:
+            print(f'{error["where"]}: {error["message"]}')
+        print()
+    kinds = Counter(_kind(error['message']) for error in errors)
+    for message, count in kinds.most_common(MAX_KINDS):
+        print(f'  {count:5}  {message}')
+    if len(kinds) > MAX_KINDS:
+        print(f'  ... and {len(kinds) - MAX_KINDS} more kinds')
+    return len(errors)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('modules', nargs='*', help=f'modules to compile (default: {" ".join(COMPILED)})')
+    parser.add_argument('--errors', action='store_true', help='list every mypyc error')
+    arguments = parser.parse_args()
+
+    modules = arguments.modules or COMPILED
+    started_at = time.monotonic()
+    _copy_tree()
+    result = _compile(modules)
+    elapsed_seconds = time.monotonic() - started_at
+    output = result.stdout + result.stderr
+
+    error_count = _report(output, arguments.errors)
+    if error_count:
+        print(f'mypyc: {error_count} errors in {" ".join(modules)} ({elapsed_seconds:.0f}s)')
+        return 1
+    if result.returncode:
+        # Not a mypyc error, so the C compiler or setuptools: show all of it.
+        print(output)
+        print(f'mypyc: the build failed ({elapsed_seconds:.0f}s)')
+        return 1
+    compiled = sorted(TARGET.glob('exabgp/**/*.so'))
+    print(f'mypyc: compiled {len(compiled)} modules into {TARGET} ({elapsed_seconds:.0f}s)')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

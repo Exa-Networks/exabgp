@@ -6,6 +6,8 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import json
 from struct import unpack
 
@@ -13,6 +15,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 # Fixed data length for SRv6 Endpoint Behavior TLV (RFC 9514 Section 7.1)
 # Endpoint Behavior (2) + Flags (1) + Algorithm (1) = 4 bytes
@@ -30,9 +33,8 @@ SRV6_ENDPOINT_BEHAVIOR_LEN = 4
 #                     Figure 7: SRv6 Endpoint Behavior TLV
 
 
-@LinkState.register_lsid(tlv=1250, json_key='srv6-endpoint-behavior', repr_name='SRv6 Endpoint Behavior')
 class Srv6EndpointBehavior(BaseLS):
-    LEN = SRV6_ENDPOINT_BEHAVIOR_LEN
+    LEN: ClassVar = SRV6_ENDPOINT_BEHAVIOR_LEN
 
     @property
     def endpoint_behavior(self) -> int:
@@ -90,4 +92,9 @@ class Srv6EndpointBehavior(BaseLS):
         }
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return f'"{self.JSON}": {json.dumps(self.content, default=json_number)}'
+
+
+LinkState.register_lsid(tlv=1250, json_key='srv6-endpoint-behavior', repr_name='SRv6 Endpoint Behavior')(
+    Srv6EndpointBehavior
+)

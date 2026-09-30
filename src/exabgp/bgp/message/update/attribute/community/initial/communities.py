@@ -26,15 +26,14 @@ from exabgp.bgp.message.update.attribute.community.initial.community import Comm
 COMMUNITY_SIZE = 4  # Each standard community is 4 bytes (2 bytes ASN + 2 bytes value)
 
 
-@Attribute.register()
 class Communities(Attribute):
     """Communities attribute (code 8).
 
     Stores packed wire-format bytes. Each community is 4 bytes.
     """
 
-    ID = Attribute.CODE.COMMUNITY
-    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    ID: ClassVar = Attribute.CODE.COMMUNITY
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
     # RFC 7606 section 7.8: a malformed Community attribute is treat-as-withdraw, not a
     # session reset.  AttributeCollection.parse honours this flag; without it the Notify
     # from_packet raises for a length which is not a multiple of four escapes the parser
@@ -134,3 +133,6 @@ class Communities(Attribute):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         return cls.from_packet(data)
+
+
+Attribute.register()(Communities)

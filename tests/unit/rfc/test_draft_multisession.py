@@ -75,8 +75,8 @@ def ours() -> Capabilities:
 
 def received(*capabilities: tuple[int, bytes]) -> Capabilities:
     """Decode the capabilities a peer sent, from wire bytes, in one parameter."""
-    tlvs = b''.join(bytes([code, len(value)]) + value for code, value in capabilities)
-    parameter = bytes([Parameter.CAPABILITIES, len(tlvs)]) + tlvs
+    tlvs = b''.join(bytes([int(code), len(value)]) + value for code, value in capabilities)
+    parameter = bytes([int(Parameter.CAPABILITIES), len(tlvs)]) + tlvs
     return Capabilities.unpack(bytes([len(parameter)]) + parameter)
 
 
@@ -171,32 +171,36 @@ def test_a_route_is_sent_on_the_session_of_its_family() -> None:
 
 @pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#4-g-bit-is-not-relied-on')
 def test_the_g_bit_does_not_change_the_session_id() -> None:
-    assert session_id(bytes([0x80, MULTIPROTOCOL])) == session_id(bytes([0x00, MULTIPROTOCOL])) == [MULTIPROTOCOL]
+    assert (
+        session_id(bytes([0x80, int(MULTIPROTOCOL)]))
+        == session_id(bytes([0x00, int(MULTIPROTOCOL)]))
+        == [MULTIPROTOCOL]
+    )
 
 
 @pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#4-reserved-flags')
 def test_we_send_the_flags_octet_as_zero() -> None:
     (value,) = MultiSession().set([MULTIPROTOCOL]).extract_capability_bytes()
 
-    assert value == bytes([0x00, MULTIPROTOCOL])
+    assert value == bytes([0x00, int(MULTIPROTOCOL)])
 
 
 @pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#4-reserved-flags', polarity='negative')
 def test_reserved_flag_bits_from_a_peer_are_ignored() -> None:
-    assert session_id(bytes([0x7F, MULTIPROTOCOL])) == [MULTIPROTOCOL]
+    assert session_id(bytes([0x7F, int(MULTIPROTOCOL)])) == [MULTIPROTOCOL]
 
 
 @pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#4-own-code-not-listed')
 def test_our_session_id_does_not_list_the_multisession_code() -> None:
     for neighbor in neighbours('capability { multi-session enable; }'):
         (value,) = Capabilities().new(neighbor, False)[MULTISESSION].extract_capability_bytes()
-        assert MULTISESSION not in value[1:]
-        assert Capability.CODE.MULTISESSION_CISCO not in value[1:]
+        assert int(MULTISESSION) not in value[1:]
+        assert int(Capability.CODE.MULTISESSION_CISCO) not in value[1:]
 
 
 @pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#4-own-code-not-listed', polarity='negative')
 def test_the_multisession_code_in_a_received_session_id_is_ignored() -> None:
-    assert session_id(bytes([0x00, MULTISESSION, MULTIPROTOCOL])) == [MULTIPROTOCOL]
+    assert session_id(bytes([0x00, int(MULTISESSION), int(MULTIPROTOCOL)])) == [MULTIPROTOCOL]
 
 
 def test_a_zero_length_value_is_refused_with_open_message_error() -> None:
@@ -255,13 +259,13 @@ def test_a_real_cisco_open_negotiates_multisession() -> None:
 
 @pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#7-session-id-mismatch-is-a-grouping-conflict')
 def test_a_peer_with_our_session_id_is_accepted() -> None:
-    assert negotiate(ours(), received(ipv4_unicast(), (MULTISESSION, bytes([0x00, MULTIPROTOCOL])))) is True
+    assert negotiate(ours(), received(ipv4_unicast(), (MULTISESSION, bytes([0x00, int(MULTIPROTOCOL)])))) is True
 
 
 @pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#5-use-the-new-subcodes')
 @pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#7-session-id-mismatch-is-a-grouping-conflict', polarity='negative')
 def test_a_peer_with_another_session_id_is_a_grouping_conflict() -> None:
-    recv = received(ipv4_unicast(), (MULTISESSION, bytes([0x00, Capability.CODE.ROUTE_REFRESH])))
+    recv = received(ipv4_unicast(), (MULTISESSION, bytes([0x00, int(Capability.CODE.ROUTE_REFRESH)])))
 
     result = negotiate(ours(), recv)
 
@@ -278,7 +282,7 @@ def test_a_peer_whose_families_match_ours_is_accepted() -> None:
 def test_a_peer_whose_families_differ_from_ours_is_a_grouping_conflict() -> None:
     ipv6 = multiprotocol((AFI.ipv6, SAFI.unicast)).extract_capability_bytes()[0]
 
-    result = negotiate(ours(), received((MULTIPROTOCOL, ipv6), (MULTISESSION, bytes([0x00, MULTIPROTOCOL]))))
+    result = negotiate(ours(), received((MULTIPROTOCOL, ipv6), (MULTISESSION, bytes([0x00, int(MULTIPROTOCOL)]))))
 
     assert isinstance(result, tuple)
     assert result[:2] == (2, 8)

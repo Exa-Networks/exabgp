@@ -76,15 +76,14 @@ class ExtendedCommunitiesBase(Attribute, ABC):
 # https://www.iana.org/assignments/bgp-extended-communities
 
 
-@Attribute.register()
 class ExtendedCommunities(ExtendedCommunitiesBase):
     """Extended Communities attribute (code 16).
 
     Stores packed wire-format bytes. Each extended community is 8 bytes.
     """
 
-    ID = Attribute.CODE.EXTENDED_COMMUNITY
-    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    ID: ClassVar = Attribute.CODE.EXTENDED_COMMUNITY
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
     def __init__(self, packed: Buffer = b'') -> None:
         """Initialize from packed wire-format bytes.
@@ -202,19 +201,21 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         return cls.from_packet(data)
 
 
+Attribute.register()(ExtendedCommunities)
+
+
 # ===================================================== ExtendedCommunitiesIPv6 (25)
 # RFC 5701
 
 
-@Attribute.register()
 class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
     """IPv6 Extended Communities attribute (code 25).
 
     Stores packed wire-format bytes. Each IPv6 extended community is 20 bytes.
     """
 
-    ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
-    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    ID: ClassVar = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
     def __init__(self, packed: Buffer = b'') -> None:
         """Initialize from packed wire-format bytes."""
@@ -282,3 +283,6 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         return cls.from_packet(data)
+
+
+Attribute.register()(ExtendedCommunitiesIPv6)

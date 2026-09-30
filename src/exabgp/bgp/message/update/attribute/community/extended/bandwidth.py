@@ -22,7 +22,6 @@ from exabgp.util.types import Buffer
 # draft-ietf-idr-link-bandwidth-06
 
 
-@ExtendedCommunity.register_subtype
 class Bandwidth(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x40
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x04
@@ -52,3 +51,6 @@ class Bandwidth(ExtendedCommunity):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> Bandwidth:
         return cls(data[:8])
+
+
+ExtendedCommunity.register_subtype(Bandwidth)

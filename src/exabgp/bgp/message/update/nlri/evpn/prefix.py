@@ -48,7 +48,6 @@ from exabgp.util.types import Buffer
 # https://tools.ietf.org/html/draft-rabadan-l2vpn-evpn-prefix-advertisement-03
 
 
-@EVPN.register_evpn_route(code=5)
 class Prefix(EVPN):
     """EVPN Route Type 5: IP Prefix Advertisement.
 
@@ -241,3 +240,6 @@ class Prefix(EVPN):
         members.append('"iplen": %d' % self.iplen)
         members.append('"gateway": "{}"'.format(str(self.gwip)))
         return '{{ {} }}'.format(', '.join(member for member in members if member))
+
+
+EVPN.register_evpn_route(code=5)(Prefix)

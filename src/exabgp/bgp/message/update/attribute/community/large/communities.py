@@ -5,7 +5,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator, Sequence
+
+from typing import ClassVar, Iterator, Sequence, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -23,16 +24,15 @@ LARGE_COMMUNITY_SIZE = (
 )
 
 
-@Attribute.register()
 class LargeCommunities(Attribute):
     """Large Communities attribute (code 32).
 
     Stores packed wire-format bytes. Each large community is 12 bytes.
     """
 
-    ID = Attribute.CODE.LARGE_COMMUNITY
-    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
-    TREAT_AS_WITHDRAW = True
+    ID: ClassVar = Attribute.CODE.LARGE_COMMUNITY
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer = b'') -> None:
         """Initialize from packed wire-format bytes.
@@ -137,3 +137,6 @@ class LargeCommunities(Attribute):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         return cls.from_packet(data)
+
+
+Attribute.register()(LargeCommunities)

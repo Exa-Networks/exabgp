@@ -21,7 +21,6 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.5
 
 
-@LinkState.register_lsid(tlv=1156, json_key='ospf-forwarding-address', repr_name='Ospf forwarding address')
 class OspfForwardingAddress(BaseLS):
     @property
     def content(self) -> str:
@@ -39,3 +38,8 @@ class OspfForwardingAddress(BaseLS):
     def make_ospf_forwarding_address(cls, address: str) -> OspfForwardingAddress:
         """Create OspfForwardingAddress from IP address string."""
         return cls(IP.pton(address))
+
+
+LinkState.register_lsid(tlv=1156, json_key='ospf-forwarding-address', repr_name='Ospf forwarding address')(
+    OspfForwardingAddress
+)

@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
@@ -54,9 +56,8 @@ SRCAP_MIN_LENGTH = 2  # Minimum for flags + reserved
 SRCAP_MIN_ENTRY_LENGTH = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE  # 7 bytes per entry header
 
 
-@LinkState.register_lsid(tlv=1034, json_key='sr-capability-flags', repr_name='SR Capability Flags')
 class SrCapabilities(FlagLS):
-    FLAGS = ['I', 'V', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    FLAGS: ClassVar = ['I', 'V', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
 
     # flags property is inherited from FlagLS and unpacks from _packed[0:1]
 
@@ -154,3 +155,6 @@ class SrCapabilities(FlagLS):
 
     def json(self, compact: bool = False) -> str:
         return f'{FlagLS.json(self)}, "sids": {self.sids}'
+
+
+LinkState.register_lsid(tlv=1034, json_key='sr-capability-flags', repr_name='SR Capability Flags')(SrCapabilities)

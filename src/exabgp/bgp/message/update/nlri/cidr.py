@@ -55,8 +55,9 @@ Wire Format (_packed):
 
 from __future__ import annotations
 
+
 from exabgp.util.types import Buffer
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -70,6 +71,9 @@ from exabgp.protocol.ip import IP
 # CIDR netmask constants
 CIDR_IPV4_MAX_MASK = 32  # Maximum valid IPv4 mask
 
+# the NLRI of a /0, the least __init__ can decode
+_ZERO_MASK = b'\x00'
+
 # Valid IP address lengths
 CIDR_IPV4_LENGTH = 4
 CIDR_IPV6_LENGTH = 16
@@ -79,7 +83,7 @@ CIDR_MAX_MASK = 128
 class CIDR:
     IS_EOR: bool = False
 
-    _mask_to_bytes: dict[int, int] = {}
+    _mask_to_bytes: ClassVar[dict[int, int]] = {}
 
     NOCIDR: ClassVar['CIDR']
 
@@ -103,12 +107,21 @@ class CIDR:
         self._mask = mask
 
     @classmethod
+    def _with_fields(cls, packed: bytes, mask: int) -> 'CIDR':
+        """A CIDR holding these fields as they are, decoding nothing.
+
+        mypyc cannot build an instance without running __init__, so this runs it on the
+        smallest input it takes, a zero mask, then sets the fields.
+        """
+        instance = cls(_ZERO_MASK, AFI.ipv4)
+        instance._packed = packed
+        instance._mask = mask
+        return instance
+
+    @classmethod
     def _create_nocidr(cls) -> 'CIDR':
         """Create the NOCIDR singleton. Called once at module load."""
-        instance = object.__new__(cls)
-        instance._packed = b''
-        instance._mask = 0
-        return instance
+        return cls._with_fields(b'', 0)
 
     @classmethod
     def from_ipv4(cls, nlri: Buffer) -> 'CIDR':
@@ -116,11 +129,7 @@ class CIDR:
 
         Use this when AFI is known to be IPv4.
         """
-        prefix, mask = cls.decode(AFI.ipv4, nlri)
-        instance = object.__new__(cls)
-        instance._packed = prefix
-        instance._mask = mask
-        return instance
+        return cls(nlri, AFI.ipv4)
 
     @classmethod
     def from_ipv6(cls, nlri: Buffer) -> 'CIDR':
@@ -128,11 +137,7 @@ class CIDR:
 
         Use this when AFI is known to be IPv6.
         """
-        prefix, mask = cls.decode(AFI.ipv6, nlri)
-        instance = object.__new__(cls)
-        instance._packed = prefix
-        instance._mask = mask
-        return instance
+        return cls(nlri, AFI.ipv6)
 
     @classmethod
     def create_cidr(cls, packed: Buffer, mask: int) -> 'CIDR':
@@ -156,10 +161,7 @@ class CIDR:
             max_mask = 32 if len(packed) == CIDR_IPV4_LENGTH else CIDR_MAX_MASK
             if not (0 <= mask <= max_mask):
                 raise ValueError(f'CIDR mask must be 0-{max_mask}, got {mask}')
-        instance = object.__new__(cls)
-        instance._packed = bytes(packed) if packed else b''
-        instance._mask = mask
-        return instance
+        return cls._with_fields(bytes(packed) if packed else b'', mask)
 
     @property
     def mask(self) -> int:

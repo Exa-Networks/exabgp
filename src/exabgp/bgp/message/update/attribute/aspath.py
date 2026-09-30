@@ -19,9 +19,10 @@ from __future__ import annotations
 
 import json
 from struct import error, unpack
-from typing import TYPE_CHECKING, ClassVar, Sequence, Type, TypeVar
+from typing import TYPE_CHECKING, ClassVar, Iterable, Iterator, Sequence, Type, TypeVar, overload
 
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -38,28 +39,91 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 # exabgp can be given back to it:  as-path [ 1 2 ] ( 3 4 ) confed-sequence [ 5 ]
 
 
-class SET(list[ASN]):
+class Segment:
+    """One AS_PATH segment: its AS numbers in order, the subclass says which kind.
+
+    This was a list subclass, which mypyc cannot compile. It keeps what the code used of
+    the list: iteration, length, indexing, slicing to a segment of the same kind, append
+    and extend, and equality with another segment or a list of the same AS numbers.
+    """
+
+    ID: ClassVar[int]
+    NAME: ClassVar[str]
+    HEAD: ClassVar[str]
+    TAIL: ClassVar[str]
+
+    def __init__(self, asns: Iterable[ASN] = ()) -> None:
+        self.asns: list[ASN] = list(asns)
+
+    def __iter__(self) -> Iterator[ASN]:
+        return iter(self.asns)
+
+    def __len__(self) -> int:
+        return len(self.asns)
+
+    def __bool__(self) -> bool:
+        return bool(self.asns)
+
+    @overload
+    def __getitem__(self, index: int) -> ASN: ...
+
+    @overload
+    def __getitem__(self: _Segment, index: slice) -> _Segment: ...
+
+    def __getitem__(self: _Segment, index: int | slice) -> ASN | _Segment:
+        if isinstance(index, slice):
+            return type(self)(self.asns[index])
+        return self.asns[index]
+
+    def append(self, asn: ASN) -> None:
+        self.asns.append(asn)
+
+    def extend(self, asns: Iterable[ASN]) -> None:
+        self.asns.extend(asns)
+
+    # a list compared equal to any list of the same numbers, whatever the segment kind, and
+    # defining __eq__ leaves the class unhashable, as the list was
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Segment):
+            return self.asns == other.asns
+        if isinstance(other, list):
+            return self.asns == other
+        return NotImplemented
+
+    def __ne__(self, other: object) -> bool:
+        # the operator, not a call to __eq__: it answers NotImplemented the way Python does,
+        # where a compiled bool-typed local would refuse it
+        return not self == other
+
+    def __repr__(self) -> str:
+        return repr(self.asns)
+
+
+_Segment = TypeVar('_Segment', bound=Segment)
+
+
+class SET(Segment):
     ID: ClassVar[int] = 0x01
     NAME: ClassVar[str] = 'as-set'
     HEAD: ClassVar[str] = '('
     TAIL: ClassVar[str] = ')'
 
 
-class SEQUENCE(list[ASN]):
+class SEQUENCE(Segment):
     ID: ClassVar[int] = 0x02
     NAME: ClassVar[str] = 'as-sequence'
     HEAD: ClassVar[str] = '['
     TAIL: ClassVar[str] = ']'
 
 
-class CONFED_SEQUENCE(list[ASN]):
+class CONFED_SEQUENCE(Segment):
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'as-confed-sequence'
     HEAD: ClassVar[str] = 'confed-sequence ['
     TAIL: ClassVar[str] = ']'
 
 
-class CONFED_SET(list[ASN]):
+class CONFED_SET(Segment):
     ID: ClassVar[int] = 0x04
     NAME: ClassVar[str] = 'as-confed-set'
     HEAD: ClassVar[str] = 'confed-set ['
@@ -73,7 +137,6 @@ SegmentType = TypeVar('SegmentType', SET, SEQUENCE, CONFED_SEQUENCE, CONFED_SET)
 PathSegment = SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET
 
 
-@Attribute.register()
 class ASPath(Attribute):
     """AS Path attribute (code 2).
 
@@ -82,8 +145,8 @@ class ASPath(Attribute):
     is stored.
     """
 
-    ID = Attribute.CODE.AS_PATH
-    FLAG = Attribute.Flag.TRANSITIVE
+    ID: ClassVar = Attribute.CODE.AS_PATH
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE
 
     AS_SET: ClassVar[int] = SET.ID
     AS_SEQUENCE: ClassVar[int] = SEQUENCE.ID
@@ -225,9 +288,9 @@ class ASPath(Attribute):
         for pos, content in enumerate(self.aspath):
             jason[pos] = {
                 'element': content.NAME,
-                'value': list(content),
+                'value': [asn.value for asn in content],
             }
-        return json.dumps(jason)
+        return json.dumps(jason, default=json_number)
 
     @classmethod
     def _unpack_segments_static(
@@ -348,6 +411,9 @@ class ASPath(Attribute):
         return cls.from_packet(data, negotiated.asn4)
 
 
+Attribute.register()(ASPath)
+
+
 ASPath.Empty = ASPath(b'', asn4=False)
 
 
@@ -358,12 +424,11 @@ AS2Path = ASPath
 # ================================================================= AS4Path (17)
 
 
-@Attribute.register()
 class AS4Path(ASPath):
     """AS4_PATH attribute (code 17). Always uses 4-byte ASNs."""
 
-    ID = Attribute.CODE.AS4_PATH
-    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    ID: ClassVar = Attribute.CODE.AS4_PATH
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
     # RFC 6793 section 6 chose attribute discard for a malformed AS4_PATH and said why:
     # the path which matters during the transition is the one in AS_PATH, and that one is
@@ -418,6 +483,9 @@ class AS4Path(ASPath):
             assert cls.Empty is not None  # Set after class definition
             return cls.Empty
         return cls.from_packet(data)
+
+
+Attribute.register()(AS4Path)
 
 
 AS4Path.Empty = AS4Path(b'')

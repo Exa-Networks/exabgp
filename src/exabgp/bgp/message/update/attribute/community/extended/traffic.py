@@ -37,7 +37,6 @@ from exabgp.protocol.ip import IPv4
 from exabgp.protocol.ip import IPv6
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunityIPv6
 from exabgp.util.types import Buffer
@@ -79,7 +78,6 @@ def checked_rate(rate: float, name: str) -> float:
 # ================================================================== TrafficRate
 
 
-@ExtendedCommunity.register_subtype
 class TrafficRate(ExtendedCommunity):
     """Rate-limit matching traffic (RFC 5575).
 
@@ -98,7 +96,7 @@ class TrafficRate(ExtendedCommunity):
         checked_rate(rate, 'traffic-rate')
         if rate < 0:
             raise ValueError(f'traffic-rate must not be negative: {rate}')
-        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, rate)
+        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, int(asn), rate)
         return cls(packed)
 
     @property
@@ -121,10 +119,12 @@ class TrafficRate(ExtendedCommunity):
         return cls(checked_rate_bytes(data, 'traffic-rate'))
 
 
+ExtendedCommunity.register_subtype(TrafficRate)
+
+
 # ============================================================ TrafficRatePackets
 
 
-@ExtendedCommunity.register_subtype
 class TrafficRatePackets(ExtendedCommunity):
     """Rate-limit matching traffic in packets per second (RFC 8955)."""
 
@@ -140,7 +140,7 @@ class TrafficRatePackets(ExtendedCommunity):
         checked_rate(rate, 'traffic-rate-packets')
         if rate < 0:
             raise ValueError(f'traffic-rate-packets must not be negative: {rate}')
-        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, rate)
+        packed = pack('!BBHf', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, int(asn), rate)
         return cls(packed)
 
     @property
@@ -162,10 +162,12 @@ class TrafficRatePackets(ExtendedCommunity):
         return cls(checked_rate_bytes(data, 'traffic-rate-packets'))
 
 
+ExtendedCommunity.register_subtype(TrafficRatePackets)
+
+
 # ================================================================ TrafficAction
 
 
-@ExtendedCommunity.register_subtype
 class TrafficAction(ExtendedCommunity):
     """Traffic action flags (RFC 5575).
 
@@ -207,10 +209,12 @@ class TrafficAction(ExtendedCommunity):
         return cls(data[:8])
 
 
+ExtendedCommunity.register_subtype(TrafficAction)
+
+
 # ============================================================== TrafficRedirect
 
 
-@ExtendedCommunity.register_subtype
 class TrafficRedirect(ExtendedCommunity):
     """Redirect matching traffic to VRF (RFC 5575, RFC 7674).
 
@@ -226,7 +230,7 @@ class TrafficRedirect(ExtendedCommunity):
     @classmethod
     def make_traffic_redirect(cls, asn: ASN, target: int) -> TrafficRedirect:
         """Create TrafficRedirect from semantic values."""
-        packed = pack('!BBHL', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, target)
+        packed = pack('!BBHL', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, int(asn), target)
         return cls(packed)
 
     @property
@@ -246,7 +250,9 @@ class TrafficRedirect(ExtendedCommunity):
         return cls(data[:8])
 
 
-@ExtendedCommunity.register_subtype
+ExtendedCommunity.register_subtype(TrafficRedirect)
+
+
 class TrafficRedirectASN4(ExtendedCommunity):
     """Redirect to VRF using 4-byte AS number (RFC 7674).
 
@@ -260,14 +266,14 @@ class TrafficRedirectASN4(ExtendedCommunity):
         ExtendedCommunity.__init__(self, packed)
 
     @classmethod
-    def make_traffic_redirect_asn4(cls, asn: ASN4, target: int) -> TrafficRedirectASN4:
+    def make_traffic_redirect_asn4(cls, asn: ASN, target: int) -> TrafficRedirectASN4:
         """Create TrafficRedirectASN4 from semantic values."""
-        packed = pack('!BBLH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, asn, target)
+        packed = pack('!BBLH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, int(asn), target)
         return cls(packed)
 
     @property
-    def asn(self) -> ASN4:
-        return ASN4(unpack('!L', self._packed[2:6])[0])
+    def asn(self) -> ASN:
+        return ASN(unpack('!L', self._packed[2:6])[0])
 
     @property
     def target(self) -> int:
@@ -275,17 +281,20 @@ class TrafficRedirectASN4(ExtendedCommunity):
         return value
 
     def __str__(self) -> str:
-        return 'redirect:{}:{}'.format(self.asn, self.target)
+        # the AS number showed as ASN4(<number>) when ASN4 was its type: the text is kept
+        return 'redirect:ASN4({}):{}'.format(self.asn, self.target)
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRedirectASN4:
         return cls(data[:8])
 
 
+ExtendedCommunity.register_subtype(TrafficRedirectASN4)
+
+
 # ================================================================== TrafficMark
 
 
-@ExtendedCommunity.register_subtype
 class TrafficMark(ExtendedCommunity):
     """Set DSCP value on matching packets (RFC 5575).
 
@@ -320,10 +329,12 @@ class TrafficMark(ExtendedCommunity):
         return cls(data[:8])
 
 
+ExtendedCommunity.register_subtype(TrafficMark)
+
+
 # =============================================================== TrafficNextHopIPv4IETF
 
 
-@ExtendedCommunity.register_subtype
 class TrafficNextHopIPv4IETF(ExtendedCommunity):
     """Redirect to IPv4 next-hop (draft-ietf-idr-flowspec-redirect-ip).
 
@@ -363,10 +374,12 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
         return cls(data[:8])
 
 
+ExtendedCommunity.register_subtype(TrafficNextHopIPv4IETF)
+
+
 # =============================================================== TrafficNextHopIPv6IETF
 
 
-@ExtendedCommunityIPv6.register_subtype
 class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
     """Redirect to IPv6 next-hop (draft-ietf-idr-flowspec-redirect-ip, RFC 5701).
 
@@ -406,10 +419,12 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
         return cls(data[:20])
 
 
+ExtendedCommunityIPv6.register_subtype(TrafficNextHopIPv6IETF)
+
+
 # =============================================================== TrafficNextHopSimpson
 
 
-@ExtendedCommunity.register_subtype
 class TrafficNextHopSimpson(ExtendedCommunity):
     """Redirect to UPDATE's existing next-hop (draft-simpson-idr-flowspec-redirect-ip).
 
@@ -441,10 +456,12 @@ class TrafficNextHopSimpson(ExtendedCommunity):
         return cls(data[:8])
 
 
+ExtendedCommunity.register_subtype(TrafficNextHopSimpson)
+
+
 # ============================================================ TrafficRedirectIPv6
 
 
-@ExtendedCommunityIPv6.register_subtype
 class TrafficRedirectIPv6(ExtendedCommunityIPv6):
     """Redirect to VRF using an IPv6-Address-Specific Route-Target (RFC 8956 6.1, rt-redirect-ipv6).
 
@@ -479,6 +496,9 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRedirectIPv6:
         return cls(data[:20])
+
+
+ExtendedCommunityIPv6.register_subtype(TrafficRedirectIPv6)
 
 
 # ============================================================ TrafficRedirectIP

@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 from exabgp.protocol.ip import IP
@@ -17,9 +19,8 @@ from exabgp.util.types import Buffer
 #   |           | Remote Node         |              |                  |
 
 
-@LinkState.register_lsid(tlv=1030, json_key='remote-router-ids', repr_name='Remote Router ID', alias_tlv=1031)
 class RemoteRouterId(BaseLS):
-    MERGE = True  # LinkState.json() groups into array
+    MERGE: ClassVar[bool] = True  # LinkState.json() groups into array
 
     @property
     def content(self) -> str:
@@ -37,3 +38,8 @@ class RemoteRouterId(BaseLS):
         if length not in (4, 16):
             raise Notify(3, 5, f'Remote TE Router-ID TLV is {length} octets, expected 4 or 16')
         return cls(data)
+
+
+LinkState.register_lsid(tlv=1030, json_key='remote-router-ids', repr_name='Remote Router ID', alias_tlv=1031)(
+    RemoteRouterId
+)

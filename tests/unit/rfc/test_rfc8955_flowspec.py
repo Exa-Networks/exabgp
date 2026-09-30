@@ -122,7 +122,7 @@ def session(families: list[FamilyTuple]) -> Negotiated:
 
 def mp_reach(afi: int, safi: int, nexthop: bytes, payload: bytes) -> bytes:
     """The MP_REACH_NLRI attribute value, as RFC 4760 section 3 lays it out."""
-    return pack('!HB', afi, safi) + bytes([len(nexthop)]) + nexthop + bytes([0]) + payload
+    return pack('!HB', int(afi), int(safi)) + bytes([len(nexthop)]) + nexthop + bytes([0]) + payload
 
 
 def flow_to(destination: bytes = DESTINATION) -> Flow:

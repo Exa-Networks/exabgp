@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from copy import deepcopy
 
 from struct import pack, unpack
 from typing import Any, ClassVar
@@ -24,10 +23,10 @@ class RouteDistinguisher:
     NORD: ClassVar['RouteDistinguisher']
 
     # RFC 4364 - Route Distinguisher Type Field
-    TYPE_AS2_ADMIN = 0  # Type 0: 2-byte AS administrator + 4-byte assigned number
-    TYPE_IPV4_ADMIN = 1  # Type 1: IPv4 address administrator + 2-byte assigned number
-    TYPE_AS4_ADMIN = 2  # Type 2: 4-byte AS administrator + 2-byte assigned number
-    LENGTH = 8  # Route Distinguisher is always 8 bytes
+    TYPE_AS2_ADMIN: ClassVar[int] = 0  # Type 0: 2-byte AS administrator + 4-byte assigned number
+    TYPE_IPV4_ADMIN: ClassVar[int] = 1  # Type 1: IPv4 address administrator + 2-byte assigned number
+    TYPE_AS4_ADMIN: ClassVar[int] = 2  # Type 2: 4-byte AS administrator + 2-byte assigned number
+    LENGTH: ClassVar[int] = 8  # Route Distinguisher is always 8 bytes
 
     def __init__(self, packed: Buffer) -> None:
         # Allow empty bytes for NORD singleton
@@ -44,6 +43,11 @@ class RouteDistinguisher:
         if not isinstance(other, RouteDistinguisher):
             return False
         return self._packed == other._packed
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing RouteDistinguisher for ordering does not make sense')
@@ -126,12 +130,9 @@ class RouteDistinguisher:
         """
         if self is RouteDistinguisher.NORD:
             return self
-        # type(self) and the whole __dict__, not RouteDistinguisher and _packed by name.  The default
-        # copy carried everything this object held; naming one attribute means a second one
-        # added later is silently dropped by a method nobody will think to revisit.
-        new = type(self).__new__(type(self))
-        new.__dict__.update(self.__dict__)
-        return new
+        # type(self), so a subclass copies to its own class. The constructor, not
+        # __new__ and __dict__: a mypyc class has neither. _packed is all it holds.
+        return type(self)(self._packed)
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'RouteDistinguisher':
         """Preserve the NORD singleton across a deep copy.
@@ -140,12 +141,9 @@ class RouteDistinguisher:
         """
         if self is RouteDistinguisher.NORD:
             return self
-        new = type(self).__new__(type(self))
+        # _packed is bytes and immutable, and all it holds (see __copy__)
+        new = type(self)(self._packed)
         memo[id(self)] = new
-        # deepcopy the values rather than sharing them: _packed is bytes and immutable
-        # today, and a mutable attribute added later would otherwise be shared silently
-        for attribute, value in self.__dict__.items():
-            setattr(new, attribute, deepcopy(value, memo))
         return new
 
 

@@ -1,6 +1,6 @@
 # Compile the hot path with mypyc
 
-📋 **Status:** Planning
+🔄 **Status:** Active
 **Created:** 2026-09-28
 
 ---
@@ -276,6 +276,163 @@ Still open:
 ## Progress
 
 - 2026-09-28: first compile attempt, errors counted and classified (section 1).
+- 2026-09-29: ✅ phase 0. `qa/bin/benchmark_codec` replays the 144 UPDATEs of
+  qa/encoding/*.ci (`--corpus ci`, 40 times per run) or 20 full-table shaped ipv4 unicast
+  UPDATEs of 400 prefixes each (`--corpus bulk`), through four stages: decode, API JSON,
+  encode, outgoing RIB. Best of 7 runs, pure Python, a00cac720, this machine:
+
+  | stage | ci (5760 UPDATEs) | bulk (60 UPDATEs, 24000 prefixes) |
+  |---|---|---|
+  | decode | 209.07 ms | 134.94 ms |
+  | json | 84.19 ms | 62.73 ms |
+  | encode | 96.35 ms | 80.97 ms |
+  | rib | 22.20 ms | 77.90 ms |
+
+  Saved as build/benchmark/baseline-{ci,bulk}.json (not in git, per machine).
+  Run to run noise is about 3%.
+
+  Profile (`--profile <stage>`, own time per module): decode is spread over
+  attribute/collection.py, update/collection.py, attribute.py, nlri/cidr.py and inet.py;
+  JSON over reactor/api/response/json.py. `protocol/family.py` is 35 to 44% of encode and
+  RIB time, all of it `Family.family()`, `Family.index()` and `Family.__init__` building a
+  new Family object per NLRI per call. That is an algorithmic cost mypyc will not remove
+  and is worth its own fix, outside this plan. The compile list stays as planned:
+  protocol/ and bgp/message/, then rib/.
+- 2026-09-29: ✅ phase 1. `exabgp/util/mypyc.py` (tested with and without
+  mypy_extensions), `qa/bin/build_mypyc` (copies src/exabgp to build/mypyc and compiles
+  there, groups the errors). setuptools added to the dev dependencies: mypyc needs it to
+  build. On today's code: 183 errors (158 decorator, 25 builtin base).
+- 2026-09-29: phase 2. 172 classes (205 decorator lines) moved from `@X.register...` to
+  `X.register...(Klass)` after the class, by an AST script which keeps the order the
+  decorators applied in (bottom first). mypyc down to 42: 30 builtin base, 12 `ClassVar`
+  type (the capability `ID`). Unit tests pass (the sandbox makes socket tests fail, they
+  pass outside it). benchmark_codec and build_mypyc listed as tools in test_everything.
+
+- 2026-09-29: ✅ phase 2 verified: full `test_everything` green except the `-O` step,
+  which failed on the new IntValue assertion test (fixed: skipped under -O, the check is
+  an assert); the other 23 steps re-run green.
+- 2026-09-30: phase 3 in progress. `exabgp/util/intvalue.py` (IntValue) is the base:
+  value in `.value`, equal to and hashed like the int, `__index__`, ordered against
+  IntValue, int and float, false at zero, formatted like an int subclass (f'{x}' is the
+  name, f'{x:02x}' the number). tests/unit/test_util_intvalue.py holds it to the old int
+  subclass on every one of those. Converted so far: MessageCode (was _MessageCode),
+  Version, HoldTime, Reserved, operational Type, Parameter, CapabilityCode, AFI, SAFI.
+  mypy found the typed call sites; these it could not, and were found by tests:
+  - JSON `_string` printed an int subclass bare and anything else quoted: IntValue added
+    (decoding test G, "version": "4").
+  - template inheritance (`transfer`) accepted int and refused other types: IntValue added.
+  - BGP-LS `jsonable`: IntValue kept a JSON number.
+  - Capabilities keys: our OPEN keys by CapabilityCode (JSON shows the name), a received
+    OPEN by the int the peer sent (JSON shows the number). Tests pin both, so the dict is
+    `dict[CapabilityCode | int, Capability]` and the wire decode keeps the int key.
+  Decisions: `AFI.value(name)`/`SAFI.value(name)` renamed `from_name()` (clash with
+  `.value`); `CapabilityCode` and `Resource` lose their `__new__` cache (mypyc cannot
+  compile `__new__` on these); `Family(afi, safi)` now takes AFI/SAFI and stores them
+  without `from_int`; `make_route_refresh` takes `AFI | int`.
+  Performance: AFI/SAFI first cost 13% on bulk encode (264000 `__eq__` calls from
+  `safi in (...)`). Fixed with numeric frozensets in has_label/has_rd/has_path, `.value`
+  in `Family.index`, and an identity shortcut in `__eq__`. After: ci 0.97x to 1.06x,
+  bulk 1.02x to 1.21x of the baseline (higher is faster).
+
+- 2026-09-30: phase 3 continued. Converted Resource/BaseValue and everything below it
+  (ASN, Port, Protocol, ICMP, NetMask, TCPFlag, Fragment), the AS_PATH segments (Segment
+  base holding `.asns`), and the four list capabilities (CapabilityList base holding
+  `.items`). Resource lost its `__new__` cache. `json.dumps` got `default=json_number` at
+  the 69 structured call sites in bgp/ and reactor/ (peer show failed with "Object of type
+  ASN is not JSON serializable"). Test fixtures which wrapped a value in its own type
+  (`ASN4(ASN(x))`, `ASN('65500')`) were changed to pass the int.
+- 2026-09-30: phase 4. What mypyc refused next, and what was done:
+  - classes nested in a class body (Message.CODE, Capability.CODE, Attribute.CODE and Flag,
+    Operational.SUBTYPE, Encapsulation.Type, EOR.EOR_NLRI, the NS/Advisory/Query/Response
+    namespaces of operational.py): moved to module level, the old name kept as a
+    `ClassVar[type[...]]` alias. NS.Malformed is NSMalformed, Advisory.ADM AdvisoryADM, ...
+  - 272 class constants declared `ClassVar` (mypyc reads `NAME = value` in a class body as
+    an instance attribute default). Two could not be both: IP.afi (now `ADDRESS_FAMILY` for
+    the registry, the instance keeps `afi`) and Capability.ID (now a ClassVar, the
+    instance's own code is `code()` / `wire_code`, which is how RouteRefresh and
+    MultiSession tell the RFC and the Cisco variants apart).
+  - multiple inheritance: the FlowSpec mixins are `@trait`; RTRecord is a trait and each
+    format names its subtype again (tests/unit/test_rt_record.py); ASN4 is a Capability
+    holding an ASN in `.asn`, comparing and hashing as the number; MPRNLRI no longer
+    inherits Family.
+  - link state: aliases and unknown TLVs no longer clone classes with type(); an instance
+    keeps the code it was decoded under (`BaseLS.tlv()`, `json_key()`).
+  - mypyc crashed (AssertionError in create_ne_from_eq) on a class with `__eq__` and no
+    `__ne__`: 30 classes got an explicit `__ne__`.
+  - mypyc 1.20 does not compile `__index__`: removed from IntValue, so the pure build
+    fails exactly where the compiled one would. mypy with a strict struct.pack stub
+    (--custom-typeshed-dir, not committed) found the 19 pack sites; the tests found the
+    rest. Tests which built wire bytes from codes wrap them in int().
+  - With all that, mypyc compiles 209 modules (protocol/, bgp/message/, util/intvalue.py).
+- 2026-09-30: pre-existing flakiness found and fixed: tests/unit/application/test_validate.py
+  left logging on (process wide), and the UPDATE handler tests in the same xdist worker
+  failed at random ("'dict' object has no attribute 'session'"). HEAD shows it too (0 to 2
+  failures a run). tests/conftest.py restores the logging state after every test.
+- Known issue kept as it was, to fix separately: TrafficRedirectASN4 prints
+  `redirect:ASN4(4200000000):7`, which the configuration cannot read back.
+
+- 2026-09-30: the compiled tree imports and runs. Beyond the list above it needed:
+  - package `__init__.py` files stay interpreted (compiled, a package lost `__path__` while
+    importing its submodules), so the seven which defined classes moved them out:
+    protocol/ip/address.py, protocol/protocol.py, protocol/iso/iso.py,
+    bgp/message/open/open.py, bgp/message/update/update.py, tunnel_encap/tunnel.py,
+    tunnel_encap/sr_policy/tunnel.py. The `__init__` re-exports the same names.
+  - the dict capabilities (AddPath, Graceful, PathsLimit, MultipleLabels) on a
+    CapabilityDict base holding `.entries`.
+  - no `super()` in a classmethod: mypyc passed `type` as cls (Port._value).
+  - no `cls.__new__(cls)`, no `object.__new__(cls)`: IP, NextHop (copies return self, they
+    are immutable), Watchdog, NLRI singletons, CIDR (`_with_fields`), Negotiated.UNSET
+    (built through `__init__` with no neighbor).
+  - the compiled build checks declared types at run time, and found what mypy could not:
+    the configuration's internal pseudo-attributes (name, split, watchdog, withdraw) were
+    `str`/`int` subclasses stored in a collection typed Attribute: they are now Attribute
+    classes in attribute/internal.py, keeping their class names so test_frozen still
+    proves the configuration reads as before. The SRv6 service decoders declared what the
+    registry returned as the generic class.
+  - update/nlri and update/eor.py are not compiled yet: 37 places there build instances
+    without `__init__`. Family allows interpreted subclasses meanwhile.
+- 2026-09-30: phase 5, first measurement, 142 modules compiled (update/nlri interpreted),
+  per UPDATE against the phase 0 baseline (qa/bin/benchmark_codec, best of 7):
+
+  | stage | ci compiled | bulk compiled | ci pure now | bulk pure now |
+  |---|---|---|---|---|
+  | decode | 1.40x | 1.20x | 1.00x | 1.01x |
+  | json | 1.13x | 1.27x | 0.96x | 1.03x |
+  | encode | 1.82x | 1.42x | 0.97x | 1.17x |
+  | rib | 1.38x | 1.45x | 1.08x | 1.23x |
+
+  Bulk decode, a full table, is mostly NLRI decoding, which is still interpreted: compiling
+  update/nlri is what the gate now waits on.
+
+- 2026-09-30: update/nlri, the unicast/labelled/VPN chain (nlri.py, cidr.py, inet.py,
+  label.py, ipvpn.py, qualifier/) compiled: factories build through `__init__`, copies
+  through `INETBase._blank()` (the deepcopy tests require a distinct object, so a copy
+  cannot return self), Labels/RD/PathInfo copy through their constructor. NLRI allows
+  interpreted subclasses, so the other families (EVPN, MVPN, MUP, BGP-LS, Flow, VPLS, RTC,
+  SR policy) stay interpreted with their `__new__` copies. `__ne__` is `not self == other`:
+  calling `self.__eq__` put NotImplemented in a compiled bool local.
+- 2026-09-30: ✅ phase 5 gate passed. 154 modules compiled, per UPDATE against the phase 0
+  baseline, best of 7, every capture decoded:
+
+  | stage | ci compiled | bulk compiled |
+  |---|---|---|
+  | decode | 1.55x | 2.10x |
+  | json | 1.26x | 2.10x |
+  | encode | 1.85x | 1.65x |
+  | rib | 1.57x | 1.58x |
+
+- 2026-09-30: phase 6 started. The suite run against the compiled tree
+  (`PYTHONPATH=build/mypyc pytest tests`): 4097 failed, 10600 passed. By cause:
+
+  | count | cause | where the fix belongs |
+  |---|---|---|
+  | ~2850 | a test passes None or a Mock where `Negotiated` is declared (2313 from one fuzz helper in test_bgpls_tlv_properties) | the tests: Negotiated.UNSET or a real one |
+  | ~890 | `bool expected; got None/Mock` | to investigate: tests or source |
+  | ~100 | a test passes int where ASN/MessageCode/CapabilityCode is declared, or the reverse | the tests |
+  | 43 | a test subclasses a compiled class (Named(IntValue), fake messages) | allow_interpreted_subclasses on the base, or the test |
+  | ~60 | test_message_contract reads signatures and `__dict__`, which a compiled class shows differently | the test |
+  | ~30 | copy/deepcopy of compiled classes without `__copy__`: Negotiated (configuration/check.py copies it), and whatever a neighbour deepcopy reaches (install.py session_of, check.py) | the source: `__copy__`/`__deepcopy__`, or mypyc serializable with state methods |
+  | 18 | test_rib_watchdog builds its own internal attribute | the test |
 
 ## Failures
 
@@ -287,4 +444,19 @@ Still open:
 
 ## Resume Point
 
-Phase 0: build the benchmark corpus and record the pure-Python baseline.
+~~Phase 0: build the benchmark corpus and record the pure-Python baseline.~~
+
+Phase 4, last blocker before the phase 5 measurement: the compiled tree does not import.
+A mypyc class cannot be built without running `__init__` (`cls.__new__(cls)` fails to
+compile, `object.__new__(cls)` is refused at run time, and the generated `__new__` calls
+`__init__`). 24 sites in 13 classes use that to skip `__init__`: IP (NoNextHop, copies),
+Watchdog, NextHop attribute copies, CIDR factories, Flow/INET/IPVPN/RTC/VPLS/Empty/
+SRPolicy copies and factories, NLRI singletons, PathInfo copies. Each needs an `__init__`
+which can take the stored fields.
+
+
+SUPERSEDED BY (2026-09-30): phases 0 to 5 are done and the gate passed. Resume at phase 6:
+the compiled test run (table above). Decisions wanted from Thomas before the test side:
+rewrite the Mock/None negotiated tests to real objects, or mark them pure-Python only;
+and whether copies of compiled classes may share immutable state. Nothing is committed yet:
+the plan asked for a commit per phase.

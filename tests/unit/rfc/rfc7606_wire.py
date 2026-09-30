@@ -80,7 +80,7 @@ MANDATORY = ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP
 def mp_reach_ipv6(next_hop_length: int = 16, mask: int = 64) -> bytes:
     """An MP_REACH_NLRI announcing one IPv6 prefix, with a next hop of the given size."""
     prefix = bytes([mask]) + bytes((mask + 7) // 8)
-    payload = pack('!HB', AFI.ipv6, SAFI.unicast) + bytes([next_hop_length])
+    payload = pack('!HB', int(AFI.ipv6), int(SAFI.unicast)) + bytes([next_hop_length])
     payload += bytes(next_hop_length) + bytes([0]) + prefix
     return attribute(OPTIONAL, Attribute.CODE.MP_REACH_NLRI, payload)
 
@@ -88,7 +88,7 @@ def mp_reach_ipv6(next_hop_length: int = 16, mask: int = 64) -> bytes:
 def mp_unreach_ipv6(mask: int = 64) -> bytes:
     """An MP_UNREACH_NLRI withdrawing one IPv6 prefix."""
     prefix = bytes([mask]) + bytes((mask + 7) // 8)
-    payload = pack('!HB', AFI.ipv6, SAFI.unicast) + prefix
+    payload = pack('!HB', int(AFI.ipv6), int(SAFI.unicast)) + prefix
     return attribute(OPTIONAL, Attribute.CODE.MP_UNREACH_NLRI, payload)
 
 

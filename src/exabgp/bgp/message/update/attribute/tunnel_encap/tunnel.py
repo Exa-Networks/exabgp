@@ -1,4 +1,4 @@
-"""tunnel_encap/__init__.py
+"""tunnel_encap/tunnel.py
 
 Tunnel Encapsulation Attribute (type 23, RFC 9012).
 
@@ -37,12 +37,11 @@ from exabgp.util.types import Buffer
 _TUNNEL_TLV_HEADER = 4  # type(2) + length(2)
 
 
-@Attribute.register()
 class TunnelEncap(Attribute):
     """Tunnel Encapsulation Attribute (RFC 9012, code 23)."""
 
-    ID: int = Attribute.CODE.TUNNEL_ENCAP
-    FLAG: int = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
+    ID: ClassVar[int] = Attribute.CODE.TUNNEL_ENCAP
+    FLAG: ClassVar[int] = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
     CACHING: ClassVar[bool] = True
 
     # RFC 9012 13 names treat-as-withdraw twice: for a TLV whose final octet is not the
@@ -111,3 +110,6 @@ class TunnelEncap(Attribute):
             tunnel_tlvs.append(tlv)
             data = data[_TUNNEL_TLV_HEADER + length :]
         return cls(tunnel_tlvs=tunnel_tlvs)
+
+
+Attribute.register()(TunnelEncap)

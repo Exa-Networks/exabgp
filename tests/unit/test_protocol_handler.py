@@ -914,7 +914,7 @@ async def test_protocol_send_raw_update(mock_peer: Any) -> None:
     # Create raw BGP UPDATE message
     # Header: marker(16) + length(2) + type(1)
     marker = b'\xff' * 16
-    msg_type = bytes([Message.CODE.UPDATE])
+    msg_type = bytes([int(Message.CODE.UPDATE)])
     body = struct.pack('!HH', 0, 0)  # withdrawn_len=0, attr_len=0
     length = struct.pack('!H', 19 + len(body))
     raw = marker + length + msg_type + body
@@ -944,7 +944,7 @@ async def test_protocol_send_with_api_callback(mock_peer: Any) -> None:
 
     # Create raw BGP UPDATE
     marker = b'\xff' * 16
-    msg_type = bytes([Message.CODE.UPDATE])
+    msg_type = bytes([int(Message.CODE.UPDATE)])
     body = struct.pack('!HH', 0, 0)
     length = struct.pack('!H', 19 + len(body))
     raw = marker + length + msg_type + body

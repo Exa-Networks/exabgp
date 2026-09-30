@@ -7,8 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 from struct import unpack
-from typing import Iterator
+from typing import ClassVar, Iterator
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
@@ -21,7 +22,6 @@ from exabgp.util.types import Buffer
 # ================================================================= MP Unreachable NLRI (15)
 
 
-@Attribute.register()
 class MPURNLRI(Attribute):
     """Wire-format MP_UNREACH_NLRI attribute container.
 
@@ -29,9 +29,9 @@ class MPURNLRI(Attribute):
     For semantic operations (building/packing), use MPNLRICollection.
     """
 
-    FLAG = Attribute.Flag.OPTIONAL
-    ID = Attribute.CODE.MP_UNREACH_NLRI
-    NO_DUPLICATE = True
+    FLAG: ClassVar = Attribute.Flag.OPTIONAL
+    ID: ClassVar = Attribute.CODE.MP_UNREACH_NLRI
+    NO_DUPLICATE: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer, addpath: bool) -> None:
         """Create MPURNLRI from wire-format bytes.
@@ -116,6 +116,9 @@ class MPURNLRI(Attribute):
 
         # Store wire bytes and addpath flag - NLRIs parsed lazily
         return cls(data, addpath)
+
+
+Attribute.register()(MPURNLRI)
 
 
 # Create empty MPURNLRI with minimal packed structure

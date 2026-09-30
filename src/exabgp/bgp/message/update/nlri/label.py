@@ -285,14 +285,9 @@ class LabelBase(INET):
         else:
             packed = nlri_bytes
 
-        instance = object.__new__(cls)
-        # Note: safi parameter is ignored - Label always uses nlri_mpls
-        NLRI.__init__(instance, afi, SAFI.nlri_mpls)
-        instance._packed = packed
-        instance._has_addpath = has_addpath
-        instance._has_labels = has_labels
+        # the safi parameter is ignored: Label always uses nlri_mpls
+        instance = cls(packed, afi, has_addpath=has_addpath, has_labels=has_labels)
         instance._label_size = len(labels_packed)
-        instance._rd = None
         return instance
 
     @classmethod
@@ -352,6 +347,11 @@ class LabelBase(INET):
         # Compare complete wire format (includes labels)
         return INET.__eq__(self, other)
 
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
     def __hash__(self) -> int:
         # _packed includes everything; use _has_addpath as discriminator
         if self._has_addpath:
@@ -359,7 +359,7 @@ class LabelBase(INET):
         return hash(b'disabled' + self._packed)
 
     def __copy__(self) -> Self:
-        new = self.__class__.__new__(self.__class__)
+        new = self._blank()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # INET slots
@@ -373,7 +373,7 @@ class LabelBase(INET):
     def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
         from copy import deepcopy
 
-        new = self.__class__.__new__(self.__class__)
+        new = self._blank()
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
@@ -470,8 +470,6 @@ class LabelBase(INET):
     # 	return cls.unpack_label(afi,safi,data,addpath)
 
 
-@NLRI.register(AFI.ipv4, SAFI.nlri_mpls)
-@NLRI.register(AFI.ipv6, SAFI.nlri_mpls)
 class Label(LabelBase):
     """The registered form of LabelBase, which holds the code.
 
@@ -485,3 +483,7 @@ class Label(LabelBase):
     """
 
     __slots__ = ()
+
+
+NLRI.register(AFI.ipv6, SAFI.nlri_mpls)(Label)
+NLRI.register(AFI.ipv4, SAFI.nlri_mpls)(Label)

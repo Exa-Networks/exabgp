@@ -86,7 +86,7 @@ def typed_session(afi: AFI, safi: SAFI) -> Negotiated:
 
 def mp_reach_typed(afi: AFI, safi: SAFI, routes: bytes) -> bytes:
     """An MP_REACH_NLRI for a typed family, with an IPv4 next hop and the given routes."""
-    payload = pack('!HB', afi, safi) + bytes([4, 192, 0, 2, 1]) + bytes([0]) + routes
+    payload = pack('!HB', int(afi), int(safi)) + bytes([4, 192, 0, 2, 1]) + bytes([0]) + routes
     return attribute(OPTIONAL, CODE.MP_REACH_NLRI, payload)
 
 
@@ -390,7 +390,7 @@ def test_a_typed_route_of_a_known_type_beside_an_unknown_one_is_kept() -> None:
 @pytest.mark.rfc('rfc7606#5.4-unrecognised-typed-nlri-discarded', polarity='negative')
 def test_a_withdrawn_typed_route_of_an_unknown_type_is_still_reported() -> None:
     """Only announcements are discarded: a withdrawal removes nothing and shows the operator the peer."""
-    payload = pack('!HB', AFI.ipv4, SAFI.mcast_vpn) + UNKNOWN_TYPED_ROUTE
+    payload = pack('!HB', int(AFI.ipv4), int(SAFI.mcast_vpn)) + UNKNOWN_TYPED_ROUTE
     attributes = attribute(OPTIONAL, CODE.MP_UNREACH_NLRI, payload)
     parsed = parse(update(attributes, nlri=b''), typed_session(AFI.ipv4, SAFI.mcast_vpn))
 

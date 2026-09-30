@@ -198,7 +198,9 @@ def test_the_prefix_past_the_limit_ends_the_session_with_subcode_one() -> None:
 
     assert (caught.value.code, caught.value.subcode) == (CEASE, MAXIMUM_NUMBER_OF_PREFIXES_REACHED)
     assert caught.value.has_defined_data
-    assert caught.value.data == pack('!HBI', AFI.ipv4, SAFI.unicast, 2), 'the Data field is not <AFI, SAFI, bound>'
+    assert caught.value.data == pack('!HBI', int(AFI.ipv4), int(SAFI.unicast), 2), (
+        'the Data field is not <AFI, SAFI, bound>'
+    )
 
 
 @pytest.mark.rfc('rfc4486#4-maximum-prefixes-must-send-subcode-one', polarity='negative')
@@ -224,7 +226,7 @@ def test_the_limit_of_one_family_does_not_count_another() -> None:
 
     with pytest.raises(Notify) as caught:
         receive(ctx, update(['10.0.1.0/24']))
-    assert caught.value.data == pack('!HBI', AFI.ipv4, SAFI.unicast, 1)
+    assert caught.value.data == pack('!HBI', int(AFI.ipv4), int(SAFI.unicast), 1)
 
 
 def test_the_ipv6_data_field_names_ipv6() -> None:
@@ -233,7 +235,7 @@ def test_the_ipv6_data_field_names_ipv6() -> None:
     with pytest.raises(Notify) as caught:
         receive(ctx, update(['2001:db8::/32', '2001:db8:1::/48'], afi=AFI.ipv6))
 
-    assert caught.value.data == pack('!HBI', AFI.ipv6, SAFI.unicast, 1)
+    assert caught.value.data == pack('!HBI', int(AFI.ipv6), int(SAFI.unicast), 1)
 
 
 def test_a_family_without_a_limit_is_not_counted() -> None:
@@ -264,7 +266,7 @@ async def test_a_peering_ended_for_too_many_prefixes_is_retried(monkeypatch: pyt
     neighbor.ephemeral = False
     neighbor.api = {'neighbor-changes': False, 'fsm': False}
     peer = Peer(neighbor, Mock())
-    notify = Notify(CEASE, MAXIMUM_NUMBER_OF_PREFIXES_REACHED, data=pack('!HBI', AFI.ipv4, SAFI.unicast, 1))
+    notify = Notify(CEASE, MAXIMUM_NUMBER_OF_PREFIXES_REACHED, data=pack('!HBI', int(AFI.ipv4), int(SAFI.unicast), 1))
     monkeypatch.setattr(peer, '_establish', AsyncMock(side_effect=notify))
 
     await peer._run()
@@ -282,4 +284,4 @@ def test_a_limit_lowered_by_a_reload_below_what_the_peer_holds_ends_the_session_
         receive(ctx, update(['10.0.3.0/24']))
 
     assert (caught.value.code, caught.value.subcode) == (CEASE, MAXIMUM_NUMBER_OF_PREFIXES_REACHED)
-    assert caught.value.data == pack('!HBI', AFI.ipv4, SAFI.unicast, 1)
+    assert caught.value.data == pack('!HBI', int(AFI.ipv4), int(SAFI.unicast), 1)

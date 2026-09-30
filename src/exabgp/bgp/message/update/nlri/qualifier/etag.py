@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from struct import pack, unpack
 
 from exabgp.bgp.message.notification import Notify
@@ -15,8 +17,8 @@ from exabgp.util.types import Buffer
 
 
 class EthernetTag:
-    MAX = pow(2, 32) - 1
-    LENGTH = 4
+    MAX: ClassVar = pow(2, 32) - 1
+    LENGTH: ClassVar[int] = 4
 
     def __init__(self, packed: Buffer) -> None:
         if len(packed) != self.LENGTH:
@@ -37,6 +39,11 @@ class EthernetTag:
         if not isinstance(other, EthernetTag):
             return False
         return self._packed == other._packed
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing EthernetTag for ordering does not make sense')

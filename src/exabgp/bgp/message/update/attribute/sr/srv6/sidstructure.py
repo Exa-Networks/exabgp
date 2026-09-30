@@ -12,6 +12,7 @@ from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 # 3.2.1.  SRv6 SID Structure Sub-Sub-TLV
 #
@@ -32,7 +33,6 @@ from exabgp.util.types import Buffer
 #           Figure 5: SRv6 SID Structure Sub-Sub-TLV
 
 
-@Srv6SidInformation.register()
 class Srv6SidStructure:
     TLV: ClassVar[int] = 1
     LENGTH: ClassVar[int] = 6
@@ -110,4 +110,7 @@ class Srv6SidStructure:
             'transposition-offset': self.tpose_offset,
         }
 
-        return '"structure": {}'.format(json.dumps(pairs))
+        return '"structure": {}'.format(json.dumps(pairs, default=json_number))
+
+
+Srv6SidInformation.register()(Srv6SidStructure)

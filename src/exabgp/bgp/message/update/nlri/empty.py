@@ -9,7 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+
+from typing import Any, ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -34,7 +35,7 @@ class Empty(NLRI):
     __slots__ = ()
 
     # Class attribute to identify Empty NLRI instances
-    EMPTY_NLRI = True
+    EMPTY_NLRI: ClassVar[bool] = True
 
     def __init__(self, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.unicast) -> None:
         """Create an Empty NLRI.
@@ -61,12 +62,12 @@ class Empty(NLRI):
         return 'Empty()'
 
     def __copy__(self) -> 'Empty':
-        new = object.__new__(Empty)
+        new = Empty.__new__(Empty)
         self._copy_nlri_slots(new)
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'Empty':
-        new = object.__new__(Empty)
+        new = Empty.__new__(Empty)
         self._deepcopy_nlri_slots(new, memo)
         return new
 

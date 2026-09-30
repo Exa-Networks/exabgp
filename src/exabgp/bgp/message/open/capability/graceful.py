@@ -12,7 +12,7 @@ from struct import unpack
 from typing import ClassVar, Iterable
 
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
-from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityDict
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log, lazymsg
@@ -22,10 +22,9 @@ from exabgp.util.types import Buffer
 # RFC 4727 - https://tools.ietf.org/html/rfc4727
 
 
-@Capability.register()
-class Graceful(Capability, dict[FamilyTuple, int]):
+class Graceful(CapabilityDict[FamilyTuple, int]):
     MAX: ClassVar[int] = 0xFFFF
-    ID = Capability.CODE.GRACEFUL_RESTART
+    ID: ClassVar = Capability.CODE.GRACEFUL_RESTART
 
     TIME_MASK: ClassVar[int] = 0x0FFF
     FLAG_MASK: ClassVar[int] = 0xF000
@@ -98,3 +97,6 @@ class Graceful(Capability, dict[FamilyTuple, int]):
             families.append((afi, safi, flag_family))
             data = data[4:]
         return instance.set(restart_flag, restart_time, families)
+
+
+Capability.register()(Graceful)

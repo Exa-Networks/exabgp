@@ -45,10 +45,10 @@ class ReceiveTimer:
         if message is not None:
             self.last_read = now
         elapsed = now - self.last_read
-        if elapsed > self.holdtime:
+        if elapsed > int(self.holdtime):
             raise Notify(self.code, self.subcode, self.message)
         if self.last_print != now:
-            left = self.holdtime - elapsed
+            left = int(self.holdtime) - elapsed
             log.debug(lazymsg('timer.receive seconds_left={left}', left=left), source='ka-' + self.session())
             self.last_print = now
         return True

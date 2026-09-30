@@ -66,6 +66,7 @@ dev = [
 	"pytest-xdist>=3.0",
 	"pytest-timeout>=2.0",
 	"mutmut>=3.0",
+	"setuptools",
 ]
 
 [tool.uv]

@@ -265,14 +265,9 @@ class IPVPNBase(Label):
         else:
             packed = nlri_bytes
 
-        instance = object.__new__(cls)
-        # Note: safi parameter is ignored - IPVPN always uses mpls_vpn
-        NLRI.__init__(instance, afi, SAFI.mpls_vpn)
-        instance._packed = packed
-        instance._has_addpath = has_addpath
-        instance._has_labels = has_labels
+        # the safi parameter is ignored: IPVPN always uses mpls_vpn
+        instance = cls(packed, afi, has_addpath=has_addpath, has_labels=has_labels, has_rd=has_rd)
         instance._label_size = len(labels_packed)
-        instance._has_rd = has_rd
         return instance
 
     @classmethod
@@ -355,8 +350,9 @@ class IPVPNBase(Label):
 
     def __ne__(self, other: object) -> bool:
         # `not NotImplemented` is a DeprecationWarning today and a TypeError from 3.14
-        equal = self.__eq__(other)
-        return equal if equal is NotImplemented else not equal
+        # the operator, not a call to __eq__: it answers NotImplemented the way Python does,
+        # where a compiled bool-typed local would refuse it
+        return not self == other
 
     def __hash__(self) -> int:
         # _packed includes everything (labels + RD); use _has_addpath as discriminator
@@ -365,7 +361,7 @@ class IPVPNBase(Label):
         return hash(b'disabled' + self._packed)
 
     def __copy__(self) -> Self:
-        new = self.__class__.__new__(self.__class__)
+        new = self._blank()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # INET slots
@@ -378,7 +374,7 @@ class IPVPNBase(Label):
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
-        new = self.__class__.__new__(self.__class__)
+        new = self._blank()
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
@@ -564,7 +560,7 @@ class IPVPNBase(Label):
 
         # a mask longer than the address family allows would index past the prefix
         if mask > IP.length(afi) * 8:
-            raise Notify(3, 10, 'invalid mask %d in NLRI prefix for %s' % (mask, AFI(afi)))
+            raise Notify(3, 10, 'invalid mask %d in NLRI prefix for %s' % (mask, afi))
 
         if not data and mask:
             raise Notify(3, 10, 'not enough data for the mask provided')
@@ -572,7 +568,7 @@ class IPVPNBase(Label):
         # Parse prefix
         size = CIDR.size(mask)
         if len(data) < size:
-            raise Notify(3, 10, f'could not decode IPVPN NLRI with family {AFI.from_int(afi)} {SAFI.from_int(safi)}')
+            raise Notify(3, 10, f'could not decode IPVPN NLRI with family {afi} {safi}')
 
         network, data = data[:size], data[size:]
 
@@ -587,19 +583,13 @@ class IPVPNBase(Label):
             packed = nlri_packed
 
         # Create NLRI
-        instance = object.__new__(cls)
-        NLRI.__init__(instance, afi, safi, path_info)
-        instance._packed = packed
-        instance._has_addpath = has_addpath
-        instance._has_labels = len(labels_packed) > 0
+        instance = cls(packed, afi, has_addpath=has_addpath, has_labels=len(labels_packed) > 0, has_rd=has_rd)
+        instance.addpath = path_info
         instance._label_size = len(labels_packed)
-        instance._has_rd = has_rd
 
         return instance, data
 
 
-@NLRI.register(AFI.ipv4, SAFI.mpls_vpn)
-@NLRI.register(AFI.ipv6, SAFI.mpls_vpn)
 class IPVPN(IPVPNBase):
     """The registered form of IPVPNBase, which holds the code.
 
@@ -613,3 +603,7 @@ class IPVPN(IPVPNBase):
     """
 
     __slots__ = ()
+
+
+NLRI.register(AFI.ipv6, SAFI.mpls_vpn)(IPVPN)
+NLRI.register(AFI.ipv4, SAFI.mpls_vpn)(IPVPN)

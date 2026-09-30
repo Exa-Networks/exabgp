@@ -8,6 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # https://datatracker.ietf.org/doc/html/draft-walton-bgp-hostname-capability-02
 
 from __future__ import annotations
+
+from typing import ClassVar
 import json
 
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -16,12 +18,12 @@ from exabgp.bgp.message.open.capability.capability import decode_utf8 as _decode
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.dns import host, domain
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 
-@Capability.register()
 class HostName(Capability):
-    ID = Capability.CODE.HOSTNAME
-    HOSTNAME_MAX_LEN = 64
+    ID: ClassVar = Capability.CODE.HOSTNAME
+    HOSTNAME_MAX_LEN: ClassVar[int] = 64
 
     def __init__(self, host_name: str | None = None, domain_name: str | None = None) -> None:
         """The names default to this host's, looked up when one is built.
@@ -41,8 +43,8 @@ class HostName(Capability):
 
     def json(self) -> str:
         return '{{ "host-name": {}, "domain-name": {} }}'.format(
-            json.dumps(self.host_name),
-            json.dumps(self.domain_name),
+            json.dumps(self.host_name, default=json_number),
+            json.dumps(self.domain_name, default=json_number),
         )
 
     @classmethod
@@ -85,3 +87,6 @@ class HostName(Capability):
             raise Notify.short(2, 0, 'Hostname capability', l1 + 2 + l2, len(data))
         instance.domain_name = _decode_utf8(data[l1 + 2 : l1 + 2 + l2], 'domain name')
         return instance
+
+
+Capability.register()(HostName)

@@ -198,13 +198,13 @@ def graceful_value(restart_flags: int, restart_time: int, families: list[tuple[A
     """A Graceful Restart capability value as a peer would put it on the wire."""
     value = pack('!H', (restart_flags << 12) | restart_time)
     for afi, safi, flag in families:
-        value += afi.pack_afi() + safi.pack_safi() + bytes([flag])
+        value += afi.pack_afi() + safi.pack_safi() + bytes([int(flag)])
     return value
 
 
 def capability_parameters(*values: bytes) -> bytes:
     """A capability optional parameter block carrying the Graceful Restart capability N times."""
-    tlvs = b''.join(bytes([Capability.CODE.GRACEFUL_RESTART, len(value)]) + value for value in values)
+    tlvs = b''.join(bytes([int(Capability.CODE.GRACEFUL_RESTART), len(value)]) + value for value in values)
     parameter = bytes([2, len(tlvs)]) + tlvs
     return bytes([len(parameter)]) + parameter
 

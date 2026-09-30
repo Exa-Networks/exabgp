@@ -25,9 +25,7 @@ class Watchdog:
     @classmethod
     def _create_sentinel(cls) -> Watchdog:
         """Create the NoWatchdog sentinel instance."""
-        instance = object.__new__(cls)
-        instance._name = ''
-        return instance
+        return cls('')
 
     @property
     def name(self) -> str:
@@ -51,6 +49,11 @@ class Watchdog:
         if isinstance(other, Watchdog):
             return self._name == other._name
         return False
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
 
 # Singleton sentinel - empty name is falsy

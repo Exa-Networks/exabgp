@@ -7,8 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
 
-from exabgp.bgp.message.open.capability.capability import Capability
+
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityList
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.logger import log, lazymsg
 from exabgp.util.types import Buffer
@@ -18,9 +20,8 @@ from exabgp.util.types import Buffer
 #
 
 
-@Capability.register()
-class Operational(Capability, list[bytes]):
-    ID = Capability.CODE.OPERATIONAL
+class Operational(CapabilityList[bytes]):
+    ID: ClassVar = Capability.CODE.OPERATIONAL
     _seen: bool = False
 
     def __str__(self) -> str:
@@ -39,3 +40,6 @@ class Operational(Capability, list[bytes]):
             log.debug(lazymsg('capability.operational.duplicate'), 'parser')
         instance._seen = True
         return instance
+
+
+Capability.register()(Operational)

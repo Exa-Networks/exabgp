@@ -29,7 +29,6 @@ from exabgp.util.types import Buffer
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register_evpn_route(code=1)
 class EthernetAD(EVPN):
     """EVPN Route Type 1: Ethernet Auto-Discovery.
 
@@ -148,3 +147,6 @@ class EthernetAD(EVPN):
         members.append(self.etag.json())
         members.append(self.label.json())
         return '{{ {} }}'.format(', '.join(member for member in members if member))
+
+
+EVPN.register_evpn_route(code=1)(EthernetAD)

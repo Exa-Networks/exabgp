@@ -26,7 +26,7 @@ class NetMask(Resource):
     def _make(cls, value: int, maximum: int) -> NetMask:
         key = (value, maximum)
         if key not in cls._by_family:
-            instance = int.__new__(cls, value)
+            instance = cls(value)
             instance.maximum = maximum
             cls._by_family[key] = instance
         mask = cls._by_family[key]

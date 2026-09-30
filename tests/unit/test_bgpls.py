@@ -42,7 +42,7 @@ def with_bgpls_header(code: int, payload: bytes) -> bytes:
     - Total NLRI Length: 2 bytes
     - Payload: variable
     """
-    return pack('!HH', code, len(payload)) + payload
+    return pack('!HH', int(code), len(payload)) + payload
 
 
 def create_negotiated() -> Negotiated:

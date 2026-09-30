@@ -10,10 +10,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from exabgp.protocol.family import FamilyTuple
 from exabgp.util.enumeration import TriState
+
+if TYPE_CHECKING:
+    from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 
 # the capability codes of route refresh, RFC 2918, and enhanced route refresh, RFC 7313
@@ -93,7 +96,7 @@ class NeighborCapability:
     multiple_labels: int = 0  # RFC 8277 2.1: the Count we send for each labelled family, 0 for none
     software_version: str | None = None
     # Codes the peer must advertise back, or be refused with (2, 7) (RFC 5492 3)
-    required: frozenset[int] = frozenset()
+    required: frozenset[CapabilityCode] = frozenset()
 
     def copy(self) -> 'NeighborCapability':
         """Create a copy of this capability configuration."""

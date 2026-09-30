@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 from exabgp.util.types import Buffer
 from struct import pack, unpack
-from typing import Type, TypeVar
+from typing import ClassVar, Type, TypeVar
 
 from exabgp.protocol.resource import Resource
 
@@ -46,26 +47,26 @@ def _decimal(value: str) -> bool:
 
 
 class ASN(Resource):
-    MAX_2BYTE = pow(2, 16) - 1  # Maximum 16-bit ASN value
-    MAX_4BYTE = pow(2, 32) - 1  # Maximum 32-bit ASN value
+    MAX_2BYTE: ClassVar = pow(2, 16) - 1  # Maximum 16-bit ASN value
+    MAX_4BYTE: ClassVar = pow(2, 32) - 1  # Maximum 32-bit ASN value
 
     # ASN encoding size constants
-    SIZE_4BYTE = 4  # 4-byte ASN encoding size
-    SIZE_2BYTE = 2  # 2-byte ASN encoding size
+    SIZE_4BYTE: ClassVar[int] = 4  # 4-byte ASN encoding size
+    SIZE_2BYTE: ClassVar[int] = 2  # 2-byte ASN encoding size
 
-    DOTTED_PARTS = 2  # <high>.<low> notation has two components
+    DOTTED_PARTS: ClassVar[int] = 2  # <high>.<low> notation has two components
 
     def asn4(self) -> bool:
         return self > self.MAX_2BYTE
 
     def pack_asn2(self) -> bytes:
-        return pack('!H', self)
+        return pack('!H', self.value)
 
     def pack_asn4(self) -> bytes:
-        return pack('!L', self)
+        return pack('!L', self.value)
 
     def pack_asn(self, asn4: bool) -> bytes:
-        return pack('!L' if asn4 else '!H', self)
+        return pack('!L' if asn4 else '!H', self.value)
 
     @classmethod
     def unpack_asn(cls: Type[ASN], data: Buffer, klass: Type[_ASN]) -> _ASN:
@@ -82,7 +83,7 @@ class ASN(Resource):
 
     def extract_asn_bytes(self) -> list[bytes]:
         """Extract ASN as list of 4-byte packed values for capability encoding."""
-        return [pack('!L', self)]
+        return [pack('!L', self.value)]
 
     def trans(self) -> ASN:
         if self.asn4():
@@ -90,10 +91,10 @@ class ASN(Resource):
         return self
 
     def __repr__(self) -> str:
-        return '%ld' % int(self)
+        return str(self.value)
 
     def __str__(self) -> str:
-        return '%ld' % int(self)
+        return str(self.value)
 
     @classmethod
     def from_string(cls: Type[ASN], value: str) -> ASN:
@@ -133,12 +134,7 @@ class ASN(Resource):
 
     @classmethod
     def from_int(cls: Type[ASN], value: int) -> ASN:
-        """Create an ASN from any int-like value. Returns ASN4 if value > 16-bit max."""
-        # Avoid circular import
-        from exabgp.bgp.message.open.capability.asn4 import ASN4
-
-        if value > cls.MAX_2BYTE:
-            return ASN4(value)
+        """Create an ASN from an int, whether it needs two octets or four."""
         return ASN(value)
 
     @classmethod

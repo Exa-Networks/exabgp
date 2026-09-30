@@ -20,7 +20,6 @@ from exabgp.util.types import Buffer
 # RFC 7432 Section 7.7.
 
 
-@ExtendedCommunity.register_subtype
 class MacMobility(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x06
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00
@@ -56,3 +55,6 @@ class MacMobility(ExtendedCommunity):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> MacMobility:
         return cls(data[:8])
+
+
+ExtendedCommunity.register_subtype(MacMobility)

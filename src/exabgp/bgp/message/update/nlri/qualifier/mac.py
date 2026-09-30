@@ -8,7 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Type
+
+from typing import ClassVar, Type
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
@@ -18,7 +19,7 @@ from exabgp.util.types import Buffer
 
 
 class MAC:
-    LENGTH = 6
+    LENGTH: ClassVar[int] = 6
 
     def __init__(self, mac: str = '', packed: Buffer = b'') -> None:
         self.mac: str = mac
@@ -33,6 +34,11 @@ class MAC:
         if not isinstance(other, MAC):
             return False
         return self._packed == other._packed
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __lt__(self, other: object) -> bool:
         raise RuntimeError('comparing MAC for ordering does not make sense')

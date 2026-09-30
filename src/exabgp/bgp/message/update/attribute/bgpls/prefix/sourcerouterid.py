@@ -24,7 +24,6 @@ from exabgp.util.types import Buffer
 #     Source Router Identifier (Source Router-ID) TLV
 
 
-@LinkState.register_lsid(tlv=1171, json_key='sr-source-router-id', repr_name='Source router identifier')
 class SourceRouterId(BaseLS):
     @property
     def content(self) -> str:
@@ -42,3 +41,6 @@ class SourceRouterId(BaseLS):
     def make_source_router_id(cls, address: str) -> SourceRouterId:
         """Create SourceRouterId from IP address string."""
         return cls(IP.pton(address))
+
+
+LinkState.register_lsid(tlv=1171, json_key='sr-source-router-id', repr_name='Source router identifier')(SourceRouterId)

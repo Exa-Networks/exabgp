@@ -31,7 +31,6 @@ from exabgp.util.types import Buffer
 # ========================================================================= EVPN
 
 
-@NLRI.register(AFI.l2vpn, SAFI.evpn)
 class EVPN(NLRI):
     """EVPN NLRI (RFC 7432) using packed-bytes-first pattern.
 
@@ -45,7 +44,7 @@ class EVPN(NLRI):
     registered_evpn: ClassVar[dict[int, type[EVPN]]] = dict()
 
     # Wire format constant
-    HEADER_SIZE = 2  # type(1) + length(1)
+    HEADER_SIZE: ClassVar[int] = 2  # type(1) + length(1)
 
     # Set by decorator, override in GenericEVPN
     CODE: ClassVar[int] = -1
@@ -76,6 +75,11 @@ class EVPN(NLRI):
         if not isinstance(other, EVPN):
             return False
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __str__(self) -> str:
         # _packed[2:] is the payload (skip type + length header)
@@ -187,6 +191,9 @@ class EVPN(NLRI):
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self._packed)
+
+
+NLRI.register(AFI.l2vpn, SAFI.evpn)(EVPN)
 
 
 class GenericEVPN(EVPN):

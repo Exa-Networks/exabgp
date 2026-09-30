@@ -356,7 +356,7 @@ LABEL_100 = bytes([0x00, 0x06, 0x41])  # label 100, bottom of stack
 
 
 def mp_reach(afi: int, safi: int, next_hop: bytes, nlri: bytes) -> bytes:
-    value = pack('!HB', afi, safi) + bytes([len(next_hop)]) + next_hop + b'\x00' + nlri
+    value = pack('!HB', int(afi), int(safi)) + bytes([len(next_hop)]) + next_hop + b'\x00' + nlri
     return bytes([0x80, int(Attribute.CODE.MP_REACH_NLRI), len(value)]) + value
 
 

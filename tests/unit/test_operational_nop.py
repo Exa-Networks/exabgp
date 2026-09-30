@@ -360,8 +360,8 @@ def test_operational_unpack_adm() -> None:
     data = (
         struct.pack('!H', Operational.SUBTYPE.ADM)  # Type
         + struct.pack('!H', 2 + 1 + len(advisory_text))  # Length: AFI(2)+SAFI(1)+message
-        + struct.pack('!H', AFI.ipv4)  # AFI
-        + struct.pack('!B', SAFI.unicast)  # SAFI
+        + struct.pack('!H', int(AFI.ipv4))  # AFI
+        + struct.pack('!B', int(SAFI.unicast))  # SAFI
         + advisory_text  # Advisory message
     )
 
@@ -381,8 +381,8 @@ def test_operational_unpack_asm() -> None:
     data = (
         struct.pack('!H', Operational.SUBTYPE.ASM)  # Type
         + struct.pack('!H', 2 + 1 + len(advisory_text))  # Length: AFI(2)+SAFI(1)+message
-        + struct.pack('!H', AFI.ipv6)  # AFI
-        + struct.pack('!B', SAFI.multicast)  # SAFI
+        + struct.pack('!H', int(AFI.ipv6))  # AFI
+        + struct.pack('!B', int(SAFI.multicast))  # SAFI
         + advisory_text  # Advisory message
     )
 
@@ -403,8 +403,8 @@ def test_operational_unpack_rpcq() -> None:
     data = (
         struct.pack('!H', Operational.SUBTYPE.RPCQ)  # Type
         + struct.pack('!H', 11)  # Length: AFI(2)+SAFI(1)+RouterID(4)+Seq(4)
-        + struct.pack('!H', AFI.ipv4)  # AFI
-        + struct.pack('!B', SAFI.unicast)  # SAFI
+        + struct.pack('!H', int(AFI.ipv4))  # AFI
+        + struct.pack('!B', int(SAFI.unicast))  # SAFI
         + router_id.pack_ip()  # Router ID (4 bytes)
         + struct.pack('!L', sequence)  # Sequence (4 bytes)
     )
@@ -427,8 +427,8 @@ def test_operational_unpack_rpcp() -> None:
     data = (
         struct.pack('!H', Operational.SUBTYPE.RPCP)  # Type
         + struct.pack('!H', 15)  # Length: AFI(2)+SAFI(1)+RID(4)+Seq(4)+Counter(4)
-        + struct.pack('!H', AFI.ipv4)  # AFI
-        + struct.pack('!B', SAFI.unicast)  # SAFI
+        + struct.pack('!H', int(AFI.ipv4))  # AFI
+        + struct.pack('!B', int(SAFI.unicast))  # SAFI
         + router_id.pack_ip()  # Router ID
         + struct.pack('!L', sequence)  # Sequence
         + struct.pack('!L', counter)  # Counter

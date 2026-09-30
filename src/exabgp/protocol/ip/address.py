@@ -1,4 +1,4 @@
-"""ip/__init__.py
+"""ip/address.py
 
 Created by Thomas Mangin on 2010-01-15.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -51,9 +51,10 @@ class IPBase:
 
 
 class IP(IPBase):
-    SELF = False
+    SELF: ClassVar[bool] = False
 
-    afi: AFI  # here for the API, changed in init (subclasses override as ClassVar)
+    afi: AFI  # set by init() from the address, or by the unresolved IPSelf
+    ADDRESS_FAMILY: ClassVar[AFI]  # the one of IPv4 and IPv6, the classes register() keys
     # BITS and BYTES are defined as ClassVar in subclasses (IPv4/IPv6)
     # Not annotated here to allow proper ClassVar override
 
@@ -68,8 +69,12 @@ class IP(IPBase):
 
     # deprecate the string API in favor of top()
 
-    def __init__(self) -> None:
-        raise RuntimeError('You should use IP.from_string() to use IP')
+    def __init__(self, packed: Buffer, afi: AFI) -> None:
+        # the fields as they are: IP.from_string(), create_ip() and the subclasses are the
+        # constructors which check. mypyc cannot build an instance without __init__, which
+        # is how NoNextHop was made while this raised to point callers at from_string().
+        self._packed = packed
+        self.afi = afi
 
     def init(self, packed: Buffer) -> IP:
         self._packed = packed
@@ -220,7 +225,7 @@ class IP(IPBase):
         IPv6 address.
         """
         afi = cls.toafi(string)
-        expected = getattr(cls, 'afi', None)
+        expected = getattr(cls, 'ADDRESS_FAMILY', None)
         if isinstance(expected, AFI) and afi != expected:
             raise ValueError(f'expected an {expected} address but got {string}')
 
@@ -243,7 +248,7 @@ class IP(IPBase):
         # cls is IPv4 or IPv6, both implement __init__(packed) -> satisfies IPFactory
         from typing import cast
 
-        cls._known[cls.afi] = cast(IPFactory, cls)
+        cls._known[cls.ADDRESS_FAMILY] = cast(IPFactory, cls)
 
     # Singleton for no next-hop (initialized after class definition)
     NoNextHop: ClassVar[IP]
@@ -251,32 +256,15 @@ class IP(IPBase):
     @classmethod
     def _create_no_nexthop(cls) -> IP:
         """Create the no-nexthop singleton. Called once at module load."""
-        # Bypass __init__ which raises RuntimeError
-        instance = object.__new__(cls)
-        instance._packed = b''
-        instance.afi = AFI.undefined
-        return instance
+        return cls(b'', AFI.undefined)
 
+    # An address is never changed once built (IPSelf.resolve() returns a new one), so a copy
+    # is the address itself, and NoNextHop keeps its identity.
     def __copy__(self) -> 'IP':
-        """Preserve singleton identity for NoNextHop."""
-        if self is IP.NoNextHop:
-            return self
-        # For subclasses that may not have all attributes (e.g., NextHopSelf),
-        # use default copy behavior
-        new = IP.__new__(type(self))
-        new.__dict__.update(self.__dict__)
-        return new
+        return self
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'IP':
-        """Preserve singleton identity for NoNextHop."""
-        if self is IP.NoNextHop:
-            return self
-        # For subclasses that may not have all attributes (e.g., NextHopSelf),
-        # use default copy behavior
-        new = IP.__new__(type(self))
-        new.__dict__.update(self.__dict__)
-        memo[id(self)] = new
-        return new
+        return self
 
     @classmethod
     def create_ip(cls, data: Buffer) -> IP:
@@ -332,10 +320,7 @@ class IPSelf(IP):
     RESOLVED: ClassVar[bool] = False  # Override: unresolved by default
 
     def __init__(self, afi: AFI) -> None:
-        # Bypass IP.__init__ which raises RuntimeError
-        # Set up IPSelf-specific state
-        self._packed = b''  # Empty = unresolved
-        self.afi = afi
+        IP.__init__(self, b'', afi)  # empty: unresolved
 
     @property
     def resolved(self) -> bool:
@@ -383,8 +368,8 @@ class IPSelf(IP):
 
 
 class IPv4(IP):
-    # Class attribute shadows base class instance variable (same pattern as Family)
-    afi = AFI.ipv4
+    # the family every instance has, for the registry: the instance sets its own afi in init()
+    ADDRESS_FAMILY: ClassVar[AFI] = AFI.ipv4
 
     # lowercase to match the Address API (used in configuration code)
     bits: ClassVar[int] = 32
@@ -440,8 +425,8 @@ IPv4.register()
 
 
 class IPv6(IP):
-    # Class attribute shadows base class instance variable (same pattern as Family)
-    afi = AFI.ipv6
+    # the family every instance has, for the registry: the instance sets its own afi in init()
+    ADDRESS_FAMILY: ClassVar[AFI] = AFI.ipv6
 
     # lowercase to match the Address API (used in configuration code)
     bits: ClassVar[int] = 128

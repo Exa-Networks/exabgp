@@ -71,16 +71,11 @@ class Port(Resource):
 
     def name(self) -> str:
         self._ensure_loaded()
-        return self.names.get(self, '%d' % int(self))
+        return self.names.get(self.value, '%d' % self.value)
 
     def short(self) -> str:
         self._ensure_loaded()
-        return self.names.get(self, '%ld' % self)
-
-    @classmethod
-    def _value(cls, string: str) -> int:
-        cls._ensure_loaded()
-        return super()._value(string)
+        return self.names.get(self.value, '%ld' % self.value)
 
     @classmethod
     def from_string(cls, string: str) -> Port:

@@ -170,7 +170,7 @@ def test_addpath_valid_entries(entry_count: int) -> None:
         safi = safis[i % len(safis)]
         if (afi, safi) not in unique_pairs:
             unique_pairs.add((afi, safi))
-            data += struct.pack('!H', afi)
+            data += struct.pack('!H', int(afi))
             data += bytes([safi])
             data += bytes([3])  # send/receive
 
@@ -259,7 +259,7 @@ def test_multiprotocol_afi_safi_values(afi: int, safi: int) -> None:
     from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
 
     # Format: AFI(2) + reserved(1) + SAFI(1) = 4 bytes
-    data = struct.pack('!H', afi) + bytes([0, safi])
+    data = struct.pack('!H', int(afi)) + bytes([0, safi])
 
     instance = MultiProtocol((0, 0))  # Dummy init
 

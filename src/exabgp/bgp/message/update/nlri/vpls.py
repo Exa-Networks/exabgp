@@ -8,8 +8,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 from struct import pack, unpack
-from typing import Any, Self, TYPE_CHECKING
+from typing import Any, ClassVar, Self, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -46,7 +47,7 @@ class VPLSBase(NLRI):
     __slots__ = ()
 
     # Wire format length (including 2-byte length prefix)
-    PACKED_LENGTH = 19  # length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
+    PACKED_LENGTH: ClassVar[int] = 19  # length(2) + RD(8) + endpoint(2) + offset(2) + size(2) + base(3)
 
     def __init__(self, packed: Buffer) -> None:
         """Create a VPLS NLRI from packed wire-format bytes.
@@ -251,7 +252,6 @@ class VPLSBase(NLRI):
         return nlri, data[2 + length :]
 
 
-@NLRI.register(AFI.l2vpn, SAFI.vpls)
 class VPLS(VPLSBase):
     """The registered form of VPLSBase, which holds the code.
 
@@ -265,3 +265,6 @@ class VPLS(VPLSBase):
     """
 
     __slots__ = ()
+
+
+NLRI.register(AFI.l2vpn, SAFI.vpls)(VPLS)

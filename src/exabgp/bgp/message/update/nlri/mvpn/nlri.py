@@ -63,8 +63,6 @@ def check_source_and_group(packed: Buffer, cursor: int, name: str) -> None:
 # ========================================================================= MVPN
 
 
-@NLRI.register(AFI.ipv4, SAFI.mcast_vpn)
-@NLRI.register(AFI.ipv6, SAFI.mcast_vpn)
 class MVPN(NLRI):
     """MVPN NLRI (RFC 6514) using packed-bytes-first pattern.
 
@@ -78,7 +76,7 @@ class MVPN(NLRI):
     registered_mvpn: ClassVar[dict[int, Type[MVPN]]] = dict()
 
     # Wire format constant
-    HEADER_SIZE = 2  # type(1) + length(1)
+    HEADER_SIZE: ClassVar[int] = 2  # type(1) + length(1)
 
     # Set by decorator, override in GenericMVPN
     CODE: ClassVar[int] = -1
@@ -98,6 +96,11 @@ class MVPN(NLRI):
         if not isinstance(other, MVPN):
             return False
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __str__(self) -> str:
         # _packed[2:] is the payload (skip type + length header)
@@ -191,6 +194,10 @@ class MVPN(NLRI):
 
     def _raw(self) -> str:
         return ''.join('{:02X}'.format(_) for _ in self._packed)
+
+
+NLRI.register(AFI.ipv6, SAFI.mcast_vpn)(MVPN)
+NLRI.register(AFI.ipv4, SAFI.mcast_vpn)(MVPN)
 
 
 class GenericMVPN(MVPN):

@@ -6,9 +6,10 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+
 import json
 from struct import pack, unpack
-from typing import Any, TYPE_CHECKING
+from typing import Any, ClassVar, TYPE_CHECKING
 
 from exabgp.util import hexstring
 from exabgp.protocol.iso import ISO
@@ -17,6 +18,7 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 # Minimum data length for SR Adjacency LAN SID TLV
 # Flags (1) + Weight (1) + Reserved (2) + System-ID (6) = 10 bytes
@@ -48,10 +50,9 @@ if TYPE_CHECKING:
 #  draft-ietf-isis-segment-routing-extensions - Adj-SID IS-IS Flags
 
 
-@LinkState.register_lsid(tlv=1100, json_key='sr-adj-lan', repr_name='LAN Adjacency SID')
 class LanAdjacencySid(FlagLS):
-    FLAGS = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
-    MERGE = True
+    FLAGS: ClassVar = ['F', 'B', 'V', 'L', 'S', 'P', 'RSV', 'RSV']
+    MERGE: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer, parsed_sids: list[dict[str, Any]] | None = None) -> None:
         """Initialize with packed bytes and optionally pre-parsed content."""
@@ -171,8 +172,11 @@ class LanAdjacencySid(FlagLS):
         return cls(packed, parsed)
 
     def json(self, compact: bool = False) -> str:
-        return f'"sr-adj-lan-sids": {json.dumps(self.sr_adj_lan_sids)}'
+        return f'"sr-adj-lan-sids": {json.dumps(self.sr_adj_lan_sids, default=json_number)}'
 
     def merge(self, other: BaseLS) -> None:
         if isinstance(other, LanAdjacencySid):
             self._sr_adj_lan_sids.extend(other.sr_adj_lan_sids)
+
+
+LinkState.register_lsid(tlv=1100, json_key='sr-adj-lan', repr_name='LAN Adjacency SID')(LanAdjacencySid)

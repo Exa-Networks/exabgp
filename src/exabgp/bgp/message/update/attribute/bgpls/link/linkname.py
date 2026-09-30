@@ -6,11 +6,14 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import json
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -22,10 +25,9 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.2.7  Link Name TLV
 
 
-@LinkState.register_lsid(tlv=1098, json_key='link-name', repr_name='Link Name')
 class LinkName(BaseLS):
     # BGP-LS TLV length constants
-    BGPLS_TLV_MAX_LENGTH = 255  # Maximum TLV data length
+    BGPLS_TLV_MAX_LENGTH: ClassVar[int] = 255  # Maximum TLV data length
 
     @property
     def content(self) -> str:
@@ -53,7 +55,7 @@ class LinkName(BaseLS):
         the API writer for a name content renders happily.  Two renderers over one value,
         disagreeing, in the class whose encoding this whole change is about.
         """
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return f'"{self.JSON}": {json.dumps(self.content, default=json_number)}'
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> LinkName:
@@ -67,3 +69,6 @@ class LinkName(BaseLS):
         # Name reached the same conclusion from the other direction, and the two have to
         # agree: one refused non-ASCII while the other refused non-UTF-8.
         return cls(data)
+
+
+LinkState.register_lsid(tlv=1098, json_key='link-name', repr_name='Link Name')(LinkName)

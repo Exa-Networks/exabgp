@@ -102,7 +102,8 @@ class Cache:
     @staticmethod
     def _make_index(nlri: 'NLRI') -> bytes:
         """Compute cache index for an NLRI (family prefix + nlri index)."""
-        return b'%02x%02x' % nlri.family().afi_safi() + nlri.index()
+        afi, safi = nlri.family().afi_safi()
+        return b'%02x%02x' % (afi.value, safi.value) + nlri.index()
 
     def update_cache(self, route: 'Route') -> None:
         """Add announced route to cache.

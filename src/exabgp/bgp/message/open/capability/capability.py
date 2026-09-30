@@ -9,9 +9,23 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, Type
+from typing import (
+    Any,
+    Callable,
+    ClassVar,
+    Generic,
+    ItemsView,
+    Iterable,
+    Iterator,
+    KeysView,
+    Type,
+    TypeVar,
+    ValuesView,
+    overload,
+)
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.util.intvalue import IntValue
 from exabgp.util.types import Buffer
 
 
@@ -37,9 +51,7 @@ def decode_utf8(data: Buffer, what: str) -> str:
         raise Notify(2, 0, f'the {what} in the capability is not valid UTF-8 ({exc})') from None
 
 
-class CapabilityCode(int):
-    _cache: ClassVar[dict[int, CapabilityCode]] = dict()
-
+class CapabilityCode(IntValue):
     RESERVED: ClassVar[int] = 0x00  # [RFC5492]
     MULTIPROTOCOL: ClassVar[int] = 0x01  # [RFC2858]
     ROUTE_REFRESH: ClassVar[int] = 0x02  # [RFC2918]
@@ -104,89 +116,81 @@ class CapabilityCode(int):
 
     NAME: str
 
-    def __new__(cls, value: int) -> CapabilityCode:
-        if value in cls._cache:
-            return cls._cache[value]
-        obj: CapabilityCode = super(CapabilityCode, cls).__new__(cls, value)
-        obj.NAME = cls.names.get(value, 'unknown capability {}'.format(hex(value)))
-        cls._cache[value] = obj
-        return obj
+    def __init__(self, value: int) -> None:
+        super().__init__(value)
+        self.NAME = self.name()
 
     def __str__(self) -> str:
-        return self.names.get(self, 'unknown capability {}'.format(hex(self)))
+        return self.name()
 
     def __repr__(self) -> str:
         return str(self)
 
     def name(self) -> str:
-        return self.names.get(self, 'unknown capability {}'.format(hex(self)))
+        return self.names.get(self.value, 'unknown capability {}'.format(hex(self.value)))
 
 
 # =================================================================== Capability
 #
 
 
+class CapabilityCodes:
+    # fmt: off
+    RESERVED: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.RESERVED)
+    MULTIPROTOCOL: ClassVar[CapabilityCode] =            CapabilityCode(CapabilityCode.MULTIPROTOCOL)
+    ROUTE_REFRESH: ClassVar[CapabilityCode] =            CapabilityCode(CapabilityCode.ROUTE_REFRESH)
+    OUTBOUND_ROUTE_FILTERING: ClassVar[CapabilityCode] = CapabilityCode(CapabilityCode.OUTBOUND_ROUTE_FILTERING)
+    MULTIPLE_ROUTES: ClassVar[CapabilityCode] =          CapabilityCode(CapabilityCode.MULTIPLE_ROUTES)
+    NEXTHOP: ClassVar[CapabilityCode] =                  CapabilityCode(CapabilityCode.NEXTHOP)
+    EXTENDED_MESSAGE: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.EXTENDED_MESSAGE)
+    ROLE: ClassVar[CapabilityCode] =                     CapabilityCode(CapabilityCode.ROLE)
+    GRACEFUL_RESTART: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.GRACEFUL_RESTART)
+    FOUR_BYTES_ASN: ClassVar[CapabilityCode] =           CapabilityCode(CapabilityCode.FOUR_BYTES_ASN)
+    DYNAMIC_CAPABILITY: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.DYNAMIC_CAPABILITY)
+    MULTISESSION: ClassVar[CapabilityCode] =             CapabilityCode(CapabilityCode.MULTISESSION)
+    ADD_PATH: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.ADD_PATH)
+    ENHANCED_ROUTE_REFRESH: ClassVar[CapabilityCode] =   CapabilityCode(CapabilityCode.ENHANCED_ROUTE_REFRESH)
+    PATHS_LIMIT: ClassVar[CapabilityCode] =              CapabilityCode(CapabilityCode.PATHS_LIMIT)
+    MULTIPLE_LABELS: ClassVar[CapabilityCode] =          CapabilityCode(CapabilityCode.MULTIPLE_LABELS)
+    LINK_LOCAL_NEXTHOP: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.LINK_LOCAL_NEXTHOP)
+    ROUTE_REFRESH_CISCO: ClassVar[CapabilityCode] =      CapabilityCode(CapabilityCode.ROUTE_REFRESH_CISCO)
+    MULTISESSION_CISCO: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.MULTISESSION_CISCO)
+    HOSTNAME: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.HOSTNAME)
+    SOFTWARE_VERSION: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.SOFTWARE_VERSION)
+    OPERATIONAL: ClassVar[CapabilityCode] =              CapabilityCode(CapabilityCode.OPERATIONAL)
+    AIGP: ClassVar[CapabilityCode] =                     CapabilityCode(CapabilityCode.AIGP)
+    # fmt: on
+
+    unassigned: ClassVar[range] = range(70, 128)
+    reserved: ClassVar[range] = range(128, 256)
+
+    @classmethod
+    def name(cls, self: int) -> str | None:
+        name: str | None = CapabilityCode.names.get(self, None)
+        if name is None:
+            if self in Capability.CODE.unassigned:
+                return 'unassigned-{}'.format(hex(self))
+            if self in Capability.CODE.reserved:
+                return 'reserved-{}'.format(hex(self))
+        return name
+
+
 class Capability:
-    class CODE(int):
-        # fmt: off
-        RESERVED: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.RESERVED)
-        MULTIPROTOCOL: ClassVar[CapabilityCode] =            CapabilityCode(CapabilityCode.MULTIPROTOCOL)
-        ROUTE_REFRESH: ClassVar[CapabilityCode] =            CapabilityCode(CapabilityCode.ROUTE_REFRESH)
-        OUTBOUND_ROUTE_FILTERING: ClassVar[CapabilityCode] = CapabilityCode(CapabilityCode.OUTBOUND_ROUTE_FILTERING)
-        MULTIPLE_ROUTES: ClassVar[CapabilityCode] =          CapabilityCode(CapabilityCode.MULTIPLE_ROUTES)
-        NEXTHOP: ClassVar[CapabilityCode] =                  CapabilityCode(CapabilityCode.NEXTHOP)
-        EXTENDED_MESSAGE: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.EXTENDED_MESSAGE)
-        ROLE: ClassVar[CapabilityCode] =                     CapabilityCode(CapabilityCode.ROLE)
-        GRACEFUL_RESTART: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.GRACEFUL_RESTART)
-        FOUR_BYTES_ASN: ClassVar[CapabilityCode] =           CapabilityCode(CapabilityCode.FOUR_BYTES_ASN)
-        DYNAMIC_CAPABILITY: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.DYNAMIC_CAPABILITY)
-        MULTISESSION: ClassVar[CapabilityCode] =             CapabilityCode(CapabilityCode.MULTISESSION)
-        ADD_PATH: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.ADD_PATH)
-        ENHANCED_ROUTE_REFRESH: ClassVar[CapabilityCode] =   CapabilityCode(CapabilityCode.ENHANCED_ROUTE_REFRESH)
-        PATHS_LIMIT: ClassVar[CapabilityCode] =              CapabilityCode(CapabilityCode.PATHS_LIMIT)
-        MULTIPLE_LABELS: ClassVar[CapabilityCode] =          CapabilityCode(CapabilityCode.MULTIPLE_LABELS)
-        LINK_LOCAL_NEXTHOP: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.LINK_LOCAL_NEXTHOP)
-        ROUTE_REFRESH_CISCO: ClassVar[CapabilityCode] =      CapabilityCode(CapabilityCode.ROUTE_REFRESH_CISCO)
-        MULTISESSION_CISCO: ClassVar[CapabilityCode] =       CapabilityCode(CapabilityCode.MULTISESSION_CISCO)
-        HOSTNAME: ClassVar[CapabilityCode] =                 CapabilityCode(CapabilityCode.HOSTNAME)
-        SOFTWARE_VERSION: ClassVar[CapabilityCode] =         CapabilityCode(CapabilityCode.SOFTWARE_VERSION)
-        OPERATIONAL: ClassVar[CapabilityCode] =              CapabilityCode(CapabilityCode.OPERATIONAL)
-        AIGP: ClassVar[CapabilityCode] =                     CapabilityCode(CapabilityCode.AIGP)
-        # fmt: on
+    CODE: ClassVar[type[CapabilityCodes]] = CapabilityCodes
 
-        unassigned: ClassVar[range] = range(70, 128)
-        reserved: ClassVar[range] = range(128, 256)
-
-        def __str__(self) -> str:
-            name: str | None = CapabilityCode.names.get(self, None)
-            if name is None:
-                if self in Capability.CODE.unassigned:
-                    return 'unassigned-{}'.format(hex(self))
-                if self in Capability.CODE.reserved:
-                    return 'reserved-{}'.format(hex(self))
-                return 'capability-{}'.format(hex(self))
-            return name
-
-        def __repr__(self) -> str:
-            return str(self)
-
-        @classmethod
-        def name(cls, self: int) -> str | None:
-            name: str | None = CapabilityCode.names.get(self, None)
-            if name is None:
-                if self in Capability.CODE.unassigned:
-                    return 'unassigned-{}'.format(hex(self))
-                if self in Capability.CODE.reserved:
-                    return 'reserved-{}'.format(hex(self))
-            return name
-
-    registered_capability: ClassVar[dict[int, Type[Capability]]] = dict()
+    registered_capability: ClassVar[dict[CapabilityCode, Type[Capability]]] = dict()
     unknown_capability: ClassVar[Type[Capability] | None] = None
 
-    # Class-level default set by subclasses; unpack() shadows this per instance
-    # for capabilities registered under more than one wire code (see unpack()),
-    # so this is intentionally NOT a ClassVar.
-    ID: int
+    # The code the class is registered under. RouteRefresh and MultiSession are also
+    # registered under a Cisco code: an instance says which one it is with code().
+    ID: ClassVar[CapabilityCode]
+    # The wire code of this instance when it is not ID, set by unpack() or by whoever
+    # builds the Cisco variant. mypyc cannot let an instance shadow a class attribute.
+    wire_code: CapabilityCode | None = None
+
+    def code(self) -> CapabilityCode:
+        """The code this capability is sent, or was received, under."""
+        return self.wire_code if self.wire_code is not None else self.ID
 
     def extract_capability_bytes(self) -> list[bytes]:
         """Extract capability data for encoding. Subclasses must implement."""
@@ -209,10 +213,10 @@ class Capability:
         return klass
 
     @classmethod
-    def register(cls, capability: int | None = None) -> Callable[[Type[Capability]], Type[Capability]]:
+    def register(cls, capability: CapabilityCode | None = None) -> Callable[[Type[Capability]], Type[Capability]]:
         def register_capability(klass: Type[Capability]) -> Type[Capability]:
             # ID is defined by all the subclasses - otherwise they do not work :)
-            what: int = klass.ID if capability is None else capability  # pylint: disable=E1101
+            what: CapabilityCode = klass.ID if capability is None else capability  # pylint: disable=E1101
             if what in cls.registered_capability:
                 raise RuntimeError('only one class can be registered per capability')
             cls.registered_capability[what] = klass
@@ -221,7 +225,7 @@ class Capability:
         return register_capability
 
     @classmethod
-    def klass(cls, what: int) -> Type[Capability]:
+    def klass(cls, what: CapabilityCode) -> Type[Capability]:
         if what in cls.registered_capability:
             return cls.registered_capability[what]
         if cls.unknown_capability:
@@ -236,8 +240,127 @@ class Capability:
         instance: Capability = capabilities.get(capability, Capability.klass(capability)())
         # Record the wire code actually received on this instance (not the shared class):
         # some capabilities (RouteRefresh, MultiSession) are registered under both an RFC
-        # and a Cisco code, and klass() resolves the same class object for either. Setting
-        # ID here shadows the ClassVar per-instance so one peer's variant never leaks into
-        # another already-unpacked instance's str()/json() output.
-        instance.ID = capability
+        # and a Cisco code, and klass() resolves the same class object for either. Keeping
+        # it on the instance means one peer's variant never leaks into another
+        # already-unpacked instance's str()/json() output.
+        instance.wire_code = capability
         return cls.klass(capability).unpack_capability(instance, data, capability)
+
+
+_Item = TypeVar('_Item')
+
+
+class CapabilityList(Capability, Generic[_Item]):
+    """A capability whose value is a list of entries: families, codes, next hop conversions.
+
+    These inherited from both Capability and list, which mypyc cannot compile. The entries
+    live in `.items` and this gives back what the code used of the list: iteration, length,
+    membership, indexing, append and extend, false when empty, and equality with a list of
+    the same entries.
+    """
+
+    def __init__(self, items: Iterable[_Item] = ()) -> None:
+        self.items: list[_Item] = list(items)
+
+    def __iter__(self) -> Iterator[_Item]:
+        return iter(self.items)
+
+    def __len__(self) -> int:
+        return len(self.items)
+
+    def __bool__(self) -> bool:
+        return bool(self.items)
+
+    def __contains__(self, item: object) -> bool:
+        return item in self.items
+
+    def __getitem__(self, index: int) -> _Item:
+        return self.items[index]
+
+    def append(self, item: _Item) -> None:
+        self.items.append(item)
+
+    def extend(self, items: Iterable[_Item]) -> None:
+        self.items.extend(items)
+
+    # defining __eq__ leaves the class unhashable, as the list was
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, CapabilityList):
+            return self.items == other.items
+        if isinstance(other, list):
+            return self.items == other
+        return NotImplemented
+
+    def __ne__(self, other: object) -> bool:
+        # the operator, not a call to __eq__: it answers NotImplemented the way Python does,
+        # where a compiled bool-typed local would refuse it
+        return not self == other
+
+
+_Key = TypeVar('_Key')
+_Value = TypeVar('_Value')
+
+
+class CapabilityDict(Capability, Generic[_Key, _Value]):
+    """A capability whose value maps a family to something: ADD-PATH, graceful restart, ...
+
+    These inherited from both Capability and dict, which mypyc cannot compile. The mapping
+    lives in `.entries` and this gives back what the code used of the dict: indexing and
+    assignment, membership, iteration over the keys, get, items, keys and values, length,
+    false when empty, and equality with a dict of the same entries.
+    """
+
+    def __init__(self) -> None:
+        self.entries: dict[_Key, _Value] = {}
+
+    def __getitem__(self, key: _Key) -> _Value:
+        return self.entries[key]
+
+    def __setitem__(self, key: _Key, value: _Value) -> None:
+        self.entries[key] = value
+
+    def __contains__(self, key: object) -> bool:
+        return key in self.entries
+
+    def __iter__(self) -> Iterator[_Key]:
+        return iter(self.entries)
+
+    def __len__(self) -> int:
+        return len(self.entries)
+
+    def __bool__(self) -> bool:
+        return bool(self.entries)
+
+    @overload
+    def get(self, key: _Key) -> _Value | None: ...
+
+    @overload
+    def get(self, key: _Key, default: _Value) -> _Value: ...
+
+    def get(self, key: _Key, default: _Value | None = None) -> _Value | None:
+        return self.entries.get(key, default)
+
+    def clear(self) -> None:
+        self.entries.clear()
+
+    def items(self) -> ItemsView[_Key, _Value]:
+        return self.entries.items()
+
+    def keys(self) -> KeysView[_Key]:
+        return self.entries.keys()
+
+    def values(self) -> ValuesView[_Value]:
+        return self.entries.values()
+
+    # defining __eq__ leaves the class unhashable, as the dict was
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, CapabilityDict):
+            return self.entries == other.entries
+        if isinstance(other, dict):
+            return self.entries == other
+        return NotImplemented
+
+    def __ne__(self, other: object) -> bool:
+        # the operator, not a call to __eq__: it answers NotImplemented the way Python does,
+        # where a compiled bool-typed local would refuse it
+        return not self == other

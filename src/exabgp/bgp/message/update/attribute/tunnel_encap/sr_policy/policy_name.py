@@ -19,9 +19,9 @@ from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 
-@SubTLV.register(130)
 class PolicyNameSubTLV(SubTLV):
     """SR Policy Name Sub-TLV (type 130, RFC 9830 Section 2.4.7)."""
 
@@ -42,7 +42,7 @@ class PolicyNameSubTLV(SubTLV):
         a JSON string. Both make the line unreadable to every API consumer, which is the
         corruption half of GHSA-jcrv-p53f-v5w5.
         """
-        return f'"policy-name": {json.dumps(self.name)}'
+        return f'"policy-name": {json.dumps(self.name, default=json_number)}'
 
     def __str__(self) -> str:
         return f'policy-name "{self.name}"'
@@ -54,3 +54,6 @@ class PolicyNameSubTLV(SubTLV):
         flags = data[0]
         name = bytes(data[1:]).decode('utf-8', errors='replace')
         return cls(name=name, flags=flags)
+
+
+SubTLV.register(130)(PolicyNameSubTLV)

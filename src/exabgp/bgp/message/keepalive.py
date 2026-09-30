@@ -7,7 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+
+from typing import ClassVar, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -23,11 +24,10 @@ from exabgp.bgp.message.notification import Notify
 #
 
 
-@Message.register
 class KeepAlive(Message):
-    ID = Message.CODE.KEEPALIVE
+    ID: ClassVar = Message.CODE.KEEPALIVE
     # RFC 4271 4.4: a KEEPALIVE is the header alone
-    LENGTH_MAX = Message.HEADER_LEN
+    LENGTH_MAX: ClassVar = Message.HEADER_LEN
 
     def __init__(self, packed: Buffer = b'') -> None:
         if packed:
@@ -56,3 +56,6 @@ class KeepAlive(Message):
             # and the Data field carries that Length rather than the payload's hex
             raise Notify(1, 2, f'KEEPALIVE body of {len(data)} octets', data=pack('!H', Message.HEADER_LEN + len(data)))
         return cls(data)
+
+
+Message.register(KeepAlive)

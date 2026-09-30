@@ -71,7 +71,7 @@ def smallest_decodable(code: int) -> bytes | None:
     # the widths a MERGE TLV can hold, from one byte to the SRv6 LAN End.X sub-TLVs,
     # which need 26 and 28 and are the reason this searches rather than guessing
     for length in range(1, MAX_TLV_WIDTH):
-        payload = pack('!HH', code, length) + bytes(length)
+        payload = pack('!HH', int(code), length) + bytes(length)
         try:
             attribute().unpack_attribute(payload, Negotiated.UNSET).json()
         except Exception:
@@ -188,7 +188,7 @@ def test_what_the_api_emits_for_a_merged_tlv_is_what_content_says(code: int) -> 
     if instance is None:
         pytest.skip(f'TLV {code} decodes none of the seed widths')
 
-    payload = pack('!HH', code, len(instance._packed)) + bytes(instance._packed)
+    payload = pack('!HH', int(code), len(instance._packed)) + bytes(instance._packed)
     document = jsonlib.loads(render(payload))
 
     key = LinkState.registered_lsids[code].JSON

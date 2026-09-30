@@ -29,18 +29,17 @@ class ClusterID(IPv4):
         return cls(IPv4.pton(string))
 
 
-@Attribute.register()
 class ClusterList(Attribute):
     """Cluster List attribute (code 10).
 
     Stores packed wire-format bytes. Each cluster ID is a 4-byte IPv4 address.
     """
 
-    ID: int = Attribute.CODE.CLUSTER_LIST
+    ID: ClassVar[int] = Attribute.CODE.CLUSTER_LIST
     # RFC 7606: CLUSTER_LIST is the reflector loop check, so discarding it invites the
     # loop it exists to prevent
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
-    FLAG: int = Attribute.Flag.OPTIONAL
+    FLAG: ClassVar[int] = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer) -> None:
@@ -120,3 +119,6 @@ class ClusterList(Attribute):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         return cls.from_packet(data)
+
+
+Attribute.register()(ClusterList)

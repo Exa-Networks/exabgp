@@ -47,7 +47,7 @@
 | `plan-api-v6-nexthop-removal.md` | Remove nexthop from NLRI JSON |
 | `plan-documentation-review.md` | Documentation review |
 | `plan-llgr.md` | Long-Lived Graceful Restart (RFC 9494, issue #292) |
-| `plan-mypyc.md` | Compile the hot path with mypyc, pure Python kept as reference |
+| `wip-mypyc.md` | Compile the hot path with mypyc, pure Python kept as reference |
 | `plan-connection-reader-removal.md` | Delete the dead sync `Connection.reader()`, retarget 68 test calls (before mypyc phase 7) |
 | `plan-gtsm-shared-listener.md` | `incoming-ttl` on a listening socket shared by several neighbours |
 | `plan-agent-instructions.md` | AGENTS.md, evidence rule, plan journal, `.claude/backups` cleanup (decisions needed) |

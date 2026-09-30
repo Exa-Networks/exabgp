@@ -27,7 +27,6 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.3.2
 
 
-@LinkState.register_lsid(tlv=1153, json_key='igp-route-tags', repr_name='IGP Route Tags')
 class IgpTags(BaseLS):
     # Variable length: each tag is 4 bytes, length should be multiple of 4.
 
@@ -47,3 +46,6 @@ class IgpTags(BaseLS):
         """Create IgpTags from list of 32-bit route tag values."""
         packed = b''.join(pack('!L', tag) for tag in tags)
         return cls(packed)
+
+
+LinkState.register_lsid(tlv=1153, json_key='igp-route-tags', repr_name='IGP Route Tags')(IgpTags)

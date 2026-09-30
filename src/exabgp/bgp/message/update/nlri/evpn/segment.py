@@ -35,7 +35,6 @@ from exabgp.util.types import Buffer
 ETHERNET_SEGMENT_RD_TYPE = 1
 
 
-@EVPN.register_evpn_route(code=4)
 class EthernetSegment(EVPN):
     """EVPN Route Type 4: Ethernet Segment.
 
@@ -169,3 +168,6 @@ class EthernetSegment(EVPN):
         members.append(self.esi.json())
         members.append('"ip": "{}"'.format(str(self.ip)))
         return '{{ {} }}'.format(', '.join(member for member in members if member))
+
+
+EVPN.register_evpn_route(code=4)(EthernetSegment)

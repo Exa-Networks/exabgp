@@ -35,7 +35,6 @@ BSID_FLAG_S = 0x80
 BSID_FLAG_I = 0x40
 
 
-@SubTLV.register(13)
 class BindingSIDSubTLV(SubTLV):
     """SR Policy Binding SID Sub-TLV (MPLS)."""
 
@@ -76,3 +75,6 @@ class BindingSIDSubTLV(SubTLV):
             label = label_entry >> 12
             return cls(label=label, flags=flags)
         return cls(label=None, flags=flags)
+
+
+SubTLV.register(13)(BindingSIDSubTLV)

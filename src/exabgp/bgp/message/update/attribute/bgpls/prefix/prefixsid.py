@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import json
 from struct import pack, unpack
 from exabgp.util import hexstring
@@ -14,6 +16,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -37,11 +40,10 @@ SID_LABEL_LENGTH_NO_FLAGS = 4  # Length of SID/Label when V and L flags are both
 SRPREFIX_MIN_LENGTH = 4
 
 
-@LinkState.register_lsid(tlv=1158, json_key='sr-prefix-sids', repr_name='Prefix SIDs')
 class PrefixSid(FlagLS):
     # RFC 9085 2.3.1: multiple Prefix-SID TLVs may be present, one per algorithm
-    MERGE = True
-    FLAGS = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
+    MERGE: ClassVar[bool] = True
+    FLAGS: ClassVar = ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
 
     # flags property is inherited from FlagLS and unpacks from _packed[0:1]
 
@@ -120,7 +122,7 @@ class PrefixSid(FlagLS):
         # this used to return four loose members with no object around them, so a caller
         # wrapping the result in a list produced a JSON array of bare keys.  It went
         # unnoticed because nothing put two of these side by side
-        return f'"{self.JSON}": {json.dumps([self.content])}'
+        return f'"{self.JSON}": {json.dumps([self.content], default=json_number)}'
 
     @classmethod
     def make_prefix_sid(cls, flags: dict[str, int], sids: list[int], sr_algo: int) -> PrefixSid:
@@ -154,3 +156,6 @@ class PrefixSid(FlagLS):
             for sid in sids:
                 packed += pack('!I', sid)
         return cls(packed)
+
+
+LinkState.register_lsid(tlv=1158, json_key='sr-prefix-sids', repr_name='Prefix SIDs')(PrefixSid)

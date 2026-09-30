@@ -7,8 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 from struct import unpack
-from typing import TYPE_CHECKING, Iterator
+from typing import ClassVar, Iterator, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -73,17 +74,16 @@ def _log_discarded_bytes(discard: NLRIDiscard) -> None:
 #
 
 
-@Attribute.register()
-class MPRNLRI(Attribute, Family):
+class MPRNLRI(Attribute):
     """Wire-format MP_REACH_NLRI attribute container.
 
     Stores raw wire bytes and yields NLRIs lazily via __iter__.
     For semantic operations (building/packing), use MPNLRICollection.
     """
 
-    FLAG = Attribute.Flag.OPTIONAL
-    ID = Attribute.CODE.MP_REACH_NLRI
-    NO_DUPLICATE = True
+    FLAG: ClassVar = Attribute.Flag.OPTIONAL
+    ID: ClassVar = Attribute.CODE.MP_REACH_NLRI
+    NO_DUPLICATE: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer, addpath: bool) -> None:
         """Create MPRNLRI from wire-format bytes.
@@ -94,10 +94,20 @@ class MPRNLRI(Attribute, Family):
         """
         self._packed = packed
         self._addpath = addpath
-        # Initialize Family from packed data
-        _afi = unpack('!H', packed[:2])[0]
-        _safi = packed[2]
-        Family.__init__(self, AFI.from_int(_afi), SAFI.from_int(_safi))
+        # read once: every NLRI decoded from the attribute asks. It inherited Family for
+        # this, next to Attribute, which mypyc cannot compile (two concrete bases).
+        self._afi = AFI.from_int(unpack('!H', packed[:2])[0])
+        self._safi = SAFI.from_int(packed[2])
+
+    @property
+    def afi(self) -> AFI:
+        """Address Family Identifier."""
+        return self._afi
+
+    @property
+    def safi(self) -> SAFI:
+        """Subsequent Address Family Identifier."""
+        return self._safi
 
     @property
     def packed(self) -> bytes:
@@ -311,6 +321,9 @@ class MPRNLRI(Attribute, Family):
 
         # Store wire bytes and addpath flag - NLRIs parsed lazily
         return cls(data, addpath)
+
+
+Attribute.register()(MPRNLRI)
 
 
 # Create empty MPRNLRI with minimal packed structure

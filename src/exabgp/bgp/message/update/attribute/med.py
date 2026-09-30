@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.unsigned import UnsignedAttribute
 
@@ -14,17 +16,19 @@ from exabgp.bgp.message.update.attribute.unsigned import UnsignedAttribute
 #
 
 
-@Attribute.register()
 class MED(UnsignedAttribute):
     """Multi-Exit Discriminator, RFC 4271 5.1.4: four octets."""
 
-    ID = Attribute.CODE.MED
-    FLAG = Attribute.Flag.OPTIONAL
-    CACHING = True
-    TREAT_AS_WITHDRAW = True
-    WIDTH = 4
-    NAME = 'MED'
+    ID: ClassVar = Attribute.CODE.MED
+    FLAG: ClassVar = Attribute.Flag.OPTIONAL
+    CACHING: ClassVar[bool] = True
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
+    WIDTH: ClassVar[int] = 4
+    NAME: ClassVar[str] = 'MED'
 
     @property
     def med(self) -> int:
         return self.value
+
+
+Attribute.register()(MED)

@@ -19,10 +19,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 import json
+from exabgp.util.intvalue import json_number
 from struct import error as struct_error, unpack
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Protocol
+from typing import Any, Callable, ClassVar, Protocol, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -31,20 +33,20 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.logger import lazymsg, log
 from exabgp.util import hexstring
+from exabgp.util.intvalue import IntValue
 from exabgp.util.types import Buffer
 
 
 class LSClass(Protocol):
     """Protocol for BGP-LS classes that can unpack from bytes."""
 
-    TLV: int
-    MERGE: bool
+    TLV: ClassVar[int]
+    MERGE: ClassVar[bool]
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> BaseLS: ...
 
 
-@Attribute.register()
 class LinkState(Attribute):
     """BGP-LS attribute containing link-state TLVs (RFC 7752).
 
@@ -52,15 +54,15 @@ class LinkState(Attribute):
     Uses registry pattern for TLV type dispatch.
     """
 
-    ID = Attribute.CODE.BGP_LS
-    FLAG = Attribute.Flag.OPTIONAL
-    TLV = -1
+    ID: ClassVar = Attribute.CODE.BGP_LS
+    FLAG: ClassVar = Attribute.Flag.OPTIONAL
+    TLV: ClassVar[int] = -1
     # RFC 7752 section 5.3 and RFC 9552 section 7.2.1: a malformed BGP-LS attribute is
     # discarded, the session is not reset. AttributeCollection.parse honours this flag.
     DISCARD: ClassVar[bool] = True
 
     # Registered subclasses we know how to decode
-    registered_lsids: dict[int, type] = dict()
+    registered_lsids: ClassVar[dict[int, type]] = dict()
 
     # what this implementation knows as LS attributes
     node_lsids: list[int] = []
@@ -101,7 +103,9 @@ class LinkState(Attribute):
 
             data = data[length + 4 :]
             klass = cls.get_ls_class(scode)
-            ls_attrs.append(cls._decode_tlv(klass, scode, payload))
+            instance = cls._decode_tlv(klass, scode, payload)
+            instance.tlv_code = scode
+            ls_attrs.append(instance)
 
         return ls_attrs
 
@@ -164,10 +168,9 @@ class LinkState(Attribute):
             if alias_tlv is not None:
                 if alias_tlv in cls.registered_lsids:
                     raise RuntimeError('only one class can be registered per BGP link state attribute type')
-                # Create alias class with different TLV but same JSON/REPR
-                alias_klass = type(f'{klass.__name__}_{alias_tlv}', klass.__bases__, dict(klass.__dict__))
-                setattr(alias_klass, 'TLV', alias_tlv)
-                cls.registered_lsids[alias_tlv] = alias_klass
+                # the same class under the second code: an instance decoded from either
+                # knows its own code (BaseLS.tlv()), so no copy of the class is needed
+                cls.registered_lsids[alias_tlv] = klass
             return klass
 
         return decorator
@@ -178,14 +181,10 @@ class LinkState(Attribute):
         klass = cls.registered_lsids.get(code, None)
         if klass is not None:
             return klass
-        unknown = type('GenericLSID_%d' % code, GenericLSID.__bases__, dict(GenericLSID.__dict__))
-        setattr(unknown, 'TLV', code)
-        # the JSON name has to be set here as well as the TLV.  GenericLSID merges, and
-        # the merge groups by name, so leaving every synthesised class on the inherited
-        # default would collapse every unknown code the peer sent into one member
-        setattr(unknown, 'JSON', f'generic-lsid-{code}')
-        cls.registered_lsids[code] = unknown
-        return unknown
+        # every code we do not know is decoded by GenericLSID, and the instance keeps the
+        # code (BaseLS.tlv()).  A class was built and registered per unknown code before,
+        # which mypyc cannot compile and which grew with every code a peer chose to send.
+        return GenericLSID
 
     @classmethod
     def is_lsid_registered(cls, lsid: int) -> bool:
@@ -205,7 +204,7 @@ class LinkState(Attribute):
     @staticmethod
     def _json_array(key: str, attrs: list[BaseLS]) -> str:
         """One key holding what every TLV of that name carried."""
-        return f'"{key}": {json.dumps([jsonable(attr.content) for attr in attrs])}'
+        return f'"{key}": {json.dumps([jsonable(attr.content) for attr in attrs], default=json_number)}'
 
     def json(self, compact: bool = False) -> str:
         """Output JSON for all TLVs, never writing the same key twice.
@@ -231,27 +230,31 @@ class LinkState(Attribute):
 
         for attr in self.ls_attrs:
             if getattr(attr, 'MERGE', False):
-                merge_groups[attr.JSON].append(attr)
+                merge_groups[attr.json_key()].append(attr)
             else:
                 non_merge.append(attr)
-                by_key[attr.JSON].append(attr)
+                by_key[attr.json_key()].append(attr)
 
         parts = [self._json_array(key, attrs) for key, attrs in merge_groups.items()]
         written: set[str] = set()
         for attr in non_merge:
-            same = by_key[attr.JSON]
+            key = attr.json_key()
+            same = by_key[key]
             if len(same) == 1:
                 parts.append(attr.json(compact))
                 continue
-            if attr.JSON in written:
+            if key in written:
                 continue
-            written.add(attr.JSON)
-            parts.append(self._json_array(attr.JSON, same))
+            written.add(key)
+            parts.append(self._json_array(key, same))
 
         return '{ ' + ', '.join(parts) + ' }'
 
     def __str__(self) -> str:
         return ', '.join(str(d) for d in self.ls_attrs)
+
+
+Attribute.register()(LinkState)
 
 
 def jsonable(content: Any) -> Any:
@@ -282,6 +285,9 @@ def jsonable(content: Any) -> Any:
         return [jsonable(item) for item in content]
     if isinstance(content, (str, int, float, bool)) or content is None:
         return content
+    # a number which is not an int only since mypyc (AFI, ASN, ...) is still a JSON number
+    if isinstance(content, IntValue):
+        return content.value
     return str(content)
 
 
@@ -299,13 +305,23 @@ class BaseLS:
         MERGE: If True, multiple TLVs of same type are merged into array
     """
 
-    TLV: int = -1
-    JSON: str = 'unset'
-    REPR: str = 'repr name unset'
-    LEN: int = 0
-    MERGE: bool = False
+    TLV: ClassVar[int] = -1
+    JSON: ClassVar[str] = 'unset'
+    REPR: ClassVar[str] = 'repr name unset'
+    LEN: ClassVar[int] = 0
+    MERGE: ClassVar[bool] = False
 
-    BGPLS_SUBTLV_HEADER_SIZE: int = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
+    BGPLS_SUBTLV_HEADER_SIZE: ClassVar[int] = 4  # Sub-TLV header is 4 bytes (Type 2 + Length 2)
+
+    # The code this instance was decoded under. A class can be registered under two codes
+    # (LocalRouterId, 1028 and 1029) or under none (GenericLSID), so TLV is only its default.
+    tlv_code: int | None = None
+
+    def tlv(self) -> int:
+        return self.tlv_code if self.tlv_code is not None else self.TLV
+
+    def json_key(self) -> str:
+        return self.JSON
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with packed wire-format bytes.
@@ -325,7 +341,7 @@ class BaseLS:
         return self._packed
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps(jsonable(self.content))}'
+        return f'"{self.JSON}": {json.dumps(jsonable(self.content), default=json_number)}'
 
     def __repr__(self) -> str:
         return '{}: {}'.format(self.REPR, self.content)
@@ -387,9 +403,9 @@ class GenericLSID(BaseLS):
     # refused nor collapsed: it merges, and both values reach the API under one key.  Two
     # of the same unknown code otherwise emitted that key twice, and every JSON parser
     # resolves a duplicate key by keeping one of them
-    MERGE = True
+    MERGE: ClassVar[bool] = True
 
-    TLV: int = 0
+    TLV: ClassVar[int] = 0
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with packed wire-format bytes.
@@ -405,15 +421,17 @@ class GenericLSID(BaseLS):
         return hexstring(self._packed)
 
     def __repr__(self) -> str:
-        return 'Attribute with code [ {} ] not implemented'.format(self.TLV)
+        return 'Attribute with code [ {} ] not implemented'.format(self.tlv())
+
+    def json_key(self) -> str:
+        # one key per unknown code: GenericLSID merges, and the merge groups by key, so one
+        # shared key would collapse every unknown code the peer sent into one member
+        return f'generic-lsid-{self.tlv()}'
 
     def json(self, compact: bool = False) -> str:
-        # the key is computed rather than read from JSON, so an instance built directly
-        # rather than through get_ls_class still names its own code.  get_ls_class sets
-        # JSON to the same string, so the merge groups by the same name this renders.
         # Always an array, which is what the merge produces when the peer sends the same
         # unknown code twice, so the member keeps one type either way
-        return f'"generic-lsid-{self.TLV}": ["{self.content}"]'
+        return f'"{self.json_key()}": ["{self.content}"]'
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> GenericLSID:
@@ -489,7 +507,7 @@ class FlagLS(BaseLS):
     """
 
     # Subclasses define FLAGS as a list of flag names, e.g. ['R', 'N', 'P', 'E', 'V', 'L', 'RSV', 'RSV']
-    FLAGS: list[str] = []
+    FLAGS: ClassVar[list[str]] = []
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with packed wire-format bytes.
@@ -528,7 +546,7 @@ class FlagLS(BaseLS):
         return '{}: {}'.format(self.REPR, self.flags)
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps(self.flags)}'
+        return f'"{self.JSON}": {json.dumps(self.flags, default=json_number)}'
 
     @classmethod
     def unpack_flags(cls, data: Buffer) -> dict[str, int]:

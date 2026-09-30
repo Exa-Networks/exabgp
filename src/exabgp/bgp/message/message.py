@@ -10,6 +10,7 @@ from __future__ import annotations
 from struct import pack
 from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar, final
 
+from exabgp.util.intvalue import IntValue
 from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 _M = TypeVar('_M', bound='Message')
 
 
-class _MessageCode(int):
+class MessageCode(IntValue):
     OPEN: ClassVar[int] = 0x01  # .          1
     UPDATE: ClassVar[int] = 0x02  # .        2
     NOTIFICATION: ClassVar[int] = 0x03  # .  3
@@ -63,17 +64,51 @@ class _MessageCode(int):
     NAME: str
 
     def __init__(self, value: int) -> None:
+        super().__init__(value)
         self.SHORT = self.short()
         self.NAME = str(self)
 
     def __str__(self) -> str:
-        return self.names.get(self, 'unknown message {}'.format(hex(self)))
+        return self.names.get(self.value, 'unknown message {}'.format(hex(self.value)))
 
     def __repr__(self) -> str:
         return str(self)
 
     def short(self) -> str:
-        return self.short_names.get(self, '{}'.format(self))
+        return self.short_names.get(self.value, '{}'.format(self.value))
+
+
+class MessageCodes:
+    OPEN: ClassVar[MessageCode] = MessageCode(MessageCode.OPEN)
+    UPDATE: ClassVar[MessageCode] = MessageCode(MessageCode.UPDATE)
+    NOTIFICATION: ClassVar[MessageCode] = MessageCode(MessageCode.NOTIFICATION)
+    KEEPALIVE: ClassVar[MessageCode] = MessageCode(MessageCode.KEEPALIVE)
+    ROUTE_REFRESH: ClassVar[MessageCode] = MessageCode(MessageCode.ROUTE_REFRESH)
+    OPERATIONAL: ClassVar[MessageCode] = MessageCode(MessageCode.OPERATIONAL)
+
+    MESSAGES: ClassVar[list[MessageCode]] = [
+        OPEN,
+        UPDATE,
+        NOTIFICATION,
+        KEEPALIVE,
+        ROUTE_REFRESH,
+        OPERATIONAL,
+    ]
+
+    @staticmethod
+    def name(message_id: int | None) -> str:
+        if message_id is None:
+            return MessageCode.names.get(message_id, 'unknown message')
+        return MessageCode.names.get(message_id, 'unknown message {}'.format(hex(int(message_id))))
+
+    @staticmethod
+    def short(message_id: int | None) -> str:
+        if message_id is None:
+            return MessageCode.short_names.get(message_id, 'unknown message')
+        return MessageCode.short_names.get(message_id, 'unknown message {}'.format(hex(int(message_id))))
+
+    def __init__(self) -> None:
+        raise RuntimeError('This class can not be instantiated')
 
 
 # ================================================================== BGP Message
@@ -118,7 +153,7 @@ class Message:
 
     registered_message: ClassVar[dict[int, Type[Message]]] = {}
 
-    ID: ClassVar[int]
+    ID: ClassVar[MessageCode]
     TYPE: ClassVar[bytes]
 
     _packed: Buffer
@@ -140,47 +175,22 @@ class Message:
                 raise TypeError(f'{cls.__qualname__}: {derived} is derived from {source}, not declared')
         if not 0 <= cls.ID <= 0xFF:
             raise TypeError(f'{cls.__qualname__}: the type of a message is one octet')
-        cls.TYPE = bytes([cls.ID])
+        cls.TYPE = bytes([cls.ID.value])
         cls.LENGTH_MIN = cls.HEADER_LEN + cls.FIXED_SIZE
         assert cls.HEADER_LEN <= cls.LENGTH_MIN <= cls.LENGTH_MAX <= cls.EXTENDED_MAX
 
-    class CODE:
-        OPEN: ClassVar[_MessageCode] = _MessageCode(_MessageCode.OPEN)
-        UPDATE: ClassVar[_MessageCode] = _MessageCode(_MessageCode.UPDATE)
-        NOTIFICATION: ClassVar[_MessageCode] = _MessageCode(_MessageCode.NOTIFICATION)
-        KEEPALIVE: ClassVar[_MessageCode] = _MessageCode(_MessageCode.KEEPALIVE)
-        ROUTE_REFRESH: ClassVar[_MessageCode] = _MessageCode(_MessageCode.ROUTE_REFRESH)
-        OPERATIONAL: ClassVar[_MessageCode] = _MessageCode(_MessageCode.OPERATIONAL)
-
-        MESSAGES: ClassVar[list[_MessageCode]] = [
-            OPEN,
-            UPDATE,
-            NOTIFICATION,
-            KEEPALIVE,
-            ROUTE_REFRESH,
-            OPERATIONAL,
-        ]
-
-        @staticmethod
-        def name(message_id: int | None) -> str:
-            if message_id is None:
-                return _MessageCode.names.get(message_id, 'unknown message')
-            return _MessageCode.names.get(message_id, 'unknown message {}'.format(hex(message_id)))
-
-        @staticmethod
-        def short(message_id: int | None) -> str:
-            if message_id is None:
-                return _MessageCode.short_names.get(message_id, 'unknown message')
-            return _MessageCode.short_names.get(message_id, 'unknown message {}'.format(hex(message_id)))
-
-        def __init__(self) -> None:
-            raise RuntimeError('This class can not be instantiated')
+    CODE: ClassVar[type[MessageCodes]] = MessageCodes
 
     def __eq__(self, other: object) -> bool:
         # `other` can be anything a caller compares with, so only here is its class asked
         if not isinstance(other, Message):
             return NotImplemented
         return self.ID == other.ID and bytes(self._packed) == bytes(other._packed)
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __hash__(self) -> int:
         return hash((self.ID, bytes(self._packed)))
@@ -211,17 +221,17 @@ class Message:
 
     @staticmethod
     def string(code: int | None) -> str:
-        return _MessageCode.long_names.get(code, 'unknown')
+        return MessageCode.long_names.get(code, 'unknown')
 
     @classmethod
-    def frame(cls, code: int, body: Buffer) -> bytes:
+    def frame(cls, code: MessageCode, body: Buffer) -> bytes:
         """The complete message: marker, length and type, then the body."""
         assert 0 <= code <= 0xFF, 'the type of a message is one octet'
         # what we build, never what a peer sent, but it must hold under -O: the length field
         # is two octets, and a larger body would go out with a length which lies about it
         if cls.HEADER_LEN + len(body) > cls.EXTENDED_MAX:
             raise RuntimeError(f'a message body of {len(body)} octets does not fit a BGP message')
-        return cls.MARKER + pack('!H', cls.HEADER_LEN + len(body)) + bytes([code]) + bytes(body)
+        return cls.MARKER + pack('!H', cls.HEADER_LEN + len(body)) + bytes([code.value]) + bytes(body)
 
     def pack_body(self, negotiated: Negotiated) -> Buffer:
         """The body of the message, what follows the header on the wire."""
@@ -237,9 +247,9 @@ class Message:
 
     @classmethod
     def register(cls, klass: Type[_M]) -> Type[_M]:
-        if klass.ID in cls.registered_message:
+        if klass.ID.value in cls.registered_message:
             raise RuntimeError('only one class can be registered per message')
-        cls.registered_message[klass.ID] = klass
+        cls.registered_message[klass.ID.value] = klass
         return klass
 
     @classmethod

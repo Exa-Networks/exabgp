@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+
 from struct import pack, unpack
-from typing import TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
@@ -15,14 +16,13 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
-@Attribute.register()
 class OTC(Attribute):
     """A four-octet ASN, regardless of negotiated AS_PATH encoding."""
 
-    ID = Attribute.CODE.OTC
-    FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
-    CACHING = True
-    TREAT_AS_WITHDRAW = True
+    ID: ClassVar = Attribute.CODE.OTC
+    FLAG: ClassVar = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
+    CACHING: ClassVar[bool] = True
+    TREAT_AS_WITHDRAW: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer) -> None:
         """Store trusted wire bytes; use the factories at input boundaries."""
@@ -35,10 +35,10 @@ class OTC(Attribute):
         return cls(data)
 
     @classmethod
-    def make_otc(cls, asn: int) -> OTC:
+    def make_otc(cls, asn: ASN | int) -> OTC:
         if not 0 <= asn <= ASN.MAX_4BYTE:
             raise ValueError(f'OTC ASN out of range: {asn}')
-        return cls(pack('!L', asn))
+        return cls(pack('!L', int(asn)))
 
     @property
     def asn(self) -> ASN:
@@ -64,11 +64,14 @@ class OTC(Attribute):
         return hash(self._comparable())
 
 
+Attribute.register()(OTC)
+
+
 class OTCSelf(Attribute):
     """Resolve the local ASN only when serializing for an established session."""
 
-    ID = Attribute.CODE.OTC
-    FLAG = OTC.FLAG
+    ID: ClassVar = Attribute.CODE.OTC
+    FLAG: ClassVar = OTC.FLAG
 
     def __init__(self, role: RoleValue = RoleValue.NO_ROLE) -> None:
         self.role = role
@@ -100,8 +103,8 @@ class OTCNone(Attribute):
     with it; they outlive this change only because those files were held elsewhere.
     """
 
-    ID = Attribute.CODE.INTERNAL_OTC_NONE
-    NO_GENERATION = True
+    ID: ClassVar = Attribute.CODE.INTERNAL_OTC_NONE
+    NO_GENERATION: ClassVar[bool] = True
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         return b''

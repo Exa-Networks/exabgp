@@ -92,7 +92,7 @@ def negotiate(neighbor: Neighbor, peer_role: RoleValue | None) -> Negotiated:
     sent = our_capabilities(neighbor)
     received = Capabilities(sent)
     # the peer's OPEN, not a copy of ours: RFC 6793 4.1 reads its AS from the capability
-    received[Capability.CODE.FOUR_BYTES_ASN] = ASN4(ASN(PEER_AS))
+    received[Capability.CODE.FOUR_BYTES_ASN] = ASN4(PEER_AS)
     received.pop(Capability.CODE.ROLE, None)
     if peer_role is not None:
         received[Capability.CODE.ROLE] = Role(peer_role)
@@ -128,7 +128,7 @@ def capability_codes(packed: bytes) -> list[int]:
 
 def role_capability_bytes(*roles: RoleValue) -> bytes:
     """A capability optional parameter block carrying the Role capability N times."""
-    tlvs = b''.join(bytes([Capability.CODE.ROLE, 1, int(role)]) for role in roles)
+    tlvs = b''.join(bytes([int(Capability.CODE.ROLE), 1, int(role)]) for role in roles)
     parameter = bytes([2, len(tlvs)]) + tlvs
     return bytes([len(parameter)]) + parameter
 
@@ -139,7 +139,7 @@ def update_payload(attributes: bytes, nlri: bytes = PREFIX_10_0_0_0_24) -> bytes
 
 
 def otc_attribute(asn: int) -> bytes:
-    return bytes([OPTIONAL_TRANSITIVE, OTC_CODE, 4]) + pack('!L', asn)
+    return bytes([int(OPTIONAL_TRANSITIVE), int(OTC_CODE), 4]) + pack('!L', asn)
 
 
 def received_update(negotiated: Negotiated, attributes: bytes, nlri: bytes = PREFIX_10_0_0_0_24) -> UpdateCollection:
@@ -528,7 +528,7 @@ def test_an_otc_of_the_wrong_length_is_treated_as_a_withdraw(length: int) -> Non
     an attribute whose length the sender got wrong is not a reason to lose every prefix.
     """
     negotiated = negotiate(neighbour('provider'), None)
-    malformed = bytes([OPTIONAL_TRANSITIVE, OTC_CODE, length]) + bytes(length)
+    malformed = bytes([int(OPTIONAL_TRANSITIVE), int(OTC_CODE), length]) + bytes(length)
 
     attributes = AttributeCollection.unpack(ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP + malformed, negotiated)
 

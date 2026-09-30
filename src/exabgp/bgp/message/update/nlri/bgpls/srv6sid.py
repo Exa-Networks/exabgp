@@ -7,6 +7,7 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
+from exabgp.util.intvalue import json_number
 from struct import unpack
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -49,7 +50,6 @@ MIN_TLV_HEADER_SIZE: int = 2  # Type (2 bytes) + Length (2 bytes) = 4 bytes, che
 #                        Figure 5: SRv6 SID NLRI Format
 
 
-@BGPLS.register_bgpls
 class SRv6SID(BGPLS):
     CODE: ClassVar[int] = 6
     NAME: ClassVar[str] = 'bgpls-srv6sid'
@@ -194,6 +194,11 @@ class SRv6SID(BGPLS):
         # Direct _packed comparison - CODE, proto_id, domain, TLVs all encoded in wire format
         return self._packed == other._packed
 
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
     def __hash__(self) -> int:
         # Direct _packed hash - all wire fields encoded in bytes
         return hash(self._packed)
@@ -206,8 +211,11 @@ class SRv6SID(BGPLS):
                 f'"l3-routing-topology": {int(self.domain)}',
                 f'"protocol-id": {int(self.proto_id)}',
                 f'"node-descriptors": [ {nodes} ]',
-                f'"srv6-sid-descriptors": {json.dumps(self.srv6_sid_descriptors)}',
+                f'"srv6-sid-descriptors": {json.dumps(self.srv6_sid_descriptors, default=json_number)}',
             ],
         )
 
         return f'{{ {content} }}'
+
+
+BGPLS.register_bgpls(SRv6SID)

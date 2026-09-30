@@ -44,8 +44,6 @@ _IPV4_NLRI_SIZE = 12
 _IPV6_NLRI_SIZE = 24
 
 
-@NLRI.register(AFI.ipv4, SAFI.sr_policy)
-@NLRI.register(AFI.ipv6, SAFI.sr_policy)
 class SRPolicyNLRI(NLRI):
     """SR Policy NLRI (RFC 9830) using packed-bytes-first pattern.
 
@@ -122,6 +120,11 @@ class SRPolicyNLRI(NLRI):
             return False
         return NLRI.__eq__(self, other)
 
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
     def __str__(self) -> str:
         return 'sr-policy distinguisher {} color {} endpoint {}'.format(
             self.distinguisher,
@@ -173,3 +176,7 @@ class SRPolicyNLRI(NLRI):
         nlri = cls(afi, data[1 : 1 + nlri_bytes])
         nlri.addpath = path_info
         return nlri, data[1 + nlri_bytes :]
+
+
+NLRI.register(AFI.ipv6, SAFI.sr_policy)(SRPolicyNLRI)
+NLRI.register(AFI.ipv4, SAFI.sr_policy)(SRPolicyNLRI)

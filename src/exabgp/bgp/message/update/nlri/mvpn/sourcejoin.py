@@ -29,13 +29,12 @@ MVPN_SOURCEJOIN_IPV4_LENGTH: int = 22  # 8 (RD) + 4 (Source AS) + 1 (source len)
 MVPN_SOURCEJOIN_IPV6_LENGTH: int = 46  # 8 (RD) + 4 (Source AS) + 1 (source len) + 16 (IPv6) + 1 (group len) + 16 (IPv6)
 
 
-@MVPN.register_mvpn(code=7)
 class SourceJoin(MVPN):
     NAME: ClassVar[str] = 'C-Multicast Source Tree Join route'
     SHORT_NAME: ClassVar[str] = 'Source-Join'
 
     # Wire format offsets (after 2-byte type+length header)
-    HEADER_SIZE = 2  # type(1) + length(1)
+    HEADER_SIZE: ClassVar[int] = 2  # type(1) + length(1)
 
     def __init__(self, packed: Buffer, afi: AFI) -> None:
         """Create SourceJoin from complete wire format bytes.
@@ -139,3 +138,6 @@ class SourceJoin(MVPN):
         content += '"source": "{}", '.format(str(self.source))
         content += '"group": "{}"'.format(str(self.group))
         return '{{{}}}'.format(content)
+
+
+MVPN.register_mvpn(code=7)(SourceJoin)

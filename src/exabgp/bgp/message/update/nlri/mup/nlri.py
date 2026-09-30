@@ -30,8 +30,6 @@ from exabgp.util.types import Buffer
 # +-----------------------------------+
 
 
-@NLRI.register(AFI.ipv4, SAFI.mup)
-@NLRI.register(AFI.ipv6, SAFI.mup)
 class MUP(NLRI):
     # MUP has no additional instance attributes beyond NLRI base class
     __slots__ = ()
@@ -65,6 +63,11 @@ class MUP(NLRI):
         if not isinstance(other, MUP):
             return NotImplemented
         return NLRI.__eq__(self, other) and self.CODE == other.CODE
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __str__(self) -> str:
         # Use the class's own SHORT_NAME since it's defined on all MUP subclasses
@@ -129,7 +132,7 @@ class MUP(NLRI):
         return decorator
 
     # [arch(1)][code(2)][length(1)][RD(8)] before the route type specific fields
-    PAYLOAD_OFFSET = 12
+    PAYLOAD_OFFSET: ClassVar[int] = 12
 
     @classmethod
     def check_length(cls, data: Buffer, minimum: int) -> None:
@@ -182,6 +185,10 @@ class MUP(NLRI):
     def _raw(self) -> str:
         # _packed includes 4-byte header
         return ''.join('{:02X}'.format(_) for _ in self._packed)
+
+
+NLRI.register(AFI.ipv6, SAFI.mup)(MUP)
+NLRI.register(AFI.ipv4, SAFI.mup)(MUP)
 
 
 class GenericMUP(MUP):

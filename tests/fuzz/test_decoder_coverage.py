@@ -69,7 +69,7 @@ def test_every_bgpls_tlv_decoder_is_reached(monkeypatch: pytest.MonkeyPatch) -> 
         for length in range(0, 24):
             for fill in (b'\x00', b'\xff', b'\x30'):
                 try:
-                    attribute.unpack_attribute(struct.pack('!HH', code, length) + fill * length, Negotiated.UNSET)
+                    attribute.unpack_attribute(struct.pack('!HH', int(code), length) + fill * length, Negotiated.UNSET)
                 except Notify:
                     continue
 

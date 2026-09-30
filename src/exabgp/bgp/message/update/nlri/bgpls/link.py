@@ -70,7 +70,6 @@ TLV_MULTI_TOPO_ID: int = 263  # Multi-Topology Identifier TLV
 #   +-----------+---------------------+--------------+------------------+
 
 
-@BGPLS.register_bgpls
 class LINK(BGPLS):
     CODE: ClassVar[int] = 2
     NAME: ClassVar[str] = 'bgpls-link'
@@ -289,3 +288,6 @@ class LINK(BGPLS):
             content += f', {self.route_d.json()}'
 
         return f'{{ {content} }}'
+
+
+BGPLS.register_bgpls(LINK)

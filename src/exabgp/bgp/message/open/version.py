@@ -7,11 +7,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.util.intvalue import IntValue
+
 from typing import ClassVar
 
 
-class Version(int):
+class Version(IntValue):
     BGP_4: ClassVar[int] = 4  # RFC 4271 - BGP version 4
 
     def pack_version(self) -> bytes:
-        return bytes([self])
+        return bytes([self.value])

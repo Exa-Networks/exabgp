@@ -18,6 +18,7 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.bgp.neighbor import NeighborTemplate
 from exabgp.environment import getenv
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -75,7 +76,7 @@ def _show_adjrib_callback(
                 route_entry['nlri'] = str(nlri)
             routes.append(route_entry)
 
-            for line in json.dumps(jason).split('\n'):
+            for line in json.dumps(jason, default=json_number).split('\n'):
                 reactor.processes.write(service, line)
 
     async def callback() -> None:

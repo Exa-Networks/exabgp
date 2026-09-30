@@ -32,7 +32,6 @@ IGP_METRIC_SIZE_ISIS_SMALL: int = 1  # IS-IS small metrics are 1 octet
 IGP_METRIC_SIZE_ISIS_WIDE: int = 3  # IS-IS wide metrics are 3 octets
 
 
-@LinkState.register_lsid(tlv=1095, json_key='igp-metric', repr_name='IGP Metric')
 class IgpMetric(BaseLS):
     @property
     def content(self) -> int:
@@ -63,3 +62,6 @@ class IgpMetric(BaseLS):
         if len(data) not in (IGP_METRIC_SIZE_ISIS_SMALL, IGP_METRIC_SIZE_OSPF, IGP_METRIC_SIZE_ISIS_WIDE):
             raise Notify(3, 5, f'IGP Metric TLV is {len(data)} octets, expected 1, 2 or 3')
         return cls(data)
+
+
+LinkState.register_lsid(tlv=1095, json_key='igp-metric', repr_name='IGP Metric')(IgpMetric)

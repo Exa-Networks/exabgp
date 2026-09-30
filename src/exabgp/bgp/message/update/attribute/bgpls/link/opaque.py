@@ -11,6 +11,7 @@ import json
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 #
 #     0                   1                   2                   3
@@ -25,7 +26,6 @@ from exabgp.util.types import Buffer
 # This TLV is added here for completeness but we don't look into the TLV.
 
 
-@LinkState.register_lsid(tlv=1097, json_key='opaque-link', repr_name='Opaque Link attribute')
 class LinkOpaque(BaseLS):
     @property
     def content(self) -> str:
@@ -43,8 +43,11 @@ class LinkOpaque(BaseLS):
         return bytes(self._packed).hex()
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return f'"{self.JSON}": {json.dumps(self.content, default=json_number)}'
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> LinkOpaque:
         return cls(data)
+
+
+LinkState.register_lsid(tlv=1097, json_key='opaque-link', repr_name='Opaque Link attribute')(LinkOpaque)

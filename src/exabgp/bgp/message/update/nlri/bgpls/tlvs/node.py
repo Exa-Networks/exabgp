@@ -7,8 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 from struct import unpack
-from typing import Any
+from typing import Any, ClassVar
 
 from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.protocol.ip import IP
@@ -55,14 +56,14 @@ IGP_STATIC = 227  # Static configuration
 
 
 class NodeDescriptor:
-    _known_tlvs = {
+    _known_tlvs: ClassVar = {
         NODE_DESC_TLV_AS: 'autonomous-system',
         NODE_DESC_TLV_BGPLS_ID: 'bgp-ls-identifier',
         NODE_DESC_TLV_OSPF_AREA: 'ospf-area-id',
         NODE_DESC_TLV_IGP_ROUTER: 'router-id',
     }
 
-    _error_tlvs = {
+    _error_tlvs: ClassVar = {
         NODE_DESC_TLV_AS: 'Invalid autonomous-system sub-tlv',
         NODE_DESC_TLV_BGPLS_ID: 'Invalid bgp-ls-identifier sub-tlv',
         NODE_DESC_TLV_OSPF_AREA: 'Invalid ospf-area-id sub-tlv',
@@ -99,8 +100,8 @@ class NodeDescriptor:
         remaining = data[4 + length :]
 
         node_id = None
-        dr_id = None
-        psn = None
+        dr_id: IP | None = None
+        psn: int | None = None
 
         # autonomous-system
         if node_type == NODE_DESC_TLV_AS:
@@ -222,6 +223,11 @@ class NodeDescriptor:
         if not isinstance(other, NodeDescriptor):
             return NotImplemented
         return bool(self.node_id == other.node_id)
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __lt__(self, other: NodeDescriptor) -> bool:
         raise RuntimeError('Not implemented')

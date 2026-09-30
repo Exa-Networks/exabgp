@@ -196,7 +196,7 @@ def add_path_tuple(afi: AFI, safi: SAFI, send_receive: int) -> bytes:
 def add_path_capability(*entries: bytes) -> bytes:
     """One instance of the ADD-PATH capability TLV, carrying the entries given."""
     value = b''.join(entries)
-    return bytes([Capability.CODE.ADD_PATH, len(value)]) + value
+    return bytes([int(Capability.CODE.ADD_PATH), len(value)]) + value
 
 
 def optional_parameters(*parameters: bytes) -> bytes:

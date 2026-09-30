@@ -44,7 +44,6 @@ NODE_DESCRIPTOR_TYPE: int = 256  # Local Node Descriptors TLV type
 # ===================================================================== DOMAIN
 
 
-@BGPLS.register_bgpls
 class NODE(BGPLS):
     CODE: ClassVar[int] = 1
     NAME: ClassVar[str] = 'bgpls-node'
@@ -192,6 +191,11 @@ class NODE(BGPLS):
         # Direct _packed comparison - CODE, proto_id, domain, node_ids all encoded in wire format
         return self._packed == other._packed and self.route_d == other.route_d
 
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
     def __str__(self) -> str:
         return self.json()
 
@@ -199,4 +203,7 @@ class NODE(BGPLS):
         # Direct _packed hash - all wire fields encoded in bytes
         return hash((self._packed, self.route_d))
 
-    # pack_nlri inherited from BGPLS base class - returns self._packed directly
+
+BGPLS.register_bgpls(NODE)
+
+# pack_nlri inherited from BGPLS base class - returns self._packed directly

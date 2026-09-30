@@ -7,12 +7,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from struct import pack
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
-from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityList
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log, lazymsg
@@ -22,9 +24,8 @@ from exabgp.util.types import Buffer
 #
 
 
-@Capability.register()
-class NextHop(Capability, list[tuple[AFI, SAFI, AFI]]):
-    ID = Capability.CODE.NEXTHOP
+class NextHop(CapabilityList[tuple[AFI, SAFI, AFI]]):
+    ID: ClassVar = Capability.CODE.NEXTHOP
 
     def __init__(self, data: tuple[tuple[AFI, SAFI, AFI], ...] = ()) -> None:
         super().__init__()
@@ -76,3 +77,6 @@ class NextHop(Capability, list[tuple[AFI, SAFI, AFI]]):
                 instance.add_nexthop(afi, safi, nexthop)
             data = data[6:]
         return instance
+
+
+Capability.register()(NextHop)

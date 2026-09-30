@@ -53,7 +53,7 @@ NOT_TEXT = bytes([0xFF, 0xFE, 0x80, 0x00, 0xC3])
 def render(code: int, payload: bytes) -> dict:
     klass = Attribute.klass_by_id(Attribute.CODE.BGP_LS)
     assert klass is not None
-    attribute = klass.unpack_attribute(pack('!HH', code, len(payload)) + payload, Negotiated.UNSET)
+    attribute = klass.unpack_attribute(pack('!HH', int(code), len(payload)) + payload, Negotiated.UNSET)
     return jsonlib.loads(attribute.json())
 
 

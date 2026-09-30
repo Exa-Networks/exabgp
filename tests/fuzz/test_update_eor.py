@@ -25,7 +25,10 @@ pytestmark = pytest.mark.fuzz
 @pytest.fixture(autouse=True)
 def mock_logger() -> Generator[None, None, None]:
     """Mock the logger to avoid initialization issues."""
-    with patch('exabgp.bgp.message.update.log') as mock_log, patch('exabgp.bgp.message.update.log') as mock_log:
+    with (
+        patch('exabgp.bgp.message.update.update.log') as mock_log,
+        patch('exabgp.bgp.message.update.update.log') as mock_log,
+    ):
         mock_log.debug = Mock()
         mock_log.debug = Mock()
         yield

@@ -123,7 +123,7 @@ neighbor 192.0.2.1 {{
     negotiated.sent(Open.make_open(Version(4), ASN(LOCAL_AS), HoldTime(180), RouterID('192.0.2.2'), capabilities))
     theirs = Capabilities(capabilities)
     # the peer's OPEN, not a copy of ours: RFC 6793 4.1 reads its AS from the capability
-    theirs[Capability.CODE.FOUR_BYTES_ASN] = ASN4(ASN(peer_as))
+    theirs[Capability.CODE.FOUR_BYTES_ASN] = ASN4(peer_as)
     negotiated.received(Open.make_open(Version(4), ASN(peer_as), HoldTime(180), RouterID('192.0.2.1'), theirs))
     return negotiated
 

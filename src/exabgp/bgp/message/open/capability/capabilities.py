@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.util.intvalue import IntValue
+
 from exabgp.util.types import Buffer
 from typing import ClassVar, TYPE_CHECKING
 
@@ -48,7 +50,7 @@ MIN_PARAM_LEN: int = 2  # Minimum length for standard parameter (type + length)
 #
 
 
-class Parameter(int):
+class Parameter(IntValue):
     AUTHENTIFICATION_INFORMATION: ClassVar[int] = 0x01  # Depreciated
     CAPABILITIES: ClassVar[int] = 0x02
 
@@ -72,7 +74,9 @@ class Parameter(int):
 # +------------------------------+
 
 
-class Capabilities(dict[int, Capability]):
+# A capability we built is keyed by its CapabilityCode, one read from a peer by the number
+# it sent, and the API JSON shows the key as it is: a name for ours, a number for theirs.
+class Capabilities(dict[CapabilityCode | int, Capability]):
     # RFC 9072 - Extended Optional Parameters Length
     EXTENDED_LENGTH: ClassVar[int] = 0xFF  # IANA Extended Length type code - indicates extended format in use
 
@@ -102,7 +106,7 @@ class Capabilities(dict[int, Capability]):
         (AFI.ipv4, SAFI.mpls_vpn, AFI.ipv6),
     ]
 
-    def announced(self, capability: int) -> bool:
+    def announced(self, capability: CapabilityCode) -> bool:
         return capability in self
 
     def role(self) -> RoleValue:
@@ -111,6 +115,12 @@ class Capabilities(dict[int, Capability]):
             return RoleValue.NO_ROLE
         assert isinstance(capability, Role), 'Role capability must be decoded as Role'
         return capability.value
+
+    def four_octet_asn(self) -> ASN:
+        """The AS number of the four-octet AS capability (RFC 6793), which must be present."""
+        capability = self[Capability.CODE.FOUR_BYTES_ASN]
+        assert isinstance(capability, ASN4), 'the four-octet AS capability must be decoded as ASN4'
+        return capability.asn
 
     def __str__(self) -> str:
         r: list[str] = []
@@ -132,7 +142,7 @@ class Capabilities(dict[int, Capability]):
                 raise ValueError('A four-octet local ASN requires ASN4 advertisement')
             return
 
-        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(effective_local_as)
+        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(effective_local_as.value)
 
     def _nexthop(self, neighbor: Neighbor) -> None:
         if not neighbor.capability.nexthop.is_enabled():
@@ -249,7 +259,7 @@ class Capabilities(dict[int, Capability]):
         # the draft code left no code on both sides, and the session was refused with 2/9.
         # A peer which does not know 131 ignores it (RFC 5492 section 3).
         cisco = MultiSession()
-        cisco.ID = Capability.CODE.MULTISESSION_CISCO
+        cisco.wire_code = Capability.CODE.MULTISESSION_CISCO
         self[Capability.CODE.MULTISESSION_CISCO] = cisco
 
     def new(self, neighbor: Neighbor, restarted: bool, *, local_as: ASN | None = None) -> Capabilities:
@@ -271,12 +281,12 @@ class Capabilities(dict[int, Capability]):
         self._session(neighbor)  # MUST be the last key added, really !?! dict is not ordered !
         return self
 
-    def tlvs(self, code: int) -> bytes:
+    def tlvs(self, code: CapabilityCode | int) -> bytes:
         """One capability we advertise, as the <code, length, value> triples of our OPEN."""
         tlvs = b''
         for value in self[code].extract_capability_bytes():
             # Zero-length capabilities (e.g., RouteRefresh, LinkLocalNextHop) are valid
-            tlvs += bytes([code, len(value)]) + value
+            tlvs += bytes([int(code), len(value)]) + value
         return tlvs
 
     def _capability_tlvs(self) -> bytes:

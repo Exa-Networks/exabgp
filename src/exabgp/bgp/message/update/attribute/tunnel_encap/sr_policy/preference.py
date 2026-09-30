@@ -22,7 +22,6 @@ from exabgp.util.types import Buffer
 _PREFERENCE_VALUE_SIZE = 6  # flags(1) + reserved(1) + preference(4)
 
 
-@SubTLV.register(12)
 class PreferenceSubTLV(SubTLV):
     """SR Policy Preference Sub-TLV."""
 
@@ -55,3 +54,6 @@ class PreferenceSubTLV(SubTLV):
             )
         flags, reserved, preference = unpack('!BBI', data[:6])
         return cls(preference=preference, flags=flags)
+
+
+SubTLV.register(12)(PreferenceSubTLV)

@@ -21,7 +21,6 @@ from exabgp.util.types import Buffer
 #
 
 
-@LinkState.register_lsid(tlv=1157, json_key='opaque-prefix', repr_name='Opaque Prefix Attribute')
 class PrefixOpaque(BaseLS):
     @property
     def content(self) -> str:
@@ -40,3 +39,6 @@ class PrefixOpaque(BaseLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> PrefixOpaque:
         return cls(data)
+
+
+LinkState.register_lsid(tlv=1157, json_key='opaque-prefix', repr_name='Opaque Prefix Attribute')(PrefixOpaque)

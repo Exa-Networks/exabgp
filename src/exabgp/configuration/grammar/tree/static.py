@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from typing import Any, Iterator, Mapping, cast
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.update.attribute.internal import Split as InternalSplit
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, Label
 from exabgp.bgp.message.update.nlri.empty import Empty
@@ -138,7 +139,7 @@ class RouteLine(RouteStatement):
     def parse(self, words: Words) -> list[Route]:
         prefix = bgp.Prefix().parse(words)
         settings = INETSettings()
-        settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask)
+        settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask.value)
         settings.afi = IP.toafi(prefix.top())
         settings.action = action(words)
         klass = _nlri_class(words, settings, prefix)
@@ -186,7 +187,7 @@ class AttributesLine(RouteStatement):
                 break
             each = bgp.Prefix().parse(words)
             settings_copy = INETSettings(**{name: getattr(settings, name) for name in settings.__dataclass_fields__})
-            settings_copy.cidr = CIDR.create_cidr(each.pack_ip(), each.mask)
+            settings_copy.cidr = CIDR.create_cidr(each.pack_ip(), each.mask.value)
             settings_copy.action = Action.UNSET
             routes.append(Route(klass.from_settings(settings_copy), collected.attributes, nexthop=settings.nexthop))
         if not routes and collected.attributes:
@@ -351,7 +352,8 @@ def split(route: Route) -> Iterator[Route]:
         yield route
         return
     nlri: Any = route.nlri
-    cut = cast(int, route.attributes[Attribute.CODE.INTERNAL_SPLIT])
+    # the code is the class: only InternalSplit is stored under INTERNAL_SPLIT
+    cut = cast(InternalSplit, route.attributes[Attribute.CODE.INTERNAL_SPLIT]).value
     if nlri.cidr.mask >= cut:
         yield route
         return
@@ -460,7 +462,7 @@ class NestedRouteSection(Section[list[Route]]):
 
     def build(self, name: IPRange, values: Values, context: ReadContext) -> list[Route]:
         settings = INETSettings()
-        settings.cidr = CIDR.create_cidr(name.pack_ip(), name.mask)
+        settings.cidr = CIDR.create_cidr(name.pack_ip(), name.mask.value)
         settings.afi = IP.toafi(name.top())
         settings.safi = SAFI.mpls_vpn
         settings.action = Action.ANNOUNCE

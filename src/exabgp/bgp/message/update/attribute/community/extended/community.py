@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
+from exabgp.util.intvalue import json_number
 
 from typing import TYPE_CHECKING, ClassVar, Type
 
@@ -87,6 +88,11 @@ class ExtendedCommunityBase(Attribute):
         if not isinstance(other, ExtendedCommunityBase):
             return False
         return self.ID == other.ID and self.FLAG == other.FLAG and self._packed == other._packed
+
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
     def __lt__(self, other: object) -> bool:
         if not isinstance(other, ExtendedCommunityBase):
@@ -183,7 +189,9 @@ class ExtendedCommunityBase(Attribute):
         return self._described() or self._hexadecimal()
 
     def json(self, compact: bool = False) -> str:
-        return '{{ "value": {}, "string": {} }}'.format(self._value(), json.dumps(self._description()))
+        return '{{ "value": {}, "string": {} }}'.format(
+            self._value(), json.dumps(self._description(), default=json_number)
+        )
 
     def __repr__(self) -> str:
         return self._description()
@@ -207,8 +215,8 @@ class ExtendedCommunityBase(Attribute):
 class ExtendedCommunity(ExtendedCommunityBase):
     """Extended Community attribute (code 16). 8 bytes."""
 
-    ID = Attribute.CODE.EXTENDED_COMMUNITY
-    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    ID: ClassVar = Attribute.CODE.EXTENDED_COMMUNITY
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
     registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]]] = {}
 
@@ -226,8 +234,8 @@ class ExtendedCommunity(ExtendedCommunityBase):
 class ExtendedCommunityIPv6(ExtendedCommunityBase):
     """IPv6 Extended Community attribute (code 25). 20 bytes."""
 
-    ID = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
-    FLAG = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    ID: ClassVar = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
     registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]]] = {}
 

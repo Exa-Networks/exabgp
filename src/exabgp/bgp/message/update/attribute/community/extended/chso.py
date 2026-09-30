@@ -19,7 +19,6 @@ from exabgp.util.types import Buffer
 # draft-fm-bess-service-chaining
 
 
-@ExtendedCommunity.register_subtype
 class ConsistentHashSortOrder(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x03
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x14
@@ -50,3 +49,6 @@ class ConsistentHashSortOrder(ExtendedCommunity):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> ConsistentHashSortOrder:
         return cls(data[:8])
+
+
+ExtendedCommunity.register_subtype(ConsistentHashSortOrder)

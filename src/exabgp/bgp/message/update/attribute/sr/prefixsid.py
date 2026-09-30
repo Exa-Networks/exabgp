@@ -38,10 +38,9 @@ SR_SINGLE_OCCURRENCE_TLVS: frozenset[int] = frozenset((SR_TLV_LABEL_INDEX, SR_TL
 T = TypeVar('T', bound='PrefixSid')
 
 
-@Attribute.register()
 class PrefixSid(Attribute):
-    ID: int = Attribute.CODE.BGP_PREFIX_SID
-    FLAG: int = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
+    ID: ClassVar[int] = Attribute.CODE.BGP_PREFIX_SID
+    FLAG: ClassVar[int] = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
     TLV: ClassVar[int] = -1
     # RFC 8669 section 6: a BGP Prefix-SID attribute which cannot be processed MUST be
@@ -145,6 +144,9 @@ class PrefixSid(Attribute):
 
     def pack_attribute(self, negotiated: Negotiated) -> Buffer:
         return self._packed
+
+
+Attribute.register()(PrefixSid)
 
 
 class GenericSRId:

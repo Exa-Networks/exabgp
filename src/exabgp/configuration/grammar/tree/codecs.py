@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.neighbor.settings import NeighborSettings
 from exabgp.configuration.grammar.context import PrintContext
 from exabgp.configuration.grammar.render import STATEMENTS
@@ -111,7 +110,7 @@ class PolicyCodec(Codec):
     def resolve(self, values: Values, settings: NeighborSettings) -> None:
         hold_time = values.get('hold-time')
         if hold_time is not None:
-            settings.hold_time = HoldTime(hold_time)
+            settings.hold_time = int(hold_time)
         for keyword in POLICY:
             if values.get(keyword) is not None:
                 setattr(settings, keyword.replace('-', '_'), values[keyword])

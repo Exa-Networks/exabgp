@@ -253,7 +253,7 @@ class SRv6EndpointBehavior:
     Total: 8 octets
     """
 
-    SIZE = 8  # endpoint_behavior(2) + reserved(2) + lb(1) + ln(1) + fun(1) + arg(1)
+    SIZE: ClassVar[int] = 8  # endpoint_behavior(2) + reserved(2) + lb(1) + ln(1) + fun(1) + arg(1)
 
     def __init__(
         self,
@@ -1580,7 +1580,6 @@ def _unpack_segment_subsubtlvs(
     return weight, segments
 
 
-@SubTLV.register(128)
 class SegmentListSubTLV(SubTLV):
     """SR Policy Segment List Sub-TLV (type 128).
 
@@ -1663,3 +1662,6 @@ class SegmentListSubTLV(SubTLV):
         if weight is None:
             weight = WeightSubSubTLV(1)
         return cls(weight=weight, segments=segments)
+
+
+SubTLV.register(128)(SegmentListSubTLV)

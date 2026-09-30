@@ -101,8 +101,6 @@ PROTO_CODES: dict[int, str] = {
 T = TypeVar('T', bound='BGPLS')
 
 
-@NLRI.register(AFI.bgpls, SAFI.bgp_ls)
-@NLRI.register(AFI.bgpls, SAFI.bgp_ls_vpn)
 class BGPLS(NLRI):
     # BGPLS has no additional instance attributes beyond NLRI base class
     __slots__ = ()
@@ -215,7 +213,7 @@ class BGPLS(NLRI):
         return klass
 
     # [type(2)][length(2)][protocol-id(1)][identifier(8)] before the first TLV
-    DESCRIPTOR_OFFSET = 13
+    DESCRIPTOR_OFFSET: ClassVar[int] = 13
 
     @classmethod
     def check_length(cls, data: Buffer, minimum: int) -> None:
@@ -340,6 +338,10 @@ class BGPLS(NLRI):
     def _raw(self) -> str:
         # _packed includes 4-byte header
         return ''.join('{:02X}'.format(_) for _ in self._packed)
+
+
+NLRI.register(AFI.bgpls, SAFI.bgp_ls_vpn)(BGPLS)
+NLRI.register(AFI.bgpls, SAFI.bgp_ls)(BGPLS)
 
 
 class GenericBGPLS(BGPLS):

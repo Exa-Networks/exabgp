@@ -49,8 +49,9 @@ class Negotiated:
         """
         return cls(neighbor, direction)
 
-    def __init__(self, neighbor: 'Neighbor', direction: 'Direction') -> None:
-        self.neighbor: 'Neighbor' = neighbor
+    def __init__(self, neighbor: 'Neighbor | None', direction: 'Direction') -> None:
+        # None for UNSET only, which is no session: see the neighbor property
+        self._neighbor: 'Neighbor | None' = neighbor
         self.direction: 'Direction' = direction
 
         self.sent_open: 'Open' | None = None  # Open message
@@ -67,10 +68,10 @@ class Negotiated:
         self.msg_size: int = ExtendedMessage.INITIAL_SIZE
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
-        self.aigp: bool = neighbor.capability.aigp.is_enabled()
+        self.aigp: bool = neighbor.capability.aigp.is_enabled() if neighbor is not None else False
         self.role: RoleValue = RoleValue.NO_ROLE
         self.peer_role: RoleValue = RoleValue.NO_ROLE
-        self.role_otc: bool = neighbor.session.role_otc
+        self.role_otc: bool = neighbor.session.role_otc if neighbor is not None else False
         self.role_error: tuple[int, int, str] | None = None
 
         # The last attribute section this session parsed, and what it parsed to. What a
@@ -87,10 +88,23 @@ class Negotiated:
         self.multiple_labels: dict[FamilyTuple, int] = {}
         self.mismatch: list[tuple[str, FamilyTuple]] = []
 
+    @property
+    def neighbor(self) -> 'Neighbor':
+        if self._neighbor is None:
+            # UNSET had no neighbor attribute at all, and asking for it raised the same way
+            raise AttributeError('Negotiated.UNSET is not a session and has no neighbor')
+        return self._neighbor
+
+    @neighbor.setter
+    def neighbor(self, neighbor: 'Neighbor') -> None:
+        self._neighbor = neighbor
+
     @classmethod
     def _create_unset(cls) -> 'Negotiated':
         """Create an uninitialized sentinel instance for use when Negotiated is not needed."""
-        instance = object.__new__(cls)
+        from exabgp.bgp.message.direction import Direction
+
+        instance = cls(None, Direction.IN)
         instance.holdtime = HoldTime(0)
         instance.local_as = ASN(0)
         instance.peer_as = ASN(0)
@@ -139,7 +153,7 @@ class Negotiated:
         sent_capa = self.sent_open.capabilities
         recv_capa = self.received_open.capabilities
 
-        self.holdtime = HoldTime(min(self.sent_open.hold_time, self.received_open.hold_time))
+        self.holdtime = min(self.sent_open.hold_time, self.received_open.hold_time)
 
         self.addpath.setup(self.received_open, self.sent_open)
         self.asn4 = sent_capa.announced(Capability.CODE.FOUR_BYTES_ASN) and recv_capa.announced(
@@ -152,13 +166,13 @@ class Negotiated:
         self.local_as = self.sent_open.asn
         if self.local_as == AS_TRANS:
             # Our identity does not depend on whether the peer supports four-octet paths.
-            self.local_as = ASN(sent_capa[Capability.CODE.FOUR_BYTES_ASN])
+            self.local_as = sent_capa.four_octet_asn()
 
         self.peer_as = self.received_open.asn
         # RFC 6793 4.1: the capability's AS number is used "in lieu of" My Autonomous System,
         # with no condition on what that field holds: AS_TRANS or not, the capability rules
         if self.asn4:
-            self.peer_as = ASN(recv_capa[Capability.CODE.FOUR_BYTES_ASN])
+            self.peer_as = recv_capa.four_octet_asn()
         self._negotiate_role(sent_capa, recv_capa)
 
         self.families = []
@@ -235,8 +249,8 @@ class Negotiated:
             multisession_code = Capability.CODE.MULTISESSION if rfc_multisession else Capability.CODE.MULTISESSION_CISCO
             sent_ms = sent_capa[multisession_code]
             recv_ms = recv_capa[multisession_code]
-            sent_ms_capa: set[int] = set(sent_ms) if isinstance(sent_ms, MultiSession) else set()
-            recv_ms_capa: set[int] = set(recv_ms) if isinstance(recv_ms, MultiSession) else set()
+            sent_ms_capa: set[CapabilityCode] = set(sent_ms) if isinstance(sent_ms, MultiSession) else set()
+            recv_ms_capa: set[CapabilityCode] = set(recv_ms) if isinstance(recv_ms, MultiSession) else set()
 
             if not sent_ms_capa:
                 sent_ms_capa = {Capability.CODE.MULTIPROTOCOL}
@@ -351,7 +365,7 @@ class Negotiated:
         missing = [code for code in sent if code in required and code not in received]
         if not missing:
             return None
-        names = ', '.join(str(CapabilityCode(code)) for code in missing)
+        names = ', '.join(str(code) for code in missing)
         data = b''.join(sent.tlvs(code) for code in missing)
         return Notify(2, 7, f'the peer did not advertise the required capabilities: {names}', data=data)
 
@@ -495,13 +509,9 @@ class RequirePath:
         self._receive: dict[FamilyTuple, bool] = {}
 
     def setup(self, received_open: Any, sent_open: Any) -> None:  # Open messages
-        # A Dict always returning False
-        class FalseDict(dict[str, bool]):
-            def __getitem__(self, key: Any) -> bool:
-                return False
-
-        receive = received_open.capabilities.get(Capability.CODE.ADD_PATH, FalseDict())
-        send = sent_open.capabilities.get(Capability.CODE.ADD_PATH, FalseDict())
+        # a side which did not send ADD-PATH has no family: only keys() and get() are read
+        receive = received_open.capabilities.get(Capability.CODE.ADD_PATH, {})
+        send = sent_open.capabilities.get(Capability.CODE.ADD_PATH, {})
 
         # python 2.4 compatibility mean no simple union but using sets.Set
         union: list[FamilyTuple] = []

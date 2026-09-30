@@ -12,6 +12,7 @@ from typing import Callable, ClassVar, Protocol
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 
 class HasTLV(Protocol):
@@ -35,10 +36,9 @@ class HasTLV(Protocol):
 SRV6_CAPABILITIES_LEN = 4
 
 
-@LinkState.register_lsid(tlv=1038, json_key='srv6-capabilities', repr_name='SRv6 Capabilities')
 class Srv6Capabilities(BaseLS):
-    LEN = SRV6_CAPABILITIES_LEN
-    registered_subsubtlvs: dict[int, type] = dict()
+    LEN: ClassVar = SRV6_CAPABILITIES_LEN
+    registered_subsubtlvs: ClassVar[dict[int, type]] = dict()
 
     @property
     def flags(self) -> dict[str, int]:
@@ -91,4 +91,7 @@ class Srv6Capabilities(BaseLS):
         }
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return f'"{self.JSON}": {json.dumps(self.content, default=json_number)}'
+
+
+LinkState.register_lsid(tlv=1038, json_key='srv6-capabilities', repr_name='SRv6 Capabilities')(Srv6Capabilities)

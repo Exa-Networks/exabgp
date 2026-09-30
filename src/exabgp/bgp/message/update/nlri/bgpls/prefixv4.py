@@ -46,7 +46,6 @@ TLV_IP_REACHABILITY: int = 265  # IP Reachability Information TLV
 #     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-@BGPLS.register_bgpls
 class PREFIXv4(BGPLS):
     CODE: ClassVar[int] = 3
     NAME: ClassVar[str] = 'bgpls-prefix-v4'
@@ -222,4 +221,7 @@ class PREFIXv4(BGPLS):
             content += f', "nexthop": "{nexthop}"'
         return f'{{ {content} }}'
 
-    # pack_nlri inherited from BGPLS base class - returns self._packed directly
+
+BGPLS.register_bgpls(PREFIXv4)
+
+# pack_nlri inherited from BGPLS base class - returns self._packed directly

@@ -395,7 +395,7 @@ LABELLED_UNICAST = (AFI.ipv4, SAFI.nlri_mpls)
 
 def triple(count: int, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.nlri_mpls) -> bytes:
     """One <AFI, SAFI, Count> triple of the Multiple Labels Capability."""
-    return pack('!HBB', afi, safi, count)
+    return pack('!HBB', int(afi), int(safi), count)
 
 
 def capabilities(multiple_labels: bytes | None = None) -> Capabilities:
@@ -404,7 +404,7 @@ def capabilities(multiple_labels: bytes | None = None) -> Capabilities:
     `multiple_labels` is the value of a Multiple Labels Capability, or None for an OPEN
     which does not carry one.
     """
-    fields = [(MULTIPROTOCOL, pack('!HBB', AFI.ipv4, 0, SAFI.nlri_mpls))]
+    fields = [(MULTIPROTOCOL, pack('!HBB', int(AFI.ipv4), 0, int(SAFI.nlri_mpls)))]
     if multiple_labels is not None:
         fields.append((MULTIPLE_LABELS, multiple_labels))
     body = b''.join(bytes([code, len(value)]) + value for code, value in fields)

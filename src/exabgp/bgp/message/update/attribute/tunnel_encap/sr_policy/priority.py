@@ -19,7 +19,6 @@ from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
 from exabgp.util.types import Buffer
 
 
-@SubTLV.register(15)
 class PrioritySubTLV(SubTLV):
     """SR Policy Priority Sub-TLV."""
 
@@ -41,3 +40,6 @@ class PrioritySubTLV(SubTLV):
     def unpack(cls, data: Buffer) -> PrioritySubTLV:
         priority = data[0] if data else 0
         return cls(priority=priority)
+
+
+SubTLV.register(15)(PrioritySubTLV)

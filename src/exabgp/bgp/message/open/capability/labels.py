@@ -8,11 +8,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 from struct import pack
-from typing import cast
+from typing import cast, ClassVar
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode, CapabilityDict
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.util.types import Buffer
@@ -24,8 +25,7 @@ MULTIPLE_LABELS_MIN = 2
 MULTIPLE_LABELS_MAX = 255
 
 
-@Capability.register()
-class MultipleLabels(Capability, dict[FamilyTuple, int]):
+class MultipleLabels(CapabilityDict[FamilyTuple, int]):
     """The most labels a speaker can receive bound to one prefix, per family.
 
     Only the triples counting two labels or more are held: one with a Count of 0 or 1 is
@@ -33,9 +33,10 @@ class MultipleLabels(Capability, dict[FamilyTuple, int]):
     included.
     """
 
-    ID = Capability.CODE.MULTIPLE_LABELS
+    ID: ClassVar = Capability.CODE.MULTIPLE_LABELS
 
     def __init__(self, families: dict[FamilyTuple, int] | None = None) -> None:
+        super().__init__()
         self._seen: set[FamilyTuple] = set()
         for family, count in (families or {}).items():
             assert MULTIPLE_LABELS_MIN <= count <= MULTIPLE_LABELS_MAX, 'RFC 8277 2.1: we never send 0 or 1'
@@ -55,7 +56,7 @@ class MultipleLabels(Capability, dict[FamilyTuple, int]):
 
     @classmethod
     def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:
-        assert instance.ID == Capability.CODE.MULTIPLE_LABELS, 'registered for code 8 only'
+        assert instance.code() == Capability.CODE.MULTIPLE_LABELS, 'registered for code 8 only'
         # the registry builds the class registered for code 8, which is this one
         labels = cast(MultipleLabels, instance)
         # RFC 8277 2.1: a length which is not a multiple of four is malformed
@@ -74,3 +75,6 @@ class MultipleLabels(Capability, dict[FamilyTuple, int]):
                 continue
             labels[family] = count
         return labels
+
+
+Capability.register()(MultipleLabels)

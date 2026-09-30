@@ -27,7 +27,6 @@ from exabgp.util.types import Buffer
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-@ExtendedCommunity.register_subtype
 class MUPExtendedCommunity(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x0C
     # Direct-Type Segment Identifier type
@@ -63,6 +62,11 @@ class MUPExtendedCommunity(ExtendedCommunity):
             and ExtendedCommunity.__eq__(self, other)
         )
 
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
     def __hash__(self) -> int:
         return hash((self.sgid2, self.sgid4))
 
@@ -72,3 +76,6 @@ class MUPExtendedCommunity(ExtendedCommunity):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> MUPExtendedCommunity:
         return cls(data[:8])
+
+
+ExtendedCommunity.register_subtype(MUPExtendedCommunity)

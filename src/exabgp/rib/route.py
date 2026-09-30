@@ -39,7 +39,7 @@ class Route:
 
     @staticmethod
     def family_prefix(family: FamilyTuple) -> bytes:
-        return b'%02x%02x' % family
+        return b'%02x%02x' % (family[0].value, family[1].value)
 
     def __init__(
         self,
@@ -108,7 +108,8 @@ class Route:
 
     def index(self) -> bytes:
         if not self._Route__index:
-            self._Route__index = b'%02x%02x' % self.nlri.family().afi_safi() + self.nlri.index()
+            afi, safi = self.nlri.family().afi_safi()
+            self._Route__index = b'%02x%02x' % (afi.value, safi.value) + self.nlri.index()
         return self._Route__index
 
     def __eq__(self, other: object) -> bool:

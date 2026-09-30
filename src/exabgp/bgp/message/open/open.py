@@ -1,4 +1,4 @@
-"""__init__.py
+"""open.py
 
 Created by Thomas Mangin on 2009-11-05.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -7,8 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 from struct import pack, unpack
-from typing import TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -64,15 +65,14 @@ __all__ = [
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-@Message.register
 class Open(Message):
-    ID = Message.CODE.OPEN
+    ID: ClassVar = Message.CODE.OPEN
 
     # RFC 4271 4.2: version(1) + my AS(2) + hold time(2) + identifier(4), then the optional
     # parameters length(1) which is part of the fixed portion; the parameters follow it
-    FIXED_SIZE = 10
-    PARAMETERS_OFFSET = 9
-    LENGTH_MAX = Message.STANDARD_MAX  # RFC 8654 3: an OPEN is never extended
+    FIXED_SIZE: ClassVar[int] = 10
+    PARAMETERS_OFFSET: ClassVar[int] = 9
+    LENGTH_MAX: ClassVar = Message.STANDARD_MAX  # RFC 8654 3: an OPEN is never extended
 
     def __init__(self, packed: Buffer) -> None:
         if len(packed) < self.FIXED_SIZE:
@@ -157,3 +157,6 @@ class Open(Message):
         # decoded here, at the boundary, so a malformed parameter is refused with the OPEN
         received._capabilities = Capabilities.unpack(data[cls.PARAMETERS_OFFSET :])
         return received
+
+
+Message.register(Open)

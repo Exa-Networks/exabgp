@@ -317,7 +317,7 @@ def test_evpn_fuzz_never_raises_a_raw_exception() -> None:
 def test_bgpls_short_nlri_raises_notify(code: int, length: int) -> None:
     """BGP-LS decoders used to raise bare Exception, RuntimeError, struct.error
     or AssertionError on anything malformed."""
-    data = pack('!HH', code, length) + bytes(length)
+    data = pack('!HH', int(code), length) + bytes(length)
     unpack_or_notify(BGPLS.unpack_nlri, AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None, None)
 
 
@@ -325,7 +325,7 @@ def test_bgpls_fuzz_never_raises_a_raw_exception() -> None:
     for code in (1, 2, 3, 4, 6):
         for length in range(0, 60):
             for _ in range(5):
-                data = pack('!HH', code, length) + os.urandom(length)
+                data = pack('!HH', int(code), length) + os.urandom(length)
                 unpack_or_notify(BGPLS.unpack_nlri, AFI.bgpls, SAFI.bgp_ls, data, Action.ANNOUNCE, None, None)
 
 

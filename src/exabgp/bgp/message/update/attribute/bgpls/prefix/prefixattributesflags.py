@@ -6,6 +6,8 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
@@ -21,10 +23,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 # 	RFC 7794 IPv4/IPv6 Extended Reachability Attribute Flags
 
 
-@LinkState.register_lsid(tlv=1170, json_key='sr-prefix-attribute-flags', repr_name='Prefix Attr Flags')
 class PrefixAttributesFlags(FlagLS):
-    FLAGS = ['X', 'R', 'N', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
-    LEN = 1
+    FLAGS: ClassVar = ['X', 'R', 'N', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
+    LEN: ClassVar[int] = 1
 
     @classmethod
     def make_prefix_attributes_flags(cls, flags: dict[str, int]) -> PrefixAttributesFlags:
@@ -38,3 +39,8 @@ class PrefixAttributesFlags(FlagLS):
         """
         flags_byte = (flags.get('X', 0) << 7) | (flags.get('R', 0) << 6) | (flags.get('N', 0) << 5)
         return cls(bytes([flags_byte]))
+
+
+LinkState.register_lsid(tlv=1170, json_key='sr-prefix-attribute-flags', repr_name='Prefix Attr Flags')(
+    PrefixAttributesFlags
+)

@@ -9,9 +9,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+
 from struct import pack
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Generator, cast
+from typing import cast, ClassVar, Generator, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -47,8 +48,8 @@ class NLRICollection:
     is the canonical representation and semantic values are derived lazily.
     """
 
-    _MODE_PACKED = 1  # Created from wire bytes (unpack path)
-    _MODE_NLRIS = 2  # Created from NLRI list (semantic path)
+    _MODE_PACKED: ClassVar[int] = 1  # Created from wire bytes (unpack path)
+    _MODE_NLRIS: ClassVar[int] = 2  # Created from NLRI list (semantic path)
 
     def __init__(self, packed: Buffer, afi: AFI, safi: SAFI, addpath: bool, action: Action = Action.UNSET) -> None:
         """Create NLRICollection from wire-format bytes.
@@ -170,9 +171,9 @@ class MPNLRICollection:
     """
 
     # Attribute flags and IDs for wire format generation
-    _FLAG_OPTIONAL = 0x80
-    _CODE_MP_REACH_NLRI = 14
-    _CODE_MP_UNREACH_NLRI = 15
+    _FLAG_OPTIONAL: ClassVar[int] = 0x80
+    _CODE_MP_REACH_NLRI: ClassVar[int] = 14
+    _CODE_MP_UNREACH_NLRI: ClassVar[int] = 15
 
     def __init__(
         self,

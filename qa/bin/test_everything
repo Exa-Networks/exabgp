@@ -506,6 +506,8 @@ if _test_root.is_dir():
 # So the directory is the source of truth and the exclusions are explicit.  The reason
 # matters more than the name; an entry nobody can justify is a gate somebody demoted.
 NOT_A_GATE = {
+    'benchmark_codec': 'measures, and a timing number is not a pass or a fail',
+    'build_mypyc': 'compiles the mypyc tree, becomes a gate in plan/wip-mypyc.md phase 6',
     'check_coverage': 'reports coverage, does not fail on it',
     'check_perf': 'measures, and a timing number is not a pass or a fail',
     'cover': 'wrapper around check_coverage',

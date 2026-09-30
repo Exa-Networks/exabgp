@@ -15,7 +15,7 @@ from exabgp.util.types import Buffer
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.bgp.message.message import Message
+from exabgp.bgp.message.message import Message, MessageCode
 from exabgp.util import hexbytes, hexstring
 
 # ================================================================== Notification
@@ -28,7 +28,6 @@ from exabgp.util import hexbytes, hexstring
 # +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 
-@Message.register
 class Notification(Message):
     """The NOTIFICATION message, whichever way it goes: a message, never an exception.
 
@@ -36,7 +35,7 @@ class Notification(Message):
     raises when a peer sent one.  Neither is a Notification: each holds one.
     """
 
-    ID: ClassVar[int] = Message.CODE.NOTIFICATION
+    ID: ClassVar[MessageCode] = Message.CODE.NOTIFICATION
 
     # RFC 9003 - Shutdown Communication, carried by these two Cease subcodes only
     SHUTDOWN_SUBCODES: ClassVar[tuple[tuple[int, int], ...]] = ((6, 2), (6, 4))
@@ -219,6 +218,9 @@ class Notification(Message):
         if len(data) < cls.FIXED_SIZE:
             return cls(bytes(cls.FIXED_SIZE))
         return cls(data)
+
+
+Message.register(Notification)
 
 
 # ========================================================== NotificationReceived

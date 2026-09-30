@@ -39,9 +39,9 @@ ROUTE_REFRESH = Capability.CODE.ROUTE_REFRESH
 EXTENDED_MESSAGE = Capability.CODE.EXTENDED_MESSAGE
 
 # What our OPEN carries for each, as <code, length, value>: local-as 65001 is 0x0000fde9
-ASN4_TLV = bytes([ASN4, 4]) + (65001).to_bytes(4, 'big')
-ROUTE_REFRESH_TLV = bytes([ROUTE_REFRESH, 0])
-EXTENDED_MESSAGE_TLV = bytes([EXTENDED_MESSAGE, 0])
+ASN4_TLV = bytes([int(ASN4), 4]) + (65001).to_bytes(4, 'big')
+ROUTE_REFRESH_TLV = bytes([int(ROUTE_REFRESH), 0])
+EXTENDED_MESSAGE_TLV = bytes([int(EXTENDED_MESSAGE), 0])
 
 
 @pytest.fixture(autouse=True)
@@ -81,7 +81,7 @@ def negotiate(neighbor: Neighbor, withheld: set[int]) -> Negotiated:
             received[code] = capability
     if ASN4 in received:
         # the peer's OPEN, not a copy of ours: RFC 6793 4.1 reads its AS from the capability
-        received[ASN4] = ASN4Capability(neighbor.session.peer_as)
+        received[ASN4] = ASN4Capability(neighbor.session.peer_as.value)
     negotiated = Negotiated(neighbor, Direction.OUT)
     negotiated.sent(Open.make_open(Version(4), neighbor.session.local_as, HoldTime(90), RouterID('192.0.2.2'), sent))
     negotiated.received(
@@ -205,7 +205,7 @@ def test_a_capability_enabled_but_not_required_is_not_grounds_for_refusal() -> N
 
 
 ENHANCED_ROUTE_REFRESH = Capability.CODE.ENHANCED_ROUTE_REFRESH
-ENHANCED_ROUTE_REFRESH_TLV = bytes([ENHANCED_ROUTE_REFRESH, 0])
+ENHANCED_ROUTE_REFRESH_TLV = bytes([int(ENHANCED_ROUTE_REFRESH), 0])
 
 
 def test_route_refresh_require_asks_for_both_capabilities() -> None:

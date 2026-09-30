@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.update.collection import UpdateCollection
 
-from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update.update import Update
 from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
@@ -23,6 +23,37 @@ from exabgp.protocol.ip import IP
 
 # =================================================================== End-Of-RIB
 # RFC 4724 2: an UPDATE, the one a speaker sends once it has sent its whole RIB for a family
+
+
+class EORNLRI(NLRI):
+    """What the encoders show for an End-of-RIB: the family, and nothing else."""
+
+    IS_EOR: ClassVar[bool] = True  # Override class variable
+
+    nexthop: ClassVar = IP.NoNextHop
+
+    def __init__(self, afi: AFI, safi: SAFI) -> None:
+        NLRI.__init__(self, afi, safi)
+
+    def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
+        return EOR.make_eor(self.afi, self.safi).payload
+
+    def __repr__(self) -> str:
+        return self.extensive()
+
+    def extensive(self) -> str:
+        return 'eor %ld/%ld (%s %s)' % (int(self.afi), int(self.safi), self.afi, self.safi)
+
+    def json(self, announced: bool = True, compact: bool = False) -> str:
+        # every other NLRI renders an object because the caller puts the result
+        # in a list, so a bare key and value here made the whole line unparseable
+        return '{{ "eor": {{ "afi" : "{}", "safi" : "{}" }} }}'.format(self.afi, self.safi)
+
+    def __len__(self) -> int:
+        if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
+            # May not have been the size read on the wire if MP was used for IPv4 unicast
+            return len(EOR.IPV4_UNICAST)
+        return EOR.MP_SIZE
 
 
 class EOR(Update):
@@ -41,35 +72,7 @@ class EOR(Update):
     MP_PREFIX: ClassVar[bytes] = b'\x00\x00\x00\x07\x90\x0f\x00\x03'
     MP_SIZE: ClassVar[int] = len(MP_PREFIX) + 3
 
-    class EOR_NLRI(NLRI):
-        """What the encoders show for an End-of-RIB: the family, and nothing else."""
-
-        IS_EOR: ClassVar[bool] = True  # Override class variable
-
-        nexthop = IP.NoNextHop
-
-        def __init__(self, afi: AFI, safi: SAFI) -> None:
-            NLRI.__init__(self, afi, safi)
-
-        def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
-            return EOR.make_eor(self.afi, self.safi).payload
-
-        def __repr__(self) -> str:
-            return self.extensive()
-
-        def extensive(self) -> str:
-            return 'eor %ld/%ld (%s %s)' % (int(self.afi), int(self.safi), self.afi, self.safi)
-
-        def json(self, announced: bool = True, compact: bool = False) -> str:
-            # every other NLRI renders an object because the caller puts the result
-            # in a list, so a bare key and value here made the whole line unparseable
-            return '{{ "eor": {{ "afi" : "{}", "safi" : "{}" }} }}'.format(self.afi, self.safi)
-
-        def __len__(self) -> int:
-            if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:
-                # May not have been the size read on the wire if MP was used for IPv4 unicast
-                return len(EOR.IPV4_UNICAST)
-            return EOR.MP_SIZE
+    EOR_NLRI: ClassVar[type[EORNLRI]] = EORNLRI
 
     def __init__(self, packed: Buffer) -> None:
         # what make_eor built, or what Update.unpack_message recognised: never unchecked bytes

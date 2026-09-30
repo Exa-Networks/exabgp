@@ -50,7 +50,7 @@ def decode(data: bytes) -> Attribute:
 
 
 def one_tlv(code: int, width: int = 4) -> bytes:
-    return pack('!HH', code, width) + bytes(width)
+    return pack('!HH', int(code), width) + bytes(width)
 
 
 def raising_decoder(monkeypatch: pytest.MonkeyPatch, exception: Exception) -> int:

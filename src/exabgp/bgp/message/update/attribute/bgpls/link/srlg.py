@@ -31,7 +31,6 @@ from exabgp.util.types import Buffer
 #     https://tools.ietf.org/html/rfc7752#section-3.3.2.5 Shared Risk Link Group TLV
 
 
-@LinkState.register_lsid(tlv=1096, json_key='shared-risk-link-groups', repr_name='link SRLG values')
 class Srlg(BaseLS):
     @property
     def content(self) -> list[int]:
@@ -49,3 +48,6 @@ class Srlg(BaseLS):
         if len(data) % 4:
             raise Notify(3, 5, f'SRLG TLV is {len(data)} octets, not a multiple of 4')
         return cls(data)
+
+
+LinkState.register_lsid(tlv=1096, json_key='shared-risk-link-groups', repr_name='link SRLG values')(Srlg)

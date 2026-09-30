@@ -309,8 +309,8 @@ def make_test_neighbor() -> Neighbor:
     neighbor.peer_address = IPv4.from_string('127.0.0.1')
     neighbor.host_name = 'localhost'
     neighbor.domain_name = 'localdomain'
-    neighbor.peer_as = ASN('65500')
-    neighbor.local_as = ASN('65500')
+    neighbor.peer_as = ASN(65500)
+    neighbor.local_as = ASN(65500)
     neighbor.hold_time = HoldTime(180)
     # Add all known families
     for family in NLRI.known_families():
@@ -353,14 +353,14 @@ class TestUpdateDecoding(unittest.TestCase):
 
             o1 = Open.make_open(
                 Version(4),
-                ASN(neighbor.local_as),
+                neighbor.local_as,
                 HoldTime(180),
                 RouterID(routerid_1),
                 capa,
             )
             o2 = Open.make_open(
                 Version(4),
-                ASN(neighbor.peer_as),
+                neighbor.peer_as,
                 HoldTime(180),
                 RouterID(routerid_2),
                 capa,

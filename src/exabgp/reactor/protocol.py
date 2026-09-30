@@ -33,7 +33,7 @@ from exabgp.bgp.message import (
     Update,
 )
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open import ASN, RouterID, Version
+from exabgp.bgp.message.open import RouterID, Version
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotiated
 from exabgp.bgp.message.refresh import RouteRefresh
@@ -412,7 +412,7 @@ class Protocol:
         elif self.negotiated.received_open:
             local_as = self.negotiated.received_open.asn
             if local_as == AS_TRANS and Capability.CODE.FOUR_BYTES_ASN in self.negotiated.received_open.capabilities:
-                local_as = ASN(self.negotiated.received_open.capabilities[Capability.CODE.FOUR_BYTES_ASN])
+                local_as = self.negotiated.received_open.capabilities.four_octet_asn()
         else:
             raise RuntimeError('no ASN available for the OPEN message')
 

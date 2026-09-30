@@ -162,7 +162,7 @@ def test_bgpls_tlv_decoders_only_raise_notify(code: int, payload: bytes) -> None
     """
     klass = Attribute.klass_by_id(Attribute.CODE.BGP_LS)
     assert klass is not None
-    data = struct.pack('!HH', code, len(payload)) + payload
+    data = struct.pack('!HH', int(code), len(payload)) + payload
     try:
         decoded = klass.unpack_attribute(data, Negotiated.UNSET)
     except Notify:
@@ -178,7 +178,7 @@ def test_bgpls_tlv_text_cannot_escape_its_json_string(code: int, payload: str) -
     klass = Attribute.klass_by_id(Attribute.CODE.BGP_LS)
     assert klass is not None
     encoded = payload.encode('utf-8')
-    data = struct.pack('!HH', code, len(encoded)) + encoded
+    data = struct.pack('!HH', int(code), len(encoded)) + encoded
     try:
         decoded = klass.unpack_attribute(data, Negotiated.UNSET)
     except Notify:

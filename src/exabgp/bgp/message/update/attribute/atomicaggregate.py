@@ -7,7 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+
+from typing import ClassVar, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -20,13 +21,12 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute
 #
 
 
-@Attribute.register()
 class AtomicAggregate(Attribute):
-    ID = Attribute.CODE.ATOMIC_AGGREGATE
-    FLAG = Attribute.Flag.TRANSITIVE
-    CACHING = True
-    DISCARD = True
-    VALID_ZERO = True
+    ID: ClassVar = Attribute.CODE.ATOMIC_AGGREGATE
+    FLAG: ClassVar = Attribute.Flag.TRANSITIVE
+    CACHING: ClassVar[bool] = True
+    DISCARD: ClassVar[bool] = True
+    VALID_ZERO: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize AtomicAggregate from packed wire-format bytes.
@@ -95,6 +95,9 @@ class AtomicAggregate(Attribute):
     def setCache(cls) -> None:
         # There can only be one, build it now :)
         cls.cache[Attribute.CODE.ATOMIC_AGGREGATE][b''] = cls.make_atomic_aggregate()
+
+
+Attribute.register()(AtomicAggregate)
 
 
 AtomicAggregate.setCache()

@@ -7,10 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from struct import pack
 
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
-from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityList
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log
@@ -20,9 +22,8 @@ from exabgp.util.types import Buffer
 #
 
 
-@Capability.register()
-class MultiProtocol(Capability, list[FamilyTuple]):
-    ID = Capability.CODE.MULTIPROTOCOL
+class MultiProtocol(CapabilityList[FamilyTuple]):
+    ID: ClassVar = Capability.CODE.MULTIPROTOCOL
 
     def __str__(self) -> str:
         families = ','.join([f'{afi!s} {safi!s}' for (afi, safi) in self])
@@ -35,7 +36,7 @@ class MultiProtocol(Capability, list[FamilyTuple]):
     def extract_capability_bytes(self) -> list[bytes]:
         rs: list[bytes] = []
         for v in self:
-            rs.append(pack('!H', v[0]) + pack('!H', v[1]))
+            rs.append(pack('!H', v[0].value) + pack('!H', v[1].value))
         return rs
 
     @classmethod
@@ -55,3 +56,6 @@ class MultiProtocol(Capability, list[FamilyTuple]):
         else:
             instance.append((afi, safi))
         return instance
+
+
+Capability.register()(MultiProtocol)

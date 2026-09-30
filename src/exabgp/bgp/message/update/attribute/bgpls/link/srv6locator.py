@@ -6,6 +6,8 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import json
 from struct import unpack
 
@@ -13,6 +15,7 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 # Minimum data length for SRv6 Locator TLV (RFC 9514 Section 5.1)
 # Flags (1) + Algorithm (1) + Reserved (2) + Metric (4) = 8 bytes
@@ -34,12 +37,11 @@ SRV6_LOCATOR_MIN_LENGTH = 8
 #                      Figure 4: SRv6 Locator TLV Format
 
 
-@LinkState.register_lsid(tlv=1162, json_key='srv6-locators', repr_name='SRv6 Locators')
 class Srv6Locator(FlagLS):
     # RFC 9514 7.1: a node may advertise a locator per algorithm
-    MERGE = True
-    FLAGS = ['D'] + ['RSV' for _ in range(7)]
-    registered_subsubtlvs: dict[int, type] = dict()
+    MERGE: ClassVar[bool] = True
+    FLAGS: ClassVar = ['D'] + ['RSV' for _ in range(7)]
+    registered_subsubtlvs: ClassVar[dict[int, type]] = dict()
 
     # flags property inherited from FlagLS - unpacks from _packed[0:1]
 
@@ -98,4 +100,7 @@ class Srv6Locator(FlagLS):
         }
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps([self.content])}'
+        return f'"{self.JSON}": {json.dumps([self.content], default=json_number)}'
+
+
+LinkState.register_lsid(tlv=1162, json_key='srv6-locators', repr_name='SRv6 Locators')(Srv6Locator)

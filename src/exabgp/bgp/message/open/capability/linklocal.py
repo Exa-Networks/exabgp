@@ -9,13 +9,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.logger import log, lazymsg
 from exabgp.util.types import Buffer
 
 
-@Capability.register()
 class LinkLocalNextHop(Capability):
     """Link-Local Next Hop Capability (Code 77).
 
@@ -26,7 +27,7 @@ class LinkLocalNextHop(Capability):
     Capability has no payload (length 0).
     """
 
-    ID = Capability.CODE.LINK_LOCAL_NEXTHOP
+    ID: ClassVar = Capability.CODE.LINK_LOCAL_NEXTHOP
     _seen: bool = False
 
     def __str__(self) -> str:
@@ -49,7 +50,7 @@ class LinkLocalNextHop(Capability):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LinkLocalNextHop):
             return False
-        return self.ID == other.ID
+        return self.code() == other.code()
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -65,3 +66,6 @@ class LinkLocalNextHop(Capability):
 
     def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing LinkLocalNextHop for ordering does not make sense')
+
+
+Capability.register()(LinkLocalNextHop)

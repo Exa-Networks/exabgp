@@ -40,14 +40,14 @@ MESSAGES = 'routes'  # legacy: the section keeps its messages as its routes
 
 
 def _afi(word: str) -> AFI:
-    afi = AFI.value(word)
+    afi = AFI.from_name(word)
     if afi is None:
         raise ValueError('invalid operational value for afi')
     return afi
 
 
 def _safi(word: str) -> SAFI:
-    safi = SAFI.value(word)
+    safi = SAFI.from_name(word)
     if safi is None:
         raise ValueError('invalid operational value for safi')
     return safi

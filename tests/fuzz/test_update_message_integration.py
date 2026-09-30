@@ -48,7 +48,7 @@ def mock_logger() -> Any:
 
     # Also mock log to avoid other issues
     with (
-        patch('exabgp.bgp.message.update.log') as mock_log,
+        patch('exabgp.bgp.message.update.update.log') as mock_log,
         patch('exabgp.bgp.message.update.nlri.nlri.log') as mock_nlri_log,
         patch('exabgp.bgp.message.update.attribute.collection.log') as mock_attr_log,
     ):

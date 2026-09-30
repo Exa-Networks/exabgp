@@ -26,6 +26,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.util.intvalue import IntValue
+
 from exabgp.util.types import Buffer
 from struct import pack
 from struct import unpack
@@ -49,14 +51,14 @@ _T = TypeVar('_T', bound='Operational')
 MAX_ADVISORY = 2048  # 2K
 
 
-class Type(int):
+class Type(IntValue):
     """Operational message type code (2-byte unsigned integer)."""
 
     def pack(self) -> bytes:
-        return pack('!H', self)
+        return pack('!H', self.value)
 
     def extract(self) -> list[bytes]:
-        return [pack('!H', self)]
+        return [pack('!H', self.value)]
 
     def __len__(self) -> int:
         return 2
@@ -64,14 +66,36 @@ class Type(int):
     def __str__(self) -> str:
         # a peer picks this code, and an unregistered one still has to be printable:
         # raising here put a NotImplementedError in the logger rather than in a test
-        return f'operational-type-{int(self)}'
+        return f'operational-type-{self.value}'
 
 
 # ================================================================== Operational
 #
 
 
-@Message.register
+class OperationalSubtype:
+    NOP: ClassVar[int] = 0x00  # Not defined by the RFC
+    # ADVISE
+    ADM: ClassVar[int] = 0x01  # 01: Advisory Demand Message
+    ASM: ClassVar[int] = 0x02  # 02: Advisory Static Message
+    # STATE
+    RPCQ: ClassVar[int] = 0x03  # 03: Reachable Prefix Count Request
+    RPCP: ClassVar[int] = 0x04  # 04: Reachable Prefix Count Reply
+    APCQ: ClassVar[int] = 0x05  # 05: Adj-Rib-Out Prefix Count Request
+    APCP: ClassVar[int] = 0x06  # 06: Adj-Rib-Out Prefix Count Reply
+    LPCQ: ClassVar[int] = 0x07  # 07: BGP Loc-Rib Prefix Count Request
+    LPCP: ClassVar[int] = 0x08  # 08: BGP Loc-Rib Prefix Count Reply
+    SSQ: ClassVar[int] = 0x09  # 09: Simple State Request
+    # DUMP
+    DUP: ClassVar[int] = 0x0A  # 10: Dropped Update Prefixes
+    MUP: ClassVar[int] = 0x0B  # 11: Malformed Update Prefixes
+    MUD: ClassVar[int] = 0x0C  # 12: Malformed Update Dump
+    SSP: ClassVar[int] = 0x0D  # 13: Simple State Response
+    # CONTROL
+    MP: ClassVar[int] = 0xFFFE  # 65534: Max Permitted
+    NS: ClassVar[int] = 0xFFFF  # 65535: Not Satisfied
+
+
 class Operational(Message):
     """Base class for BGP Operational messages.
 
@@ -81,33 +105,13 @@ class Operational(Message):
     Wire format: [type(2)][length(2)][payload...], all of it stored as the body.
     """
 
-    ID = Message.CODE.OPERATIONAL
-    FIXED_SIZE = 4  # the operational header: a two octet type and a two octet length
+    ID: ClassVar = Message.CODE.OPERATIONAL
+    FIXED_SIZE: ClassVar[int] = 4  # the operational header: a two octet type and a two octet length
 
     registered_operational: ClassVar[dict[int, TypingType['Operational']]] = dict()
 
     # the operational types, draft-ietf-idr-operational-message
-    class SUBTYPE:
-        NOP = 0x00  # Not defined by the RFC
-        # ADVISE
-        ADM = 0x01  # 01: Advisory Demand Message
-        ASM = 0x02  # 02: Advisory Static Message
-        # STATE
-        RPCQ = 0x03  # 03: Reachable Prefix Count Request
-        RPCP = 0x04  # 04: Reachable Prefix Count Reply
-        APCQ = 0x05  # 05: Adj-Rib-Out Prefix Count Request
-        APCP = 0x06  # 06: Adj-Rib-Out Prefix Count Reply
-        LPCQ = 0x07  # 07: BGP Loc-Rib Prefix Count Request
-        LPCP = 0x08  # 08: BGP Loc-Rib Prefix Count Reply
-        SSQ = 0x09  # 09: Simple State Request
-        # DUMP
-        DUP = 0x0A  # 10: Dropped Update Prefixes
-        MUP = 0x0B  # 11: Malformed Update Prefixes
-        MUD = 0x0C  # 12: Malformed Update Dump
-        SSP = 0x0D  # 13: Simple State Response
-        # CONTROL
-        MP = 0xFFFE  # 65534: Max Permitted
-        NS = 0xFFFF  # 65535: Not Satisfied
+    SUBTYPE: ClassVar[type[OperationalSubtype]] = OperationalSubtype
 
     # what a class is: its type code, its name and how its payload is laid out.  Only a
     # message which is sent has a NAME: a class without one is the layout its group shares
@@ -183,7 +187,7 @@ class Operational(Message):
             )
         body = data[: length + cls.FIXED_SIZE]
 
-        klass = cls.registered_operational.get(what)
+        klass = cls.registered_operational.get(what.value)
         if klass is None:
             # never write to stdout from a decoder: in daemon mode that is the pipe
             # feeding the API subprocesses, and this would be a line they cannot parse
@@ -198,7 +202,7 @@ class Operational(Message):
 
         # every read the class makes is from bytes the peer chose, so their size is checked first
         needed, holds = sizes
-        cls._check_size(body, needed, what, holds)
+        cls._check_size(body, needed, what.value, holds)
         return klass(body)
 
     @staticmethod
@@ -209,6 +213,9 @@ class Operational(Message):
                 0,
                 f'operational message {int(what)} needs {needed} bytes to hold {holds}, got {len(data)}',
             )
+
+
+Message.register(Operational)
 
 
 # ============================================================ UnknownOperational
@@ -251,7 +258,7 @@ class OperationalFamily(Operational):
 
     @staticmethod
     def pack_family(afi: int | AFI, safi: int | SAFI) -> bytes:
-        return AFI.from_int(afi).pack_afi() + SAFI.from_int(safi).pack_safi()
+        return pack('!HB', int(afi), int(safi))
 
     @property
     def afi(self) -> AFI:
@@ -338,65 +345,116 @@ class SequencedOperationalFamily(OperationalFamily):
             routerid = negotiated.sent_open.router_id
         if sequence is None:
             sequence = self.next_sequence(routerid)
-        return self.pack_sequenced(self.what, self.afi, self.safi, routerid, sequence, bytes(self.data))
+        return self.pack_sequenced(self.what.value, self.afi, self.safi, routerid, sequence, bytes(self.data))
 
 
 # =========================================================================== NS
+
+
+class NSBase(OperationalFamily):
+    SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.NS
+    IS_FAULT: ClassVar[bool] = True
+    ERROR_SUBCODE: ClassVar[bytes]
+
+    @classmethod
+    def make_ns(cls, afi: int | AFI, safi: int | SAFI, sequence: Buffer) -> 'NSBase':
+        payload = cls.pack_family(afi, safi) + bytes(sequence) + cls.ERROR_SUBCODE
+        return cls(cls.pack_operational(cls.SUBTYPE_ID, payload))
+
+    def extensive(self) -> str:
+        return f'operational NS {self.NAME} {self.afi}/{self.safi}'
+
+
+class NSMalformed(NSBase):
+    NAME: ClassVar[str] = 'NS malformed'
+    ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x01'  # pack('!H',MALFORMED)
+
+
+class NSUnsupported(NSBase):
+    NAME: ClassVar[str] = 'NS unsupported'
+    ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x02'  # pack('!H',UNSUPPORTED)
+
+
+class NSMaximum(NSBase):
+    NAME: ClassVar[str] = 'NS maximum'
+    ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x03'  # pack('!H',MAXIMUM)
+
+
+class NSProhibited(NSBase):
+    NAME: ClassVar[str] = 'NS prohibited'
+    ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x04'  # pack('!H',PROHIBITED)
+
+
+class NSBusy(NSBase):
+    NAME: ClassVar[str] = 'NS busy'
+    ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x05'  # pack('!H',BUSY)
+
+
+class NSNotFound(NSBase):
+    NAME: ClassVar[str] = 'NS notfound'
+    ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x06'  # pack('!H',NOTFOUND)
 
 
 class NS:
     """Not Satisfied (NS) error response codes.
 
     Sent when an operational request cannot be fulfilled.
-    Each nested class represents a specific error condition.
+    Each class above (NSMalformed, NSBusy, ...) is one error condition, named here too.
     """
 
-    MALFORMED = 0x01  # Request TLV Malformed
-    UNSUPPORTED = 0x02  # TLV Unsupported for this neighbor
-    MAXIMUM = 0x03  # Max query frequency exceeded
-    PROHIBITED = 0x04  # Administratively prohibited
-    BUSY = 0x05  # Busy
-    NOTFOUND = 0x06  # Not Found
+    MALFORMED: ClassVar[int] = 0x01  # Request TLV Malformed
+    UNSUPPORTED: ClassVar[int] = 0x02  # TLV Unsupported for this neighbor
+    MAXIMUM: ClassVar[int] = 0x03  # Max query frequency exceeded
+    PROHIBITED: ClassVar[int] = 0x04  # Administratively prohibited
+    BUSY: ClassVar[int] = 0x05  # Busy
+    NOTFOUND: ClassVar[int] = 0x06  # Not Found
 
-    class NS(OperationalFamily):
-        SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.NS
-        IS_FAULT: ClassVar[bool] = True
-        ERROR_SUBCODE: ClassVar[bytes]
-
-        @classmethod
-        def make_ns(cls, afi: int | AFI, safi: int | SAFI, sequence: Buffer) -> 'NS.NS':
-            payload = cls.pack_family(afi, safi) + bytes(sequence) + cls.ERROR_SUBCODE
-            return cls(cls.pack_operational(cls.SUBTYPE_ID, payload))
-
-        def extensive(self) -> str:
-            return f'operational NS {self.NAME} {self.afi}/{self.safi}'
-
-    class Malformed(NS):
-        NAME: ClassVar[str] = 'NS malformed'
-        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x01'  # pack('!H',MALFORMED)
-
-    class Unsupported(NS):
-        NAME: ClassVar[str] = 'NS unsupported'
-        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x02'  # pack('!H',UNSUPPORTED)
-
-    class Maximum(NS):
-        NAME: ClassVar[str] = 'NS maximum'
-        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x03'  # pack('!H',MAXIMUM)
-
-    class Prohibited(NS):
-        NAME: ClassVar[str] = 'NS prohibited'
-        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x04'  # pack('!H',PROHIBITED)
-
-    class Busy(NS):
-        NAME: ClassVar[str] = 'NS busy'
-        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x05'  # pack('!H',BUSY)
-
-    class NotFound(NS):
-        NAME: ClassVar[str] = 'NS notfound'
-        ERROR_SUBCODE: ClassVar[bytes] = b'\x00\x06'  # pack('!H',NOTFOUND)
+    NS: ClassVar[type[NSBase]] = NSBase
+    Malformed: ClassVar[type[NSMalformed]] = NSMalformed
+    Unsupported: ClassVar[type[NSUnsupported]] = NSUnsupported
+    Maximum: ClassVar[type[NSMaximum]] = NSMaximum
+    Prohibited: ClassVar[type[NSProhibited]] = NSProhibited
+    Busy: ClassVar[type[NSBusy]] = NSBusy
+    NotFound: ClassVar[type[NSNotFound]] = NSNotFound
 
 
 # ===================================================================== Advisory
+
+
+class AdvisoryBase(OperationalFamily):
+    CATEGORY: ClassVar[str] = 'advisory'
+
+    @classmethod
+    def make_advisory(
+        cls, afi: int | AFI, safi: int | SAFI, advisory: str | bytes, routerid: RouterID | None = None
+    ) -> 'AdvisoryBase':
+        utf8 = advisory if isinstance(advisory, bytes) else advisory.encode('utf-8')
+        if len(utf8) > MAX_ADVISORY:
+            utf8 = utf8[: MAX_ADVISORY - 3] + b'...'
+        return cls(cls.pack_operational(cls.SUBTYPE_ID, cls.pack_family(afi, safi) + utf8))
+
+    @classmethod
+    def from_values(cls, values: dict[str, Any]) -> 'OperationalFamily':
+        return cls.make_advisory(values['afi'], values['safi'], values['advisory'], values.get('routerid'))
+
+    def extensive(self) -> str:
+        return f'operational {self.NAME} afi {self.afi} safi {self.safi} "{bytes(self.data).hex()}"'
+
+
+class AdvisoryADM(AdvisoryBase):
+    NAME: ClassVar[str] = 'ADM'
+    SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.ADM
+
+
+Operational.register_operational(AdvisoryADM)
+
+
+class AdvisoryASM(AdvisoryBase):
+    NAME: ClassVar[str] = 'ASM'
+    SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.ASM
+
+
+Operational.register_operational(AdvisoryASM)
 
 
 class Advisory:
@@ -406,37 +464,55 @@ class Advisory:
     ASM (Advisory Static Message): Persistent notification
     """
 
-    class Advisory(OperationalFamily):
-        CATEGORY: ClassVar[str] = 'advisory'
-
-        @classmethod
-        def make_advisory(
-            cls, afi: int | AFI, safi: int | SAFI, advisory: str | bytes, routerid: RouterID | None = None
-        ) -> 'Advisory.Advisory':
-            utf8 = advisory if isinstance(advisory, bytes) else advisory.encode('utf-8')
-            if len(utf8) > MAX_ADVISORY:
-                utf8 = utf8[: MAX_ADVISORY - 3] + b'...'
-            return cls(cls.pack_operational(cls.SUBTYPE_ID, cls.pack_family(afi, safi) + utf8))
-
-        @classmethod
-        def from_values(cls, values: dict[str, Any]) -> 'OperationalFamily':
-            return cls.make_advisory(values['afi'], values['safi'], values['advisory'], values.get('routerid'))
-
-        def extensive(self) -> str:
-            return f'operational {self.NAME} afi {self.afi} safi {self.safi} "{bytes(self.data).hex()}"'
-
-    @Operational.register_operational
-    class ADM(Advisory):
-        NAME: ClassVar[str] = 'ADM'
-        SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.ADM
-
-    @Operational.register_operational
-    class ASM(Advisory):
-        NAME: ClassVar[str] = 'ASM'
-        SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.ASM
+    Advisory: ClassVar[type[AdvisoryBase]] = AdvisoryBase
+    ADM: ClassVar[type[AdvisoryADM]] = AdvisoryADM
+    ASM: ClassVar[type[AdvisoryASM]] = AdvisoryASM
 
 
 # ======================================================================== Query
+
+
+class QueryBase(SequencedOperationalFamily):
+    CATEGORY: ClassVar[str] = 'query'
+
+    @classmethod
+    def make_query(
+        cls, afi: int | AFI, safi: int | SAFI, routerid: RouterID | None, sequence: int | None
+    ) -> 'QueryBase':
+        return cls(cls.pack_sequenced(cls.SUBTYPE_ID, afi, safi, routerid, sequence, b''))
+
+    @classmethod
+    def from_values(cls, values: dict[str, Any]) -> 'OperationalFamily':
+        return cls.make_query(values['afi'], values['safi'], values.get('routerid'), values['sequence'])
+
+    def extensive(self) -> str:
+        if self.routerid and self.sequence:
+            return f'operational {self.NAME} afi {self.afi} safi {self.safi} router-id {self.routerid} sequence {self.sequence}'
+        return f'operational {self.NAME} afi {self.afi} safi {self.safi}'
+
+
+class QueryRPCQ(QueryBase):
+    NAME: ClassVar[str] = 'RPCQ'
+    SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.RPCQ
+
+
+Operational.register_operational(QueryRPCQ)
+
+
+class QueryAPCQ(QueryBase):
+    NAME: ClassVar[str] = 'APCQ'
+    SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.APCQ
+
+
+Operational.register_operational(QueryAPCQ)
+
+
+class QueryLPCQ(QueryBase):
+    NAME: ClassVar[str] = 'LPCQ'
+    SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.LPCQ
+
+
+Operational.register_operational(QueryLPCQ)
 
 
 class Query:
@@ -447,41 +523,64 @@ class Query:
     LPCQ: Loc-RIB Prefix Count Query
     """
 
-    class Query(SequencedOperationalFamily):
-        CATEGORY: ClassVar[str] = 'query'
-
-        @classmethod
-        def make_query(
-            cls, afi: int | AFI, safi: int | SAFI, routerid: RouterID | None, sequence: int | None
-        ) -> 'Query.Query':
-            return cls(cls.pack_sequenced(cls.SUBTYPE_ID, afi, safi, routerid, sequence, b''))
-
-        @classmethod
-        def from_values(cls, values: dict[str, Any]) -> 'OperationalFamily':
-            return cls.make_query(values['afi'], values['safi'], values.get('routerid'), values['sequence'])
-
-        def extensive(self) -> str:
-            if self.routerid and self.sequence:
-                return f'operational {self.NAME} afi {self.afi} safi {self.safi} router-id {self.routerid} sequence {self.sequence}'
-            return f'operational {self.NAME} afi {self.afi} safi {self.safi}'
-
-    @Operational.register_operational
-    class RPCQ(Query):
-        NAME: ClassVar[str] = 'RPCQ'
-        SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.RPCQ
-
-    @Operational.register_operational
-    class APCQ(Query):
-        NAME: ClassVar[str] = 'APCQ'
-        SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.APCQ
-
-    @Operational.register_operational
-    class LPCQ(Query):
-        NAME: ClassVar[str] = 'LPCQ'
-        SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.LPCQ
+    Query: ClassVar[type[QueryBase]] = QueryBase
+    RPCQ: ClassVar[type[QueryRPCQ]] = QueryRPCQ
+    APCQ: ClassVar[type[QueryAPCQ]] = QueryAPCQ
+    LPCQ: ClassVar[type[QueryLPCQ]] = QueryLPCQ
 
 
 # ===================================================================== Response
+
+
+class ResponseCounter(SequencedOperationalFamily):
+    CATEGORY: ClassVar[str] = 'counter'
+    COUNTER_SIZE: ClassVar[int] = 4
+
+    @classmethod
+    def make_counter(
+        cls, afi: int | AFI, safi: int | SAFI, routerid: RouterID | None, sequence: int | None, counter: int
+    ) -> 'ResponseCounter':
+        return cls(cls.pack_sequenced(cls.SUBTYPE_ID, afi, safi, routerid, sequence, pack('!L', counter)))
+
+    @classmethod
+    def from_values(cls, values: dict[str, Any]) -> 'OperationalFamily':
+        return cls.make_counter(
+            values['afi'], values['safi'], values.get('routerid'), values['sequence'], values['counter']
+        )
+
+    @property
+    def counter(self) -> int:
+        counter: int = unpack('!L', self.data[: self.COUNTER_SIZE])[0]
+        return counter
+
+    def extensive(self) -> str:
+        if self.routerid and self.sequence:
+            return f'operational {self.NAME} afi {self.afi} safi {self.safi} router-id {self.routerid} sequence {self.sequence} counter {self.counter}'
+        return f'operational {self.NAME} afi {self.afi} safi {self.safi} counter {self.counter}'
+
+
+class ResponseRPCP(ResponseCounter):
+    NAME: ClassVar[str] = 'RPCP'
+    SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.RPCP
+
+
+Operational.register_operational(ResponseRPCP)
+
+
+class ResponseAPCP(ResponseCounter):
+    NAME: ClassVar[str] = 'APCP'
+    SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.APCP
+
+
+Operational.register_operational(ResponseAPCP)
+
+
+class ResponseLPCP(ResponseCounter):
+    NAME: ClassVar[str] = 'LPCP'
+    SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.LPCP
+
+
+Operational.register_operational(ResponseLPCP)
 
 
 class Response:
@@ -492,46 +591,10 @@ class Response:
     LPCP: Loc-RIB Prefix Count Reply
     """
 
-    class Counter(SequencedOperationalFamily):
-        CATEGORY: ClassVar[str] = 'counter'
-        COUNTER_SIZE: ClassVar[int] = 4
-
-        @classmethod
-        def make_counter(
-            cls, afi: int | AFI, safi: int | SAFI, routerid: RouterID | None, sequence: int | None, counter: int
-        ) -> 'Response.Counter':
-            return cls(cls.pack_sequenced(cls.SUBTYPE_ID, afi, safi, routerid, sequence, pack('!L', counter)))
-
-        @classmethod
-        def from_values(cls, values: dict[str, Any]) -> 'OperationalFamily':
-            return cls.make_counter(
-                values['afi'], values['safi'], values.get('routerid'), values['sequence'], values['counter']
-            )
-
-        @property
-        def counter(self) -> int:
-            counter: int = unpack('!L', self.data[: self.COUNTER_SIZE])[0]
-            return counter
-
-        def extensive(self) -> str:
-            if self.routerid and self.sequence:
-                return f'operational {self.NAME} afi {self.afi} safi {self.safi} router-id {self.routerid} sequence {self.sequence} counter {self.counter}'
-            return f'operational {self.NAME} afi {self.afi} safi {self.safi} counter {self.counter}'
-
-    @Operational.register_operational
-    class RPCP(Counter):
-        NAME: ClassVar[str] = 'RPCP'
-        SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.RPCP
-
-    @Operational.register_operational
-    class APCP(Counter):
-        NAME: ClassVar[str] = 'APCP'
-        SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.APCP
-
-    @Operational.register_operational
-    class LPCP(Counter):
-        NAME: ClassVar[str] = 'LPCP'
-        SUBTYPE_ID: ClassVar[int] = Operational.SUBTYPE.LPCP
+    Counter: ClassVar[type[ResponseCounter]] = ResponseCounter
+    RPCP: ClassVar[type[ResponseRPCP]] = ResponseRPCP
+    APCP: ClassVar[type[ResponseAPCP]] = ResponseAPCP
+    LPCP: ClassVar[type[ResponseLPCP]] = ResponseLPCP
 
 
 # ========================================================================= Dump

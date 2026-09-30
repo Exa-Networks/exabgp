@@ -44,7 +44,6 @@ IPV6_ADDRESS_LEN_BITS = 128  # IPv6 address length in bits
 # ===================================================================== EVPNNLRI
 
 
-@EVPN.register_evpn_route(code=2)
 class MAC(EVPN):
     """EVPN Route Type 2: MAC/IP Advertisement.
 
@@ -267,3 +266,6 @@ class MAC(EVPN):
         if self.ip:
             members.append('"ip": "{}"'.format(str(self.ip)))
         return '{{ {} }}'.format(', '.join(member for member in members if member))
+
+
+EVPN.register_evpn_route(code=2)(MAC)

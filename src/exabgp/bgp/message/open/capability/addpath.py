@@ -12,19 +12,19 @@ from struct import pack
 from typing import ClassVar, Iterable
 
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
-from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityDict
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
 from exabgp.logger import log, lazymsg
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 # ====================================================================== AddPath
 #
 
 
-@Capability.register()
-class AddPath(Capability, dict[FamilyTuple, int]):
-    ID = Capability.CODE.ADD_PATH
+class AddPath(CapabilityDict[FamilyTuple, int]):
+    ID: ClassVar = Capability.CODE.ADD_PATH
 
     string: ClassVar[dict[int, str]] = {
         0: 'disabled',
@@ -34,6 +34,7 @@ class AddPath(Capability, dict[FamilyTuple, int]):
     }
 
     def __init__(self, families: Iterable[FamilyTuple] = (), send_receive: int = 0) -> None:
+        super().__init__()
         for afi, safi in families:
             self.add_path(afi, safi, send_receive)
 
@@ -64,7 +65,7 @@ class AddPath(Capability, dict[FamilyTuple, int]):
 
     def json(self) -> str:
         families = ','.join(
-            '"{}/{}": {}'.format(xafi, xsafi, json.dumps(self.named(self[aafi])))
+            '"{}/{}": {}'.format(xafi, xsafi, json.dumps(self.named(self[aafi]), default=json_number))
             for (aafi, xafi, xsafi) in (((afi, safi), str(afi), str(safi)) for (afi, safi) in self)
         )
         return '{{ "name": "addpath"{}{} }}'.format(', ' if families else '', families)
@@ -100,3 +101,6 @@ class AddPath(Capability, dict[FamilyTuple, int]):
             instance.add_path(afi, safi, sr)
             data = data[4:]
         return instance
+
+
+Capability.register()(AddPath)

@@ -16,6 +16,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import json
 from enum import IntEnum
 
@@ -96,12 +98,11 @@ assert set(_NAMES) == set(RoleValue.assigned()), 'every assigned role needs a na
 assert set(_COMPLEMENT) == set(RoleValue.assigned()), 'every assigned role needs a complement'
 
 
-@Capability.register()
 class Role(Capability):
     """RFC 9234 BGP Role capability, one octet of value."""
 
-    ID = Capability.CODE.ROLE
-    VALUE_SIZE = 1
+    ID: ClassVar = Capability.CODE.ROLE
+    VALUE_SIZE: ClassVar[int] = 1
 
     def __init__(self, value: RoleValue = RoleValue.NO_ROLE) -> None:
         self.value: RoleValue = value
@@ -171,3 +172,6 @@ class Role(Capability):
 
     def __ge__(self, other: object) -> bool:
         raise RuntimeError('comparing Role for ordering does not make sense')
+
+
+Capability.register()(Role)

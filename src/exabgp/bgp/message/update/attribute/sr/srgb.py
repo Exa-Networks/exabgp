@@ -14,6 +14,7 @@ from typing import ClassVar
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 # RFC 8669 3.2: the Originator SRGB TLV value is two bytes of flags followed by one or more
 # SRGB entries, each a three byte base and a three byte range.
@@ -42,7 +43,6 @@ SRGB_ENTRY_SIZE = 6
 # 3.3.  Originator SRGB TLV
 
 
-@PrefixSid.register_sr()
 class SrGb:
     TLV: ClassVar[int] = 3
     # Length is the total length of the value portion of the TLV: 2 +
@@ -115,4 +115,7 @@ class SrGb:
         return cls(data)
 
     def json(self, compact: bool | None = None) -> str:
-        return f'"sr-srgbs": {json.dumps(self.srgbs)}'
+        return f'"sr-srgbs": {json.dumps(self.srgbs, default=json_number)}'
+
+
+PrefixSid.register_sr()(SrGb)

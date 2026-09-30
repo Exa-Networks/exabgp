@@ -37,7 +37,7 @@ UNKNOWN_SUBTYPE = 3  # 0, 1 and 2 are the only subtypes RFC 7313 defines
 
 
 def body(subtype: int) -> bytes:
-    return pack('!HBB', AFI.ipv4, subtype, SAFI.unicast)
+    return pack('!HBB', int(AFI.ipv4), subtype, int(SAFI.unicast))
 
 
 def received(subtype: int) -> RouteRefresh:

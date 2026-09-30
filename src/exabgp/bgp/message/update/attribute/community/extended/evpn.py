@@ -26,7 +26,6 @@ SINGLE_ACTIVE = 0x01
 MAC_SIZE = 6
 
 
-@ExtendedCommunity.register_subtype
 class ESILabel(ExtendedCommunity):
     """RFC 7432 7.5: Type 0x06, Sub-Type 0x01, Flags, two reserved octets, the ESI Label."""
 
@@ -65,7 +64,9 @@ class ESILabel(ExtendedCommunity):
         return cls(data[:EXTENDED_COMMUNITY_SIZE])
 
 
-@ExtendedCommunity.register_subtype
+ExtendedCommunity.register_subtype(ESILabel)
+
+
 class ESImportRouteTarget(RouteTarget):
     """RFC 7432 7.6: Type 0x06, Sub-Type 0x02, and the six octet ES-Import, a MAC address."""
 
@@ -94,3 +95,6 @@ class ESImportRouteTarget(RouteTarget):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> ESImportRouteTarget:
         return cls(data[:EXTENDED_COMMUNITY_SIZE])
+
+
+ExtendedCommunity.register_subtype(ESImportRouteTarget)

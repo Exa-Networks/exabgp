@@ -11,6 +11,7 @@ import json
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.util.types import Buffer
+from exabgp.util.intvalue import json_number
 
 #     draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -25,7 +26,6 @@ from exabgp.util.types import Buffer
 # 						sec 2.1.2.
 
 
-@LinkState.register_lsid(tlv=1035, json_key='sr-algorithms', repr_name='SrAlgorithms')
 class SrAlgorithm(BaseLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> SrAlgorithm:
@@ -53,4 +53,7 @@ class SrAlgorithm(BaseLS):
         return list(self._packed) or [0]
 
     def json(self, compact: bool = False) -> str:
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return f'"{self.JSON}": {json.dumps(self.content, default=json_number)}'
+
+
+LinkState.register_lsid(tlv=1035, json_key='sr-algorithms', repr_name='SrAlgorithms')(SrAlgorithm)

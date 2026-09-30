@@ -41,12 +41,12 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard
 
 
 class AIGPBase(Attribute):
-    ID = Attribute.CODE.AIGP
+    ID: ClassVar = Attribute.CODE.AIGP
     # RFC 7311: the accumulated IGP metric decides best path, so a route whose metric we
     # could not read must not be kept with the metric quietly missing
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
-    FLAG = Attribute.Flag.OPTIONAL
-    CACHING = True
+    FLAG: ClassVar = Attribute.Flag.OPTIONAL
+    CACHING: ClassVar[bool] = True
     TYPES: ClassVar[list[int]] = [1]
 
     # TLV header for IGP metric: type=1, length=11 (3 header + 8 value)
@@ -149,7 +149,6 @@ class AIGPBase(Attribute):
         return cls.from_packet(data)
 
 
-@Attribute.register()
 class AIGP(AIGPBase):
     """The registered form of AIGPBase, which holds the code.
 
@@ -158,3 +157,6 @@ class AIGP(AIGPBase):
     peer sends was the one part of this tree mutation testing could not see. Keeping the
     body in an undecorated base and registering an empty subclass puts it back in reach.
     """
+
+
+Attribute.register()(AIGP)

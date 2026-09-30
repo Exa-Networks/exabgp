@@ -44,12 +44,16 @@ class Origin(ExtendedCommunity):
             return False
         return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)
 
+    # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
+    # not a call to __eq__, so NotImplemented is answered the way Python answers it.
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
 
 # ================================================================== OriginASNIP
 # RFC 4360 / RFC 7153
 
 
-@ExtendedCommunity.register_subtype
 class OriginASNIP(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
@@ -61,7 +65,7 @@ class OriginASNIP(Origin):
     def make_origin(cls, asn: ASN, ip: str, transitive: bool = True) -> OriginASNIP:
         """Create OriginASNIP from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
-        packed = pack('!BBH4s', type_byte, cls.COMMUNITY_SUBTYPE, asn, IPv4.pton(ip))
+        packed = pack('!BBH4s', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), IPv4.pton(ip))
         return cls(packed)
 
     @property
@@ -80,11 +84,13 @@ class OriginASNIP(Origin):
         return cls(data[:8])
 
 
+ExtendedCommunity.register_subtype(OriginASNIP)
+
+
 # ================================================================== OriginIPASN
 # RFC 4360 / RFC 7153
 
 
-@ExtendedCommunity.register_subtype
 class OriginIPASN(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x01
     LIMIT: ClassVar[int] = 6
@@ -96,7 +102,7 @@ class OriginIPASN(Origin):
     def make_origin(cls, ip: str, asn: ASN, transitive: bool = True) -> OriginIPASN:
         """Create OriginIPASN from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
-        packed = pack('!BB4sH', type_byte, cls.COMMUNITY_SUBTYPE, IPv4.pton(ip), asn)
+        packed = pack('!BB4sH', type_byte, cls.COMMUNITY_SUBTYPE, IPv4.pton(ip), int(asn))
         return cls(packed)
 
     @property
@@ -115,11 +121,13 @@ class OriginIPASN(Origin):
         return cls(data[:8])
 
 
+ExtendedCommunity.register_subtype(OriginIPASN)
+
+
 # ============================================================= OriginASN4Number
 # RFC 4360 / RFC 7153
 
 
-@ExtendedCommunity.register_subtype
 class OriginASN4Number(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x02
     LIMIT: ClassVar[int] = 6
@@ -131,7 +139,7 @@ class OriginASN4Number(Origin):
     def make_origin(cls, asn: ASN, number: int, transitive: bool = True) -> OriginASN4Number:
         """Create OriginASN4Number from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
-        packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, asn, number)
+        packed = pack('!BBLH', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), number)
         return cls(packed)
 
     @property
@@ -149,3 +157,6 @@ class OriginASN4Number(Origin):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> OriginASN4Number:
         return cls(data[:8])
+
+
+ExtendedCommunity.register_subtype(OriginASN4Number)

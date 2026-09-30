@@ -23,22 +23,24 @@ from exabgp.util.types import Buffer
 # RFC 5512
 
 
-@ExtendedCommunity.register_subtype
+class EncapsulationType:
+    DEFAULT: ClassVar[int] = 0x00
+    L2TPv3: ClassVar[int] = 0x01
+    GRE: ClassVar[int] = 0x02
+    IPIP: ClassVar[int] = 0x07
+    VXLAN: ClassVar[int] = 0x08
+    NVGRE: ClassVar[int] = 0x09
+    MPLS: ClassVar[int] = 0x0A
+    VXLAN_GPE: ClassVar[int] = 0x0C
+    MPLS_UDP: ClassVar[int] = 0x0D
+
+
 class Encapsulation(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x03
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x0C
 
     # https://www.iana.org/assignments/bgp-parameters/bgp-parameters.xhtml#tunnel-types
-    class Type:
-        DEFAULT: ClassVar[int] = 0x00
-        L2TPv3: ClassVar[int] = 0x01
-        GRE: ClassVar[int] = 0x02
-        IPIP: ClassVar[int] = 0x07
-        VXLAN: ClassVar[int] = 0x08
-        NVGRE: ClassVar[int] = 0x09
-        MPLS: ClassVar[int] = 0x0A
-        VXLAN_GPE: ClassVar[int] = 0x0C
-        MPLS_UDP: ClassVar[int] = 0x0D
+    Type: ClassVar[type[EncapsulationType]] = EncapsulationType
 
     _string: ClassVar[dict[int, str]] = {
         Type.DEFAULT: 'Default',
@@ -72,3 +74,6 @@ class Encapsulation(ExtendedCommunity):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> Encapsulation:
         return cls(data[:8])
+
+
+ExtendedCommunity.register_subtype(Encapsulation)

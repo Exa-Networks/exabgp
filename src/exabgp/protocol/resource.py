@@ -7,18 +7,19 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Type, Iterator, ClassVar
+from typing import Iterator, ClassVar
 from exabgp.util import string_is_hex
+from exabgp.util.intvalue import IntValue
 
 # Resource value range constants
 RESOURCE_VALUE_MAX: int = 0xFFFF  # Maximum 16-bit unsigned integer value
 
 
-class BaseValue(int):
-    """Base class for int types that provide short() for display.
+class BaseValue(IntValue):
+    """Base class for the numbers which provide short() for display.
 
     Flow values need two things:
-    1. int behavior - for byte encoding (bytes([value]), pack('!H', value))
+    1. a number - for byte encoding (bytes([value]), pack('!H', value)), see IntValue
     2. short() -> str - for string formatting
     """
 
@@ -28,7 +29,7 @@ class BaseValue(int):
         Default implementation returns the integer as string.
         Subclasses may override for named representations.
         """
-        return str(int(self))
+        return str(self.value)
 
 
 class Resource(BaseValue):
@@ -36,26 +37,23 @@ class Resource(BaseValue):
     codes: ClassVar[dict[str, int]] = {}
     names: ClassVar[dict[int, str]] = {}
 
-    cache: ClassVar[dict[Type[Resource], dict[str, Resource]]] = {}
-
-    def __new__(cls, *args: Any) -> Resource:
-        key = '//'.join(str(_) for _ in args)
-        if key in Resource.cache.setdefault(cls, {}):
-            return Resource.cache[cls][key]
-        instance: Resource = int.__new__(cls, *args)
-        Resource.cache[cls][key] = instance
-        return instance
-
     # NOTE: Do not convert to f-strings! Using f-strings in __str__() methods
     # that call str() on self causes infinite recursion.
     def short(self) -> str:
-        return self.names.get(self, '%ld' % self)
+        return self.names.get(self.value, '%ld' % self.value)
 
     def __str__(self) -> str:
-        return self.names.get(self, 'unknown %s type %ld' % (self.NAME, self))
+        return self.names.get(self.value, 'unknown %s type %ld' % (self.NAME, self.value))
+
+    @classmethod
+    def _ensure_loaded(cls) -> None:
+        """Fill codes and names before they are read: Port loads them from a file on first use."""
 
     @classmethod
     def _value(cls, string: str) -> int:
+        # a hook rather than an override calling super(): mypyc passes the wrong cls to
+        # super() in a classmethod, and Port's names were read from `type`
+        cls._ensure_loaded()
         name = string.lower().replace('_', '-')
         if name in cls.codes:
             return cls.codes[name]
@@ -88,22 +86,22 @@ class BitResource(Resource):
         return cls(value)
 
     def named_bits(self) -> Iterator[str]:
-        value = int(self)
+        value = self.value
         for bit in self.names.keys():
             if value & bit or value == bit:
                 yield self.names[bit]
                 value -= bit
         if value:
-            yield self.names.get(self, f'unknown {self.NAME} type {int(self)}')
+            yield self.names.get(self.value, f'unknown {self.NAME} type {self.value}')
 
     def bits(self) -> Iterator[str]:
-        value = int(self)
+        value = self.value
         for bit in self.names.keys():
             if value & bit or value == bit:
                 yield self.names[bit]
                 value -= bit
         if value:
-            yield self.names.get(self, hex(self))
+            yield self.names.get(self.value, hex(self.value))
 
     def short(self) -> str:
         return '+'.join(self.bits())
@@ -120,4 +118,4 @@ class NumericValue(BaseValue):
     """
 
     def short(self) -> str:
-        return str(int(self))
+        return str(self.value)

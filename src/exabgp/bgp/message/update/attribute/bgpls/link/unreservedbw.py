@@ -6,8 +6,9 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+
 from struct import pack, unpack
-from typing import Sequence
+from typing import ClassVar, Sequence
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
@@ -24,9 +25,8 @@ from exabgp.util.types import Buffer
 #  ----------------------------
 
 
-@LinkState.register_lsid(tlv=1091, json_key='unreserved-bandwidth', repr_name='Maximum link bandwidth')
 class UnreservedBw(BaseLS):
-    LEN = 32
+    LEN: ClassVar[int] = 32
 
     @property
     def content(self) -> list[float]:
@@ -44,3 +44,6 @@ class UnreservedBw(BaseLS):
     def unpack_bgpls(cls, data: Buffer) -> UnreservedBw:
         cls.check(data)
         return cls(data)
+
+
+LinkState.register_lsid(tlv=1091, json_key='unreserved-bandwidth', repr_name='Maximum link bandwidth')(UnreservedBw)

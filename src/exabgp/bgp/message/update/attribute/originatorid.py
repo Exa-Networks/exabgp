@@ -20,7 +20,6 @@ from exabgp.protocol.ip import IP, IPv4
 # ============================================================== OriginatorID (9)
 
 
-@Attribute.register()
 class OriginatorID(Attribute):
     """Originator ID attribute (code 9).
 
@@ -28,11 +27,11 @@ class OriginatorID(Attribute):
     Delegates IP functionality via composition rather than inheritance.
     """
 
-    ID: int = Attribute.CODE.ORIGINATOR_ID
+    ID: ClassVar[int] = Attribute.CODE.ORIGINATOR_ID
     # RFC 7606: a malformed ORIGINATOR_ID cannot be dropped silently, it is what stops a
     # route being reflected back to where it came from
     TREAT_AS_WITHDRAW: ClassVar[bool] = True
-    FLAG: int = Attribute.Flag.OPTIONAL
+    FLAG: ClassVar[int] = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
 
     def __init__(self, packed: Buffer) -> None:
@@ -115,3 +114,6 @@ class OriginatorID(Attribute):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         return cls.from_packet(data)
+
+
+Attribute.register()(OriginatorID)

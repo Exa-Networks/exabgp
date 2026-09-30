@@ -44,7 +44,7 @@ IDS = [row[0] for row in SHAPES]
 
 def decoded(code: int, descriptor: bytes, safi: SAFI, prefix: bytes) -> NLRI:
     body = bytes([3]) + bytes(8) + descriptor
-    wire = pack('!HH', code, len(body) + len(prefix)) + prefix + body
+    wire = pack('!HH', int(code), len(body) + len(prefix)) + prefix + body
     nlri, _ = NLRI.unpack_nlri(AFI.bgpls, safi, wire, Action.ANNOUNCE, None, None)
     return nlri
 
