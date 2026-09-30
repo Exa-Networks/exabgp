@@ -335,6 +335,59 @@ def test_our_own_open_still_negotiates_against_itself():
 
 
 # ==============================================================================
+# a Cisco router offers code 131 alone, so we have to offer it too
+# ==============================================================================
+
+
+# frames 2 and 3 of PacketLife's 4-byte_AS_numbers_Full_Support.cap, two Cisco IOS routers:
+# capability 131, length 1, one flags octet and no Session Id
+CISCO_MULTISESSION = bytes([0x00])
+
+
+def our_session_capabilities():
+    """What Capabilities.new() adds for a neighbour with multi-session enabled."""
+    capabilities = Capabilities()
+    capabilities[Capability.CODE.MULTIPROTOCOL] = multiprotocol([(AFI.ipv4, SAFI.unicast)])
+    capabilities._session({'capability': {'multi-session': True}})
+    return capabilities
+
+
+def test_we_offer_the_cisco_code_in_the_layout_cisco_sends():
+    """We only ever sent 68, so a Cisco peer saw no code it knew."""
+    ours = our_session_capabilities()
+
+    assert ours.pack().hex().endswith('0203830100')
+    assert json.loads(ours[Capability.CODE.MULTISESSION_CISCO].json())['variant'] == 'Cisco'
+    assert json.loads(ours[Capability.CODE.MULTISESSION].json())['variant'] == 'RFC'
+
+
+def test_a_cisco_router_offering_131_alone_negotiates_multisession():
+    """Neither code was on both sides, and as we had announced 68 the answer was 2/9,
+    "multisession is mandatory with this peer", to a peer which had asked for it."""
+    peer = Capabilities.unpack(
+        wire(
+            [
+                (Capability.CODE.MULTIPROTOCOL, MP_IPV4_UNICAST),
+                (Capability.CODE.MULTISESSION_CISCO, CISCO_MULTISESSION),
+            ]
+        )
+    )
+
+    negotiated = negotiate(our_session_capabilities(), peer)
+
+    assert negotiated.validate(FakeNeighbor()) is None
+    assert negotiated.multisession is True
+
+
+def test_a_peer_offering_both_codes_negotiates_under_the_draft_code():
+    """ExaBGP against ExaBGP now carries both: the draft code is preferred."""
+    ours = our_session_capabilities()
+    peer = Capabilities.unpack(ours.pack())
+
+    assert negotiate(ours, peer).validate(FakeNeighbor()) is None
+
+
+# ==============================================================================
 # the published JSON keeps its shape
 # ==============================================================================
 
