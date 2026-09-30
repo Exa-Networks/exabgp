@@ -19,6 +19,7 @@ from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.reactor.api.response.json import JSON
 
 
 def test_eor_nlri_json_is_an_object():
@@ -36,3 +37,14 @@ def test_eor_nlri_json_survives_being_put_in_a_list():
     rendered = json.loads('[ {} ]'.format(', '.join(nlris)))
 
     assert rendered == [{'eor': {'afi': 'ipv6', 'safi': 'unicast'}}]
+
+
+def test_eor_update_reported_to_an_api_process_is_json():
+    # an EOR carries no action, so the builder does not list it: it takes its own
+    # branch, which wrapped the object in a second pair of braces
+    for eor in (EOR(AFI.ipv4, SAFI.unicast), EOR(AFI.ipv6, SAFI.unicast)):
+        message = str(JSON('6.0.0')._update(eor)['message'])
+
+        rendered = json.loads(message)
+
+        assert rendered == {'eor': {'afi': str(eor.nlris[0].afi), 'safi': 'unicast'}}
