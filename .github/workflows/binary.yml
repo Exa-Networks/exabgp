@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.2.0
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -67,7 +67,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.2.0
 
       - name: Install dependencies
         run: uv sync --frozen --python python3.12
@@ -101,7 +101,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10
+        uses: astral-sh/setup-uv@v10.2.0
 
       - name: Install dependencies
         run: uv sync --frozen --python python3.12
