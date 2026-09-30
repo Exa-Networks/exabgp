@@ -23,6 +23,14 @@ neighbour named like one an earlier test configured inherits that test's routes.
 after test_configuration_export loaded conf-no-asn4.conf, `exabgp encode` run in process
 printed its own UPDATE and that file's static route as well, and test_otc_parsing decoded
 the second message as garbage.
+
+Logging is process wide too.  `exabgp validate --verbose`, run in process, turns every log
+source on at DEBUG and leaves it on: the environment it edits and the logger options it
+loads are both singletons.  Measured: after tests/unit/application/test_validate.py, the
+UPDATE handler tests in the same worker failed with "'dict' object has no attribute
+'session'", because the parser now formatted every decoded UPDATE as JSON for a debug line
+and their mock neighbour is a dict.  Which tests failed depended on how xdist shared the
+files out, so it looked like a flaky test rather than a leak.
 """
 
 from __future__ import annotations
@@ -33,7 +41,43 @@ from collections.abc import Iterator
 
 import pytest
 
+from exabgp.environment import getenv
+from exabgp.logger import log
+from exabgp.logger.option import option
 from exabgp.rib import RIB
+
+
+class _LoggingState:
+    """What log.init() and `validate --verbose` change: the logger options, the logger, the environment."""
+
+    def __init__(self) -> None:
+        env = getenv()
+        self.logger = option.logger
+        self.formater = option.formater
+        self.short = option.short
+        self.level = option.level
+        self.destination = option.destination
+        self.sources = dict(option.option)
+        self.logit = dict(option.logit)
+        self.log_function = log.logger
+        self.env_log = dict(env.log._values)
+        self.env_debug = dict(env.debug._values)
+
+    def restore(self) -> None:
+        env = getenv()
+        option.logger = self.logger
+        option.formater = self.formater
+        option.short = self.short
+        option.level = self.level
+        option.destination = self.destination
+        option.option = dict(self.sources)
+        option.logit = dict(self.logit)
+        # the logger is a class attribute holding a function, which mypy reads as a method
+        setattr(log, 'logger', self.log_function)
+        env.log._values.clear()
+        env.log._values.update(self.env_log)
+        env.debug._values.clear()
+        env.debug._values.update(self.env_debug)
 
 
 @pytest.fixture(autouse=True)
@@ -45,6 +89,7 @@ def restore_process_state() -> Iterator[None]:
     umask = os.umask(0o022)
     os.umask(umask)
     ribs = dict(RIB._cache)
+    logging_state = _LoggingState()
     try:
         yield
     finally:
@@ -53,6 +98,7 @@ def restore_process_state() -> Iterator[None]:
         os.umask(umask)
         RIB._cache.clear()
         RIB._cache.update(ribs)
+        logging_state.restore()
         try:
             os.chdir(cwd)
         except OSError:
