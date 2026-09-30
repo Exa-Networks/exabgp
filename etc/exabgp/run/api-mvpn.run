@@ -1,80 +1,15 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os
-import sys
-import time
-import select
-import json
 
+from exabgp_api import counters, send, trace, wait_for_ack, wait_for_shutdown
 
-def wait_for_ack(expected_count=1, timeout=2):
-    """
-    Wait for ACK responses from ExaBGP.
+# every announcement has to be on the wire before the matching withdrawal is
+# asked for. A withdrawal which reaches the RIB while its announcement is still
+# pending there cancels it, and the peer then never sees either
+BARRIER_TIMEOUT = 20.0
 
-    Polls STDIN until all expected ACK messages are received.
-    ExaBGP may not respond immediately, so we loop with sleep.
-
-    Handles both text and JSON encoder formats:
-    - Text: "done", "error", "shutdown"
-    - JSON: {"answer": "done|error|shutdown", "message": "..."}
-
-    Args:
-        expected_count: Number of ACK messages expected (default: 1)
-        timeout: Total timeout in seconds (default: 2)
-
-    Returns:
-        True if all ACKs received successfully
-        False if any command failed or timeout occurred
-
-    Raises:
-        SystemExit: If ExaBGP sends shutdown message
-    """
-    import json
-    received = 0
-    start_time = time.time()
-
-    while received < expected_count:
-        # Check if we've exceeded timeout
-        elapsed = time.time() - start_time
-        if elapsed >= timeout:
-            return False
-
-        # Poll for data (non-blocking with short timeout)
-        ready, _, _ = select.select([sys.stdin], [], [], 0.1)
-
-        if ready:
-            line = sys.stdin.readline().strip()
-
-            # Parse response (could be text or JSON)
-            answer = None
-            if line.startswith('{'):
-                # JSON format: {"answer": "done|error|shutdown", ...}
-                try:
-                    data = json.loads(line)
-                    answer = data.get('answer')
-                except:
-                    pass
-            else:
-                # Text format: done|error|shutdown
-                answer = line
-
-            if answer == "done":
-                received += 1
-            elif answer == "error":
-                return False
-            elif answer == "shutdown":
-                raise SystemExit(0)
-            # Ignore other messages (could be BGP updates if receiving)
-        else:
-            # No data yet, sleep briefly before next poll
-            time.sleep(0.1)
-
-    return True
-
-time.sleep(2)  # let the EOR pass
-
-
-routes = [
+ROUTES = [
     'ipv4 mcast-vpn shared-join rp 10.99.199.1 group 239.251.255.228 rd 65000:99999 source-as 65000 next-hop 10.10.6.3 extended-community [ target:192.168.94.12:5 ]',
     'ipv4 mcast-vpn source-join source 10.99.12.2 group 239.251.255.228 rd 65000:99999 source-as 65000 next-hop 10.10.6.3 extended-community [ target:192.168.94.12:5 ]',
     'ipv6 mcast-vpn shared-join rp fd00::1 group ff0e::1 rd 65000:99999 source-as 65000 next-hop 10.10.6.3 extended-community [ target:192.168.94.12:5 ]',
@@ -83,33 +18,44 @@ routes = [
     'ipv4 mcast-vpn source-ad source 10.99.12.4 group 239.251.255.228 rd 65000:99999 next-hop 10.10.6.4 extended-community [ target:65000:99999 ]',
 ]
 
-for r in routes:
-    sys.stdout.write('announce ' + r + '\n')
-    sys.stdout.flush()
-    time.sleep(0.1)
+# a barrier names the family rather than each route, because an mcast-vpn route
+# renders its own fields and has no single string which identifies it
+PER_FAMILY = (('ipv4 mcast-vpn', 3), ('ipv6 mcast-vpn', 3))
 
-if not wait_for_ack(expected_count=6):
-    # ACK not received, continuing anyway (ACKs may be disabled in config)
-    pass
 
-time.sleep(5)
+def barrier(what: str, expected_count: int = 1, **events) -> None:
+    if wait_for_ack(expected_count=expected_count, timeout=BARRIER_TIMEOUT, **events):
+        trace(f'{what} ok')
+        return
+    raise SystemExit(f'{what} never reached the wire, saw {counters()}')
 
-for r in routes:
-    sys.stdout.write('withdraw ' + r + '\n')
-    sys.stdout.flush()
-    time.sleep(0.1)
 
-if not wait_for_ack(expected_count=6):
-    # ACK not received, continuing anyway (ACKs may be disabled in config)
-    pass
+def main() -> None:
+    trace('start api-mvpn.run ppid=' + str(os.getppid()))
+    try:
+        barrier('the session coming up', expected_count=0, state=(('up', 1),))
+        # one end of RIB per configured family: announcing into a reactor which is
+        # still flushing them changes what the peer sees and in which order
+        barrier('both end of RIB markers', expected_count=0, announce=(('eor', 2),))
 
-# Wait for shutdown signal
-try:
-    now = time.time()
-    while os.getppid() != 1 and time.time() < now + 15:
-        line = sys.stdin.readline().strip()
-        if not line or 'shutdown' in line:
-            break
-        time.sleep(1)
-except IOError:
-    pass
+        for route in ROUTES:
+            send('announce ' + route)
+        barrier('the six announcements', expected_count=len(ROUTES), announce=PER_FAMILY)
+
+        for route in ROUTES:
+            send('withdraw ' + route)
+        barrier('the six withdrawals', expected_count=len(ROUTES), withdraw=PER_FAMILY)
+
+        trace('work done')
+
+        # stay until ExaBGP is done with us. The conf sets respawn false so a
+        # return would not be restarted, but leaving while the daemon is still
+        # writing loses whatever it had left to say
+        wait_for_shutdown(timeout=15.0)
+        trace('finished')
+    except IOError:
+        pass
+
+
+if __name__ == '__main__':
+    main()
