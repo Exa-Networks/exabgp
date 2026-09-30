@@ -45,6 +45,9 @@ from exabgp.protocol.ip.fragment import Fragment
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.action import Action
+from exabgp.protocol.protocol import Protocol
+from exabgp.protocol.ip.icmp import ICMPType
+from exabgp.protocol.ip.icmp import ICMPCode
 
 
 # ============================================================================
@@ -160,7 +163,7 @@ class TestFlow6Components:
 
     def test_flownextheader(self) -> None:
         """Test IPv6 next header matching"""
-        nh = FlowNextHeader(NumericOperator.EQ, 58)  # ICMPv6
+        nh = FlowNextHeader(NumericOperator.EQ, Protocol(58))  # ICMPv6
 
         assert nh.value == 58
         packed = nh.pack()
@@ -224,7 +227,7 @@ class TestFlowICMP:
 
     def test_flowicmptype_echo_request(self) -> None:
         """Test ICMP type matching for echo request"""
-        icmp_type = FlowICMPType(NumericOperator.EQ, 8)  # Echo request
+        icmp_type = FlowICMPType(NumericOperator.EQ, ICMPType(8))  # Echo request
 
         assert icmp_type.value == 8
         icmp_type.pack()
@@ -232,7 +235,7 @@ class TestFlowICMP:
 
     def test_flowicmpcode_basic(self) -> None:
         """Test ICMP code matching"""
-        icmp_code = FlowICMPCode(NumericOperator.EQ, 0)
+        icmp_code = FlowICMPCode(NumericOperator.EQ, ICMPCode(0))
 
         assert icmp_code.value == 0
         icmp_code.pack()
@@ -249,7 +252,7 @@ class TestFlowTCPFlags:
 
     def test_flowtcpflag_syn(self) -> None:
         """Test TCP SYN flag matching"""
-        tcp_flag = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.SYN)
+        tcp_flag = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag(TCPFlag.SYN))
 
         assert tcp_flag.value == TCPFlag.SYN
         tcp_flag.pack()
@@ -257,21 +260,21 @@ class TestFlowTCPFlags:
 
     def test_flowtcpflag_not_match(self) -> None:
         """Test TCP flag NOT match operator"""
-        tcp_flag = FlowTCPFlag(BinaryOperator.NOT | BinaryOperator.MATCH, TCPFlag.RST)
+        tcp_flag = FlowTCPFlag(BinaryOperator.NOT | BinaryOperator.MATCH, TCPFlag(TCPFlag.RST))
 
         assert tcp_flag.operations & BinaryOperator.NOT
         assert tcp_flag.operations & BinaryOperator.MATCH
 
     def test_flowtcpflag_include(self) -> None:
         """Test TCP flag INCLUDE operator"""
-        tcp_flag = FlowTCPFlag(BinaryOperator.INCLUDE, TCPFlag.ACK)
+        tcp_flag = FlowTCPFlag(BinaryOperator.INCLUDE, TCPFlag(TCPFlag.ACK))
 
         # Include is 0x00, so just check value
         assert tcp_flag.value == TCPFlag.ACK
 
     def test_flowtcpflag_string(self) -> None:
         """Test TCP flag string representation"""
-        tcp_flag = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.FIN)
+        tcp_flag = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag(TCPFlag.FIN))
         flag_str = str(tcp_flag)
         assert flag_str  # Should have some representation
 
@@ -286,7 +289,7 @@ class TestFlowPacketAttributes:
 
     def test_flowpacketlength_small(self) -> None:
         """Test packet length matching for small packets"""
-        pkt_len = FlowPacketLength(NumericOperator.LT, 100)
+        pkt_len = FlowPacketLength(NumericOperator.LT, NumericValue(100))
 
         assert pkt_len.value == 100
         pkt_len.pack()
@@ -294,7 +297,7 @@ class TestFlowPacketAttributes:
 
     def test_flowpacketlength_large(self) -> None:
         """Test packet length with large value (2-byte encoding)"""
-        pkt_len = FlowPacketLength(NumericOperator.GT, 1500)
+        pkt_len = FlowPacketLength(NumericOperator.GT, NumericValue(1500))
 
         assert pkt_len.value == 1500
         packed = pkt_len.pack()
@@ -303,7 +306,7 @@ class TestFlowPacketAttributes:
 
     def test_flowdscp_ef(self) -> None:
         """Test DSCP matching for Expedited Forwarding"""
-        dscp = FlowDSCP(NumericOperator.EQ, 46)  # EF PHB
+        dscp = FlowDSCP(NumericOperator.EQ, NumericValue(46))  # EF PHB
 
         assert dscp.value == 46
         dscp.pack()
@@ -311,7 +314,7 @@ class TestFlowPacketAttributes:
 
     def test_flowtrafficclass_ipv6(self) -> None:
         """Test IPv6 traffic class matching"""
-        tc = FlowTrafficClass(NumericOperator.EQ, 0xE0)  # CS7
+        tc = FlowTrafficClass(NumericOperator.EQ, NumericValue(0xE0))  # CS7
 
         assert tc.value == 0xE0
         tc.pack()
@@ -328,7 +331,7 @@ class TestFlowFragment:
 
     def test_flowfragment_dont_fragment(self) -> None:
         """Test matching Don't Fragment flag"""
-        frag = FlowFragment(BinaryOperator.MATCH, Fragment.DONT)
+        frag = FlowFragment(BinaryOperator.MATCH, Fragment(Fragment.DONT))
 
         assert frag.value == Fragment.DONT
         frag.pack()
@@ -336,13 +339,13 @@ class TestFlowFragment:
 
     def test_flowfragment_is_fragment(self) -> None:
         """Test matching fragmented packets"""
-        frag = FlowFragment(BinaryOperator.MATCH, Fragment.IS)
+        frag = FlowFragment(BinaryOperator.MATCH, Fragment(Fragment.IS))
 
         assert frag.value == Fragment.IS
 
     def test_flowfragment_not(self) -> None:
         """Test NOT operator with fragments"""
-        frag = FlowFragment(BinaryOperator.NOT | BinaryOperator.MATCH, Fragment.FIRST)
+        frag = FlowFragment(BinaryOperator.NOT | BinaryOperator.MATCH, Fragment(Fragment.FIRST))
 
         assert frag.operations & BinaryOperator.NOT
         assert frag.value == Fragment.FIRST
@@ -358,7 +361,7 @@ class TestFlowLabel:
 
     def test_flowflowlabel_small(self) -> None:
         """Test flow label with small value (1-byte)"""
-        label = FlowFlowLabel(NumericOperator.EQ, 100)
+        label = FlowFlowLabel(NumericOperator.EQ, NumericValue(100))
 
         assert label.value == 100
         label.pack()
@@ -366,7 +369,7 @@ class TestFlowLabel:
 
     def test_flowflowlabel_medium(self) -> None:
         """Test flow label with medium value (2-byte)"""
-        label = FlowFlowLabel(NumericOperator.EQ, 5000)
+        label = FlowFlowLabel(NumericOperator.EQ, NumericValue(5000))
 
         assert label.value == 5000
         packed = label.pack()
@@ -375,7 +378,7 @@ class TestFlowLabel:
 
     def test_flowflowlabel_large(self) -> None:
         """Test flow label with large value (4-byte)"""
-        label = FlowFlowLabel(NumericOperator.EQ, 1000000)
+        label = FlowFlowLabel(NumericOperator.EQ, NumericValue(1000000))
 
         assert label.value == 1000000
         packed = label.pack()
@@ -581,7 +584,7 @@ class TestFlowNLRI:
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         proto = FlowIPProtocol(NumericOperator.EQ, NumericValue(6))  # TCP
         dport = FlowDestinationPort(NumericOperator.EQ, NumericValue(80))
-        tcp_syn = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.SYN)
+        tcp_syn = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag(TCPFlag.SYN))
 
         flow.add(dest)
         flow.add(proto)
@@ -649,7 +652,7 @@ class TestFlowNLRI:
         flow = Flow.make_flow()
 
         dest = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
-        frag = FlowFragment(BinaryOperator.MATCH, Fragment.DONT)
+        frag = FlowFragment(BinaryOperator.MATCH, Fragment(Fragment.DONT))
 
         flow.add(dest)
         flow.add(frag)
@@ -686,16 +689,16 @@ class TestOperators:
     def test_binary_operator_combinations(self) -> None:
         """Test various binary operator combinations"""
         # Match
-        flag_match = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.SYN)
+        flag_match = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag(TCPFlag.SYN))
         assert flag_match.operations & BinaryOperator.MATCH
 
         # Not match
-        flag_not_match = FlowTCPFlag(BinaryOperator.NOT | BinaryOperator.MATCH, TCPFlag.RST)
+        flag_not_match = FlowTCPFlag(BinaryOperator.NOT | BinaryOperator.MATCH, TCPFlag(TCPFlag.RST))
         assert flag_not_match.operations & BinaryOperator.NOT
         assert flag_not_match.operations & BinaryOperator.MATCH
 
         # Include (default, 0x00)
-        flag_include = FlowTCPFlag(BinaryOperator.INCLUDE, TCPFlag.ACK)
+        flag_include = FlowTCPFlag(BinaryOperator.INCLUDE, TCPFlag(TCPFlag.ACK))
         # Include is 0, so just verify it doesn't have NOT or MATCH set independently
         assert not (flag_include.operations & BinaryOperator.NOT and not flag_include.operations & BinaryOperator.MATCH)
 
@@ -711,7 +714,7 @@ class TestOperators:
         assert '>' in str_repr or '1024' in str_repr
 
         # Binary operators
-        flag = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag.SYN)
+        flag = FlowTCPFlag(BinaryOperator.MATCH, TCPFlag(TCPFlag.SYN))
         flag_str = str(flag)
         # Should have some representation
         assert flag_str is not None
@@ -921,12 +924,12 @@ class TestFlowEdgeCases:
     def test_binary_operator_and_combinations(self) -> None:
         """Test AND operator with binary operators"""
         # AND with INCLUDE
-        flag1 = FlowTCPFlag(BinaryOperator.AND | BinaryOperator.INCLUDE, TCPFlag.SYN)
+        flag1 = FlowTCPFlag(BinaryOperator.AND | BinaryOperator.INCLUDE, TCPFlag(TCPFlag.SYN))
         str_repr = str(flag1)
         assert '&' in str_repr or str_repr is not None
 
         # AND with NOT
-        flag2 = FlowTCPFlag(BinaryOperator.AND | BinaryOperator.NOT, TCPFlag.RST)
+        flag2 = FlowTCPFlag(BinaryOperator.AND | BinaryOperator.NOT, TCPFlag(TCPFlag.RST))
         str_repr = str(flag2)
         assert str_repr is not None
 

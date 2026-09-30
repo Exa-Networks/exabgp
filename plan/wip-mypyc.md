@@ -520,3 +520,37 @@ now prints numbers too, as the decoded one always did.
 SUPERSEDED (Thomas chose names): the capabilities are filed under their name, with the
 number inside each object as "code"; the decoding fixture G and the JSON unit tests follow,
 and doc/CHANGELOG.rst says so under Incompatible.
+
+### 2026-09-30: phase 7, every NLRI family compiled
+
+`exabgp/bgp/message/update/nlri` is compiled whole (196 modules). What it took:
+- copies: NLRI gains `_fresh()`, a new instance built through `__init__` from what the
+  object holds; EVPN, RTC, VPLS, Empty, SR Policy and Flow implement it once, the MVPN, MUP
+  and BGP-LS subclasses each (their constructors differ). BGP-LS carries its extra state
+  from `__getstate__()`, as a compiled class has no `__dict__`. `IOperation` (flow
+  components) copies through its constructor
+- found by the compiled build: flow.py filled its component registry by walking `dir()`
+  and `globals()` at import, which a compiled module does not have. Every component was
+  refused as "not one this family defines", every flow route decoded as INVALID. The
+  registry is an explicit `COMPONENTS` tuple, with a test that every component class is in it
+- tests: the Mock session of the ADD-PATH and link-local tests, `rd=None` in the BGP-LS
+  tests, ints for flow component values, `None` actions, and next hops set on NLRI objects
+  (they belong to the Route) all replaced by the real thing
+
+| stage | ci (rib) | ci (all NLRI) | bulk (rib) | bulk (all NLRI) |
+|---|---|---|---|---|
+| decode | 1.54x | 1.63x | 2.03x | 2.01x |
+| json | 1.26x | 1.41x | 2.09x | 1.89x |
+| encode | 1.79x | 2.07x | 1.67x | 1.61x |
+| rib | 1.96x | 2.11x | 2.26x | 2.12x |
+
+Bulk is unicast only and within noise of the rib build. The machine is noisier than when
+the baseline was taken: HEAD and the working tree, run interleaved, both read 0.93x to 1.08x
+of the pure baseline, so the pure budget holds against HEAD. An earlier all-NLRI
+measurement (json 1.75x) was inflated by the flow routes failing to decode.
+
+Pure 14703 passed, compiled 14702 passed.
+
+Open for phase 6's exit: the functional suites (encoding, decoding, api) do not run
+against the compiled tree, because sbin/exabgp sets PYTHONPATH to src. Needs the launcher
+to accept another tree, which phase 8 wants anyway.

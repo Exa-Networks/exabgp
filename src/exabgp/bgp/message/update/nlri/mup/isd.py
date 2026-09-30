@@ -7,7 +7,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar, Self, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -40,6 +40,9 @@ class InterworkSegmentDiscoveryRoute(MUP):
     RD_OFFSET: ClassVar[int] = 4  # Bytes 4-11: RD (8 bytes)
     PREFIX_LEN_OFFSET: ClassVar[int] = 12  # Byte 12: prefix length
     PREFIX_OFFSET: ClassVar[int] = 13  # Bytes 13+: prefix
+
+    def _fresh(self) -> Self:
+        return type(self)(self._packed, self.afi)
 
     def __init__(self, packed: Buffer, afi: AFI) -> None:
         """Create ISD with complete wire format.

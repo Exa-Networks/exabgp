@@ -39,9 +39,7 @@ TARGET = ROOT / 'build' / 'mypyc'
 STUBS = ROOT / 'stubs'
 
 # What gets compiled, relative to TARGET. plan/wip-mypyc.md section 2.1 says why these.
-# A pattern is expanded in the copy. Of update/nlri only the unicast, labelled and VPN
-# chain is compiled: the other families still build copies with cls.__new__, which mypyc
-# cannot compile, and NLRI allows them to stay interpreted (plan/wip-mypyc.md).
+# A pattern is expanded in the copy.
 COMPILED = [
     'exabgp/util/intvalue.py',
     'exabgp/protocol',
@@ -49,12 +47,7 @@ COMPILED = [
     'exabgp/bgp/message/open',
     'exabgp/bgp/message/update/*.py',
     'exabgp/bgp/message/update/attribute',
-    'exabgp/bgp/message/update/nlri/nlri.py',
-    'exabgp/bgp/message/update/nlri/cidr.py',
-    'exabgp/bgp/message/update/nlri/inet.py',
-    'exabgp/bgp/message/update/nlri/label.py',
-    'exabgp/bgp/message/update/nlri/ipvpn.py',
-    'exabgp/bgp/message/update/nlri/qualifier',
+    'exabgp/bgp/message/update/nlri',
     'exabgp/rib',
 ]
 

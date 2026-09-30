@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type
+from typing import Any, Callable, ClassVar, Self, TYPE_CHECKING, Type
 
 from exabgp.util.types import Buffer
 
@@ -128,14 +128,14 @@ class MVPN(NLRI):
         return bytes(Family.index(self)) + self._packed
 
     def __copy__(self) -> 'MVPN':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # MVPN has empty __slots__ - nothing else to copy
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'MVPN':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
@@ -207,6 +207,9 @@ class GenericMVPN(MVPN):
     """
 
     __slots__ = ()  # No extra storage needed - CODE extracted from _packed
+
+    def _fresh(self) -> Self:
+        return type(self)(self._packed, self.afi)
 
     def __init__(self, packed: Buffer, afi: AFI) -> None:
         """Create a GenericMVPN from complete wire format bytes.

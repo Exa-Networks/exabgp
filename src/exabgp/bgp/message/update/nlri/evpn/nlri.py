@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar
+from typing import Any, Callable, ClassVar, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -91,15 +91,18 @@ class EVPN(NLRI):
     def __repr__(self) -> str:
         return str(self)
 
+    def _fresh(self) -> Self:
+        return type(self)(self._packed)
+
     def __copy__(self) -> 'EVPN':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         # Family/NLRI slots (afi/safi are class-level)
         self._copy_nlri_slots(new)
         # EVPN has empty __slots__ - nothing else to copy
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'EVPN':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         memo[id(self)] = new
         # Family/NLRI slots (afi/safi are class-level)
         self._deepcopy_nlri_slots(new, memo)

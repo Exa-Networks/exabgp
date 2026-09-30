@@ -35,7 +35,6 @@ from __future__ import annotations
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
@@ -50,6 +49,7 @@ from exabgp.bgp.message.update.nlri.rtc import RTC
 from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
 
 PATH_ID = bytes([0, 0, 0, 7])
 
@@ -82,11 +82,7 @@ IDS = [name for name, _, _, _, _ in FAMILIES]
 
 
 def negotiated() -> Any:
-    session = Mock()
-    session.asn4 = False
-    session.families = []
-    session.nexthop = []
-    return session
+    return negotiation.negotiated(())
 
 
 @pytest.mark.parametrize('name,klass,afi,safi,nlri_bytes', FAMILIES, ids=IDS)

@@ -7,7 +7,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar, Self, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
 
@@ -37,6 +37,9 @@ class DirectSegmentDiscoveryRoute(MUP):
     HEADER_SIZE: ClassVar[int] = 4
     RD_OFFSET: ClassVar[int] = 4  # Bytes 4-11: RD (8 bytes)
     IP_OFFSET: ClassVar[int] = 12  # Bytes 12+: IP address
+
+    def _fresh(self) -> Self:
+        return type(self)(self._packed, self.afi)
 
     def __init__(self, packed: Buffer, afi: AFI) -> None:
         """Create DSD with complete wire format.

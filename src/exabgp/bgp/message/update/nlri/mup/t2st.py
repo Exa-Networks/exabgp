@@ -7,7 +7,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -56,6 +56,9 @@ class Type2SessionTransformedRoute(MUP):
     RD_OFFSET: ClassVar[int] = 4  # Bytes 4-11: RD (8 bytes)
     ENDPOINT_LEN_OFFSET: ClassVar[int] = 12  # Byte 12: endpoint length
     ENDPOINT_IP_OFFSET: ClassVar[int] = 13  # Bytes 13+: endpoint IP
+
+    def _fresh(self) -> Self:
+        return type(self)(self._packed, self.afi)
 
     def __init__(self, packed: Buffer, afi: AFI) -> None:
         """Create T2ST with complete wire format.

@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import socket
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any
+from typing import Any, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -97,13 +97,16 @@ class SRPolicyNLRI(NLRI):
     def index(self) -> bytes:
         return bytes(Family.index(self)) + self._packed
 
+    def _fresh(self) -> Self:
+        return type(self)(self.afi, self._packed)
+
     def __copy__(self) -> 'SRPolicyNLRI':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         self._copy_nlri_slots(new)
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'SRPolicyNLRI':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         memo[id(self)] = new
         self._deepcopy_nlri_slots(new, memo)
         return new

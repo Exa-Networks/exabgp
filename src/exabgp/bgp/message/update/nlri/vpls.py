@@ -201,14 +201,17 @@ class VPLSBase(NLRI):
     def __str__(self) -> str:
         return self.extensive()
 
+    def _fresh(self) -> Self:
+        return type(self)(self._packed)
+
     def __copy__(self) -> Self:
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         # Family/NLRI slots - _packed is in NLRI slots
         self._copy_nlri_slots(new)
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         memo[id(self)] = new
         # Family/NLRI slots - _packed is in NLRI slots and is immutable bytes
         self._deepcopy_nlri_slots(new, memo)

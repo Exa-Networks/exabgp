@@ -34,6 +34,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
 from exabgp.protocol.family import AFI, SAFI
 from tests import negotiation
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
 
 def with_bgpls_header(code: int, payload: bytes) -> bytes:
@@ -120,12 +121,12 @@ class TestNodeNLRI:
             b'\x02\x03\x00\x04\x0a\x71\x3f\xf0'  # Router ID: 10.113.63.240
         )
 
-        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
+        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert node.proto_id == 3  # OSPFv2
         assert node.domain == 1
         assert len(node.node_ids) == 3
-        assert node.route_d is None
+        assert node.route_d is RouteDistinguisher.NORD
         assert node.CODE == 1
         assert node.NAME == 'bgpls-node'
         assert node.SHORT_NAME == 'Node'
@@ -141,7 +142,7 @@ class TestNodeNLRI:
             b'\x02\x03\x00\x04\x0a\x71\x3f\xf0'
         )
 
-        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
+        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=RouteDistinguisher.NORD)
         json_output = node.json()
 
         assert '"ls-nlri-type": "bgpls-node"' in json_output
@@ -163,8 +164,8 @@ class TestNodeNLRI:
         )
 
         wire_data = with_bgpls_header(NODE.CODE, payload)
-        node1 = NODE.unpack_bgpls_nlri(wire_data, rd=None)
-        node2 = NODE.unpack_bgpls_nlri(wire_data, rd=None)
+        node1 = NODE.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
+        node2 = NODE.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
 
         assert node1 == node2
         assert not (node1 != node2)
@@ -179,7 +180,7 @@ class TestNodeNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
+        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=RouteDistinguisher.NORD)
 
         # Fixed: node_ids is now properly converted to tuple in __hash__()
         hash1 = hash(node)
@@ -196,8 +197,7 @@ class TestNodeNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfd'  # AS: 65533
         )
 
-        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
-        node.nexthop = '192.0.2.1'
+        node = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=RouteDistinguisher.NORD)
         str_repr = str(node)
 
         assert 'bgpls-node' in str_repr
@@ -215,7 +215,7 @@ class TestNodeNLRI:
             b'\x01\x00\x00\x00'
         )
 
-        nlri = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
+        nlri = NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert nlri.proto_id == 0xFF
 
@@ -229,7 +229,7 @@ class TestNodeNLRI:
         )
 
         with pytest.raises(Exception, match='Unknown type.*Only Local Node descriptors'):
-            NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=None)
+            NODE.unpack_bgpls_nlri(with_bgpls_header(NODE.CODE, payload), rd=RouteDistinguisher.NORD)
 
     def test_node_pack(self) -> None:
         """Test Node NLRI packing"""
@@ -242,7 +242,7 @@ class TestNodeNLRI:
         )
 
         wire_data = with_bgpls_header(NODE.CODE, payload)
-        node = NODE.unpack_bgpls_nlri(wire_data, rd=None)
+        node = NODE.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
         negotiated = create_negotiated()
         packed = node.pack_nlri(negotiated)
 
@@ -269,7 +269,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'  # AS: 65534
         )
 
-        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert link.proto_id == 3
         assert link.domain == 1
@@ -294,7 +294,7 @@ class TestLinkNLRI:
             b'\x00\x00\x00\x02'  # Remote ID: 2
         )
 
-        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=RouteDistinguisher.NORD)
 
         # Link IDs are returned as a single LinkIdentifier object, not a list
         assert link.link_ids is not None
@@ -313,7 +313,7 @@ class TestLinkNLRI:
             b'\xc0\x00\x02\x01'  # 192.0.2.1
         )
 
-        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert len(link.iface_addrs) == 1
 
@@ -331,7 +331,7 @@ class TestLinkNLRI:
             b'\xc0\x00\x02\x02'  # 192.0.2.2
         )
 
-        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert len(link.neigh_addrs) == 1
 
@@ -349,7 +349,7 @@ class TestLinkNLRI:
             b'\x00\x01'  # MT-ID: 1
         )
 
-        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert len(link.topology_ids) == 1
 
@@ -364,7 +364,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=RouteDistinguisher.NORD)
         json_output = link.json()
 
         assert '"ls-nlri-type": "bgpls-link"' in json_output
@@ -384,8 +384,8 @@ class TestLinkNLRI:
         )
 
         wire_data = with_bgpls_header(LINK.CODE, payload)
-        link1 = LINK.unpack_bgpls_nlri(wire_data, rd=None)
-        link2 = LINK.unpack_bgpls_nlri(wire_data, rd=None)
+        link1 = LINK.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
+        link2 = LINK.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
 
         assert link1 == link2
         assert not (link1 != link2)
@@ -400,7 +400,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=RouteDistinguisher.NORD)
 
         # Fixed: __hash__() now properly returns hash of attributes instead of recursing
         hash1 = hash(link)
@@ -417,7 +417,7 @@ class TestLinkNLRI:
             b'\x02\x00\x00\x04\x00\x00\xff\xfe'
         )
 
-        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
+        link = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=RouteDistinguisher.NORD)
         str_repr = str(link)
 
         assert 'bgpls-link' in str_repr
@@ -434,7 +434,7 @@ class TestLinkNLRI:
             b'\x01\x00\x00\x00'
         )
 
-        nlri = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=None)
+        nlri = LINK.unpack_bgpls_nlri(with_bgpls_header(LINK.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert nlri.proto_id == 0xFF
 
@@ -449,7 +449,7 @@ class TestLinkNLRI:
         )
 
         wire_data = with_bgpls_header(LINK.CODE, payload)
-        link = LINK.unpack_bgpls_nlri(wire_data, rd=None)
+        link = LINK.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
 
         # pack_nlri returns complete wire format with header
         negotiated = create_negotiated()
@@ -473,7 +473,7 @@ class TestPrefixV4NLRI:
             b'\x0a\x0a\x00'  # Prefix: 10.0.0.0/10
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
+        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert prefix.proto_id == 3
         assert prefix.domain == 1
@@ -498,7 +498,7 @@ class TestPrefixV4NLRI:
             b'\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
+        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert prefix.ospf_type is not None
 
@@ -512,7 +512,7 @@ class TestPrefixV4NLRI:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
+        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=RouteDistinguisher.NORD)
         json_output = prefix.json()
 
         assert '"ls-nlri-type": "bgpls-prefix-v4"' in json_output
@@ -532,8 +532,8 @@ class TestPrefixV4NLRI:
         )
 
         wire_data = with_bgpls_header(PREFIXv4.CODE, payload)
-        prefix1 = PREFIXv4.unpack_bgpls_nlri(wire_data, rd=None)
-        prefix2 = PREFIXv4.unpack_bgpls_nlri(wire_data, rd=None)
+        prefix1 = PREFIXv4.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
+        prefix2 = PREFIXv4.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
 
         assert prefix1 == prefix2
         assert not (prefix1 != prefix2)
@@ -547,7 +547,7 @@ class TestPrefixV4NLRI:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
+        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=RouteDistinguisher.NORD)
 
         hash1 = hash(prefix)
         hash2 = hash(prefix)
@@ -562,8 +562,7 @@ class TestPrefixV4NLRI:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
-        prefix.nexthop = '192.0.2.1'
+        prefix = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=RouteDistinguisher.NORD)
         str_repr = str(prefix)
 
         assert 'bgpls-prefix-v4' in str_repr
@@ -582,7 +581,7 @@ class TestPrefixV4NLRI:
             b'\x01\x09\x00\x03\x0a\x0a\x00'
         )
 
-        nlri = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=None)
+        nlri = PREFIXv4.unpack_bgpls_nlri(with_bgpls_header(PREFIXv4.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert nlri.proto_id == 0xFF
 
@@ -596,7 +595,7 @@ class TestPrefixV4NLRI:
         )
 
         wire_data = with_bgpls_header(PREFIXv4.CODE, payload)
-        prefix = PREFIXv4.unpack_bgpls_nlri(wire_data, rd=None)
+        prefix = PREFIXv4.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
         negotiated = create_negotiated()
         packed = prefix.pack_nlri(negotiated)
 
@@ -619,7 +618,7 @@ class TestPrefixV6NLRI:
             b'\x7f\x20\x01\x07'  # Prefix: 2001:700::/127
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
+        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert prefix.proto_id == 3
         assert prefix.domain == 1
@@ -644,7 +643,7 @@ class TestPrefixV6NLRI:
             b'\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
+        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert prefix.ospf_type is not None
 
@@ -658,7 +657,7 @@ class TestPrefixV6NLRI:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
+        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=RouteDistinguisher.NORD)
         json_output = prefix.json()
 
         assert '"ls-nlri-type": "bgpls-prefix-v6"' in json_output
@@ -678,8 +677,8 @@ class TestPrefixV6NLRI:
         )
 
         wire_data = with_bgpls_header(PREFIXv6.CODE, payload)
-        prefix1 = PREFIXv6.unpack_bgpls_nlri(wire_data, rd=None)
-        prefix2 = PREFIXv6.unpack_bgpls_nlri(wire_data, rd=None)
+        prefix1 = PREFIXv6.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
+        prefix2 = PREFIXv6.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
 
         assert prefix1 == prefix2
         assert not (prefix1 != prefix2)
@@ -693,7 +692,7 @@ class TestPrefixV6NLRI:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
+        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=RouteDistinguisher.NORD)
 
         hash1 = hash(prefix)
         hash2 = hash(prefix)
@@ -708,8 +707,7 @@ class TestPrefixV6NLRI:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
-        prefix.nexthop = '2001:db8::1'
+        prefix = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=RouteDistinguisher.NORD)
         str_repr = str(prefix)
 
         assert 'bgpls-prefix-v6' in str_repr
@@ -728,7 +726,7 @@ class TestPrefixV6NLRI:
             b'\x01\x09\x00\x04\x7f\x20\x01\x07'
         )
 
-        nlri = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=None)
+        nlri = PREFIXv6.unpack_bgpls_nlri(with_bgpls_header(PREFIXv6.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert nlri.proto_id == 0xFF
 
@@ -742,7 +740,7 @@ class TestPrefixV6NLRI:
         )
 
         wire_data = with_bgpls_header(PREFIXv6.CODE, payload)
-        prefix = PREFIXv6.unpack_bgpls_nlri(wire_data, rd=None)
+        prefix = PREFIXv6.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
         negotiated = create_negotiated()
         packed = prefix.pack_nlri(negotiated)
 
@@ -766,7 +764,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
+        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert srv6sid.proto_id == 3
         assert srv6sid.domain == 1
@@ -792,7 +790,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
+        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert len(srv6sid.srv6_sid_descriptors['multi-topology-ids']) == 1
 
@@ -808,7 +806,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
+        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=RouteDistinguisher.NORD)
         json_output = srv6sid.json()
 
         assert '"ls-nlri-type": "bgpls-srv6sid"' in json_output
@@ -829,7 +827,7 @@ class TestSRv6SIDNLRI:
             b'\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
-        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
+        srv6sid = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=RouteDistinguisher.NORD)
         repr_str = repr(srv6sid)
 
         assert 'bgpls-srv6sid' in repr_str
@@ -848,7 +846,7 @@ class TestSRv6SIDNLRI:
             b'\x01\x00\x00\x00'
         )
 
-        nlri = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
+        nlri = SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=RouteDistinguisher.NORD)
 
         assert nlri.proto_id == 0xFF
 
@@ -862,7 +860,7 @@ class TestSRv6SIDNLRI:
         )
 
         with pytest.raises(Exception, match='Unknown type.*Only Local Node descriptors'):
-            SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=None)
+            SRv6SID.unpack_bgpls_nlri(with_bgpls_header(SRv6SID.CODE, payload), rd=RouteDistinguisher.NORD)
 
     def test_srv6sid_len(self) -> None:
         """Test SRv6 SID NLRI length computation"""
@@ -877,7 +875,7 @@ class TestSRv6SIDNLRI:
         )
 
         wire_data = with_bgpls_header(SRv6SID.CODE, payload)
-        srv6sid = SRv6SID.unpack_bgpls_nlri(wire_data, rd=None)
+        srv6sid = SRv6SID.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
 
         # Length should include 4-byte header + payload
         length = len(srv6sid)

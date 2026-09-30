@@ -20,7 +20,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, TypeVar
+from typing import Any, Callable, ClassVar, Self, TYPE_CHECKING, Type, TypeVar
 
 from exabgp.util.mypyc import mypyc_attr
 from exabgp.util.types import Buffer
@@ -93,6 +93,14 @@ class NLRI(Family):
         Family.__init__(self, afi, safi)
         self.addpath = addpath
         self._packed = b''  # Subclasses set actual wire data
+
+    def _fresh(self) -> Self:
+        """A new instance of this class for a copy to fill, built through __init__.
+
+        A compiled class (plan/wip-mypyc.md) can not be made without running __init__, so
+        each family builds one from what it holds, and the copy then sets every slot.
+        """
+        raise NotImplementedError(f'{type(self).__name__} must implement _fresh')
 
     def _copy_nlri_slots(self, new: 'NLRI') -> None:
         """Copy NLRI base class slots to new instance."""

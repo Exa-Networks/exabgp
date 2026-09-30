@@ -18,6 +18,7 @@ from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
+from exabgp.protocol.resource import NumericValue
 
 
 class TestVPLSSettings:
@@ -650,7 +651,7 @@ class TestFlowFromSettings:
         from exabgp.bgp.message.update.nlri.settings import FlowSettings
 
         # Create a simple rule
-        port_rule = FlowAnyPort(NumericOperator.EQ, 80)
+        port_rule = FlowAnyPort(NumericOperator.EQ, NumericValue(80))
 
         settings = FlowSettings()
         settings.afi = AFI.ipv4
@@ -750,7 +751,7 @@ class TestFlowFromSettings:
         dest_rule = Flow4Destination.make_prefix4(IPv4.pton('10.0.0.2'), 32)
         src_rule = Flow4Source.make_prefix4(IPv4.pton('10.0.0.1'), 32)
         proto_rule = FlowIPProtocol(NumericOperator.EQ, Protocol(6))  # TCP
-        port_rule = FlowDestinationPort(NumericOperator.EQ, 3128)
+        port_rule = FlowDestinationPort(NumericOperator.EQ, NumericValue(3128))
 
         settings = FlowSettings()
         settings.afi = AFI.ipv4

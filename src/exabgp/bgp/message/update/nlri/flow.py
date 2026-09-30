@@ -35,6 +35,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import Self
+
 import json
 from struct import pack
 from typing import (
@@ -43,7 +45,6 @@ from typing import (
     Callable,
     ClassVar,
     Protocol as TypingProtocol,
-    Self,
     Type,
 )
 
@@ -479,6 +480,18 @@ class IOperation(IComponent):
         self.operations = operations
         self.value = value
         self.first = None  # handled by pack/str
+
+    # Built through __init__: copy's generic path calls the class with no argument, which a
+    # compiled class refuses (plan/wip-mypyc.md). The value is not changed once built.
+    def __copy__(self) -> Self:
+        new = type(self)(self.operations, self.value)
+        new.first = self.first
+        return new
+
+    def __deepcopy__(self, memo: dict[int, object]) -> Self:
+        new = self.__copy__()
+        memo[id(self)] = new
+        return new
 
     def pack(self) -> Buffer:
         """Pack to wire format: [operator][value...]"""
@@ -933,16 +946,32 @@ FLOW_LENGTH_EXTENDED_MAX: int = 0x0FFF  # Maximum length for extended encoding (
 decode: dict[AFI, dict[int, str]] = {AFI.ipv4: {}, AFI.ipv6: {}}
 factory: dict[AFI, dict[int, Type[IComponent]]] = {AFI.ipv4: {}, AFI.ipv6: {}}
 
-for content in dir():
-    kls = globals().get(content, None)
-    if not isinstance(kls, type(IComponent)):
-        continue
-    if not issubclass(kls, IComponent):
-        continue
+# Named rather than found with dir() and globals(): a compiled module (plan/wip-mypyc.md)
+# has neither, and the walk registered nothing, so every component was refused.
+COMPONENTS: tuple[Type[IComponent], ...] = (
+    Flow4Destination,
+    Flow4Source,
+    Flow6Destination,
+    Flow6Source,
+    FlowAnyPort,
+    FlowDSCP,
+    FlowDestinationPort,
+    FlowFlowLabel,
+    FlowFragment,
+    FlowFragmentIPv6,
+    FlowICMPCode,
+    FlowICMPType,
+    FlowIPProtocol,
+    FlowNextHeader,
+    FlowPacketLength,
+    FlowSourcePort,
+    FlowTCPFlag,
+    FlowTrafficClass,
+)
 
-    _ID = getattr(kls, 'ID', None)
-    if not _ID:
-        continue
+for kls in COMPONENTS:
+    _ID = kls.ID
+    assert _ID, f'{kls.__name__} is a component without a type code'
 
     _afis = []
     if issubclass(kls, FlowIPv4):
@@ -1394,8 +1423,11 @@ class Flow(NLRI):
     def __str__(self) -> str:
         return self.extensive()
 
+    def _fresh(self) -> Self:
+        return type(self)(self._packed, self.afi, self.safi)
+
     def __copy__(self) -> 'Flow':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # Flow slots
@@ -1407,7 +1439,7 @@ class Flow(NLRI):
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'Flow':
         from copy import deepcopy
 
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)

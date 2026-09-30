@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from exabgp.util.intvalue import json_number
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import Any, ClassVar, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass
@@ -60,6 +60,9 @@ class SRv6SID(BGPLS):
     PROTO_ID_OFFSET: ClassVar[int] = 4  # Byte 4: Protocol ID
     DOMAIN_OFFSET: ClassVar[int] = 5  # Bytes 5-12: Domain (8 bytes)
     TLV_OFFSET: ClassVar[int] = 13  # Bytes 13+: TLVs
+
+    def _fresh(self) -> Self:
+        return type(self)(self._packed)
 
     def __init__(
         self,

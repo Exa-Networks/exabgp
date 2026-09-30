@@ -22,7 +22,8 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv6
 from exabgp.util.enumeration import TriState
 
-from unittest.mock import Mock
+from tests import negotiation
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 def _parse(cfg: str) -> tuple[bool, Configuration]:
@@ -125,12 +126,11 @@ def test_ip_self_still_falls_back_to_the_router_id_for_ipv4() -> None:
 # ==============================================================================
 
 
-def _negotiated(linklocal_nexthop: bool, is_multihop: bool) -> Mock:
-    negotiated = Mock()
-    negotiated.linklocal_nexthop = linklocal_nexthop
-    negotiated.link_local_address = Mock(return_value=None)
-    negotiated.is_multihop = Mock(return_value=is_multihop)
-    return negotiated
+def _negotiated(linklocal_nexthop: bool, is_multihop: bool) -> Negotiated:
+    """A session with no local link-local address, one hop away or further."""
+    session = negotiation.neighbor()
+    session.session.outgoing_ttl = 2 if is_multihop else None
+    return negotiation.negotiated((), linklocal_nexthop=linklocal_nexthop, session=session)
 
 
 def test_encoding_a_link_local_next_hop_without_the_capability_is_a_bug() -> None:

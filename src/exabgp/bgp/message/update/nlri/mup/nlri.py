@@ -6,7 +6,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, ClassVar
+from typing import Any, Callable, ClassVar, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -100,14 +100,14 @@ class MUP(NLRI):
         return bytes(Family.index(self)) + self._packed
 
     def __copy__(self) -> 'MUP':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # MUP has empty __slots__ - nothing else to copy
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'MUP':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
@@ -196,6 +196,9 @@ class GenericMUP(MUP):
 
     # No additional slots - arch/code extracted from _packed on demand
     __slots__ = ()
+
+    def _fresh(self) -> Self:
+        return type(self)(self.afi, self._packed)
 
     def __init__(self, afi: AFI, packed: Buffer) -> None:
         """Create GenericMUP with complete wire format.

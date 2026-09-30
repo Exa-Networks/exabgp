@@ -23,6 +23,7 @@ from exabgp.bgp.message.update.nlri.flow import NumericOperator
 # from exabgp.bgp.message.update.attribute.community import *
 
 from exabgp.protocol.ip import IPv4
+from exabgp.protocol.resource import NumericValue
 
 
 def create_negotiated() -> Negotiated:
@@ -39,7 +40,7 @@ class TestFlow(unittest.TestCase):
         components = {
             'destination': Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24),
             'source': Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24),
-            'anyport_1': FlowAnyPort(NumericOperator.EQ, 25),
+            'anyport_1': FlowAnyPort(NumericOperator.EQ, NumericValue(25)),
         }
         messages = {
             'destination': [0x01, 0x18, 0xC0, 0x00, 0x02],
@@ -59,8 +60,8 @@ class TestFlow(unittest.TestCase):
         components = {
             'destination': Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24),
             'source': Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24),
-            'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, 25),
-            'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, 80),
+            'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, NumericValue(25)),
+            'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, NumericValue(80)),
         }
         messages = {
             'destination': [0x01, 0x18, 0xC0, 0x00, 0x02],
@@ -83,8 +84,8 @@ class TestFlow(unittest.TestCase):
         components = {
             'destination': Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24),
             'source': Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24),
-            'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, 25),
-            'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, 80),
+            'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, NumericValue(25)),
+            'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, NumericValue(80)),
         }
         messages = {
             'destination': [0x01, 0x18, 0xC0, 0x00, 0x02],
@@ -112,9 +113,9 @@ class TestFlow(unittest.TestCase):
         components = {
             'destination': Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24),
             'source': Flow4Source.make_prefix4(IPv4.pton('10.1.2.0'), 24),
-            'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, 25),
-            'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, 80),
-            'anyport_3': FlowAnyPort(NumericOperator.EQ, 80),
+            'anyport_1': FlowAnyPort(NumericOperator.EQ | NumericOperator.GT, NumericValue(25)),
+            'anyport_2': FlowAnyPort(NumericOperator.EQ | NumericOperator.LT, NumericValue(80)),
+            'anyport_3': FlowAnyPort(NumericOperator.EQ, NumericValue(80)),
         }
 
         flow1 = Flow.make_flow()

@@ -45,6 +45,7 @@ from exabgp.configuration.grammar.lexer import lex_text
 from exabgp.configuration.grammar.tree.sr_policy import SRPolicyLine
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.bgp.message import Action
 
 # what an sr-policy route says before its sub-TLVs
 _ROUTE_HEAD = ['distinguisher', '1', 'color', '1', 'endpoint', '10.0.0.1', 'next-hop', '10.0.0.2']
@@ -103,7 +104,9 @@ def test_sr_policy_nlri_ipv4_pack_unpack():
     assert len(packed) == 13
     assert packed[0] == 96  # Length byte = 96 bits (12 bytes * 8)
 
-    nlri2, remaining = SRPolicyNLRI.unpack_nlri(AFI.ipv4, SAFI.sr_policy, packed, None, False, Negotiated.UNSET)
+    nlri2, remaining = SRPolicyNLRI.unpack_nlri(
+        AFI.ipv4, SAFI.sr_policy, packed, Action.ANNOUNCE, False, Negotiated.UNSET
+    )
     assert remaining == b''
     assert isinstance(nlri2, SRPolicyNLRI)
     assert nlri2.distinguisher == 42
@@ -118,7 +121,9 @@ def test_sr_policy_nlri_ipv6_pack_unpack():
     assert len(packed) == 25
     assert packed[0] == 192  # Length byte = 192 bits (24 bytes * 8)
 
-    nlri2, remaining = SRPolicyNLRI.unpack_nlri(AFI.ipv6, SAFI.sr_policy, packed, None, False, Negotiated.UNSET)
+    nlri2, remaining = SRPolicyNLRI.unpack_nlri(
+        AFI.ipv6, SAFI.sr_policy, packed, Action.ANNOUNCE, False, Negotiated.UNSET
+    )
     assert remaining == b''
     assert nlri2.distinguisher == 0
     assert nlri2.color == 500

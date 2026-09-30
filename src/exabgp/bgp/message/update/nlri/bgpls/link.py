@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar
+from typing import ClassVar, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     pass
@@ -80,6 +80,9 @@ class LINK(BGPLS):
     PROTO_ID_OFFSET: ClassVar[int] = 4  # Byte 4: Protocol ID
     DOMAIN_OFFSET: ClassVar[int] = 5  # Bytes 5-12: Domain (8 bytes)
     TLV_OFFSET: ClassVar[int] = 13  # Bytes 13+: TLVs
+
+    def _fresh(self) -> Self:
+        return type(self)(self._packed, self.route_d)
 
     def __init__(
         self,

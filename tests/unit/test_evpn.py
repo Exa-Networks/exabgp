@@ -27,6 +27,8 @@ from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, P
 from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
+from exabgp.rib.route import Route
+from exabgp.bgp.message.update.attribute import AttributeCollection
 
 
 def create_negotiated() -> Negotiated:
@@ -799,14 +801,13 @@ class TestEVPNIntegration:
         """Test EVPN routes with next hop.
 
         Per RFC 4760, nexthop is NOT part of NLRI wire format - it's in MP_REACH_NLRI attribute.
-        So nexthop is set after NLRI creation, not in the constructor.
+        So the next hop is held by the Route, beside the NLRI, not by the NLRI.
         """
         rd = RouteDistinguisher.make_from_elements('43.43.43.43', 430)
         etag = EthernetTag.make_etag(4300)
         ip = IP.from_string('192.168.1.1')
         nexthop = IP.from_string('192.168.1.254')
 
-        route = Multicast.make_multicast(rd, etag, ip)
-        route.nexthop = nexthop  # Set after creation (per RFC 4760)
+        route = Route(Multicast.make_multicast(rd, etag, ip), AttributeCollection(), nexthop=nexthop)
 
         assert route.nexthop == nexthop

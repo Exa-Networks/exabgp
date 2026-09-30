@@ -11,7 +11,7 @@ from copy import deepcopy
 
 from struct import pack, unpack
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar
+from typing import Any, ClassVar, Self, TYPE_CHECKING, Type, TypeVar, cast
 
 from exabgp.util.types import Buffer
 
@@ -186,19 +186,26 @@ class BGPLS(NLRI):
     # be the same mistake one attribute later, which is exactly what the first version of
     # this fix did.
     def _copy_instance_state(self, new: 'BGPLS', memo: dict[Any, Any] | None = None) -> None:
-        """Carry the instance dictionary across a copy, deeply when asked to."""
-        for attribute, value in getattr(self, '__dict__', {}).items():
-            setattr(new, attribute, deepcopy(value, memo) if memo is not None else value)
+        """Carry the instance state across a copy, deeply when asked to.
+
+        From __getstate__(): a compiled class (plan/wip-mypyc.md) has no __dict__, and lists
+        its attributes there. The interpreter answers (dict, slots) for a class with both.
+        """
+        state = self.__getstate__()
+        parts = state if isinstance(state, tuple) else (state,)
+        for part in parts:
+            for attribute, value in cast(dict[str, Any], part or {}).items():
+                setattr(new, attribute, deepcopy(value, memo) if memo is not None else value)
 
     def __copy__(self) -> 'BGPLS':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         self._copy_instance_state(new)
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'BGPLS':
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
         self._deepcopy_nlri_slots(new, memo)
@@ -346,6 +353,9 @@ NLRI.register(AFI.bgpls, SAFI.bgp_ls)(BGPLS)
 
 class GenericBGPLS(BGPLS):
     __slots__ = ('_code',)
+
+    def _fresh(self) -> Self:
+        return type(self)(self._code, self._packed)
 
     def __init__(self, code: int, packed: Buffer) -> None:
         """Create GenericBGPLS with complete wire format.

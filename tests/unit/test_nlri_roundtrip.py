@@ -421,7 +421,7 @@ class TestNLRIs(unittest.TestCase):
             IP.from_string('2.2.2.2'),
         )
 
-        # with a next hop...
+        # the next hop is not part of the NLRI (a Route holds it), so these are the same route
         nlri4 = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
             ESI.make_default(),
@@ -430,7 +430,6 @@ class TestNLRIs(unittest.TestCase):
             6 * 8,
             Labels.make_labels([42], True),
             IP.from_string('1.1.1.1'),
-            IP.pton('10.10.10.10'),
         )
         nlri5 = EVPNMAC.make_mac(
             RouteDistinguisher.make_from_elements('42.42.42.42', 5),
@@ -440,7 +439,6 @@ class TestNLRIs(unittest.TestCase):
             6 * 8,
             Labels.make_labels([42], True),
             IP.from_string('1.1.1.1'),
-            IP.pton('11.11.11.11'),
         )
 
         self.assertEqual(hash(nlri0), hash(nlri1))

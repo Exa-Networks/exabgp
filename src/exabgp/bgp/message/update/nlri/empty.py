@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 
-from typing import Any, ClassVar, TYPE_CHECKING
+from typing import Any, ClassVar, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -61,13 +61,16 @@ class Empty(NLRI):
     def __repr__(self) -> str:
         return 'Empty()'
 
+    def _fresh(self) -> Self:
+        return type(self)(self.afi, self.safi)
+
     def __copy__(self) -> 'Empty':
-        new = Empty.__new__(Empty)
+        new = self._fresh()
         self._copy_nlri_slots(new)
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> 'Empty':
-        new = Empty.__new__(Empty)
+        new = self._fresh()
         self._deepcopy_nlri_slots(new, memo)
         return new
 

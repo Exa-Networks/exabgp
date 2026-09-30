@@ -652,7 +652,7 @@ class TestEventJSONSemantics:
 def test_a_capability_is_filed_under_its_name_with_its_number_inside(json_encoder: JSON, api_neighbor: Mock) -> None:
     """The OPEN of a peer, decoded from the wire, and one we build print the same way."""
     capabilities = Capabilities()
-    capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(ASN(65001))
+    capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(65001)
     built = Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), capabilities)
     received = Open.unpack_message(built.pack_message(Negotiated.UNSET)[19:], Negotiated.UNSET)
 

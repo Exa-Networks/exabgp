@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar
+from typing import ClassVar, Self
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN, check_source_and_group
@@ -35,6 +35,9 @@ class SharedJoin(MVPN):
 
     # Wire format offsets (after 2-byte type+length header)
     HEADER_SIZE: ClassVar[int] = 2  # type(1) + length(1)
+
+    def _fresh(self) -> Self:
+        return type(self)(self._packed, self.afi)
 
     def __init__(self, packed: Buffer, afi: AFI) -> None:
         """Create SharedJoin from complete wire format bytes.

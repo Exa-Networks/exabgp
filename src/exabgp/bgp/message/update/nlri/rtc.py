@@ -176,14 +176,17 @@ class RTCBase(NLRI):
             )
         return '{ "origin": 0, "route-target": null }'
 
+    def _fresh(self) -> Self:
+        return type(self)(self._packed)
+
     def __copy__(self) -> Self:
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         self._copy_nlri_slots(new)
         new._packed = self._packed  # bytes - immutable
         return new
 
     def __deepcopy__(self, memo: dict[Any, Any]) -> Self:
-        new = self.__class__.__new__(self.__class__)
+        new = self._fresh()
         memo[id(self)] = new
         self._deepcopy_nlri_slots(new, memo)
         new._packed = self._packed  # bytes - immutable
