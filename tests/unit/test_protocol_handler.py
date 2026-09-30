@@ -770,26 +770,46 @@ def test_protocol_read_notification_with_api_consolidated(mock_peer: Any) -> Non
 # ==============================================================================
 
 
-def test_protocol_new_operational(mock_peer: Any) -> None:
-    """Test creating and sending an OPERATIONAL message."""
+@pytest.mark.parametrize('reset', ['_close', 'stop'])
+def test_protocol_operational_counters(mock_neighbor: Any, reset: str) -> None:
+    """Real peer counters permit OPERATIONAL traffic and reset with the session."""
+    from exabgp.bgp.message import Message
+    from exabgp.bgp.message.operational import Advisory
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.reactor.peer import Peer
     from exabgp.reactor.protocol import Protocol
 
-    protocol = Protocol(mock_peer)
+    mock_neighbor.api['fsm'] = False
+    peer = Peer(mock_neighbor, Mock())
+    advisory = Advisory.ADM(AFI.ipv4, SAFI.unicast, 'maintenance')
+    wire = advisory.message(None)
 
-    mock_connection = Mock()
-    mock_connection.writer = Mock(return_value=[True])
-    mock_connection.session = Mock(return_value='test-session')
-    protocol.connection = mock_connection
+    for session in range(2):
+        protocol = Protocol(peer)
+        peer.proto = protocol
+        connection = Mock()
+        connection.session.return_value = 'test-operational'
+        connection.writer.return_value = [True]
+        connection.reader.return_value = [
+            (len(wire), Message.CODE.OPERATIONAL, wire[: Message.HEADER_LEN], wire[Message.HEADER_LEN :], None)
+        ]
+        protocol.connection = connection
 
-    # Mock operational message
-    mock_operational = Mock()
-    mock_operational.message = Mock(return_value=b'\xff' * 16 + b'\x00\x13\x04' + b'\x01')
-    mock_operational.ID = 4  # OPERATIONAL
-    mock_operational.__str__ = Mock(return_value='OPERATIONAL')
+        for count in (1, 2):
+            list(protocol.new_operational(advisory, protocol.negotiated))
+            connection.writer.assert_called_with(wire)
+            (received,) = list(protocol.read_message())
+            assert isinstance(received, Advisory.ADM)
+            assert received.afi == AFI.ipv4
+            assert received.safi == SAFI.unicast
+            assert received.data == b'maintenance'
+            assert peer.stats['send-operational'] == count
+            assert peer.stats['receive-operational'] == count
 
-    list(protocol.new_operational(mock_operational, protocol.negotiated))
-
-    assert mock_connection.writer.called
+        if session == 0:
+            getattr(peer, reset)()
+            assert peer.stats['send-operational'] == 0
+            assert peer.stats['receive-operational'] == 0
 
 
 def test_protocol_new_refresh(mock_peer: Any) -> None:
