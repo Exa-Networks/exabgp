@@ -1,124 +1,73 @@
 #!/usr/bin/env python3
 
 import os
-import sys
-import time
-import select
-import json
 
-MAX_API_BUFFER_BYTES = 65536
-_api_buffer = b''
-_sent_updates = {f'192.168.0.{last}/32': 0 for last in (1, 2, 3, 4)}
+from exabgp_api import counters, send, trace, wait_for_ack, wait_for_shutdown
+
+# an ACK only says a command was parsed and queued, so a barrier waits on the
+# event ExaBGP reports once the update has left the RIB. Without that a clear
+# or a flush can overtake the announce before it, and the announce is then
+# folded away and never reaches the wire.
+BARRIER_TIMEOUT = 20.0
 
 
-def record_announcements(reply):
-    neighbor = reply.get('neighbor', {})
-    if reply.get('type') != 'update' or neighbor.get('direction') != 'send':
+def barrier(what: str, expected_count: int = 1, **events) -> None:
+    if wait_for_ack(expected_count=expected_count, timeout=BARRIER_TIMEOUT, **events):
+        trace(f'{what} ok')
         return
-    announced = neighbor.get('message', {}).get('update', {}).get('announce', {})
-    for routes in announced.get('ipv4 unicast', {}).values():
-        for route in routes:
-            prefix = route if isinstance(route, str) else route['nlri']
-            if prefix in _sent_updates:
-                _sent_updates[prefix] += 1
+    raise SystemExit(f'{what} never reached the wire, saw {counters()}')
 
 
-def wait_for_ack(expected_count=1, timeout=2, sent=()):
-    """Wait for ACKs and required announcements, not merely queued API work."""
-    global _api_buffer
-    received = 0
-    deadline = time.monotonic() + timeout
-    while received < expected_count or any(_sent_updates[prefix] < count for prefix, count in sent):
-        if b'\n' not in _api_buffer:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0 or len(_api_buffer) >= MAX_API_BUFFER_BYTES:
-                return False
-            ready, _, _ = select.select([sys.stdin], [], [], remaining)
-            if not ready:
-                return False
-            # Read the pipe directly: TextIO can hide complete lines from select().
-            chunk = os.read(sys.stdin.fileno(), MAX_API_BUFFER_BYTES - len(_api_buffer))
-            if not chunk:
-                return False
-            _api_buffer += chunk
-            continue
+def main() -> None:
+    trace('start api-rr-rib.run ppid=' + str(os.getppid()))
+    try:
+        barrier('the session coming up', expected_count=0, state=(('up', 1),))
+        # the peer is told the end of RIB first, so wait for it rather than race
+        # the first announcement past it
+        barrier('the end of RIB', expected_count=0, announce=(('eor', 1),))
 
-        raw, _api_buffer = _api_buffer.split(b'\n', 1)
-        line = raw.decode('utf-8').strip()
-        answer = line
-        if line.startswith('{'):
-            try:
-                reply = json.loads(line)
-            except ValueError:
-                continue
-            record_announcements(reply)
-            answer = reply.get('answer')
-        if answer == 'done':
-            received += 1
-        elif answer == 'error':
-            return False
-        elif answer == 'shutdown':
-            raise SystemExit(0)
-    return True
+        send('announce route 192.168.0.1/32 next-hop 10.0.0.1')
+        barrier('192.168.0.1/32', announce=(('192.168.0.1/32', 1),))
+        send('clear adj-rib out')
+        barrier('the withdrawal of 192.168.0.1/32', withdraw=(('192.168.0.1/32', 1),))
 
+        send('announce route 192.168.0.2/32 next-hop 10.0.0.2')
+        send('announce route 192.168.0.3/32 next-hop 10.0.0.3')
+        barrier(
+            '192.168.0.2/32 and 192.168.0.3/32',
+            expected_count=2,
+            announce=(('192.168.0.2/32', 1), ('192.168.0.3/32', 1)),
+        )
+        send('flush adj-rib out')
+        barrier('the first flush', announce=(('192.168.0.2/32', 2), ('192.168.0.3/32', 2)))
 
-try:
-    time.sleep(1)
+        send('announce route 192.168.0.4/32 next-hop 10.0.0.4')
+        barrier('192.168.0.4/32', announce=(('192.168.0.4/32', 1),))
+        send('flush adj-rib out')
+        barrier(
+            'the second flush',
+            announce=(('192.168.0.2/32', 3), ('192.168.0.3/32', 3), ('192.168.0.4/32', 2)),
+        )
 
-    sys.stdout.write('announce route 192.168.0.0/32 next-hop 10.0.0.0\n')
-    sys.stdout.write('clear adj-rib out\n')
-    sys.stdout.flush()
-    if not wait_for_ack(expected_count=2):
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
+        send('clear adj-rib out')
+        barrier(
+            'the withdrawal of the three routes',
+            withdraw=(('192.168.0.2/32', 1), ('192.168.0.3/32', 1), ('192.168.0.4/32', 1)),
+        )
+
+        send('announce route 192.168.0.5/32 next-hop 10.0.0.5')
+        barrier('192.168.0.5/32', announce=(('192.168.0.5/32', 1),))
+
+        trace('work done')
+
+        # stay until ExaBGP is done with us. The conf sets respawn false so a
+        # return would not be restarted, but leaving while the daemon is still
+        # writing loses whatever it had left to say
+        wait_for_shutdown(timeout=7.0)
+        trace('finished')
+    except IOError:
         pass
 
-    sys.stdout.write('announce route 192.168.0.1/32 next-hop 10.0.0.1\n')
-    sys.stdout.flush()
-    if not wait_for_ack(sent=(('192.168.0.1/32', 1),)):
-        raise SystemExit('route announcement did not complete')
-    sys.stdout.write('clear adj-rib out\n')
-    sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
 
-    sys.stdout.write('announce route 192.168.0.2/32 next-hop 10.0.0.2\n')
-    sys.stdout.write('announce route 192.168.0.3/32 next-hop 10.0.0.3\n')
-    sys.stdout.flush()
-    if not wait_for_ack(expected_count=2, sent=(('192.168.0.2/32', 1), ('192.168.0.3/32', 1))):
-        raise SystemExit('route announcements did not complete')
-    sys.stdout.write('flush adj-rib out\n')
-    sys.stdout.flush()
-    if not wait_for_ack(sent=(('192.168.0.2/32', 2), ('192.168.0.3/32', 2))):
-        raise SystemExit('route refresh did not complete')
-
-    sys.stdout.write('announce route 192.168.0.4/32 next-hop 10.0.0.4\n')
-    sys.stdout.flush()
-    if not wait_for_ack(sent=(('192.168.0.4/32', 1),)):
-        raise SystemExit('route announcement did not complete')
-    sys.stdout.write('flush adj-rib out\n')
-    sys.stdout.flush()
-    if not wait_for_ack(sent=(('192.168.0.2/32', 3), ('192.168.0.3/32', 3), ('192.168.0.4/32', 2))):
-        raise SystemExit('route refresh did not complete')
-
-    sys.stdout.write('clear adj-rib out\n')
-    sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-    sys.stdout.write('announce route 192.168.0.5/32 next-hop 10.0.0.5\n')
-    sys.stdout.flush()
-    if not wait_for_ack():
-        # ACK not received, continuing anyway (ACKs may be disabled in config)
-        pass
-
-    # Wait for shutdown signal
-    now = time.time()
-    while os.getppid() != 1 and time.time() < now + 7:
-        line = sys.stdin.readline().strip()
-        if not line or 'shutdown' in line:
-            break
-        time.sleep(1)
-    # This route will never be sent
-except IOError:
-    pass
+if __name__ == '__main__':
+    main()

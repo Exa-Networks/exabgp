@@ -19,6 +19,9 @@ Version 5.0.14:
    in a list. The API response builder no longer double-wraps that
    object. The public end-of-RIB API layout remains
    '"message": { "eor": {...} }'.
+ * QA: the RIB, route-refresh, MVPN and teardown API examples use buffered
+   input and wait for sent-route and neighbour-state events, not just
+   command acknowledgements or sleeps. Their processes do not respawn.
 
 Version 5.0.13:
  * Fix: automatic local-AS sessions advertise the resolved peer identity,
