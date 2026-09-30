@@ -20,7 +20,7 @@ from exabgp.bgp.message.update import UpdateCollection
 from exabgp.bgp.message.notification import Notification
 from exabgp.bgp.message.operational import Advisory, Query, Response
 from exabgp.bgp.message.open import ASN, HoldTime, Open, RouterID, Version
-from exabgp.bgp.message.open.capability import Capabilities, Capability
+from exabgp.bgp.message.open.capability import ASN4, Capabilities, Capability
 from exabgp.bgp.message.open.capability.hostname import HostName
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.capability.software import Software
@@ -515,10 +515,14 @@ class TestPublicJSONEventSurface:
         assert notification['neighbor']['notification']['message'] == 'closing'
         assert open_event['type'] == 'open'
         assert open_event['neighbor']['open']['capabilities']['hostname'] == {
+            'code': 73,
             'host-name': 'router-a',
             'domain-name': 'example.net',
         }
-        assert open_event['neighbor']['open']['capabilities']['software-version'] == {'software': 'ExaBGP/6.0.0'}
+        assert open_event['neighbor']['open']['capabilities']['software-version'] == {
+            'code': 75,
+            'software': 'ExaBGP/6.0.0',
+        }
         assert update['type'] == 'update'
         assert update['header'] == '0x48454144'
         assert update['body'] == '0x424F4459'
@@ -643,6 +647,18 @@ class TestEventJSONSemantics:
             'sequence': 7,
             'counter': 42,
         }
+
+
+def test_a_capability_is_filed_under_its_name_with_its_number_inside(json_encoder: JSON, api_neighbor: Mock) -> None:
+    """The OPEN of a peer, decoded from the wire, and one we build print the same way."""
+    capabilities = Capabilities()
+    capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(ASN(65001))
+    built = Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), capabilities)
+    received = Open.unpack_message(built.pack_message(Negotiated.UNSET)[19:], Negotiated.UNSET)
+
+    for message in (built, received):
+        event = json.loads(json_encoder.open(api_neighbor, 'receive', message, b'', b'', Negotiated.UNSET))
+        assert event['neighbor']['open']['capabilities'] == {'asn4': {'code': 65, 'name': 'asn4', 'asn4': 65001}}
 
 
 class TestPeerStringEscaping:

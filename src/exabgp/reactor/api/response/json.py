@@ -121,8 +121,16 @@ class JSON:
         return ', '.join(f'"{k}": {self._string(v)}' for (k, v) in extra.items())
 
     def _json_kv(self, extra: dict[Any, Any]) -> str:
-        # the key is a code (CapabilityCode), printed as its number: str() of a code is its name
-        return ', '.join(f'"{int(k)}": {v.json()}' for (k, v) in extra.items())
+        # the key is a code (CapabilityCode): the object is filed under its name, and the
+        # number is given inside it as "code"
+        return ', '.join(f'"{k}": {self._with_code(int(k), v.json())}' for (k, v) in extra.items())
+
+    @staticmethod
+    def _with_code(code: int, value: str) -> str:
+        body = value.strip()
+        assert body.startswith('{') and body.endswith('}'), f'capability {code} is not a JSON object: {body}'
+        inside = body[1:-1].strip()
+        return f'{{ "code": {code}, {inside} }}' if inside else f'{{ "code": {code} }}'
 
     def _json_list(self, extra: dict[str, Any]) -> str:
         return ', '.join(v.json() for v in extra.values())

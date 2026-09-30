@@ -4,6 +4,10 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Incompatible: in the JSON API, the capabilities of an OPEN are filed under their name
+   ("multiprotocol", "asn4", ...), with the capability code inside as "code". A received
+   OPEN used to file them under the code ("1", "65", ...) and a sent one under the name,
+   without the code.
  * Fix: the configuration syntax in exabgp.conf(5) is printed from the parser. The page
    written by hand said "rate-limit <enable | disable>" where a number of UPDATE messages
    per second is read, and "encoding" for the statement called "encoder".

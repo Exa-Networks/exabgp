@@ -516,3 +516,7 @@ Capabilities keys narrowed to CapabilityCode (773a6242d), the OPEN JSON printed 
 capability under str(code), its name ("multiprotocol"), where a decoded OPEN printed the
 number ("1"). `JSON._json_kv` prints int(key). A sent OPEN, whose keys were already codes,
 now prints numbers too, as the decoded one always did.
+
+SUPERSEDED (Thomas chose names): the capabilities are filed under their name, with the
+number inside each object as "code"; the decoding fixture G and the JSON unit tests follow,
+and doc/CHANGELOG.rst says so under Incompatible.
