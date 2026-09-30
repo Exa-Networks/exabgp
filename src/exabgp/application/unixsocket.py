@@ -326,6 +326,9 @@ class Control:
         if socket_dir and not os.path.exists(socket_dir):
             try:
                 os.makedirs(socket_dir, mode=0o700, exist_ok=True)
+                # mode= is filtered by the umask: exabgp's default of 0o137 left 0o600, a
+                # directory nobody can enter, and binding the socket inside it then failed
+                os.chmod(socket_dir, 0o700)
                 sys.stdout.write(f'created socket directory: {socket_dir}\n')
                 sys.stdout.flush()
             except OSError as exc:
