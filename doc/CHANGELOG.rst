@@ -8,6 +8,9 @@ Version 5.0.14:
    check. It returned a plain IPv4 or IPv6 object. The configuration
    already refuses a neighbour which could reach it with an IPv6 address,
    so no OPEN was affected.
+ * Fix: sending or receiving an OPERATIONAL message no longer raises
+   KeyError on missing peer counters. Both counters reset when the
+   session closes or the peer stops.
 
 Version 5.0.13:
  * Fix: the end of RIB marker reported to an API process was not JSON.

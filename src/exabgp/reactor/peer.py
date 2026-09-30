@@ -123,6 +123,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-operational': 0,
+                'send-operational': 0,
             },
         )
 
@@ -171,6 +173,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-operational': 0,
+                'send-operational': 0,
             },
         )
 
@@ -247,6 +251,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-operational': 0,
+                'send-operational': 0,
             },
         )
         self.neighbor.rib.uncache()
