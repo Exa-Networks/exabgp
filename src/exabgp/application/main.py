@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import sys
 import argparse
+from collections.abc import MutableMapping
 from types import ModuleType
 from typing import cast
 
@@ -28,6 +29,28 @@ from exabgp.application import schema
 from exabgp.application import export
 from exabgp.application import example
 from exabgp.application import migrate
+
+
+# what a PyInstaller one-file binary points at the libraries it unpacked, keeping the value it
+# found under <name>_ORIG (LIBPATH is the AIX name of LD_LIBRARY_PATH)
+FROZEN_LIBRARY_PATHS = ('LD_LIBRARY_PATH', 'LIBPATH')
+
+
+def restore_library_path(environment: MutableMapping[str, str]) -> None:
+    """Give back the library path a one-file binary replaced, so what it starts sees the host's.
+
+    Only for the binary (qa/bin/build_binary calls it before main). Its bootloader puts its
+    unpacked directory first, and every helper, healthcheck command or shell inherits it. A
+    python3 which finds its libpython through that path, as the one of GitHub's runners does,
+    then loads the bundled libpython instead, cannot find its standard library, and dies.
+    The daemon itself is unaffected: the loader read the path when the binary started.
+    """
+    for name in FROZEN_LIBRARY_PATHS:
+        original = environment.pop(f'{name}_ORIG', None)
+        if original is None:
+            environment.pop(name, None)
+        else:
+            environment[name] = original
 
 
 def _description(module: ModuleType) -> str | None:

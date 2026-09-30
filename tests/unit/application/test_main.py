@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from exabgp.application.main import main
+from exabgp.application.main import main, restore_library_path
 
 
 class TestMainFunction:
@@ -212,3 +212,33 @@ class TestArgumentParsing:
             assert should_skip is True
         finally:
             sys.argv = original_argv
+
+
+class TestRestoreLibraryPath:
+    """What the one-file binary hands the programs it starts (qa/bin/build_binary ENTRY)."""
+
+    UNPACKED = '/tmp/_MEI12345'
+
+    def test_the_host_path_comes_back(self) -> None:
+        """The bootloader saved the host's path: helpers get it, not the unpacked directory."""
+        environment = {'LD_LIBRARY_PATH': f'{self.UNPACKED}:/opt/python/lib', 'LD_LIBRARY_PATH_ORIG': '/opt/python/lib'}
+        restore_library_path(environment)
+        assert environment == {'LD_LIBRARY_PATH': '/opt/python/lib'}
+
+    def test_no_host_path_leaves_none(self) -> None:
+        """The host had none, so helpers must not see the one the bootloader added."""
+        environment = {'LD_LIBRARY_PATH': self.UNPACKED, 'PATH': '/usr/bin'}
+        restore_library_path(environment)
+        assert environment == {'PATH': '/usr/bin'}
+
+    def test_aix_libpath(self) -> None:
+        """AIX names the same path LIBPATH, and the bootloader treats it the same way."""
+        environment = {'LIBPATH': f'{self.UNPACKED}:/usr/lib', 'LIBPATH_ORIG': '/usr/lib'}
+        restore_library_path(environment)
+        assert environment == {'LIBPATH': '/usr/lib'}
+
+    def test_nothing_to_restore(self) -> None:
+        """Other variables are never touched."""
+        environment = {'PATH': '/usr/bin', 'HOME': '/root'}
+        restore_library_path(environment)
+        assert environment == {'PATH': '/usr/bin', 'HOME': '/root'}

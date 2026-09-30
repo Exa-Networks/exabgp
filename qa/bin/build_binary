@@ -63,8 +63,12 @@ COMMAND_TIMEOUT = 300
 SERVER_READY = 'config.loaded'
 SERVER_STOPPED = 'reactor.shutdown'
 
-# the console script of [project.scripts], as pip writes it
-ENTRY = 'import sys\nfrom exabgp.application.main import main\n\nsys.exit(main())\n'
+# the console script of [project.scripts], as pip writes it, after giving back the library
+# path the bootloader replaced, which every program the binary starts would otherwise inherit
+ENTRY = (
+    'import os\nimport sys\nfrom exabgp.application.main import main, restore_library_path\n\n'
+    'restore_library_path(os.environ)\nsys.exit(main())\n'
+)
 
 
 def environment(**extra: str) -> dict[str, str]:
