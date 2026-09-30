@@ -197,7 +197,7 @@ def safe_write(filepath: str | Path, content: str | bytes) -> None:
     if isinstance(content, str):
         content = content.encode('utf-8')
 
-    tmp_path = None
+    tmp_path: str | None = None
     try:
         # Write to temp file in same directory (for atomic rename)
         fd, tmp_path = tempfile.mkstemp(dir=filepath.parent, prefix='.config_', suffix='.tmp')

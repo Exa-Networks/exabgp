@@ -18,7 +18,6 @@ License: 3-clause BSD
 
 from exabgp.bgp.neighbor import Neighbor
 
-from unittest.mock import Mock
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.open import Version, ASN, RouterID, HoldTime
@@ -1390,7 +1389,7 @@ def test_pathslimit_capability_per_family() -> None:
     """Test _pathslimit() emits only families with explicit limits."""
     from exabgp.bgp.neighbor.capability import NeighborCapability
 
-    neighbor = Mock()
+    neighbor = Neighbor()
     cap = NeighborCapability()
     cap.add_path = 3
     cap.paths_limit_per_family = {(AFI.ipv4, SAFI.unicast): 5, (AFI.ipv6, SAFI.unicast): 10}

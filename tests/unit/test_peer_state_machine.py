@@ -5,12 +5,20 @@
 Comprehensive tests for BGP Peer State Machine implementation.
 Tests state transitions, timers, collision detection, and error recovery.
 
+The Peer is a real one, over a real Reactor and a neighbour read from a configuration:
+the compiled build (plan/wip-mypyc.md) checks the declared type of each argument and
+attribute, so a Mock can stand in for none of them, and a method of a compiled instance
+cannot be replaced.  What the tests used to learn by asking a Mock whether it was called,
+they learn from what the call left behind: the RIB's queues, the RIB cache, the bytes a
+connection sent.
+
 Created: 2025-11-08
 """
 
+import asyncio
 import os
 from typing import Any
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -21,8 +29,29 @@ os.environ['exabgp_tcp_bind'] = '127.0.0.1'
 os.environ['exabgp_tcp_attempts'] = '0'
 
 from exabgp.bgp.fsm import FSM  # noqa: E402
+from exabgp.bgp.message import KeepAlive, Open  # noqa: E402
 from exabgp.bgp.message.notification import Notify  # noqa: E402
+from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, RouterID, Version  # noqa: E402
+from exabgp.bgp.message.open.capability.negotiated import Negotiated  # noqa: E402
+from exabgp.bgp.neighbor import Neighbor  # noqa: E402
+from exabgp.configuration.configuration import Configuration  # noqa: E402
+from exabgp.protocol.family import AFI, SAFI  # noqa: E402
+from exabgp.reactor.network.incoming import Incoming  # noqa: E402
 from exabgp.reactor.peer import Peer, Stats  # noqa: E402
+from exabgp.reactor.protocol import Protocol  # noqa: E402
+from exabgp.rib import RIB  # noqa: E402
+from tests.negotiation import connect, messages, negotiated, peer as real_peer, received  # noqa: E402
+from tests.wire_reader import tcp_socketpair  # noqa: E402
+
+from exabgp.reactor.peer import peer as peer_module  # noqa: E402
+
+# a compiled module is an extension, with no .py file behind it
+COMPILED = not str(peer_module.__file__).endswith('.py')
+
+NOTIFICATION = 3
+KEEPALIVE = 4
+IPV4_UNICAST = (AFI.ipv4, SAFI.unicast)
+IPV6_UNICAST = (AFI.ipv6, SAFI.unicast)
 
 
 @pytest.fixture(autouse=True)
@@ -56,16 +85,87 @@ def mock_logger() -> Any:
     option.formater = original_formater
 
 
+def configured(
+    *families: str,
+    routes: tuple[str, ...] = (),
+    router_id: str = '192.0.2.2',
+    neighbor: str = '192.0.2.1',
+) -> Neighbor:
+    """A neighbour as the configuration builds it, with its RIB enabled."""
+    family = ' '.join(f'{name};' for name in families or ('ipv4 unicast',))
+    static = ' '.join(f'route {route};' for route in routes)
+    config = Configuration(
+        [
+            f"""neighbor {neighbor} {{
+            router-id {router_id};
+            local-address 192.0.2.2;
+            local-as 65001;
+            peer-as 65002;
+            family {{ {family} }}
+            static {{ {static} }}
+        }}"""
+        ],
+        text=True,
+    )
+    assert config.reload(), str(config.error)
+    return next(iter(config.neighbors.values()))
+
+
+def make_peer(neighbor: Neighbor | None = None) -> Peer:
+    session, _ = real_peer(configured() if neighbor is None else neighbor)
+    return session
+
+
+def queued(neighbor: Neighbor) -> list[str]:
+    """The prefixes the outgoing RIB has queued to announce."""
+    return sorted(str(route.nlri.cidr) for route in neighbor.rib.outgoing.queued_routes())
+
+
+def queue_a_route(neighbor: Neighbor, prefix: str = '10.9.9.0/24') -> None:
+    """Queue one route for announcement, as the API does."""
+    (route,) = configured(routes=(f'{prefix} next-hop 192.0.2.1',), neighbor='192.0.2.99').routes
+    neighbor.rib.outgoing.add_to_rib(route)
+    assert neighbor.rib.outgoing.pending()
+
+
+def incoming() -> tuple[Incoming, Any]:
+    """A real accepted TCP connection, and the socket of the side which connected."""
+    accepted, connecting = tcp_socketpair()
+    return Incoming(AFI.ipv4, '127.0.0.1', '127.0.0.1', accepted), connecting
+
+
+def notifications_sent(refusal: Any, connecting: Any) -> list[tuple[int, int]]:
+    """Run the refusal handle_connection returned, and the (code, subcode) the peer read."""
+    # bounded: a NOTIFICATION fits in one write to an empty socket buffer
+    for _, _ in zip(range(100), refusal):
+        pass
+    # the refusal closes the connection once it is written: read up to that end of stream
+    connecting.settimeout(5)
+    data = b''
+    try:
+        # bounded: each read takes at least a byte, or ends the loop
+        for _ in range(1024):
+            chunk = connecting.recv(65536)
+            if not chunk:
+                break
+            data += chunk
+    finally:
+        connecting.close()
+    return [(body[0], body[1]) for kind, body in messages(data) if kind == NOTIFICATION]
+
+
+def received_open(router_id: str) -> Open:
+    return Open.make_open(Version(4), ASN(65002), HoldTime(180), RouterID(router_id), Capabilities())
+
+
 class TestPeerInitialization:
     """Test Peer object initialization"""
 
     def test_peer_init_basic(self) -> None:
         """Test basic Peer initialization"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.rib = Mock()
-        reactor = Mock()
+        neighbor = configured()
+        session, _ = real_peer(neighbor)
+        reactor = session.reactor
 
         peer = Peer(neighbor, reactor)
 
@@ -78,12 +178,7 @@ class TestPeerInitialization:
 
     def test_peer_init_stats(self) -> None:
         """Test Peer initialization creates stats"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
 
         assert 'fsm' in peer.stats
         assert 'creation' in peer.stats
@@ -94,12 +189,7 @@ class TestPeerInitialization:
 
     def test_peer_init_message_counters(self) -> None:
         """Test Peer initialization creates message counters"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
 
         assert peer.stats['receive-open'] == 0
         assert peer.stats['send-open'] == 0
@@ -111,15 +201,11 @@ class TestPeerInitialization:
         assert peer.stats['send-notification'] == 0
 
     def test_peer_id_generation(self) -> None:
-        """Test Peer generates unique ID"""
-        neighbor = Mock()
-        neighbor.uid = '123'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
+        """Test Peer generates its ID from the neighbour's uid"""
+        neighbor = configured()
+        peer = make_peer(neighbor)
 
-        peer = Peer(neighbor, reactor)
-
-        assert peer.id() == 'peer-123'
+        assert peer.id() == f'peer-{neighbor.uid}'
 
 
 class TestPeerStateTransitions:
@@ -127,24 +213,13 @@ class TestPeerStateTransitions:
 
     def test_peer_starts_in_idle(self) -> None:
         """Test Peer starts in IDLE state"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
 
         assert peer.fsm == FSM.IDLE
 
     def test_peer_close_transitions_to_idle(self) -> None:
         """Test _close transitions Peer to IDLE"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.ephemeral = False
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer.fsm.change(FSM.ESTABLISHED)
 
         peer._close('test close')
@@ -153,16 +228,11 @@ class TestPeerStateTransitions:
         assert peer.proto is None
 
     def test_peer_reset_clears_state(self) -> None:
-        """Test _reset clears peer state"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.ephemeral = False
-        neighbor.reset_rib = Mock()
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        """Test _reset clears peer state, and resets the neighbour's RIB"""
+        neighbor = configured()
+        peer = make_peer(neighbor)
         peer.fsm.change(FSM.ESTABLISHED)
+        queue_a_route(neighbor)
 
         peer._reset('test reset')
 
@@ -170,34 +240,25 @@ class TestPeerStateTransitions:
         assert not peer.fsm_runner.running
         assert not peer.fsm_runner.terminated
         assert peer._teardown is None
-        neighbor.reset_rib.assert_called_once()
+        # reset_rib: what was queued for the session which ended is not sent to the next
+        assert not neighbor.rib.outgoing.pending()
 
     def test_peer_stop_sets_flags(self) -> None:
-        """Test stop() sets correct flags"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.rib = Mock()
-        neighbor.rib.uncache = Mock()
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        """Test stop() sets correct flags, and takes the RIB out of the cache"""
+        neighbor = configured()
+        peer = make_peer(neighbor)
+        assert RIB._cache.get(neighbor.rib.name) is neighbor.rib
 
         peer.stop()
 
         assert peer._restart is False
         assert peer._restarted is False
         assert peer.fsm == FSM.IDLE
-        neighbor.rib.uncache.assert_called_once()
+        assert neighbor.rib.name not in RIB._cache
 
     def test_peer_reestablish_sets_teardown(self) -> None:
         """Test reestablish() sets teardown flag"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
 
         peer.reestablish()
 
@@ -212,139 +273,88 @@ class TestPeerCollisionDetection:
 
     def test_collision_reject_when_established(self) -> None:
         """Test collision detection rejects connection when established"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.shutdown = False
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer.fsm.change(FSM.ESTABLISHED)
-
-        connection = Mock()
-        connection.name = Mock(return_value='test-connection')
-        connection.notification = Mock(return_value='notification')
+        connection, connecting = incoming()
 
         result = peer.handle_connection(connection)
 
         assert result is not None
-        connection.notification.assert_called_once_with(6, 7, b'could not accept the connection, already established')
+        assert notifications_sent(result, connecting) == [(6, 7)]
 
     def test_collision_detection_openconfirm_higher_router_id(self) -> None:
         """Test collision detection in OPENCONFIRM with higher local router-id"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.shutdown = False
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        # Neighbor now uses session for connection-related config
-        neighbor.session = Mock()
-        neighbor.session.router_id = Mock(pack_ip=Mock(return_value=b'\x02\x02\x02\x02'))
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer(configured(router_id='2.2.2.2'))
         peer.fsm.change(FSM.OPENCONFIRM)
-
-        # Create mock protocol with negotiated_in OPEN
-        peer.proto = Mock()
-        peer.proto.negotiated = Mock()
-        peer.proto.negotiated.received_open = Mock()
-        peer.proto.negotiated.received_open.router_id = Mock(pack_ip=Mock(return_value=b'\x01\x01\x01\x01'))
-
-        connection = Mock()
-        connection.name = Mock(return_value='test-connection')
-        connection.notification = Mock(return_value='notification')
+        peer.proto = Protocol(peer)
+        peer.proto.negotiated.received_open = received_open('1.1.1.1')
+        connection, connecting = incoming()
 
         result = peer.handle_connection(connection)
 
         # Should reject incoming connection (local ID is higher)
         assert result is not None
-        connection.notification.assert_called_once()
+        assert notifications_sent(result, connecting) == [(6, 7)]
 
     def test_collision_detection_openconfirm_lower_router_id(self) -> None:
         """Test collision detection in OPENCONFIRM with lower local router-id"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.shutdown = False
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        # Neighbor now uses session for connection-related config
-        neighbor.session = Mock()
-        neighbor.session.router_id = Mock(pack_ip=Mock(return_value=b'\x01\x01\x01\x01'))
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer(configured(router_id='1.1.1.1'))
         peer.fsm.change(FSM.OPENCONFIRM)
+        existing = Protocol(peer)
+        existing.negotiated.received_open = received_open('2.2.2.2')
+        theirs = connect(existing)
+        peer.proto = existing
+        connection, connecting = incoming()
 
-        # Create mock protocol with negotiated_in OPEN
-        peer.proto = Mock()
-        peer.proto.negotiated = Mock()
-        peer.proto.negotiated.received_open = Mock()
-        peer.proto.negotiated.received_open.router_id = Mock(pack_ip=Mock(return_value=b'\x02\x02\x02\x02'))
-        peer.proto.close = Mock()
+        try:
+            result = peer.handle_connection(connection)
 
-        from exabgp.reactor.protocol import Protocol
-
-        connection = Mock()
-        connection.name = Mock(return_value='test-connection')
-
-        with patch.object(Protocol, '__init__', return_value=None):
-            with patch.object(Protocol, 'accept', return_value=Mock()):
-                result = peer.handle_connection(connection)
-
-        # Should accept incoming connection (local ID is lower)
-        assert result is None
-        assert peer.proto is not None
+            # Should accept incoming connection (local ID is lower)
+            assert result is None
+            assert peer.proto is not None
+            assert peer.proto is not existing
+            assert peer.proto.connection is connection
+            # the outgoing connection was closed for the incoming one
+            assert existing.connection is None
+        finally:
+            connection.close()
+            connecting.close()
+            theirs.close()
 
     def test_collision_accept_replaces_proto(self) -> None:
         """Test accepting collision replaces existing protocol"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.shutdown = False
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer.fsm.change(FSM.ACTIVE)
-
-        old_proto = Mock()
+        old_proto = Protocol(peer)
         peer.proto = old_proto
+        connection, connecting = incoming()
 
-        from exabgp.reactor.protocol import Protocol
+        try:
+            result = peer.handle_connection(connection)
 
-        connection = Mock()
-        connection.name = Mock(return_value='test-connection')
-
-        with patch.object(Protocol, '__init__', return_value=None):
-            with patch.object(Protocol, 'accept', return_value=Mock()):
-                result = peer.handle_connection(connection)
-
-        # Should accept connection and replace proto
-        assert result is None
-        assert not peer.fsm_runner.running
+            # Should accept connection and replace proto
+            assert result is None
+            assert peer.proto is not old_proto
+            assert peer.proto is not None
+            assert peer.proto.connection is connection
+            assert not peer.fsm_runner.running
+        finally:
+            connection.close()
+            connecting.close()
 
 
 class TestPeerTimers:
     """Test Peer timer functionality"""
 
     def test_receive_timer_initialized(self) -> None:
-        """Test receive timer is initialized after OPENCONFIRM"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        """Test receive timer is only initialized after OPENCONFIRM"""
+        peer = make_peer()
 
         assert peer.recv_timer is None
 
     def test_peer_delay_increase_on_close(self) -> None:
         """Test delay increases on connection close"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.ephemeral = False
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         initial_next = peer._delay._next
 
         peer._close('test')
@@ -354,12 +364,7 @@ class TestPeerTimers:
 
     def test_peer_delay_reset_on_reestablish(self) -> None:
         """Test delay resets on reestablish"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer._delay.increase()
         peer._delay.increase()
 
@@ -370,12 +375,7 @@ class TestPeerTimers:
 
     def test_peer_delay_reset_on_teardown(self) -> None:
         """Test delay resets on teardown"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer._delay.increase()
 
         peer.teardown(Notify(6, 3), restart=True)
@@ -389,13 +389,7 @@ class TestPeerErrorRecovery:
 
     def test_peer_close_on_error_transitions_to_idle(self) -> None:
         """Test _close transitions peer to IDLE on error"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.ephemeral = False
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer.fsm.change(FSM.ESTABLISHED)
 
         peer._close('test error', 'network error')
@@ -405,34 +399,22 @@ class TestPeerErrorRecovery:
 
     def test_peer_reset_on_error_clears_state(self) -> None:
         """Test _reset clears peer state on error"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.ephemeral = False
-        neighbor.reset_rib = Mock()
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        neighbor = configured()
+        peer = make_peer(neighbor)
         peer.fsm.change(FSM.ESTABLISHED)
         peer._teardown = Notify(6, 6)
+        queue_a_route(neighbor)
 
         peer._reset('notification received', 'error')
 
         # Should reset state
         assert peer.fsm == FSM.IDLE
         assert peer._teardown is None
-        neighbor.reset_rib.assert_called_once()
+        assert not neighbor.rib.outgoing.pending()
 
     def test_peer_handles_network_error_state(self) -> None:
         """Test Peer error handling transitions to IDLE"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.ephemeral = False
-        neighbor.reset_rib = Mock()
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer.fsm.change(FSM.OPENCONFIRM)
 
         # Simulate error by calling _reset
@@ -442,13 +424,7 @@ class TestPeerErrorRecovery:
 
     def test_peer_error_increases_delay(self) -> None:
         """Test error increases backoff delay"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.ephemeral = False
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         initial_next = peer._delay._next
 
         # Simulate error
@@ -458,21 +434,20 @@ class TestPeerErrorRecovery:
         assert peer._delay._next > initial_next
 
     def test_peer_clears_proto_on_error(self) -> None:
-        """Test Peer clears protocol on error"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.ephemeral = False
-        reactor = Mock()
+        """Test Peer clears, and closes, its protocol on error"""
+        peer = make_peer()
+        proto = Protocol(peer)
+        theirs = connect(proto)
+        peer.proto = proto
 
-        peer = Peer(neighbor, reactor)
-        peer.proto = Mock()
-        peer.proto.close = Mock()
+        try:
+            peer._close('test error')
 
-        peer._close('test error')
-
-        # Protocol should be cleared
-        assert peer.proto is None
+            # Protocol should be cleared, and its connection closed
+            assert peer.proto is None
+            assert proto.connection is None
+        finally:
+            theirs.close()
 
 
 class TestPeerConnectionAttempts:
@@ -480,14 +455,8 @@ class TestPeerConnectionAttempts:
 
     def test_can_reconnect_unlimited(self) -> None:
         """Test can_reconnect with unlimited attempts"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        with patch('exabgp.reactor.peer.peer.getenv') as mock_env:
-            mock_env.return_value.tcp.attempts = 0  # unlimited
-            peer = Peer(neighbor, reactor)
+        peer = make_peer()
+        peer.max_connection_attempts = 0  # unlimited, what tcp.attempts 0 gives
 
         assert peer.can_reconnect() is True
         peer.connection_attempts = 1000
@@ -495,14 +464,8 @@ class TestPeerConnectionAttempts:
 
     def test_can_reconnect_limited(self) -> None:
         """Test can_reconnect with limited attempts"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        with patch('exabgp.reactor.peer.peer.getenv') as mock_env:
-            mock_env.return_value.tcp.attempts = 3
-            peer = Peer(neighbor, reactor)
+        peer = make_peer()
+        peer.max_connection_attempts = 3
 
         assert peer.can_reconnect() is True
         peer.connection_attempts = 2
@@ -514,14 +477,8 @@ class TestPeerConnectionAttempts:
 
     def test_connection_attempt_counting(self) -> None:
         """Test connection attempts are tracked"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        with patch('exabgp.reactor.peer.peer.getenv') as mock_env:
-            mock_env.return_value.tcp.attempts = 3
-            peer = Peer(neighbor, reactor)
+        peer = make_peer()
+        peer.max_connection_attempts = 3
 
         # Initially no attempts
         assert peer.connection_attempts == 0
@@ -533,37 +490,59 @@ class TestPeerConnectionAttempts:
         peer.connection_attempts = 3
         assert peer.can_reconnect() is False
 
+    def test_the_attempt_limit_is_read_from_the_environment(self) -> None:
+        """tcp.attempts, which the environment of this file sets to 0, is the peer's limit"""
+        from exabgp.environment import getenv
+
+        assert make_peer().max_connection_attempts == getenv().tcp.attempts
+
     @pytest.mark.asyncio
     async def test_establishment_negotiates_each_open_once(self) -> None:
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False, 'negotiated': False}
-        neighbor.ephemeral = False
-        neighbor.session.local_as = 65000
-        reactor = Mock()
+        """A session established over a real connection, each OPEN handed to Negotiated once.
 
-        with patch('exabgp.reactor.peer.peer.getenv') as mock_env:
-            mock_env.return_value.tcp.attempts = 3
-            mock_env.return_value.tcp.bind = False
-            mock_env.return_value.bgp.passive = False
-            peer = Peer(neighbor, reactor)
+        The OPEN exchange runs for real: ours is written to the peer's socket, and the
+        peer's OPEN and KEEPALIVE are read from it.  Counting the calls needs Negotiated's
+        methods replaced, which a compiled class does not allow, so the count is only
+        checked interpreted; the establishment is checked both ways.
+        """
+        peer = make_peer()
+        peer.connection_attempts = 3
+        proto = Protocol(peer)
+        theirs = connect(proto)
+        peer.proto = proto
+        wire = negotiated()
+        theirs.sendall(received_open('192.0.2.1').pack_message(wire) + KeepAlive.make_keepalive().pack_message(wire))
 
-            peer.connection_attempts = 3
-            peer.proto = Mock()
-            peer.proto.connection = Mock()
-            peer.proto.connection.session = Mock()
-            peer.proto.negotiated = Mock(msg_size=4096, holdtime=180)
-            peer._send_open = AsyncMock(return_value=Mock())
-            peer._read_open = AsyncMock(return_value=Mock())
-            peer._send_ka = AsyncMock()
-            peer._read_ka = AsyncMock()
+        calls: dict[str, int] = {'sent': 0, 'received': 0}
+        counting = []
+        if not COMPILED:
+            for name in calls:
 
-            with patch('exabgp.reactor.peer.peer.ReceiveTimer', return_value=Mock()):
-                await peer._establish()
+                def counted(self: Negotiated, message: Open, _name: str = name, _real: Any = getattr(Negotiated, name)):
+                    calls[_name] += 1
+                    return _real(self, message)
 
+                counting.append(patch.object(Negotiated, name, counted))
+        for each in counting:
+            each.start()
+        try:
+            await asyncio.wait_for(peer._establish(), timeout=5)
+        finally:
+            for each in counting:
+                each.stop()
+            sent = messages(received(theirs))
+            theirs.close()
+            proto.close()
+
+        assert peer.fsm == FSM.ESTABLISHED
+        # _connect was not needed, the connection was there: no attempt was counted
         assert peer.connection_attempts == 3
-        peer.proto.negotiated.sent.assert_called_once()
-        peer.proto.negotiated.received.assert_called_once()
+        assert [kind for kind, _ in sent] == [1, KEEPALIVE]
+        assert proto.negotiated.sent_open is not None
+        assert proto.negotiated.received_open is not None
+        assert proto.negotiated.peer_as == ASN(65002)
+        if not COMPILED:
+            assert calls == {'sent': 1, 'received': 1}
 
 
 class TestPeerEstablished:
@@ -571,24 +550,14 @@ class TestPeerEstablished:
 
     def test_established_returns_true_when_established(self) -> None:
         """Test established() returns True in ESTABLISHED state"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer.fsm.change(FSM.ESTABLISHED)
 
         assert peer.established() is True
 
     def test_established_returns_false_when_not_established(self) -> None:
         """Test established() returns False in other states"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
 
         assert peer.established() is False
 
@@ -603,26 +572,24 @@ class TestPeerSocket:
     """Test Peer socket() method"""
 
     def test_socket_returns_fd_when_proto_exists(self) -> None:
-        """Test socket() returns fd when protocol exists"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
+        """Test socket() returns the connection's fd when a protocol exists"""
+        peer = make_peer()
+        proto = Protocol(peer)
+        theirs = connect(proto)
+        peer.proto = proto
 
-        peer = Peer(neighbor, reactor)
-        peer.proto = Mock()
-        peer.proto.fd = Mock(return_value=42)
-
-        assert peer.socket() == 42
+        try:
+            assert proto.connection is not None
+            assert proto.connection.io is not None
+            assert peer.socket() == proto.connection.io.fileno()
+            assert peer.socket() >= 0
+        finally:
+            proto.close()
+            theirs.close()
 
     def test_socket_returns_negative_when_no_proto(self) -> None:
         """Test socket() returns -1 when no protocol"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer.proto = None
 
         assert peer.socket() == -1
@@ -633,19 +600,9 @@ class TestPeerReconfigure:
 
     def test_reconfigure_updates_neighbor(self) -> None:
         """Test reconfigure() updates neighbor reference"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
+        peer = make_peer()
+        new_neighbor = configured()
 
-        new_neighbor = Mock()
-        new_neighbor.uid = '2'
-        new_neighbor.rib = Mock()
-        new_neighbor.rib.outgoing = Mock()
-        new_neighbor.routes = []
-        new_neighbor.previous = None
-
-        peer = Peer(neighbor, reactor)
         peer.reconfigure(new_neighbor)
 
         # Neighbor reference updated immediately
@@ -660,38 +617,25 @@ class TestPeerReconfigure:
         the RIB should be updated immediately since the main loop isn't
         running to process the _neighbor variable later.
         """
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        before = configured(routes=('10.0.1.0/24 next-hop 192.0.2.1',))
+        peer = make_peer(before)
         # Peer starts in IDLE (offline)
         assert peer.fsm == FSM.IDLE
+        # the reloaded configuration: the old route replaced by a new one
+        after = configured(routes=('10.0.2.0/24 next-hop 192.0.2.1',))
+        after.previous = before
+        # loading a configuration queues its routes: start from an empty queue
+        after.rib.outgoing.reset()
+        assert queued(after) == []
 
-        # Create new neighbor config with routes and RIB
-        # After reconfigure(), peer.neighbor becomes new_neighbor
-        # so the RIB is accessed from new_neighbor
-        new_neighbor = Mock()
-        new_neighbor.uid = '1'
-        new_neighbor.rib = Mock()
-        new_neighbor.rib.outgoing = Mock()
-        new_neighbor.rib.outgoing.replace_reload = Mock()
-        current_routes = [Mock(name='route1')]
-        previous_routes = [Mock(name='old_route')]
-        new_neighbor.routes = current_routes
-        new_neighbor.previous = Mock()
-        new_neighbor.previous.routes = previous_routes
+        peer.reconfigure(after)
 
-        peer.reconfigure(new_neighbor)
-
-        # RIB should be updated directly since peer is offline
-        new_neighbor.rib.outgoing.replace_reload.assert_called_once_with(
-            previous_routes,
-            current_routes,
-        )
+        # RIB should be updated directly since peer is offline: the new route queued to
+        # be announced, the one the configuration dropped queued to be withdrawn
+        assert queued(after) == ['10.0.2.0/24']
+        assert after.rib.outgoing.pending()
         # previous should be cleared
-        assert new_neighbor.previous is None
+        assert after.previous is None
         # _neighbor should be cleared to prevent double-processing on reconnect
         assert peer._neighbor is None
 
@@ -701,61 +645,42 @@ class TestPeerReconfigure:
         When a neighbor is online (ESTABLISHED), the RIB update should be
         deferred to the main loop which will process _neighbor.
         """
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        before = configured(routes=('10.0.1.0/24 next-hop 192.0.2.1',))
+        peer = make_peer(before)
         peer.fsm.change(FSM.ESTABLISHED)
+        after = configured(routes=('10.0.2.0/24 next-hop 192.0.2.1',))
+        after.previous = before
+        # loading a configuration queues its routes: start from an empty queue
+        after.rib.outgoing.reset()
 
-        # Create new neighbor config with routes and RIB
-        new_neighbor = Mock()
-        new_neighbor.uid = '1'
-        new_neighbor.rib = Mock()
-        new_neighbor.rib.outgoing = Mock()
-        new_neighbor.rib.outgoing.replace_reload = Mock()
-        new_neighbor.routes = [Mock(name='route1')]
-        new_neighbor.previous = Mock()
-        new_neighbor.previous.routes = [Mock(name='old_route')]
-
-        peer.reconfigure(new_neighbor)
+        peer.reconfigure(after)
 
         # RIB should NOT be updated directly - main loop will handle it
-        new_neighbor.rib.outgoing.replace_reload.assert_not_called()
+        assert queued(after) == []
+        assert not after.rib.outgoing.pending()
         # _neighbor should be set for main loop to process
-        assert peer._neighbor is new_neighbor
+        assert peer._neighbor is after
         # previous should NOT be cleared (main loop will do it)
-        assert new_neighbor.previous is not None
+        assert after.previous is before
 
     def test_reconfigure_offline_no_rib(self) -> None:
-        """Test reconfigure() handles missing RIB gracefully."""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.rib = None  # No RIB
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        """Test reconfigure() handles a neighbour whose RIB is not enabled."""
+        peer = make_peer()
         assert peer.fsm == FSM.IDLE
 
-        new_neighbor = Mock()
-        new_neighbor.uid = '1'
-        new_neighbor.routes = []
-        new_neighbor.previous = None
+        # a Neighbor the configuration has not finished: its RIB is the disabled placeholder
+        new_neighbor = Neighbor()
+        assert not new_neighbor.rib.enabled
+        new_neighbor.routes = configured(routes=('10.0.3.0/24 next-hop 192.0.2.1',)).routes
 
         # Should not raise
         peer.reconfigure(new_neighbor)
         assert peer.neighbor is new_neighbor
+        assert queued(new_neighbor) == []
 
     def test_teardown_sets_code_and_restart(self) -> None:
         """Test teardown() sets correct code and restart flag"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         notify = Notify(6, 6)
         peer.teardown(notify, restart=False)
 
@@ -805,63 +730,39 @@ class TestPeerNegotiatedFamilies:
     """Test Peer negotiated_families() method"""
 
     def test_negotiated_families_with_proto(self) -> None:
-        """Test negotiated_families() when protocol exists"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
-        peer.proto = Mock()
-        peer.proto.negotiated = Mock()
-        peer.proto.negotiated.families = [(1, 1), (2, 1)]
+        """Test negotiated_families() reports what the session negotiated"""
+        # the configuration asks for one family, the session negotiated two
+        peer = make_peer(configured('ipv4 unicast'))
+        peer.proto = Protocol(peer)
+        peer.proto.negotiated.families = [IPV4_UNICAST, IPV6_UNICAST]
 
         result = peer.negotiated_families()
-        assert '1/1' in result
-        assert '2/1' in result
+        assert 'ipv4/unicast' in result
+        assert 'ipv6/unicast' in result
 
     def test_negotiated_families_without_proto(self) -> None:
         """Test negotiated_families() when no protocol"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.families = Mock(return_value=[(1, 1)])
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer(configured('ipv4 unicast'))
         peer.proto = None
 
         result = peer.negotiated_families()
-        assert '1/1' in result
+        assert 'ipv4/unicast' in result
 
     def test_negotiated_families_single_family(self) -> None:
         """Test negotiated_families() with single family"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.families = Mock(return_value=[(1, 1)])
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer(configured('ipv4 unicast'))
         peer.proto = None
 
         result = peer.negotiated_families()
-        assert result == '1/1'
+        assert result == 'ipv4/unicast'
 
     def test_negotiated_families_multiple_families(self) -> None:
         """Test negotiated_families() with multiple families"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.families = Mock(return_value=[(1, 1), (2, 1)])
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer(configured('ipv4 unicast', 'ipv6 unicast'))
         peer.proto = None
 
         result = peer.negotiated_families()
-        assert '[' in result
-        assert ']' in result
+        assert result == '[ ipv4/unicast ipv6/unicast ]'
 
 
 class TestPeerRun:
@@ -869,24 +770,34 @@ class TestPeerRun:
 
     @pytest.mark.asyncio
     async def test_run_checks_broken_process(self) -> None:
-        """Test run() checks for broken process"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.rib = Mock()
-        neighbor.rib.uncache = Mock()
-        reactor = Mock()
-        reactor.processes = Mock()
-        reactor.processes.broken = Mock(return_value=True)
-        reactor.processes.terminate_on_error = False
+        """Test run() stops the peer when an API process is broken"""
+        neighbor = configured()
+        peer = make_peer(neighbor)
+        processes = peer.reactor.processes
+        # what Processes records of a helper which died and could not be respawned
+        processes._configuration['helper'] = {}
+        processes._broken.append('helper')
+        processes.terminate_on_error = False
+        assert processes.broken(neighbor)
 
-        peer = Peer(neighbor, reactor)
-
-        await peer.run()
+        await asyncio.wait_for(peer.run(), timeout=5)
 
         # Should stop peer when process is broken
         assert peer._restart is False
-        reactor.processes.broken.assert_called_once_with(neighbor)
+        assert peer._teardown is not None
+        assert neighbor.rib.name not in RIB._cache
+
+    @pytest.mark.asyncio
+    async def test_run_without_a_broken_process_does_not_stop(self) -> None:
+        """The other side of the test above: the stop is the broken helper's doing"""
+        peer = make_peer()
+        assert not peer.reactor.processes.broken(peer.neighbor)
+        # a peer told not to restart leaves run() at once, without being stopped
+        peer._restart = False
+
+        await asyncio.wait_for(peer.run(), timeout=5)
+
+        assert peer._teardown is None
 
 
 class TestPeerRemoveShutdown:
@@ -894,14 +805,7 @@ class TestPeerRemoveShutdown:
 
     def test_remove_stops_peer(self) -> None:
         """Test remove() stops peer"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.rib = Mock()
-        neighbor.rib.uncache = Mock()
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer.remove()
 
         assert peer._restart is False
@@ -909,14 +813,7 @@ class TestPeerRemoveShutdown:
 
     def test_shutdown_stops_peer(self) -> None:
         """Test shutdown() stops peer"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.rib = Mock()
-        neighbor.rib.uncache = Mock()
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer.shutdown()
 
         assert peer._restart is False
@@ -927,31 +824,19 @@ class TestPeerResend:
     """Test Peer resend() method"""
 
     def test_resend_calls_rib_resend(self) -> None:
-        """Test resend() calls RIB resend"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.rib = Mock()
-        neighbor.rib.outgoing = Mock()
-        neighbor.rib.outgoing.resend = Mock()
-        reactor = Mock()
+        """Test resend() asks the RIB to resend the family, as an enhanced refresh"""
+        neighbor = configured('ipv4 unicast', 'ipv6 unicast')
+        peer = make_peer(neighbor)
+        neighbor.rib.outgoing.reset()
 
-        peer = Peer(neighbor, reactor)
-        peer.resend(True, family=(1, 1))
+        peer.resend(True, family=IPV4_UNICAST)
 
-        neighbor.rib.outgoing.resend.assert_called_once_with(True, (1, 1))
+        # the enhanced refresh is marked for the one family asked for, not the other
+        assert neighbor.rib.outgoing._refresh_families == {IPV4_UNICAST}
 
     def test_resend_resets_delay(self) -> None:
         """Test resend() resets delay"""
-        neighbor = Mock()
-        neighbor.uid = '1'
-        neighbor.api = {'neighbor-changes': False, 'fsm': False}
-        neighbor.rib = Mock()
-        neighbor.rib.outgoing = Mock()
-        neighbor.rib.outgoing.resend = Mock()
-        reactor = Mock()
-
-        peer = Peer(neighbor, reactor)
+        peer = make_peer()
         peer._delay.increase()
 
         peer.resend(False)

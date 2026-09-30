@@ -11,16 +11,22 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Callable, Generic, TypeVar, ClassVar, Iterator, cast
+from typing import Any, Callable, ClassVar, Generic, Iterator, TypeVar, cast, overload
 import configparser as ConfigParser
 
 from exabgp.environment import base
 from exabgp.environment import parsing
 from exabgp.protocol.ip import IP
+from exabgp.util.mypyc import mypyc_attr
 
 T = TypeVar('T')
 
 
+# The configuration is read once at start-up, and relies on what a native compiled class
+# does not do: ConfigOption is a generic dataclass used as a descriptor, the sections are
+# walked with dir(), and Environment is a singleton made in __new__. So these stay ordinary
+# Python classes when compiled (mypyc_attr native_class=False), their methods compiled.
+@mypyc_attr(native_class=False)
 @dataclass
 class ConfigOption(Generic[T]):
     """Descriptor for typed configuration options."""
@@ -38,10 +44,16 @@ class ConfigOption(Generic[T]):
         # Section name will be set when ConfigSection registers its options
         self.section = getattr(owner, '_section_name', '')
 
-    def __get__(self, obj: Any, owner: type) -> T | ConfigOption[T]:
+    @overload
+    def __get__(self, obj: None, owner: type) -> ConfigOption[T]: ...
+
+    @overload
+    def __get__(self, obj: object, owner: type) -> T: ...
+
+    def __get__(self, obj: object | None, owner: type) -> T | ConfigOption[T]:
         if obj is None:
             return self
-        result: T = obj._values.get(self.name, self.default)
+        result: T = cast(Any, obj)._values.get(self.name, self.default)
         return result
 
     def __set__(self, obj: Any, value: T) -> None:
@@ -83,11 +95,17 @@ def option(
     help: str,
     reader: Callable[[str], T] | None = None,
     writer: Callable[[T], str] | None = None,
-) -> T:
-    """Factory for ConfigOption - returns T for type inference."""
-    return cast(T, ConfigOption(default, help, reader, writer))
+) -> ConfigOption[T]:
+    """Factory for ConfigOption.
+
+    A section declares each option as `name: ConfigOption[T] = option(...)`, and reads it as
+    a T on an instance, through the descriptor. It was declared `name: T`, which the
+    compiled build checks, and a ConfigOption is not a T.
+    """
+    return ConfigOption(default, help, reader, writer)
 
 
+@mypyc_attr(native_class=False)
 class ConfigSection:
     """Base class for typed configuration sections."""
 
@@ -140,33 +158,36 @@ class ConfigSection:
 # =============================================================================
 
 
+@mypyc_attr(native_class=False)
 class ProfileSection(ConfigSection):
     """Profile configuration section."""
 
     _section_name: ClassVar[str] = 'profile'
 
-    enable: bool = option(False, 'toggle profiling of the code')
-    file: str = option('', 'profiling result file, none means stdout, no overwriting')
+    enable: ConfigOption[bool] = option(False, 'toggle profiling of the code')
+    file: ConfigOption[str] = option('', 'profiling result file, none means stdout, no overwriting')
 
 
+@mypyc_attr(native_class=False)
 class PdbSection(ConfigSection):
     """PDB configuration section."""
 
     _section_name: ClassVar[str] = 'pdb'
 
-    enable: bool = option(False, 'on program fault, start pdb the python interactive debugger')
+    enable: ConfigOption[bool] = option(False, 'on program fault, start pdb the python interactive debugger')
 
 
+@mypyc_attr(native_class=False)
 class DaemonSection(ConfigSection):
     """Daemon configuration section."""
 
     _section_name: ClassVar[str] = 'daemon'
 
-    pid: str = option('', 'where to save the pid if we manage it')
-    user: str = option('nobody', 'user to run the program as', reader=parsing.user)
-    daemonize: bool = option(False, 'should we run in the background')
-    drop: bool = option(True, 'drop privileges before forking processes')
-    umask: int = option(
+    pid: ConfigOption[str] = option('', 'where to save the pid if we manage it')
+    user: ConfigOption[str] = option('nobody', 'user to run the program as', reader=parsing.user)
+    daemonize: ConfigOption[bool] = option(False, 'should we run in the background')
+    drop: ConfigOption[bool] = option(True, 'drop privileges before forking processes')
+    umask: ConfigOption[int] = option(
         0o137,
         'run daemon with this umask, governs perms of logfiles etc.',
         reader=parsing.umask_read,
@@ -184,91 +205,102 @@ where logging should log
 {_SPACE} <filename> send the data to a file"""
 
 
+@mypyc_attr(native_class=False)
 class LogSection(ConfigSection):
     """Log configuration section."""
 
     _section_name: ClassVar[str] = 'log'
 
-    enable: bool = option(True, 'enable logging to file or syslog')
-    level: str = option(
+    enable: ConfigOption[bool] = option(True, 'enable logging to file or syslog')
+    level: ConfigOption[str] = option(
         'INFO',
         'log message with at least the priority SYSLOG.<level>',
         reader=parsing.syslog_value,
         writer=parsing.syslog_name,
     )
-    destination: str = option('stdout', LOGGING_HELP_STDOUT)
-    all: bool = option(False, 'report debug information for everything')
-    configuration: bool = option(True, 'report command parsing')
-    reactor: bool = option(True, 'report signal received, command reload')
-    daemon: bool = option(True, 'report pid change, forking, ...')
-    processes: bool = option(True, 'report handling of forked processes')
-    network: bool = option(True, 'report networking information (TCP/IP, network state,...)')
-    statistics: bool = option(True, 'report packet statistics')
-    packets: bool = option(False, 'report BGP packets sent and received')
-    rib: bool = option(False, 'report change in locally configured routes')
-    message: bool = option(False, 'report changes in route announcement on config reload')
-    timers: bool = option(False, 'report keepalives timers')
-    routes: bool = option(False, 'report received routes')
-    parser: bool = option(False, 'report BGP message parsing details')
-    short: bool = option(True, 'use short log format (not prepended with time,level,pid and source)')
+    destination: ConfigOption[str] = option('stdout', LOGGING_HELP_STDOUT)
+    all: ConfigOption[bool] = option(False, 'report debug information for everything')
+    configuration: ConfigOption[bool] = option(True, 'report command parsing')
+    reactor: ConfigOption[bool] = option(True, 'report signal received, command reload')
+    daemon: ConfigOption[bool] = option(True, 'report pid change, forking, ...')
+    processes: ConfigOption[bool] = option(True, 'report handling of forked processes')
+    network: ConfigOption[bool] = option(True, 'report networking information (TCP/IP, network state,...)')
+    statistics: ConfigOption[bool] = option(True, 'report packet statistics')
+    packets: ConfigOption[bool] = option(False, 'report BGP packets sent and received')
+    rib: ConfigOption[bool] = option(False, 'report change in locally configured routes')
+    message: ConfigOption[bool] = option(False, 'report changes in route announcement on config reload')
+    timers: ConfigOption[bool] = option(False, 'report keepalives timers')
+    routes: ConfigOption[bool] = option(False, 'report received routes')
+    parser: ConfigOption[bool] = option(False, 'report BGP message parsing details')
+    short: ConfigOption[bool] = option(True, 'use short log format (not prepended with time,level,pid and source)')
 
 
+@mypyc_attr(native_class=False)
 class TcpSection(ConfigSection):
     """TCP configuration section."""
 
     _section_name: ClassVar[str] = 'tcp'
 
-    once: bool = option(
+    once: ConfigOption[bool] = option(
         False, 'only one tcp connection attempt per peer (for debuging scripts) - deprecated, use tcp.attempts'
     )
-    attempts: int = option(0, 'maximum tcp connection attempts per peer (0 for unlimited)')
-    delay: int = option(0, 'start to announce route when the minutes in the hours is a modulo of this number')
-    bind: list[IP] = option(
+    attempts: ConfigOption[int] = option(0, 'maximum tcp connection attempts per peer (0 for unlimited)')
+    delay: ConfigOption[int] = option(
+        0, 'start to announce route when the minutes in the hours is a modulo of this number'
+    )
+    bind: ConfigOption[list[IP]] = option(
         [],
         'Space separated list of IPs to bind on when listening (no ip to disable)',
         reader=parsing.ip_list,
         writer=parsing.quote_list,
     )
-    port: int = option(179, 'port to bind on when listening')
-    acl: bool = option(False, '(experimental please do not use) unimplemented')
+    port: ConfigOption[int] = option(179, 'port to bind on when listening')
+    acl: ConfigOption[bool] = option(False, '(experimental please do not use) unimplemented')
 
 
+@mypyc_attr(native_class=False)
 class BgpSection(ConfigSection):
     """BGP configuration section."""
 
     _section_name: ClassVar[str] = 'bgp'
 
-    passive: bool = option(False, 'ignore the peer configuration and make all peers passive')
-    openwait: int = option(60, 'how many seconds we wait for an open once the TCP session is established')
-    paths_limit_audit: bool = option(
+    passive: ConfigOption[bool] = option(False, 'ignore the peer configuration and make all peers passive')
+    openwait: ConfigOption[int] = option(60, 'how many seconds we wait for an open once the TCP session is established')
+    paths_limit_audit: ConfigOption[bool] = option(
         True, 'log a warning when a peer sends more paths per prefix than our advertised PATHS-LIMIT'
     )
 
 
+@mypyc_attr(native_class=False)
 class CacheSection(ConfigSection):
     """Cache configuration section."""
 
     _section_name: ClassVar[str] = 'cache'
 
-    attributes: bool = option(True, 'cache all attributes (configuration and wire) for faster parsing')
-    nexthops: bool = option(True, 'cache routes next-hops (deprecated: next-hops are always cached)')
+    attributes: ConfigOption[bool] = option(True, 'cache all attributes (configuration and wire) for faster parsing')
+    nexthops: ConfigOption[bool] = option(True, 'cache routes next-hops (deprecated: next-hops are always cached)')
 
 
+@mypyc_attr(native_class=False)
 class ApiSection(ConfigSection):
     """API configuration section."""
 
     _section_name: ClassVar[str] = 'api'
 
-    version: int = option(6, 'API version (4=legacy with text/json, 6=json only)', reader=parsing.api_version)
-    ack: bool = option(True, 'acknowledge api command(s) and report issues')
-    chunk: int = option(1, 'maximum lines to print before yielding in show routes api')
-    encoder: str = option('json', 'default encoder for API v4 (text or json), ignored in v6', reader=parsing.api)
-    compact: bool = option(False, 'shorter JSON encoding for IPv4/IPv6 Unicast NLRI')
-    respawn: bool = option(True, 'should we try to respawn helper processes if they dies')
-    terminate: bool = option(False, 'should we terminate ExaBGP if any helper process dies')
-    cli: bool = option(True, 'should we create a named pipe for the cli')
-    pipename: str = option('exabgp', 'name to be used for the exabgp pipe')
-    socketname: str = option('exabgp', 'name to be used for the exabgp Unix socket')
+    version: ConfigOption[int] = option(
+        6, 'API version (4=legacy with text/json, 6=json only)', reader=parsing.api_version
+    )
+    ack: ConfigOption[bool] = option(True, 'acknowledge api command(s) and report issues')
+    chunk: ConfigOption[int] = option(1, 'maximum lines to print before yielding in show routes api')
+    encoder: ConfigOption[str] = option(
+        'json', 'default encoder for API v4 (text or json), ignored in v6', reader=parsing.api
+    )
+    compact: ConfigOption[bool] = option(False, 'shorter JSON encoding for IPv4/IPv6 Unicast NLRI')
+    respawn: ConfigOption[bool] = option(True, 'should we try to respawn helper processes if they dies')
+    terminate: ConfigOption[bool] = option(False, 'should we terminate ExaBGP if any helper process dies')
+    cli: ConfigOption[bool] = option(True, 'should we create a named pipe for the cli')
+    pipename: ConfigOption[str] = option('exabgp', 'name to be used for the exabgp pipe')
+    socketname: ConfigOption[str] = option('exabgp', 'name to be used for the exabgp Unix socket')
 
     def __init__(self) -> None:
         super().__init__()
@@ -296,27 +328,29 @@ class ApiSection(ConfigSection):
         return self._initial_encoder
 
 
+@mypyc_attr(native_class=False)
 class ReactorSection(ConfigSection):
     """Reactor configuration section."""
 
     _section_name: ClassVar[str] = 'reactor'
 
-    speed: float = option(1.0, f'reactor loop time\n{_SPACE} use only if you understand the code.')
+    speed: ConfigOption[float] = option(1.0, f'reactor loop time\n{_SPACE} use only if you understand the code.')
 
 
+@mypyc_attr(native_class=False)
 class DebugSection(ConfigSection):
     """Debug configuration section."""
 
     _section_name: ClassVar[str] = 'debug'
 
-    pdb: bool = option(False, 'enable python debugger on errors')
-    memory: bool = option(False, 'command line option --memory')
-    configuration: bool = option(False, 'undocumented option: raise when parsing configuration errors')
-    selfcheck: bool = option(False, 'does a self check on the configuration file')
-    route: str = option('', 'decode the route using the configuration')
-    defensive: bool = option(False, 'generate random fault in the code in purpose')
-    rotate: bool = option(False, 'rotate configurations file on reload (signal)')
-    timing: bool = option(False, 'enable timing instrumentation for reactor performance analysis')
+    pdb: ConfigOption[bool] = option(False, 'enable python debugger on errors')
+    memory: ConfigOption[bool] = option(False, 'command line option --memory')
+    configuration: ConfigOption[bool] = option(False, 'undocumented option: raise when parsing configuration errors')
+    selfcheck: ConfigOption[bool] = option(False, 'does a self check on the configuration file')
+    route: ConfigOption[str] = option('', 'decode the route using the configuration')
+    defensive: ConfigOption[bool] = option(False, 'generate random fault in the code in purpose')
+    rotate: ConfigOption[bool] = option(False, 'rotate configurations file on reload (signal)')
+    timing: ConfigOption[bool] = option(False, 'enable timing instrumentation for reactor performance analysis')
 
 
 # =============================================================================
@@ -327,6 +361,7 @@ class DebugSection(ConfigSection):
 nonedict: dict[str, str] = {}
 
 
+@mypyc_attr(native_class=False)
 class Environment:
     """Typed environment configuration singleton."""
 
@@ -345,11 +380,16 @@ class Environment:
     reactor: ReactorSection
     debug: DebugSection
 
-    def __new__(cls) -> Environment:
+    # The one environment of the process is Environment.instance(), made on first use. It
+    # was made in __new__, with super().__new__(cls), which mypyc does not compile.
+    @classmethod
+    def instance(cls) -> Environment:
         if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance._init_sections()
+            cls._instance = cls()
         return cls._instance
+
+    def __init__(self) -> None:
+        self._init_sections()
 
     def _init_sections(self) -> None:
         """Initialize all configuration sections."""
@@ -386,7 +426,7 @@ class Environment:
             return
         cls._setup_done = True
 
-        env = cls()
+        env = cls.instance()
         sections = env._sections()
 
         # Read INI file if exists
@@ -480,7 +520,7 @@ class Environment:
     def default(cls) -> Iterator[str]:
         """Yield default configuration lines."""
         cls.setup()
-        env = cls()
+        env = cls.instance()
         for section_name, section in env._sections().items():
             if section_name in ('internal', 'debug'):
                 continue
@@ -496,7 +536,7 @@ class Environment:
     def iter_ini(cls, diff: bool = False) -> Iterator[str]:
         """Yield INI-format configuration lines."""
         cls.setup()
-        env = cls()
+        env = cls.instance()
         for section_name, section in env._sections().items():
             if section_name in ('internal', 'debug'):
                 continue
@@ -514,7 +554,7 @@ class Environment:
     def iter_env(cls, diff: bool = False) -> Iterator[str]:
         """Yield environment variable format lines."""
         cls.setup()
-        env = cls()
+        env = cls.instance()
         for section_name, section in env._sections().items():
             if section_name in ('internal', 'debug'):
                 continue
@@ -531,4 +571,4 @@ class Environment:
     def settings(cls) -> Environment:
         """Return the environment singleton (for backward compatibility)."""
         cls.setup()
-        return cls()
+        return cls.instance()

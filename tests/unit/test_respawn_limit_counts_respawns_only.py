@@ -19,6 +19,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from exabgp.environment import Environment
+
 
 HELPER = {'run': ['/bin/cat'], 'encoder': 'text', 'respawn': True}
 
@@ -31,11 +33,11 @@ def processes(request):
     """A real Processes, with real _start, and api.respawn as the test asks."""
     respawn = getattr(request, 'param', False)
     with patch('exabgp.reactor.api.processes.getenv') as getenv:
-        environment = MagicMock()
+        environment = Environment()
         environment.api.respawn = respawn
         environment.api.terminate = False
         environment.api.ack = True
-        environment.api.version = '5.0.0'
+        environment.api.version = 6
         getenv.return_value = environment
 
         from exabgp.reactor.api.processes import Processes

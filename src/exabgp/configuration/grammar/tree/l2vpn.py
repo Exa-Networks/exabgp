@@ -32,7 +32,7 @@ from exabgp.configuration.grammar.tree.static import (
     attribute_words,
     value_fields,
 )
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
@@ -132,7 +132,7 @@ class VPLSLine(RouteStatement):
             _apply(settings, attributes, spec, spec.type.parse(words))
         return [_vpls_route(settings, attributes, words.where())]
 
-    def printed(self, route: Route) -> list[str]:
+    def printed(self, route: Route) -> list[WordOrSyntax]:
         return vpls_words(route)
 
     def hint(self) -> str:
@@ -145,7 +145,7 @@ class VPLSLine(RouteStatement):
         return shape.container(*value_fields(VPLS_VALUES))
 
 
-def vpls_words(route: Route) -> list[str]:
+def vpls_words(route: Route) -> list[WordOrSyntax]:
     """What follows `vpls`: the text of the NLRI after its name, the next-hop, the attributes."""
     words = str(route.nlri).split()[1:]
     return words + attribute_words(route)
@@ -162,7 +162,7 @@ class _Ignored(Type[str]):
     def parse(self, words: Words) -> str:
         return words.word()
 
-    def render(self, value: str) -> list[str]:
+    def render(self, value: str) -> list[WordOrSyntax]:
         return []
 
     def hint(self) -> str:
@@ -206,7 +206,7 @@ class _NoSetter(Type[Any]):
     def parse(self, words: Words) -> Any:
         raise ConfigError(words.where(), f'{self.name} can not be changed on a route already made')
 
-    def render(self, value: Any) -> list[str]:
+    def render(self, value: Any) -> list[WordOrSyntax]:
         raise ValueError(f'{self.name} is never read, so never printed')
 
     def hint(self) -> str:

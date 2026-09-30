@@ -11,34 +11,37 @@ from __future__ import annotations
 
 import os
 import sys
+from typing import ClassVar
 
 
 class Colors:
     """ANSI color codes for terminal output"""
 
-    RESET = '\033[0m'
-    BOLD = '\033[1m'
-    DIM = '\033[2m'
+    # ClassVar: mypyc reads an unannotated class constant as an instance attribute,
+    # and every caller reads these through the class
+    RESET: ClassVar[str] = '\033[0m'
+    BOLD: ClassVar[str] = '\033[1m'
+    DIM: ClassVar[str] = '\033[2m'
 
     # Foreground colors
-    BLACK = '\033[30m'
-    RED = '\033[31m'
-    GREEN = '\033[32m'
-    YELLOW = '\033[33m'
-    BLUE = '\033[34m'
-    MAGENTA = '\033[35m'
-    CYAN = '\033[36m'
-    WHITE = '\033[37m'
+    BLACK: ClassVar[str] = '\033[30m'
+    RED: ClassVar[str] = '\033[31m'
+    GREEN: ClassVar[str] = '\033[32m'
+    YELLOW: ClassVar[str] = '\033[33m'
+    BLUE: ClassVar[str] = '\033[34m'
+    MAGENTA: ClassVar[str] = '\033[35m'
+    CYAN: ClassVar[str] = '\033[36m'
+    WHITE: ClassVar[str] = '\033[37m'
 
     # Bright colors
-    BRIGHT_BLACK = '\033[90m'
-    BRIGHT_RED = '\033[91m'
-    BRIGHT_GREEN = '\033[92m'
-    BRIGHT_YELLOW = '\033[93m'
-    BRIGHT_BLUE = '\033[94m'
-    BRIGHT_MAGENTA = '\033[95m'
-    BRIGHT_CYAN = '\033[96m'
-    BRIGHT_WHITE = '\033[97m'
+    BRIGHT_BLACK: ClassVar[str] = '\033[90m'
+    BRIGHT_RED: ClassVar[str] = '\033[91m'
+    BRIGHT_GREEN: ClassVar[str] = '\033[92m'
+    BRIGHT_YELLOW: ClassVar[str] = '\033[93m'
+    BRIGHT_BLUE: ClassVar[str] = '\033[94m'
+    BRIGHT_MAGENTA: ClassVar[str] = '\033[95m'
+    BRIGHT_CYAN: ClassVar[str] = '\033[96m'
+    BRIGHT_WHITE: ClassVar[str] = '\033[97m'
 
     @classmethod
     def supports_color(cls) -> bool:

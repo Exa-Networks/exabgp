@@ -94,6 +94,21 @@ _V4_BLOCKED_COMMANDS = frozenset(
 )
 
 
+# At module level rather than inside CommandCompleter.__init__: mypyc does not compile a
+# class defined in a function body
+class FrequencyProvider:
+    """Dict-like wrapper for history tracker, as the fuzzy matcher expects a .get()"""
+
+    def __init__(self, tracker: HistoryTracker | None) -> None:
+        self.tracker = tracker
+
+    def get(self, command: str, default: int = 0) -> int:
+        if self.tracker:
+            # Convert total bonus (0-100) to frequency count (0-10) for scoring
+            return int(self.tracker.get_total_bonus(command)) // 10
+        return default
+
+
 class CommandCompleter:
     """Tab completion for ExaBGP commands using readline with dynamic command discovery"""
 
@@ -136,7 +151,7 @@ class CommandCompleter:
         # Cache for neighbor IPs
         self._neighbor_cache: list[str] | None = None
         self._cache_timeout = 300  # Refresh cache every 5 minutes (avoid repeated socket calls)
-        self._cache_timestamp: float = 0
+        self._cache_timestamp: float = 0.0
         self._cache_in_progress = False  # Prevent concurrent queries
 
         # Track state for single-TAB display on macOS libedit
@@ -155,19 +170,6 @@ class CommandCompleter:
         self._rl_forced_update_display = self._get_rl_forced_update_display()
 
         # Initialize new completion engines
-        # Create frequency provider dict-like wrapper for fuzzy matcher
-        class FrequencyProvider:
-            """Dict-like wrapper for history tracker"""
-
-            def __init__(self, tracker: HistoryTracker | None) -> None:
-                self.tracker = tracker
-
-            def get(self, command: str, default: int = 0) -> int:
-                if self.tracker:
-                    # Convert total bonus (0-100) to frequency count (0-10) for scoring
-                    return int(self.tracker.get_total_bonus(command)) // 10
-                return default
-
         freq_provider: FrequencyProvider | dict[str, int] = (
             FrequencyProvider(self.history_tracker) if self.history_tracker else {}
         )
@@ -1405,4 +1407,4 @@ class CommandCompleter:
     def invalidate_cache(self) -> None:
         """Invalidate neighbor IP cache (call after topology changes)"""
         self._neighbor_cache = None
-        self._cache_timestamp = 0
+        self._cache_timestamp = 0.0

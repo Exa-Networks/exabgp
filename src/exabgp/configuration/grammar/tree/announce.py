@@ -45,7 +45,7 @@ from exabgp.configuration.grammar.tree.static import (
     value_fields,
 )
 from exabgp.configuration.grammar.types import bgp
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.network import ASN_WORD
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.types.word import Number, Word
@@ -73,7 +73,7 @@ class Refused(Type[Any]):
     def parse(self, words: Words) -> Any:
         raise ConfigError(words.where(), f'{self.name} can not be used in an announce family')
 
-    def render(self, value: Any) -> list[str]:
+    def render(self, value: Any) -> list[WordOrSyntax]:
         raise ValueError(f'{self.name} is never read, so never printed')
 
     def hint(self) -> str:
@@ -102,7 +102,7 @@ class AnnounceNextHop(Type[tuple[IP | IPSelf, NextHop | NextHopSelf]]):
         except (OSError, IndexError, ValueError):
             raise ConfigError(where, f"'{word}' is not a valid next-hop", expected=['<ip>', 'self']) from None
 
-    def render(self, value: tuple[IP | IPSelf, NextHop | NextHopSelf]) -> list[str]:
+    def render(self, value: tuple[IP | IPSelf, NextHop | NextHopSelf]) -> list[WordOrSyntax]:
         return ['self'] if isinstance(value[0], IPSelf) else [str(value[0])]
 
     def hint(self) -> str:
@@ -188,7 +188,7 @@ class _RTCNextHop(Type[Any]):
         except (OSError, IndexError, ValueError):
             raise ConfigError(where, f"'{word}' is not a valid next-hop", expected=['<ip>', 'self']) from None
 
-    def render(self, value: Any) -> list[str]:
+    def render(self, value: Any) -> list[WordOrSyntax]:
         return ['self'] if value.SELF else [str(value)]
 
     def hint(self) -> str:
@@ -225,7 +225,7 @@ class _Default(Type[bool]):
     def parse(self, words: Words) -> bool:
         return True
 
-    def render(self, value: bool) -> list[str]:
+    def render(self, value: bool) -> list[WordOrSyntax]:
         return []
 
     def hint(self) -> str:
@@ -298,7 +298,7 @@ class AnnounceLine(RouteStatement):
             raise ConfigError(words.where(), str(exc)) from None
         return [Route(nlri, attributes, nexthop=settings.nexthop)]
 
-    def printed(self, route: Route) -> list[str]:
+    def printed(self, route: Route) -> list[WordOrSyntax]:
         return announce_words(route)
 
     def hint(self) -> str:
@@ -439,7 +439,7 @@ L2VPN = Block(
 ANNOUNCE_BLOCK = Block('announce', field='announce', doc='routes by address family', children=(IPV4, IPV6, L2VPN))
 
 
-def rtc_words(route: Route) -> list[str]:
+def rtc_words(route: Route) -> list[WordOrSyntax]:
     """`default|origin-as <asn> route-target <rt> next-hop <ip>|self <attributes>`."""
     nlri: Any = route.nlri
     words = ['default'] if nlri.rt is None else ['origin-as', str(nlri.origin), 'route-target', str(nlri.rt)]
@@ -448,7 +448,7 @@ def rtc_words(route: Route) -> list[str]:
     return words + attribute_words(route)
 
 
-def announce_words(route: Route) -> list[str]:
+def announce_words(route: Route) -> list[WordOrSyntax]:
     """What follows the family keyword of an announce family: the route line, or the RTC line."""
     if isinstance(route.nlri, RTC):
         return rtc_words(route)

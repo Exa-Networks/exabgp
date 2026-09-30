@@ -3,9 +3,14 @@
 import pytest
 
 from exabgp.bgp.message import UpdateCollection
-from exabgp.configuration.check import check_generation
+from exabgp.configuration import check
 from exabgp.rib import RIB
 from test_configuration_asn_context import configured
+from tests import negotiation
+
+# The faults are injected by replacing methods of UpdateCollection, which the compiled
+# check module calls directly: the source of the module is run instead, and it finds them.
+check_generation = negotiation.interpreted(check).check_generation
 
 
 @pytest.fixture(autouse=True)

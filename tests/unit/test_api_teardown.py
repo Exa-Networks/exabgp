@@ -14,13 +14,21 @@ that used to raise inside the peer loop instead of answering the client.
 
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
+import os
+from collections.abc import Iterator
+from unittest.mock import patch
 
 import pytest
 
+from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message.notification import Notify
+from exabgp.configuration.configuration import Configuration
 from exabgp.reactor.api.command import neighbor
 from exabgp.reactor.api.command.neighbor import teardown, teardown_notification
+from exabgp.reactor.api.processes import Processes
+from exabgp.reactor.loop import Reactor
+from exabgp.reactor.peer import Peer
+from tests import negotiation
 
 CEASE = 6
 ADMINISTRATIVE_SHUTDOWN = 2
@@ -79,37 +87,67 @@ def test_what_cannot_be_put_on_the_wire_is_refused(arguments: str) -> None:
         teardown_notification(arguments)
 
 
-def handled(arguments: str) -> tuple[bool, Mock]:
-    reactor = Mock()
-    reactor.established_peers.return_value = ['peer']
-    api = Mock()
-    return teardown(api, reactor, 'service', ['peer'], arguments, False), reactor
+class PipedHelper:
+    """The Popen of the API client, as far as answering it goes: its stdin is a pipe."""
+
+    def __init__(self) -> None:
+        self._reader, writer = os.pipe()
+        os.set_blocking(self._reader, False)
+        self.stdin = os.fdopen(writer, 'wb')
+
+    def lines(self) -> list[str]:
+        try:
+            return os.read(self._reader, 65536).decode('ascii').splitlines()
+        except BlockingIOError:
+            return []
+
+    def close(self) -> None:
+        os.close(self._reader)
+        self.stdin.close()
 
 
-def test_the_client_is_answered_with_an_error_and_nothing_is_torn_down() -> None:
+@pytest.fixture
+def client() -> Iterator[PipedHelper]:
+    piped = PipedHelper()
+    yield piped
+    piped.close()
+
+
+def handled(client: PipedHelper, arguments: str) -> tuple[bool, Peer]:
+    """Run `teardown <arguments>` from `client` against one established peer, named 'peer'."""
+    reactor = Reactor(Configuration([''], text=True))
+    reactor.processes = Processes()
+    reactor.processes._process['service'] = client  # type: ignore[assignment]
+    reactor.processes._ack['service'] = True
+    reactor.processes._ackjson['service'] = False
+    peer = Peer(negotiation.neighbor(), reactor)
+    peer.fsm.change(FSM.ESTABLISHED)
+    reactor._peers['peer'] = peer
+    return teardown(reactor.api, reactor, 'service', ['peer'], arguments, False), peer
+
+
+def test_the_client_is_answered_with_an_error_and_nothing_is_torn_down(client: PipedHelper) -> None:
     """`teardown 300` used to reach the peer loop, where bytes([6, 300]) raised ValueError."""
-    answered, reactor = handled('300')
+    answered, peer = handled(client, '300')
     assert answered is False
-    reactor.teardown_peer.assert_not_called()
-    reactor.processes.answer_error_sync.assert_called_once()
+    assert peer._teardown is None
+    lines = client.lines()
+    assert lines[-1] == 'error'
+    assert lines[0].startswith('error: ')
 
 
-def test_the_peer_is_handed_the_notification_the_client_asked_for() -> None:
-    answered, reactor = handled('3 1 testing')
+def test_the_peer_is_handed_the_notification_the_client_asked_for(client: PipedHelper) -> None:
+    answered, peer = handled(client, '3 1 testing')
     assert answered is True
-    (name, notify), _ = reactor.teardown_peer.call_args
-    assert name == 'peer'
+    notify = peer._teardown
+    assert notify is not None
     assert (notify.code, notify.subcode, notify.data) == (3, 1, b'testing')
+    assert client.lines() == ['done']
 
 
 def test_the_peer_raises_the_notification_it_was_handed() -> None:
     """A subcode of 0 used to be falsy, and `while not self._teardown` never saw it."""
-    from exabgp.reactor.peer import Peer
-
-    neighbor_config = Mock()
-    neighbor_config.uid = '1'
-    neighbor_config.api = {'neighbor-changes': False, 'fsm': False}
-    peer = Peer(neighbor_config, Mock())
+    peer = Peer(negotiation.neighbor(), Reactor(Configuration([''], text=True)))
     notify = Notify(CEASE, 0)
     peer.teardown(notify, restart=False)
 

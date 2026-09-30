@@ -126,15 +126,6 @@ class Listener:
     # Singleton for stopped listener (initialized after class definition)
     STOPPED: ClassVar['Listener']
 
-    @classmethod
-    def _create_stopped(cls) -> 'Listener':
-        """Create the STOPPED sentinel. Called once at module load."""
-        instance = object.__new__(cls)
-        instance.serving = False
-        instance._sockets = {}
-        instance._accepted = {}
-        return instance
-
     def __init__(self, reactor: 'Reactor', backlog: int = 200) -> None:
         self.serving: bool = False
 
@@ -440,5 +431,19 @@ class Listener:
         self.serving = False
 
 
+class StoppedListener(Listener):
+    """The listener of a reactor which listens on nothing, the STOPPED sentinel.
+
+    A subclass rather than object.__new__(Listener): a compiled class can not be built
+    that way. It has no reactor, as the sentinel never had one.
+    """
+
+    def __init__(self) -> None:
+        # no Listener.__init__, which needs a reactor: only what the sentinel is asked
+        self.serving = False
+        self._sockets = {}
+        self._accepted = {}
+
+
 # Initialize the STOPPED singleton
-Listener.STOPPED = Listener._create_stopped()
+Listener.STOPPED = StoppedListener()

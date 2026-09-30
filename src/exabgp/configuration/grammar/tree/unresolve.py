@@ -77,6 +77,11 @@ def _tristate(state: TriState) -> bool | None:
 
 
 def capability(neighbor_capability: NeighborCapability) -> dict[str, Any]:
+    # False, not 0, is disabled: not a conditional expression, whose type is int, and which
+    # mypyc then turns from False into 0
+    graceful: int | bool = False
+    if neighbor_capability.graceful_restart.is_enabled():
+        graceful = neighbor_capability.graceful_restart.time
     values: dict[str, Any] = {
         'asn4': _tristate(neighbor_capability.asn4),
         'extended-message': _tristate(neighbor_capability.extended_message),
@@ -89,9 +94,7 @@ def capability(neighbor_capability: NeighborCapability) -> dict[str, Any]:
         'software-version': neighbor_capability.software_version is not None,
         'link-local-prefer': neighbor_capability.link_local_prefer,
         'multiple-labels': neighbor_capability.multiple_labels or None,
-        'graceful-restart': neighbor_capability.graceful_restart.time
-        if neighbor_capability.graceful_restart.is_enabled()
-        else False,
+        'graceful-restart': graceful,
     }
     for name, code in REQUIRABLE.items():
         if code in neighbor_capability.required:

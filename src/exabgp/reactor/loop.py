@@ -25,7 +25,7 @@ import errno
 import re
 import time
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -48,23 +48,29 @@ from exabgp.rib.route import Route
 from exabgp.version import version
 
 
+class ReactorExit:
+    """The process exit codes, named by what went wrong."""
+
+    normal: ClassVar[int] = 0
+    validate: ClassVar[int] = 0
+    listening: ClassVar[int] = 1
+    configuration: ClassVar[int] = 1
+    privileges: ClassVar[int] = 1
+    log: ClassVar[int] = 1
+    pid: ClassVar[int] = 1
+    socket: ClassVar[int] = 1
+    io_error: ClassVar[int] = 1
+    process: ClassVar[int] = 1
+    select: ClassVar[int] = 1
+    unknown: ClassVar[int] = 1
+
+
 class Reactor:
-    class Exit:
-        normal: int = 0
-        validate: int = 0
-        listening: int = 1
-        configuration: int = 1
-        privileges: int = 1
-        log: int = 1
-        pid: int = 1
-        socket: int = 1
-        io_error: int = 1
-        process: int = 1
-        select: int = 1
-        unknown: int = 1
+    # mypyc compiles no class nested in a class body: Reactor.Exit names the module level one
+    Exit: ClassVar[type[ReactorExit]] = ReactorExit
 
     # [hex(ord(c)) for c in os.popen('clear').read()]
-    clear: bytes = b''.join(bytes([int(c, 16)]) for c in ['0x1b', '0x5b', '0x48', '0x1b', '0x5b', '0x32', '0x4a'])
+    clear: ClassVar[bytes] = b'\x1b[H\x1b[2J'
 
     def __init__(self, configuration: Any) -> None:
         self._ips: list[Any] = getenv().tcp.bind

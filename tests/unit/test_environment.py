@@ -92,8 +92,8 @@ class TestEnvironment:
 
     def test_environment_singleton(self) -> None:
         """Test Environment is a singleton"""
-        e1 = Environment()
-        e2 = Environment()
+        e1 = Environment.instance()
+        e2 = Environment.instance()
         assert e1 is e2
 
     def test_environment_sections(self) -> None:

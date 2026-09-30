@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 from queue import Queue, Empty
+from typing import Any
 
 from exabgp.cli.colors import Colors
 
@@ -34,7 +35,7 @@ class PersistentSocketConnection:
         self.socket_path = socket_path
         self.socket: sock.socket | None = None
         self.daemon_uuid: str | None = None
-        self.last_ping_time: float = 0
+        self.last_ping_time: float = 0.0
         self.consecutive_failures: int = 0
         self.max_failures: int = 3
         self.health_interval: int = 10  # seconds
@@ -166,13 +167,16 @@ class PersistentSocketConnection:
                     # The daemon answers a ping in JSON or in text, and the reply may carry
                     # other lines. A line which opens with a brace and does not parse is
                     # neither form of pong, so the search simply moves on to the next line.
+                    # The break stays outside the suppress: mypyc cannot compile a break
+                    # inside the try/finally a with statement becomes.
+                    parsed: Any = None
                     with contextlib.suppress(json.JSONDecodeError, ValueError):
                         parsed = json.loads(line)
-                        if isinstance(parsed, dict) and 'pong' in parsed:
-                            self.daemon_uuid = parsed['pong']
-                            is_active = parsed.get('active', True)
-                            uuid_found = True
-                            break
+                    if isinstance(parsed, dict) and 'pong' in parsed:
+                        self.daemon_uuid = parsed['pong']
+                        is_active = parsed.get('active', True)
+                        uuid_found = True
+                        break
 
                 # Try text format
                 if line.startswith('pong '):

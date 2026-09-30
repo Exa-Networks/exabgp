@@ -52,6 +52,7 @@ from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
 from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ROUTE_ERRORS, ConfigError
 from exabgp.configuration.grammar.shape import Shape
+from exabgp.configuration.grammar.types.base import WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI
@@ -324,7 +325,7 @@ class SRPolicyLine(RouteStatement):
         except ROUTE_ERRORS as exc:
             raise ConfigError(where, str(exc) or 'invalid sr-policy route') from None
 
-    def printed(self, route: Route) -> list[str]:
+    def printed(self, route: Route) -> list[WordOrSyntax]:
         return sr_policy_words(route)
 
     def hint(self) -> str:
@@ -506,10 +507,17 @@ def _tunnel(route: Route) -> SRPolicyTunnel | None:
     return tunnel
 
 
-def sr_policy_words(route: Route) -> list[str]:
+def sr_policy_words(route: Route) -> list[WordOrSyntax]:
     """What follows `sr-policy`: the NLRI, the next-hop, the sub-TLVs in the order they were read."""
     nlri: Any = route.nlri
-    words = ['distinguisher', str(nlri.distinguisher), 'color', str(nlri.color), 'endpoint', nlri.endpoint]
+    words: list[WordOrSyntax] = [
+        'distinguisher',
+        str(nlri.distinguisher),
+        'color',
+        str(nlri.color),
+        'endpoint',
+        nlri.endpoint,
+    ]
     words += ['next-hop', str(route.nexthop)]
     tunnel = _tunnel(route)
     if tunnel is not None:

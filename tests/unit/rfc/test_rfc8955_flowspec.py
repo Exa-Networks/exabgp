@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from struct import pack
 from typing import Any
-from unittest.mock import Mock
 
 import pytest
 
@@ -217,19 +216,14 @@ def received_update(payload: bytes, negotiated: Negotiated) -> Update:
     return message
 
 
-def peer_context(validation: str = 'enable') -> Any:
+def peer_context(validation: str = 'enable') -> PeerContext:
     """What `UpdateHandler` and the validation read of a peer: its neighbour's incoming RIB,
     its `flow-validation` setting and counters.  Validation is on unless told otherwise:
     the section 6 tests below are about what it does once asked for."""
-    ctx = Mock(spec=PeerContext)
-    ctx.neighbor = negotiation.neighbor()
+    ctx, _ = negotiation.context()
     ctx.neighbor.flow_validation = validation
     ctx.neighbor.route_target_filter = False
     ctx.neighbor.rib.incoming = IncomingRIB(True, {IPV4_UNICAST, IPV4_FLOW})
-    ctx.negotiated = Mock()
-    ctx.negotiated.advertised_paths_limit = {}
-    ctx.peer_id = 'rfc8955-peer'
-    ctx.stats = {'receive-prefixes': 0, 'receive-withdraws': 0}
     return ctx
 
 

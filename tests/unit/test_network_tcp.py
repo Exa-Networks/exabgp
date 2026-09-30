@@ -144,7 +144,7 @@ class TestSocketConnection:
         # Connection to unreachable host should either raise or return (non-blocking)
         # With EINPROGRESS, connect() returns without exception in non-blocking mode
         try:
-            tcp.connect(io, '192.0.2.1', 179, AFI.ipv4, None)
+            tcp.connect(io, '192.0.2.1', 179, AFI.ipv4, '')
         except NotConnected:
             pass  # Expected for some scenarios
 
@@ -157,7 +157,7 @@ class TestSocketConnection:
 
         # Connect should not raise for non-blocking socket (EINPROGRESS is OK)
         try:
-            tcp.connect(io, '127.0.0.1', 179, AFI.ipv4, None)
+            tcp.connect(io, '127.0.0.1', 179, AFI.ipv4, '')
         except NotConnected as e:
             # Connection refused is expected if nothing is listening
             if 'Could not connect' in str(e):
@@ -173,7 +173,7 @@ class TestSocketConnection:
 
             # Connect should not raise for non-blocking socket (EINPROGRESS is OK)
             try:
-                tcp.connect(io, '::1', 179, AFI.ipv6, None)
+                tcp.connect(io, '::1', 179, AFI.ipv6, '')
             except NotConnected as e:
                 # Connection refused is expected if nothing is listening
                 if 'Could not connect' in str(e):
@@ -227,7 +227,7 @@ class TestMD5Authentication:
     @patch('socket.socket.setsockopt')
     def test_md5_freebsd_with_kernel(self, mock_setsockopt: Any, mock_platform: Any) -> None:
         """Test FreeBSD MD5 with 'kernel' value"""
-        mock_setsockopt.side_effect = OSError('Not enabled')
+        mock_setsockopt.side_effect = OSError(errno.ENOPROTOOPT, 'Not enabled')
         io = tcp.create(AFI.ipv4)
 
         with pytest.raises(MD5Error, match='rebuild your kernel'):
@@ -379,7 +379,7 @@ class TestNagleAlgorithm:
     @patch('socket.socket.setsockopt')
     def test_nagle_disable_failure(self, mock_setsockopt: Any) -> None:
         """Test Nagle disable failure handling"""
-        mock_setsockopt.side_effect = OSError('Not supported')
+        mock_setsockopt.side_effect = OSError(errno.EOPNOTSUPP, 'Not supported')
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         with pytest.raises(NagleError, match='Could not disable nagle'):
@@ -445,7 +445,7 @@ class TestTTLConfiguration:
     @patch('socket.socket.setsockopt')
     def test_ttl_not_supported(self, mock_setsockopt: Any) -> None:
         """Test TTL error when not supported"""
-        mock_setsockopt.side_effect = OSError('Not supported')
+        mock_setsockopt.side_effect = OSError(errno.EOPNOTSUPP, 'Not supported')
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         with pytest.raises(TTLError, match='does not support IP_TTL'):
@@ -492,7 +492,7 @@ class TestAsynchronousMode:
     @patch('socket.socket.setblocking')
     def test_asynchronous_failure(self, mock_setblocking: Any) -> None:
         """Test async mode failure handling"""
-        mock_setblocking.side_effect = OSError('Not supported')
+        mock_setblocking.side_effect = OSError(errno.EOPNOTSUPP, 'Not supported')
         io = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         with pytest.raises(AsyncError, match='could not set socket non-blocking'):
@@ -511,7 +511,7 @@ class TestSocketReadiness:
 
         # Try to connect to unreachable address
         try:
-            tcp.connect(io, '192.0.2.1', 179, AFI.ipv4, None)
+            tcp.connect(io, '192.0.2.1', 179, AFI.ipv4, '')
         except NotConnected:
             pass
 

@@ -615,7 +615,7 @@ class TestEdgeCases:
         # Should return default SAFI list
         assert isinstance(safi_values, list)
 
-    def test_get_commands_by_category_none(self):
-        """Test getting commands with None category"""
-        commands = self.registry.get_commands_by_category(None)
+    def test_get_commands_by_category_empty(self):
+        """Test getting commands with an empty category (the category is a str, never None)"""
+        commands = self.registry.get_commands_by_category('')
         assert isinstance(commands, list)

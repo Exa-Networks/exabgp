@@ -5,9 +5,11 @@ happy path is covered by test_process_read_stranding.py; almost none of the rest
 That is the half which decides a helper is dead: a hang-up, an end of file, a command so
 long it would grow the buffer without bound, and the three classes of read error.
 
-These tests pin that behaviour before the function is taken apart. `_handle_problem` is
-replaced by a recorder throughout, because what matters here is which conditions are
-judged to be a problem, not what terminating a helper then does.
+These tests pin that behaviour before the function is taken apart. What matters here is
+which conditions are judged to be a problem, not what terminating a helper then does, so
+respawning is off and a helper judged to have one is read back from `_ended`, which the
+real `_handle_problem` appends it to. (It used to be replaced by a recorder, which the
+compiled build does not allow on an instance.)
 """
 
 from __future__ import annotations
@@ -39,6 +41,12 @@ class FakeProcess:
     def poll(self) -> int | None:
         return self.returncode
 
+    def terminate(self) -> None:
+        """_handle_problem terminates the helper it gives up on; this one has no child to stop."""
+
+    def wait(self, timeout: float | None = None) -> int | None:
+        return self.returncode
+
 
 @pytest.fixture
 def pipe() -> Any:
@@ -58,9 +66,14 @@ def processes(pipe: Any) -> Any:
     read_fd, _ = pipe
     instance = Processes()
     instance._process['test'] = FakeProcess(io.FileIO(read_fd, 'rb', closefd=False))
-    instance.problems: list[str] = []
-    instance._handle_problem = instance.problems.append
+    # with no respawn, a helper judged to have a problem is terminated and ended, once
+    instance.respawn_number = 0
     return instance
+
+
+def problems(processes: Any) -> list[str]:
+    """The helpers _handle_problem has given up on."""
+    return list(processes._ended)
 
 
 def exited(processes: Any, code: int = 0) -> None:
@@ -74,7 +87,7 @@ class TestReading:
         os.write(write_fd, b'announce route 10.0.0.0/24\n')
 
         assert list(processes.received()) == [('test', 'announce route 10.0.0.0/24')]
-        assert processes.problems == []
+        assert problems(processes) == []
 
     def test_a_debug_line_is_reported_but_not_executed(self, processes: Any, pipe: Any) -> None:
         """`debug ` is how a helper talks to the log, not to the API."""
@@ -95,7 +108,7 @@ class TestReading:
 
     def test_a_quiet_pipe_produces_nothing_and_no_complaint(self, processes: Any) -> None:
         assert list(processes.received()) == []
-        assert processes.problems == []
+        assert problems(processes) == []
 
 
 class TestTheHelperGoingAway:
@@ -113,7 +126,7 @@ class TestTheHelperGoingAway:
             poller.return_value.poll.return_value = [(0, select.POLLIN | select.POLLHUP)]
             assert list(processes.received()) == []
 
-        assert processes.problems == []
+        assert problems(processes) == []
 
     def test_a_hung_up_pipe_with_nothing_to_read_is_a_problem(self, processes: Any, pipe: Any) -> None:
         """On Linux a closed writer with an empty pipe reports POLLHUP alone, with no data behind it."""
@@ -124,7 +137,7 @@ class TestTheHelperGoingAway:
             poller.return_value.poll.return_value = [(0, select.POLLHUP)]
             assert list(processes.received()) == []
 
-        assert processes.problems == ['test']
+        assert problems(processes) == ['test']
 
     def test_an_invalid_descriptor_is_a_problem(self, processes: Any) -> None:
         """POLLERR and POLLNVAL have no data behind them, so this is the branch they take."""
@@ -132,7 +145,7 @@ class TestTheHelperGoingAway:
             poller.return_value.poll.return_value = [(0, select.POLLNVAL)]
             assert list(processes.received()) == []
 
-        assert processes.problems == ['test']
+        assert problems(processes) == ['test']
 
     def test_end_of_file_from_a_process_which_exited_is_a_problem(self, processes: Any, pipe: Any) -> None:
         """An empty read alone means nothing; an empty read from a reaped child means EOF."""
@@ -146,7 +159,7 @@ class TestTheHelperGoingAway:
                 poller.return_value.poll.return_value = [(0, 1)]
                 assert list(processes.received()) == []
 
-        assert processes.problems == ['test']
+        assert problems(processes) == ['test']
 
     def test_a_process_which_exits_after_speaking_stops_the_sweep(self, processes: Any, pipe: Any) -> None:
         """Its last commands are still delivered; the sweep then returns rather than continuing."""
@@ -155,7 +168,7 @@ class TestTheHelperGoingAway:
         exited(processes)
 
         assert list(processes.received()) == [('test', 'announce route 10.0.0.0/24')]
-        assert processes.problems == ['test']
+        assert problems(processes) == ['test']
 
     def test_a_process_removed_while_being_read_is_not_an_error(self, processes: Any, pipe: Any) -> None:
         """_handle_problem deletes the entry, and the sweep is iterating over a snapshot."""
@@ -182,7 +195,7 @@ class TestBounds:
         assert list(processes.received()) == []
 
         assert 'test' not in processes._buffer
-        assert processes.problems == ['test']
+        assert problems(processes) == ['test']
 
     def test_a_long_command_which_does_end_is_still_executed(self, processes: Any, pipe: Any) -> None:
         """The cap is on a line with no newline in it, not on a legitimately large one."""
@@ -191,7 +204,7 @@ class TestBounds:
         os.write(write_fd, b'\n')
 
         assert len(list(processes.received())) == 1
-        assert processes.problems == []
+        assert problems(processes) == []
 
 
 class TestReadErrors:
@@ -203,7 +216,7 @@ class TestReadErrors:
         with patch('exabgp.reactor.api.processes.os.read', side_effect=OSError(fatal, 'fatal')):
             assert list(processes.received()) == []
 
-        assert processes.problems == ['test']
+        assert problems(processes) == ['test']
 
     def test_errno_zero_is_a_problem(self, processes: Any, pipe: Any) -> None:
         """A helper exiting mid-read has been seen to surface as an IOError with errno 0."""
@@ -213,7 +226,7 @@ class TestReadErrors:
         with patch('exabgp.reactor.api.processes.os.read', side_effect=OSError(0, 'nothing')):
             assert list(processes.received()) == []
 
-        assert processes.problems == ['test']
+        assert problems(processes) == ['test']
 
     def test_a_recoverable_errno_is_left_for_the_next_turn(self, processes: Any, pipe: Any) -> None:
         """EINTR usually means the data is there; the next reactor cycle will collect it."""
@@ -224,7 +237,7 @@ class TestReadErrors:
         with patch('exabgp.reactor.api.processes.os.read', side_effect=OSError(block, 'again')):
             assert list(processes.received()) == []
 
-        assert processes.problems == []
+        assert problems(processes) == []
 
     def test_an_unclassified_errno_is_only_logged(self, processes: Any, pipe: Any) -> None:
         _, write_fd = pipe
@@ -235,4 +248,4 @@ class TestReadErrors:
         with patch('exabgp.reactor.api.processes.os.read', side_effect=OSError(unclassified, 'odd')):
             assert list(processes.received()) == []
 
-        assert processes.problems == []
+        assert problems(processes) == []

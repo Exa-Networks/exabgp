@@ -1,9 +1,11 @@
 """RFC 4271 sections 4.4, 6 and 6.5: what the hold time does once it has been negotiated.
 
-Both timers read `time.time()` through the module global in `exabgp/bgp/timer.py`, so the
-tests here replace that module with a clock they move by hand.  Sleeping would make the
-suite take a minute to assert something about one second, and a test which sleeps for
-"about" a second is a test which fails on a loaded machine.
+Both timers call `time.time()`, so the tests here replace that function of the time module
+with a clock they move by hand.  Sleeping would make the suite take a minute to assert
+something about one second, and a test which sleeps for "about" a second is a test which
+fails on a loaded machine.  It is the function which is replaced, not the `time` global of
+`exabgp/bgp/timer.py`: the compiled module holds the time module itself and never reads
+its own global, but it does look `time` up on that module at each call.
 
 Section 6.5 has no RFC 2119 keyword in it: it states that the notification is sent, it
 does not say MUST.  The sentence which binds it is in the preamble of section 6, "If no
@@ -14,9 +16,10 @@ records, and its positive test is the hold timer expiring.
 
 from __future__ import annotations
 
+import time
+
 import pytest
 
-from exabgp.bgp import timer
 from exabgp.bgp.message import KeepAlive, Notify, Open
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, RouterID, Version
@@ -35,7 +38,7 @@ EPOCH = 1700000000.0
 
 
 class Clock:
-    """A stand-in for the time module, holding one instant which the test moves."""
+    """A stand-in for time.time(), holding one instant which the test moves."""
 
     def __init__(self, at: float) -> None:
         self._at = at
@@ -50,7 +53,7 @@ class Clock:
 @pytest.fixture
 def clock(monkeypatch: pytest.MonkeyPatch) -> Clock:
     frozen = Clock(EPOCH)
-    monkeypatch.setattr(timer, 'time', frozen)
+    monkeypatch.setattr(time, 'time', frozen.time)
     return frozen
 
 
@@ -206,24 +209,23 @@ async def test_waiting_too_long_for_the_open_is_hold_timer_expired() -> None:
     exabgp sent (5, 1), Receive Unexpected Message in OpenSent State, which RFC 6608 keeps
     for a message which did arrive.  Here nothing arrived at all.
     """
-    import asyncio
-    from unittest.mock import Mock, patch
+    from exabgp.environment import getenv
+    from tests import negotiation
 
-    from exabgp.reactor.peer import Peer
-
-    async def silent(_ip: str) -> Open:
-        await asyncio.Event().wait()
-        raise AssertionError('the peer never sends its OPEN')
-
-    neighbor = Mock()
-    neighbor.uid = '1'
-    neighbor.api = {'neighbor-changes': False, 'fsm': False}
-    with patch('exabgp.reactor.peer.peer.getenv') as environment:
-        environment.return_value.bgp.openwait = 0.01
-        peer = Peer(neighbor, Mock())
-        peer.proto = Mock()
-        peer.proto.read_open = silent
+    # a real session over a socket pair, whose peer end is connected and never writes
+    proto, _ = negotiation.protocol()
+    theirs = negotiation.connect(proto)
+    peer = proto.peer
+    peer.proto = proto
+    monkeypatch = pytest.MonkeyPatch()
+    # openwait is whole seconds (the compiled build refuses a float): none at all expires at once
+    monkeypatch.setattr(getenv().bgp, 'openwait', 0)
+    try:
         with pytest.raises(Notify) as caught:
             await peer._read_open()
+    finally:
+        monkeypatch.undo()
+        proto.close()
+        theirs.close()
 
     assert (caught.value.code, caught.value.subcode) == (HOLD_TIMER_EXPIRED, UNSPECIFIC)

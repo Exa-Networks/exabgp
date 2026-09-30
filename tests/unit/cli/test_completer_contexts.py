@@ -6,27 +6,33 @@ neighbor filters, the AFI/SAFI and route refresh hand-offs, or the multi-charact
 abbreviation. These pin each one, value and description, before the 570 line method is
 split by context (plan-large-function-decomposition step 3).
 
-The neighbor list is a fixed table rather than a query to a daemon: which neighbors
-exist is not what is being pinned, where they are offered is.
+The neighbor list is a fixed `peer list` reply rather than a query to a daemon: which
+neighbors exist is not what is being pinned, where they are offered is.
 """
 
 from __future__ import annotations
 
-from unittest.mock import Mock
+import json
 
 import pytest
 
 from exabgp.cli.completer import CommandCompleter
 
-NEIGHBORS = {'127.0.0.1': 'AS65000 up', '192.0.2.1': 'AS65001 down'}
+PEER_LIST = [
+    {'peer-address': '127.0.0.1', 'peer-as': 65000, 'state': 'up'},
+    {'peer-address': '192.0.2.1', 'peer-as': 65001, 'state': 'down'},
+]
+
+
+def daemon(command: str) -> str:
+    """The daemon's reply: the fixed neighbor list to `peer list`, nothing to anything else."""
+    return json.dumps(PEER_LIST) if command == 'peer list' else '[]'
 
 
 @pytest.fixture
 def completer(monkeypatch: pytest.MonkeyPatch) -> CommandCompleter:
     monkeypatch.setenv('exabgp_cli_fuzzy_matching', 'true')
-    completer = CommandCompleter(Mock(return_value='[]'))
-    monkeypatch.setattr(completer, '_get_neighbor_data', lambda: dict(NEIGHBORS))
-    return completer
+    return CommandCompleter(daemon)
 
 
 def offered(completer: CommandCompleter, tokens: list[str], text: str = '') -> dict[str, tuple[str | None, str]]:
@@ -37,7 +43,7 @@ def offered(completer: CommandCompleter, tokens: list[str], text: str = '') -> d
 
 RIB_SHOW = {'in': ('Adj-RIB-In (received)', 'option'), 'out': ('Adj-RIB-Out (advertised)', 'option')}
 RIB_CLEAR = {'in': ('Clear inbound RIB', 'option'), 'out': ('Clear outbound RIB', 'option')}
-NEIGHBOR_IPS = {'127.0.0.1': ('AS65000 up', 'neighbor'), '192.0.2.1': ('AS65001 down', 'neighbor')}
+NEIGHBOR_IPS = {'127.0.0.1': ('(AS65000, up)', 'neighbor'), '192.0.2.1': ('(AS65001, down)', 'neighbor')}
 
 CASES = [
     # noun-first sub-commands

@@ -17,30 +17,39 @@ Now `min_ttl` sets the minimum only, both directions install both settings, and 
 from __future__ import annotations
 
 import socket
-from typing import Any
-from unittest.mock import Mock
+from typing import Any, cast
+from unittest.mock import patch
 
 import pytest
 
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI
 from exabgp.reactor import listener
 from exabgp.reactor.network import outgoing, tcp
 from exabgp.reactor.network.error import TTLError
+from exabgp.reactor.network.incoming import Incoming
+from tests import negotiation
 
 PEER = '192.0.2.1'
 
 
 class FakeSocket:
-    """Records every setsockopt."""
+    """Records every setsockopt, and is enough of a socket for an Incoming to be built on."""
 
     def __init__(self, refuse: bool = False) -> None:
         self.options: list[tuple[int, int, int]] = []
-        self._refuse = refuse
+        self.refuse = refuse
 
     def setsockopt(self, level: int, option: int, value: int) -> None:
-        if self._refuse:
+        if self.refuse:
             raise OSError(22, 'Invalid argument')
         self.options.append((level, option, value))
+
+    def setblocking(self, flag: bool) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
 
 
 @pytest.fixture
@@ -80,38 +89,59 @@ def test_sending_ttl(outgoing_ttl: int | None, incoming_ttl: int | None, expecte
     assert tcp.sending_ttl(outgoing_ttl, incoming_ttl) == expected
 
 
-def setup_outgoing(monkeypatch: pytest.MonkeyPatch, **kwargs: Any) -> FakeSocket:
-    """Run Outgoing._setup against a fake socket, with nothing but the TTL code real."""
-    io = FakeSocket()
-    monkeypatch.setattr(outgoing, 'create', lambda afi, interface: io)
-    monkeypatch.setattr(outgoing, 'md5', lambda *args: None)
-    monkeypatch.setattr(outgoing, 'asynchronous', lambda *args: None)
+# the levels the TTL options live at: what the socket is given at the others (address
+# reuse, an MD5 key cleared on Linux) is not what these tests are about
+TTL_LEVELS = (socket.IPPROTO_IP, socket.IPPROTO_IPV6)
+
+
+def setup_outgoing(**kwargs: Any) -> list[tuple[int, int, int]]:
+    """Run Outgoing._setup on a real socket, returning the TTL options it set.
+
+    Outgoing is compiled, and the tcp functions it calls can not be replaced, so the socket
+    is a real one and only setsockopt is recorded instead of performed: a function, not a
+    Mock, so it is told which socket it is on.
+    """
+    options: list[tuple[int, int, int]] = []
+
+    def setsockopt(sock: socket.socket, level: int, option: int, value: int | bytes) -> None:
+        if level in TTL_LEVELS:
+            assert isinstance(value, int), 'a TTL is set as a number'
+            options.append((level, option, value))
+
     connection = outgoing.Outgoing(AFI.ipv4, PEER, '', **kwargs)
-    assert connection._setup() is None
-    return io
+    with patch.object(socket.socket, 'setsockopt', setsockopt):
+        assert connection._setup() is None
+    connection.close()
+    return options
 
 
-def test_a_session_we_open_installs_the_incoming_minimum(monkeypatch: pytest.MonkeyPatch, linux_minttl: int) -> None:
-    io = setup_outgoing(monkeypatch, incoming_ttl=254)
+def test_a_session_we_open_installs_the_incoming_minimum(linux_minttl: int) -> None:
+    options = setup_outgoing(incoming_ttl=254)
 
-    assert (socket.IPPROTO_IP, linux_minttl, 254) in io.options, 'incoming-ttl was ignored on an outgoing session'
-    assert (socket.IPPROTO_IP, socket.IP_TTL, tcp.GTSM_SENDING_TTL) in io.options, io.options
-
-
-def test_a_session_we_open_still_sends_with_outgoing_ttl(monkeypatch: pytest.MonkeyPatch) -> None:
-    io = setup_outgoing(monkeypatch, ttl=10)
-
-    assert io.options == [(socket.IPPROTO_IP, socket.IP_TTL, 10)]
+    assert (socket.IPPROTO_IP, linux_minttl, 254) in options, 'incoming-ttl was ignored on an outgoing session'
+    assert (socket.IPPROTO_IP, socket.IP_TTL, tcp.GTSM_SENDING_TTL) in options, options
 
 
-def accepted(io: FakeSocket, afi: AFI = AFI.ipv4) -> Mock:
-    connection = Mock(io=io, afi=afi, peer=PEER)
-    connection.name.return_value = f'incoming {PEER}'
+def test_a_session_we_open_still_sends_with_outgoing_ttl() -> None:
+    options = setup_outgoing(ttl=10)
+
+    assert options == [(socket.IPPROTO_IP, socket.IP_TTL, 10)]
+
+
+def accepted(io: FakeSocket, afi: AFI = AFI.ipv4, refuse: bool = False) -> Incoming:
+    """A real Incoming over the fake socket, as the listener builds for a session the peer opened."""
+    connection = Incoming(afi, PEER, '192.0.2.2', cast(socket.socket, io))
+    # what the Incoming set up on it (TCP_NODELAY) is not what is under test
+    io.options.clear()
+    io.refuse = refuse
     return connection
 
 
-def neighbor(outgoing_ttl: int | None, incoming_ttl: int | None) -> Mock:
-    return Mock(session=Mock(outgoing_ttl=outgoing_ttl, incoming_ttl=incoming_ttl))
+def neighbor(outgoing_ttl: int | None, incoming_ttl: int | None) -> Neighbor:
+    configured = negotiation.neighbor()
+    configured.session.outgoing_ttl = outgoing_ttl
+    configured.session.incoming_ttl = incoming_ttl
+    return configured
 
 
 def test_a_session_the_peer_opens_sends_with_outgoing_ttl() -> None:
@@ -143,7 +173,7 @@ def test_a_refused_ttl_on_an_accepted_session_is_logged(monkeypatch: pytest.Monk
     logged: list[str] = []
     monkeypatch.setattr(listener.log, 'error', lambda message, source: logged.append(str(message())))
 
-    listener.set_accepted_ttl(accepted(FakeSocket(refuse=True)), neighbor(10, None))
+    listener.set_accepted_ttl(accepted(FakeSocket(), refuse=True), neighbor(10, None))
 
     assert logged and 'ttl=10' in logged[0], logged
 

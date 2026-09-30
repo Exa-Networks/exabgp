@@ -11,12 +11,8 @@ import errno
 
 
 def errstr(exc: BaseException) -> str:
-    try:
-        code: int = exc.args[0] if exc.args else getattr(exc, 'errno', 256)
-        if code == 256:
-            return f'[Errno unknown] {exc!s}'
-        return f'[Errno {errno.errorcode.get(code, str(code))}] {exc!s}'
-    except KeyError:
-        return f'[Errno unknown (key)] {exc!s}'
-    except AttributeError:
-        return f'[Errno unknown (attr)] {exc!s}'
+    # args[0] is the errno of an OSError, and anything at all (often a message) otherwise.
+    code: object = exc.args[0] if exc.args else getattr(exc, 'errno', None)
+    if not isinstance(code, int):
+        return f'[Errno unknown] {exc!s}'
+    return f'[Errno {errno.errorcode.get(code, str(code))}] {exc!s}'

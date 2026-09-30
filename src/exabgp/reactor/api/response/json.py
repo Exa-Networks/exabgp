@@ -12,7 +12,7 @@ import json
 import os
 import socket
 import time
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, Callable, ClassVar, TYPE_CHECKING, cast
 
 from exabgp.util import hexstring
 
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.collection import RouteLeak
     from exabgp.bgp.message.refresh import RouteRefresh
-    from exabgp.bgp.message.operational import OperationalFamily
+    from exabgp.bgp.message.operational import Operational, OperationalFamily
     from exabgp.bgp.fsm import FSM
 
 
@@ -46,12 +46,24 @@ def nop(_: float) -> float:
     return _
 
 
-class _RawJSON(str):
-    """JSON fragment already encoded by this module."""
+class _RawJSON:
+    """JSON fragment already encoded by this module, printed as it is and never quoted.
+
+    It holds the text rather than being a str: mypyc cannot compile a subclass of str.
+    """
+
+    __slots__ = ('text',)
+
+    def __init__(self, text: str) -> None:
+        self.text = text
+
+    def __str__(self) -> str:
+        return self.text
 
 
 class JSON:
-    _count: dict[str, int] = {}
+    # shared by every encoder: one counter per neighbour, whichever encoder prints it
+    _count: ClassVar[dict[str, int]] = {}
 
     def __init__(self, version: str) -> None:
         self.version = version
@@ -75,7 +87,7 @@ class JSON:
 
     def _string(self, obj: Any) -> str:
         if isinstance(obj, _RawJSON):
-            return str(obj)
+            return obj.text
         if issubclass(obj.__class__, bool):
             return 'true' if obj else 'false'
         # IntValue: the numbers (HoldTime, ASN, ...) which stopped being int for mypyc
@@ -134,6 +146,10 @@ class JSON:
 
     def _json_list(self, extra: dict[str, Any]) -> str:
         return ', '.join(v.json() for v in extra.values())
+
+    def _raw_kv(self, extra: dict[str, str]) -> str:
+        """As _kv, for values which are JSON text already (what _update and _negotiated give)."""
+        return ', '.join(f'"{k}": {v}' for (k, v) in extra.items())
 
     def _minimalkv(self, extra: dict[str, Any]) -> str:
         return ', '.join(f'"{k}": {self._string(v)}' for (k, v) in extra.items() if v)
@@ -240,11 +256,11 @@ class JSON:
                 ),
             },
         )
-        return {'negotiated': self._json(f'{{ {kv_content} }} ')}
+        return {'negotiated': f'{{ {kv_content} }} '}
 
     def negotiated(self, neighbor: 'Neighbor', negotiated: 'Negotiated') -> str:
         return self._header(
-            self._neighbor(neighbor, None, self._kv(self._negotiated(negotiated))),
+            self._neighbor(neighbor, None, self._raw_kv(self._negotiated(negotiated))),
             b'',
             b'',
             neighbor,
@@ -328,12 +344,12 @@ class JSON:
             },
         )
         message: dict[str, str] = {
-            'message': self._json(f'{{ {kv_content} }} '),
+            'message': f'{{ {kv_content} }} ',
         }
         if negotiated is not Negotiated.UNSET:
             message.update(self._negotiated(negotiated))
         return self._header(
-            self._neighbor(neighbor, direction, self._kv(message)),
+            self._neighbor(neighbor, direction, self._raw_kv(message)),
             b'',
             b'',
             neighbor,
@@ -475,7 +491,7 @@ class JSON:
         nlri_str = ''
         if not add and not remove:
             if update_msg.nlris:  # an EOR
-                return {'message': self._json(f'{{ {self._nlri_to_json(update_msg.nlris[0])} }}')}
+                return {'message': f'{{ {self._nlri_to_json(update_msg.nlris[0])} }}'}
         if add:
             add_str = ', '.join(add)
             nlri_str += f'"announce": {{ {add_str} }}'
@@ -497,7 +513,7 @@ class JSON:
         else:
             update_str = f'"update": {{ {attributes}, {nlri_str} }}'
 
-        return {'message': self._json(f'{{ {update_str} }}')}
+        return {'message': f'{{ {update_str} }}'}
 
     def update(
         self,
@@ -512,7 +528,7 @@ class JSON:
         if negotiated is not Negotiated.UNSET:
             message.update(self._negotiated(negotiated))
         return self._header(
-            self._neighbor(neighbor, direction, self._kv(message)),
+            self._neighbor(neighbor, direction, self._raw_kv(message)),
             header,
             body,
             neighbor,
@@ -645,15 +661,15 @@ class JSON:
         neighbor: 'Neighbor',
         direction: str,
         what: str,
-        operational: 'OperationalFamily',
+        operational: 'Operational',
         header: bytes,
         body: bytes,
         negotiated: 'Negotiated',
     ) -> str:
         if what == 'advisory':
-            return self._operational_advisory(neighbor, direction, operational, header, body)
+            return self._operational_advisory(neighbor, direction, cast('OperationalFamily', operational), header, body)
         if what == 'query':
-            return self._operational_query(neighbor, direction, operational, header, body)
+            return self._operational_query(neighbor, direction, cast('OperationalFamily', operational), header, body)
         if what == 'counter':
             return self._operational_counter(neighbor, direction, operational, header, body)
         # elif what == 'interface':

@@ -49,23 +49,6 @@ class TriState(IntEnum):
         return self == TriState.UNSET
 
 
-# int are immutable once created: can not set ._str in __init__
-class _integer(int):
-    _str: str
-
-    def __str__(self) -> str:
-        return self._str
-
-
-class Enumeration:
-    def __init__(self, *names: str) -> None:
-        for number, name in enumerate(names):
-            # doing the .parent thing here instead
-            number = _integer(pow(2, number))
-            number._str = name
-            setattr(self, name, number)
-
-
 # Taken from Vincent Bernat
 def enum(*sequential: str) -> type[object]:
     return type(str('Enum'), (), dict(zip(sequential, sequential)))

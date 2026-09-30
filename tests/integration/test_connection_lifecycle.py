@@ -16,7 +16,7 @@ import struct
 import threading
 import time
 from typing import Any, Generator
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -58,6 +58,7 @@ from exabgp.reactor.network.connection import Connection  # noqa: E402
 from exabgp.reactor.network.error import LostConnection, NotConnected, NotifyError  # noqa: E402
 from exabgp.reactor.network.incoming import Incoming  # noqa: E402
 from exabgp.reactor.network.outgoing import Outgoing  # noqa: E402
+from tests.wire_reader import tcp_socketpair  # noqa: E402
 from exabgp.util.types import Buffer  # noqa: E402
 from exabgp.bgp.message.message import MessageCode  # noqa: E402
 
@@ -271,7 +272,7 @@ class TestConnectionLifecycleBasics:
 
             # Connect to the mock server
             try:
-                tcp.connect(client_sock, server.host, server.port, AFI.ipv4, None)
+                tcp.connect(client_sock, server.host, server.port, AFI.ipv4, '')
             except NotConnected:
                 # Non-blocking connect may raise EINPROGRESS, which is OK
                 pass
@@ -472,24 +473,18 @@ class TestIncomingConnectionLifecycle:
 
     def test_incoming_connection_from_real_socket(self) -> None:
         """Test Incoming can be created from a real connected socket"""
-        # Create a socket pair to simulate an accepted connection
-        if not hasattr(socket, 'socketpair'):
-            pytest.skip('socketpair not available')
-
-        server_sock, client_sock = socket.socketpair()
+        server_sock, client_sock = tcp_socketpair()
 
         try:
-            # Mock nagle to avoid issues with socketpair
-            with patch('exabgp.reactor.network.incoming.nagle'):
-                # Create Incoming connection with the server side socket
-                incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
+            # Create Incoming connection with the server side socket
+            incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
 
-                assert incoming.io is not None
-                assert incoming.io == server_sock
-                assert incoming.peer == '192.0.2.1'
-                assert incoming.local == '127.0.0.1'
+            assert incoming.io is not None
+            assert incoming.io == server_sock
+            assert incoming.peer == '192.0.2.1'
+            assert incoming.local == '127.0.0.1'
 
-                incoming.close()
+            incoming.close()
         finally:
             try:
                 client_sock.close()
@@ -498,32 +493,27 @@ class TestIncomingConnectionLifecycle:
 
     def test_incoming_receive_message(self) -> None:
         """Test Incoming can receive messages from connected socket"""
-        if not hasattr(socket, 'socketpair'):
-            pytest.skip('socketpair not available')
-
-        server_sock, client_sock = socket.socketpair()
+        server_sock, client_sock = tcp_socketpair()
 
         try:
-            # Mock nagle to avoid issues with socketpair
-            with patch('exabgp.reactor.network.incoming.nagle'):
-                # Create Incoming connection
-                incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
+            # Create Incoming connection
+            incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
 
-                # Client sends KEEPALIVE
-                keepalive = create_keepalive_message()
-                client_sock.sendall(keepalive)
+            # Client sends KEEPALIVE
+            keepalive = create_keepalive_message()
+            client_sock.sendall(keepalive)
 
-                # Wait for data to arrive
-                time.sleep(0.1)
+            # Wait for data to arrive
+            time.sleep(0.1)
 
-                # Read the message
-                length, msg_type, header, body, error = read_one(incoming)
+            # Read the message
+            length, msg_type, header, body, error = read_one(incoming)
 
-                assert error is None
-                assert length == 19
-                assert msg_type == 4
+            assert error is None
+            assert length == 19
+            assert msg_type == 4
 
-                incoming.close()
+            incoming.close()
         finally:
             try:
                 client_sock.close()
@@ -532,31 +522,26 @@ class TestIncomingConnectionLifecycle:
 
     def test_incoming_send_message(self) -> None:
         """Test Incoming can send messages to connected socket"""
-        if not hasattr(socket, 'socketpair'):
-            pytest.skip('socketpair not available')
-
-        server_sock, client_sock = socket.socketpair()
+        server_sock, client_sock = tcp_socketpair()
 
         try:
-            # Mock nagle to avoid issues with socketpair
-            with patch('exabgp.reactor.network.incoming.nagle'):
-                # Create Incoming connection
-                incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
+            # Create Incoming connection
+            incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
 
-                # Send KEEPALIVE from Incoming
-                keepalive = create_keepalive_message()
-                for sent in incoming.writer(keepalive):
-                    if sent:
-                        break
+            # Send KEEPALIVE from Incoming
+            keepalive = create_keepalive_message()
+            for sent in incoming.writer(keepalive):
+                if sent:
+                    break
 
-                # Client receives the message
-                time.sleep(0.1)
-                data = client_sock.recv(19)
+            # Client receives the message
+            time.sleep(0.1)
+            data = client_sock.recv(19)
 
-                assert len(data) == 19
-                assert data == keepalive
+            assert len(data) == 19
+            assert data == keepalive
 
-                incoming.close()
+            incoming.close()
         finally:
             try:
                 client_sock.close()
@@ -588,24 +573,19 @@ class TestConnectionErrorScenarios:
 
     def test_connection_close_during_read(self) -> None:
         """Test handling of connection close during read operation"""
-        if not hasattr(socket, 'socketpair'):
-            pytest.skip('socketpair not available')
-
-        server_sock, client_sock = socket.socketpair()
+        server_sock, client_sock = tcp_socketpair()
         incoming = None
 
         try:
-            # Mock nagle to avoid issues with socketpair
-            with patch('exabgp.reactor.network.incoming.nagle'):
-                # Create Incoming connection
-                incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
+            # Create Incoming connection
+            incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
 
-                # Close the client socket
-                client_sock.close()
+            # Close the client socket
+            client_sock.close()
 
-                # Try to read - should raise LostConnection
-                with pytest.raises(LostConnection):
-                    read_one(incoming)
+            # Try to read - should raise LostConnection
+            with pytest.raises(LostConnection):
+                read_one(incoming)
 
         finally:
             if incoming:
@@ -613,31 +593,26 @@ class TestConnectionErrorScenarios:
 
     def test_invalid_bgp_marker(self) -> None:
         """Test detection of invalid BGP marker"""
-        if not hasattr(socket, 'socketpair'):
-            pytest.skip('socketpair not available')
-
-        server_sock, client_sock = socket.socketpair()
+        server_sock, client_sock = tcp_socketpair()
         incoming = None
 
         try:
-            # Mock nagle to avoid issues with socketpair
-            with patch('exabgp.reactor.network.incoming.nagle'):
-                # Create Incoming connection
-                incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
+            # Create Incoming connection
+            incoming = Incoming(AFI.ipv4, '192.0.2.1', '127.0.0.1', server_sock)
 
-                # Send message with invalid marker
-                invalid_msg = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
-                client_sock.sendall(invalid_msg)
+            # Send message with invalid marker
+            invalid_msg = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
+            client_sock.sendall(invalid_msg)
 
-                time.sleep(0.1)
+            time.sleep(0.1)
 
-                # Read should detect error
-                length, msg_type, header, body, error = read_one(incoming)
+            # Read should detect error
+            length, msg_type, header, body, error = read_one(incoming)
 
-                # Should have a NotifyError
-                assert isinstance(error, NotifyError)
-                assert error.code == 1  # Message Header Error
-                assert error.subcode == 1  # Connection Not Synchronized
+            # Should have a NotifyError
+            assert isinstance(error, NotifyError)
+            assert error.code == 1  # Message Header Error
+            assert error.subcode == 1  # Connection Not Synchronized
 
         finally:
             if incoming:

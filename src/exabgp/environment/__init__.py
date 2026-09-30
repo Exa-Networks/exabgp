@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 def getenv() -> Environment:
     """Return the global environment configuration."""
     Environment.setup()
-    return Environment()
+    return Environment.instance()
 
 
 def getconf(name: str) -> str:

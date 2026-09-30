@@ -71,7 +71,7 @@ DEFAULT_TIMES: dict[str, int] = {
     'mypy': 60,
     'unit': 15,
     'optimised': 15,
-    'compiled': 330,
+    'compiled': 390,
     'config': 2,
     'no-neighbor': 5,
     'encode-decode': 3,
@@ -165,11 +165,17 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     # every normal run and vanishes in production: the BGP-LS decoder boundary was one
     # statement of that shape, and this is the only thing which catches it.
     'optimised': 'env exabgp_log_enable=false PYTHONOPTIMIZE=1 uv run pytest ./tests/ -q',
-    # the same suite again against the mypyc build (plan/wip-mypyc.md): the compiled code
-    # checks every declared type and refuses what the interpreter lets through
+    # the unit and functional suites again against the mypyc build (plan/wip-mypyc.md): the
+    # compiled code checks every declared type and refuses what the interpreter lets through.
+    # EXABGP_COMPILED makes sbin/exabgp, which the functional suites start, run build/mypyc
     'compiled': [
         'uv run python qa/bin/build_mypyc',
         'env exabgp_log_enable=false PYTHONPATH=build/mypyc uv run pytest ./tests/ -q -p no:cacheprovider',
+        'env EXABGP_COMPILED=1 ./qa/bin/functional decoding --quiet',
+        'killall -9 python 2>/dev/null; sleep 0.5',
+        'env EXABGP_COMPILED=1 ./qa/bin/functional encoding --quiet',
+        'env EXABGP_COMPILED=1 ./qa/bin/functional api --quiet',
+        'env EXABGP_COMPILED=1 ./qa/bin/functional cli --quiet',
     ],
     'config': './sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf',
     'no-neighbor': './qa/scripts/test_no_neighbor.py',
@@ -199,7 +205,7 @@ TEST_DESCRIPTIONS: dict[str, str] = {
     'mypy': 'Mypy strict type check',
     'unit': 'Unit tests (pytest)',
     'optimised': 'Unit tests with assertions removed (-O)',
-    'compiled': 'Unit tests against the mypyc build',
+    'compiled': 'Unit and functional tests against the mypyc build',
     'config': 'Configuration validation',
     'no-neighbor': 'No-neighbor API test',
     'encode-decode': 'Encode/decode CLI test',
@@ -516,6 +522,7 @@ if _test_root.is_dir():
 # matters more than the name; an entry nobody can justify is a gate somebody demoted.
 NOT_A_GATE = {
     'benchmark_codec': 'measures, and a timing number is not a pass or a fail',
+    'build_binary': 'builds and tests the one-file executable, run by .github/workflows/binary.yml',
     'check_coverage': 'reports coverage, does not fail on it',
     'check_perf': 'measures, and a timing number is not a pass or a fail',
     'cover': 'wrapper around check_coverage',
@@ -525,6 +532,7 @@ NOT_A_GATE = {
     'rmpyc': 'deletes .pyc files',
     'sync_requirements.sh': 'regenerates qa/requirements.txt',
     'test_everything': 'this file',
+    'test_wheel': 'tests an installed compiled wheel, run by .github/workflows/wheels.yml',
     'update_man_syntax': 'rewrites doc/man/exabgp.conf.5, which test_man_configuration_syntax.py gates',
     'update_wiki_syntax': 'writes a page of the wiki, another repository',
 }

@@ -7,14 +7,10 @@ fully support the PEP 688 Buffer protocol yet.
 See: https://peps.python.org/pep-0688/
 """
 
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    # For type checking, use a Union that mypy understands fully
-    # bytes and memoryview both support len(), indexing, iteration
-    Buffer = bytes | memoryview
-else:
-    # At runtime, use the actual PEP 688 Buffer protocol
-    from collections.abc import Buffer
+# A Union that mypy understands fully: bytes and memoryview both support len(), indexing
+# and iteration. The same at run time, where it only ever appears in annotations: it was
+# collections.abc.Buffer there, behind `if TYPE_CHECKING`, which mypyc compiles as
+# unreachable code (the compiled module raised at import).
+Buffer = bytes | memoryview
 
 __all__ = ['Buffer']

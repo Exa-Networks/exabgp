@@ -10,7 +10,30 @@ catching format regressions like v4 commands being used with v6 API.
 
 from __future__ import annotations
 
-import inspect
+import ast
+import pathlib
+from types import ModuleType
+
+
+def source(module: ModuleType, function: str | None = None) -> str:
+    """The source of `module`, or of one function or method in it (`Class.method`).
+
+    Read from the .py file beside the module, so it is the tree under test whether it
+    runs interpreted or compiled: inspect.getsource() has no source for a compiled
+    function, and the build keeps each .py next to its extension.
+    """
+    path = pathlib.Path(module.__file__ or '')
+    text = path.with_name(path.name.split('.')[0] + '.py').read_text()
+    if function is None:
+        return text
+    scope: ast.AST = ast.parse(text)
+    for name in function.split('.'):
+        scope = next(
+            node
+            for node in ast.iter_child_nodes(scope)
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name
+        )
+    return ast.get_source_segment(text, scope) or ''
 
 
 class TestPipeV6Commands:
@@ -18,11 +41,11 @@ class TestPipeV6Commands:
 
     def test_pipe_sends_session_ack_enable(self) -> None:
         """pipe.py must send 'session ack enable', not 'enable-ack'."""
-        from exabgp.application.pipe import Control
+        from exabgp.application import pipe
 
-        source = inspect.getsource(Control.loop)
-        assert "b'session ack enable\\n'" in source, 'pipe.py must send v6 session ack enable command'
-        assert "b'enable-ack\\n'" not in source, 'pipe.py must not send v4 enable-ack command'
+        text = source(pipe, 'Control.loop')
+        assert "b'session ack enable\\n'" in text, 'pipe.py must send v6 session ack enable command'
+        assert "b'enable-ack\\n'" not in text, 'pipe.py must not send v4 enable-ack command'
 
     def test_session_ack_enable_in_v6_tree(self) -> None:
         """'session ack enable' must resolve in v6 dispatch tree."""
@@ -44,9 +67,9 @@ class TestSocketV6Commands:
         """unixsocket.py must send 'session ack enable', not 'enable-ack'."""
         from exabgp.application import unixsocket
 
-        source = inspect.getsource(unixsocket)
-        assert "b'session ack enable\\n'" in source, 'unixsocket.py must send v6 session ack enable command'
-        assert "b'enable-ack\\n'" not in source, 'unixsocket.py must not send v4 enable-ack command'
+        text = source(unixsocket)
+        assert "b'session ack enable\\n'" in text, 'unixsocket.py must send v6 session ack enable command'
+        assert "b'enable-ack\\n'" not in text, 'unixsocket.py must not send v4 enable-ack command'
 
 
 class TestHealthcheckV6Commands:
@@ -54,23 +77,23 @@ class TestHealthcheckV6Commands:
 
     def test_healthcheck_uses_peer_not_neighbor(self) -> None:
         """healthcheck must use 'peer *' (v6), not 'neighbor *' (v4)."""
-        from exabgp.application.healthcheck import loop
+        from exabgp.application import healthcheck
 
-        source = inspect.getsource(loop)
+        text = source(healthcheck, 'loop')
         # Must use v6 peer prefix (constructed dynamically via prefix variable)
-        assert "prefix = 'peer *'" in source, "healthcheck must default to 'peer *' prefix"
-        assert "f'peer {" in source, "healthcheck must format neighbor filter as 'peer {ip}'"
+        assert "prefix = 'peer *'" in text, "healthcheck must default to 'peer *' prefix"
+        assert "f'peer {" in text, "healthcheck must format neighbor filter as 'peer {ip}'"
         # Must not use v4 neighbor prefix
-        assert "'neighbor *'" not in source, "healthcheck must not use v4 'neighbor *'"
-        assert "f'neighbor {" not in source, "healthcheck must not format as 'neighbor {ip}'"
+        assert "'neighbor *'" not in text, "healthcheck must not use v4 'neighbor *'"
+        assert "f'neighbor {" not in text, "healthcheck must not format as 'neighbor {ip}'"
 
     def test_healthcheck_neighbor_filter_uses_peer(self) -> None:
         """healthcheck --neighbor filter must use 'peer {ip}', not 'neighbor {ip}'."""
-        from exabgp.application.healthcheck import loop
+        from exabgp.application import healthcheck
 
-        source = inspect.getsource(loop)
-        assert "f'peer {" in source, "neighbor filter must format as 'peer {ip}'"
-        assert "f'neighbor {" not in source, "neighbor filter must not format as 'neighbor {ip}'"
+        text = source(healthcheck, 'loop')
+        assert "f'peer {" in text, "neighbor filter must format as 'peer {ip}'"
+        assert "f'neighbor {" not in text, "neighbor filter must not format as 'neighbor {ip}'"
 
     def test_peer_exists_in_v6_tree(self) -> None:
         """'peer' must be a top-level entry in the v6 dispatch tree."""

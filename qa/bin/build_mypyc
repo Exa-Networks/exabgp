@@ -19,6 +19,7 @@ Usage:
     ./qa/bin/build_mypyc              # compile COMPILED, fail on any mypyc error
     ./qa/bin/build_mypyc --errors     # list every error, not only the counts
     ./qa/bin/build_mypyc exabgp/rib   # compile these instead
+    ./qa/bin/build_mypyc --into /tmp/trial exabgp   # a trial, leaving build/mypyc alone
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ import shutil
 import subprocess
 import sys
 import time
+import tomllib
 from collections import Counter
 from pathlib import Path
 
@@ -37,22 +39,17 @@ ROOT = Path(__file__).parent.parent.parent
 SOURCE = ROOT / 'src' / 'exabgp'
 TARGET = ROOT / 'build' / 'mypyc'
 STUBS = ROOT / 'stubs'
+# the Python which built the tree, read by sbin/exabgp
+INTERPRETER_FILE = 'interpreter'
 
-# What gets compiled, relative to TARGET. plan/wip-mypyc.md section 2.1 says why these.
-# A pattern is expanded in the copy.
-COMPILED = [
-    'exabgp/util/intvalue.py',
-    'exabgp/protocol',
-    'exabgp/bgp/message/*.py',
-    'exabgp/bgp/message/open',
-    'exabgp/bgp/message/update/*.py',
-    'exabgp/bgp/message/update/attribute',
-    'exabgp/bgp/message/update/nlri',
-    'exabgp/rib',
-]
+# What gets compiled, relative to TARGET: [tool.exabgp.mypyc] in pyproject.toml, which
+# setup.py reads too. plan/wip-mypyc.md section 2.1 says why these.
+with open(ROOT / 'pyproject.toml', 'rb') as reader:
+    _SETTINGS = tomllib.load(reader)['tool']['exabgp']['mypyc']
+COMPILED: list[str] = _SETTINGS['modules']
 
-# Modules left out of COMPILED's patterns
-EXCLUDED: set[str] = set()
+# Modules left out of COMPILED's patterns: [tool.exabgp.mypyc] exclude says why
+EXCLUDED: set[str] = set(_SETTINGS.get('exclude', []))
 
 # How many distinct error messages the summary shows before cutting the list short.
 MAX_KINDS = 30
@@ -97,7 +94,9 @@ def _expand(modules: list[str]) -> list[str]:
 def _compile(modules: list[str]) -> subprocess.CompletedProcess[str]:
     mypyc = Path(sys.executable).parent / 'mypyc'
     environment = dict(os.environ, MYPYPATH=str(STUBS))
-    command = [str(mypyc), '--config-file', str(ROOT / 'pyproject.toml'), *_expand(modules)]
+    # a build of part of the package need not import every module a [[tool.mypy.overrides]]
+    # names (exabgp.vendoring), and warn_unused_configs would fail it for that
+    command = [str(mypyc), '--config-file', str(ROOT / 'pyproject.toml'), '--no-warn-unused-configs', *_expand(modules)]
     return subprocess.run(command, cwd=TARGET, env=environment, capture_output=True, text=True)
 
 
@@ -116,10 +115,14 @@ def _report(output: str, show_every_error: bool) -> int:
 
 
 def main() -> int:
+    global TARGET
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('modules', nargs='*', help=f'modules to compile (default: {" ".join(COMPILED)})')
     parser.add_argument('--errors', action='store_true', help='list every mypyc error')
+    parser.add_argument('--into', metavar='DIR', help=f'build there rather than in {TARGET}, for a trial')
     arguments = parser.parse_args()
+    if arguments.into:
+        TARGET = Path(arguments.into).resolve()
 
     modules = arguments.modules or COMPILED
     started_at = time.monotonic()
@@ -138,6 +141,9 @@ def main() -> int:
         print(f'mypyc: the build failed ({elapsed_seconds:.0f}s)')
         return 1
     compiled = sorted(TARGET.glob('exabgp/**/*.so'))
+    # the extensions only load in the Python which built them: another version ignores
+    # them and imports the .py beside them, so sbin/exabgp runs this one (EXABGP_COMPILED)
+    (TARGET / INTERPRETER_FILE).write_text(sys.executable + '\n')
     print(f'mypyc: compiled {len(compiled)} modules into {TARGET} ({elapsed_seconds:.0f}s)')
     return 0
 

@@ -32,12 +32,14 @@ from exabgp.configuration.grammar.types.base import Type
 class _Missing:
     """No default: the field is left out when the configuration does not set it."""
 
-    _instance: '_Missing | None' = None
+    # one object, compared with `is`: a copy of a leaf default (describe.py deepcopies them)
+    # must still be MISSING. A compiled class can not return a cached object from __new__,
+    # so the copies give back the object itself
+    def __copy__(self) -> '_Missing':
+        return self
 
-    def __new__(cls) -> '_Missing':
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
+    def __deepcopy__(self, memo: dict[int, Any]) -> '_Missing':
+        return self
 
     def __repr__(self) -> str:
         return 'MISSING'

@@ -13,7 +13,7 @@ from typing import Generic, TypeVar
 
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import TEXT, Shape, boolean, enumeration, leaf_list
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
 from exabgp.util.program import resolve_program, validate_executable
 
@@ -47,7 +47,7 @@ class Bool(Type[bool]):
             return self.bare
         raise ConfigError(where, f"'{word}' is not a valid boolean", expected=list(TRUE_WORDS + FALSE_WORDS))
 
-    def render(self, value: bool) -> list[str]:
+    def render(self, value: bool) -> list[WordOrSyntax]:
         return ['true' if value else 'false']
 
     def hint(self) -> str:
@@ -84,7 +84,7 @@ class Choice(Type[E], Generic[E]):
                 return member
         raise ConfigError(where, f"'{word}' is not a valid {self.name}", expected=self._values())
 
-    def render(self, value: E) -> list[str]:
+    def render(self, value: E) -> list[WordOrSyntax]:
         return [self.enumeration(value).value]
 
     def hint(self) -> str:
@@ -112,7 +112,7 @@ class LegacyName(Type[str]):
     def parse(self, words: Words) -> str:
         return '{' if words.at_end() else words.word()
 
-    def render(self, value: str) -> list[str]:
+    def render(self, value: str) -> list[WordOrSyntax]:
         return [value]
 
     def hint(self) -> str:
@@ -144,7 +144,7 @@ class Program(Type[list[str]]):
             raise ConfigError(where, str(exc)) from None
         return [program] + [token.word for token in words.rest()]
 
-    def render(self, value: list[str]) -> list[str]:
+    def render(self, value: list[str]) -> list[WordOrSyntax]:
         return list(value)
 
     def hint(self) -> str:

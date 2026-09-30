@@ -54,6 +54,7 @@ import time
 import collections
 
 from enum import Enum
+from typing import Any
 from ipaddress import ip_network, IPv4Network, IPv6Network
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
@@ -337,10 +338,10 @@ def setup_ips(
             try:
                 subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError as e:
-                # the IP address is already setup, ignoring
-                if cmd[0] == 'ip' and cmd[2] == 'add' and e.returncode == IP_CMD_ADD_ERROR_CODE:
-                    continue
-                raise e
+                # the IP address is already setup, ignoring. Not a `continue`: mypyc does not
+                # compile one inside the try/finally the `with` is
+                if cmd[0] != 'ip' or cmd[2] != 'add' or e.returncode != IP_CMD_ADD_ERROR_CODE:
+                    raise e
 
 
 def remove_ips(
@@ -397,6 +398,11 @@ def drop_privileges(user: str | None, group: str | None) -> None:
             os.setreuid(uid, uid)
 
 
+# at module level: mypyc does not compile a class defined inside a function
+class Alarm(Exception):
+    """Exception to signal an alarm condition."""
+
+
 def check(cmd: str | None, timeout: int) -> bool:
     """Check the return code of the given command.
 
@@ -408,21 +414,19 @@ def check(cmd: str | None, timeout: int) -> bool:
     if cmd is None:
         return True
 
-    class Alarm(Exception):
-        """Exception to signal an alarm condition."""
-
     def alarm_handler(number: int, frame: object) -> None:  # pylint: disable=W0613
         """Handle SIGALRM signal."""
         raise Alarm
 
     logger.debug('Checking command %s', repr(cmd))
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
+    # Any: the stub says communicate() gives two bytes, and a compiled caller checks that, but
+    # stderr goes to stdout and comes back None
+    p: Any = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
     if timeout:
         signal.signal(signal.SIGALRM, alarm_handler)
         signal.alarm(timeout)
     try:
-        stdout = None
-        stdout, _ = p.communicate()
+        stdout: bytes = p.communicate()[0]
         if timeout:
             signal.alarm(0)
         if p.returncode != 0:

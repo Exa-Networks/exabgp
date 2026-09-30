@@ -5,14 +5,15 @@ Unit tests for exabgp.util modules
 """
 
 import errno
-from unittest.mock import patch, Mock
+import resource
+from unittest.mock import patch
 
 from typing import Any
 
 import pytest
 
 from exabgp.util.dictionary import Dictionary
-from exabgp.util.enumeration import Enumeration, enum
+from exabgp.util.enumeration import enum
 from exabgp.util.usage import usage
 from exabgp.util.errstr import errstr
 from exabgp.util.ip import isipv4, isipv6, isip
@@ -49,37 +50,8 @@ class TestDictionary:
         assert isinstance(d['level1'], dict)
 
 
-class TestEnumeration:
-    """Test Enumeration class"""
-
-    def test_enumeration_init(self) -> None:
-        """Test Enumeration initialization with names"""
-        e = Enumeration('RED', 'GREEN', 'BLUE')
-        assert hasattr(e, 'RED')
-        assert hasattr(e, 'GREEN')
-        assert hasattr(e, 'BLUE')
-
-    def test_enumeration_values(self) -> None:
-        """Test Enumeration values are powers of 2"""
-        e = Enumeration('FIRST', 'SECOND', 'THIRD')
-        assert e.FIRST == 1  # 2^0
-        assert e.SECOND == 2  # 2^1
-        assert e.THIRD == 4  # 2^2
-
-    def test_enumeration_str(self) -> None:
-        """Test Enumeration string representation"""
-        e = Enumeration('RED', 'GREEN', 'BLUE')
-        assert str(e.RED) == 'RED'
-        assert str(e.GREEN) == 'GREEN'
-        assert str(e.BLUE) == 'BLUE'
-
-    def test_enumeration_int_operations(self) -> None:
-        """Test Enumeration values work as integers"""
-        e = Enumeration('FLAG1', 'FLAG2', 'FLAG3')
-        # Can use as integers
-        assert e.FLAG1 + e.FLAG2 == 3
-        assert e.FLAG1 | e.FLAG2 == 3
-        assert e.FLAG1 & e.FLAG2 == 0
+class TestEnum:
+    """Test enum() helper function"""
 
     def test_enum_function(self) -> None:
         """Test enum() helper function"""
@@ -110,12 +82,8 @@ class TestUsage:
     @patch('resource.getrusage')
     def test_usage_with_mock_rusage(self, mock_rusage: Any) -> None:
         """Test usage() with mocked resource data"""
-        # Create a mock rusage object
-        mock_ru = Mock()
-        mock_ru.ru_utime = 1.5
-        mock_ru.ru_stime = 0.5
-        mock_ru.ru_maxrss = 10240  # depends on platform
-        mock_rusage.return_value = mock_ru
+        # A real struct_rusage: ru_utime, ru_stime, ru_maxrss (platform dependent unit), then zeros
+        mock_rusage.return_value = resource.struct_rusage((1.5, 0.5, 10240) + (0,) * 13)
 
         result = usage('test')
         assert 'test:' in result

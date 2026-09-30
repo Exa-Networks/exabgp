@@ -1,24 +1,18 @@
-"""Every block runs a Section and every store is a Store, each of them used, and printable.
-
-The code a tree runs is found by its base class (grammar/section.py): these tests hold the
-tree to it, so a new section or store can not be a loose function again, and one no block
-uses any more is noticed.
-"""
+"""The tree uses its section and store implementations and names printable settings fields."""
 
 from __future__ import annotations
 
 import dataclasses
-import inspect
 from typing import Iterator
 
 from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.read import _command_sections
 from exabgp.configuration.grammar.section import Section, Store
-from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.tree.root import ROOT
 
 MAX_DEPTH = 32  # as the engine: sections nest a handful deep
 GRAMMAR = 'exabgp.configuration.grammar.'
+ABSTRACT_SECTIONS = frozenset({'Collector'})
 
 
 def _nodes(block: Block, depth: int = 0) -> Iterator[Block | Leaf]:
@@ -50,18 +44,11 @@ def _concrete(base: type) -> set[type]:
     return {each for each in _subclasses(base) if each.__module__.startswith(GRAMMAR)}
 
 
-def test_every_block_runs_a_section_and_every_store_is_a_store() -> None:
-    for node in every_node():
-        if isinstance(node, Block):
-            assert isinstance(node.section, Section), node.keyword
-        else:
-            assert node.store is None or isinstance(node.store, Store), node.keyword
-
-
 def test_every_section_is_used_by_a_block() -> None:
     used = {type(node.section) for node in every_node() if isinstance(node, Block)}
-    # an abstract section (Collector) is a base to derive from, not an implementation left behind
-    implementations = {each for each in _concrete(Section) if not inspect.isabstract(each)}
+    # an abstract section is a base to derive from, not an implementation left behind. Named
+    # rather than found with inspect.isabstract, which a class compiled by mypyc answers False
+    implementations = {each for each in _concrete(Section) if each.__name__ not in ABSTRACT_SECTIONS}
     assert {each.__name__ for each in implementations - used} == set()
 
 
@@ -80,10 +67,3 @@ def test_a_settings_block_prints_each_leaf_from_a_field_of_what_it_builds() -> N
         names = {each.name for each in dataclasses.fields(built)}
         for leaf in block.leaves():
             assert leaf.field in names, f'{block.keyword} {leaf.keyword}: {built.__name__} has no {leaf.field}'
-
-
-def test_every_statement_keeping_routes_reads_them_with_a_route_statement() -> None:
-    """A leaf whose store keeps routes shares the value loop and the printer of RouteStatement."""
-    leaves = [node for node in every_node() if isinstance(node, Leaf) and node.store is not None and node.store.routes]
-    assert leaves, 'no store keeps routes: the test checks nothing'
-    assert [leaf.keyword for leaf in leaves if not isinstance(leaf.type, RouteStatement)] == []

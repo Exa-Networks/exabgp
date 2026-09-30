@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
-import inspect
+import os
+from collections.abc import Iterator
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import Mock
+
+from exabgp.configuration.configuration import Configuration
+from exabgp.reactor.api.processes import Processes
+from exabgp.reactor.loop import Reactor
 
 from exabgp.reactor.api.command.group import (
     _GROUP_BUFFERS,
@@ -19,34 +25,53 @@ from exabgp.reactor.api.command.group import (
 )
 
 
-def _create_mock_reactor_with_cleanup():
-    """Create a mock reactor that tracks and cleans up scheduled coroutines.
+class PipedHelper:
+    """The Popen of the API client, as far as answering it goes: its stdin is a pipe."""
 
-    Returns:
-        tuple: (reactor, cleanup_func) - Call cleanup_func after test to close coroutines.
+    def __init__(self) -> None:
+        self._reader, writer = os.pipe()
+        os.set_blocking(self._reader, False)
+        self.stdin = os.fdopen(writer, 'wb')
+
+    def lines(self) -> list[str]:
+        """Every line written to the client since the last call."""
+        try:
+            return os.read(self._reader, 65536).decode('ascii').splitlines()
+        except BlockingIOError:
+            return []
+
+    def close(self) -> None:
+        os.close(self._reader)
+        self.stdin.close()
+
+
+@pytest.fixture
+def client() -> Iterator[PipedHelper]:
+    piped = PipedHelper()
+    yield piped
+    piped.close()
+
+
+@pytest.fixture
+def reactor(client: PipedHelper) -> Iterator[Reactor]:
+    """A real Reactor whose API clients, test-service, service-a and service-b, all write to `client`.
+
+    What a handler schedules is closed afterwards, unrun, so no coroutine is left never awaited.
     """
-    scheduled_coroutines: list = []
+    created = Reactor(Configuration([''], text=True))
+    created.processes = Processes()
+    for service in ('test-service', 'service-a', 'service-b'):
+        created.processes._process[service] = client  # type: ignore[assignment]
+        created.processes._ack[service] = True
+        created.processes._ackjson[service] = False
+    yield created
+    for _, coroutine in created.asynchronous._async:
+        coroutine.close()
 
-    def track_schedule(service, name, coro):
-        """Track coroutines passed to schedule() for cleanup."""
-        if inspect.iscoroutine(coro):
-            scheduled_coroutines.append(coro)
 
-    reactor = Mock()
-    reactor.processes = Mock()
-    reactor.processes.write = Mock()
-    reactor.processes.answer_done = Mock()
-    reactor.processes.answer_error = Mock()
-    reactor.asynchronous = Mock()
-    reactor.asynchronous.schedule = Mock(side_effect=track_schedule)
-
-    def cleanup():
-        """Close any scheduled coroutines to prevent warnings."""
-        for coro in scheduled_coroutines:
-            coro.close()
-        scheduled_coroutines.clear()
-
-    return reactor, cleanup
+def scheduled(reactor: Reactor) -> list[str]:
+    """The service of each callback the handler left for the reactor to run."""
+    return [uid for uid, _ in reactor.asynchronous._async]
 
 
 class TestGroupBufferManagement:
@@ -155,59 +180,46 @@ class TestGroupStartHandler:
         """Clear group buffers after each test."""
         _GROUP_BUFFERS.clear()
 
-    @pytest.fixture
-    def mock_reactor(self):
-        """Create mock reactor for testing."""
-        reactor = Mock()
-        reactor.processes = Mock()
-        reactor.processes.write = Mock()
-        reactor.processes.answer_done = Mock()
-        reactor.processes.answer_error = Mock()
-        return reactor
-
-    def test_group_start_success(self, mock_reactor):
+    def test_group_start_success(self, reactor, client):
         """Test successful group start."""
-        result = group_start(None, mock_reactor, 'test-service', [], '', False)
+        result = group_start(reactor.api, reactor, 'test-service', [], '', False)
 
         assert result is True
         assert _is_grouping('test-service') is True
-        mock_reactor.processes.write.assert_called_once()
-        mock_reactor.processes.answer_done_sync.assert_called_once_with('test-service')
+        assert client.lines() == ['group started', 'done']
 
-    def test_group_start_text_response(self, mock_reactor):
+    def test_group_start_text_response(self, reactor, client):
         """Test group start text response."""
-        group_start(None, mock_reactor, 'test-service', [], '', False)
+        group_start(reactor.api, reactor, 'test-service', [], '', False)
 
-        call_args = mock_reactor.processes.write.call_args[0]
-        assert call_args[0] == 'test-service'
-        assert 'group started' in call_args[1]
+        answer = client.lines()[0]
+        assert 'group started' in answer
 
-    def test_group_start_json_response(self, mock_reactor):
+    def test_group_start_json_response(self, reactor, client):
         """Test group start JSON response."""
-        group_start(None, mock_reactor, 'test-service', [], '', True)
+        group_start(reactor.api, reactor, 'test-service', [], '', True)
 
-        call_args = mock_reactor.processes.write.call_args[0]
-        assert call_args[0] == 'test-service'
-        assert '"status"' in call_args[1]
-        assert 'group started' in call_args[1]
+        answer = client.lines()[0]
+        assert '"status"' in answer
+        assert 'group started' in answer
 
-    def test_group_start_nested_error(self, mock_reactor):
+    def test_group_start_nested_error(self, reactor, client):
         """Test group start fails when already in group."""
         _start_group('test-service')
 
-        result = group_start(None, mock_reactor, 'test-service', [], '', False)
+        result = group_start(reactor.api, reactor, 'test-service', [], '', False)
 
         assert result is False
-        mock_reactor.processes.answer_error_sync.assert_called_once_with('test-service')
+        assert client.lines()[-1:] == ['error']
 
-    def test_group_start_nested_error_message(self, mock_reactor):
+    def test_group_start_nested_error_message(self, reactor, client):
         """Test nested group error message contains explanation."""
         _start_group('test-service')
 
-        group_start(None, mock_reactor, 'test-service', [], '', False)
+        group_start(reactor.api, reactor, 'test-service', [], '', False)
 
-        call_args = mock_reactor.processes.write.call_args[0]
-        assert 'already in group' in call_args[1].lower() or 'nested' in call_args[1].lower()
+        answer = client.lines()[0]
+        assert 'already in group' in answer.lower() or 'nested' in answer.lower()
 
 
 class TestGroupEndHandler:
@@ -216,63 +228,54 @@ class TestGroupEndHandler:
     def setup_method(self):
         """Clear group buffers before each test."""
         _GROUP_BUFFERS.clear()
-        self._cleanup = None
 
     def teardown_method(self):
-        """Clear group buffers and close any scheduled coroutines."""
+        """Clear group buffers after each test."""
         _GROUP_BUFFERS.clear()
-        if self._cleanup:
-            self._cleanup()
 
-    @pytest.fixture
-    def mock_reactor(self):
-        """Create mock reactor that tracks and cleans up scheduled coroutines."""
-        reactor, cleanup = _create_mock_reactor_with_cleanup()
-        self._cleanup = cleanup
-        return reactor
-
-    def test_group_end_not_in_group_error(self, mock_reactor):
+    def test_group_end_not_in_group_error(self, reactor, client):
         """Test group end fails when not in group."""
-        result = group_end(None, mock_reactor, 'test-service', [], '', False)
+        result = group_end(reactor.api, reactor, 'test-service', [], '', False)
 
         assert result is False
-        mock_reactor.processes.answer_error_sync.assert_called_once_with('test-service')
+        assert client.lines()[-1:] == ['error']
 
-    def test_group_end_not_in_group_error_message(self, mock_reactor):
+    def test_group_end_not_in_group_error_message(self, reactor, client):
         """Test not in group error message."""
-        group_end(None, mock_reactor, 'test-service', [], '', False)
+        group_end(reactor.api, reactor, 'test-service', [], '', False)
 
-        call_args = mock_reactor.processes.write.call_args[0]
-        assert 'not in group' in call_args[1].lower()
+        answer = client.lines()[0]
+        assert 'not in group' in answer.lower()
 
-    def test_group_end_empty_group_success(self, mock_reactor):
+    def test_group_end_empty_group_success(self, reactor, client):
         """Test group end succeeds with empty group."""
         _start_group('test-service')
 
-        result = group_end(None, mock_reactor, 'test-service', [], '', False)
+        result = group_end(reactor.api, reactor, 'test-service', [], '', False)
 
         assert result is True
-        mock_reactor.processes.answer_done_sync.assert_called_once_with('test-service')
+        assert client.lines()[-1:] == ['done']
 
-    def test_group_end_empty_group_clears_buffer(self, mock_reactor):
+    def test_group_end_empty_group_clears_buffer(self, reactor, client):
         """Test group end clears buffer."""
         _start_group('test-service')
-        group_end(None, mock_reactor, 'test-service', [], '', False)
+        group_end(reactor.api, reactor, 'test-service', [], '', False)
 
         assert not _is_grouping('test-service')
 
-    def test_group_end_with_commands_schedules_async(self, mock_reactor):
+    def test_group_end_with_commands_schedules_async(self, reactor, client):
         """Test group end with buffered commands schedules async processing."""
         _start_group('test-service')
         _add_to_group('test-service', ['peer1'], 'announce route 10.0.0.0/24 next-hop 1.2.3.4')
 
-        result = group_end(None, mock_reactor, 'test-service', [], '', False)
+        with patch('exabgp.reactor.asynchronous.log') as log:
+            result = group_end(reactor.api, reactor, 'test-service', [], '', False)
 
         assert result is True
-        mock_reactor.asynchronous.schedule.assert_called_once()
-        call_args = mock_reactor.asynchronous.schedule.call_args[0]
-        assert call_args[0] == 'test-service'
-        assert call_args[1] == 'group end'
+        assert scheduled(reactor) == ['test-service']
+        # the command name is only kept in what ASYNC logs as it schedules
+        logged = [call.args[0]() for call in log.debug.call_args_list]
+        assert 'async.schedule uid=test-service command=group end' in logged
 
 
 class TestGroupInlineHandler:
@@ -281,49 +284,39 @@ class TestGroupInlineHandler:
     def setup_method(self):
         """Clear group buffers before each test."""
         _GROUP_BUFFERS.clear()
-        self._cleanup = None
 
     def teardown_method(self):
-        """Clear group buffers and close any scheduled coroutines."""
+        """Clear group buffers after each test."""
         _GROUP_BUFFERS.clear()
-        if self._cleanup:
-            self._cleanup()
 
-    @pytest.fixture
-    def mock_reactor(self):
-        """Create mock reactor that tracks and cleans up scheduled coroutines."""
-        reactor, cleanup = _create_mock_reactor_with_cleanup()
-        self._cleanup = cleanup
-        return reactor
-
-    def test_group_inline_empty_error(self, mock_reactor):
+    def test_group_inline_empty_error(self, reactor, client):
         """Test group inline fails with empty command."""
-        result = group_inline(None, mock_reactor, 'test-service', [], '', False)
+        result = group_inline(reactor.api, reactor, 'test-service', [], '', False)
 
         assert result is False
-        mock_reactor.processes.answer_error_sync.assert_called_once_with('test-service')
+        assert client.lines()[-1:] == ['error']
 
-    def test_group_inline_empty_error_message(self, mock_reactor):
+    def test_group_inline_empty_error_message(self, reactor, client):
         """Test empty group error message."""
-        group_inline(None, mock_reactor, 'test-service', [], '', False)
+        group_inline(reactor.api, reactor, 'test-service', [], '', False)
 
-        call_args = mock_reactor.processes.write.call_args[0]
-        assert 'empty group' in call_args[1].lower()
+        answer = client.lines()[0]
+        assert 'empty group' in answer.lower()
 
-    def test_group_inline_single_command(self, mock_reactor):
+    def test_group_inline_single_command(self, reactor, client):
         """Test group inline with single command."""
         result = group_inline(
-            None, mock_reactor, 'test-service', ['peer1'], 'announce route 10.0.0.0/24 next-hop 1.2.3.4', False
+            None, reactor, 'test-service', ['peer1'], 'announce route 10.0.0.0/24 next-hop 1.2.3.4', False
         )
 
         assert result is True
-        mock_reactor.asynchronous.schedule.assert_called_once()
+        assert scheduled(reactor) == ['test-service']
 
-    def test_group_inline_multiple_commands(self, mock_reactor):
+    def test_group_inline_multiple_commands(self, reactor, client):
         """Test group inline with multiple semicolon-separated commands."""
         result = group_inline(
-            None,
-            mock_reactor,
+            reactor.api,
+            reactor,
             'test-service',
             ['peer1'],
             'announce route 10.0.0.0/24 next-hop 1.2.3.4 ; announce route 10.0.0.1/24 next-hop 1.2.3.4',
@@ -331,13 +324,13 @@ class TestGroupInlineHandler:
         )
 
         assert result is True
-        mock_reactor.asynchronous.schedule.assert_called_once()
+        assert scheduled(reactor) == ['test-service']
 
-    def test_group_inline_strips_whitespace(self, mock_reactor):
+    def test_group_inline_strips_whitespace(self, reactor, client):
         """Test group inline strips whitespace around commands."""
         result = group_inline(
-            None,
-            mock_reactor,
+            reactor.api,
+            reactor,
             'test-service',
             ['peer1'],
             '  announce route 10.0.0.0/24 next-hop 1.2.3.4  ;  announce route 10.0.0.1/24 next-hop 1.2.3.4  ',
@@ -346,11 +339,11 @@ class TestGroupInlineHandler:
 
         assert result is True
 
-    def test_group_inline_ignores_empty_parts(self, mock_reactor):
+    def test_group_inline_ignores_empty_parts(self, reactor, client):
         """Test group inline ignores empty command parts."""
         result = group_inline(
-            None,
-            mock_reactor,
+            reactor.api,
+            reactor,
             'test-service',
             ['peer1'],
             'announce route 10.0.0.0/24 next-hop 1.2.3.4 ; ; ; announce route 10.0.0.1/24 next-hop 1.2.3.4',
@@ -359,13 +352,13 @@ class TestGroupInlineHandler:
 
         assert result is True
 
-    def test_group_inline_preserves_peers(self, mock_reactor):
+    def test_group_inline_preserves_peers(self, reactor, client):
         """Test group inline passes peers to callback."""
         peers = ['peer1', 'peer2']
-        group_inline(None, mock_reactor, 'test-service', peers, 'announce route 10.0.0.0/24 next-hop 1.2.3.4', False)
+        group_inline(reactor.api, reactor, 'test-service', peers, 'announce route 10.0.0.0/24 next-hop 1.2.3.4', False)
 
         # The peers are captured in the closure passed to schedule
-        mock_reactor.asynchronous.schedule.assert_called_once()
+        assert scheduled(reactor) == ['test-service']
 
 
 class TestGroupBufferIsolation:
@@ -374,39 +367,29 @@ class TestGroupBufferIsolation:
     def setup_method(self):
         """Clear group buffers before each test."""
         _GROUP_BUFFERS.clear()
-        self._cleanup = None
 
     def teardown_method(self):
-        """Clear group buffers and close any scheduled coroutines."""
+        """Clear group buffers after each test."""
         _GROUP_BUFFERS.clear()
-        if self._cleanup:
-            self._cleanup()
 
-    @pytest.fixture
-    def mock_reactor(self):
-        """Create mock reactor that tracks and cleans up scheduled coroutines."""
-        reactor, cleanup = _create_mock_reactor_with_cleanup()
-        self._cleanup = cleanup
-        return reactor
-
-    def test_different_services_independent(self, mock_reactor):
+    def test_different_services_independent(self, reactor, client):
         """Test that different services have independent group state."""
         # Start group for service A
-        group_start(None, mock_reactor, 'service-a', [], '', False)
+        group_start(reactor.api, reactor, 'service-a', [], '', False)
         assert is_grouping('service-a') is True
         assert is_grouping('service-b') is False
 
         # Start group for service B
-        group_start(None, mock_reactor, 'service-b', [], '', False)
+        group_start(reactor.api, reactor, 'service-b', [], '', False)
         assert is_grouping('service-a') is True
         assert is_grouping('service-b') is True
 
         # End group for service A
-        group_end(None, mock_reactor, 'service-a', [], '', False)
+        group_end(reactor.api, reactor, 'service-a', [], '', False)
         assert is_grouping('service-a') is False
         assert is_grouping('service-b') is True
 
-    def test_service_buffer_contents_isolated(self, mock_reactor):
+    def test_service_buffer_contents_isolated(self, reactor, client):
         """Test that buffer contents are isolated between services."""
         _start_group('service-a')
         _start_group('service-b')

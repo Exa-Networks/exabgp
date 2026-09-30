@@ -7,29 +7,57 @@ which is for a peering the speaker had and decided to remove.
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, Mock, patch
+import socket
 
 import pytest
 
+from exabgp.bgp.message import Message
 from exabgp.reactor.listener import Listener
+from exabgp.reactor.loop import Reactor
 
 CEASE = 6
 CONNECTION_REJECTED = 5
+NOTIFICATION = 3
+
+# bounded: writing one NOTIFICATION to a local socket takes a handful of steps
+MAX_WRITER_STEPS = 1000
 
 
 def refused_with() -> tuple[int, int]:
-    reactor = MagicMock()
-    reactor.peers.return_value = []
+    """Accept a real connection with no neighbor configured, and read what the peer is sent.
+
+    The listener is compiled, so neither its accepted socket nor the connection it builds
+    can be replaced: the connection is a real one, from a real listening socket, and the
+    answer is read off the wire by the far end.
+    """
+    reactor = Reactor(None)
     listener = Listener(reactor)
     listener.serving = True
-    connection = Mock()
 
-    with patch.object(Listener, '_connected', return_value=iter([connection])):
-        for _ in listener.new_connections():
-            pass
+    with socket.create_server(('127.0.0.1', 0)) as listening:
+        peer = socket.create_connection(listening.getsockname())
+        accepted, _ = listening.accept()
+        try:
+            listener._accepted[listening] = accepted
+            for _ in listener.new_connections():
+                pass
 
-    code, subcode, _ = connection.notification.call_args.args
-    return code, subcode
+            # the refusal is scheduled on the reactor, run it as the reactor would
+            scheduled = [callback for _, callback in reactor.asynchronous._async]
+            assert len(scheduled) == 1, scheduled
+            for step, _ in enumerate(scheduled[0]):
+                assert step < MAX_WRITER_STEPS, 'the NOTIFICATION was never written'
+
+            peer.settimeout(1.0)
+            header = peer.recv(Message.HEADER_LEN)
+            length = int.from_bytes(header[16:18], 'big')
+            body = peer.recv(length - Message.HEADER_LEN)
+        finally:
+            peer.close()
+            accepted.close()
+
+    assert header[18] == NOTIFICATION, header
+    return body[0], body[1]
 
 
 @pytest.mark.rfc('rfc4486#4-connection-rejected')

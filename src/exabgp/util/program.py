@@ -76,16 +76,14 @@ def validate_executable(prg: str) -> None:
        not from blocking symlinks
     3. We validate the final target file that the descriptor points to
     """
-    fd = None
     try:
-        try:
-            fd = os.open(prg, os.O_RDONLY)
-        except OSError as e:
-            if e.errno == ENOENT:
-                raise ValueError('can not locate the program "{}"'.format(prg)) from e
-            # Preserve exception chain for debugging while providing clear message
-            raise ValueError('can not access program "{}": {}'.format(prg, e)) from e
-
+        fd = os.open(prg, os.O_RDONLY)
+    except OSError as e:
+        if e.errno == ENOENT:
+            raise ValueError('can not locate the program "{}"'.format(prg)) from e
+        # Preserve exception chain for debugging while providing clear message
+        raise ValueError('can not access program "{}": {}'.format(prg, e)) from e
+    try:
         # Use fstat on file descriptor - this is safe from TOCTOU
         # The file descriptor points to the final target, even if prg was a symlink
         s = os.fstat(fd)
@@ -115,5 +113,4 @@ def validate_executable(prg: str) -> None:
             raise ValueError('program must be a regular file "{}"'.format(prg))
 
     finally:
-        if fd is not None:
-            os.close(fd)
+        os.close(fd)

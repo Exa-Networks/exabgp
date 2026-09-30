@@ -10,7 +10,7 @@ from __future__ import annotations
 import os
 import traceback
 from typing import TYPE_CHECKING, Any, cast
-from collections.abc import AsyncGenerator
+from collections.abc import Iterator
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -173,9 +173,10 @@ class Protocol:
             self.connection = None
 
     def _to_api(self, direction: str, message: Any, raw: bytes) -> None:
-        packets: bool = self._api['{}-packets'.format(direction)]
-        parsed: bool = self._api['{}-parsed'.format(direction)]
-        consolidate: bool = self._api['{}-consolidate'.format(direction)]
+        # the API entries are the lists of processes which asked, so only their truth is kept
+        packets = bool(self._api['{}-packets'.format(direction)])
+        parsed = bool(self._api['{}-parsed'.format(direction)])
+        consolidate = bool(self._api['{}-consolidate'.format(direction)])
         neg: Negotiated = self.negotiated
 
         if consolidate:
@@ -461,33 +462,12 @@ class Protocol:
         )
         return notification
 
-    async def new_update_generator(self, include_withdraw: bool) -> AsyncGenerator[None, None]:
-        """Async generator for sending UPDATE messages - yields control between messages.
+    def new_update_generator(self, include_withdraw: bool) -> UpdateSender:
+        """The pending UPDATE messages, sent one per `UpdateSender.step()`.
 
-        This yields after each message to allow the event loop to process other tasks.
+        Each step awaits one send, so the event loop runs other tasks between messages.
         """
-        assert self.connection is not None
-        log.debug(lazymsg('update.generator.started'), self._session())
-        updates = self.neighbor.rib.outgoing.updates(
-            self.neighbor.group_updates,
-            paths_limit=self.negotiated.paths_limit or None,
-            negotiated=self.negotiated,
-        )
-        number: int = 0
-        for update in updates:
-            for message in update.messages(self.negotiated, include_withdraw):
-                number += 1
-                current_msg = message
-                log.debug(
-                    lazymsg('update.message.sending num={num} msg={msg}', num=number, msg=repr(current_msg)),
-                    self._session(),
-                )
-                await self.send(message)
-                yield
-        if number:
-            final_number = number
-            log.debug(lazymsg('update.sent count={n}', n=final_number), self._session())
-        log.debug(lazymsg('update.generator.completed count={count}', count=number), self._session())
+        return UpdateSender(self, include_withdraw)
 
     async def new_update(self, include_withdraw: bool) -> int:
         """Send BGP UPDATE messages (runs to completion), and say how many were sent."""
@@ -549,3 +529,77 @@ class Protocol:
         await self.write(refresh, self.negotiated)
         log.debug(lazymsg('refresh.sent message={m}', m=str(refresh)), self._session())
         return refresh
+
+
+class UpdateSender:
+    """Sends the pending UPDATE messages of the outgoing RIB, one message per step.
+
+    This was an async generator, which mypyc 1.20 does not compile. Its protocol is not
+    used either: a compiled coroutine raising StopAsyncIteration fails with a TypeError.
+    `step()` says instead whether it sent a message, False once every one has gone.
+
+    Like a generator, nothing is read from the RIB before the first step, and an exception
+    out of a step ends the sending.
+    """
+
+    def __init__(self, protocol: Protocol, include_withdraw: bool) -> None:
+        self._protocol = protocol
+        self._include_withdraw = include_withdraw
+        self._updates: Iterator[UpdateCollection | RouteRefresh] | None = None
+        self._messages: Iterator[bytes] = iter(())
+        self._number = 0
+        self._done = False
+
+    def _start(self) -> Iterator[UpdateCollection | RouteRefresh]:
+        protocol = self._protocol
+        assert protocol.connection is not None
+        log.debug(lazymsg('update.generator.started'), protocol._session())
+        return iter(
+            protocol.neighbor.rib.outgoing.updates(
+                protocol.neighbor.group_updates,
+                paths_limit=protocol.negotiated.paths_limit or None,
+                negotiated=protocol.negotiated,
+            )
+        )
+
+    def _next_message(self, updates: Iterator[UpdateCollection | RouteRefresh]) -> bytes | None:
+        message = next(self._messages, None)
+        if message is not None:
+            return message
+        # the RIB iterator is finite and each turn consumes one update from it
+        for update in updates:
+            self._messages = update.messages(self._protocol.negotiated, self._include_withdraw)
+            message = next(self._messages, None)
+            if message is not None:
+                return message
+        return None
+
+    def _finish(self) -> None:
+        self._done = True
+        session = self._protocol._session()
+        if self._number:
+            log.debug(lazymsg('update.sent count={n}', n=self._number), session)
+        log.debug(lazymsg('update.generator.completed count={count}', count=self._number), session)
+
+    async def step(self) -> bool:
+        """Send the next UPDATE message, False when there is none left."""
+        if self._done:
+            return False
+        if self._updates is None:
+            self._updates = self._start()
+        try:
+            message = self._next_message(self._updates)
+            if message is None:
+                self._finish()
+                return False
+            self._number += 1
+            log.debug(
+                lazymsg('update.message.sending num={num} msg={msg}', num=self._number, msg=repr(message)),
+                self._protocol._session(),
+            )
+            await self._protocol.send(message)
+        except BaseException:
+            # a generator which raised is finished: it never sends the rest
+            self._done = True
+            raise
+        return True

@@ -6,11 +6,8 @@ out of the adj-rib-in while the API process, usually the thing which programs th
 filters, had already been told about it. These tests drive `read_message` itself.
 """
 
-from unittest.mock import AsyncMock, Mock
-
 import pytest
 
-from exabgp.bgp.message import Message
 from exabgp.bgp.message.update import Update, UpdateCollection
 from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
@@ -18,11 +15,11 @@ from exabgp.bgp.message.update.nlri.flow import Flow, Flow4Destination
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.check import _negotiated
 from exabgp.configuration.configuration import Configuration
-from exabgp.reactor.peer.peer import Peer
 from exabgp.reactor.protocol import Protocol
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.rib import RIB
 from exabgp.rib.route import Route
+from tests import negotiation
 
 CONFIGURATION = """
 neighbor 192.0.2.1 {
@@ -70,21 +67,23 @@ def unicast_route() -> Route:
 
 
 async def read(proto: Protocol, message: bytes) -> Update:
-    proto.connection = Mock(
-        reader_async=AsyncMock(return_value=(len(message), Message.CODE.UPDATE, message[:19], message[19:], None))
-    )
-    received = await proto.read_message()
+    theirs = negotiation.connect(proto)
+    theirs.sendall(message)
+    try:
+        received = await proto.read_message()
+    finally:
+        negotiation.disconnect(proto, theirs)
     assert isinstance(received, Update)
     return received
 
 
-def told(processes: Mock) -> list[str]:
+def told(api: negotiation.Told) -> list[str]:
     """The flow routes the API was told about, announced or withdrawn, in order."""
     routes = []
-    for call in processes.message.call_args_list:
-        update = call.args[3]
-        routes.extend(f'+{routed.nlri}' for routed in update.data.announces if 'flow' in str(routed.nlri))
-        routes.extend(f'-{nlri}' for nlri in update.data.withdraws if 'flow' in str(nlri))
+    # the encoder's update() is given the neighbor, the direction, then the UpdateCollection
+    for _, _, collection, *_ in api.called('update'):
+        routes.extend(f'+{routed.nlri}' for routed in collection.announces if 'flow' in str(routed.nlri))
+        routes.extend(f'-{nlri}' for nlri in collection.withdraws if 'flow' in str(nlri))
     return routes
 
 
@@ -92,16 +91,15 @@ def told(processes: Mock) -> list[str]:
 async def test_an_infeasible_flow_is_withheld_from_the_api_and_told_once_it_becomes_feasible() -> None:
     neighbor = neighbour()
     # what a process asking for parsed UPDATEs sets, without starting one
-    neighbor.api['receive-update'] = True
-    neighbor.api['receive-parsed'] = True
-    reactor = Mock()
-    proto = Protocol(Peer(neighbor, reactor))
+    neighbor.api['receive-update'] = [negotiation.PROCESS]
+    neighbor.api['receive-parsed'] = [negotiation.PROCESS]
+    proto, api = negotiation.protocol(neighbor)
     proto.negotiated, _ = _negotiated(neighbor)
 
     flow = await read(proto, wire(neighbor, flow_route()))
     assert flow.data.announces == [], 'an infeasible flow reached the peer loop'
-    assert told(reactor.processes) == [], 'an infeasible flow reached the API'
+    assert told(api) == [], 'an infeasible flow reached the API'
 
     await read(proto, wire(neighbor, unicast_route()))
 
-    assert told(reactor.processes) == [f'+{FLOW}']
+    assert told(api) == [f'+{FLOW}']

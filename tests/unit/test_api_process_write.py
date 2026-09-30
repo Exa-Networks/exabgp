@@ -22,6 +22,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from exabgp.environment import Environment
 from exabgp.reactor.api.processes import ProcessError, Processes
 
 
@@ -34,7 +35,7 @@ def quiet_logger() -> Any:
 @pytest.fixture
 def processes() -> Any:
     with patch('exabgp.reactor.api.processes.getenv') as getenv:
-        environment = MagicMock()
+        environment = Environment()
         environment.api.respawn = False
         environment.api.terminate = False
         environment.api.ack = True

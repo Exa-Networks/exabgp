@@ -29,7 +29,9 @@ MAX_DEPTH = 40
 
 def _numbers() -> list[Number[Any]]:
     """Every Number the grammar declares, wherever it is used."""
-    found = {id(each): each for each in gc.get_objects() if isinstance(each, Number)}
+    # Compiled ABCs share an inherited cache: isinstance can find unrelated objects after
+    # another class check. Inspect inheritance only for discovery, then exercise parsing.
+    found = {id(each): each for each in gc.get_objects() if Number in type(each).__mro__}
     return sorted(found.values(), key=lambda each: (each.name, each.ranges))
 
 

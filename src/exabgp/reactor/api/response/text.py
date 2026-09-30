@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from exabgp.util import hexstring
 
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open import Open
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.refresh import RouteRefresh
-    from exabgp.bgp.message.operational import OperationalFamily
+    from exabgp.bgp.message.operational import Operational, OperationalFamily
     from exabgp.bgp.fsm import FSM
 
 
@@ -196,15 +196,15 @@ class Text:
         neighbor: 'Neighbor',
         direction: str,
         what: str,
-        operational: 'OperationalFamily',
+        operational: 'Operational',
         header: bytes,
         body: bytes,
         negotiated: 'Negotiated',
     ) -> str:
         if what == 'advisory':
-            return self._operational_advisory(neighbor, direction, operational, header, body)
+            return self._operational_advisory(neighbor, direction, cast('OperationalFamily', operational), header, body)
         if what == 'query':
-            return self._operational_query(neighbor, direction, operational, header, body)
+            return self._operational_query(neighbor, direction, cast('OperationalFamily', operational), header, body)
         if what == 'counter':
             return self._operational_counter(neighbor, direction, operational, header, body)
         # elif what == 'interface':

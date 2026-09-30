@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+import os
+from collections.abc import Iterator
+from typing import Any
+from unittest.mock import patch
+
 import pytest
+
+from exabgp.configuration.configuration import Configuration
+from exabgp.reactor.api.processes import Processes
+from exabgp.reactor.loop import Reactor
 
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.reactor.api.command.peer import (
     _parse_ip,
@@ -153,8 +163,8 @@ class TestBuildNeighbor:
         params = {
             'peer-address': IP.from_string('127.0.0.1'),
             'local-address': IP.from_string('127.0.0.1'),
-            'local-as': 65000,
-            'peer-as': 65001,
+            'local-as': ASN(65000),
+            'peer-as': ASN(65001),
             'router-id': RouterID('1.2.3.4'),
         }
 
@@ -172,8 +182,8 @@ class TestBuildNeighbor:
         params = {
             'peer-address': IP.from_string('10.0.0.2'),
             'local-address': IP.from_string('10.0.0.1'),
-            'local-as': 65000,
-            'peer-as': 65001,
+            'local-as': ASN(65000),
+            'peer-as': ASN(65001),
             'router-id': RouterID('1.2.3.4'),
         }
 
@@ -185,8 +195,8 @@ class TestBuildNeighbor:
         params = {
             'peer-address': IP.from_string('127.0.0.1'),
             'local-address': IP.from_string('127.0.0.1'),
-            'local-as': 65000,
-            'peer-as': 65001,
+            'local-as': ASN(65000),
+            'peer-as': ASN(65001),
             'router-id': RouterID('1.2.3.4'),
         }
 
@@ -198,8 +208,8 @@ class TestBuildNeighbor:
         params = {
             'peer-address': IP.from_string('127.0.0.1'),
             'local-address': IP.from_string('127.0.0.1'),
-            'local-as': 65000,
-            'peer-as': 65001,
+            'local-as': ASN(65000),
+            'peer-as': ASN(65001),
             'router-id': RouterID('1.2.3.4'),
         }
 
@@ -212,8 +222,8 @@ class TestBuildNeighbor:
         params = {
             'peer-address': IP.from_string('127.0.0.1'),
             'local-address': IP.from_string('127.0.0.1'),
-            'local-as': 65000,
-            'peer-as': 65001,
+            'local-as': ASN(65000),
+            'peer-as': ASN(65001),
             'router-id': RouterID('1.2.3.4'),
             'families': [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)],
         }
@@ -227,8 +237,8 @@ class TestBuildNeighbor:
     def test_missing_peer_address(self):
         params = {
             'local-address': IP.from_string('127.0.0.1'),
-            'local-as': 65000,
-            'peer-as': 65001,
+            'local-as': ASN(65000),
+            'peer-as': ASN(65001),
             'router-id': RouterID('1.2.3.4'),
         }
 
@@ -238,8 +248,8 @@ class TestBuildNeighbor:
     def test_missing_local_ip(self):
         params = {
             'peer-address': IP.from_string('127.0.0.1'),
-            'local-as': 65000,
-            'peer-as': 65001,
+            'local-as': ASN(65000),
+            'peer-as': ASN(65001),
             'router-id': RouterID('1.2.3.4'),
         }
 
@@ -250,7 +260,7 @@ class TestBuildNeighbor:
         params = {
             'peer-address': IP.from_string('127.0.0.1'),
             'local-address': IP.from_string('127.0.0.1'),
-            'peer-as': 65001,
+            'peer-as': ASN(65001),
             'router-id': RouterID('1.2.3.4'),
         }
 
@@ -261,7 +271,7 @@ class TestBuildNeighbor:
         params = {
             'peer-address': IP.from_string('127.0.0.1'),
             'local-address': IP.from_string('127.0.0.1'),
-            'local-as': 65000,
+            'local-as': ASN(65000),
             'router-id': RouterID('1.2.3.4'),
         }
 
@@ -272,8 +282,8 @@ class TestBuildNeighbor:
         params = {
             'peer-address': IP.from_string('127.0.0.1'),
             'local-address': IP.from_string('127.0.0.1'),
-            'local-as': 65000,
-            'peer-as': 65001,
+            'local-as': ASN(65000),
+            'peer-as': ASN(65001),
         }
 
         with pytest.raises(ValueError, match='missing required parameter: router-id'):
@@ -311,79 +321,99 @@ class TestEndToEnd:
         assert (AFI.ipv6, SAFI.unicast) in neighbor.families()
 
 
+class PipedHelper:
+    """The Popen of the API client, as far as answering it goes: its stdin is a pipe."""
+
+    def __init__(self) -> None:
+        self._reader, writer = os.pipe()
+        os.set_blocking(self._reader, False)
+        self.stdin = os.fdopen(writer, 'wb')
+
+    def lines(self) -> list[str]:
+        """Every line written to the client since the last call."""
+        try:
+            return os.read(self._reader, 65536).decode('ascii').splitlines()
+        except BlockingIOError:
+            return []
+
+    def close(self) -> None:
+        os.close(self._reader)
+        self.stdin.close()
+
+
+@pytest.fixture
+def client() -> Iterator[PipedHelper]:
+    piped = PipedHelper()
+    yield piped
+    piped.close()
+
+
+@pytest.fixture
+def reactor(client: PipedHelper) -> Reactor:
+    """A real Reactor with no neighbor, whose API client 'test-service' is `client`."""
+    created = Reactor(Configuration([''], text=True))
+    created.configuration.neighbors = {}
+    created.processes = Processes()
+    created.processes._process['test-service'] = client  # type: ignore[assignment]
+    created.processes._ack['test-service'] = True
+    created.processes._ackjson['test-service'] = False
+    return created
+
+
 class TestNeighborCreateCommand:
     """Test neighbor_create API command handler."""
 
-    @pytest.fixture
-    def mock_reactor(self):
-        """Create mock reactor for testing."""
-        from unittest.mock import Mock
-        from exabgp.configuration.configuration import Configuration
-
-        reactor = Mock()
-        reactor._peers = {}
-        reactor._dynamic_peers = set()
-        reactor.configuration = Configuration([])
-        reactor.configuration.neighbors = {}
-
-        # Mock processes
-        reactor.processes = Mock()
-        reactor.processes._answer = Mock()
-        reactor.processes.answer_error = Mock()
-
-        return reactor
-
-    def test_create_new_peer_success(self, mock_reactor):
+    def test_create_new_peer_success(self, reactor, client):
         """Test creating a new peer successfully."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
         # command is params after "peer create" stripped
         command = '127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4'
-        result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
+        result = neighbor_create(reactor.api, reactor, 'test-service', [], command, False)
 
         assert result is True
-        mock_reactor.processes._answer_sync.assert_called_once_with('test-service', 'done')
-        assert len(mock_reactor._peers) == 1
-        assert len(mock_reactor._dynamic_peers) == 1
+        assert client.lines() == ['done']
+        assert len(reactor._peers) == 1
+        assert len(reactor._dynamic_peers) == 1
 
-    def test_create_duplicate_peer(self, mock_reactor):
+    def test_create_duplicate_peer(self, reactor, client):
         """Test creating a peer that already exists."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
         command = '127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4'
 
         # Create first peer
-        result1 = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
+        result1 = neighbor_create(reactor.api, reactor, 'test-service', [], command, False)
         assert result1 is True
 
         # Try to create duplicate
-        result2 = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
+        result2 = neighbor_create(reactor.api, reactor, 'test-service', [], command, False)
         assert result2 is False
-        mock_reactor.processes.answer_error_sync.assert_called()
-        error_msg = mock_reactor.processes.answer_error_sync.call_args[0][1]
-        assert 'peer already exists' in error_msg
+        answers = client.lines()
+        assert answers[-1] == 'error'
+        assert any(line.startswith('error: peer already exists') for line in answers)
 
-    def test_create_with_invalid_ip(self, mock_reactor):
+    def test_create_with_invalid_ip(self, reactor, client):
         """Test creating peer with invalid IP address."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
         command = '999.999.999.999 local-address 127.0.0.1 local-as 65000 peer-as 65001'
-        result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
+        result = neighbor_create(reactor.api, reactor, 'test-service', [], command, False)
 
         assert result is False
-        mock_reactor.processes.answer_error_sync.assert_called()
+        assert client.lines()[-1] == 'error'
 
-    def test_create_with_missing_params(self, mock_reactor):
+    def test_create_with_missing_params(self, reactor, client):
         """Test creating peer with missing required parameters."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
         command = '127.0.0.1 local-as 65000'
-        result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
+        result = neighbor_create(reactor.api, reactor, 'test-service', [], command, False)
 
         assert result is False
-        mock_reactor.processes.answer_error_sync.assert_called()
+        assert client.lines()[-1] == 'error'
 
-    def test_create_multiple_peers(self, mock_reactor):
+    def test_create_multiple_peers(self, reactor, client):
         """Test creating multiple different peers."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
@@ -394,26 +424,26 @@ class TestNeighborCreateCommand:
         ]
 
         for cmd in commands:
-            result = neighbor_create(None, mock_reactor, 'test-service', [], cmd, False)
+            result = neighbor_create(reactor.api, reactor, 'test-service', [], cmd, False)
             assert result is True
 
-        assert len(mock_reactor._peers) == 3
-        assert len(mock_reactor._dynamic_peers) == 3
+        assert len(reactor._peers) == 3
+        assert len(reactor._dynamic_peers) == 3
 
-    def test_create_peer_validates_configuration(self, mock_reactor):
+    def test_create_peer_validates_configuration(self, reactor, client):
         """Test that created peer has correct configuration."""
         from exabgp.reactor.api.command.peer import neighbor_create
         from exabgp.protocol.family import AFI, SAFI
 
         command = '10.0.0.2 local-address 10.0.0.1 local-as 65000 peer-as 65001 router-id 2.3.4.5 family-allowed ipv4-unicast/ipv6-unicast'
-        result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
+        result = neighbor_create(reactor.api, reactor, 'test-service', [], command, False)
 
         assert result is True
-        assert len(mock_reactor._peers) == 1
+        assert len(reactor._peers) == 1
 
         # Get the created peer
-        peer_key = list(mock_reactor._peers.keys())[0]
-        peer = mock_reactor._peers[peer_key]
+        peer_key = list(reactor._peers.keys())[0]
+        peer = reactor._peers[peer_key]
 
         # Verify peer neighbor configuration
         neighbor = peer.neighbor
@@ -432,23 +462,23 @@ class TestNeighborCreateCommand:
         # Verify RIB created and enabled
         assert neighbor.rib.enabled
 
-    def test_create_with_api_processes_stored(self, mock_reactor):
+    def test_create_with_api_processes_stored(self, reactor, client):
         """Test that API processes are correctly stored in peer configuration."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
         command = '127.0.0.1 local-address 127.0.0.1 local-as 65000 peer-as 65001 router-id 1.2.3.4 api proc1 api proc2'
-        result = neighbor_create(None, mock_reactor, 'test-service', [], command, False)
+        result = neighbor_create(reactor.api, reactor, 'test-service', [], command, False)
 
         assert result is True
 
         # Get the created peer
-        peer = list(mock_reactor._peers.values())[0]
+        peer = list(reactor._peers.values())[0]
         neighbor = peer.neighbor
 
         # Verify API processes
         assert neighbor.api['processes'] == ['proc1', 'proc2']
 
-    def test_create_peer_key_uniqueness(self, mock_reactor):
+    def test_create_peer_key_uniqueness(self, reactor, client):
         """Test that peer key correctly distinguishes different neighbors."""
         from exabgp.reactor.api.command.peer import neighbor_create
 
@@ -459,14 +489,14 @@ class TestNeighborCreateCommand:
         ]
 
         for cmd in commands:
-            result = neighbor_create(None, mock_reactor, 'test-service', [], cmd, False)
+            result = neighbor_create(reactor.api, reactor, 'test-service', [], cmd, False)
             assert result is True
 
         # Should have 2 distinct peers (different local-address = different keys)
-        assert len(mock_reactor._peers) == 2
+        assert len(reactor._peers) == 2
 
         # Verify they have different local addresses
-        peers = list(mock_reactor._peers.values())
+        peers = list(reactor._peers.values())
         local_addrs = {str(p.neighbor.session.local_address) for p in peers}
         assert local_addrs == {'10.0.0.1', '10.0.0.2'}
 
@@ -475,21 +505,9 @@ class TestPeerDeleteCommand:
     """Test peer_delete API command handler (v6 only)."""
 
     @pytest.fixture
-    def mock_reactor_with_peers(self):
-        """Create mock reactor with pre-existing peers."""
-        from unittest.mock import Mock
-        from exabgp.configuration.configuration import Configuration
+    def reactor(self, reactor: Reactor, client: PipedHelper) -> Reactor:
+        """The reactor, with two peers created through the API, and their answers read."""
         from exabgp.reactor.api.command.peer import neighbor_create
-
-        reactor = Mock()
-        reactor._peers = {}
-        reactor._dynamic_peers = set()
-        reactor.configuration = Configuration([])
-        reactor.configuration.neighbors = {}
-        reactor.processes = Mock()
-        reactor.processes._answer = Mock()
-        reactor.processes.answer_error = Mock()
-        reactor.processes.answer_done = Mock()
 
         # Create test peers (command is params after "peer create" stripped)
         commands = [
@@ -498,199 +516,191 @@ class TestPeerDeleteCommand:
         ]
 
         for cmd in commands:
-            neighbor_create(None, reactor, 'test-service', [], cmd, False)
-
-        # Add remove() method to all created peers
-        for key, peer in list(reactor._peers.items()):
-            peer.remove = Mock()
-
-        # Mock peers() method for selector matching - returns all peer keys
-        def peers_func(service):
-            return list(reactor._peers.keys())
-
-        reactor.peers = peers_func
+            assert neighbor_create(reactor.api, reactor, 'test-service', [], cmd, False)
+        assert client.lines() == ['done', 'done']
 
         return reactor
 
-    def test_delete_existing_peer(self, mock_reactor_with_peers):
+    def test_delete_existing_peer(self, reactor, client):
         """Test deleting an existing peer."""
         from exabgp.reactor.api.command.peer import peer_delete
 
-        initial_count = len(mock_reactor_with_peers._peers)
-        all_peers = list(mock_reactor_with_peers._peers.keys())
+        initial_count = len(reactor._peers)
+        all_peers = list(reactor._peers.keys())
         target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
 
         # peers list is now passed directly (already matched by dispatcher)
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
+        result = peer_delete(reactor.api, reactor, 'test-service', [target_peer], '', False)
 
         assert result is True
-        mock_reactor_with_peers.processes.answer_done_sync.assert_called_once()
-        assert len(mock_reactor_with_peers._peers) == initial_count - 1
+        assert client.lines() == ['done']
+        assert len(reactor._peers) == initial_count - 1
 
-    def test_delete_nonexistent_peer(self, mock_reactor_with_peers):
+    def test_delete_nonexistent_peer(self, reactor, client):
         """Test deleting a peer that doesn't exist."""
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Empty peers list means no matches
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [], '', False)
+        result = peer_delete(reactor.api, reactor, 'test-service', [], '', False)
 
         assert result is False
-        mock_reactor_with_peers.processes.answer_error_sync.assert_called()
-        error_msg = mock_reactor_with_peers.processes.answer_error_sync.call_args[0][1]
-        assert 'no neighbors match' in error_msg
+        assert client.lines() == ['error: no neighbors match the selector', 'error']
 
-    def test_delete_all_peers(self, mock_reactor_with_peers):
+    def test_delete_all_peers(self, reactor, client):
         """Test deleting all peers with wildcard selector."""
         from exabgp.reactor.api.command.peer import peer_delete
 
         # All peers passed in the list
-        all_peers = list(mock_reactor_with_peers._peers.keys())
+        all_peers = list(reactor._peers.keys())
         assert len(all_peers) > 0  # Verify we have peers to delete
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', all_peers, '', False)
+        result = peer_delete(reactor.api, reactor, 'test-service', all_peers, '', False)
 
         assert result is True
-        assert len(mock_reactor_with_peers._peers) == 0
+        assert len(reactor._peers) == 0
 
-    def test_delete_with_missing_selector(self, mock_reactor_with_peers):
+    def test_delete_with_missing_selector(self, reactor, client):
         """Test delete command with missing peer selector."""
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Empty peers list simulates no selector match
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [], '', False)
+        result = peer_delete(reactor.api, reactor, 'test-service', [], '', False)
 
         assert result is False
-        mock_reactor_with_peers.processes.answer_error_sync.assert_called()
+        assert client.lines()[-1] == 'error'
 
-    def test_delete_verifies_peer_removed(self, mock_reactor_with_peers):
+    def test_delete_verifies_peer_removed(self, reactor, client):
         """Test that delete properly removes peer from all data structures."""
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Get initial state
-        all_peers = list(mock_reactor_with_peers._peers.keys())
+        all_peers = list(reactor._peers.keys())
         target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
-        initial_peers = len(mock_reactor_with_peers._peers)
-        initial_config = len(mock_reactor_with_peers.configuration.neighbors)
-        initial_dynamic = len(mock_reactor_with_peers._dynamic_peers)
+        initial_peers = len(reactor._peers)
+        initial_config = len(reactor.configuration.neighbors)
+        initial_dynamic = len(reactor._dynamic_peers)
 
         # Pass the matched peer directly
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
+        result = peer_delete(reactor.api, reactor, 'test-service', [target_peer], '', False)
 
         assert result is True
 
         # Verify peer removed from all structures
-        assert len(mock_reactor_with_peers._peers) == initial_peers - 1
-        assert len(mock_reactor_with_peers.configuration.neighbors) == initial_config - 1
-        assert len(mock_reactor_with_peers._dynamic_peers) == initial_dynamic - 1
+        assert len(reactor._peers) == initial_peers - 1
+        assert len(reactor.configuration.neighbors) == initial_config - 1
+        assert len(reactor._dynamic_peers) == initial_dynamic - 1
 
         # Verify specific peer is gone
-        assert target_peer not in mock_reactor_with_peers._peers
-        assert target_peer not in mock_reactor_with_peers.configuration.neighbors
-        assert target_peer not in mock_reactor_with_peers._dynamic_peers
+        assert target_peer not in reactor._peers
+        assert target_peer not in reactor.configuration.neighbors
+        assert target_peer not in reactor._dynamic_peers
 
-        # Verify peer.remove() was called
-        # (Peer object was already deleted, but we mocked remove() earlier)
-
-    def test_delete_keeps_other_peers_intact(self, mock_reactor_with_peers):
+    def test_delete_keeps_other_peers_intact(self, reactor, client):
         """Test that deleting one peer doesn't affect others."""
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Get all peer keys and configurations before delete
-        all_peers = list(mock_reactor_with_peers._peers.keys())
+        all_peers = list(reactor._peers.keys())
         target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
         other_peers = [key for key in all_peers if key != target_peer]
 
         # Store other peer data before deletion
         other_peer_data = {}
         for key in other_peers:
-            peer = mock_reactor_with_peers._peers[key]
+            peer = reactor._peers[key]
             other_peer_data[key] = {
                 'peer-address': str(peer.neighbor.session.peer_address),
                 'local-as': peer.neighbor.session.local_as,
             }
 
         # Delete the target peer (pass matched peer directly)
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
+        result = peer_delete(reactor.api, reactor, 'test-service', [target_peer], '', False)
 
         assert result is True
 
         # Verify other peers still exist
         for key in other_peers:
-            assert key in mock_reactor_with_peers._peers
-            peer = mock_reactor_with_peers._peers[key]
+            assert key in reactor._peers
+            peer = reactor._peers[key]
 
             # Verify configuration unchanged
             assert str(peer.neighbor.session.peer_address) == other_peer_data[key]['peer-address']
             assert peer.neighbor.session.local_as == other_peer_data[key]['local-as']
 
-    def test_delete_calls_peer_remove(self, mock_reactor_with_peers):
+    def test_delete_calls_peer_remove(self, reactor, client):
         """Test that delete calls peer.remove() for graceful TCP teardown."""
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Get target peer
-        all_peers = list(mock_reactor_with_peers._peers.keys())
+        all_peers = list(reactor._peers.keys())
         target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
-        peer_obj = mock_reactor_with_peers._peers[target_peer]
+        peer_obj = reactor._peers[target_peer]
 
         # Delete the peer (pass matched peer directly)
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
+        result = peer_delete(reactor.api, reactor, 'test-service', [target_peer], '', False)
 
         assert result is True
 
-        # Verify peer.remove() was called (TCP teardown)
-        peer_obj.remove.assert_called_once()
+        # Verify peer.remove() was called (TCP teardown): it stopped the peer for good
+        assert peer_obj.stopping()
 
-    def test_delete_removes_key_from_all_structures(self, mock_reactor_with_peers):
+    def test_delete_removes_key_from_all_structures(self, reactor, client):
         """Test that delete removes peer key from reactor, config, and dynamic tracking."""
         from exabgp.reactor.api.command.peer import peer_delete
 
         # Get target peer key
-        all_peers = list(mock_reactor_with_peers._peers.keys())
+        all_peers = list(reactor._peers.keys())
         target_peer = [key for key in all_peers if '127.0.0.2' in key][0]
 
         # Verify key exists before deletion
-        assert target_peer in mock_reactor_with_peers._peers
-        assert target_peer in mock_reactor_with_peers.configuration.neighbors
-        assert target_peer in mock_reactor_with_peers._dynamic_peers
+        assert target_peer in reactor._peers
+        assert target_peer in reactor.configuration.neighbors
+        assert target_peer in reactor._dynamic_peers
 
         # Delete the peer (pass matched peer directly)
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
+        result = peer_delete(reactor.api, reactor, 'test-service', [target_peer], '', False)
 
         assert result is True
 
         # Verify key removed from ALL structures
-        assert target_peer not in mock_reactor_with_peers._peers
-        assert target_peer not in mock_reactor_with_peers.configuration.neighbors
-        assert target_peer not in mock_reactor_with_peers._dynamic_peers
+        assert target_peer not in reactor._peers
+        assert target_peer not in reactor.configuration.neighbors
+        assert target_peer not in reactor._dynamic_peers
 
-    def test_delete_graceful_shutdown_order(self, mock_reactor_with_peers):
-        """Test that delete follows correct order: remove() BEFORE deleting from structures."""
-        from unittest.mock import Mock
+    def test_delete_graceful_shutdown_order(self, reactor, client):
+        """Test that delete follows correct order: remove() BEFORE deleting from structures.
+
+        remove() stops the peer, which moves its FSM to IDLE and tells the process which
+        asked for FSM changes. The client is that process here, so what the reactor holds
+        is recorded the moment remove() writes to it.
+        """
         from exabgp.reactor.api.command.peer import peer_delete
 
-        # Track operation order
-        operations = []
-
         # Get target peer
-        all_peers = list(mock_reactor_with_peers._peers.keys())
+        all_peers = list(reactor._peers.keys())
         target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
-        peer_obj = mock_reactor_with_peers._peers[target_peer]
+        peer_obj = reactor._peers[target_peer]
+        peer_obj.neighbor.api['fsm'] = ['test-service']
+        reactor.processes._select_encoder('test-service', {'encoder': 'json'})
 
-        # Mock remove to record when it's called
-        def mock_remove():
-            operations.append('remove')
-            # Check peer still in structures when remove() called
-            assert target_peer in mock_reactor_with_peers._peers
-            assert target_peer in mock_reactor_with_peers.configuration.neighbors
+        # for each line written to the client: was the peer still in the reactor and configuration
+        held: list[tuple[bool, bool]] = []
+        write = os.write
 
-        peer_obj.remove = Mock(side_effect=mock_remove)
+        def recording(fd: int, data: Any) -> int:
+            held.append((target_peer in reactor._peers, target_peer in reactor.configuration.neighbors))
+            return write(fd, data)
 
         # Delete the peer (pass matched peer directly)
-        result = peer_delete(None, mock_reactor_with_peers, 'test-service', [target_peer], '', False)
+        with patch('exabgp.reactor.api.processes.os.write', side_effect=recording):
+            result = peer_delete(reactor.api, reactor, 'test-service', [target_peer], '', False)
 
         assert result is True
+        answers = client.lines()
+        assert '"state": "IDLE"' in answers[0], 'remove() did not stop the peer'
+        assert answers[1:] == ['done']
 
-        # Verify remove() was called first (peer still existed in structures at that point)
-        assert operations == ['remove']
+        # remove() ran while the peer existed in both structures, and the answer after it went
+        assert held == [(True, True), (False, False)]
 
         # Verify peer removed from structures AFTER remove() completed
-        assert target_peer not in mock_reactor_with_peers._peers
+        assert target_peer not in reactor._peers

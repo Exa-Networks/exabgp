@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open import Open
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.refresh import RouteRefresh
-    from exabgp.bgp.message.operational import OperationalFamily
+    from exabgp.bgp.message.operational import Operational
     from exabgp.bgp.fsm import FSM
 
 
@@ -153,7 +153,7 @@ class V4JSON:
         neighbor: 'Neighbor',
         direction: str,
         what: str,
-        operational: 'OperationalFamily',
+        operational: 'Operational',
         header: bytes,
         body: bytes,
         negotiated: 'Negotiated',

@@ -14,6 +14,7 @@ import sys
 import time
 
 import socket as sock
+from typing import ClassVar
 
 from exabgp.application.pipe import check_fifo, named_pipe
 from exabgp.application.shortcuts import CommandShortcuts
@@ -48,13 +49,13 @@ errno_block = set(
 
 
 class AnswerStream:
-    text_done = f'\n{Answer.text_done}\n'
-    text_error = f'\n{Answer.text_error}\n'
-    text_shutdown = f'\n{Answer.text_error}\n'
-    json_done = f'\n{Answer.json_done}\n'
-    json_error = f'\n{Answer.json_error}\n'
-    json_shutdown = f'\n{Answer.json_error}\n'
-    buffer_size = Answer.buffer_size + 2
+    text_done: ClassVar[str] = f'\n{Answer.text_done}\n'
+    text_error: ClassVar[str] = f'\n{Answer.text_error}\n'
+    text_shutdown: ClassVar[str] = f'\n{Answer.text_error}\n'
+    json_done: ClassVar[str] = f'\n{Answer.json_done}\n'
+    json_error: ClassVar[str] = f'\n{Answer.json_error}\n'
+    json_shutdown: ClassVar[str] = f'\n{Answer.json_error}\n'
+    buffer_size: ClassVar[int] = Answer.buffer_size + 2
 
 
 def open_reader(recv: str) -> int:
@@ -66,19 +67,21 @@ def open_reader(recv: str) -> int:
     signal.signal(signal.SIGALRM, open_timeout)
     signal.alarm(PIPE_OPEN_TIMEOUT)
 
-    done = False
-    while not done:
+    while True:
         try:
             reader = os.open(recv, os.O_RDONLY | os.O_NONBLOCK)
-            done = True
         except OSError as exc:
-            if exc.args[0] in errno_block:
-                signal.signal(signal.SIGALRM, open_timeout)
-                signal.alarm(PIPE_OPEN_TIMEOUT)
-                continue
+            # the handler only looks at the error: mypyc 1.20 emits C which does not compile
+            # for a handler inside a loop which leaves it (continue, sys.exit)
+            blocked = exc.args[0] in errno_block
+        else:
+            break
+        if not blocked:
             sys.stdout.write('could not read answer from ExaBGP')
             sys.stdout.flush()
             sys.exit(1)
+        signal.signal(signal.SIGALRM, open_timeout)
+        signal.alarm(PIPE_OPEN_TIMEOUT)
     signal.alarm(0)
     return reader
 

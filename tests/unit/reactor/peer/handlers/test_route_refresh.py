@@ -1,14 +1,21 @@
-"""Tests for RouteRefreshHandler."""
+"""Tests for RouteRefreshHandler.
+
+The context and the messages are real: compiled (plan/wip-mypyc.md), the handler refuses a
+Mock where it declares a PeerContext or a Message. The resend callback stays a Mock, it is
+a plain callable.
+"""
 
 import pytest
 
-from exabgp.bgp.message import Message
 from unittest.mock import Mock
+
+from exabgp.bgp.message import KeepAlive
 
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.peer.handlers.route_refresh import RouteRefreshHandler
 from exabgp.reactor.peer.context import PeerContext
+from tests import negotiation
 
 
 class TestRouteRefreshHandler:
@@ -22,31 +29,23 @@ class TestRouteRefreshHandler:
 
     @pytest.fixture
     def mock_context(self) -> PeerContext:
-        ctx = Mock(spec=PeerContext)
-        ctx.refresh_enhanced = False
+        ctx, _ = negotiation.context(refresh_enhanced=False)
         return ctx
 
     def test_can_handle_route_refresh(self, handler: RouteRefreshHandler) -> None:
         """RouteRefreshHandler recognizes ROUTE-REFRESH messages."""
-        rr = Mock()
-        rr.ID = Message.CODE.ROUTE_REFRESH
+        rr = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast)
         assert handler.can_handle(rr) is True
 
     def test_cannot_handle_keepalive(self, handler: RouteRefreshHandler) -> None:
         """RouteRefreshHandler ignores non-ROUTE-REFRESH messages."""
-        ka = Mock()
-        ka.ID = Message.CODE.KEEPALIVE
-        assert handler.can_handle(ka) is False
+        assert handler.can_handle(KeepAlive()) is False
 
     def test_handle_calls_resend(
         self, handler: RouteRefreshHandler, mock_context: PeerContext, resend_mock: Mock
     ) -> None:
         """RouteRefreshHandler calls resend callback."""
-        rr = Mock()
-        rr.ID = Message.CODE.ROUTE_REFRESH
-        rr.reserved = 0  # Not enhanced
-        rr.afi = AFI.ipv4
-        rr.safi = SAFI.unicast
+        rr = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, 0)  # Not enhanced
 
         list(handler.handle(mock_context, rr))
 
@@ -58,11 +57,7 @@ class TestRouteRefreshHandler:
         """Enhanced refresh disabled even if requested when not negotiated."""
         mock_context.refresh_enhanced = False
 
-        rr = Mock()
-        rr.ID = Message.CODE.ROUTE_REFRESH
-        rr.reserved = RouteRefresh.REQUEST  # Request enhanced
-        rr.afi = AFI.ipv4
-        rr.safi = SAFI.unicast
+        rr = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, RouteRefresh.REQUEST)  # Request enhanced
 
         list(handler.handle(mock_context, rr))
 
@@ -75,11 +70,7 @@ class TestRouteRefreshHandler:
         """Enhanced refresh enabled when both requested and negotiated."""
         mock_context.refresh_enhanced = True
 
-        rr = Mock()
-        rr.ID = Message.CODE.ROUTE_REFRESH
-        rr.reserved = RouteRefresh.REQUEST  # Request enhanced
-        rr.afi = AFI.ipv6
-        rr.safi = SAFI.unicast
+        rr = RouteRefresh.make_route_refresh(AFI.ipv6, SAFI.unicast, RouteRefresh.REQUEST)  # Request enhanced
 
         list(handler.handle(mock_context, rr))
 
@@ -88,11 +79,7 @@ class TestRouteRefreshHandler:
 
     def test_handle_is_generator(self, handler: RouteRefreshHandler, mock_context: PeerContext) -> None:
         """handle() returns a generator."""
-        rr = Mock()
-        rr.ID = Message.CODE.ROUTE_REFRESH
-        rr.reserved = 0
-        rr.afi = AFI.ipv4
-        rr.safi = SAFI.unicast
+        rr = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, 0)
 
         result = handler.handle(mock_context, rr)
         assert hasattr(result, '__iter__')
@@ -110,8 +97,7 @@ class TestRouteRefreshHandlerAsync:
 
     @pytest.fixture
     def mock_context(self) -> PeerContext:
-        ctx = Mock(spec=PeerContext)
-        ctx.refresh_enhanced = False
+        ctx, _ = negotiation.context(refresh_enhanced=False)
         return ctx
 
     @pytest.mark.asyncio
@@ -119,11 +105,7 @@ class TestRouteRefreshHandlerAsync:
         self, handler: RouteRefreshHandler, mock_context: PeerContext, resend_mock: Mock
     ) -> None:
         """handle_async calls resend callback."""
-        rr = Mock()
-        rr.ID = Message.CODE.ROUTE_REFRESH
-        rr.reserved = 0
-        rr.afi = AFI.ipv4
-        rr.safi = SAFI.unicast
+        rr = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, 0)
 
         await handler.handle_async(mock_context, rr)
 
@@ -136,11 +118,7 @@ class TestRouteRefreshHandlerAsync:
         """handle_async supports enhanced refresh."""
         mock_context.refresh_enhanced = True
 
-        rr = Mock()
-        rr.ID = Message.CODE.ROUTE_REFRESH
-        rr.reserved = RouteRefresh.REQUEST
-        rr.afi = AFI.ipv4
-        rr.safi = SAFI.unicast
+        rr = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, RouteRefresh.REQUEST)
 
         await handler.handle_async(mock_context, rr)
 

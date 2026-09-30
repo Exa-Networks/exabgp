@@ -14,9 +14,6 @@ whenever that membership changes.
 
 from __future__ import annotations
 
-from collections import defaultdict
-from typing import Any
-from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -41,30 +38,19 @@ from tests import negotiation
 RTC_END_OF_RIB = bytes.fromhex('FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001E0200000007900F0003000184')
 
 
-@pytest.fixture
-def protocol() -> Any:
-    from exabgp.reactor.protocol import Protocol
-
-    neighbor = negotiation.neighbor()
-    peer = Mock()
-    peer.neighbor = neighbor
-    peer.stats = defaultdict(int)
-    proto = Protocol(peer)
-    proto.connection = Mock()
-    proto.connection.writer_async = AsyncMock()
-    proto.connection.session = Mock(return_value='test-session')
-    return proto
-
-
 @pytest.mark.rfc('rfc4684#6-end-of-rib-for-rt-membership')
 @pytest.mark.asyncio
-async def test_rt_membership_gets_its_end_of_rib_without_graceful_restart(protocol: Any) -> None:
+async def test_rt_membership_gets_its_end_of_rib_without_graceful_restart() -> None:
+    protocol, _ = negotiation.protocol()
+    theirs = negotiation.connect(protocol)
     protocol.negotiated.families = [(AFI.ipv4, SAFI.mpls_vpn), (AFI.ipv4, SAFI.rtc)]
 
     await protocol.new_eors()
 
-    written = [bytes(call.args[0]) for call in protocol.connection.writer_async.call_args_list]
-    assert RTC_END_OF_RIB in written, [w.hex().upper() for w in written]
+    written = negotiation.messages(negotiation.received(theirs))
+    negotiation.disconnect(protocol, theirs)
+    # an UPDATE (type 2) whose body is the End-of-RIB's
+    assert (2, RTC_END_OF_RIB[19:]) in written, [(kind, body.hex().upper()) for kind, body in written]
 
 
 # ============================================================ 5, output route filtering

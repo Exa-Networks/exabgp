@@ -19,6 +19,8 @@ import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'src')
+# the tree qa/bin/build_mypyc compiles, run when EXABGP_COMPILED is set (doc/user/compiled-build.md)
+COMPILED = os.path.join(ROOT, 'build', 'mypyc')
 
 
 def base_version() -> str:
@@ -62,7 +64,35 @@ def version() -> str | None:
     return f'{base_version()}-{time.strftime("%Y%m%d")}+{branch}-{commit}'
 
 
+def compiled() -> bool:
+    return os.environ.get('EXABGP_COMPILED', '').lower() in ('1', 'true', 'yes')
+
+
+def source() -> str:
+    """The tree to run: src, the compiled copy of it when EXABGP_COMPILED is set, or the one
+    EXABGP_TREE names (an installed wheel's site-packages, for the functional suites).
+    EXABGP_BINARY, checked before, runs a one-file executable instead of any tree."""
+    tree = os.environ.get('EXABGP_TREE', '')
+    if tree:
+        if not os.path.isfile(os.path.join(tree, 'exabgp', 'application', 'main.py')):
+            sys.exit(f'EXABGP_TREE is set but {tree} holds no exabgp package')
+        return tree
+    if not compiled():
+        return SRC
+    if not os.path.isfile(os.path.join(COMPILED, 'interpreter')):
+        sys.exit('EXABGP_COMPILED is set but there is no compiled tree: run ./qa/bin/build_mypyc')
+    return COMPILED
+
+
+def built_with() -> str:
+    """The Python which compiled the tree: the extensions load in no other."""
+    with open(os.path.join(COMPILED, 'interpreter')) as reader:
+        return reader.read().strip()
+
+
 def interpreter() -> str:
+    if compiled() and not os.environ.get('INTERPRETER', ''):
+        return built_with()
     for name in (os.environ.get('INTERPRETER', ''), 'python3', 'python', 'pypy3'):
         if not name:
             continue
@@ -72,9 +102,9 @@ def interpreter() -> str:
     sys.exit('ExaBGP could not find a python interpreter')
 
 
-def application() -> str:
+def application(tree: str) -> str:
     """The main.py to run, the first one found on the path."""
-    for folder in [SRC] + sys.path:
+    for folder in [tree] + sys.path:
         main = os.path.join(folder, 'exabgp', 'application', 'main.py')
         if os.path.isfile(main):
             return main
@@ -95,17 +125,34 @@ def cleanup(main: str) -> None:
                 pass
 
 
+def binary() -> str:
+    """The one-file executable EXABGP_BINARY names (qa/bin/build_binary), or '' to run a tree."""
+    path = os.environ.get('EXABGP_BINARY', '')
+    if path and not os.access(path, os.X_OK):
+        sys.exit(f'EXABGP_BINARY is set but {path} is not an executable')
+    return path
+
+
 def main() -> None:
     if not os.environ.get('exabgp_version', ''):
         reported = version()
         if reported:
             os.environ['exabgp_version'] = reported
 
+    executable = binary()
+    if executable:
+        # the binary ignores PYTHONPATH and runs what it bundles; src stays on it for the
+        # API programs a configuration runs, which need a Python of their own
+        os.environ['EXABGP_ROOT'] = ROOT
+        os.environ['PYTHONPATH'] = SRC
+        os.execv(executable, [executable] + sys.argv[1:])
+
+    tree = source()
     os.environ['EXABGP_ROOT'] = ROOT
-    os.environ['PYTHONPATH'] = SRC
+    os.environ['PYTHONPATH'] = tree
 
     python = interpreter()
-    program = application()
+    program = application(tree)
     cleanup(program)
 
     os.execv(python, [python, program] + sys.argv[1:])

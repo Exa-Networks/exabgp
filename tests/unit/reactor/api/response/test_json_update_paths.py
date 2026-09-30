@@ -18,6 +18,8 @@ import socket
 from types import SimpleNamespace
 from typing import Any
 
+import pytest
+
 from exabgp.bgp.message.update.attribute import AttributeCollection, NextHop, Origin
 from exabgp.bgp.message.update.collection import RouteLeak, RoutedNLRI, UpdateCollection
 from exabgp.bgp.message.update.eor import EOR
@@ -27,6 +29,10 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv4, IPv6
 from exabgp.reactor.api.response.json import JSON
 from exabgp.bgp.message.update.attribute.aspath import AS4Path
+from exabgp.reactor.api.response import json as json_module
+
+# Compiled, JSON._update checks that it is given an UpdateCollection
+COMPILED = not str(json_module.__file__).endswith('.py')
 
 LEAK = (
     '"meta": {"route-leak": {"reason": "invalid-otc", "peer-role": "customer", "peer-as": "AS1", '
@@ -156,13 +162,17 @@ def test_an_end_of_rib_collection() -> None:
 
 
 def test_an_end_of_rib_message() -> None:
-    # EOR is an Update, not an UpdateCollection: it has no announces and no route_leaks
-    assert _message(EOR.make_eor(AFI.ipv4, SAFI.unicast)) == (
+    # EOR is an Update, not an UpdateCollection: Processes hands the encoders its decoded
+    # UpdateCollection, the End-of-RIB marker of the family
+    assert _message(EOR.make_eor(AFI.ipv4, SAFI.unicast).data) == (
         '{ "update": { "announce": { "ipv4 unicast": { "null": '
         '[ { "eor": { "afi" : "ipv4", "safi" : "unicast" } } ] } } } }'
     )
 
 
+@pytest.mark.skipif(
+    COMPILED, reason='the compiled encoder refuses the stand-in, and no UpdateCollection reaches the branch'
+)
 def test_nlris_with_nothing_announced_or_withdrawn() -> None:
     # No real UPDATE reaches this branch: an UpdateCollection's nlris are its announces and
     # withdraws, and an End-of-RIB puts its one NLRI in the announces.  Pinned with a stand-in

@@ -16,7 +16,7 @@ from typing import Any, Callable, Generic, TypeVar, cast
 
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import INT64_MAX, INT64_MIN, TEXT, Shape, boolean, enumeration, integer_ranges
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
 
 T = TypeVar('T')
@@ -50,8 +50,8 @@ class Word(Type[T], Generic[T]):
         except ValueError as exc:
             raise ConfigError(where, str(exc), expected=self._choices or [self._hint]) from None
 
-    def render(self, value: T) -> list[str]:
-        return self._render(value)
+    def render(self, value: T) -> list[WordOrSyntax]:
+        return list(self._render(value))
 
     def hint(self) -> str:
         return self._hint

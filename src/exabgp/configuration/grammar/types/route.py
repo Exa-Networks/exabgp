@@ -17,7 +17,7 @@ from enum import Enum
 from typing import Any, Iterator, Mapping
 
 from exabgp.configuration.grammar.error import ConfigError
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
 from exabgp.rib.route import Route
 
@@ -60,8 +60,8 @@ class RouteStatement(Type[list[Route]]):
             yield where, spec
 
     @abstractmethod
-    def printed(self, route: Route) -> list[str]:
+    def printed(self, route: Route) -> list[WordOrSyntax]:
         """The words which read back as `route`."""
 
-    def render(self, value: list[Route]) -> list[str]:
+    def render(self, value: list[Route]) -> list[WordOrSyntax]:
         return [word for route in value for word in self.printed(route)]

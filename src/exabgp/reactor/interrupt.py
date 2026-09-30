@@ -15,11 +15,11 @@ from exabgp.logger import log, lazymsg
 
 
 class Signal:
-    NONE: int = 0
-    SHUTDOWN: int = -1
-    RESTART: int = -2
-    RELOAD: int = -4
-    FULL_RELOAD: int = -8
+    NONE: ClassVar[int] = 0
+    SHUTDOWN: ClassVar[int] = -1
+    RESTART: ClassVar[int] = -2
+    RELOAD: ClassVar[int] = -4
+    FULL_RELOAD: ClassVar[int] = -8
 
     _names: ClassVar[dict[int, str]] = {
         **dict(

@@ -13,16 +13,19 @@ code, whether returned or raised through `sys.exit`.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import os
+import sys
+from collections.abc import Callable, Iterator
 from io import StringIO
 from pathlib import Path
-from typing import Any
 from unittest.mock import patch
 
 import pytest
 
 from exabgp.application import encode
 from exabgp.application.encode import cmdline, setargs
-from exabgp.configuration.setup import create_minimal_configuration
+from exabgp.debug.intercept import intercept
 from exabgp.environment import getenv
 
 ETC = Path(__file__).resolve().parents[3] / 'etc' / 'exabgp'
@@ -43,6 +46,20 @@ def _run(argv: list[str]) -> tuple[int | str | None, str]:
         except SystemExit as exit:
             code = exit.code
     return code, stdout.getvalue()
+
+
+@contextlib.contextmanager
+def _trace_interceptor() -> Iterator[Callable[[], tuple[bool, bool]]]:
+    """Undo what trace_interceptor installs, and say whether it ran and asked for pdb.
+
+    trace_interceptor is called directly by the compiled module, so what it does is
+    observed (the excepthook it installs, the PDB variable it sets) rather than replaced.
+    """
+    seen: dict[str, tuple[bool, bool]] = {}
+    with patch.object(sys, 'excepthook', sys.excepthook), patch.dict(os.environ):
+        os.environ.pop('PDB', None)
+        yield lambda: seen['installed']
+        seen['installed'] = (sys.excepthook is intercept, os.environ.get('PDB') == '1')
 
 
 @pytest.fixture(autouse=True)
@@ -86,17 +103,17 @@ class TestEnvironment:
 
     def test_debug_turns_logging_on_instead_of_silencing_it(self) -> None:
         env = getenv()
-        with patch.object(encode, 'log') as log, patch.object(encode, 'trace_interceptor') as trace:
+        with patch.object(encode, 'log') as log, _trace_interceptor() as installed:
             assert _run(['-d', ROUTE]) == (0, UPDATE + '\n')
         assert env.log.all is True
         assert env.log.level == 'DEBUG'
         log.silence.assert_not_called()
         log.init.assert_called_once_with(env)
-        trace.assert_called_once_with(env.debug.pdb)
+        assert installed() == (True, env.debug.pdb)
 
     def test_without_debug_logging_is_silenced(self) -> None:
         env = getenv()
-        with patch.object(encode, 'log') as log, patch.object(encode, 'trace_interceptor'):
+        with patch.object(encode, 'log') as log, _trace_interceptor():
             assert _run([ROUTE]) == (0, UPDATE + '\n')
         log.silence.assert_called_once_with()
         assert [call[0] for call in log.method_calls] == ['silence', 'init']
@@ -105,10 +122,10 @@ class TestEnvironment:
     def test_pdb_is_handed_to_the_trace_interceptor(self) -> None:
         env = getenv()
         env.debug.pdb = False
-        with patch.object(encode, 'log'), patch.object(encode, 'trace_interceptor') as trace:
+        with patch.object(encode, 'log'), _trace_interceptor() as installed:
             assert _run(['-p', ROUTE]) == (0, UPDATE + '\n')
         assert env.debug.pdb is True
-        trace.assert_called_once_with(True)
+        assert installed() == (True, True)
 
 
 class TestRouteArgument:
@@ -195,35 +212,47 @@ class TestConfigurationFile:
 
 
 class TestNeighborLoop:
-    def test_a_disabled_rib_writes_nothing(self) -> None:
-        def disabled(**kwargs: Any) -> Any:
-            configuration = create_minimal_configuration(**kwargs)
-            for neighbor in configuration.neighbors.values():
-                neighbor.rib.enabled = False
-            return configuration
+    # The loop's collaborators are real: a compiled module calls its own functions and the
+    # ones it imports directly, so replacing them on the module would change nothing.
 
-        with patch.object(encode, 'create_minimal_configuration', disabled):
-            assert _run([ROUTE]) == (0, '')
+    def test_a_disabled_rib_writes_nothing(self) -> None:
+        # No configuration cmdline builds has a disabled RIB, so the neighbor is encoded here
+        # directly, from the configuration cmdline would have built.
+        parser = argparse.ArgumentParser()
+        setargs(parser)
+        arguments = parser.parse_args([ROUTE])
+        configuration = encode._configuration_from_route(arguments)
+        assert configuration.neighbors
+        for neighbor in configuration.neighbors.values():
+            neighbor.rib.enabled = False
+        with patch('sys.stdout', new_callable=StringIO) as stdout:
+            for neighbor in configuration.neighbors.values():
+                encode._encode_neighbor(neighbor, arguments)
+        assert stdout.getvalue() == ''
 
     def test_a_value_error_while_encoding_is_reported(self) -> None:
-        def refuse(_neighbor: object) -> object:
-            raise ValueError('cannot negotiate')
+        # AS_TRANS as the local AS is refused when the neighbor's session is negotiated.
+        assert _run(['-a', '23456', ROUTE]) == (
+            1,
+            'configuration error: AS_TRANS is a wire placeholder, not a resolved local ASN\n',
+        )
 
-        with patch.object(encode, '_negotiated', refuse):
-            assert _run([ROUTE]) == (1, 'configuration error: cannot negotiate\n')
-
-    def test_a_value_error_after_output_keeps_what_was_written(self) -> None:
-        calls: list[int] = []
-        real = encode.UpdateCollection
-
-        def failing(*args: Any) -> Any:
-            calls.append(1)
-            if len(calls) > 1:
-                raise ValueError('second route')
-            return real(*args)
-
-        with patch.object(encode, 'UpdateCollection', failing):
-            code, output = _run([ROUTE + ' split /25'])
+    def test_a_value_error_after_output_keeps_what_was_written(self, tmp_path: Path) -> None:
+        # The second route has no next hop, which is refused only when its UPDATE is built.
+        conf = tmp_path / 'two-routes.conf'
+        conf.write_text(
+            'neighbor 127.0.0.1 {\n'
+            '\trouter-id 1.2.3.4;\n'
+            '\tlocal-address 127.0.0.1;\n'
+            '\tlocal-as 1;\n'
+            '\tpeer-as 1;\n'
+            '\tstatic {\n'
+            '\t\troute 10.0.0.0/25 next-hop 1.2.3.4;\n'
+            '\t\troute 10.0.0.128/25;\n'
+            '\t}\n'
+            '}\n'
+        )
+        code, output = _run(['-c', str(conf)])
         assert code == 1
         head = MARKER + '00310200000015400101004002004003040102030440050400000064190A0000'
-        assert output == f'{head}00\nconfiguration error: second route\n'
+        assert output == f'{head}00\nconfiguration error: announce requires nexthop: 10.0.0.128/25\n'

@@ -15,15 +15,22 @@ from unittest.mock import Mock
 
 import pytest
 
-from exabgp.bgp.message import Message
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.bgp.message import KeepAlive, Notify  # noqa: E402
+from exabgp.bgp.message import KeepAlive, Notify, Update  # noqa: E402
 from exabgp.bgp.message.open.holdtime import HoldTime  # noqa: E402
 from exabgp.bgp.timer import ReceiveTimer, SendTimer  # noqa: E402
+
+# An UPDATE payload withdrawing 10.0.0.0/24: no path attributes, one withdrawn route
+WITHDRAW_PAYLOAD = bytes([0x00, 0x04, 0x18, 0x0A, 0x00, 0x00, 0x00, 0x00])
+
+
+def an_update() -> Update:
+    """A real UPDATE, as read from the wire: the timer is only given what a read returns."""
+    return Update(WITHDRAW_PAYLOAD)
 
 
 @pytest.fixture(autouse=True)
@@ -63,7 +70,7 @@ class TestReceiveTimerInitialization:
     def test_receive_timer_init(self) -> None:
         """Test ReceiveTimer initialization"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 180, 4, 0, 'hold timer expired')
+        timer = ReceiveTimer(session, HoldTime(180), 4, 0, 'hold timer expired')
 
         assert timer.session is session
         assert timer.holdtime == 180
@@ -75,7 +82,7 @@ class TestReceiveTimerInitialization:
     def test_receive_timer_tracks_last_read(self) -> None:
         """Test ReceiveTimer tracks last read time"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 180, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
 
         current_time = int(time.time())
         assert abs(timer.last_read - current_time) <= 1
@@ -83,7 +90,7 @@ class TestReceiveTimerInitialization:
     def test_receive_timer_init_with_zero_holdtime(self) -> None:
         """Test ReceiveTimer initialization with zero holdtime"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 0, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(0), 4, 0)
 
         assert timer.holdtime == 0
 
@@ -94,11 +101,9 @@ class TestReceiveTimerKeepaliveCheck:
     def test_check_ka_with_zero_holdtime(self) -> None:
         """Test check_ka with zero holdtime returns True for non-keepalive"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 0, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(0), 4, 0)
 
-        message = Mock()
-        message.ID = Message.CODE.UPDATE
-        message.IS_EOR = False
+        message = an_update()
 
         result = timer.check_ka_timer(message)
         assert result is True
@@ -106,7 +111,7 @@ class TestReceiveTimerKeepaliveCheck:
     def test_check_ka_with_zero_holdtime_keepalive(self) -> None:
         """Test check_ka with zero holdtime returns False for keepalive"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 0, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(0), 4, 0)
 
         message = KeepAlive.make_keepalive()
 
@@ -116,14 +121,12 @@ class TestReceiveTimerKeepaliveCheck:
     def test_check_ka_timer_updates_last_read(self) -> None:
         """Test check_ka_timer updates last_read on message"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 180, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
 
         # Set last_read to past
         timer.last_read = int(time.time()) - 10
 
-        message = Mock()
-        message.ID = Message.CODE.UPDATE
-        message.IS_EOR = False
+        message = an_update()
 
         old_last_read = timer.last_read
         timer.check_ka_timer(message)
@@ -134,7 +137,7 @@ class TestReceiveTimerKeepaliveCheck:
     def test_check_ka_timer_ignores_nop(self) -> None:
         """Test check_ka_timer does not count a read which returned nothing"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 180, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
 
         # Set last_read to past
         timer.last_read = int(time.time()) - 10
@@ -151,7 +154,7 @@ class TestReceiveTimerKeepaliveCheck:
     def test_check_ka_timer_raises_notify_on_expiry(self) -> None:
         """Test check_ka_timer raises Notify when timer expires"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 2, 4, 0, 'timer expired')
+        timer = ReceiveTimer(session, HoldTime(2), 4, 0, 'timer expired')
 
         # Set last_read to past (beyond holdtime)
         timer.last_read = int(time.time()) - 3
@@ -167,11 +170,9 @@ class TestReceiveTimerKeepaliveCheck:
     def test_check_ka_timer_does_not_raise_within_holdtime(self) -> None:
         """Test check_ka_timer does not raise within holdtime"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 180, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
 
-        message = Mock()
-        message.ID = Message.CODE.UPDATE
-        message.IS_EOR = False
+        message = an_update()
 
         # Should not raise
         result = timer.check_ka_timer(message)
@@ -184,11 +185,9 @@ class TestReceiveTimerCheckKa:
     def test_check_ka_normal_message(self) -> None:
         """Test check_ka with normal message"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 180, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
 
-        message = Mock()
-        message.ID = Message.CODE.UPDATE
-        message.IS_EOR = False
+        message = an_update()
 
         # Should not raise
         timer.check_ka(message)
@@ -196,7 +195,7 @@ class TestReceiveTimerCheckKa:
     def test_check_ka_with_zero_holdtime_sets_single_flag(self) -> None:
         """Test check_ka with zero holdtime sets single flag on first keepalive"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 0, 2, 6)
+        timer = ReceiveTimer(session, HoldTime(0), 2, 6)
 
         message = KeepAlive.make_keepalive()
 
@@ -214,7 +213,7 @@ class TestReceiveTimerCheckKa:
     def test_check_ka_with_zero_holdtime_second_keepalive(self) -> None:
         """Test check_ka with zero holdtime on second keepalive"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 0, 2, 6)
+        timer = ReceiveTimer(session, HoldTime(0), 2, 6)
 
         message = KeepAlive.make_keepalive()
 
@@ -235,7 +234,7 @@ class TestReceiveTimerElapsedTime:
     def test_elapsed_time_calculation(self) -> None:
         """Test elapsed time is calculated correctly"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 180, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
 
         # Set last_read to known past time
         timer.last_read = int(time.time()) - 10
@@ -252,7 +251,7 @@ class TestReceiveTimerElapsedTime:
         """Test timer expiry at exact boundary"""
         session = Mock(return_value='test-session')
         holdtime = 5
-        timer = ReceiveTimer(session, holdtime, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(holdtime), 4, 0)
 
         # Set last_read to exactly holdtime + 1 seconds ago
         timer.last_read = int(time.time()) - (holdtime + 1)
@@ -418,12 +417,10 @@ class TestReceiveTimerIntegration:
     def test_receive_timer_typical_flow(self) -> None:
         """Test ReceiveTimer in typical BGP flow"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 180, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
 
         # Receive update
-        update = Mock()
-        update.ID = Message.CODE.UPDATE
-        update.IS_EOR = False
+        update = an_update()
         timer.check_ka_timer(update)
 
         # Receive keepalive
@@ -435,7 +432,7 @@ class TestReceiveTimerIntegration:
     def test_receive_timer_hold_timer_expiry_scenario(self) -> None:
         """Test ReceiveTimer hold timer expiry scenario"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 2, 4, 0, 'hold timer expired')
+        timer = ReceiveTimer(session, HoldTime(2), 4, 0, 'hold timer expired')
 
         # Simulate no messages for holdtime period
         timer.last_read = int(time.time()) - 3
@@ -477,11 +474,9 @@ class TestTimerEdgeCases:
     def test_receive_timer_with_very_short_holdtime(self) -> None:
         """Test ReceiveTimer with very short holdtime"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 1, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(1), 4, 0)
 
-        message = Mock()
-        message.ID = Message.CODE.UPDATE
-        message.IS_EOR = False
+        message = an_update()
 
         # Should handle short holdtime
         timer.check_ka_timer(message)
@@ -499,7 +494,7 @@ class TestTimerEdgeCases:
     def test_receive_timer_message_none(self) -> None:
         """Test ReceiveTimer when nothing was read"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 180, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
 
         # Should handle default message
         result = timer.check_ka_timer()
@@ -528,7 +523,7 @@ class TestTimerNotifyMessages:
     def test_receive_timer_notify_code(self) -> None:
         """Test ReceiveTimer generates correct Notify code"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 1, 4, 5, 'test error')
+        timer = ReceiveTimer(session, HoldTime(1), 4, 5, 'test error')
 
         timer.last_read = int(time.time()) - 2
 
@@ -543,7 +538,7 @@ class TestTimerNotifyMessages:
     def test_receive_timer_notify_message(self) -> None:
         """Test ReceiveTimer includes message in Notify"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 1, 4, 0, 'custom error message')
+        timer = ReceiveTimer(session, HoldTime(1), 4, 0, 'custom error message')
 
         timer.last_read = int(time.time()) - 2
 
@@ -562,11 +557,9 @@ class TestTimerConcurrentBehavior:
     def test_receive_timer_rapid_messages(self) -> None:
         """Test ReceiveTimer handles rapid messages"""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, 180, 4, 0)
+        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
 
-        message = Mock()
-        message.ID = Message.CODE.UPDATE
-        message.IS_EOR = False
+        message = an_update()
 
         # Rapid fire messages
         for _ in range(10):

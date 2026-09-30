@@ -18,6 +18,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from exabgp.configuration.configuration import Configuration
+from exabgp.environment import Environment
 from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.loop import Reactor
 
@@ -29,11 +31,11 @@ def processes(request):
     """A real Processes, with api.respawn and api.terminate as the test asks."""
     respawn, terminate = getattr(request, 'param', (False, False))
     with patch('exabgp.reactor.api.processes.getenv') as getenv:
-        environment = MagicMock()
+        environment = Environment()
         environment.api.respawn = respawn
         environment.api.terminate = terminate
         environment.api.ack = True
-        environment.api.version = '5.0.0'
+        environment.api.version = 6
         getenv.return_value = environment
 
         from exabgp.reactor.api.processes import Processes
@@ -110,16 +112,23 @@ def test_a_reload_which_starts_the_helper_again_clears_it(processes) -> None:
 # ==============================================================================
 
 
-def _reactor(terminate: bool, lost: list[str]) -> SimpleNamespace:
-    processes = SimpleNamespace(terminate_on_error=terminate, lost=lambda: list(lost))
-    return SimpleNamespace(_helper_lost=False, processes=processes, signal=SimpleNamespace(received=Signal.NONE))
+def _reactor(terminate: bool, lost: list[str]) -> Reactor:
+    """A real Reactor over an empty configuration, whose helpers in `lost` are gone for good."""
+    from exabgp.reactor.api.processes import Processes
+
+    reactor = Reactor(Configuration([''], text=True))
+    processes = Processes()
+    processes.terminate_on_error = terminate
+    processes._ended = list(lost)
+    reactor.processes = processes
+    return reactor
 
 
 def test_a_lost_helper_shuts_the_daemon_down_with_terminate() -> None:
     reactor = _reactor(terminate=True, lost=['helper'])
 
     with patch('exabgp.reactor.loop.log', MagicMock()):
-        Reactor._terminate_on_lost_helper(reactor)  # type: ignore[arg-type]
+        Reactor._terminate_on_lost_helper(reactor)
 
     assert reactor._helper_lost
     assert reactor.signal.received == Signal.SHUTDOWN
@@ -128,7 +137,7 @@ def test_a_lost_helper_shuts_the_daemon_down_with_terminate() -> None:
 def test_a_lost_helper_is_left_alone_without_terminate() -> None:
     reactor = _reactor(terminate=False, lost=['helper'])
 
-    Reactor._terminate_on_lost_helper(reactor)  # type: ignore[arg-type]
+    Reactor._terminate_on_lost_helper(reactor)
 
     assert not reactor._helper_lost
     assert reactor.signal.received == Signal.NONE
@@ -137,7 +146,7 @@ def test_a_lost_helper_is_left_alone_without_terminate() -> None:
 def test_nothing_happens_while_every_helper_runs() -> None:
     reactor = _reactor(terminate=True, lost=[])
 
-    Reactor._terminate_on_lost_helper(reactor)  # type: ignore[arg-type]
+    Reactor._terminate_on_lost_helper(reactor)
 
     assert not reactor._helper_lost
     assert reactor.signal.received == Signal.NONE

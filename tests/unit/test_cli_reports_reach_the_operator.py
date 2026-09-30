@@ -140,7 +140,8 @@ def test_no_try_in_the_application_catches_one_name_twice() -> None:
 
 def test_check_fifo_writes_to_no_other_stream() -> None:
     """Read the source: the fault is a destination, and a destination is visible statically."""
-    source = pathlib.Path(pipe_module.__file__).read_text()
+    # Compiled, __file__ is the extension module: the source is the pipe.py beside it.
+    source = (pathlib.Path(pipe_module.__file__).parent / 'pipe.py').read_text()
     body = source[source.index('def check_fifo') : source.index('class Control')]
 
     # `sys.stdout.write`, not `sys.stdout`: the docstring names the stream it must not use,

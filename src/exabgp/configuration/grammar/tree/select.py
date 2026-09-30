@@ -36,7 +36,7 @@ from exabgp.configuration.grammar.tree.static import (
     attribute_words,
     value_fields,
 )
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
@@ -251,7 +251,7 @@ class MupNextHop(Type[tuple[Any, Any]]):
         except ROUTE_ERRORS:
             raise ConfigError(where, f"'{word}' is not a valid next-hop", expected=['<ip>', 'self']) from None
 
-    def render(self, value: tuple[Any, Any]) -> list[str]:
+    def render(self, value: tuple[Any, Any]) -> list[WordOrSyntax]:
         return ['self'] if isinstance(value[0], IPSelf) else [str(value[0])]
 
     def hint(self) -> str:
@@ -316,7 +316,7 @@ class SelectLine(RouteStatement):
             route.attributes.add(attribute)
         return route
 
-    def printed(self, route: Route) -> list[str]:
+    def printed(self, route: Route) -> list[WordOrSyntax]:
         return select_words(route.nlri) + attribute_words(route)
 
     def hint(self) -> str:

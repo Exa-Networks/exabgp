@@ -22,14 +22,57 @@ from exabgp.configuration.grammar.words import Words
 T = TypeVar('T')
 
 
-class Syntax(str):
-    """A structural word (`[`, `]`, `(`, ...), printed as is and never quoted."""
+class Syntax:
+    """A structural word (`[`, `]`, `(`, ...), printed as is and never quoted.
 
-    __slots__ = ()
+    It holds the word rather than being a str: mypyc cannot compile a subclass of str. It
+    is equal to, and hashed like, the str it holds, so a rendered list compares with words.
+    """
+
+    __slots__ = ('word',)
+
+    def __init__(self, word: str) -> None:
+        self.word = word
+
+    def __str__(self) -> str:
+        return self.word
+
+    def __repr__(self) -> str:
+        return repr(self.word)
+
+    def __hash__(self) -> int:
+        return hash(self.word)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Syntax):
+            return self.word == other.word
+        if isinstance(other, str):
+            return self.word == other
+        return NotImplemented
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
 
 
-class Printed(list[str]):
-    """A value given to the printer as its words already, where the route holds the text of it."""
+# what a type renders a value as: the words, some of them structure
+WordOrSyntax = str | Syntax
+
+
+def spoken(words: list[WordOrSyntax]) -> str:
+    """Rendered words as one line of text, for help and examples, where nothing is quoted."""
+    return ' '.join(str(word) for word in words)
+
+
+class Printed:
+    """A value given to the printer as its words already, where the route holds the text of it.
+
+    It holds the words rather than being a list: mypyc cannot compile a subclass of list.
+    """
+
+    __slots__ = ('words',)
+
+    def __init__(self, words: list[WordOrSyntax]) -> None:
+        self.words = words
 
 
 class Type(ABC, Generic[T]):
@@ -40,7 +83,7 @@ class Type(ABC, Generic[T]):
         """Read a value, raising ConfigError positioned on the word at fault."""
 
     @abstractmethod
-    def render(self, value: T) -> list[str]:
+    def render(self, value: T) -> list[WordOrSyntax]:
         """The words which parse back to `value`."""
 
     @abstractmethod

@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from typing import Any
 from unittest.mock import MagicMock, patch
+
 import pytest
+
+from exabgp.environment import Environment
 
 
 @pytest.fixture(autouse=True)
@@ -13,43 +18,71 @@ def mock_logger():
         yield mock_log
 
 
+def helper_process() -> MagicMock:
+    """What Popen returns for a helper: two pipes with a descriptor each."""
+    child = MagicMock()
+    child.stdout.fileno.return_value = 31
+    child.stdin.fileno.return_value = 32
+    return child
+
+
+class Recorded:
+    """A real Processes, with the helpers it starts and terminates written down.
+
+    The compiled Processes does not let a test replace _start or _terminate on the
+    instance, so the two are observed where they reach outside: _start through Popen,
+    which creates the helper, and _terminate through the Thread which stops it. Every
+    other attribute is the Processes' own.
+    """
+
+    def __init__(self, processes: Any) -> None:
+        object.__setattr__(self, '_processes', processes)
+        object.__setattr__(self, '_children', [])
+        object.__setattr__(self, '_terminated', [])
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._processes, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(self._processes, name, value)
+
+    @property
+    def _started(self) -> list[str]:
+        return [name for name, child in self._processes._process.items() if child in self._children]
+
+    def popen(self, *args: Any, **kwargs: Any) -> Any:
+        child = helper_process()
+        self._children.append(child)
+        return child
+
+    def thread(self, target: Any, args: tuple[Any, str]) -> Any:
+        self._terminated.append(args[1])
+        return MagicMock()
+
+
 class TestProcessesStart:
     """Test Processes.start() method - process change detection."""
 
     @pytest.fixture
-    def processes(self):
-        """Create a Processes instance with mocked subprocess calls."""
+    def processes(self) -> Iterator[Recorded]:
+        """A Processes which starts and terminates helpers without creating any."""
         with patch('exabgp.reactor.api.processes.getenv') as mock_getenv:
-            # Mock environment
-            mock_env = MagicMock()
-            mock_env.api.respawn = False
-            mock_env.api.terminate = False
-            mock_env.api.ack = True
-            mock_getenv.return_value = mock_env
+            environment = Environment()
+            environment.api.respawn = False
+            environment.api.terminate = False
+            environment.api.ack = True
+            mock_getenv.return_value = environment
 
             from exabgp.reactor.api.processes import Processes
 
-            proc = Processes()
-            # Track method calls
-            proc._started = []
-            proc._terminated = []
+            recorded = Recorded(Processes())
 
-            # Mock _start to track calls without actually starting processes
-            def mock_start(process):
-                proc._started.append(process)
-
-            proc._start = mock_start
-
-            # Mock _terminate to track calls without actually terminating
-            def mock_terminate(process):
-                proc._terminated.append(process)
-                # Remove from _process dict as real _terminate does
-                if process in proc._process:
-                    del proc._process[process]
-
-            proc._terminate = mock_terminate
-
-            yield proc
+        with (
+            patch('exabgp.reactor.api.processes.subprocess.Popen', side_effect=recorded.popen),
+            patch('exabgp.reactor.api.processes.fcntl.fcntl'),
+            patch('exabgp.reactor.api.processes.Thread', side_effect=recorded.thread),
+        ):
+            yield recorded
 
     def test_new_process_started(self, processes):
         """New processes should be started."""
@@ -65,7 +98,7 @@ class TestProcessesStart:
     def test_removed_process_terminated(self, processes):
         """Processes removed from config should be terminated."""
         # Simulate existing running process
-        processes._process['process-a'] = MagicMock()
+        processes._process['process-a'] = helper_process()
         processes._configuration = {
             'process-a': {'run': '/bin/true', 'encoder': 'text', 'respawn': True},
         }
@@ -85,7 +118,7 @@ class TestProcessesStart:
         }
 
         # Simulate existing running process with same config
-        processes._process['process-a'] = MagicMock()
+        processes._process['process-a'] = helper_process()
         processes._configuration = config.copy()
 
         # Call start with restart=True but same config
@@ -105,7 +138,7 @@ class TestProcessesStart:
         }
 
         # Simulate existing running process
-        processes._process['process-a'] = MagicMock()
+        processes._process['process-a'] = helper_process()
         processes._configuration = old_config
 
         processes.start(new_config, restart=True)
@@ -123,7 +156,7 @@ class TestProcessesStart:
             'process-a': {'run': '/bin/true', 'encoder': 'json', 'respawn': True},  # Changed encoder
         }
 
-        processes._process['process-a'] = MagicMock()
+        processes._process['process-a'] = helper_process()
         processes._configuration = old_config
 
         processes.start(new_config, restart=True)
@@ -140,7 +173,7 @@ class TestProcessesStart:
             'process-a': {'run': '/bin/false', 'encoder': 'json', 'respawn': False},  # All changed
         }
 
-        processes._process['process-a'] = MagicMock()
+        processes._process['process-a'] = helper_process()
         processes._configuration = old_config
 
         # restart=False should skip change detection entirely
@@ -152,20 +185,20 @@ class TestProcessesStart:
     def test_multiple_processes_selective_restart(self, processes):
         """Only changed processes should restart, unchanged should be kept."""
         old_config = {
-            'unchanged': {'run': '/bin/a', 'encoder': 'text'},
-            'changed': {'run': '/bin/b', 'encoder': 'text'},
-            'removed': {'run': '/bin/c', 'encoder': 'text'},
+            'unchanged': {'run': '/bin/a', 'encoder': 'text', 'respawn': True},
+            'changed': {'run': '/bin/b', 'encoder': 'text', 'respawn': True},
+            'removed': {'run': '/bin/c', 'encoder': 'text', 'respawn': True},
         }
         new_config = {
-            'unchanged': {'run': '/bin/a', 'encoder': 'text'},  # Same
-            'changed': {'run': '/bin/b-new', 'encoder': 'text'},  # Changed
-            'added': {'run': '/bin/d', 'encoder': 'text'},  # New
+            'unchanged': {'run': '/bin/a', 'encoder': 'text', 'respawn': True},  # Same
+            'changed': {'run': '/bin/b-new', 'encoder': 'text', 'respawn': True},  # Changed
+            'added': {'run': '/bin/d', 'encoder': 'text', 'respawn': True},  # New
         }
 
         # Simulate running processes
-        processes._process['unchanged'] = MagicMock()
-        processes._process['changed'] = MagicMock()
-        processes._process['removed'] = MagicMock()
+        processes._process['unchanged'] = helper_process()
+        processes._process['changed'] = helper_process()
+        processes._process['removed'] = helper_process()
         processes._configuration = old_config
 
         processes.start(new_config, restart=True)
@@ -188,7 +221,7 @@ class TestProcessesStart:
     def test_configuration_updated_after_start(self, processes):
         """Configuration should be updated after start() call."""
         new_config = {
-            'process-a': {'run': '/bin/true', 'encoder': 'text'},
+            'process-a': {'run': '/bin/true', 'encoder': 'text', 'respawn': True},
         }
 
         processes.start(new_config, restart=False)
@@ -198,8 +231,8 @@ class TestProcessesStart:
     def test_empty_old_config_starts_all(self, processes):
         """With empty old config, all processes should be started."""
         new_config = {
-            'process-a': {'run': '/bin/a'},
-            'process-b': {'run': '/bin/b'},
+            'process-a': {'run': '/bin/a', 'respawn': True},
+            'process-b': {'run': '/bin/b', 'respawn': True},
         }
 
         # Empty initial state

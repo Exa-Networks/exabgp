@@ -22,6 +22,7 @@ from exabgp.configuration.grammar.engine import MAX_DEPTH
 from exabgp.configuration.grammar.nodes import MISSING, Block, Collect, Keep, Leaf
 from exabgp.configuration.grammar.render import INDENT
 from exabgp.configuration.grammar.shape import Kind, Shape
+from exabgp.configuration.grammar.types.base import spoken
 
 
 @dataclass(frozen=True)
@@ -65,7 +66,7 @@ def _leaf_line(leaf: Leaf) -> str:
     if leaf.mandatory:
         notes.append('mandatory')
     if leaf.default is not MISSING and leaf.default is not None:
-        notes.append(f'default {" ".join(leaf.type.render(leaf.default)) or leaf.default}')
+        notes.append(f'default {spoken(leaf.type.render(leaf.default)) or leaf.default}')
     if leaf.repeated:
         notes.append('may be repeated')
     hint = leaf.type.hint()
@@ -224,7 +225,7 @@ def _leaf(leaf: Leaf, given: Any) -> Shape | None:
     implied = leaf.default if leaf.default is not MISSING else given
     default = None
     if implied is not None and not leaf.many:
-        default = ' '.join(leaf.type.render(implied)) or None
+        default = spoken(leaf.type.render(implied)) or None
     return shape.member(value, mandatory=leaf.mandatory, default=default, description=leaf.doc)
 
 

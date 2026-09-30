@@ -41,7 +41,7 @@ from exabgp.configuration.grammar.tree.session import (
     TCP_AO,
     boolean,
 )
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.network import (
     ASN_OR_AUTO,
     HOLD_TIME,
@@ -114,8 +114,8 @@ class Inherit(Type[list[str]]):
             raise ConfigError(where, 'invalid inherit list', expected=['<template>', '[ <template> ... ]'])
         return found[1:-1]
 
-    def render(self, value: list[str]) -> list[str]:
-        return value if len(value) == 1 else ['[', *value, ']']
+    def render(self, value: list[str]) -> list[WordOrSyntax]:
+        return list(value) if len(value) == 1 else ['[', *value, ']']
 
     def hint(self) -> str:
         return '<template>|[ <template> ... ]'
@@ -139,7 +139,7 @@ class TemplateName(Type[str]):
             raise ConfigError(where, 'invalid character in name for template-neighbor')
         return name
 
-    def render(self, value: str) -> list[str]:
+    def render(self, value: str) -> list[WordOrSyntax]:
         return [value]
 
     def hint(self) -> str:

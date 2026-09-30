@@ -19,13 +19,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from exabgp.environment import Environment
 from exabgp.reactor.api.processes import Processes
 
 
 @pytest.fixture
 def processes() -> Any:
     with patch('exabgp.reactor.api.processes.getenv') as getenv:
-        environment = MagicMock()
+        environment = Environment()
         environment.api.respawn = False
         environment.api.terminate = False
         environment.api.ack = True
@@ -33,6 +34,8 @@ def processes() -> Any:
         instance = Processes()
     instance._async_mode = True
     instance._loop = MagicMock()
+    # AbstractEventLoop.remove_reader returns a bool, and the compiled build checks it does
+    instance._loop.remove_reader.return_value = True
     return instance
 
 

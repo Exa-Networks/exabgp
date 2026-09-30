@@ -184,8 +184,10 @@ def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: bool) -> No
                 if md5_base64:
                     try:
                         md5_bytes = decode_base64(md5)
-                    except PSKError as exc:
-                        raise MD5Error(f'Failed to decode base 64 encoded PSK: {exc}') from None
+                    # not `exc`, the OSError caught below: compiled, a name keeps a single
+                    # type, and every setsockopt failure would become a TypeError
+                    except PSKError as psk_exc:
+                        raise MD5Error(f'Failed to decode base 64 encoded PSK: {psk_exc}') from None
 
             # __kernel_sockaddr_storage
             n_af = IP.toaf(ip)
@@ -553,6 +555,7 @@ def ready(io: socket.socket) -> Iterator[tuple[bool, str]]:
                     yield False, 'connect attempt failed, retrying, reason {}'.format(errno.errorcode[err])
                     return
             yield False, 'waiting for socket to become ready'
-        except OSError as err:
-            yield False, 'error, retrying {}'.format(str(err))
+        # not `err`, the name of the int above: compiled, a name keeps a single type
+        except OSError as exc:
+            yield False, 'error, retrying {}'.format(str(exc))
             return

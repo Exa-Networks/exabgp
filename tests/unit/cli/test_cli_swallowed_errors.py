@@ -34,7 +34,11 @@ they believe is gone to be read back by the next session.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import os
+import signal
+import threading
 from pathlib import Path
 from unittest.mock import patch
 
@@ -44,16 +48,48 @@ from exabgp.cli.history import HistoryTracker
 from exabgp.cli.persistent_connection import PersistentSocketConnection
 
 
+class FakeDaemonSocket:
+    """A unix socket to a daemon which answers the first ping and says nothing more."""
+
+    def __init__(self, *args: object) -> None:
+        self.replies = [b'{"pong": "daemon-uuid-one", "active": true}\ndone\n']
+
+    def connect(self, path: str) -> None:
+        return None
+
+    def settimeout(self, timeout: float) -> None:
+        return None
+
+    def sendall(self, data: bytes) -> None:
+        return None
+
+    def recv(self, size: int) -> bytes:
+        return self.replies.pop(0) if self.replies else b''
+
+
+class IdleThread(threading.Thread):
+    """A thread which is never started, so no background loop runs during the test."""
+
+    def start(self) -> None:
+        return None
+
+
 def make_connection() -> PersistentSocketConnection:
-    """Build a connection with no socket, no signal handler and no background threads."""
-    with (
-        patch('socket.socket'),
-        patch('threading.Thread'),
-        patch.object(PersistentSocketConnection, '_connect'),
-        patch.object(PersistentSocketConnection, '_initial_ping'),
-        patch.object(PersistentSocketConnection, '_setup_signal_handler'),
-    ):
-        return PersistentSocketConnection('/fake/path')
+    """Build a connection with a fake socket, no signal handler left behind and no background threads.
+
+    The class's own methods are not patched: a compiled class calls them directly, so the
+    collaborators they reach (the socket, the thread, the signal module) are replaced instead.
+    """
+    previous_handler = signal.getsignal(signal.SIGUSR1)
+    try:
+        with (
+            patch('socket.socket', FakeDaemonSocket),
+            patch('threading.Thread', IdleThread),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            return PersistentSocketConnection('/fake/path')
+    finally:
+        signal.signal(signal.SIGUSR1, previous_handler)
 
 
 class TestSignalShutdown:

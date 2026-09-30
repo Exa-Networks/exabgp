@@ -9,6 +9,7 @@ NOTIFICATION or a ValueError.
 
 from __future__ import annotations
 
+import io
 import os
 import importlib
 import pathlib
@@ -445,34 +446,45 @@ def test_cli_helper_bounds_its_backlog_by_bytes(module: str) -> None:
     assert 'backlog[source].nbytes' in source, f'{module} does not bound its buffer by bytes'
 
 
+class PipedHelper:
+    """The Popen of a helper still running, whose stdout is the read end of a real pipe."""
+
+    def __init__(self, read_fd: int) -> None:
+        self.stdout = io.FileIO(read_fd, 'rb', closefd=False)
+        self.stdin = None
+
+    def poll(self) -> int | None:
+        return None
+
+    def terminate(self) -> None:
+        """Giving up on the helper terminates it; there is no child behind this one."""
+
+    def wait(self, timeout: float | None = None) -> int | None:
+        return None
+
+
 def reader_over_a_pipe(read_fd: int) -> Any:
     """A Processes wired to one fake helper whose stdout is a real pipe.
 
     _async_reader_callback is the only production path which reads helper output, and it
     lives inside a select loop, so the way to test it is to give it a real descriptor and
-    call it.  Everything it touches is set here rather than mocked away, so a change to
-    what it reads shows up as a failure rather than as a mock which no longer matches.
+    call it.  Everything it touches is real rather than mocked away, _handle_problem
+    included, so a change to what it reads shows up as a failure rather than as a mock
+    which no longer matches.  With respawning off, a helper it gives up on is in `_ended`.
     """
-    from unittest.mock import Mock
-
     from exabgp.reactor.api.processes import Processes
 
-    processes = Processes.__new__(Processes)
-    helper = Mock()
-    helper.poll = Mock(return_value=None)  # still running
-    processes._process = {'helper': helper}
-    processes._buffer = {}
-    processes._command_queue = []
-    processes._async_mode = False
-    processes._loop = None
-
-    stdout = Mock()
-    stdout.fileno = Mock(return_value=read_fd)
-    processes._get_stdout = Mock(return_value=stdout)
-
-    processes.problems = []
-    processes._handle_problem = lambda name: processes.problems.append(name)
+    processes = Processes()
+    processes.respawn_number = 0
+    # keep its routes when it goes, so the only thing in _command_queue is what it sent
+    processes._configuration['helper'] = {'on-exit': 'keep'}
+    processes._process['helper'] = PipedHelper(read_fd)  # type: ignore[assignment]
     return processes
+
+
+def problems(processes: Any) -> list[str]:
+    """The helpers the reader gave up on."""
+    return list(processes._ended)
 
 
 def test_processes_caps_a_command_without_a_newline() -> None:
@@ -497,7 +509,7 @@ def test_processes_caps_a_command_without_a_newline() -> None:
         processes._async_reader_callback('helper')
 
         assert 'helper' not in processes._buffer, 'the reader kept a buffer it can never turn into a command'
-        assert processes.problems == ['helper'], 'the oversized helper was not reported'
+        assert problems(processes) == ['helper'], 'the oversized helper was not reported'
     finally:
         os.close(read_fd)
         os.close(write_fd)
@@ -518,8 +530,8 @@ def test_processes_survives_a_helper_writing_bytes_which_are_not_ascii() -> None
 
         processes._async_reader_callback('helper')
 
-        assert processes.problems == ['helper'], 'a helper writing a non-ascii byte was not reported'
-        assert processes._command_queue == [], 'undecodable bytes were queued as a command'
+        assert problems(processes) == ['helper'], 'a helper writing a non-ascii byte was not reported'
+        assert list(processes._command_queue) == [], 'undecodable bytes were queued as a command'
     finally:
         os.close(read_fd)
         os.close(write_fd)
@@ -540,8 +552,8 @@ def test_processes_still_queues_an_ordinary_command() -> None:
 
         processes._async_reader_callback('helper')
 
-        assert processes.problems == [], 'an ordinary command was reported as a problem'
-        assert processes._command_queue == [('helper', 'announce route 10.0.0.0/24 next-hop 1.2.3.4')]
+        assert problems(processes) == [], 'an ordinary command was reported as a problem'
+        assert list(processes._command_queue) == [('helper', 'announce route 10.0.0.0/24 next-hop 1.2.3.4')]
     finally:
         os.close(read_fd)
         os.close(write_fd)

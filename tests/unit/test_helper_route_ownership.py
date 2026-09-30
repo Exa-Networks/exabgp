@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
-from typing import Iterator, cast
+from typing import Iterator
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+from exabgp.environment import Environment
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -191,11 +192,11 @@ def test_on_exit_refuses_anything_else() -> None:
 @pytest.fixture
 def processes():
     with patch('exabgp.reactor.api.processes.getenv') as getenv:
-        environment = MagicMock()
+        environment = Environment()
         environment.api.respawn = False
         environment.api.terminate = False
         environment.api.ack = True
-        environment.api.version = '5.0.0'
+        environment.api.version = 6
         getenv.return_value = environment
 
         from exabgp.reactor.api.processes import Processes
@@ -256,13 +257,11 @@ def test_the_reactor_withdraws_the_helper_routes_on_every_neighbour() -> None:
         f'n{index}': SimpleNamespace(rib=SimpleNamespace(outgoing=each), routes=[], resolve_self=lambda r: r)
         for index, each in enumerate(ribs)
     }
-    scheduled = []
-    reactor = SimpleNamespace(
-        configuration=SimpleNamespace(neighbors=neighbors),
-        asynchronous=SimpleNamespace(schedule=lambda uid, command, callback: scheduled.append((uid, callback))),
-    )
+    # the reactor only walks configuration.neighbors, and each neighbour's routes and rib
+    reactor = Reactor(SimpleNamespace(neighbors=neighbors))
 
-    Reactor._withdraw_helper_routes(cast(Reactor, reactor), 'helper')
+    reactor._withdraw_helper_routes('helper')
+    scheduled = list(reactor.asynchronous._async)
     assert [uid for uid, _ in scheduled] == ['helper']
     with patch('exabgp.reactor.loop.log', MagicMock()):
         asyncio.run(scheduled[0][1])

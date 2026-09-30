@@ -1,7 +1,5 @@
 """The effective local ASN survives OPEN's AS_TRANS representation."""
 
-from unittest.mock import AsyncMock, Mock
-
 import pytest
 
 from exabgp.bgp.message.direction import Direction
@@ -13,8 +11,9 @@ from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.neighbor import Neighbor
-from exabgp.reactor.protocol import Protocol
+from exabgp.protocol.ip import IPv4
 from exabgp.util.enumeration import TriState
+from tests import negotiation
 
 
 def negotiate(local: int, remote: int, advertise_asn4: bool, receive_asn4: bool) -> Negotiated:
@@ -75,8 +74,10 @@ async def test_auto_as_open_advertises_effective_asn_on_wire(remote_as: int) -> 
     neighbor.session.local_as = ASN(0)
     neighbor.session.router_id = RouterID('192.0.2.1')
     neighbor.capability.asn4 = TriState.TRUE
-    proto = Protocol(Mock(neighbor=neighbor, _restarted=False, capabilities_refused=False, stats={'send-open': 0}))
-    proto.connection = Mock(writer_async=AsyncMock(), session=Mock(return_value='test'))
+    neighbor.session.peer_address = IPv4.from_string('192.0.2.2')
+    neighbor.session.local_address = IPv4.from_string('192.0.2.1')
+    proto, _ = negotiation.protocol(neighbor)
+    theirs = negotiation.connect(proto)
     received = Capabilities()
     received[Capability.CODE.FOUR_BYTES_ASN] = ASN4(remote_as)
     remote = Open.make_open(Version(4), ASN(remote_as), HoldTime(90), RouterID('192.0.2.2'), received)
@@ -84,8 +85,9 @@ async def test_auto_as_open_advertises_effective_asn_on_wire(remote_as: int) -> 
 
     await proto.new_open()
 
-    wire = proto.connection.writer_async.await_args.args[0]
-    decoded = Open.unpack_message(wire[19:], Negotiated.UNSET)
+    [(kind, body)] = negotiation.messages(negotiation.received(theirs))
+    assert kind == Open.ID
+    decoded = Open.unpack_message(body, Negotiated.UNSET)
     assert decoded.asn == ASN(remote_as).trans()
     assert int(decoded.capabilities[Capability.CODE.FOUR_BYTES_ASN]) == remote_as
     assert neighbor.session.local_as == 0

@@ -38,8 +38,8 @@ import pytest
 os.environ['exabgp_log_enable'] = 'false'
 
 from exabgp.bgp.message import Message
-from exabgp.protocol.family import AFI
 from exabgp.reactor.network.connection import Connection
+from tests.wire_reader import loopback_connection
 
 # The deadline Peer._main_loop uses.  The tests deliberately use the real number rather
 # than a faster one: a fix which only works for a longer deadline has not fixed anything.
@@ -51,35 +51,13 @@ KEEPALIVE = Message.MARKER + Message.HEADER_LEN.to_bytes(2, 'big') + bytes([4])
 KEEPALIVE_TYPE = 4
 
 
-class LoopbackConnection(Connection):
-    """A Connection over a socketpair, with the constructor's DNS and binding skipped.
-
-    Connection.__init__ is called so the read state it sets up is the real one: a test
-    which hand-rolled those fields would be testing its own fixture.
-    """
-
-    def __init__(self, sock: socket.socket) -> None:
-        super().__init__(AFI.ipv4, '127.0.0.1', '127.0.0.1')
-        self.io = sock
-        self.established = True
-        self.msg_size = 4096
-
-    def name(self) -> str:
-        return 'test'
-
-    def session(self) -> str:
-        return 'test'
-
-    # close() is deliberately NOT overridden: the tests below assert what closing does to
-    # the retained read state, and a stub would have them assert against the fixture.
-
-
 @pytest.fixture
 def pair() -> object:
     ours, theirs = socket.socketpair()
-    ours.setblocking(False)
     theirs.setblocking(False)
-    yield LoopbackConnection(ours), theirs
+    # the real Connection, built by its own constructor, so the read state it sets up is
+    # the real one: close() included, which the tests below assert against
+    yield loopback_connection(ours), theirs
     ours.close()
     theirs.close()
 

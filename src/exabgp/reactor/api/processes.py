@@ -31,14 +31,14 @@ import subprocess
 import time
 from exabgp.util.intvalue import json_number
 from threading import Thread
-from typing import IO, TYPE_CHECKING, Any, Callable, Generator, TypeVar, cast
+from typing import IO, TYPE_CHECKING, Any, Callable, ClassVar, Generator, TypeVar, cast
 
 
 if TYPE_CHECKING:
     from exabgp.bgp.fsm import FSM
     from exabgp.bgp.message import Open, Update
     from exabgp.bgp.message.notification import Notification
-    from exabgp.bgp.message.operational import OperationalFamily
+    from exabgp.bgp.message.operational import Operational
     from exabgp.bgp.message.refresh import RouteRefresh
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.reactor.peer import Peer
@@ -109,6 +109,35 @@ def preexec_helper() -> None:
     # signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
+# do not do anything if silenced. At module level: a compiled class body can not use a name
+# it defined itself, so the decorator can not be a staticmethod of Processes
+def silenced(function: _F) -> _F:
+    def closure(self: 'Processes', *args: Any, **kwargs: Any) -> None:
+        if self.silence:
+            return None
+        return function(self, *args, **kwargs)
+
+    return cast(_F, closure)
+
+
+# the function printing each message, filled by register_process as the class is built. At
+# module level, as silenced: a compiled class body can not use a name it defined itself
+_DISPATCH: dict[MessageCode, Any] = {}
+
+
+def register_process(
+    message_id: MessageCode, storage: dict[MessageCode, Any] = _DISPATCH
+) -> Callable[[Callable[..., None]], Callable[..., None]]:
+    def closure(function: Callable[..., None]) -> Callable[..., None]:
+        def wrap(*args: Any) -> None:
+            function(*args)
+
+        storage[message_id] = wrap
+        return wrap
+
+    return closure
+
+
 class Processes:
     """Manages external API subprocess lifecycle and communication.
 
@@ -125,21 +154,21 @@ class Processes:
     """
 
     # how many time can a process can respawn in the time interval
-    respawn_timemask: int = 0xFFFFFF - 0b111111
+    respawn_timemask: ClassVar[int] = 0xFFFFFF - 0b111111
 
     # Write queue backpressure thresholds
-    WRITE_QUEUE_HIGH_WATER: int = 1000  # Pause writes when queue exceeds this
+    WRITE_QUEUE_HIGH_WATER: ClassVar[int] = 1000  # Pause writes when queue exceeds this
     # A single API command must fit on one line: without a cap a helper process which
     # never sends a newline would grow _buffer until the daemon runs out of memory.
-    MAX_COMMAND_SIZE: int = 1024 * 1024
-    WRITE_QUEUE_LOW_WATER: int = 100  # Resume writes when queue drops below this
+    MAX_COMMAND_SIZE: ClassVar[int] = 1024 * 1024
+    WRITE_QUEUE_LOW_WATER: ClassVar[int] = 100  # Resume writes when queue drops below this
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
-    _dispatch: dict[MessageCode, Any] = {}
+    _dispatch: ClassVar[dict[MessageCode, Any]] = _DISPATCH
 
     # queued in place of a command when a helper exits, so its routes are withdrawn after
     # the commands it sent before dying: lines are split on newlines, none can be this
-    EXITED: str = '\nexited'
+    EXITED: ClassVar[str] = '\nexited'
 
     def __init__(self) -> None:
         self.clean()
@@ -1386,18 +1415,6 @@ class Processes:
         for process in neighbor.api.get(event, []):
             yield process
 
-    # do not do anything if silenced
-    # no-self-argument
-
-    @staticmethod
-    def silenced(function: _F) -> _F:
-        def closure(self: 'Processes', *args: Any, **kwargs: Any) -> None:
-            if self.silence:
-                return None
-            return function(self, *args, **kwargs)
-
-        return cast(_F, closure)
-
     # invalid-name
     @silenced
     def up(self, neighbor: 'Neighbor') -> None:
@@ -1476,22 +1493,6 @@ class Processes:
     ) -> None:
         self._dispatch[message_id](self, peer, direction, message, negotiated, header, body)
 
-    # registering message functions
-    # no-self-argument
-
-    @staticmethod
-    def register_process(
-        message_id: MessageCode, storage: dict[MessageCode, Any] = _dispatch
-    ) -> Callable[[Callable[..., None]], Callable[..., None]]:
-        def closure(function: Callable[..., None]) -> Callable[..., None]:
-            def wrap(*args: Any) -> None:
-                function(*args)
-
-            storage[message_id] = wrap
-            return wrap
-
-        return closure
-
     # notifications are handled in the loop as they use different arguments
 
     @register_process(Message.CODE.OPEN)
@@ -1553,7 +1554,7 @@ class Processes:
         self,
         peer: 'Peer',
         direction: str,
-        operational: 'OperationalFamily',
+        operational: 'Operational',
         negotiated: Negotiated,
         header: bytes,
         body: bytes,

@@ -100,7 +100,7 @@ class TestSessionSettings:
         # local_address is None = auto-discovery
         settings.local_as = ASN(65000)
         settings.peer_as = ASN(65001)
-        settings.router_id = RouterID.from_string('1.1.1.1')  # Must provide router_id for auto-discovery
+        settings.router_id = RouterID('1.1.1.1')  # Must provide router_id for auto-discovery
 
         error = settings.validate()
         assert error == ''
@@ -295,7 +295,7 @@ class TestSessionFromSettings:
         settings.local_address = IP.from_string('192.168.1.2')
         settings.local_as = ASN(65000)
         settings.peer_as = ASN(65001)
-        settings.router_id = RouterID.from_string('10.0.0.1')
+        settings.router_id = RouterID('10.0.0.1')
 
         session = Session.from_settings(settings)
 
@@ -313,7 +313,7 @@ class TestSessionFromSettings:
         # local_address is None = auto-discovery
         settings.local_as = ASN(65000)
         settings.peer_as = ASN(65001)
-        settings.router_id = RouterID.from_string('10.0.0.1')  # Required for auto-discovery
+        settings.router_id = RouterID('10.0.0.1')  # Required for auto-discovery
 
         session = Session.from_settings(settings)
 
@@ -372,7 +372,7 @@ class TestSessionFromSettings:
         settings.local_address = IP.from_string('2001:db8::2')
         settings.local_as = ASN(65000)
         settings.peer_as = ASN(65001)
-        settings.router_id = RouterID.from_string('10.0.0.1')  # Router ID required for IPv6
+        settings.router_id = RouterID('10.0.0.1')  # Router ID required for IPv6
 
         session = Session.from_settings(settings)
 

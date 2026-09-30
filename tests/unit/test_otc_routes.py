@@ -1,12 +1,11 @@
 """OTC route parsing, admission and actual UPDATE bytes agree across sessions."""
 
 import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message import Message
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.role import RoleValue
@@ -18,10 +17,9 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.logger import log
 from exabgp.reactor.api import API
 from exabgp.reactor.api.response.json import JSON
-from exabgp.reactor.peer.peer import Peer
-from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
 from exabgp.protocol.family import AFI, SAFI
+from tests import negotiation
 
 
 IPV4 = (AFI.ipv4, SAFI.unicast)
@@ -225,16 +223,18 @@ async def test_auto_as_open_and_static_self_reach_wire_with_real_four_octet_asn(
     neighbor, _ = configured(None, 'route 10.0.0.0/24 next-hop 192.0.2.2 otc self;')
     neighbor.session.local_as = ASN(0)
     neighbor.session.peer_as = ASN(70000)
-    proto = Protocol(Peer(neighbor, Mock()))
-    proto.connection = Mock(writer_async=AsyncMock())
+    proto, _ = negotiation.protocol(neighbor)
+    theirs = negotiation.connect(proto)
     remote_caps = Capabilities().new(neighbor, False, local_as=ASN(70000))
     remote = Open.make_open(Version(4), ASN(70000), HoldTime(90), RouterID('192.0.2.1'), remote_caps)
     proto.negotiated.received(remote)
     proto.negotiated.sent(await proto.new_open())
     assert proto.negotiated.validate(neighbor) is None
     await proto.new_update(True)
-    wire = proto.connection.writer_async.await_args.args[0]
-    decoded = Update.unpack_message(wire[19:], proto.negotiated).parse(proto.negotiated)
+    # the OPEN, then the UPDATE of the static route, the last message written
+    kind, body = negotiation.messages(negotiation.received(theirs))[-1]
+    assert kind == Update.ID
+    decoded = Update.unpack_message(body, proto.negotiated).parse(proto.negotiated)
     assert decoded.attributes[Attribute.CODE.OTC].asn == 70000
     assert str(decoded.announces[0].nlri.cidr) == '10.0.0.0/24'
     assert neighbor.session.local_as == 0
@@ -247,11 +247,10 @@ async def test_receive_classifies_without_api_or_cache_and_live_meta_setting_onl
     incoming = route('65009')
     collection = UpdateCollection([RoutedNLRI(incoming.nlri, incoming.nexthop)], [], incoming.attributes)
     wire = next(collection.messages(negotiated))
-    proto = Protocol(Peer(neighbor, Mock()))
+    proto, _ = negotiation.protocol(neighbor)
     proto.negotiated = negotiated
-    proto.connection = Mock(
-        reader_async=AsyncMock(return_value=(len(wire), Message.CODE.UPDATE, wire[:19], wire[19:], None))
-    )
+    theirs = negotiation.connect(proto)
+    theirs.sendall(wire)
     with patch('exabgp.bgp.message.update.collection.log.warning') as warning:
         received = await proto.read_message()
     assert isinstance(received, Update)

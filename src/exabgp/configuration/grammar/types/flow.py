@@ -45,7 +45,7 @@ from exabgp.bgp.message.update.nlri.flow import (
 from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import Shape
-from exabgp.configuration.grammar.types.base import Printed, Type
+from exabgp.configuration.grammar.types.base import Printed, Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI
@@ -108,10 +108,10 @@ class Operation(Type[list[Any]]):
         except (ValueError, IndexError, KeyError, TypeError, OSError) as exc:
             raise ConfigError(where, str(exc) or f'invalid {self.name}', expected=[self._hint]) from None
 
-    def render(self, value: Any) -> list[str]:
+    def render(self, value: Any) -> list[WordOrSyntax]:
         # a flow value is printed from the text of its NLRI or community, already as words
         if isinstance(value, Printed):
-            return list(value)
+            return list(value.words)
         raise ValueError(f'a {self.name} is printed from the route it is in')
 
     def hint(self) -> str:

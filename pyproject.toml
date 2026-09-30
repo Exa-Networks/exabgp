@@ -67,6 +67,7 @@ dev = [
 	"pytest-timeout>=2.0",
 	"mutmut>=3.0",
 	"setuptools",
+	"pyinstaller",
 ]
 
 [tool.uv]
@@ -103,7 +104,7 @@ markers = [
 
 [tool.ruff]
 line-length = 120
-exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages", "src/exabgp/vendoring"]
+exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages"]
 
 [tool.ruff.lint]
 # Select same critical error codes as flake8 configuration:
@@ -173,13 +174,8 @@ ignore_missing_imports = true
 # Custom stubs for PEP 688 Buffer protocol (mypy doesn't fully support it yet)
 mypy_path = "stubs"
 
-# Exclude vendored code
-exclude = [
-    "src/exabgp/vendoring/",
-]
-
-# All modules now use global strict settings (2025-12-17)
-# No per-module overrides needed
+# All modules use the global strict settings (2025-12-17), vendored code included since it
+# was typed for the compiled build (2026-09-30)
 
 [tool.mutmut]
 # mutation testing: does the test suite notice when the code changes meaning?
@@ -225,3 +221,31 @@ do_not_mutate = ["*/vendoring/*"]
 # the tests import the whole package, so the modules which are not mutated have to be
 # there too, copied before the mutants are written over the files being mutated
 also_copy = ["src/", "sbin/", "etc/", "qa/"]
+
+# The modules mypyc compiles: all of them, but for the exclude below (plan/wip-mypyc.md,
+# doc/user/compiled-build.md). Relative to
+# the directory holding the exabgp package: a directory is every module under it, a
+# pattern what it matches. A package's __init__.py is never compiled. Read by
+# qa/bin/build_mypyc and by setup.py when EXABGP_MYPYC=1.
+[tool.exabgp.mypyc]
+modules = [
+	'exabgp/*.py',
+	'exabgp/application',
+	'exabgp/bgp',
+	'exabgp/cli',
+	'exabgp/configuration',
+	'exabgp/data',
+	'exabgp/debug',
+	'exabgp/environment',
+	'exabgp/logger',
+	'exabgp/protocol',
+	'exabgp/reactor',
+	'exabgp/rib',
+	'exabgp/util',
+	'exabgp/vendoring',
+]
+# Left interpreted, relative to the same directory. util/mypyc.py exists to replace
+# mypy_extensions' trait and mypyc_attr at run time when it is not installed: compiled, the
+# fallback branch is unreachable to mypy and would be compiled as a crash, and the module
+# runs once at import.
+exclude = ['exabgp/util/mypyc.py']

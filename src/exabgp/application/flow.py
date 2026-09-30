@@ -18,20 +18,22 @@ import signal
 import subprocess
 import sys
 from types import FrameType
-from typing import Any
+from typing import Any, ClassVar
+
+from exabgp.environment.parsing import boolean
 
 
 class ACL:
-    dry = os.environ.get('CUMULUS_FLOW_RIB', False)
+    dry: ClassVar[bool] = boolean(os.environ.get('CUMULUS_FLOW_RIB', 'false'))
 
-    path = '/etc/cumulus/acl/policy.d/'
-    priority = '60'
-    prefix = 'flowspec'
-    bld = '.bld'
-    suffix = '.rules'
+    path: ClassVar[str] = '/etc/cumulus/acl/policy.d/'
+    priority: ClassVar[str] = '60'
+    prefix: ClassVar[str] = 'flowspec'
+    bld: ClassVar[str] = '.bld'
+    suffix: ClassVar[str] = '.rules'
 
-    __uid = 0
-    _known: dict[str, tuple[int, str]] = dict()
+    __uid: ClassVar[int] = 0
+    _known: ClassVar[dict[str, tuple[int, str]]] = dict()
 
     @classmethod
     def _uid(cls) -> int:
@@ -64,13 +66,17 @@ class ACL:
             cls.show()
             return b''
         try:
-            return subprocess.Popen(
+            # Any: the stub says communicate() gives two bytes, and a compiled caller checks
+            # that, but stderr goes to stdout and comes back None
+            acltool: Any = subprocess.Popen(
                 ['cl-acltool', '-i'],
                 stderr=subprocess.STDOUT,
                 stdout=subprocess.PIPE,
-            ).communicate()[0]
+            )
+            output: bytes = acltool.communicate()[0]
         except (OSError, subprocess.SubprocessError):
             return b''
+        return output
 
     @staticmethod
     def _prefix(value: Any, what: str) -> str:

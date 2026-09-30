@@ -27,8 +27,8 @@ from __future__ import annotations
 import asyncio
 import time
 from collections import defaultdict
-from collections.abc import AsyncGenerator
-from typing import TYPE_CHECKING, Any, Generator, Iterator, NoReturn, cast
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar, Generator, Iterator, NoReturn, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -53,7 +53,7 @@ from exabgp.reactor.api.processes import ProcessError
 from exabgp.reactor.delay import Delay
 from exabgp.reactor.keepalive import KA
 from exabgp.reactor.network.error import NetworkError
-from exabgp.reactor.protocol import Protocol
+from exabgp.reactor.protocol import Protocol, UpdateSender
 from exabgp.reactor.timing import LoopTimer, timed_async
 from exabgp.rib.route import Route
 from exabgp.util.enumeration import TriState
@@ -93,23 +93,24 @@ class Stats(dict[str, Any]):
     Yields formatted strings for changed values via changed_statistics().
     """
 
-    __format: dict[str, Any] = {
+    # one underscore, not two: mypyc does not mangle a private name the way Python does
+    _format: ClassVar[dict[str, Callable[[Any], str]]] = {
         'complete': lambda t: 'time {}'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(t)))
     }
 
     def __init__(self, *args: tuple[Any, ...]) -> None:
         dict.__init__(self, args)
-        self.__changed: set[str] = set()
+        self._changed: set[str] = set()
 
     def __setitem__(self, key: str, val: Any) -> None:
         dict.__setitem__(self, key, val)
-        self.__changed.add(key)
+        self._changed.add(key)
 
     def changed_statistics(self) -> Iterator[str]:
-        for name in self.__changed:
-            formater = self.__format.get(name, lambda v: f'counter {v}')
+        for name in self._changed:
+            formater = self._format.get(name, lambda v: f'counter {v}')
             yield f'statistics for {name} {formater(self[name])}'
-        self.__changed = set()
+        self._changed = set()
 
 
 # ======================================================================== FSMRunner
@@ -210,6 +211,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-operational': 0,
+                'send-operational': 0,
                 'receive-prefixes': 0,
                 'receive-withdraws': 0,
             },
@@ -275,6 +278,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-operational': 0,
+                'send-operational': 0,
                 'receive-prefixes': 0,
                 'receive-withdraws': 0,
             },
@@ -423,6 +428,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-operational': 0,
+                'send-operational': 0,
             },
         )
         if self.neighbor.rib:
@@ -769,10 +776,10 @@ class Peer:
 
     async def _send_route_updates(
         self,
-        new_routes: AsyncGenerator[None, None] | None,
+        new_routes: UpdateSender | None,
         include_withdraw: bool,
         routes_per_iteration: int,
-    ) -> tuple[AsyncGenerator[None, None] | None, bool]:
+    ) -> tuple[UpdateSender | None, bool]:
         """Send route updates from the outgoing RIB.
 
         Returns:
@@ -784,23 +791,22 @@ class Peer:
             new_routes = self.proto.new_update_generator(include_withdraw)
 
         if new_routes:
-            try:
-                for _ in range(routes_per_iteration):
-                    await new_routes.__anext__()
-                    # Yield control to allow async API readers to process commands
-                    await asyncio.sleep(0)
-            except StopAsyncIteration:
-                log.debug(lazymsg('peer.update.generator.exhausted'), self.id())
-                new_routes = None
-                include_withdraw = True
-                self.neighbor.rib.outgoing.fire_flush_callbacks()
+            for _ in range(routes_per_iteration):
+                if not await new_routes.step():
+                    log.debug(lazymsg('peer.update.generator.exhausted'), self.id())
+                    new_routes = None
+                    include_withdraw = True
+                    self.neighbor.rib.outgoing.fire_flush_callbacks()
+                    break
+                # Yield control to allow async API readers to process commands
+                await asyncio.sleep(0)
 
         return (new_routes, include_withdraw)
 
     async def _send_eor_messages(
         self,
         send_eor: bool,
-        new_routes: AsyncGenerator[None, None] | None,
+        new_routes: UpdateSender | None,
     ) -> bool:
         """Send End-of-RIB markers.
 
@@ -822,9 +828,17 @@ class Peer:
 
         return send_eor
 
+    def _teardown_asked(self) -> bool:
+        """Read teardown state afresh after another task may have changed it.
+
+        Testing the attribute directly in a loop narrows it to None across awaits.
+        The compiled build enforces that stale narrowing when another task sets a Notify.
+        """
+        return self._teardown is not None
+
     def _has_pending_work(
         self,
-        new_routes: AsyncGenerator[None, None] | None,
+        new_routes: UpdateSender | None,
         message: Message | None,
     ) -> bool:
         """Check if there's pending work that requires immediate attention."""
@@ -968,7 +982,7 @@ class Peer:
         assert self.proto is not None
         assert self.recv_timer is not None
         include_withdraw = False
-        new_routes: AsyncGenerator[None, None] | None = None
+        new_routes: UpdateSender | None = None
 
         from exabgp.reactor.peer.handlers import UpdateHandler, RouteRefreshHandler
 
@@ -979,7 +993,7 @@ class Peer:
         peer_loop_timer = LoopTimer(f'peer_main_{self.id()}', warn_threshold_ms=50)
 
         try:
-            while self._teardown is None:
+            while not self._teardown_asked():
                 peer_loop_timer.start()
 
                 # Handle configuration reload
@@ -1013,7 +1027,7 @@ class Peer:
                     await asyncio.sleep(0)
                 else:
                     await asyncio.sleep(0.001)
-                    if self._teardown is not None:
+                    if self._teardown_asked():
                         log.debug(lazymsg('async.mainloop.exiting teardown={td}', td=str(self._teardown)), self.id())
                         break
 
@@ -1021,8 +1035,9 @@ class Peer:
                 peer_loop_timer.stop()
                 peer_loop_timer.log_if_slow()
 
-        except NetworkError as exc:
-            log.debug(lazymsg('async.network.error error={exc}', exc=exc), self.id())
+        except NetworkError as network:
+            # Separate names keep compiled handlers from sharing incompatible exception types.
+            log.debug(lazymsg('async.network.error error={exc}', exc=network), self.id())
             raise
         except Exception as exc:
             log.error(lazyexc('async.mainloop.exception error={exc}', exc), self.id())
@@ -1140,8 +1155,8 @@ class Peer:
             if self._restart:
                 log.debug(lazymsg('peer.connection.initializing peer={p}', p=self.id()), 'reactor')
                 await self._run()
-                # After _run completes, check if we should restart
-                if not self._restart:
+                # _reset clears restartable teardowns; a remaining request ends this task.
+                if self._teardown_asked():
                     break
                 await asyncio.sleep(0.1)  # Clean loop delay
             else:

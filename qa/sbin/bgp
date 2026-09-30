@@ -711,9 +711,35 @@ def any_ends_in_list(searched, words):
     return False
 
 
+def find_binary_pid(binary, conf_name):
+    """The exabgp one-file binary sbin/exabgp runs when EXABGP_BINARY is set (qa/bin/build_binary).
+
+    It is two processes with the same command line: the launcher, which unpacks the binary
+    and passes every signal on, and its child. The launcher is the one to signal.
+    """
+    found = {}
+    for line in os.popen('/bin/ps x -o pid= -o ppid= -o command='):
+        fields = line.strip().split()
+        if len(fields) < 3 or fields[2] != binary:
+            continue
+        if not any_word_in_list(fields[3:], [conf_name]):
+            continue
+        found[fields[0]] = (fields[1], ' '.join(fields[2:]))
+
+    launchers = [pid for pid, (ppid, _) in found.items() if ppid not in found]
+    if len(launchers) != 1:
+        flushed(f'expected one exabgp binary process running, found {len(launchers)}, quitting')
+        sys.exit(1)
+    return launchers[0], found[launchers[0]][1]
+
+
 def find_exabgp_pid():
     # --view is argv[1]
     conf_name = sys.argv[2].split('/')[-1].split('.')[0]
+
+    binary = os.environ.get('EXABGP_BINARY', '')
+    if binary:
+        return find_binary_pid(binary, conf_name)
 
     processes = []
     cmdlines = []

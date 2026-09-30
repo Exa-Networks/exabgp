@@ -773,17 +773,17 @@ Neighbor {peer-address}
         for (a, s), (lf, pf, aps, apr) in answer['families'].items():
             k = f'{a} {s}'
             formated['local']['families'][k] = lf
-            formated['peer']['families'][k] = pf
-            formated['local']['add-path'][k] = aps
-            formated['peer']['add-path'][k] = apr
-            if lf and pf:
+            formated['peer']['families'][k] = pf.to_bool()
+            formated['local']['add-path'][k] = aps.to_bool()
+            formated['peer']['add-path'][k] = apr.to_bool()
+            if lf and pf.is_enabled():
                 formated['families'].append(k)
-            formated['add-path'][k] = _addpath(aps, apr)
+            formated['add-path'][k] = _addpath(aps.is_enabled(), apr.is_enabled())
 
         for k, (lc, pc) in answer['capabilities'].items():
-            formated['local']['capabilities'][k] = lc
-            formated['peer']['capabilities'][k] = pc
-            if lc and pc:
+            formated['local']['capabilities'][k] = lc.to_bool()
+            formated['peer']['capabilities'][k] = pc.to_bool()
+            if lc.is_enabled() and pc.is_enabled():
                 formated['capabilities'].append(k)
 
         for k, (ms, mr) in answer['messages'].items():
@@ -823,12 +823,13 @@ Neighbor {peer-address}
             'id': f'    {"ID":<20} {answer["local-id"]:>15} {_pr(answer["peer-id"]):>15} {"":<15}',
             'hold': f'    {"hold-time":<20} {answer["local-hold"]:>15} {_pr(answer["peer-hold"]):>15} {"":<15}',
             'capabilities': '\n'.join(
-                f'    {f"{k}:":<20} {_en(lc):>15} {_en(pc):>15} {"":<15}'
+                f'    {f"{k}:":<20} {_en(lc.to_bool()):>15} {_en(pc.to_bool()):>15} {"":<15}'
                 for k, (lc, pc) in answer['capabilities'].items()
             ),
             'families': '\n'.join(
-                f'    {f"{a} {s}:":<20} {_en(lf):>15} {_en(rf):>15} {_addpath(aps, apr):>15}'
-                for (a, s), (lf, rf, apr, aps) in answer['families'].items()
+                f'    {f"{a} {s}:":<20} {_en(lf):>15} {_en(rf.to_bool()):>15} '
+                f'{_addpath(aps.is_enabled(), apr.is_enabled()):>15}'
+                for (a, s), (lf, rf, aps, apr) in answer['families'].items()
             ),
             'messages': '\n'.join(
                 f'    {f"{k}:":<20} {ms!s:>15} {mr!s:>15} {"":<15}' for k, (ms, mr) in answer['messages'].items()

@@ -12,16 +12,23 @@ split moves.  So the JSON is built here rather than decoded from wire bytes, and
 formatters the function delegates to are replaced by stubs which say how they were called:
 their own output has its own tests, and the split must not change which one is called, with
 what, or in what order.
+
+Compiled with mypyc, the module calls its own functions and the ones it imports directly,
+so stubs set on it are never called. Against the compiled tree the tests therefore run the
+module's source, command.py beside the extension, as an interpreted copy: what is pinned is
+the dispatch the source describes, and the extension is compiled from that same source.
 """
 
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
 from exabgp.configuration import command
+from tests import negotiation
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -59,20 +66,22 @@ def _formatter(name: str) -> Any:
 
 @pytest.fixture
 def decode(monkeypatch: pytest.MonkeyPatch) -> Any:
-    monkeypatch.setattr(command, '_hexa', lambda _payload: b'')
-    monkeypatch.setattr(command, '_make_update', lambda _neighbor, _raw: object())
-    monkeypatch.setattr(command.Response, 'JSON', _Encoder)
-    monkeypatch.setattr(command, 'format_flow_announce', _formatter('flow'))
-    monkeypatch.setattr(command, 'format_mup_announce', _formatter('mup'))
-    monkeypatch.setattr(command, 'format_mvpn_announce', _formatter('mvpn'))
-    monkeypatch.setattr(command, 'format_attributes', lambda attrs: ['ATTRS'] if attrs else [])
-    monkeypatch.setattr(command, 'format_withdraw_attributes', lambda _attrs: 'WATTRS')
-    monkeypatch.setattr(command, 'has_extra_withdraw_attributes', lambda attrs: bool(attrs.get('extra')))
-    monkeypatch.setattr(command, '_format_sr_policy_tunnel', lambda _sr: ['TUNNEL'])
+    module = negotiation.interpreted(command)
+    monkeypatch.setattr(module, '_hexa', lambda _payload: b'')
+    monkeypatch.setattr(module, '_make_update', lambda _neighbor, _raw: object())
+    monkeypatch.setattr(module, 'Response', SimpleNamespace(JSON=_Encoder))
+    monkeypatch.setattr(module, 'format_flow_announce', _formatter('flow'))
+    monkeypatch.setattr(module, 'format_mup_announce', _formatter('mup'))
+    monkeypatch.setattr(module, 'format_mvpn_announce', _formatter('mvpn'))
+    monkeypatch.setattr(module, 'format_attributes', lambda attrs: ['ATTRS'] if attrs else [])
+    monkeypatch.setattr(module, 'format_withdraw_attributes', lambda _attrs: 'WATTRS')
+    monkeypatch.setattr(module, 'has_extra_withdraw_attributes', lambda attrs: bool(attrs.get('extra')))
+    monkeypatch.setattr(module, '_format_sr_policy_tunnel', lambda _sr: ['TUNNEL'])
 
     def decoded(message: dict[str, Any], generic: bool = False) -> list[str]:
         _Encoder.message = message
-        return command.decode_to_api_command('00', cast('Neighbor', object()), generic=generic)
+        commands: list[str] = module.decode_to_api_command('00', cast('Neighbor', object()), generic=generic)
+        return commands
 
     return decoded
 

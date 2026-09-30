@@ -34,6 +34,17 @@ from tests.wire_reader import loopback_connection
 READ_DEADLINE_SECONDS = 0.05
 
 
+def _poller() -> MagicMock:
+    """A stand-in for select.poll(), whose register() returns None as the real one does.
+
+    The compiled build checks what register() returns against its declared None, so the
+    MagicMock default of returning another MagicMock would fail there before the test is reached.
+    """
+    poller = MagicMock()
+    poller.register.return_value = None
+    return poller
+
+
 class TestSimultaneousBidirectionalConnections:
     """Test race conditions when both peers connect simultaneously"""
 
@@ -84,7 +95,7 @@ class TestSimultaneousBidirectionalConnections:
 
         # Set up polling state
         with patch('select.poll') as mock_poll:
-            mock_poller = MagicMock()
+            mock_poller = _poller()
             mock_poll.return_value = mock_poller
             mock_poller.poll.return_value = []
 
@@ -161,7 +172,7 @@ class TestConnectionResetDuringIO:
         with patch('select.poll') as mock_poll:
             with patch('exabgp.reactor.network.connection.log'):
                 with patch('exabgp.reactor.network.connection.log'):
-                    mock_poller = MagicMock()
+                    mock_poller = _poller()
                     mock_poll.return_value = mock_poller
                     mock_poller.poll.return_value = [(7, 4)]  # POLLOUT
 
@@ -265,7 +276,7 @@ class TestRapidConnectDisconnectCycles:
 
                 # Access pollers to populate them
                 with patch('select.poll') as mock_poll:
-                    mock_poller = MagicMock()
+                    mock_poller = _poller()
                     mock_poll.return_value = mock_poller
                     mock_poller.poll.return_value = []
                     _ = conn.writing()
@@ -294,7 +305,7 @@ class TestRapidConnectDisconnectCycles:
         with patch('select.poll') as mock_poll:
             with patch('exabgp.reactor.network.connection.log'):
                 with patch('exabgp.reactor.network.connection.log'):
-                    mock_poller = MagicMock()
+                    mock_poller = _poller()
                     mock_poll.return_value = mock_poller
                     mock_poller.poll.return_value = [(20, 4)]
 
@@ -324,7 +335,7 @@ class TestPollingStateRaces:
         conn.io = mock_sock
 
         with patch('select.poll') as mock_poll:
-            mock_poller = MagicMock()
+            mock_poller = _poller()
             mock_poll.return_value = mock_poller
             mock_poller.poll.return_value = []
 
@@ -401,7 +412,7 @@ class TestMessageQueueOrderingRaces:
         with patch('select.poll') as mock_poll:
             with patch('exabgp.reactor.network.connection.log'):
                 with patch('exabgp.reactor.network.connection.log'):
-                    mock_poller = MagicMock()
+                    mock_poller = _poller()
                     mock_poll.return_value = mock_poller
                     mock_poller.poll.return_value = [(25, 4)]  # POLLOUT
 

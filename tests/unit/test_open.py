@@ -105,6 +105,22 @@ class TestData(unittest.TestCase):
         self.assertEqual(o.hold_time, 180)
         self.assertEqual(o.capabilities, {})
 
+    def test_router_id_from_string_in_open(self) -> None:
+        router_id: RouterID = RouterID.from_string('192.0.2.1')
+        self.assertIs(type(router_id), RouterID)
+        message = Open.make_open(Version(4), ASN(65000), HoldTime(180), router_id, Capabilities())
+        wire = message.pack_message(Negotiated.UNSET)
+        self.assertEqual(wire[Message.HEADER_LEN :], b'\x04\xfd\xe8\x00\xb4\xc0\x00\x02\x01\x00')
+        received = Open.unpack_message(wire[Message.HEADER_LEN :], Negotiated.UNSET)
+        self.assertEqual(received.router_id, router_id)
+        self.assertEqual(received.router_id.top(), '192.0.2.1')
+
+    def test_router_id_from_string_rejects_invalid_ipv4(self) -> None:
+        for address in ('256.0.2.1', '192.0.2', 'not-an-address', '2001:db8::1', '::ffff:192.0.2.1'):
+            with self.subTest(address=address):
+                with self.assertRaises((ValueError, OSError)):
+                    RouterID.from_string(address)
+
 
 if __name__ == '__main__':
     unittest.main()

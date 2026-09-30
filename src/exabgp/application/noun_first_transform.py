@@ -26,6 +26,7 @@ Old syntax passes through unchanged, maintaining 100% backward compatibility.
 """
 
 import re
+from typing import ClassVar
 
 
 class NounFirstTransform:
@@ -33,7 +34,7 @@ class NounFirstTransform:
 
     # Transformation patterns: (cli_pattern, api_pattern, preserves_tail)
     # preserves_tail=True means everything after the pattern is appended to result
-    TRANSFORMS: list[tuple[str, str, bool]] = [
+    TRANSFORMS: ClassVar[list[tuple[str, str, bool]]] = [
         # Neighbor commands
         # neighbor show → show neighbor (for all neighbors)
         (r'^neighbor\s+show\b', 'show neighbor', True),

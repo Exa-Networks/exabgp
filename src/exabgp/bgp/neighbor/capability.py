@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
 
 from exabgp.protocol.family import FamilyTuple
 from exabgp.util.enumeration import TriState
@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 # the capability codes of route refresh, RFC 2918, and enhanced route refresh, RFC 7313
 ROUTE_REFRESH_CODE = 0x02
 ENHANCED_ROUTE_REFRESH_CODE = 0x46
+# the largest graceful restart time, in seconds. A module constant: in the compiled build a
+# ClassVar on a dataclass is taken for a field, and its __init__ fails setting it
+GRACEFUL_RESTART_MAX_TIME = 0xFFFF
 
 
 @dataclass
@@ -33,14 +36,12 @@ class GracefulRestartConfig:
         time: Restart time in seconds (0-65535). Only meaningful when enabled.
     """
 
-    MAX_TIME: ClassVar[int] = 0xFFFF  # Maximum restart time (65535 seconds)
-
     state: TriState = TriState.UNSET
     time: int = 0
 
     def __post_init__(self) -> None:
-        if self.time < 0 or self.time > self.MAX_TIME:
-            raise ValueError(f'graceful-restart time must be 0-{self.MAX_TIME}, got {self.time}')
+        if self.time < 0 or self.time > GRACEFUL_RESTART_MAX_TIME:
+            raise ValueError(f'graceful-restart time must be 0-{GRACEFUL_RESTART_MAX_TIME}, got {self.time}')
 
     @classmethod
     def disabled(cls) -> 'GracefulRestartConfig':

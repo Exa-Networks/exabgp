@@ -65,13 +65,27 @@ def _nlri(route: Any) -> tuple[str, str]:
         return f'broken NLRI: {exc}', f'broken NLRI: {exc}'
 
 
+def attributes(instance: object) -> dict[str, Any]:
+    """Every attribute the instance holds, in either build.
+
+    __getstate__, not vars(): a compiled class (plan/wip-mypyc.md) has no __dict__. The
+    interpreter answers (dict, slots) for a class with both, the compiled build one dict.
+    """
+    state = instance.__getstate__()
+    parts = state if isinstance(state, tuple) else (state,)
+    found: dict[str, Any] = {}
+    for part in parts:
+        found.update(part or {})
+    return found
+
+
 def neighbor_state(neighbor: Neighbor) -> dict[str, Any]:
     """Everything the configuration decided about a neighbor.
 
     Neighbor.__eq__ is not used: it compares what forces a session reset on reload, and
     leaves out what can change without one.
     """
-    state = {key: value for key, value in vars(neighbor).items() if key not in _NEIGHBOR_RUNTIME}
+    state = {key: value for key, value in attributes(neighbor).items() if key not in _NEIGHBOR_RUNTIME}
     state['session'] = _dataclass_state(neighbor.session)
     state['capability'] = _dataclass_state(neighbor.capability)
     state['routes'] = [route_state(route) for route in neighbor.routes]

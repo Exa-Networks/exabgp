@@ -14,7 +14,6 @@ This catches regressions like:
 import json
 import socket
 import pytest
-from unittest.mock import Mock
 
 from exabgp.bgp.message.update import UpdateCollection
 from exabgp.bgp.message.notification import Notification
@@ -36,6 +35,12 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.api.response.json import JSON
 from exabgp.bgp.message import Message
+from exabgp.bgp.fsm import FSM
+from exabgp.bgp.neighbor import Neighbor
+from tests import negotiation
+
+IPV4_UNICAST = (AFI.ipv4, SAFI.unicast)
+IPV6_UNICAST = (AFI.ipv6, SAFI.unicast)
 
 
 @pytest.fixture
@@ -45,40 +50,17 @@ def json_encoder() -> JSON:
 
 
 @pytest.fixture
-def mock_neighbor() -> Mock:
-    """Create a mock neighbor for JSON encoding."""
-    neighbor = Mock()
-    neighbor.session = Mock()
-    neighbor.session.peer_address = IPv4.from_string('192.168.1.1')
-    neighbor.session.local_address = IPv4.from_string('192.168.1.2')
-    neighbor.asn = Mock()
-    neighbor.asn.peer = 65001
-    neighbor.asn.local = 65000
+def api_neighbor() -> Neighbor:
+    """A neighbor with the fields event JSON encoding reads."""
+    neighbor = negotiation.neighbor(
+        local_as=65000,
+        peer_as=65001,
+        local_address='192.0.2.2',
+        peer_address='192.0.2.1',
+        router_id='192.0.2.2',
+    )
+    neighbor.session.role_add_meta = True
     return neighbor
-
-
-@pytest.fixture
-def api_neighbor() -> Mock:
-    """Create a neighbor object with fields used by event JSON encoding."""
-    neighbor = Mock()
-    neighbor.uid = '192.0.2.1'
-    neighbor.session = Mock()
-    neighbor.session.peer_address = IPv4.from_string('192.0.2.1')
-    neighbor.session.local_address = IPv4.from_string('192.0.2.2')
-    neighbor.session.peer_as = 65001
-    neighbor.session.local_as = 65000
-    neighbor.session.router_id = IPv4.from_string('192.0.2.2')
-    return neighbor
-
-
-@pytest.fixture
-def mock_negotiated() -> Mock:
-    """Create a mock negotiated object."""
-    negotiated = Mock()
-    negotiated.local_as = 65000
-    negotiated.peer_as = 65001
-    negotiated.asn4 = True
-    return negotiated
 
 
 def parsed_api_event(payload: str) -> dict[str, object]:
@@ -88,20 +70,19 @@ def parsed_api_event(payload: str) -> dict[str, object]:
     return event
 
 
-def sample_negotiated(refresh: int = REFRESH.NORMAL) -> Mock:
-    negotiated = Mock()
-    negotiated.msg_size = 4096
-    negotiated.holdtime = 90
-    negotiated.asn4 = True
-    negotiated.multisession = False
-    negotiated.operational = False
-    negotiated.refresh = refresh
-    negotiated.families = [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)]
-    negotiated.nexthop = [(AFI.ipv4, SAFI.unicast, AFI.ipv4), (AFI.ipv6, SAFI.unicast, AFI.ipv6)]
-    negotiated.addpath = Mock()
-    negotiated.addpath.send = Mock(side_effect=lambda afi, safi: afi == AFI.ipv4)
-    negotiated.addpath.receive = Mock(side_effect=lambda afi, safi: afi == AFI.ipv6)
-    return negotiated
+def sample_negotiated(refresh: int = REFRESH.NORMAL) -> Negotiated:
+    return negotiation.negotiated(
+        [IPV4_UNICAST, IPV6_UNICAST],
+        asn4=True,
+        addpath_send=[IPV4_UNICAST],
+        addpath_receive=[IPV6_UNICAST],
+        msg_size=4096,
+        holdtime=HoldTime(90),
+        multisession=False,
+        operational=False,
+        refresh=refresh,
+        nexthop=[(AFI.ipv4, SAFI.unicast, AFI.ipv4), (AFI.ipv6, SAFI.unicast, AFI.ipv6)],
+    )
 
 
 def sample_open_message() -> Open:
@@ -292,7 +273,8 @@ class TestEORJSON:
         eor = EOR.make_eor(AFI.ipv4, SAFI.unicast)
 
         # Generate JSON - should not crash
-        result = json_encoder._update(eor)
+        # what Processes hands the encoders: the decoded UpdateCollection of the message
+        result = json_encoder._update(eor.data)
 
         # Should produce some output
         assert 'message' in result
@@ -308,7 +290,8 @@ class TestEORJSON:
         eor = EOR.make_eor(AFI.ipv6, SAFI.unicast)
 
         # Generate JSON - should not crash
-        result = json_encoder._update(eor)
+        # what Processes hands the encoders: the decoded UpdateCollection of the message
+        result = json_encoder._update(eor.data)
 
         # Should produce some output
         assert 'message' in result
@@ -444,7 +427,7 @@ class TestEmptyUpdate:
 class TestPublicJSONEventSurface:
     """Public JSON event methods must preserve parseable API semantics."""
 
-    def test_state_events_parse_and_keep_existing_shape(self, json_encoder: JSON, api_neighbor: Mock) -> None:
+    def test_state_events_parse_and_keep_existing_shape(self, json_encoder: JSON, api_neighbor: Neighbor) -> None:
         up = parsed_api_event(json_encoder.up(api_neighbor))
         connected = parsed_api_event(json_encoder.connected(api_neighbor))
         down = parsed_api_event(json_encoder.down(api_neighbor, 'manual maintenance'))
@@ -463,20 +446,20 @@ class TestPublicJSONEventSurface:
             'notification': 'shutdown',
         }
 
-    def test_control_events_parse_and_keep_existing_shape(self, json_encoder: JSON, api_neighbor: Mock) -> None:
-        fsm = Mock()
-        fsm.name = Mock(return_value='established')
+    def test_control_events_parse_and_keep_existing_shape(self, json_encoder: JSON, api_neighbor: Neighbor) -> None:
+        peer, _ = negotiation.peer(api_neighbor)
+        fsm = FSM(peer, FSM.ESTABLISHED)
 
         fsm_event = parsed_api_event(json_encoder.fsm(api_neighbor, fsm))
         signal_event = parsed_api_event(json_encoder.signal(api_neighbor, Signal.RELOAD))
 
         assert fsm_event['type'] == 'fsm'
-        assert fsm_event['neighbor']['state'] == 'established'
+        assert fsm_event['neighbor']['state'] == 'ESTABLISHED'
         assert signal_event['type'] == 'signal'
         assert signal_event['neighbor']['code'] == '-4'
         assert signal_event['neighbor']['name'] == 'reload'
 
-    def test_bgp_message_events_parse_and_keep_existing_shape(self, json_encoder: JSON, api_neighbor: Mock) -> None:
+    def test_bgp_message_events_parse_and_keep_existing_shape(self, json_encoder: JSON, api_neighbor: Neighbor) -> None:
         keepalive = parsed_api_event(json_encoder.keepalive(api_neighbor, 'receive', b'HEAD', b'', Negotiated.UNSET))
         packets = parsed_api_event(
             json_encoder.packets(
@@ -537,7 +520,7 @@ class TestPublicJSONEventSurface:
         ],
     )
     def test_negotiated_refresh_variants_parse(
-        self, json_encoder: JSON, api_neighbor: Mock, refresh_value: int, refresh_name: str
+        self, json_encoder: JSON, api_neighbor: Neighbor, refresh_value: int, refresh_name: str
     ) -> None:
         event = parsed_api_event(json_encoder.negotiated(api_neighbor, sample_negotiated(refresh_value)))
         negotiated = event['neighbor']['negotiated']
@@ -559,7 +542,7 @@ class TestPublicJSONEventSurface:
 class TestEventJSONSemantics:
     """Non-UPDATE events must keep JSON API values parseable and typed."""
 
-    def test_route_refresh_event_values_are_strings(self, json_encoder: JSON, api_neighbor: Mock) -> None:
+    def test_route_refresh_event_values_are_strings(self, json_encoder: JSON, api_neighbor: Neighbor) -> None:
         refresh = RouteRefresh.make_route_refresh(AFI.ipv4, SAFI.unicast, RouteRefresh.BEGIN)
 
         event = json.loads(json_encoder.refresh(api_neighbor, 'receive', refresh, b'', b'', Negotiated.UNSET))
@@ -571,7 +554,7 @@ class TestEventJSONSemantics:
             'subtype': 'begin',
         }
 
-    def test_packets_event_keeps_message_object(self, json_encoder: JSON, api_neighbor: Mock) -> None:
+    def test_packets_event_keeps_message_object(self, json_encoder: JSON, api_neighbor: Neighbor) -> None:
         event = json.loads(
             json_encoder.packets(
                 api_neighbor, 'receive', Message.CODE.UPDATE, b'\xff' * 16, b'\x00\x01', Negotiated.UNSET
@@ -585,19 +568,18 @@ class TestEventJSONSemantics:
             'body': '0x0001',
         }
 
-    def test_negotiated_event_values_parse(self, json_encoder: JSON, api_neighbor: Mock) -> None:
-        negotiated = Mock()
-        negotiated.msg_size = 4096
-        negotiated.holdtime = 90
-        negotiated.asn4 = True
-        negotiated.multisession = False
-        negotiated.operational = False
-        negotiated.refresh = REFRESH.NORMAL
-        negotiated.families = [(AFI.ipv4, SAFI.unicast)]
-        negotiated.nexthop = [(AFI.ipv4, SAFI.unicast, AFI.ipv4)]
-        negotiated.addpath = Mock()
-        negotiated.addpath.send = Mock(return_value=True)
-        negotiated.addpath.receive = Mock(return_value=False)
+    def test_negotiated_event_values_parse(self, json_encoder: JSON, api_neighbor: Neighbor) -> None:
+        negotiated = negotiation.negotiated(
+            [IPV4_UNICAST],
+            asn4=True,
+            addpath_send=[IPV4_UNICAST],
+            msg_size=4096,
+            holdtime=HoldTime(90),
+            multisession=False,
+            operational=False,
+            refresh=REFRESH.NORMAL,
+            nexthop=[(AFI.ipv4, SAFI.unicast, AFI.ipv4)],
+        )
 
         event = json.loads(json_encoder.negotiated(api_neighbor, negotiated))
         negotiated_json = event['neighbor']['negotiated']
@@ -613,7 +595,7 @@ class TestEventJSONSemantics:
             'receive': [],
         }
 
-    def test_operational_events_values_are_strings(self, json_encoder: JSON, api_neighbor: Mock) -> None:
+    def test_operational_events_values_are_strings(self, json_encoder: JSON, api_neighbor: Neighbor) -> None:
         advisory = Advisory.ADM.make_advisory(AFI.ipv4, SAFI.unicast, 'maintenance')
         query = Query.RPCQ.make_query(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7)
         counter = Response.RPCP.make_counter(AFI.ipv4, SAFI.unicast, RouterID('192.0.2.9'), 7, 42)
@@ -649,7 +631,9 @@ class TestEventJSONSemantics:
         }
 
 
-def test_a_capability_is_filed_under_its_name_with_its_number_inside(json_encoder: JSON, api_neighbor: Mock) -> None:
+def test_a_capability_is_filed_under_its_name_with_its_number_inside(
+    json_encoder: JSON, api_neighbor: Neighbor
+) -> None:
     """The OPEN of a peer, decoded from the wire, and one we build print the same way."""
     capabilities = Capabilities()
     capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(65001)
@@ -664,7 +648,7 @@ def test_a_capability_is_filed_under_its_name_with_its_number_inside(json_encode
 class TestPeerStringEscaping:
     """Peer-controlled strings must not inject JSON members."""
 
-    def test_open_hostname_capability_escapes_peer_strings(self, json_encoder: JSON, api_neighbor: Mock) -> None:
+    def test_open_hostname_capability_escapes_peer_strings(self, json_encoder: JSON, api_neighbor: Neighbor) -> None:
         capabilities = Capabilities()
         capabilities[Capability.CODE.HOSTNAME] = HostName('x", "injected": "owned', 'victim.example')
         open_msg = Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), capabilities)
@@ -676,7 +660,7 @@ class TestPeerStringEscaping:
         assert hostname['domain-name'] == 'victim.example'
         assert 'injected' not in hostname
 
-    def test_open_software_capability_escapes_peer_strings(self, json_encoder: JSON, api_neighbor: Mock) -> None:
+    def test_open_software_capability_escapes_peer_strings(self, json_encoder: JSON, api_neighbor: Neighbor) -> None:
         software = Software()
         software.software_version = 'ExaBGP", "injected": "owned'
         capabilities = Capabilities()
@@ -689,7 +673,7 @@ class TestPeerStringEscaping:
         assert software_capability['software'] == 'ExaBGP", "injected": "owned'
         assert 'injected' not in software_capability
 
-    def test_notification_escapes_peer_data(self, json_encoder: JSON, api_neighbor: Mock) -> None:
+    def test_notification_escapes_peer_data(self, json_encoder: JSON, api_neighbor: Neighbor) -> None:
         payload = b'y", "injected-notif": "owned2'
         notification = Notification.make_notification(6, 0, payload)
 
@@ -701,7 +685,7 @@ class TestPeerStringEscaping:
         assert 'injected-notif' not in notification_json
 
     def test_a_received_shutdown_communication_is_reported_as_the_peer_sent_it(
-        self, json_encoder: JSON, api_neighbor: Mock
+        self, json_encoder: JSON, api_neighbor: Neighbor
     ) -> None:
         """`data` is the Data field as it came off the wire, the RFC 9003 length octet included.
 

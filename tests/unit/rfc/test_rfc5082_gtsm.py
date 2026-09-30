@@ -15,7 +15,7 @@ The ledger entries these prove are in qa/rfc/rfc5082.toml.
 from __future__ import annotations
 
 import socket
-from typing import Any, cast
+from typing import cast
 
 import pytest
 
@@ -24,6 +24,7 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI
 from exabgp.reactor import listener
 from exabgp.reactor.network import tcp
+from exabgp.reactor.network.incoming import Incoming
 
 
 # RFC 5082 section 3 wants 255 on the wire. 254 is the matching minimum for a directly
@@ -36,13 +37,19 @@ IP_MINTTL = 21
 
 
 class FakeSocket:
-    """Records every setsockopt instead of performing it."""
+    """Records every setsockopt instead of performing it, enough of a socket for an Incoming."""
 
     def __init__(self) -> None:
         self.options: list[tuple[int, int, int]] = []
 
     def setsockopt(self, level: int, option: int, value: int) -> None:
         self.options.append((level, option, value))
+
+    def setblocking(self, flag: bool) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
 
 
 @pytest.fixture
@@ -79,19 +86,12 @@ neighbor 192.0.2.1 {{
     return parsed
 
 
-def accepted_connection(io: FakeSocket, afi: AFI) -> Any:
+def accepted_connection(io: FakeSocket, afi: AFI) -> Incoming:
     """What reactor/listener.py hands set_accepted_ttl for a session the peer opened."""
-
-    class Connection:
-        def __init__(self) -> None:
-            self.io = io
-            self.afi = afi
-            self.peer = '192.0.2.1'
-
-        def name(self) -> str:
-            return 'incoming-192.0.2.1'
-
-    return Connection()
+    connection = Incoming(afi, '192.0.2.1', '192.0.2.2', cast(socket.socket, io))
+    # what the Incoming set up on the socket for itself (TCP_NODELAY) is not a TTL
+    io.options.clear()
+    return connection
 
 
 # ============================================================ what we transmit with

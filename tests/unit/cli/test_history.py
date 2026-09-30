@@ -24,6 +24,21 @@ import pytest
 from exabgp.cli.history import CommandStats, HistoryTracker
 
 
+def history_file_in(state_home: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Make the tracker's own XDG search find a history file under state_home, and return it.
+
+    The environment is what is replaced, not HistoryTracker._get_history_path: a compiled
+    class calls its own method directly, and a patched one would be skipped in favour of the
+    user's real history file.
+    """
+    monkeypatch.setenv('XDG_STATE_HOME', str(state_home))
+    history_file = state_home / 'exabgp' / 'cli_history.json'
+    history_file.parent.mkdir(parents=True, exist_ok=True)
+    history_file.write_text('{"version": 1, "commands": {}}')
+    history_file.chmod(0o600)
+    return history_file
+
+
 @pytest.fixture(autouse=True, scope='module')
 def clean_env_module():
     """Clean up environment variables before and after the entire module."""
@@ -108,7 +123,7 @@ class TestHistoryTracker:
         """Create a temporary history file path (uses tempfile to avoid pytest tmp_path issues)."""
         # Use Python's tempfile directly to avoid pytest tmp_path lock contention
         tmp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
-        history_file = tmp_dir / 'test_cli_history.json'
+        history_file = tmp_dir / 'exabgp' / 'cli_history.json'
         yield history_file
         # Cleanup after test
         try:
@@ -124,25 +139,9 @@ class TestHistoryTracker:
     @pytest.fixture
     def tracker_enabled(self, temp_history_file, monkeypatch):
         """Create an enabled tracker with temporary storage."""
-        # Ensure parent directory exists with proper permissions
-        temp_history_file.parent.mkdir(parents=True, exist_ok=True)
-        temp_history_file.parent.chmod(0o700)  # Ensure we have full permissions
-
-        # Create an empty history file to avoid permission issues during load
-        if not temp_history_file.exists():
-            temp_history_file.write_text('{"version": 1, "commands": {}}')
-            temp_history_file.chmod(0o600)
-
-        # Mock _get_history_path to use temp file
-        def mock_get_path(self):
-            return temp_history_file
-
-        monkeypatch.setattr(HistoryTracker, '_get_history_path', mock_get_path)
+        history_file_in(temp_history_file.parent.parent, monkeypatch)
         tracker = HistoryTracker(enabled=True)
-        # Ensure history path is set
-        if tracker._history_path is None:
-            tracker._history_path = temp_history_file
-
+        assert tracker._history_path == temp_history_file
         return tracker
 
     def test_disabled_by_default(self, monkeypatch):
@@ -158,14 +157,7 @@ class TestHistoryTracker:
         # Mock path to avoid filesystem issues
         temp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
         temp_dir.chmod(0o700)
-        history_file = temp_dir / 'test_history.json'
-        history_file.write_text('{"version": 1, "commands": {}}')
-        history_file.chmod(0o600)
-
-        def mock_get_path(self):
-            return history_file
-
-        monkeypatch.setattr(HistoryTracker, '_get_history_path', mock_get_path)
+        history_file_in(temp_dir, monkeypatch)
         tracker = HistoryTracker()
         assert tracker.enabled
 
@@ -501,14 +493,7 @@ class TestIntegration:
         """Test complete workflow: record, save, load, rank."""
         temp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
         temp_dir.chmod(0o700)
-        history_file = temp_dir / 'history.json'
-        history_file.write_text('{"version": 1, "commands": {}}')
-        history_file.chmod(0o600)
-
-        def mock_get_path(self):
-            return history_file
-
-        monkeypatch.setattr(HistoryTracker, '_get_history_path', mock_get_path)
+        history_file_in(temp_dir, monkeypatch)
 
         # Create tracker and record commands
         tracker1 = HistoryTracker(enabled=True)
@@ -539,14 +524,7 @@ class TestIntegration:
         """Test that IPs are never stored in history file."""
         temp_dir = Path(tempfile.mkdtemp(prefix='exabgp_test_'))
         temp_dir.chmod(0o700)
-        history_file = temp_dir / 'history.json'
-        history_file.write_text('{"version": 1, "commands": {}}')
-        history_file.chmod(0o600)
-
-        def mock_get_path(self):
-            return history_file
-
-        monkeypatch.setattr(HistoryTracker, '_get_history_path', mock_get_path)
+        history_file = history_file_in(temp_dir, monkeypatch)
 
         tracker = HistoryTracker(enabled=True)
 

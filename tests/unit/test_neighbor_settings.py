@@ -429,9 +429,9 @@ class TestNeighborFromSettings:
 
         # Set custom capabilities
         settings.capability.asn4 = TriState.FALSE
-        settings.capability.route_refresh = 2  # NORMAL
+        settings.capability.route_refresh = TriState.TRUE
 
         neighbor = Neighbor.from_settings(settings)
 
         assert neighbor.capability.asn4 == TriState.FALSE
-        assert neighbor.capability.route_refresh == 2
+        assert neighbor.capability.route_refresh == TriState.TRUE

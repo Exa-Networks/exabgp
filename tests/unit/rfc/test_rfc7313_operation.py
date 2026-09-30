@@ -17,17 +17,23 @@ from unittest.mock import Mock, patch
 import pytest
 
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.graceful import Graceful
+from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
-from exabgp.reactor.peer.context import PeerContext
+from exabgp.reactor.peer import Peer
 from exabgp.reactor.peer.handlers import route_refresh
 from exabgp.reactor.peer.handlers.route_refresh import RouteRefreshHandler
+from exabgp.reactor.protocol import Protocol
+from exabgp.rib import RIB
 from exabgp.rib.incoming import IncomingRIB
+from exabgp.rib.outgoing import OutgoingRIB
 from exabgp.rib.route import Route
+from tests import negotiation
 
 FAMILY = (AFI.ipv4, SAFI.unicast)
 OTHER = (AFI.ipv6, SAFI.unicast)
@@ -56,21 +62,22 @@ def held(incoming: IncomingRIB) -> list[str]:
     return sorted(str(entry.nlri) for entry in incoming.cached_routes([FAMILY]))
 
 
+def graceful_open(graceful: bool) -> Any:
+    """An OPEN announcing Graceful Restart for FAMILY, or no capability at all."""
+    capabilities = [Graceful().set(0, 120, [(FAMILY[0], FAMILY[1], 0)])] if graceful else []
+    return negotiation.open_message(capabilities)
+
+
 class Session:
     """The handler, a real adj-rib-in, and what was negotiated."""
 
     def __init__(self, enhanced: bool = True, graceful: bool = False) -> None:
         self.resend = Mock()
         self.incoming = IncomingRIB(True, {FAMILY, OTHER})
-        self.ctx = Mock(spec=PeerContext)
-        self.ctx.peer_id = 'peer'
-        self.ctx.refresh_enhanced = enhanced
-        self.ctx.neighbor = Mock()
+        self.ctx, _ = negotiation.context(refresh_enhanced=enhanced)
         self.ctx.neighbor.rib.incoming = self.incoming
-        self.ctx.negotiated = Mock()
-        self.ctx.negotiated.received_open.capabilities.announced.side_effect = lambda code: (
-            graceful and code == Capability.CODE.GRACEFUL_RESTART
-        )
+        # the OPEN the peer sent, which says whether it does Graceful Restart
+        self.ctx.negotiated.received_open = graceful_open(graceful)
         self.handler = RouteRefreshHandler(self.resend)
 
     def receive(self, subtype: int, family: tuple[AFI, SAFI] = FAMILY) -> None:
@@ -220,30 +227,30 @@ def test_a_borr_before_the_peers_end_of_rib_is_logged() -> None:
 # ------------------------------------------------------------ what we send
 
 
-def peer(graceful: bool, enhanced_by_the_peer: bool = True) -> Mock:
-    from exabgp.reactor.peer import Peer
+def peer(graceful: bool | None) -> Peer:
+    """A real Peer whose adj-rib-out holds FAMILY and OTHER.
 
-    neighbor = Mock()
-    neighbor.uid = '1'
-    neighbor.api = {'neighbor-changes': False, 'fsm': False}
-    neighbor.rib.outgoing.families = {FAMILY, OTHER}
-    subject = Peer(neighbor, Mock())
-    subject.proto = Mock()
-    subject.proto.negotiated.sent_open.capabilities.announced.side_effect = lambda code: (
-        graceful and code == Capability.CODE.GRACEFUL_RESTART
-    )
+    `graceful` says whether the OPEN we sent announced Graceful Restart, None when the
+    session has no OPEN of ours.
+    """
+    subject, _ = negotiation.peer()
+    subject.neighbor.rib = RIB('rfc7313', True, IncomingRIB(True, {FAMILY, OTHER}), OutgoingRIB(True, {FAMILY, OTHER}))
+    subject.proto = Protocol(subject)
+    if graceful is not None:
+        subject.proto.negotiated.sent_open = graceful_open(graceful)
     return subject
 
 
-def replays(subject: Mock) -> dict[tuple[AFI, SAFI] | None, bool]:
-    return {call.args[1]: call.args[0] for call in subject.neighbor.rib.outgoing.resend.call_args_list}
+def bracketed(subject: Peer) -> set[tuple[AFI, SAFI]]:
+    """The families the adj-rib-out will replay between a BoRR and an EoRR."""
+    return subject.neighbor.rib.outgoing._refresh_families
 
 
 @pytest.mark.rfc('rfc7313#4-no-borr-before-our-eor')
 def test_no_borr_before_our_end_of_rib_when_we_do_graceful_restart() -> None:
     subject = peer(graceful=True)
     subject.resend(True, FAMILY)
-    assert replays(subject) == {FAMILY: False}
+    assert bracketed(subject) == set()
 
 
 @pytest.mark.rfc('rfc7313#4-no-borr-before-our-eor', polarity='negative')
@@ -251,28 +258,29 @@ def test_a_borr_once_our_end_of_rib_is_out() -> None:
     subject = peer(graceful=True)
     subject._end_of_rib_sent.add(FAMILY)
     subject.resend(True)
-    assert replays(subject) == {FAMILY: True, OTHER: False}
+    assert bracketed(subject) == {FAMILY}
 
 
 def test_without_graceful_restart_the_end_of_rib_does_not_matter() -> None:
     subject = peer(graceful=False)
     subject.resend(True)
-    assert replays(subject) == {None: True}
+    assert bracketed(subject) == {FAMILY, OTHER}
 
 
 # ------------------------------------------------------------ a refresh we start
 
 
-def rib_resend(peer_refresh: int) -> Mock:
-    """The operator's `rib flush out`, on a peer whose negotiated refresh is given."""
-    from exabgp.reactor.loop import Reactor
+def rib_resend(peer_refresh: REFRESH) -> set[tuple[AFI, SAFI]]:
+    """The operator's `rib flush out`, on a peer whose negotiated refresh is given.
 
-    reactor = Mock(spec=Reactor)
-    reactor._peers = {'peer': Mock()}
-    reactor._peers['peer'].neighbor.capability.route_refresh = True
-    reactor._peers['peer'].proto.negotiated.refresh = peer_refresh
-    Reactor.neighbor_rib_resend(reactor, 'peer')
-    return reactor._peers['peer'].resend
+    Returns the families replayed between a BoRR and an EoRR.
+    """
+    reactor, _ = negotiation.reactor()
+    subject = peer(graceful=None)
+    subject.proto.negotiated.refresh = peer_refresh
+    reactor._peers['peer'] = subject
+    reactor.neighbor_rib_resend('peer')
+    return bracketed(subject)
 
 
 @pytest.mark.rfc('rfc7313#4-send-borr-before-a-refresh', polarity='negative')
@@ -283,17 +291,13 @@ def test_a_refresh_we_start_is_not_bracketed_unless_the_peer_advertised_the_capa
     `rib flush out` decided from our own configuration, so a peer which never advertised
     Enhanced Route Refresh was sent BoRR and EoRR it had not asked to understand.
     """
-    from exabgp.bgp.message.open.capability.refresh import REFRESH
-
-    rib_resend(REFRESH.NORMAL).assert_called_once_with(False)
+    assert rib_resend(REFRESH.NORMAL) == set()
 
 
 @pytest.mark.rfc('rfc7313#4-send-borr-before-a-refresh')
 @pytest.mark.rfc('rfc7313#4-send-eorr-after-a-refresh')
 def test_a_refresh_we_start_is_bracketed_when_the_peer_advertised_it() -> None:
-    from exabgp.bgp.message.open.capability.refresh import REFRESH
-
-    rib_resend(REFRESH.ENHANCED).assert_called_once_with(True)
+    assert rib_resend(REFRESH.ENHANCED) == {FAMILY, OTHER}
 
 
 @pytest.mark.rfc('rfc7313#4-advertise-the-capability')

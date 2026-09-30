@@ -6,9 +6,15 @@ from exabgp.bgp.message.update import UpdateCollection
 from exabgp.bgp.message.update.attribute import Attribute, OTC
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.configuration import check
 from exabgp.configuration.check import _negotiated, check_generation
 from exabgp.configuration.configuration import Configuration
 from exabgp.rib import RIB
+from tests import negotiation
+
+# The faults are injected by replacing methods of UpdateCollection, which the compiled
+# check module calls directly: those tests run the source of the module, which finds them.
+interpreted_check_generation = negotiation.interpreted(check).check_generation
 
 
 @pytest.fixture(autouse=True)
@@ -85,7 +91,7 @@ def test_validation_rejects_unrelated_decoded_attribute_corruption(monkeypatch, 
         return update
 
     monkeypatch.setattr(UpdateCollection, 'unpack_message', corrupt)
-    assert not check_generation(config.neighbors)
+    assert not interpreted_check_generation(config.neighbors)
 
 
 def test_validation_rejects_corrupted_automatic_otc(monkeypatch):
@@ -98,13 +104,13 @@ def test_validation_rejects_corrupted_automatic_otc(monkeypatch):
         return update
 
     monkeypatch.setattr(UpdateCollection, 'unpack_message', corrupt)
-    assert not check_generation(config.neighbors)
+    assert not interpreted_check_generation(config.neighbors)
 
 
 def test_validation_rejects_unexplained_missing_update(monkeypatch):
     config = configured('provider')
     monkeypatch.setattr(UpdateCollection, 'messages', lambda *args, **kwargs: iter(()))
-    assert not check_generation(config.neighbors)
+    assert not interpreted_check_generation(config.neighbors)
 
 
 @pytest.mark.parametrize('peer_as', ['65002', '65538'])

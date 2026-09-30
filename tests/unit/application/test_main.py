@@ -134,7 +134,8 @@ class TestSubcommandDispatch:
 
     def test_version_dispatches_to_version_module(self) -> None:
         """version subcommand should call version.cmdline."""
-        with patch('exabgp.application.version.cmdline') as mock_cmdline:
+        # returns None, as the real one does: compiled, main() checks it returns an int or None
+        with patch('exabgp.application.version.cmdline', return_value=None) as mock_cmdline:
             with patch('sys.argv', ['exabgp', 'version']):
                 main()
 
@@ -142,7 +143,8 @@ class TestSubcommandDispatch:
 
     def test_env_dispatches_to_environ_module(self) -> None:
         """env subcommand should call environ.cmdline."""
-        with patch('exabgp.application.environ.cmdline') as mock_cmdline:
+        # returns None, as the real one does: compiled, main() checks it returns an int or None
+        with patch('exabgp.application.environ.cmdline', return_value=None) as mock_cmdline:
             with patch('sys.argv', ['exabgp', 'env']):
                 main()
 

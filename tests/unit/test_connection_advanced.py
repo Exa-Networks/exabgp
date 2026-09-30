@@ -10,6 +10,8 @@ Created: 2025-11-08
 
 import asyncio
 import pytest
+from collections.abc import Iterator
+from contextlib import contextmanager
 import os
 import socket
 import struct
@@ -21,6 +23,7 @@ os.environ['exabgp_log_level'] = 'CRITICAL'
 
 from exabgp.protocol.family import AFI
 from exabgp.reactor.network.connection import Connection
+from exabgp.reactor.network.outgoing import Outgoing
 from exabgp.reactor.network.error import (
     NotConnected,
     LostConnection,
@@ -34,6 +37,34 @@ from tests.wire_reader import loopback_connection, read_message, read_messages
 
 # Long enough that the read is certainly waiting on the event loop when the data arrives.
 DELIVERY_DELAY_SECONDS = 0.05
+
+
+@contextmanager
+def _identifiers(counts: dict[str, int]) -> Iterator[None]:
+    """Run with the per direction connection counters set to counts, then put them back.
+
+    The counters are one dict shared by every Connection, a class attribute which the
+    compiled build does not let a test replace, so its content is swapped instead.
+    """
+    saved = dict(Connection.identifier)
+    Connection.identifier.clear()
+    Connection.identifier.update(counts)
+    try:
+        yield
+    finally:
+        Connection.identifier.clear()
+        Connection.identifier.update(saved)
+
+
+def _poller(**kwargs: object) -> Mock:
+    """A stand-in for select.poll(), whose register() returns None as the real one does.
+
+    The compiled build checks what register() returns against its declared None, so the
+    Mock's default of returning another Mock would fail there before the test is reached.
+    """
+    poller = Mock(**kwargs)
+    poller.register.return_value = None
+    return poller
 
 
 class TestSocketReader:
@@ -202,7 +233,7 @@ class TestGeneratorBasedWriter:
         poll_results = [[], [(5, 4)]]  # First not ready, then POLLOUT
 
         with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.side_effect = poll_results
             mock_poll.return_value = mock_poller
 
@@ -232,7 +263,7 @@ class TestGeneratorBasedWriter:
         mock_sock.send.side_effect = send_results
 
         with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.return_value = [(5, 4)]  # Always ready
             mock_poll.return_value = mock_poller
 
@@ -263,7 +294,7 @@ class TestGeneratorBasedWriter:
         ]
 
         with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.return_value = [(5, 4)]  # Always ready
             mock_poll.return_value = mock_poller
 
@@ -292,7 +323,7 @@ class TestGeneratorBasedWriter:
         mock_sock.send.side_effect = error
 
         with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.return_value = [(5, 4)]
             mock_poll.return_value = mock_poller
 
@@ -315,7 +346,7 @@ class TestGeneratorBasedWriter:
         mock_sock.send.return_value = 0  # Connection lost
 
         with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.return_value = [(5, 4)]
             mock_poll.return_value = mock_poller
 
@@ -554,7 +585,7 @@ class TestBufferManagement:
         mock_sock.send.side_effect = send_results
 
         with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.return_value = [(5, 4)]  # Always ready
             mock_poll.return_value = mock_poller
 
@@ -617,7 +648,7 @@ class TestPollingMechanisms:
         conn.io = mock_sock
 
         with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.return_value = [(5, 4)]
             mock_poll.return_value = mock_poller
 
@@ -642,7 +673,7 @@ class TestPollingMechanisms:
         with patch('select.poll') as mock_poll:
             import select
 
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.return_value = [(5, select.POLLERR)]
             mock_poll.return_value = mock_poller
 
@@ -689,8 +720,8 @@ class TestConnectionBasics:
 
     def test_name_returns_formatted_string(self) -> None:
         """Test name() returns properly formatted connection name"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        conn.direction = 'outgoing'
+        # the direction is the class's: an Outgoing is built without opening a socket
+        conn = Outgoing(AFI.ipv4, '192.0.2.1', '192.0.2.2')
         conn.id = 5
 
         name = conn.name()
@@ -700,13 +731,12 @@ class TestConnectionBasics:
 
     def test_session_returns_direction_and_id(self) -> None:
         """Test session() returns session identifier"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        conn.direction = 'incoming'
+        conn = Outgoing(AFI.ipv4, '192.0.2.1', '192.0.2.2')
         conn.id = 3
 
         session = conn.session()
 
-        assert session == 'incoming-3'
+        assert session == 'outgoing-3'
 
     def test_fd_returns_fileno_when_socket_exists(self) -> None:
         """Test fd() returns file descriptor when socket exists"""
@@ -731,25 +761,23 @@ class TestConnectionBasics:
 
     def test_success_increments_identifier(self) -> None:
         """Test success() increments connection identifier"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        conn.direction = 'outgoing'
-        conn.identifier = {'outgoing': 5}
+        conn = Outgoing(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        new_id = conn.success()
+        with _identifiers({'outgoing': 5}):
+            new_id = conn.success()
+            assert Connection.identifier['outgoing'] == 6
 
         assert new_id == 6
-        assert conn.identifier['outgoing'] == 6
 
     def test_success_initializes_identifier(self) -> None:
         """Test success() initializes identifier if not present"""
-        conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        conn.direction = 'incoming'
-        conn.identifier = {}
+        conn = Outgoing(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        new_id = conn.success()
+        with _identifiers({}):
+            new_id = conn.success()
+            assert Connection.identifier['outgoing'] == 2
 
         assert new_id == 2  # 1 + 1
-        assert conn.identifier['incoming'] == 2
 
     def test_close_with_active_socket(self) -> None:
         """Test close() properly closes active socket"""
@@ -852,7 +880,7 @@ class TestErrorPropagation:
         mock_sock.send.side_effect = error
 
         with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.return_value = [(5, 4)]
             mock_poll.return_value = mock_poller
 
@@ -1011,7 +1039,7 @@ class TestEdgeCasesAndDefensiveMode:
         mock_sock.send.side_effect = error
 
         with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.return_value = [(5, 4)]
             mock_poll.return_value = mock_poller
 
@@ -1075,7 +1103,7 @@ class TestEdgeCasesAndDefensiveMode:
         conn.io = mock_sock
 
         with patch('select.poll') as mock_poll:
-            mock_poller = Mock()
+            mock_poller = _poller()
             # Return empty list - no events
             mock_poller.poll.return_value = []
             mock_poll.return_value = mock_poller
@@ -1095,7 +1123,7 @@ class TestEdgeCasesAndDefensiveMode:
         with patch('select.poll') as mock_poll:
             import select
 
-            mock_poller = Mock()
+            mock_poller = _poller()
             mock_poller.poll.return_value = [(5, select.POLLNVAL)]
             mock_poll.return_value = mock_poller
 

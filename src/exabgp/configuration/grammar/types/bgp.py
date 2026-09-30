@@ -55,7 +55,7 @@ from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo, RouteDist
 from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import Shape
-from exabgp.configuration.grammar.types.base import Syntax, Type
+from exabgp.configuration.grammar.types.base import Syntax, Type, WordOrSyntax
 from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.ip import IP, IPRange, IPSelf, IPv4, IPv6
@@ -98,7 +98,7 @@ class Prefix(Type[IPRange]):
             raise ConfigError(where, f"'{ip}/{mask}' is not a valid network, the host bits are not zero")
         return iprange
 
-    def render(self, value: IPRange) -> list[str]:
+    def render(self, value: IPRange) -> list[WordOrSyntax]:
         return [f'{value.top()}/{int(value.mask)}']
 
     def hint(self) -> str:
@@ -144,7 +144,7 @@ class NextHopType(Type[tuple[IP | IPSelf, NextHop | NextHopSelf]]):
             raise ConfigError(where, f"'{word}' is not a valid next-hop", expected=['<ip>', 'self']) from None
         return ip, NextHop.from_string(ip.top())
 
-    def render(self, value: tuple[IP | IPSelf, NextHop | NextHopSelf]) -> list[str]:
+    def render(self, value: tuple[IP | IPSelf, NextHop | NextHopSelf]) -> list[WordOrSyntax]:
         ip = value[0]
         return ['self'] if isinstance(ip, IPSelf) else [str(ip)]
 
@@ -196,7 +196,7 @@ class HexAttribute(Type[GenericAttribute]):
         except ValueError:
             raise ConfigError(where, f"'{word}' is not a valid {what}, it is hexadecimal") from None
 
-    def render(self, value: GenericAttribute) -> list[str]:
+    def render(self, value: GenericAttribute) -> list[WordOrSyntax]:
         return [Syntax('['), f'0x{value.ID:02x}', f'0x{value.FLAG:02x}', '0x' + bytes(value.data).hex(), Syntax(']')]
 
     def hint(self) -> str:
@@ -322,7 +322,7 @@ class Flag(Type[Any]):
     def parse(self, words: Words) -> Any:
         return self._make()
 
-    def render(self, value: Any) -> list[str]:
+    def render(self, value: Any) -> list[WordOrSyntax]:
         return []
 
     def hint(self) -> str:
@@ -366,7 +366,7 @@ class AggregatorType(Type[Aggregator]):
             raise ConfigError(where, "invalid aggregator - missing closing ')'")
         return aggregator
 
-    def render(self, value: Aggregator) -> list[str]:
+    def render(self, value: Aggregator) -> list[WordOrSyntax]:
         return [Syntax('('), f'{value.asn}:{value.speaker}', Syntax(')')]
 
     def hint(self) -> str:
@@ -424,7 +424,7 @@ class ClusterListType(Type[ClusterList]):
         except (ValueError, OSError):
             raise ConfigError(where, f"'{word}' is not a valid cluster-list", expected=[self.hint()]) from None
 
-    def render(self, value: ClusterList) -> list[str]:
+    def render(self, value: ClusterList) -> list[WordOrSyntax]:
         return [Syntax('['), *(str(each) for each in value.clusters), Syntax(']')]
 
     def hint(self) -> str:
@@ -508,7 +508,7 @@ class ASPathType(Type[AS2Path]):
             raise ValueError('an as-path segment can not be empty')
         return segment
 
-    def render(self, value: AS2Path) -> list[str]:
+    def render(self, value: AS2Path) -> list[WordOrSyntax]:
         # the text of an as-path reads back as the same path
         return [Syntax(word) if word in ('[', ']', '(', ')') else word for word in str(value).split()] or [
             Syntax('['),
@@ -636,7 +636,7 @@ class CommunitiesType(Type[Any]):
             raise ConfigError(where, str(exc), expected=[self._hint]) from None
         raise ConfigError(where, f'a {self.name} list holds at most {MAX_LIST_ITEMS} values')
 
-    def render(self, value: Any) -> list[str]:
+    def render(self, value: Any) -> list[WordOrSyntax]:
         return [Syntax('['), *(str(each) for each in value.communities), Syntax(']')]
 
     def hint(self) -> str:
@@ -810,7 +810,7 @@ class ExtendedCommunitiesType(Type[ExtendedCommunities]):
             return extended_community(f'{word} {address}')
         return extended_community(word)
 
-    def render(self, value: ExtendedCommunities) -> list[str]:
+    def render(self, value: ExtendedCommunities) -> list[WordOrSyntax]:
         return [Syntax('['), *(word for each in value.communities for word in str(each).split()), Syntax(']')]
 
     def hint(self) -> str:
@@ -872,7 +872,7 @@ class LabelsType(Type[Labels]):
             raise ValueError(f'MPLS label {label} out of range, it is 0 to {Labels.MAX}')
         return label
 
-    def render(self, value: Labels) -> list[str]:
+    def render(self, value: Labels) -> list[WordOrSyntax]:
         return [Syntax('['), *(str(label) for label in value.labels), Syntax(']')]
 
     def hint(self) -> str:
@@ -959,7 +959,7 @@ class Internal(Type[Any]):
         except ValueError as exc:
             raise ConfigError(where, str(exc), expected=[self._hint]) from None
 
-    def render(self, value: Any) -> list[str]:
+    def render(self, value: Any) -> list[WordOrSyntax]:
         return [f'/{int(value)}'] if isinstance(value, InternalNumber) else [str(value)]
 
     def hint(self) -> str:
@@ -1109,8 +1109,8 @@ class PrefixSidType(Type[Any]):
                 base = word
         raise ConfigError(where, f'a bgp-prefix-sid holds at most {MAX_PREFIX_SID_WORDS} words')
 
-    def render(self, value: Any) -> list[str]:
-        return str(value).split()
+    def render(self, value: Any) -> list[WordOrSyntax]:
+        return list(str(value).split())
 
     def hint(self) -> str:
         return '[ <label-index> ] | [ <label-index>, [ ( <base>,<range> ) ... ] ]'
@@ -1181,8 +1181,8 @@ class PrefixSidSrv6Type(Type[Any]):
             raise ValueError(f"expect ')', but received '{word}'")
         return behavior, structures
 
-    def render(self, value: Any) -> list[str]:
-        return str(value).split()
+    def render(self, value: Any) -> list[WordOrSyntax]:
+        return list(str(value).split())
 
     def hint(self) -> str:
         return '( l3-service|l2-service <ipv6> [<behavior> [ [ <LBL>, <LNL>, <FL>, <AL>, <len>, <offset> ] ]] )'

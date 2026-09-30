@@ -25,7 +25,7 @@ from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.section import Kept, Store, Values
 from exabgp.configuration.grammar.shape import Shape
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 
@@ -124,9 +124,9 @@ class FamilyLine(Type[tuple[FamilyTuple, int]]):
             )
         return limit
 
-    def render(self, value: tuple[FamilyTuple, int]) -> list[str]:
+    def render(self, value: tuple[FamilyTuple, int]) -> list[WordOrSyntax]:
         family, limit = value
-        safi = [family[1].name()]
+        safi: list[WordOrSyntax] = [family[1].name()]
         return safi + (['prefix-limit', str(limit)] if limit else [])
 
     def hint(self) -> str:
@@ -191,9 +191,10 @@ class AddPathLine(Type[tuple[FamilyTuple, int]]):
             raise ConfigError(where, f'unexpected token after paths-limit value: {words.word()}')
         return limit
 
-    def render(self, value: tuple[FamilyTuple, int]) -> list[str]:
+    def render(self, value: tuple[FamilyTuple, int]) -> list[WordOrSyntax]:
         family, limit = value
-        return [family[1].name()] + (['limit', str(limit)] if limit else [])
+        words: list[WordOrSyntax] = [family[1].name()]
+        return words + (['limit', str(limit)] if limit else [])
 
     def hint(self) -> str:
         return f'{"|".join(SAFIS[self.afi_keyword])} [limit <n>]'
@@ -228,7 +229,7 @@ class NextHopLine(Type[tuple[AFI, SAFI, AFI]]):
             )
         return AFI.from_string(self.afi_keyword), SAFI.from_string(safi), AFI.from_string(nexthop_afi)
 
-    def render(self, value: tuple[AFI, SAFI, AFI]) -> list[str]:
+    def render(self, value: tuple[AFI, SAFI, AFI]) -> list[WordOrSyntax]:
         return [value[1].name(), value[2].name()]
 
     def hint(self) -> str:
@@ -257,7 +258,7 @@ class Nothing(Type[None]):
     def parse(self, words: Words) -> None:
         return None
 
-    def render(self, value: None) -> list[str]:
+    def render(self, value: None) -> list[WordOrSyntax]:
         return []
 
     def hint(self) -> str:

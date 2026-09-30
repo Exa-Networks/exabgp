@@ -6,14 +6,25 @@ import sys
 from datetime import datetime
 
 
+def _here() -> str:
+    """This file's path, found through the package.
+
+    Not __file__: a compiled module has neither __file__ nor __spec__ while it is imported,
+    and this module reads its path during its import. The package's __init__.py is never
+    compiled, and is imported before any module of it.
+    """
+    package = os.path.dirname(sys.modules['exabgp'].__file__ or '')
+    return os.path.join(package, 'version.py')
+
+
 def get_zipapp() -> str:
-    return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-2]))
+    return os.path.abspath(os.path.sep.join(_here().split(os.path.sep)[:-2]))
 
 
 def get_root() -> str:
     if os.path.isfile(get_zipapp()):
         return get_zipapp()
-    return os.path.abspath(os.path.sep.join(__file__.split(os.path.sep)[:-1]))
+    return os.path.abspath(os.path.sep.join(_here().split(os.path.sep)[:-1]))
 
 
 def _is_zipapp() -> bool:
@@ -65,7 +76,7 @@ def _get_base_version() -> str:
     with contextlib.suppress(Exception):
         import tomllib
 
-        pyproject = os.path.join(os.path.dirname(__file__), '..', '..', 'pyproject.toml')
+        pyproject = os.path.join(os.path.dirname(_here()), '..', '..', 'pyproject.toml')
         if os.path.exists(pyproject):
             with open(pyproject, 'rb') as f:
                 version: str = tomllib.load(f)['project']['version']
@@ -76,7 +87,7 @@ def _get_base_version() -> str:
 
 # Modification time for dev builds
 try:
-    _file = os.path.abspath(__file__)
+    _file = os.path.abspath(_here())
     _modification_time = os.path.getmtime(_file)
 except NotADirectoryError:
     _modification_time = os.path.getmtime(get_zipapp())

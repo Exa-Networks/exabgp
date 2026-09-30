@@ -15,7 +15,7 @@ from typing import Any
 from exabgp.configuration.grammar.context import PrintContext
 from exabgp.configuration.grammar.lexer import COMMENT, QUOTES, SEPARATORS, SPACES, TERMINATORS
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
-from exabgp.configuration.grammar.types.base import Printed, Syntax
+from exabgp.configuration.grammar.types.base import Printed, Syntax, WordOrSyntax
 
 INDENT = '\t'
 # the statements of a block whose order matters across keywords, as (keyword, value) pairs,
@@ -25,10 +25,10 @@ _PLAIN_BREAKERS = set(SPACES + TERMINATORS + SEPARATORS + QUOTES + (COMMENT, '\\
 _ESCAPED = {'\\': '\\\\', '\b': '\\b', '\f': '\\f', '\n': '\\n', '\r': '\\r', '\t': '\\t'}
 
 
-def quote(word: str) -> str:
+def quote(word: WordOrSyntax) -> str:
     """A word as the lexer will read it back."""
     if isinstance(word, Syntax):
-        return str(word)
+        return word.word
     if word and not any(char in _PLAIN_BREAKERS for char in word):
         return word
     # the lexer resolves escapes before it looks for quotes, and inside quotes the other quote
@@ -40,7 +40,7 @@ def quote(word: str) -> str:
 
 
 def _leaf(leaf: Leaf, value: Any) -> str:
-    rendered = list(value) if isinstance(value, Printed) else leaf.type.render(value)
+    rendered = list(value.words) if isinstance(value, Printed) else leaf.type.render(value)
     words = ' '.join(quote(word) for word in rendered)
     return f'{leaf.keyword} {words};' if words else f'{leaf.keyword};'
 

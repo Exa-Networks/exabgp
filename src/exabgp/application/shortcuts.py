@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import contextlib
-from typing import Callable
+from typing import Callable, ClassVar
 
 from exabgp.protocol.ip import IPv4
 
@@ -94,7 +94,7 @@ class CommandShortcuts:
 
     # Shortcut definitions: (nickname, full_name, match_condition)
     # Match condition is a function: (position: int, previous_tokens: list) -> bool
-    SHORTCUTS: list[tuple[str, str, ShortcutMatcher]] = [
+    SHORTCUTS: ClassVar[list[tuple[str, str, ShortcutMatcher]]] = [
         # 'a' has multiple meanings based on context
         ('a', 'announce', _announce_context),
         ('a', 'attributes', _attributes_context),

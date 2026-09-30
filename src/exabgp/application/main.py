@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import sys
 import argparse
+from types import ModuleType
 from typing import cast
 
 from exabgp.application import cli
@@ -27,6 +28,16 @@ from exabgp.application import schema
 from exabgp.application import export
 from exabgp.application import example
 from exabgp.application import migrate
+
+
+def _description(module: ModuleType) -> str | None:
+    """The docstring of a subcommand's module, which a module compiled with mypyc does not keep.
+
+    Read as `module.__doc__`, the type checker takes a module's docstring to be a `str`, and
+    compiled code then refuses the None a compiled module has in its place.
+    """
+    docstring: str | None = getattr(module, '__doc__', None)
+    return docstring
 
 
 def main() -> int | None:
@@ -92,7 +103,7 @@ def main() -> int | None:
 
     subparsers = parser.add_subparsers()
 
-    sub = subparsers.add_parser('version', help='report exabgp version', description=version.__doc__)
+    sub = subparsers.add_parser('version', help='report exabgp version', description=_description(version))
     sub.set_defaults(func=version.cmdline)
     version.setargs(sub)
 
@@ -109,34 +120,34 @@ def main() -> int | None:
     sub.add_argument('--pipename', dest='pipename', metavar='NAME', help='Name of the pipe')
     sub.add_argument('--no-color', dest='no_color', action='store_true', help='Disable colored output')
 
-    sub = subparsers.add_parser('run', help='execute single command (non-interactive)', description=run.__doc__)
+    sub = subparsers.add_parser('run', help='execute single command (non-interactive)', description=_description(run))
     sub.set_defaults(func=run.cmdline)
     run.setargs(sub)
 
     sub = subparsers.add_parser(
         'healthcheck',
         help='monitor services and announce/withdraw routes',
-        description=healthcheck.__doc__,
+        description=_description(healthcheck),
         formatter_class=formatter,
     )
     sub.set_defaults(func=healthcheck.cmdline)
     healthcheck.setargs(sub)
 
-    sub = subparsers.add_parser('env', help='show exabgp configuration information', description=environ.__doc__)
+    sub = subparsers.add_parser('env', help='show exabgp configuration information', description=_description(environ))
     sub.set_defaults(func=environ.cmdline)
     environ.setargs(sub)
 
-    sub = subparsers.add_parser('decode', help='decode hex-encoded bgp packets', description=decode.__doc__)
+    sub = subparsers.add_parser('decode', help='decode hex-encoded bgp packets', description=_description(decode))
     sub.set_defaults(func=decode.cmdline)
     decode.setargs(sub)
 
     sub = subparsers.add_parser(
-        'encode', help='encode route config to hex-encoded bgp packets', description=encode.__doc__
+        'encode', help='encode route config to hex-encoded bgp packets', description=_description(encode)
     )
     sub.set_defaults(func=encode.cmdline)
     encode.setargs(sub)
 
-    sub = subparsers.add_parser('server', help='start exabgp', description=server.__doc__)
+    sub = subparsers.add_parser('server', help='start exabgp', description=_description(server))
     sub.set_defaults(func=server.cmdline)
     server.setargs(sub)
 
@@ -146,7 +157,7 @@ def main() -> int | None:
     sub.set_defaults(func=shell.cmdline)
     shell.setargs(sub)
 
-    sub = subparsers.add_parser('schema', help='export configuration schema', description=schema.__doc__)
+    sub = subparsers.add_parser('schema', help='export configuration schema', description=_description(schema))
     sub.set_defaults(func=schema.cmdline)
     schema.setargs(sub)
 
@@ -157,32 +168,32 @@ def main() -> int | None:
     config_subparsers = config_parser.add_subparsers(dest='config_command')
 
     config_validate = config_subparsers.add_parser(
-        'validate', help='validate configuration file', description=validate.__doc__
+        'validate', help='validate configuration file', description=_description(validate)
     )
     config_validate.set_defaults(func=validate.cmdline)
     validate.setargs(config_validate)
 
     config_export = config_subparsers.add_parser(
-        'export', help='export parsed configuration to JSON', description=export.__doc__
+        'export', help='export parsed configuration to JSON', description=_description(export)
     )
     config_export.set_defaults(func=export.cmdline)
     export.setargs(config_export)
 
     config_syntax = config_subparsers.add_parser(
-        'syntax', help='show what the configuration accepts', description=syntax.__doc__
+        'syntax', help='show what the configuration accepts', description=_description(syntax)
     )
     config_syntax.set_defaults(func=syntax.cmdline)
     syntax.setargs(config_syntax)
 
     config_example = config_subparsers.add_parser(
-        'example', help='generate documented configuration example', description=example.__doc__
+        'example', help='generate documented configuration example', description=_description(example)
     )
     config_example.set_defaults(func=example.cmdline)
     example.setargs(config_example)
 
     # Migration tools subcommand group
     migrate_parser = subparsers.add_parser(
-        'migrate', help='migrate configuration/API between versions', description=migrate.__doc__
+        'migrate', help='migrate configuration/API between versions', description=_description(migrate)
     )
     migrate_parser.set_defaults(func=migrate.cmdline)
     migrate.setargs(migrate_parser)

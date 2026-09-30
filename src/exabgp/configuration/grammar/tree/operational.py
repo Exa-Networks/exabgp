@@ -29,7 +29,7 @@ from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.section import Collector, Pending, Values
 from exabgp.configuration.grammar.shape import Shape
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.ip import isipv4
@@ -126,8 +126,8 @@ class OperationalLine(Type[OperationalFamily]):
             raise ConfigError(where, str(exc) or f'invalid {self.name}') from None
         return message
 
-    def render(self, value: OperationalFamily) -> list[str]:
-        words = ['afi', value.afi.name(), 'safi', value.safi.name()]
+    def render(self, value: OperationalFamily) -> list[WordOrSyntax]:
+        words: list[WordOrSyntax] = ['afi', value.afi.name(), 'safi', value.safi.name()]
         message: Any = value
         for parameter in self.parameters[2:]:
             if parameter == 'advisory':

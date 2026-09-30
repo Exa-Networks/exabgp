@@ -101,8 +101,11 @@ def families(values: dict[str, Any]) -> list[FamilyTuple]:
         return NLRI.known_families()
     found: list[FamilyTuple] = []
     for afi_keyword in SAFIS:
-        # a family named in two family blocks is negotiated once
-        found.extend(family for family in configured.get(afi_keyword, []) if family not in found)
+        # a family named in two family blocks is negotiated once. A loop, not extend() of a
+        # generator: mypyc builds the whole list before extending, and let the second one in
+        for family in configured.get(afi_keyword, []):
+            if family not in found:
+                found.append(family)
     return found or default_families()
 
 

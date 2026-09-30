@@ -21,6 +21,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from exabgp.environment import Environment
 from exabgp.reactor.api.processes import ProcessError, Processes
 from exabgp.reactor.api.response import Response
 
@@ -35,7 +36,7 @@ def quiet_logger() -> Any:
 def environment() -> Any:
     """The env() the module reads, with the API knobs a test is likely to want."""
     with patch('exabgp.reactor.api.processes.getenv') as getenv:
-        env = MagicMock()
+        env = Environment()
         env.api.respawn = True
         env.api.terminate = False
         env.api.ack = True
@@ -319,6 +320,8 @@ class TestStartAsyncReader:
         processes = configured(environment)
         processes._async_mode = True
         processes._loop = MagicMock()
+        # AbstractEventLoop.add_reader returns None, and the compiled build checks it does
+        processes._loop.add_reader.return_value = None
 
         processes._start('helper')
 

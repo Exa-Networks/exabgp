@@ -11,8 +11,9 @@ The ledger entries these prove are in qa/rfc/rfc4724.toml.
 from __future__ import annotations
 
 import asyncio
+import socket
+from collections.abc import Callable
 from struct import pack
-from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -24,7 +25,7 @@ from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message import Message
+from exabgp.bgp.message import KeepAlive
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.neighbor import Neighbor
@@ -32,7 +33,10 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.peer.peer import Peer
+from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
+from tests.negotiation import PROCESS, Told, connect
+from tests.negotiation import peer as real_peer
 
 
 LOCAL_AS = 65001
@@ -59,6 +63,15 @@ KEPT = '10.0.0.0/24'
 DROPPED = '10.0.1.0/24'
 PEER_RESTART_TIME = 1
 RESTART_TIME_MARGIN = 0.5
+
+# RFC 4271 4.1: the marker every message starts with, and the UPDATE type code
+MARKER = bytes([0xFF] * 16)
+UPDATE = 2
+
+# The session runs as its own task reading a real socket, so the test polls for it to act
+# on what the peer sent, bounded so that a session which never does fails the test.
+POLL_SECONDS = 0.01
+POLL_ROUNDS = 500
 
 
 @pytest.fixture(autouse=True)
@@ -89,12 +102,17 @@ def our_capabilities(neighbor: Neighbor, restarted: bool) -> Capabilities:
     return Capabilities().new(neighbor, restarted, local_as=ASN(LOCAL_AS))
 
 
+def their_capabilities(neighbor: Neighbor) -> Capabilities:
+    """What the peer advertises: ours, with its own AS in the four octet AS capability."""
+    return Capabilities().new(neighbor, False, local_as=ASN(PEER_AS))
+
+
 def negotiated_session(neighbor: Neighbor) -> Negotiated:
     capabilities = our_capabilities(neighbor, False)
     negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
     negotiated.sent(Open.make_open(Version(4), ASN(LOCAL_AS), HoldTime(180), RouterID('192.0.2.2'), capabilities))
     negotiated.received(
-        Open.make_open(Version(4), ASN(PEER_AS), HoldTime(180), RouterID('192.0.2.1'), Capabilities(capabilities))
+        Open.make_open(Version(4), ASN(PEER_AS), HoldTime(180), RouterID('192.0.2.1'), their_capabilities(neighbor))
     )
     return negotiated
 
@@ -106,7 +124,7 @@ def graceful_session(neighbor: Neighbor, restart_time: int, forwarding: int = Gr
     of a family removed at once when the new OPEN clears it.
     """
     ours = our_capabilities(neighbor, False)
-    theirs = Capabilities(ours)
+    theirs = their_capabilities(neighbor)
     value = graceful_value(
         0, restart_time, [(AFI.ipv4, SAFI.unicast, forwarding), (AFI.ipv6, SAFI.unicast, forwarding)]
     )
@@ -121,8 +139,12 @@ def graceful_session(neighbor: Neighbor, restart_time: int, forwarding: int = Gr
     return negotiated
 
 
-def announce(negotiated: Negotiated, *prefixes: str) -> Message:
-    """An IPv4 unicast UPDATE for /24s, decoded the way the reactor decodes one."""
+def announce(negotiated: Negotiated, *prefixes: str) -> bytes:
+    """An IPv4 unicast UPDATE for /24s, as the peer puts it on the wire.
+
+    Decoded once here with the session, so a payload this test got wrong fails here
+    rather than as a route which never arrives.
+    """
     # AS_PATH <PEER_AS>, four octets: an EBGP route starts with the peer's AS (RFC 8955 6)
     as_path = bytes([0x40, 0x02, 0x06, 0x02, 0x01]) + pack('!L', PEER_AS)
     attributes = bytes([0x40, 0x01, 0x01, 0x00]) + as_path + bytes([0x40, 0x03, 0x04, 192, 0, 2, 1])
@@ -132,13 +154,21 @@ def announce(negotiated: Negotiated, *prefixes: str) -> Message:
         assert mask == '24', 'the encoding below is for /24 only'
         nlri += bytes([24]) + bytes(int(octet) for octet in address.split('.')[:3])
     payload = pack('!H', 0) + pack('!H', len(attributes)) + attributes + nlri
-    return Update.unpack_message(payload, negotiated)
+    decoded = Update.unpack_message(payload, negotiated)
+    assert len(decoded.data.announces) == len(prefixes), 'the UPDATE built does not announce what was asked'
+    return MARKER + pack('!H', HEADER_LENGTH + len(payload)) + bytes([UPDATE]) + payload
 
 
-def end_of_rib(negotiated: Negotiated) -> Message:
+def end_of_rib(negotiated: Negotiated) -> bytes:
+    """The IPv4 unicast End-of-RIB marker, as the peer puts it on the wire."""
     decoded = Update.unpack_message(eor_payload(*IPV4_UNICAST), negotiated)
     assert isinstance(decoded, EOR)
-    return decoded
+    return EOR.make_eor(*IPV4_UNICAST).pack_message(negotiated)
+
+
+def withdrawn(told: Told) -> list[str]:
+    """Every route the API was told the peer withdrew, in order."""
+    return [str(nlri) for args in told.called('update') for nlri in args[2].withdraws]
 
 
 def held(peer: Peer) -> list[str]:
@@ -146,34 +176,51 @@ def held(peer: Peer) -> list[str]:
     return sorted(str(route.nlri) for route in peer.neighbor.rib.incoming.cached_routes([IPV4_UNICAST]))
 
 
-async def session(peer: Peer, negotiated: Negotiated, *messages: Message) -> list[list[str]]:
+async def until(condition: Callable[[], bool], what: str) -> None:
+    """Let the session run until `condition` holds."""
+    for _ in range(POLL_ROUNDS):
+        if condition():
+            return
+        await asyncio.sleep(POLL_SECONDS)
+    raise AssertionError(f'{what} did not happen within {POLL_SECONDS * POLL_ROUNDS} seconds')
+
+
+async def session(peer: Peer, negotiated: Negotiated, *messages: bytes) -> list[list[str]]:
     """One session, from establishment to the TCP connection being lost.
 
-    The peer sends `messages` and then the connection drops, which Peer._run handles by
-    calling _reset: that is the Receiving Speaker detecting termination of the session.
-    Returns what the adj-RIB-in held before each message was read, and once more before
-    the connection was lost.
+    The peer sends `messages` over a real connection and then closes it, which Peer._run
+    handles by calling _reset: that is the Receiving Speaker detecting termination of the
+    session. Returns what the adj-RIB-in held before each message was read, and once more
+    before the connection was lost.
     """
-    await establish(peer)
+    theirs = await establish(peer, negotiated)
     assert peer.proto is not None
+    # the session the test describes, whatever the OPEN exchange computed from the wire
     peer.proto.negotiated = negotiated
-    peer.proto.close = Mock()
 
-    pending = list(messages)
+    up = peer.stats['up']
+    running = asyncio.ensure_future(peer._main())
     snapshots: list[list[str]] = []
-
-    async def read_message() -> Message:
-        snapshots.append(held(peer))
-        if not pending:
-            raise NetworkError('the TCP session was terminated')
-        return pending.pop(0)
-
-    peer.proto.read_message = read_message
     try:
-        await peer._main()
+        await until(lambda: peer.stats['up'] > up or running.done(), 'the session coming up')
+        snapshots.append(held(peer))
+        for message in messages:
+            # an UPDATE is handled in the step which counts it, with no await in between
+            count = peer.stats['receive-update']
+            theirs.sendall(message)
+            await until(
+                lambda count=count: peer.stats['receive-update'] > count or running.done(), 'the message being read'
+            )
+            snapshots.append(held(peer))
+    finally:
+        theirs.close()
+
+    try:
+        await running
     except NetworkError as lost:
         peer._reset('closing connection', lost)
-    assert len(snapshots) == len(messages) + 1, 'the session ended before the peer had sent everything'
+    else:
+        raise AssertionError('the session outlived its TCP connection')
     return snapshots
 
 
@@ -213,24 +260,28 @@ def eor_payload(afi: AFI, safi: SAFI) -> bytes:
     return EOR.make_eor(afi, safi).pack_message(Negotiated.UNSET)[HEADER_LENGTH:]
 
 
-async def establish(peer: Peer) -> None:
-    """Take a Peer to ESTABLISHED over a protocol which answers but sends nothing.
+async def establish(peer: Peer, negotiated: Negotiated | None = None) -> socket.socket:
+    """Take a Peer to ESTABLISHED over a real connection, and return the peer's end of it.
 
-    The Restart State bit is decided by how many sessions this process has held with the
-    neighbor, so a test about it has to go through the establishment path rather than
-    poke the flag the path sets.
+    The peer's end has already sent the OPEN `negotiated` received, and the KEEPALIVE
+    which confirms ours. The Restart State bit is decided by how many sessions this
+    process has held with the neighbor, so a test about it has to go through the
+    establishment path rather than poke the flag the path sets.
     """
-    protocol = AsyncMock()
-    protocol.connection = Mock(session=Mock(return_value='test'))
-    protocol.negotiated = Mock(holdtime=HoldTime(180), msg_size=4096)
-    protocol.validate_open = Mock()
-    # a Protocol knows its Peer, which is who the End-of-RIB handler tells the API through
-    protocol.peer = peer
+    if negotiated is None:
+        negotiated = negotiated_session(peer.neighbor)
+    assert negotiated.received_open is not None
+    protocol = Protocol(peer)
+    theirs = connect(protocol)
+    theirs.sendall(
+        negotiated.received_open.pack_message(negotiated) + KeepAlive.make_keepalive().pack_message(negotiated)
+    )
     peer.proto = protocol
 
     await peer._establish()
 
-    assert peer.fsm == FSM.ESTABLISHED, 'the mocked protocol did not reach ESTABLISHED'
+    assert peer.fsm == FSM.ESTABLISHED, 'the session did not reach ESTABLISHED'
+    return theirs
 
 
 # ============================================================ 3 the capability bytes
@@ -334,7 +385,7 @@ def test_the_first_open_of_a_process_claims_a_restart() -> None:
     Nothing here can tell which, because exabgp keeps no state between runs. Setting it
     only asks the peer not to wait for our End-of-RIB, so it is the cheap way to be wrong.
     """
-    peer = Peer(neighbour(), Mock())
+    peer, _ = real_peer(neighbour())
 
     graceful = our_capabilities(peer.neighbor, peer._restarted)[Capability.CODE.GRACEFUL_RESTART]
 
@@ -353,9 +404,9 @@ async def test_a_reconnecting_speaker_does_not_claim_it_has_restarted() -> None:
     claiming it on every reconnection for the life of the process is a claim about our
     state which is false and which the peer acts on.
     """
-    peer = Peer(neighbour(), Mock())
+    peer, _ = real_peer(neighbour())
 
-    await establish(peer)
+    (await establish(peer)).close()
 
     graceful = our_capabilities(peer.neighbor, peer._restarted)[Capability.CODE.GRACEFUL_RESTART]
     assert isinstance(graceful, Graceful)
@@ -372,8 +423,8 @@ async def test_an_operator_asking_for_a_restart_gets_the_bit_back() -> None:
     The session is torn down and the RIB rebuilt, so the peer is told rather than left to
     wait on an End-of-RIB for routes it is about to be sent again.
     """
-    peer = Peer(neighbour(), Mock())
-    await establish(peer)
+    peer, _ = real_peer(neighbour())
+    (await establish(peer)).close()
 
     peer.reestablish()
 
@@ -476,7 +527,7 @@ async def test_routes_from_a_restarting_peer_are_retained_into_the_next_session(
     are the two tests below. What this one holds to is the retention: the routes are
     still there when the restarted peer is back and has not yet sent a single UPDATE.
     """
-    peer = Peer(neighbour(adj_rib_in=True), Mock())
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
     negotiated = graceful_session(peer.neighbor, RESTART_TIME)
 
     await session(peer, negotiated, announce(negotiated, KEPT, DROPPED))
@@ -492,7 +543,7 @@ async def test_routes_from_a_restarting_peer_are_retained_into_the_next_session(
 @pytest.mark.rfc('rfc4724#4.2-delete-stale-after-restart-time')
 @pytest.mark.asyncio
 async def test_routes_retained_for_a_peer_which_does_not_return_expire_with_its_restart_time() -> None:
-    peer = Peer(neighbour(adj_rib_in=True), Mock())
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
     negotiated = graceful_session(peer.neighbor, PEER_RESTART_TIME)
 
     await session(peer, negotiated, announce(negotiated, KEPT))
@@ -512,7 +563,7 @@ async def test_the_end_of_rib_removes_what_the_restarted_peer_did_not_send_again
     at reconnection, as happens now, ends in the same table by a path which withdraws
     every route of a restarting peer and then announces most of them again.
     """
-    peer = Peer(neighbour(adj_rib_in=True), Mock())
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
     negotiated = graceful_session(peer.neighbor, RESTART_TIME)
 
     await session(peer, negotiated, announce(negotiated, KEPT, DROPPED))
@@ -528,7 +579,7 @@ async def test_the_end_of_rib_removes_what_the_restarted_peer_did_not_send_again
 async def test_a_new_open_clearing_the_forwarding_state_bit_removes_the_stale_routes_at_once() -> None:
     """RFC 4724 4.2: retention is for a peer which kept forwarding; one which says it did
     not has its stale routes removed as soon as the new session is up."""
-    peer = Peer(neighbour(adj_rib_in=True), Mock())
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
     retained = graceful_session(peer.neighbor, RESTART_TIME)
 
     await session(peer, retained, announce(retained, KEPT))
@@ -541,7 +592,7 @@ async def test_a_new_open_clearing_the_forwarding_state_bit_removes_the_stale_ro
 @pytest.mark.asyncio
 async def test_a_peer_without_graceful_restart_has_its_routes_cleared_at_the_next_session() -> None:
     """Only a peer which advertised the capability is retained for."""
-    peer = Peer(neighbour(adj_rib_in=True), Mock())
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
     plain = negotiated_session(peer.neighbor)
     plain.received_open.capabilities.pop(Capability.CODE.GRACEFUL_RESTART, None)
 
@@ -554,15 +605,15 @@ async def test_a_peer_without_graceful_restart_has_its_routes_cleared_at_the_nex
 @pytest.mark.asyncio
 async def test_a_notification_ends_the_session_without_retaining_anything() -> None:
     """Unmarked: RFC 4724 is about the TCP session being lost; a NOTIFICATION is a clean end."""
-    peer = Peer(neighbour(adj_rib_in=True), Mock())
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
     negotiated = graceful_session(peer.neighbor, RESTART_TIME)
     await session(peer, negotiated, announce(negotiated, KEPT))
     # the session above ended on a lost TCP connection; do it again, ended by a NOTIFICATION
     peer.neighbor.rib.incoming.clear()
-    await establish(peer)
+    theirs = await establish(peer, negotiated)
     assert peer.proto is not None
     peer.proto.negotiated = negotiated
-    peer.proto.close = Mock()
+    theirs.close()
     peer._reset('notification received', 'a NOTIFICATION, not a NetworkError')
 
     assert peer.neighbor.rib.incoming.restarting_families() == set()
@@ -571,30 +622,26 @@ async def test_a_notification_ends_the_session_without_retaining_anything() -> N
 @pytest.mark.asyncio
 async def test_the_api_is_told_when_the_end_of_rib_removes_stale_routes() -> None:
     """Unmarked: the API saw the routes announced, so it is told they are gone."""
-    reactor = Mock()
-    peer = Peer(neighbour(adj_rib_in=True), reactor)
-    peer.neighbor.api['receive-update'] = True
-    peer.neighbor.api['receive-parsed'] = True
+    peer, told = real_peer(neighbour(adj_rib_in=True))
+    peer.neighbor.api['receive-update'] = [PROCESS]
+    peer.neighbor.api['receive-parsed'] = [PROCESS]
     negotiated = graceful_session(peer.neighbor, RESTART_TIME)
 
     await session(peer, negotiated, announce(negotiated, KEPT, DROPPED))
     await session(peer, negotiated, announce(negotiated, KEPT), end_of_rib(negotiated))
 
-    told = [str(nlri) for call in reactor.processes.message.call_args_list for nlri in call.args[3].data.withdraws]
-    assert told == [DROPPED]
+    assert withdrawn(told) == [DROPPED]
 
 
 @pytest.mark.asyncio
 async def test_the_api_is_told_when_the_restart_time_removes_stale_routes() -> None:
     """Unmarked: a peer which never comes back has its routes withdrawn to the API too."""
-    reactor = Mock()
-    peer = Peer(neighbour(adj_rib_in=True), reactor)
-    peer.neighbor.api['receive-update'] = True
-    peer.neighbor.api['receive-parsed'] = True
+    peer, told = real_peer(neighbour(adj_rib_in=True))
+    peer.neighbor.api['receive-update'] = [PROCESS]
+    peer.neighbor.api['receive-parsed'] = [PROCESS]
     negotiated = graceful_session(peer.neighbor, PEER_RESTART_TIME)
 
     await session(peer, negotiated, announce(negotiated, KEPT))
     await asyncio.sleep(PEER_RESTART_TIME + RESTART_TIME_MARGIN)
 
-    told = [str(nlri) for call in reactor.processes.message.call_args_list for nlri in call.args[3].data.withdraws]
-    assert told == [KEPT]
+    assert withdrawn(told) == [KEPT]

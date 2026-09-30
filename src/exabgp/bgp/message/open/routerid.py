@@ -10,7 +10,7 @@ from __future__ import annotations
 from exabgp.util.types import Buffer
 from typing import Type
 
-from exabgp.protocol.ip import IPv4
+from exabgp.protocol.ip import IPFactory, IPv4
 
 # ===================================================================== RouterID
 #
@@ -19,6 +19,12 @@ from exabgp.protocol.ip import IPv4
 class RouterID(IPv4):
     def __init__(self, ip: str) -> None:
         IPv4.__init__(self, IPv4.pton(ip))
+
+    @classmethod
+    def from_string(cls, string: str, klass: IPFactory | None = None) -> RouterID:
+        """Build a RouterID rather than the registered IPv4 address class."""
+        # Like ClusterID, this factory always returns its own identifier type.
+        return cls(string)
 
     @classmethod
     def unpack_routerid(cls: Type[RouterID], data: Buffer) -> RouterID:

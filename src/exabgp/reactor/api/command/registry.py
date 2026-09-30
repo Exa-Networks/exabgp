@@ -383,7 +383,7 @@ class CommandRegistry:
 
 
 # Global registry instance
-_registry = None
+_registry: CommandRegistry | None = None
 
 
 def get_registry() -> CommandRegistry:

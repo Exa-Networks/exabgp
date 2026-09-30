@@ -11,8 +11,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import time
-from contextlib import asynccontextmanager, contextmanager
-from typing import AsyncIterator, Iterator
+from contextlib import contextmanager
+from types import TracebackType
+from typing import Iterator
 
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
@@ -55,29 +56,41 @@ def timed_sync(name: str, warn_threshold_ms: float = SLOW_THRESHOLD_MS) -> Itera
             )
 
 
-@asynccontextmanager
-async def timed_async(name: str, warn_threshold_ms: float = SLOW_THRESHOLD_MS) -> AsyncIterator[None]:
-    """Context manager to log slow async operations.
+class timed_async:
+    """Async context manager to log slow async operations.
 
     Only logs if exabgp_debug_timing=true is set.
+
+    A class, not an @asynccontextmanager function: that is an async generator, which
+    mypyc 1.20 does not compile.
 
     Args:
         name: Operation name for logging
         warn_threshold_ms: Threshold in ms above which to log warning
     """
-    if not timing_enabled():
-        yield
-        return
 
-    start = time.perf_counter()
-    try:
-        yield
-    finally:
-        elapsed_ms = (time.perf_counter() - start) * 1000
-        if elapsed_ms > warn_threshold_ms:
+    def __init__(self, name: str, warn_threshold_ms: float = SLOW_THRESHOLD_MS) -> None:
+        self.name = name
+        self.warn_threshold_ms = warn_threshold_ms
+        self._start: float | None = None
+
+    async def __aenter__(self) -> None:
+        # None when timing is off, so the exit neither measures nor logs
+        self._start = time.perf_counter() if timing_enabled() else None
+
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
+        if self._start is None:
+            return
+        elapsed_ms = (time.perf_counter() - self._start) * 1000
+        if elapsed_ms > self.warn_threshold_ms:
             level = 'error' if elapsed_ms > VERY_SLOW_THRESHOLD_MS else 'warning'
             getattr(log, level)(
-                lazymsg('timing.slow.async operation={n} elapsed_ms={e:.1f}', n=name, e=elapsed_ms),
+                lazymsg('timing.slow.async operation={n} elapsed_ms={e:.1f}', n=self.name, e=elapsed_ms),
                 'timing',
             )
 
@@ -97,11 +110,11 @@ class LoopTimer:
     def __init__(self, name: str, warn_threshold_ms: float = SLOW_THRESHOLD_MS) -> None:
         self.name = name
         self.warn_threshold_ms = warn_threshold_ms
-        self._start: float = 0
-        self._elapsed_ms: float = 0
+        self._start: float = 0.0
+        self._elapsed_ms: float = 0.0
         self._iteration: int = 0
-        self._total_ms: float = 0
-        self._max_ms: float = 0
+        self._total_ms: float = 0.0
+        self._max_ms: float = 0.0
 
     def start(self) -> None:
         """Start timing an iteration."""
@@ -111,7 +124,7 @@ class LoopTimer:
     def stop(self) -> float:
         """Stop timing and return elapsed milliseconds."""
         if not timing_enabled():
-            return 0
+            return 0.0
 
         self._elapsed_ms = (time.perf_counter() - self._start) * 1000
         self._iteration += 1
@@ -175,8 +188,8 @@ class OperationTimer:
     """
 
     def __init__(self) -> None:
-        self._start: float = 0
-        self._elapsed_ms: float = 0
+        self._start: float = 0.0
+        self._elapsed_ms: float = 0.0
 
     def start(self) -> None:
         """Start the timer."""

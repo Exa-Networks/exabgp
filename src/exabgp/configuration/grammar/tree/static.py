@@ -36,7 +36,7 @@ from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.section import Section, Store, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types import bgp
-from exabgp.configuration.grammar.types.base import Syntax, Type
+from exabgp.configuration.grammar.types.base import Syntax, Type, WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
@@ -149,7 +149,7 @@ class RouteLine(RouteStatement):
         route = Route(klass.from_settings(settings), collected.attributes, nexthop=settings.nexthop)
         return finish([route])
 
-    def printed(self, route: Route) -> list[str]:
+    def printed(self, route: Route) -> list[WordOrSyntax]:
         return route_words(route)
 
     def hint(self) -> str:
@@ -194,7 +194,7 @@ class AttributesLine(RouteStatement):
             return [Route(Empty(AFI.ipv4, SAFI.unicast), collected.attributes)]
         return finish(routes)
 
-    def printed(self, route: Route) -> list[str]:
+    def printed(self, route: Route) -> list[WordOrSyntax]:
         return attribute_words(route)
 
     def hint(self) -> str:
@@ -249,7 +249,7 @@ class Unprintable(ValueError):
     """A route holding a value no statement writes back (an SRv6 prefix SID)."""
 
 
-def _attribute_words(code: int, attribute: Any) -> list[str]:
+def _attribute_words(code: int, attribute: Any) -> list[WordOrSyntax]:
     from exabgp.bgp.message.update.attribute import GenericAttribute
 
     if isinstance(attribute, GenericAttribute):
@@ -274,13 +274,13 @@ def _attribute_words(code: int, attribute: Any) -> list[str]:
     return [ATTRIBUTE_KEYWORDS[code], *_words(text)]
 
 
-def _words(text: str) -> list[str]:
+def _words(text: str) -> list[WordOrSyntax]:
     """The words the lexer makes of text an attribute prints: `300,` is two words."""
     statement = lex_command(f'{text};')[0]
     return [Syntax(token.word) if token.word in _STRUCTURE else token.word for token in statement.words]
 
 
-def _srv6(attribute: Any) -> list[str]:
+def _srv6(attribute: Any) -> list[WordOrSyntax]:
     """`( l3-service <sid> <behavior> [ <structure> ] )`, or nothing for a prefix SID without SRv6."""
     from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
     from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
@@ -292,7 +292,7 @@ def _srv6(attribute: Any) -> list[str]:
         raise Unprintable('only one SRv6 service with one SID is printed back')
     service = 'l3-service' if isinstance(services[0], Srv6L3Service) else 'l2-service'
     information = services[0].subtlvs[0]
-    words = [Syntax('('), service, str(information.sid), f'0x{information.behavior:x}']
+    words: list[WordOrSyntax] = [Syntax('('), service, str(information.sid), f'0x{information.behavior:x}']
     for structure in information.subsubtlvs:
         fields = (
             structure.loc_block_len,
@@ -309,11 +309,11 @@ def _srv6(attribute: Any) -> list[str]:
     return words + [Syntax(')')]
 
 
-def attribute_words(route: Route) -> list[str]:
+def attribute_words(route: Route) -> list[WordOrSyntax]:
     """The keyword and value pairs of a route's attributes, the next-hop first."""
     # legacy: the first next-hop given is the NEXT_HOP attribute (the first attribute of a code
     # wins), the last is the route's next-hop; two statements say it when the two differ
-    words: list[str] = []
+    words: list[WordOrSyntax] = []
     attribute = route.attributes.get(Attribute.CODE.NEXT_HOP)
     first = None if attribute is None else str(attribute)
     last = None if route.nexthop is IP.NoNextHop else 'self' if route.nexthop.SELF else str(route.nexthop)
@@ -325,7 +325,7 @@ def attribute_words(route: Route) -> list[str]:
     return words
 
 
-def route_words(route: Route) -> list[str]:
+def route_words(route: Route) -> list[WordOrSyntax]:
     """`<prefix> [rd ..] [label ..] [path-information ..] next-hop .. <attributes>`."""
     from exabgp.bgp.message.notification import Notify
 
@@ -444,7 +444,7 @@ class NestedPrefix(Type[IPRange]):
     def parse(self, words: Words) -> IPRange:
         return bgp.Prefix().parse(words)
 
-    def render(self, value: IPRange) -> list[str]:
+    def render(self, value: IPRange) -> list[WordOrSyntax]:
         return bgp.Prefix().render(value)
 
     def hint(self) -> str:

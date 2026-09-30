@@ -16,28 +16,47 @@ A peer which has been removed is allowed to still be in `_peers` immediately aft
 reload, because it is dropped on its next turn rather than synchronously. What it may not
 be is *unreapable*, so the peers which survive are required to be on their way out.
 
-No sockets are bound here and no daemon runs. `Listener` is a double which records what it
-was asked to bind, which is enough: what is under test is the reactor's bookkeeping, and
-`tests/unit/test_removed_neighbor_cleanup.py` covers the socket handling itself.
+No daemon runs, but the sockets are real: the reactor is compiled, and refuses a listener
+which is not a Listener, so the real one binds unprivileged ports on 127.0.0.1 and what is
+bound is read back from it. `tests/unit/test_removed_neighbor_cleanup.py` covers the socket
+handling itself.
 """
 
 from __future__ import annotations
 
 import os
+import socket
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.protocol.family import AFI  # noqa: E402
+from exabgp.bgp.neighbor import Neighbor  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
 from exabgp.reactor.loop import Reactor  # noqa: E402
 from exabgp.reactor.peer.peer import Peer  # noqa: E402
+from tests import negotiation  # noqa: E402
 
-GLOBAL_PORT = 179
+
+def free_ports(count: int) -> list[int]:
+    """Unprivileged ports nothing listens on: the kernel picks them, then they are let go."""
+    held = [socket.create_server(('127.0.0.1', 0)) for _ in range(count)]
+    ports = [held_socket.getsockname()[1] for held_socket in held]
+    for held_socket in held:
+        held_socket.close()
+    return ports
+
+
+# The global listener's port (the -l addresses) and two neighbour `listen` ports
+GLOBAL_PORT, PORT_A, PORT_B = free_ports(3)
+
+# every reactor a test built, so its listening sockets are closed whatever the test did
+BUILT: list[Reactor] = []
 
 
 @pytest.fixture(autouse=True)
@@ -54,70 +73,53 @@ def mock_logger() -> Any:
     option.formater = formater
 
 
-class FakeListener:
-    """Records what it was asked to bind, and honours close_unwanted the way Listener does.
+@pytest.fixture(autouse=True)
+def release_ports() -> Iterator[None]:
+    yield
+    for reactor in BUILT:
+        reactor.listener.stop()
+    BUILT.clear()
 
-    It shares one entry per (address, port) on purpose. That sharing is why the real
-    close_unwanted takes the set of pairs the configuration wants rather than removing one
-    neighbour's socket: several neighbours sit behind one entry and nothing records how
-    many.
-    """
 
-    def __init__(self, refuse: set[tuple[str, int]] | None = None) -> None:
-        self.bound: set[tuple[str, int]] = set()
-        self.serving: bool = False
-        self.refuse: set[tuple[str, int]] = refuse or set()
-        # every argument of every call, so a test can say the authentication a neighbour
-        # asked for actually reached the socket rather than only its address and port
-        self.calls: list[tuple[Any, ...]] = []
+class Configured:
+    """The configuration as the reactor reads it: the neighbours, and a reload which works."""
 
-    def listen_on(self, local_addr: IP, remote_addr: Any, port: int, *arguments: Any) -> bool:
-        self.calls.append((local_addr.top(), remote_addr, port, *arguments))
-        if (local_addr.top(), port) in self.refuse:
-            return False
-        self.bound.add((local_addr.top(), port))
-        self.serving = True
+    def __init__(self, neighbors: dict[str, Neighbor]) -> None:
+        self.neighbors = neighbors
+        self.error = ''
+
+    def reload(self) -> bool:
         return True
 
-    def close_unwanted(self, wanted: set[tuple[str, int]]) -> None:
-        self.bound &= wanted
-        self.serving = bool(self.bound)
 
-
-def neighbor(peer_address: str, listen_port: int | None = None, local_address: str = '127.0.0.1') -> Any:
-    """A configured neighbour, as the reactor reads one."""
-    configured = MagicMock()
-    configured.session.peer_address = IP.from_string(peer_address)
-    configured.session.peer_address.afi = AFI.ipv4
-    configured.session.local_address = IP.from_string(local_address)
+def neighbor(peer_address: str, listen_port: int = 0, local_address: str = '127.0.0.1') -> Neighbor:
+    """A configured passive neighbour, as the reactor reads one."""
+    configured = negotiation.api_asks(negotiation.neighbor(peer_address=peer_address, local_address=local_address))
     configured.session.md5_ip = IP.from_string(local_address)
     configured.session.listen = listen_port
     configured.session.passive = True
-    configured.session.md5_password = None
-    configured.session.md5_base64 = False
-    configured.session.incoming_ttl = None
-    configured.session.tcp_ao_keyid = None
-    configured.session.tcp_ao_algorithm = ''
-    configured.session.tcp_ao_password = ''
-    configured.session.tcp_ao_base64 = False
-    configured.session.source_interface = ''
-    configured.name.return_value = f'neighbor {peer_address}'
-    configured.rib = Mock()
-    configured.api = {'neighbor-changes': False, 'fsm': False}
     return configured
 
 
-def reactor_serving(neighbors: dict[str, Any], listen_ips: list[str] | None = None) -> Any:
+def reactor_serving(neighbors: dict[str, Neighbor], listen_ips: list[str] | None = None) -> Reactor:
     """A reactor holding that configuration, with nothing bound yet."""
-    reactor = Reactor.__new__(Reactor)
-    reactor._peers = {}
+    reactor = Reactor(Configured(neighbors))
     reactor._ips = [IP.from_string(ip) for ip in (listen_ips or ['127.0.0.1'])]
     reactor._port = GLOBAL_PORT
-    reactor.listener = FakeListener()
-    reactor.configuration = MagicMock()
-    reactor.configuration.neighbors = neighbors
-    reactor.configuration.reload.return_value = True
+    BUILT.append(reactor)
     return reactor
+
+
+def bound(reactor: Reactor) -> set[tuple[str, int]]:
+    """The (address, port) pairs the reactor's listener has a socket bound to."""
+    return {(local, port) for (local, port, _, _, _) in reactor.listener._sockets.values()}
+
+
+@contextmanager
+def occupied(port: int) -> Iterator[None]:
+    """Something else listening on 127.0.0.1:port, so the listener can not bind it."""
+    with socket.create_server(('127.0.0.1', port)):
+        yield
 
 
 def wanted_sockets(reactor: Any) -> set[tuple[str, int]]:
@@ -145,23 +147,23 @@ def assert_invariants(reactor: Any) -> None:
     missing = configured - held
     assert not missing, f'configured neighbours with no peer: {missing}'
 
-    assert reactor.listener.bound == wanted_sockets(reactor), (
-        f'bound {reactor.listener.bound} but the configuration asks for {wanted_sockets(reactor)}'
+    assert bound(reactor) == wanted_sockets(reactor), (
+        f'bound {bound(reactor)} but the configuration asks for {wanted_sockets(reactor)}'
     )
 
 
 def test_the_invariants_hold_on_a_first_load() -> None:
-    reactor = reactor_serving({'a': neighbor('127.0.0.2', 1179)})
+    reactor = reactor_serving({'a': neighbor('127.0.0.2', PORT_A)})
 
     assert reactor.reload()
 
     assert_invariants(reactor)
-    assert ('127.0.0.1', 1179) in reactor.listener.bound
+    assert ('127.0.0.1', PORT_A) in bound(reactor)
 
 
 def test_removing_a_neighbour_releases_its_peer_and_its_port() -> None:
     """Issue #1425. The peer stayed forever and the port stayed bound and accepting."""
-    neighbors = {'a': neighbor('127.0.0.2', 1179), 'b': neighbor('127.0.0.3')}
+    neighbors = {'a': neighbor('127.0.0.2', PORT_A), 'b': neighbor('127.0.0.3')}
     reactor = reactor_serving(neighbors)
     assert reactor.reload()
 
@@ -169,35 +171,35 @@ def test_removing_a_neighbour_releases_its_peer_and_its_port() -> None:
 
     assert reactor.reload()
     assert_invariants(reactor)
-    assert ('127.0.0.1', 1179) not in reactor.listener.bound, 'the removed neighbour kept its port'
+    assert ('127.0.0.1', PORT_A) not in bound(reactor), 'the removed neighbour kept its port'
     assert 'a' in reactor.active_peers(), 'the removed peer is never run, so it is never dropped'
 
 
 def test_adding_a_neighbour_binds_its_port_without_a_restart() -> None:
     """The same bug from the other side: this used to need the daemon restarted."""
-    neighbors: dict[str, Any] = {'b': neighbor('127.0.0.3')}
+    neighbors: dict[str, Neighbor] = {'b': neighbor('127.0.0.3')}
     reactor = reactor_serving(neighbors)
     assert reactor.reload()
-    assert ('127.0.0.1', 1179) not in reactor.listener.bound
+    assert ('127.0.0.1', PORT_A) not in bound(reactor)
 
-    neighbors['a'] = neighbor('127.0.0.2', 1179)
+    neighbors['a'] = neighbor('127.0.0.2', PORT_A)
 
     assert reactor.reload()
     assert_invariants(reactor)
-    assert ('127.0.0.1', 1179) in reactor.listener.bound, 'a neighbour added by a reload never listened'
+    assert ('127.0.0.1', PORT_A) in bound(reactor), 'a neighbour added by a reload never listened'
 
 
 def test_moving_a_neighbour_to_another_port_releases_the_old_one() -> None:
-    neighbors = {'a': neighbor('127.0.0.2', 1179)}
+    neighbors = {'a': neighbor('127.0.0.2', PORT_A)}
     reactor = reactor_serving(neighbors)
     assert reactor.reload()
 
-    neighbors['a'] = neighbor('127.0.0.2', 1180)
+    neighbors['a'] = neighbor('127.0.0.2', PORT_B)
 
     assert reactor.reload()
     assert_invariants(reactor)
-    assert ('127.0.0.1', 1179) not in reactor.listener.bound, 'the port it moved off stayed bound'
-    assert ('127.0.0.1', 1180) in reactor.listener.bound
+    assert ('127.0.0.1', PORT_A) not in bound(reactor), 'the port it moved off stayed bound'
+    assert ('127.0.0.1', PORT_B) in bound(reactor)
 
 
 def test_two_neighbours_on_one_port_keep_it_until_both_are_gone() -> None:
@@ -206,7 +208,7 @@ def test_two_neighbours_on_one_port_keep_it_until_both_are_gone() -> None:
     This is the case a reference count gets wrong, and the reason close_unwanted is told
     what the configuration wants rather than what to remove.
     """
-    neighbors = {'a': neighbor('127.0.0.2', 1179), 'b': neighbor('127.0.0.3', 1179)}
+    neighbors = {'a': neighbor('127.0.0.2', PORT_A), 'b': neighbor('127.0.0.3', PORT_A)}
     reactor = reactor_serving(neighbors)
     assert reactor.reload()
 
@@ -214,18 +216,18 @@ def test_two_neighbours_on_one_port_keep_it_until_both_are_gone() -> None:
 
     assert reactor.reload()
     assert_invariants(reactor)
-    assert ('127.0.0.1', 1179) in reactor.listener.bound, 'a port another neighbour still uses was closed'
+    assert ('127.0.0.1', PORT_A) in bound(reactor), 'a port another neighbour still uses was closed'
 
     del neighbors['b']
 
     assert reactor.reload()
     assert_invariants(reactor)
-    assert ('127.0.0.1', 1179) not in reactor.listener.bound
+    assert ('127.0.0.1', PORT_A) not in bound(reactor)
 
 
 def test_the_global_listener_survives_every_neighbour_going_away() -> None:
     """The -l addresses are not a neighbour's to release."""
-    neighbors = {'a': neighbor('127.0.0.2', 1179)}
+    neighbors = {'a': neighbor('127.0.0.2', PORT_A)}
     reactor = reactor_serving(neighbors)
     assert reactor.reload()
 
@@ -233,12 +235,12 @@ def test_the_global_listener_survives_every_neighbour_going_away() -> None:
 
     assert reactor.reload()
     assert_invariants(reactor)
-    assert ('127.0.0.1', GLOBAL_PORT) in reactor.listener.bound, 'the global listener was closed'
+    assert ('127.0.0.1', GLOBAL_PORT) in bound(reactor), 'the global listener was closed'
 
 
 def test_a_removed_peer_is_the_only_peer_allowed_to_outlive_its_neighbour() -> None:
     """A peer left behind for any other reason is the #1425 leak wearing a different hat."""
-    neighbors = {'a': neighbor('127.0.0.2', 1179)}
+    neighbors = {'a': neighbor('127.0.0.2', PORT_A)}
     reactor = reactor_serving(neighbors)
     assert reactor.reload()
 
@@ -257,16 +259,16 @@ def test_a_removed_peer_is_the_only_peer_allowed_to_outlive_its_neighbour() -> N
 
 def test_a_port_which_will_not_bind_is_reported() -> None:
     """run() turns a False here into a refusal to start, so the flag has to be real."""
-    neighbors = {'a': neighbor('127.0.0.2', 1179)}
+    neighbors = {'a': neighbor('127.0.0.2', PORT_A)}
     reactor = reactor_serving(neighbors)
-    reactor.listener.refuse = {('127.0.0.1', 1179)}
 
-    assert not reactor._listen_for_neighbors(), 'a port which would not bind was reported as bound'
+    with occupied(PORT_A):
+        assert not reactor._listen_for_neighbors(), 'a port which would not bind was reported as bound'
 
 
 def test_every_port_binding_is_reported_as_success() -> None:
     """The control for the test above: False means something only if True is reachable."""
-    neighbors = {'a': neighbor('127.0.0.2', 1179)}
+    neighbors = {'a': neighbor('127.0.0.2', PORT_A)}
     reactor = reactor_serving(neighbors)
 
     assert reactor._listen_for_neighbors()
@@ -274,28 +276,45 @@ def test_every_port_binding_is_reported_as_success() -> None:
 
 def test_a_neighbour_without_a_listen_port_does_not_hide_the_ones_after_it() -> None:
     """The skip has to be a continue: a break drops every neighbour past the first one."""
-    neighbors = {'plain': neighbor('127.0.0.3'), 'listening': neighbor('127.0.0.2', 1179)}
+    neighbors = {'plain': neighbor('127.0.0.3'), 'listening': neighbor('127.0.0.2', PORT_A)}
     reactor = reactor_serving(neighbors)
 
     assert reactor._listen_for_neighbors()
-    assert ('127.0.0.1', 1179) in reactor.listener.bound, 'a neighbour behind one with no listen port was lost'
+    assert ('127.0.0.1', PORT_A) in bound(reactor), 'a neighbour behind one with no listen port was lost'
+
+
+# linux/tcp.h and linux/in.h: the options the key and the minimum TTL are installed with
+TCP_MD5SIG = 14
+IP_MINTTL = 21
+# the TCP_MD5SIG option is a 128 byte __kernel_sockaddr_storage followed by tcp_md5sig
+SOCKADDR_STORAGE_BYTES = 128
 
 
 def test_a_neighbour_passes_its_authentication_to_its_socket() -> None:
     """The address and the port are not the whole call: an MD5 key which never reaches the
     socket is a session which will not come up, and the reload path had nothing saying so.
+
+    Run as on Linux, where both can be installed, with the socket options recorded rather
+    than set: what is asserted is what the kernel is asked for on the neighbour's socket.
     """
-    configured = neighbor('127.0.0.2', 1179)
+    configured = neighbor('127.0.0.2', PORT_A)
     configured.session.md5_password = 'a-secret'
     configured.session.incoming_ttl = 254
     reactor = reactor_serving({'a': configured})
+    options: list[tuple[int, int, int | bytes]] = []
 
-    assert reactor._listen_for_neighbors()
+    # only the neighbour's socket is made here: the global listener is bound by reload()
+    def setsockopt(sock: socket.socket, level: int, option: int, value: int | bytes) -> None:
+        options.append((level, option, value))
 
-    listening = [call for call in reactor.listener.calls if call[2] == 1179]
-    assert listening, 'the neighbour never asked for its port'
-    assert 'a-secret' in listening[0], 'the md5 password did not reach the socket'
-    assert 254 in listening[0], 'the incoming ttl did not reach the socket'
+    with patch('platform.system', return_value='Linux'), patch.object(socket.socket, 'setsockopt', setsockopt):
+        assert reactor._listen_for_neighbors()
+
+    assert ('127.0.0.1', PORT_A) in bound(reactor), 'the neighbour never asked for its port'
+    keys = [value for level, option, value in options if (level, option) == (socket.IPPROTO_TCP, TCP_MD5SIG)]
+    assert keys and isinstance(keys[0], bytes), 'the md5 password did not reach the socket'
+    assert b'a-secret' in keys[0][SOCKADDR_STORAGE_BYTES:], 'the md5 password did not reach the socket'
+    assert (socket.IPPROTO_IP, IP_MINTTL, 254) in options, 'the incoming ttl did not reach the socket'
 
 
 def test_two_neighbours_on_different_ports_both_listen() -> None:
@@ -304,9 +323,9 @@ def test_two_neighbours_on_different_ports_both_listen() -> None:
     The one after a successful bind is invisible with a single listening neighbour, which
     is what let a break survive there.
     """
-    neighbors = {'first': neighbor('127.0.0.2', 1179), 'second': neighbor('127.0.0.3', 1180)}
+    neighbors = {'first': neighbor('127.0.0.2', PORT_A), 'second': neighbor('127.0.0.3', PORT_B)}
     reactor = reactor_serving(neighbors)
 
     assert reactor._listen_for_neighbors()
-    assert ('127.0.0.1', 1179) in reactor.listener.bound
-    assert ('127.0.0.1', 1180) in reactor.listener.bound, 'the second listening neighbour never bound'
+    assert ('127.0.0.1', PORT_A) in bound(reactor)
+    assert ('127.0.0.1', PORT_B) in bound(reactor), 'the second listening neighbour never bound'

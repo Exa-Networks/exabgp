@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import sys
 from ipaddress import ip_network
 from unittest.mock import patch
 
@@ -24,6 +25,11 @@ from exabgp.application.healthcheck import (
     IP_CMD_ADD_ERROR_CODE,
     IP_IFNAME_PARTS,
 )
+from exabgp.application import healthcheck as healthcheck_module
+
+# Compiled, `sys.platform` is read at build time: the branch for another platform is compiled
+# as unreachable, so patching sys.platform cannot select it.
+COMPILED = not str(healthcheck_module.__file__).endswith('.py')
 
 
 class TestStatesEnum:
@@ -203,6 +209,9 @@ class TestIpIfname:
 
         assert ip_ifname(ip, ip_ifnames) == 'eth0'
 
+    @pytest.mark.skipif(
+        COMPILED and sys.platform != 'linux', reason='compiled for another platform, sys.platform cannot be patched'
+    )
     def test_ip_ifname_without_mapping_linux(self) -> None:
         """Should return 'lo' on Linux when no mapping."""
         ip = ip_network('10.0.0.1/32')
@@ -211,6 +220,9 @@ class TestIpIfname:
             result = ip_ifname(ip, {})
             assert result == 'lo'
 
+    @pytest.mark.skipif(
+        COMPILED and sys.platform != 'darwin', reason='compiled for another platform, sys.platform cannot be patched'
+    )
     def test_ip_ifname_without_mapping_other(self) -> None:
         """Should return 'lo0' on non-Linux when no mapping."""
         ip = ip_network('10.0.0.1/32')

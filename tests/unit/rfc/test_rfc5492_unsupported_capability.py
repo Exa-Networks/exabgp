@@ -10,12 +10,12 @@ peering is not re-established until the operator acts.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, Mock
-
+import asyncio
 import pytest
 
+from exabgp.bgp.message import Message
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.notification import Notification, NotificationReceived, Notify
+from exabgp.bgp.message.notification import Notification, Notify
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities, Capability
 from exabgp.bgp.message.open.capability.asn4 import ASN4 as ASN4Capability
@@ -25,6 +25,7 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
+from tests import negotiation
 
 OPEN_MESSAGE_ERROR = 2
 UNSUPPORTED_OPTIONAL_PARAMETER = 4
@@ -33,6 +34,10 @@ UNSUPPORTED_CAPABILITY = 7
 # RFC 4271 4.2: the Optional Parameters Length octet follows the 19 octet header and the
 # nine octets of version, My Autonomous System, Hold Time and BGP Identifier
 OPTIONAL_PARAMETERS_LENGTH_OFFSET = 28
+
+# How long one establishment against a scripted peer may take: each ends on the first
+# message the peer sends, so this is only reached when the test is about to fail.
+SESSION_SECONDS = 5.0
 
 ASN4 = Capability.CODE.FOUR_BYTES_ASN
 ROUTE_REFRESH = Capability.CODE.ROUTE_REFRESH
@@ -240,8 +245,7 @@ def test_route_refresh_require_enhanced_asks_for_the_enhanced_capability_only() 
 
 def test_validate_open_raises_the_unsupported_capability() -> None:
     neighbor = parsed_neighbor('asn4 require;')
-    peer = Mock()
-    peer.neighbor = neighbor
+    peer, _ = negotiation.peer(neighbor)
     protocol = Protocol(peer)
     protocol.negotiated = negotiate(neighbor, {ASN4})
 
@@ -252,37 +256,76 @@ def test_validate_open_raises_the_unsupported_capability() -> None:
     assert caught.value.data == ASN4_TLV
 
 
-# =========================================================== 3, no automatic re-establishment
+# =========================================================== a session over a real socket
+#
+# Peer and Protocol are compiled, and a compiled method can not be replaced, so the
+# establishment is not stubbed to raise: the peer end of a socket pair answers our OPEN
+# with what the test says it sent, and Peer._run() meets it the way it would on the wire.
 
 
-def peer_whose_establishment_raises(monkeypatch: pytest.MonkeyPatch, notify: Notify) -> Peer:
-    neighbor = Mock()
-    neighbor.uid = '1'
-    neighbor.ephemeral = False
-    neighbor.api = {'neighbor-changes': False, 'fsm': False}
-    peer = Peer(neighbor, Mock())
-    monkeypatch.setattr(peer, '_establish', AsyncMock(side_effect=notify))
+def peer_open(neighbor: Neighbor, *, withheld: set[int] | None = None, router_id: str = '192.0.2.1') -> bytes:
+    """The OPEN the peer end sends: our own capabilities less the withheld, as router_id."""
+    negotiated = negotiate(neighbor, withheld or set())
+    assert negotiated.received_open is not None
+    capabilities = negotiated.received_open.capabilities
+    received = Open.make_open(Version(4), neighbor.session.peer_as, HoldTime(90), RouterID(router_id), capabilities)
+    return received.pack_message(negotiated)
+
+
+def peer_notification(code: int, subcode: int) -> bytes:
+    """The NOTIFICATION the peer end answers our OPEN with."""
+    return Notification.make_notification(code, subcode).pack_message(negotiation.negotiated())
+
+
+async def run_against(neighbor: Neighbor, answer: bytes) -> Peer:
+    """Run one establishment of a peer whose far end sends answer, as a connection it accepted."""
+    peer, _ = negotiation.peer(neighbor)
+    protocol = Protocol(peer)
+    theirs = negotiation.connect(protocol)
+    try:
+        # as Peer.handle_connection() does with an accepted connection: no _connect()
+        peer.proto = protocol
+        theirs.sendall(answer)
+        # bounded: a peer which is not refused waits out its hold time for a KEEPALIVE
+        await asyncio.wait_for(peer._run(), SESSION_SECONDS)
+    finally:
+        theirs.close()
     return peer
+
+
+async def next_open(peer: Peer) -> bytes:
+    """The OPEN the peer sends on its next connection, as the peer end receives it."""
+    retry = Protocol(peer)
+    theirs = negotiation.connect(retry)
+    try:
+        await retry.new_open()
+        ((kind, body),) = negotiation.messages(negotiation.received(theirs))
+    finally:
+        theirs.close()
+    assert kind == Message.CODE.OPEN, kind
+    return body
+
+
+# =========================================================== 3, no automatic re-establishment
 
 
 @pytest.mark.rfc('rfc5492#3-terminated-peering-not-re-established')
 @pytest.mark.asyncio
-async def test_a_peering_refused_for_a_capability_is_not_restarted(monkeypatch: pytest.MonkeyPatch) -> None:
-    peer = peer_whose_establishment_raises(
-        monkeypatch, Notify(OPEN_MESSAGE_ERROR, UNSUPPORTED_CAPABILITY, data=ASN4_TLV)
-    )
+async def test_a_peering_refused_for_a_capability_is_not_restarted() -> None:
+    neighbor = parsed_neighbor('asn4 require;')
 
-    await peer._run()
+    peer = await run_against(neighbor, peer_open(neighbor, withheld={ASN4}))
 
     assert not peer._restart, 'the reactor would reconnect to a peer refused for a missing capability'
 
 
 @pytest.mark.rfc('rfc5492#3-terminated-peering-not-re-established', polarity='negative')
 @pytest.mark.asyncio
-async def test_a_peering_ended_for_another_reason_is_still_restarted(monkeypatch: pytest.MonkeyPatch) -> None:
-    peer = peer_whose_establishment_raises(monkeypatch, Notify(OPEN_MESSAGE_ERROR, 2, 'bad peer as'))
+async def test_a_peering_ended_for_another_reason_is_still_restarted() -> None:
+    neighbor = parsed_neighbor('asn4 require;')
 
-    await peer._run()
+    # every capability, but an invalid BGP Identifier: refused with (2, 3)
+    peer = await run_against(neighbor, peer_open(neighbor, router_id='0.0.0.0'))
 
     assert peer._restart, 'stopping every peer after any NOTIFICATION also passes the test above'
 
@@ -300,19 +343,14 @@ async def test_after_unsupported_optional_parameter_the_next_open_has_no_capabil
     for ever.  What is asserted is the wire: an Optional Parameters Length of zero.
     """
     neighbor = parsed_neighbor('asn4 enable; route-refresh enable;')
-    peer = Peer(neighbor, Mock())
-    refusal = Notification.make_notification(OPEN_MESSAGE_ERROR, UNSUPPORTED_OPTIONAL_PARAMETER)
-    # raised, as the reactor raises it when it reads the NOTIFICATION
-    peer._establish = AsyncMock(side_effect=NotificationReceived(refusal))  # type: ignore[method-assign]
 
-    await peer._run()
+    peer = await run_against(neighbor, peer_notification(OPEN_MESSAGE_ERROR, UNSUPPORTED_OPTIONAL_PARAMETER))
 
     assert peer._restart, 'the peering was stopped rather than retried'
-    retry = Protocol(peer)
-    retry.connection = Mock()
-    retry.write = AsyncMock()  # type: ignore[method-assign]
-    sent = (await retry.new_open()).pack_message(retry.negotiated)
-    assert sent[OPTIONAL_PARAMETERS_LENGTH_OFFSET] == 0, f'the retried OPEN still carries parameters: {sent.hex()}'
+    sent = await next_open(peer)
+    assert sent[OPTIONAL_PARAMETERS_LENGTH_OFFSET - Message.HEADER_LEN] == 0, (
+        f'the retried OPEN still carries parameters: {sent.hex()}'
+    )
 
 
 @pytest.mark.rfc('rfc5492#3-reconnect-without-the-capabilities-parameter', polarity='negative')
@@ -320,14 +358,10 @@ async def test_after_unsupported_optional_parameter_the_next_open_has_no_capabil
 async def test_after_another_open_error_the_next_open_still_has_its_capabilities() -> None:
     """Only (2, 4) says the Capabilities parameter was the problem."""
     neighbor = parsed_neighbor('asn4 enable; route-refresh enable;')
-    peer = Peer(neighbor, Mock())
-    refusal = Notification.make_notification(OPEN_MESSAGE_ERROR, 2)
-    peer._establish = AsyncMock(side_effect=NotificationReceived(refusal))  # type: ignore[method-assign]
 
-    await peer._run()
+    peer = await run_against(neighbor, peer_notification(OPEN_MESSAGE_ERROR, 2))
 
-    retry = Protocol(peer)
-    retry.connection = Mock()
-    retry.write = AsyncMock()  # type: ignore[method-assign]
-    sent = (await retry.new_open()).pack_message(retry.negotiated)
-    assert sent[OPTIONAL_PARAMETERS_LENGTH_OFFSET] != 0, 'the capabilities were dropped over another error'
+    sent = await next_open(peer)
+    assert sent[OPTIONAL_PARAMETERS_LENGTH_OFFSET - Message.HEADER_LEN] != 0, (
+        'the capabilities were dropped over another error'
+    )

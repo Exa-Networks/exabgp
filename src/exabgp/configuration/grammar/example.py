@@ -18,6 +18,7 @@ from exabgp.configuration.grammar.describe import neighbor_defaults
 from exabgp.configuration.grammar.engine import MAX_DEPTH
 from exabgp.configuration.grammar.nodes import MISSING, Block, Leaf
 from exabgp.configuration.grammar.shape import Kind
+from exabgp.configuration.grammar.types.base import spoken
 
 INDENT = '    '
 RULE = '# ' + '=' * 77
@@ -71,7 +72,7 @@ def _leaf(leaf: Leaf, default: Any, indent: str, given: bool) -> list[str]:
     if leaf.type.shape().kind == Kind.REFUSED:
         return []
     implied = leaf.default if leaf.default is not MISSING else default
-    value = ' '.join(leaf.type.render(implied)) if implied is not None and not leaf.many else ''
+    value = spoken(leaf.type.render(implied)) if implied is not None and not leaf.many else ''
     lines = ['', f'{indent}# {leaf.keyword}: {leaf.doc}' if leaf.doc else f'{indent}# {leaf.keyword}']
     if leaf.type.hint():
         lines.append(f'{indent}# Type: {leaf.type.hint()}')

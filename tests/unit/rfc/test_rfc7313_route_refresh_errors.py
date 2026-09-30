@@ -25,7 +25,6 @@ from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
 from exabgp.bgp.message.open.capability.refresh import RouteRefresh as CapabilityRouteRefresh
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.reactor.peer.context import PeerContext
 from exabgp.reactor.peer.handlers import route_refresh
 from exabgp.reactor.peer.handlers.route_refresh import RouteRefreshHandler
 from rfc.message_wire import header, read_wire
@@ -55,9 +54,7 @@ def received(subtype: int) -> RouteRefresh:
 
 def handled(subtype: int, enhanced: bool) -> Mock:
     resend = Mock()
-    ctx = Mock(spec=PeerContext)
-    ctx.refresh_enhanced = enhanced
-    ctx.peer_id = 'peer'
+    ctx, _ = negotiation.context(refresh_enhanced=enhanced)
     list(RouteRefreshHandler(resend).handle(ctx, received(subtype)))
     return resend
 

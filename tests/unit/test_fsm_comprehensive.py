@@ -11,13 +11,55 @@ Created: 2025-11-08
 import pytest
 import os
 from typing import Any
-from unittest.mock import Mock
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.bgp.fsm import FSM
+from exabgp.bgp import fsm as fsm_module  # noqa: E402
+from exabgp.bgp.fsm import FSM  # noqa: E402
+from exabgp.reactor.peer import Peer  # noqa: E402
+from tests import negotiation  # noqa: E402
+from tests.negotiation import Told  # noqa: E402
+
+# The compiled build checks the declared type of every argument and attribute
+COMPILED = not str(fsm_module.__file__).endswith('.py')
+
+
+class StatesTold(Told):
+    """A Told which also keeps the state the FSM was in each time the API was told of it.
+
+    Told keeps the FSM object, which has moved on by the time the test looks at it.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.states: list[Any] = []
+
+    def fsm(self, neighbor: Any, fsm: FSM) -> str:
+        self.calls.append(('fsm', (neighbor, fsm)))
+        self.states.append(fsm.state)
+        return ''
+
+
+class RefusingTold(Told):
+    """An API encoder which fails when asked to print a state change."""
+
+    def fsm(self, neighbor: Any, fsm: FSM) -> str:
+        raise RuntimeError('API error')
+
+
+def a_peer(*events: str, encoder: Told | None = None) -> tuple[Peer, Told]:
+    """A real Peer whose neighbor asks the API to be told of `events`, and what the API hears.
+
+    FSM.change() tells the API through peer.reactor.processes, so the peer, its neighbor and
+    its reactor are the real ones: the compiled FSM refuses anything else for a Peer.
+    """
+    session, told = negotiation.peer(negotiation.api_asks(negotiation.neighbor(), *events))
+    if encoder is not None:
+        session.reactor.processes._encoder[negotiation.PROCESS] = encoder
+        told = encoder
+    return session, told
 
 
 class TestFSMStateConstants:
@@ -83,12 +125,12 @@ class TestFSMStateRepresentation:
     def test_state_repr(self) -> None:
         """Test STATE __repr__ returns proper state names"""
         # IntEnum repr is <EnumName.MEMBER: value>
-        assert repr(FSM.IDLE) == '<STATE.IDLE: 1>'
-        assert repr(FSM.ACTIVE) == '<STATE.ACTIVE: 2>'
-        assert repr(FSM.CONNECT) == '<STATE.CONNECT: 4>'
-        assert repr(FSM.OPENSENT) == '<STATE.OPENSENT: 8>'
-        assert repr(FSM.OPENCONFIRM) == '<STATE.OPENCONFIRM: 16>'
-        assert repr(FSM.ESTABLISHED) == '<STATE.ESTABLISHED: 32>'
+        assert repr(FSM.IDLE) == '<FSMState.IDLE: 1>'
+        assert repr(FSM.ACTIVE) == '<FSMState.ACTIVE: 2>'
+        assert repr(FSM.CONNECT) == '<FSMState.CONNECT: 4>'
+        assert repr(FSM.OPENSENT) == '<FSMState.OPENSENT: 8>'
+        assert repr(FSM.OPENCONFIRM) == '<FSMState.OPENCONFIRM: 16>'
+        assert repr(FSM.ESTABLISHED) == '<FSMState.ESTABLISHED: 32>'
 
     def test_state_str(self) -> None:
         """Test STATE __str__ returns proper state names"""
@@ -106,14 +148,14 @@ class TestFSMInitialization:
 
     def test_init_with_idle_state(self) -> None:
         """Test FSM initialization with IDLE state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.IDLE)
         assert fsm.peer is peer
         assert fsm.state == FSM.IDLE
 
     def test_init_with_different_states(self) -> None:
         """Test FSM initialization with various states"""
-        peer = Mock()
+        peer, _ = a_peer()
 
         states = [
             FSM.IDLE,
@@ -131,13 +173,14 @@ class TestFSMInitialization:
 
     def test_init_preserves_peer_reference(self) -> None:
         """Test that FSM maintains reference to peer object"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.reactor = Mock()
+        peer, _ = a_peer()
+        neighbor = peer.neighbor
+        reactor = peer.reactor
 
         fsm = FSM(peer, FSM.IDLE)
         assert fsm.peer is peer
-        assert fsm.peer.neighbor is peer.neighbor
+        assert fsm.peer.neighbor is neighbor
+        assert fsm.peer.reactor is reactor
 
 
 class TestFSMStateComparison:
@@ -145,31 +188,31 @@ class TestFSMStateComparison:
 
     def test_equality_with_same_state(self) -> None:
         """Test FSM equality operator with matching state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.IDLE)
         assert fsm == FSM.IDLE
 
     def test_equality_with_different_state(self) -> None:
         """Test FSM equality operator with different state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.IDLE)
         assert not (fsm == FSM.ACTIVE)
 
     def test_inequality_with_different_state(self) -> None:
         """Test FSM inequality operator with different state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.IDLE)
         assert fsm != FSM.ACTIVE
 
     def test_inequality_with_same_state(self) -> None:
         """Test FSM inequality operator with matching state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.ESTABLISHED)
         assert not (fsm != FSM.ESTABLISHED)
 
     def test_multiple_state_comparisons(self) -> None:
         """Test FSM comparison across multiple states"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.CONNECT)
 
         assert fsm == FSM.CONNECT
@@ -185,9 +228,7 @@ class TestFSMStateTransitions:
 
     def test_change_updates_state(self) -> None:
         """Test that change() method updates FSM state"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
         fsm.change(FSM.ACTIVE)
@@ -195,9 +236,7 @@ class TestFSMStateTransitions:
 
     def test_change_returns_self(self) -> None:
         """Test that change() returns FSM object for chaining"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
         result = fsm.change(FSM.ACTIVE)
@@ -205,9 +244,7 @@ class TestFSMStateTransitions:
 
     def test_transition_idle_to_active(self) -> None:
         """Test IDLE -> ACTIVE transition"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
         fsm.change(FSM.ACTIVE)
@@ -215,9 +252,7 @@ class TestFSMStateTransitions:
 
     def test_transition_active_to_connect(self) -> None:
         """Test ACTIVE -> CONNECT is allowed (via IDLE)"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # Note: transition table shows CONNECT can come from IDLE
         # ACTIVE can transition to IDLE, then to CONNECT
@@ -227,9 +262,7 @@ class TestFSMStateTransitions:
 
     def test_transition_connect_to_opensent(self) -> None:
         """Test CONNECT -> OPENSENT transition"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.CONNECT)
         fsm.change(FSM.OPENSENT)
@@ -237,9 +270,7 @@ class TestFSMStateTransitions:
 
     def test_transition_opensent_to_openconfirm(self) -> None:
         """Test OPENSENT -> OPENCONFIRM transition"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.OPENSENT)
         fsm.change(FSM.OPENCONFIRM)
@@ -247,9 +278,7 @@ class TestFSMStateTransitions:
 
     def test_transition_openconfirm_to_established(self) -> None:
         """Test OPENCONFIRM -> ESTABLISHED transition"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.OPENCONFIRM)
         fsm.change(FSM.ESTABLISHED)
@@ -257,9 +286,7 @@ class TestFSMStateTransitions:
 
     def test_transition_established_to_idle(self) -> None:
         """Test ESTABLISHED -> IDLE transition (session reset)"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.ESTABLISHED)
         fsm.change(FSM.IDLE)
@@ -267,9 +294,7 @@ class TestFSMStateTransitions:
 
     def test_multiple_consecutive_transitions(self) -> None:
         """Test multiple state changes in sequence"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
         fsm.change(FSM.ACTIVE)
@@ -292,9 +317,7 @@ class TestFSMStateTransitions:
 
     def test_transition_staying_in_same_state(self) -> None:
         """Test transition to the same state (no change)"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
         fsm.change(FSM.IDLE)
@@ -361,63 +384,43 @@ class TestFSMAPICallbacks:
 
     def test_change_triggers_api_callback_when_enabled(self) -> None:
         """Test that state change triggers API callback when enabled"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': True}
-        peer.reactor = Mock()
-        peer.reactor.processes = Mock()
-        peer.reactor.processes.fsm = Mock()
+        peer, told = a_peer('fsm')
 
         fsm = FSM(peer, FSM.IDLE)
         fsm.change(FSM.ACTIVE)
 
-        peer.reactor.processes.fsm.assert_called_once_with(peer.neighbor, fsm)
+        assert told.called('fsm') == [(peer.neighbor, fsm)]
 
     def test_change_skips_api_callback_when_disabled(self) -> None:
         """Test that state change skips API callback when disabled"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
-        peer.reactor = Mock()
-        peer.reactor.processes = Mock()
-        peer.reactor.processes.fsm = Mock()
+        peer, told = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
         fsm.change(FSM.ACTIVE)
 
-        peer.reactor.processes.fsm.assert_not_called()
+        assert told.called('fsm') == []
 
     def test_multiple_transitions_trigger_multiple_callbacks(self) -> None:
         """Test that multiple state changes trigger multiple callbacks"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': True}
-        peer.reactor = Mock()
-        peer.reactor.processes = Mock()
-        peer.reactor.processes.fsm = Mock()
+        peer, told = a_peer('fsm')
 
         fsm = FSM(peer, FSM.IDLE)
         fsm.change(FSM.ACTIVE)
         fsm.change(FSM.IDLE)
         fsm.change(FSM.CONNECT)
 
-        assert peer.reactor.processes.fsm.call_count == 3
+        assert len(told.called('fsm')) == 3
 
     def test_api_callback_receives_correct_parameters(self) -> None:
         """Test that API callback receives neighbor and FSM instance"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': True}
-        peer.reactor = Mock()
-        peer.reactor.processes = Mock()
-        peer.reactor.processes.fsm = Mock()
+        peer, told = a_peer('fsm')
 
         fsm = FSM(peer, FSM.IDLE)
         fsm.change(FSM.ESTABLISHED)
 
-        call_args = peer.reactor.processes.fsm.call_args
-        assert call_args[0][0] is peer.neighbor
-        assert call_args[0][1] is fsm
+        ((neighbor, told_fsm),) = told.called('fsm')
+        assert neighbor is peer.neighbor
+        assert told_fsm is fsm
 
 
 class TestFSMRepr:
@@ -425,13 +428,13 @@ class TestFSMRepr:
 
     def test_fsm_repr_format(self) -> None:
         """Test FSM __repr__ includes state name"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.IDLE)
         assert 'FSM state' in repr(fsm)
 
     def test_fsm_repr_different_states(self) -> None:
         """Test FSM __repr__ for different states"""
-        peer = Mock()
+        peer, _ = a_peer()
 
         states = [
             FSM.IDLE,
@@ -453,45 +456,43 @@ class TestFSMName:
 
     def test_name_returns_idle(self) -> None:
         """Test name() returns 'IDLE' for IDLE state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.IDLE)
         assert fsm.name() == 'IDLE'
 
     def test_name_returns_active(self) -> None:
         """Test name() returns 'ACTIVE' for ACTIVE state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.ACTIVE)
         assert fsm.name() == 'ACTIVE'
 
     def test_name_returns_connect(self) -> None:
         """Test name() returns 'CONNECT' for CONNECT state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.CONNECT)
         assert fsm.name() == 'CONNECT'
 
     def test_name_returns_opensent(self) -> None:
         """Test name() returns 'OPENSENT' for OPENSENT state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.OPENSENT)
         assert fsm.name() == 'OPENSENT'
 
     def test_name_returns_openconfirm(self) -> None:
         """Test name() returns 'OPENCONFIRM' for OPENCONFIRM state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.OPENCONFIRM)
         assert fsm.name() == 'OPENCONFIRM'
 
     def test_name_returns_established(self) -> None:
         """Test name() returns 'ESTABLISHED' for ESTABLISHED state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.ESTABLISHED)
         assert fsm.name() == 'ESTABLISHED'
 
     def test_name_after_transition(self) -> None:
         """Test name() reflects current state after transition"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
         assert fsm.name() == 'IDLE'
@@ -508,9 +509,7 @@ class TestFSMTypicalSessionFlow:
 
     def test_successful_session_establishment(self) -> None:
         """Test typical successful BGP session establishment flow"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # Start in IDLE
         fsm = FSM(peer, FSM.IDLE)
@@ -539,9 +538,7 @@ class TestFSMTypicalSessionFlow:
 
     def test_session_reset_from_established(self) -> None:
         """Test session reset from ESTABLISHED to IDLE"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.ESTABLISHED)
         fsm.change(FSM.IDLE)
@@ -549,9 +546,7 @@ class TestFSMTypicalSessionFlow:
 
     def test_connection_failure_recovery(self) -> None:
         """Test connection failure and recovery"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # Try to connect
         fsm = FSM(peer, FSM.IDLE)
@@ -568,9 +563,7 @@ class TestFSMTypicalSessionFlow:
 
     def test_open_message_collision(self) -> None:
         """Test handling of simultaneous OPEN messages (collision)"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # Both sides send OPEN -> OPENCONFIRM
         fsm = FSM(peer, FSM.OPENCONFIRM)
@@ -587,6 +580,7 @@ class TestFSMTypicalSessionFlow:
 class TestFSMEdgeCases:
     """Test FSM edge cases and boundary conditions"""
 
+    @pytest.mark.skipif(COMPILED, reason='the compiled FSM refuses a peer which is not a Peer')
     def test_fsm_with_none_peer(self) -> None:
         """Test FSM initialization with None peer (edge case)"""
         fsm = FSM(None, FSM.IDLE)
@@ -595,9 +589,7 @@ class TestFSMEdgeCases:
 
     def test_rapid_state_changes(self) -> None:
         """Test rapid consecutive state changes"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
 
@@ -610,7 +602,7 @@ class TestFSMEdgeCases:
 
     def test_state_persistence_across_comparisons(self) -> None:
         """Test that state comparisons don't modify state"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.CONNECT)
 
         # Multiple comparisons shouldn't change state
@@ -622,7 +614,7 @@ class TestFSMEdgeCases:
 
     def test_fsm_state_is_integer(self) -> None:
         """Test that FSM states are integer values"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.IDLE)
 
         assert isinstance(fsm.state, int)
@@ -634,22 +626,12 @@ class TestFSMSessionLifecycle:
 
     def test_full_lifecycle_with_api_tracking(self) -> None:
         """Test full session lifecycle with API callbacks"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': True}
-        peer.reactor = Mock()
-        peer.reactor.processes = Mock()
-        peer.reactor.processes.fsm = Mock()
+        # Track all state changes
+        told = StatesTold()
+        peer, _ = a_peer('fsm', encoder=told)
+        states = told.states
 
         fsm = FSM(peer, FSM.IDLE)
-
-        # Track all state changes
-        states = []
-
-        def record_state(neighbor: Any, fsm_obj: Any):
-            states.append(fsm_obj.state)
-
-        peer.reactor.processes.fsm.side_effect = record_state
 
         # Go through full lifecycle
         fsm.change(FSM.ACTIVE)
@@ -671,9 +653,7 @@ class TestFSMSessionLifecycle:
 
     def test_session_termination_and_restart(self) -> None:
         """Test session termination and restart"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.ESTABLISHED)
 
@@ -690,9 +670,7 @@ class TestFSMSessionLifecycle:
 
     def test_multiple_failed_connection_attempts(self) -> None:
         """Test multiple connection failures before success"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
 
@@ -733,14 +711,19 @@ class TestFSMStateValidation:
 
     def test_name_returns_invalid_for_unknown_state(self) -> None:
         """Test name() handles invalid state gracefully"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.IDLE)
 
-        # With IntEnum, cannot set invalid state - it will be an int not STATE
-        # This test now verifies that assigning raw int causes AttributeError
-        fsm.state = 0x99  # type: ignore[assignment]
+        # With IntEnum, cannot set invalid state - it will be an int not STATE.
+        # The compiled FSM refuses the int as it is assigned (TypeError); interpreted, it
+        # is taken, and name() fails because an int has no .name attribute
+        try:
+            fsm.state = 0x99  # type: ignore[assignment]
+        except TypeError:
+            assert COMPILED, 'only the compiled build checks the type of an assignment'
+            assert fsm.state == FSM.IDLE
+            return
 
-        # name() will fail because int doesn't have .name attribute
         with pytest.raises(AttributeError):
             fsm.name()
 
@@ -768,9 +751,7 @@ class TestFSMTransitionValidation:
 
     def test_idle_transition_from_all_states(self) -> None:
         """Test that IDLE can be reached from any state"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         all_states = [
             FSM.IDLE,
@@ -788,9 +769,7 @@ class TestFSMTransitionValidation:
 
     def test_opensent_only_from_connect(self) -> None:
         """Test OPENSENT can only come from CONNECT"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # Valid: CONNECT -> OPENSENT
         fsm = FSM(peer, FSM.CONNECT)
@@ -802,9 +781,7 @@ class TestFSMTransitionValidation:
 
     def test_established_only_from_openconfirm(self) -> None:
         """Test ESTABLISHED typically comes from OPENCONFIRM"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # Valid: OPENCONFIRM -> ESTABLISHED
         fsm = FSM(peer, FSM.OPENCONFIRM)
@@ -817,9 +794,7 @@ class TestFSMTransitionValidation:
 
     def test_active_valid_transitions(self) -> None:
         """Test ACTIVE accepts transitions from IDLE, ACTIVE, OPENSENT"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # From IDLE
         fsm = FSM(peer, FSM.IDLE)
@@ -837,9 +812,7 @@ class TestFSMTransitionValidation:
 
     def test_connect_valid_transitions(self) -> None:
         """Test CONNECT accepts transitions from IDLE, CONNECT, ACTIVE"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # From IDLE
         fsm = FSM(peer, FSM.IDLE)
@@ -858,9 +831,7 @@ class TestFSMTransitionValidation:
 
     def test_openconfirm_transitions(self) -> None:
         """Test OPENCONFIRM accepts transitions from OPENSENT, OPENCONFIRM"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # From OPENSENT
         fsm = FSM(peer, FSM.OPENSENT)
@@ -877,7 +848,7 @@ class TestFSMStateComparisons:
 
     def test_eq_with_all_states(self) -> None:
         """Test __eq__ operator works with all states"""
-        peer = Mock()
+        peer, _ = a_peer()
 
         all_states = [
             FSM.IDLE,
@@ -898,7 +869,7 @@ class TestFSMStateComparisons:
 
     def test_neq_with_all_states(self) -> None:
         """Test __neq__ operator works with all states"""
-        peer = Mock()
+        peer, _ = a_peer()
 
         all_states = [
             FSM.IDLE,
@@ -919,7 +890,7 @@ class TestFSMStateComparisons:
 
     def test_comparison_type_compatibility(self) -> None:
         """Test FSM comparison works with int values"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.IDLE)
 
         # Should work with direct int value
@@ -928,7 +899,7 @@ class TestFSMStateComparisons:
 
     def test_state_value_matches_constant(self) -> None:
         """Test FSM.state value matches state constant"""
-        peer = Mock()
+        peer, _ = a_peer()
 
         fsm_idle = FSM(peer, FSM.IDLE)
         assert fsm_idle.state == FSM.IDLE
@@ -944,7 +915,7 @@ class TestFSMStatePersistence:
 
     def test_state_persists_after_comparison(self) -> None:
         """Test state doesn't change after comparisons"""
-        peer = Mock()
+        peer, _ = a_peer()
         fsm = FSM(peer, FSM.CONNECT)
 
         original_state = fsm.state
@@ -960,9 +931,7 @@ class TestFSMStatePersistence:
 
     def test_peer_reference_persists(self) -> None:
         """Test peer reference remains unchanged"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
         original_peer = fsm.peer
@@ -976,9 +945,7 @@ class TestFSMStatePersistence:
 
     def test_state_changes_atomic(self) -> None:
         """Test that state changes are atomic"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         fsm = FSM(peer, FSM.IDLE)
 
@@ -996,8 +963,7 @@ class TestFSMAPIIntegration:
 
     def test_api_callback_with_missing_api_dict(self) -> None:
         """Test FSM handles missing api dictionary"""
-        peer = Mock()
-        peer.neighbor = Mock()
+        peer, _ = a_peer()
         peer.neighbor.api = {}  # No 'fsm' key
 
         fsm = FSM(peer, FSM.IDLE)
@@ -1012,18 +978,9 @@ class TestFSMAPIIntegration:
 
     def test_api_callback_state_matches(self) -> None:
         """Test API callback receives FSM in correct state"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': True}
-        peer.reactor = Mock()
-        peer.reactor.processes = Mock()
-
-        captured_states = []
-
-        def capture_state(neighbor: Any, fsm_obj: Any):
-            captured_states.append(fsm_obj.state)
-
-        peer.reactor.processes.fsm = capture_state
+        told = StatesTold()
+        peer, _ = a_peer('fsm', encoder=told)
+        captured_states = told.states
 
         fsm = FSM(peer, FSM.IDLE)
         fsm.change(FSM.CONNECT)
@@ -1033,12 +990,7 @@ class TestFSMAPIIntegration:
 
     def test_api_callback_exception_handling(self) -> None:
         """Test FSM handles API callback exceptions"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': True}
-        peer.reactor = Mock()
-        peer.reactor.processes = Mock()
-        peer.reactor.processes.fsm = Mock(side_effect=RuntimeError('API error'))
+        peer, _ = a_peer('fsm', encoder=RefusingTold())
 
         fsm = FSM(peer, FSM.IDLE)
 
@@ -1048,13 +1000,9 @@ class TestFSMAPIIntegration:
 
     def test_multiple_peers_independent_fsms(self) -> None:
         """Test multiple peers have independent FSM instances"""
-        peer1 = Mock()
-        peer1.neighbor = Mock()
-        peer1.neighbor.api = {'fsm': False}
+        peer1, _ = a_peer()
 
-        peer2 = Mock()
-        peer2.neighbor = Mock()
-        peer2.neighbor.api = {'fsm': False}
+        peer2, _ = a_peer()
 
         fsm1 = FSM(peer1, FSM.IDLE)
         fsm2 = FSM(peer2, FSM.CONNECT)
@@ -1116,9 +1064,7 @@ class TestFSMRealWorldScenarios:
 
     def test_graceful_restart_scenario(self) -> None:
         """Test graceful restart state transitions"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # Session established
         fsm = FSM(peer, FSM.ESTABLISHED)
@@ -1136,9 +1082,7 @@ class TestFSMRealWorldScenarios:
 
     def test_hold_timer_expiry_scenario(self) -> None:
         """Test hold timer expiry state transitions"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # In OPENCONFIRM waiting for KEEPALIVE
         fsm = FSM(peer, FSM.OPENCONFIRM)
@@ -1149,9 +1093,7 @@ class TestFSMRealWorldScenarios:
 
     def test_notification_message_scenario(self) -> None:
         """Test NOTIFICATION message state transitions"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # Can receive NOTIFICATION from any state -> IDLE
         for start_state in [FSM.ACTIVE, FSM.CONNECT, FSM.OPENSENT, FSM.OPENCONFIRM, FSM.ESTABLISHED]:
@@ -1161,9 +1103,7 @@ class TestFSMRealWorldScenarios:
 
     def test_collision_detection_scenario(self) -> None:
         """Test connection collision detection"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # Collision detected in OPENCONFIRM
         fsm = FSM(peer, FSM.OPENCONFIRM)
@@ -1178,9 +1118,7 @@ class TestFSMRealWorldScenarios:
 
     def test_administratively_shutdown_scenario(self) -> None:
         """Test administrative shutdown from any state"""
-        peer = Mock()
-        peer.neighbor = Mock()
-        peer.neighbor.api = {'fsm': False}
+        peer, _ = a_peer()
 
         # Can shutdown from any state
         for state in [FSM.ACTIVE, FSM.CONNECT, FSM.OPENSENT, FSM.OPENCONFIRM, FSM.ESTABLISHED]:

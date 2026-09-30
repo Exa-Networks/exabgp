@@ -265,6 +265,18 @@ class TestProcessParserRunExceptions:
 
 
 class TestExecutableDescriptorValidation:
+    @pytest.mark.parametrize('parent_is_file', [False, True])
+    def test_open_failure_preserves_the_program_error(self, tmp_path, parent_is_file) -> None:
+        parent = tmp_path / 'parent'
+        if parent_is_file:
+            parent.touch()
+        program = parent / 'program'
+
+        with pytest.raises(ValueError) as failure:
+            program_module.validate_executable(str(program))
+
+        assert str(program) in str(failure.value)
+
     def test_checks_the_opened_object_when_the_path_changes(self, monkeypatch, tmp_path) -> None:
         program = tmp_path / 'program'
         program.write_text('#!/bin/sh\n')

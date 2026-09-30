@@ -11,28 +11,33 @@ of distinct routes the peer currently holds with us, not of announcements.
 
 from __future__ import annotations
 
+import asyncio
 from struct import pack
 from typing import Any
-from unittest.mock import AsyncMock, Mock
 
 import pytest
 
-from exabgp.bgp.message import Message
-
+from exabgp.bgp.message import KeepAlive, Open, Update
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, RouterID, Version
+from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
-from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.bgp.message.update.collection import RoutedNLRI, UpdateCollection
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
+from exabgp.reactor.api import API
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.peer.context import PeerContext
 from exabgp.reactor.peer.handlers.update import UpdateHandler
+from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
 from exabgp.rib.incoming import IncomingRIB
+from tests import negotiation
 
 CEASE = 6
 MAXIMUM_NUMBER_OF_PREFIXES_REACHED = 1
@@ -75,28 +80,20 @@ def nlri(prefix: str, afi: AFI = AFI.ipv4) -> INET:
 
 def update(
     announces: tuple[str, ...] | list[str] = (), withdraws: tuple[str, ...] | list[str] = (), afi: AFI = AFI.ipv4
-) -> Any:
-    parsed = Mock()
-    parsed.announces = [RoutedNLRI(nlri(prefix, afi), IP.NoNextHop) for prefix in announces]
-    parsed.withdraws = [nlri(prefix, afi) for prefix in withdraws]
-    parsed.attributes = AttributeCollection()
-    message = Mock()
-    message.ID = Message.CODE.UPDATE
-    message.IS_EOR = False
-    message.data = parsed
-    return message
+) -> Update:
+    return Update.from_collection(
+        UpdateCollection(
+            [RoutedNLRI(nlri(prefix, afi), IP.NoNextHop) for prefix in announces],
+            [nlri(prefix, afi) for prefix in withdraws],
+            AttributeCollection(),
+        )
+    )
 
 
-def context(limits: dict[FamilyTuple, int]) -> Any:
-    ctx = Mock(spec=PeerContext)
-    ctx.neighbor = Mock()
+def context(limits: dict[FamilyTuple, int]) -> PeerContext:
+    ctx, _ = negotiation.context()
     ctx.neighbor.prefix_limit = limits
-    ctx.neighbor.rib = Mock()
     ctx.neighbor.rib.incoming = IncomingRIB(True, {IPV4_UNICAST, IPV6_UNICAST})
-    ctx.negotiated = Mock()
-    ctx.negotiated.advertised_paths_limit = {}
-    ctx.peer_id = 'test-peer'
-    ctx.stats = {'receive-prefixes': 0, 'receive-withdraws': 0}
     return ctx
 
 
@@ -258,19 +255,44 @@ async def test_the_asynchronous_handler_enforces_the_same_limit() -> None:
     assert (caught.value.code, caught.value.subcode) == (CEASE, MAXIMUM_NUMBER_OF_PREFIXES_REACHED)
 
 
+def peer_sends(announces: int) -> bytes:
+    """What the eBGP peer AS 65002 sends: its OPEN, a KEEPALIVE, then an UPDATE of `announces` prefixes."""
+    agreed = negotiation.negotiated()
+    families = MultiProtocol()
+    families.append(IPV4_UNICAST)
+    capabilities = Capabilities()
+    capabilities[Capability.CODE.MULTIPROTOCOL] = families
+    sent = Open.make_open(Version(4), ASN(65002), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+    reactor, _ = negotiation.reactor()
+    routes = [
+        API(reactor).api_route(f'route 10.0.{index}.0/24 next-hop 192.0.2.1 origin igp as-path [ 65002 ]', 'announce')[
+            0
+        ]
+        for index in range(announces)
+    ]
+    collection = UpdateCollection([RoutedNLRI(route.nlri, route.nexthop) for route in routes], [], routes[0].attributes)
+    return sent.pack_message(agreed) + KeepAlive().pack_message(agreed) + b''.join(collection.messages(agreed))
+
+
 @pytest.mark.asyncio
-async def test_a_peering_ended_for_too_many_prefixes_is_retried(monkeypatch: pytest.MonkeyPatch) -> None:
-    """The operator chose the normal reconnect backoff for (6, 1), unlike (2, 7)."""
-    neighbor = Mock()
-    neighbor.uid = '1'
-    neighbor.ephemeral = False
-    neighbor.api = {'neighbor-changes': False, 'fsm': False}
-    peer = Peer(neighbor, Mock())
-    notify = Notify(CEASE, MAXIMUM_NUMBER_OF_PREFIXES_REACHED, data=pack('!HBI', int(AFI.ipv4), int(SAFI.unicast), 1))
-    monkeypatch.setattr(peer, '_establish', AsyncMock(side_effect=notify))
+async def test_a_peering_ended_for_too_many_prefixes_is_retried() -> None:
+    """The operator chose the normal reconnect backoff for (6, 1), unlike (2, 7).
 
-    await peer._run()
+    A real session: the peer opens it, then sends one prefix past the limit.
+    """
+    neighbor = parsed_neighbor('ipv4 unicast prefix-limit 1;')
+    reactor, _ = negotiation.reactor()
+    peer = Peer(neighbor, reactor)
+    peer.proto = Protocol(peer)
+    theirs = negotiation.connect(peer.proto)
+    theirs.sendall(peer_sends(2))
 
+    await asyncio.wait_for(peer._run(), 5)
+
+    answered = [body for kind, body in negotiation.messages(negotiation.received(theirs)) if kind == 3]
+    # the session was reset, which closed our end
+    theirs.close()
+    assert answered == [bytes([CEASE, MAXIMUM_NUMBER_OF_PREFIXES_REACHED]) + pack('!HBI', 1, 1, 1)]
     assert peer._restart
 
 

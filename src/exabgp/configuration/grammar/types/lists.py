@@ -20,7 +20,7 @@ from typing import Generic, TypeVar
 
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import Shape, leaf_list
-from exabgp.configuration.grammar.types.base import Syntax, Type
+from exabgp.configuration.grammar.types.base import Syntax, Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
 
 T = TypeVar('T')
@@ -80,10 +80,10 @@ class OneOrList(Type[list[T]], Generic[T]):
                 found.append(value)
         raise ConfigError(where, f'a {self.name} holds at most {self.max_items} items')
 
-    def render(self, value: list[T]) -> list[str]:
+    def render(self, value: list[T]) -> list[WordOrSyntax]:
         if len(value) == 1 and self.single:
             return self.item.render(value[0])
-        rendered: list[str] = [Syntax(OPEN)]
+        rendered: list[WordOrSyntax] = [Syntax(OPEN)]
         for each in value:
             rendered.extend(self.item.render(each))
         rendered.append(Syntax(CLOSE))

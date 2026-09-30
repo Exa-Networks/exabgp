@@ -5,15 +5,67 @@ Unit tests for CLI transport selection (pipe vs Unix socket)
 """
 
 import argparse
+import contextlib
+import io
 import os
+import signal
 import stat
-from queue import Empty
+import threading
+from collections.abc import Iterator
+from queue import Empty, Queue
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from exabgp.application.unixsocket import unix_socket
+from exabgp.environment import getenv
+
+
+def stat_of(mode: int) -> os.stat_result:
+    """A real stat result with only st_mode set, as os.stat returns one."""
+    return os.stat_result((mode, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+
+# Names no daemon on the test machine uses, so each transport fails to find its endpoint
+# and says which endpoint it was looking for.
+UNUSED_PIPE = 'exabgp-unit-test-no-such-pipe'
+UNUSED_SOCKET = 'exabgp-unit-test-no-such-socket'
+
+
+def run_cmdline(
+    capsys: pytest.CaptureFixture[str],
+    command: list[str],
+    environ: dict[str, str],
+    use_pipe: bool = False,
+    use_socket: bool = False,
+) -> str:
+    """Run `exabgp run` against no daemon and return what it printed.
+
+    The transports are not replaced (a compiled module calls its own functions directly):
+    each one reports, by name, the endpoint it could not find, which says which one ran.
+    """
+    from exabgp.application.run import cmdline
+
+    arguments = argparse.Namespace(use_pipe=use_pipe, use_socket=use_socket, pipename=UNUSED_PIPE, command=command)
+    api = getenv().api
+    socketname = api.socketname
+    api.socketname = UNUSED_SOCKET
+    try:
+        with patch.dict(os.environ, environ, clear=True), pytest.raises(SystemExit) as exited:
+            cmdline(arguments)
+    finally:
+        api.socketname = socketname
+    assert exited.value.code == 1
+    return capsys.readouterr().out
+
+
+def used_pipe(output: str) -> bool:
+    return f"could not find ExaBGP's named pipes ({UNUSED_PIPE}.in" in output
+
+
+def used_socket(output: str) -> bool:
+    return f"could not find ExaBGP's Unix socket ({UNUSED_SOCKET}.sock)" in output
 
 
 class TestUnixSocketDiscovery:
@@ -25,12 +77,7 @@ class TestUnixSocketDiscovery:
 
         with patch.dict(os.environ, {'exabgp_api_socketpath': test_path}):
             with patch('os.path.exists', return_value=True):
-                with patch('os.stat') as mock_stat:
-                    # Mock stat to return socket file type
-                    mock_stat_result = Mock()
-                    mock_stat_result.st_mode = stat.S_IFSOCK | 0o600
-                    mock_stat.return_value = mock_stat_result
-
+                with patch('os.stat', return_value=stat_of(stat.S_IFSOCK | 0o600)):
                     result = unix_socket('', 'exabgp')
 
                     # Should return the directory containing the socket
@@ -43,9 +90,7 @@ class TestUnixSocketDiscovery:
         def mock_stat_side_effect(path: str) -> Any:
             if path == '/run/exabgp/exabgp.sock':
                 # Return a socket file
-                mock_stat_result = Mock()
-                mock_stat_result.st_mode = stat.S_IFSOCK | 0o600
-                return mock_stat_result
+                return stat_of(stat.S_IFSOCK | 0o600)
             raise FileNotFoundError()
 
         with patch('os.path.exists', return_value=True):
@@ -72,9 +117,7 @@ class TestUnixSocketDiscovery:
 
         def mock_stat_side_effect(path: str) -> Any:
             # Return a regular file, not a socket
-            mock_stat_result = Mock()
-            mock_stat_result.st_mode = stat.S_IFREG | 0o644  # Regular file
-            return mock_stat_result
+            return stat_of(stat.S_IFREG | 0o644)
 
         with patch('os.path.exists', return_value=True):
             with patch('os.stat', side_effect=mock_stat_side_effect):
@@ -88,9 +131,7 @@ class TestUnixSocketDiscovery:
 
         def mock_stat_side_effect(path: str) -> Any:
             if path == '/run/exabgp/custom.sock':
-                mock_stat_result = Mock()
-                mock_stat_result.st_mode = stat.S_IFSOCK | 0o600
-                return mock_stat_result
+                return stat_of(stat.S_IFSOCK | 0o600)
             raise FileNotFoundError()
 
         with patch('os.path.exists', return_value=True):
@@ -106,9 +147,7 @@ class TestUnixSocketDiscovery:
 
         def mock_stat_side_effect(path: str) -> Any:
             if path == '/custom/root/run/exabgp/exabgp.sock':
-                mock_stat_result = Mock()
-                mock_stat_result.st_mode = stat.S_IFSOCK | 0o600
-                return mock_stat_result
+                return stat_of(stat.S_IFSOCK | 0o600)
             raise FileNotFoundError()
 
         with patch('os.path.exists', return_value=True):
@@ -200,230 +239,59 @@ class TestCLIArgumentParsing:
 class TestTransportSelection:
     """Test transport selection logic in cmdline()"""
 
-    def test_default_transport_is_socket(self) -> None:
+    def test_default_transport_is_socket(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test that default transport is Unix socket"""
-        # Create mock args with no flags
-        mock_args = MagicMock()
-        mock_args.use_pipe = False
-        mock_args.use_socket = False
-        mock_args.pipename = None
-        mock_args.command = ['show', 'neighbor']
+        output = run_cmdline(capsys, ['show', 'neighbor'], {})
+        assert used_socket(output)
+        assert not used_pipe(output)
 
-        with patch.dict(os.environ, {}, clear=True):
-            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.run.getenv') as mock_getenv:
-                        mock_env = MagicMock()
-                        mock_env.api.pipename = 'exabgp'
-                        mock_env.api.socketname = 'exabgp'
-                        mock_getenv.return_value = mock_env
-
-                        from exabgp.application.run import cmdline
-
-                        try:
-                            cmdline(mock_args)
-                        except SystemExit:
-                            pass
-
-                        # Should call socket transport (default)
-                        mock_socket.assert_called_once()
-                        mock_pipe.assert_not_called()
-
-    def test_pipe_flag_forces_pipe_transport(self) -> None:
+    def test_pipe_flag_forces_pipe_transport(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test --pipe flag forces pipe transport"""
-        mock_args = MagicMock()
-        mock_args.use_pipe = True
-        mock_args.use_socket = False
-        mock_args.pipename = None
-        mock_args.command = ['show', 'neighbor']
+        output = run_cmdline(capsys, ['show', 'neighbor'], {}, use_pipe=True)
+        assert used_pipe(output)
+        assert not used_socket(output)
 
-        with patch.dict(os.environ, {}, clear=True):
-            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.run.getenv') as mock_getenv:
-                        mock_env = MagicMock()
-                        mock_env.api.pipename = 'exabgp'
-                        mock_getenv.return_value = mock_env
-
-                        from exabgp.application.run import cmdline
-
-                        try:
-                            cmdline(mock_args)
-                        except SystemExit:
-                            pass
-
-                        # Should call pipe transport
-                        mock_pipe.assert_called_once()
-                        mock_socket.assert_not_called()
-
-    def test_socket_flag_forces_socket_transport(self) -> None:
+    def test_socket_flag_forces_socket_transport(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test --socket flag forces socket transport"""
-        mock_args = MagicMock()
-        mock_args.use_pipe = False
-        mock_args.use_socket = True
-        mock_args.pipename = None
-        mock_args.command = ['show', 'neighbor']
+        output = run_cmdline(capsys, ['show', 'neighbor'], {'exabgp_cli_transport': 'pipe'}, use_socket=True)
+        assert used_socket(output)
+        assert not used_pipe(output)
 
-        with patch.dict(os.environ, {}, clear=True):
-            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.run.getenv') as mock_getenv:
-                        mock_env = MagicMock()
-                        mock_env.api.socketname = 'exabgp'
-                        mock_getenv.return_value = mock_env
-
-                        from exabgp.application.run import cmdline
-
-                        try:
-                            cmdline(mock_args)
-                        except SystemExit:
-                            pass
-
-                        # Should call socket transport
-                        mock_socket.assert_called_once()
-                        mock_pipe.assert_not_called()
-
-    def test_env_var_pipe_forces_pipe_transport(self) -> None:
+    def test_env_var_pipe_forces_pipe_transport(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test exabgp_cli_transport=pipe environment variable"""
-        mock_args = MagicMock()
-        mock_args.use_pipe = False
-        mock_args.use_socket = False
-        mock_args.pipename = None
-        mock_args.command = ['show', 'neighbor']
+        output = run_cmdline(capsys, ['show', 'neighbor'], {'exabgp_cli_transport': 'pipe'})
+        assert used_pipe(output)
+        assert not used_socket(output)
 
-        with patch.dict(os.environ, {'exabgp_cli_transport': 'pipe'}):
-            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.run.getenv') as mock_getenv:
-                        mock_env = MagicMock()
-                        mock_env.api.pipename = 'exabgp'
-                        mock_getenv.return_value = mock_env
-
-                        from exabgp.application.run import cmdline
-
-                        try:
-                            cmdline(mock_args)
-                        except SystemExit:
-                            pass
-
-                        # Should call pipe transport
-                        mock_pipe.assert_called_once()
-                        mock_socket.assert_not_called()
-
-    def test_env_var_socket_forces_socket_transport(self) -> None:
+    def test_env_var_socket_forces_socket_transport(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test exabgp_cli_transport=socket environment variable"""
-        mock_args = MagicMock()
-        mock_args.use_pipe = False
-        mock_args.use_socket = False
-        mock_args.pipename = None
-        mock_args.command = ['show', 'neighbor']
+        output = run_cmdline(capsys, ['show', 'neighbor'], {'exabgp_cli_transport': 'socket'})
+        assert used_socket(output)
+        assert not used_pipe(output)
 
-        with patch.dict(os.environ, {'exabgp_cli_transport': 'socket'}):
-            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.run.getenv') as mock_getenv:
-                        mock_env = MagicMock()
-                        mock_env.api.socketname = 'exabgp'
-                        mock_getenv.return_value = mock_env
-
-                        from exabgp.application.run import cmdline
-
-                        try:
-                            cmdline(mock_args)
-                        except SystemExit:
-                            pass
-
-                        # Should call socket transport
-                        mock_socket.assert_called_once()
-                        mock_pipe.assert_not_called()
-
-    def test_flag_overrides_env_var(self) -> None:
+    def test_flag_overrides_env_var(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test command-line flag overrides environment variable"""
-        mock_args = MagicMock()
-        mock_args.use_pipe = True  # Flag says pipe
-        mock_args.use_socket = False
-        mock_args.pipename = None
-        mock_args.command = ['show', 'neighbor']
-
-        # Environment says socket
-        with patch.dict(os.environ, {'exabgp_cli_transport': 'socket'}):
-            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.run.cmdline_pipe') as mock_pipe:
-                    with patch('exabgp.application.run.getenv') as mock_getenv:
-                        mock_env = MagicMock()
-                        mock_env.api.pipename = 'exabgp'
-                        mock_getenv.return_value = mock_env
-
-                        from exabgp.application.run import cmdline
-
-                        try:
-                            cmdline(mock_args)
-                        except SystemExit:
-                            pass
-
-                        # Flag should override env var - should use pipe
-                        mock_pipe.assert_called_once()
-                        mock_socket.assert_not_called()
+        # Environment says socket, the flag says pipe
+        output = run_cmdline(capsys, ['show', 'neighbor'], {'exabgp_cli_transport': 'socket'}, use_pipe=True)
+        assert used_pipe(output)
+        assert not used_socket(output)
 
 
 class TestCommandShortcuts:
     """Test command nickname expansion"""
 
-    def test_help_shortcut(self) -> None:
+    def test_help_shortcut(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test 'h' expands to 'help'"""
-        mock_args = MagicMock()
-        mock_args.use_pipe = False
-        mock_args.use_socket = False
-        mock_args.pipename = None
-        mock_args.command = ['h']  # Should expand to 'help'
+        output = run_cmdline(capsys, ['h'], {})
+        # The expanded command is shown before it is sent
+        assert 'command: help\n' in output
+        assert used_socket(output)
 
-        with patch.dict(os.environ, {}, clear=True):
-            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.run.getenv') as mock_getenv:
-                    mock_env = MagicMock()
-                    mock_env.api.socketname = 'exabgp'
-                    mock_getenv.return_value = mock_env
-
-                    from exabgp.application.run import cmdline
-
-                    try:
-                        cmdline(mock_args)
-                    except SystemExit:
-                        pass
-
-                    # Should be called with expanded 'help' command
-                    mock_socket.assert_called_once()
-                    call_args = mock_socket.call_args
-                    # Second argument should be the command string
-                    assert 'help' in call_args[0][1]
-
-    def test_show_neighbor_shortcut(self) -> None:
+    def test_show_neighbor_shortcut(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test 's n' expands to 'show neighbor'"""
-        mock_args = MagicMock()
-        mock_args.use_pipe = False
-        mock_args.use_socket = False
-        mock_args.pipename = None
-        mock_args.command = ['s', 'n']  # Should expand to 'show neighbor'
-
-        with patch.dict(os.environ, {}, clear=True):
-            with patch('exabgp.application.run.cmdline_socket') as mock_socket:
-                with patch('exabgp.application.run.getenv') as mock_getenv:
-                    mock_env = MagicMock()
-                    mock_env.api.socketname = 'exabgp'
-                    mock_getenv.return_value = mock_env
-
-                    from exabgp.application.run import cmdline
-
-                    try:
-                        cmdline(mock_args)
-                    except SystemExit:
-                        pass
-
-                    mock_socket.assert_called_once()
-                    call_args = mock_socket.call_args
-                    # Should contain 'show neighbor'
-                    assert 'show' in call_args[0][1]
-                    assert 'neighbor' in call_args[0][1]
+        output = run_cmdline(capsys, ['s', 'n'], {})
+        assert 'command: show neighbor\n' in output
+        assert used_socket(output)
 
 
 class TestResponseRouter:
@@ -551,6 +419,68 @@ class TestResponseRouter:
         assert router.active_command_client is None
 
 
+class FakeDaemonSocket:
+    """A unix socket to a daemon which answers a ping, and records what the client sends."""
+
+    made: list['FakeDaemonSocket'] = []
+
+    def __init__(self, *args: object) -> None:
+        self.replies = [b'{"pong": "daemon-uuid-one", "active": true}\ndone\n']
+        self.sent: list[bytes] = []
+        self.closed = False
+        FakeDaemonSocket.made.append(self)
+
+    def connect(self, path: str) -> None:
+        return None
+
+    def settimeout(self, timeout: float) -> None:
+        return None
+
+    def sendall(self, data: bytes) -> None:
+        self.sent.append(data)
+
+    def recv(self, size: int) -> bytes:
+        return self.replies.pop(0) if self.replies else b''
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class IdleThread(threading.Thread):
+    """A thread which is never started, so no background loop runs during the test."""
+
+    def start(self) -> None:
+        return None
+
+
+class ImpatientQueue(Queue[str]):
+    """A response queue which times out at once rather than after the real five seconds."""
+
+    def get(self, block: bool = True, timeout: float | None = None) -> str:
+        raise Empty
+
+
+@contextlib.contextmanager
+def fake_daemon() -> Iterator[list[FakeDaemonSocket]]:
+    """Every socket the connection opens talks to a fake daemon; no thread runs, no handler is left.
+
+    The class's own methods are not patched: a compiled class calls them directly, so the
+    collaborators they reach (the socket, the thread, the signal module) are replaced instead.
+    """
+    FakeDaemonSocket.made = []
+    previous_handler = signal.getsignal(signal.SIGUSR1)
+    try:
+        with (
+            patch('socket.socket', FakeDaemonSocket),
+            patch('threading.Thread', IdleThread),
+            contextlib.redirect_stderr(io.StringIO()),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            yield FakeDaemonSocket.made
+    finally:
+        signal.signal(signal.SIGUSR1, previous_handler)
+
+
 class TestPersistentConnectionRetry:
     """Test PersistentSocketConnection command retry functionality (Fix 3)"""
 
@@ -558,73 +488,52 @@ class TestPersistentConnectionRetry:
         """Test request ID generation is unique and sequential"""
         from exabgp.cli.persistent_connection import PersistentSocketConnection
 
-        # Create connection without actually connecting
-        with patch('socket.socket'):
-            with patch.object(PersistentSocketConnection, '_connect'):
-                with patch.object(PersistentSocketConnection, '_initial_ping'):
-                    with patch.object(PersistentSocketConnection, '_setup_signal_handler'):
-                        conn = PersistentSocketConnection('/fake/path')
-                        conn.reader_thread = Mock()
-                        conn.health_thread = Mock()
+        with fake_daemon():
+            conn = PersistentSocketConnection('/fake/path')
 
-                        # Generate IDs
-                        id1 = conn._generate_request_id()
-                        id2 = conn._generate_request_id()
-                        id3 = conn._generate_request_id()
+        # Generate IDs
+        id1 = conn._generate_request_id()
+        id2 = conn._generate_request_id()
+        id3 = conn._generate_request_id()
 
-                        # Should be sequential
-                        assert id1 != id2 != id3
-                        assert '-1' in id1
-                        assert '-2' in id2
-                        assert '-3' in id3
+        # Should be sequential
+        assert id1 != id2 != id3
+        assert '-1' in id1
+        assert '-2' in id2
+        assert '-3' in id3
 
     def test_command_retry_flag_initialization(self) -> None:
         """Test command retry flags are initialized (Fix 3)"""
         from exabgp.cli.persistent_connection import PersistentSocketConnection
 
-        with patch('socket.socket'):
-            with patch.object(PersistentSocketConnection, '_connect'):
-                with patch.object(PersistentSocketConnection, '_initial_ping'):
-                    with patch.object(PersistentSocketConnection, '_setup_signal_handler'):
-                        conn = PersistentSocketConnection('/fake/path')
-                        conn.reader_thread = Mock()
-                        conn.health_thread = Mock()
+        with fake_daemon():
+            conn = PersistentSocketConnection('/fake/path')
 
-                        assert conn._last_command is None
-                        assert conn._command_needs_retry is False
-                        assert conn._request_id_counter == 0
+        assert conn._last_command is None
+        assert conn._command_needs_retry is False
+        assert conn._request_id_counter == 0
 
     def test_reconnect_resends_without_waiting_on_reader_queue(self) -> None:
         from exabgp.cli.persistent_connection import PersistentSocketConnection
 
-        with (
-            patch('socket.socket'),
-            patch.object(PersistentSocketConnection, '_connect'),
-            patch.object(PersistentSocketConnection, '_initial_ping'),
-            patch.object(PersistentSocketConnection, '_setup_signal_handler'),
-        ):
+        with fake_daemon() as sockets:
             connection = PersistentSocketConnection('/fake/path')
+            connection.command_in_progress = True
+            connection.pending_user_command = True
+            connection._command_needs_retry = True
+            connection._last_command = 'show neighbor'
 
-        old_socket = Mock()
-        new_socket = Mock()
-        connection.socket = old_socket
-        connection.reader_thread = Mock()
-        connection.health_thread = Mock()
-        connection.command_in_progress = True
-        connection.pending_user_command = True
-        connection._command_needs_retry = True
-        connection._last_command = 'show neighbor'
-        connection._connect = Mock(side_effect=lambda: setattr(connection, 'socket', new_socket))
-        connection._initial_ping = Mock()
-        connection.send_command = Mock(side_effect=AssertionError('reader thread must not wait on itself'))
+            with patch('readline.get_line_buffer', return_value=''):
+                assert connection._reconnect(max_attempts=1, retry_delay=0) is True
 
-        with patch('readline.get_line_buffer', return_value=''):
-            assert connection._reconnect(max_attempts=1, retry_delay=0) is True
-
-        old_socket.close.assert_called_once()
-        new_socket.sendall.assert_called_once_with(b'show neighbor\n')
-        connection.send_command.assert_not_called()
+        old_socket, new_socket = sockets
+        assert old_socket.closed
+        # The new socket carries the ping of the reconnection, then the command resent as is.
+        assert new_socket.sent[1:] == [b'show neighbor\n']
+        # send_command() would have waited on the queue this reader thread fills, and cleared
+        # the flag when nothing arrived: the resend went straight to the socket.
         assert connection._command_needs_retry is True
+        assert connection.pending_responses.empty()
 
     def test_send_command_timeout_clears_the_retry_flag(self) -> None:
         """Nothing waits on a command which has already timed out.
@@ -636,19 +545,11 @@ class TestPersistentConnectionRetry:
         """
         from exabgp.cli.persistent_connection import PersistentSocketConnection
 
-        with (
-            patch('socket.socket'),
-            patch.object(PersistentSocketConnection, '_connect'),
-            patch.object(PersistentSocketConnection, '_initial_ping'),
-            patch.object(PersistentSocketConnection, '_setup_signal_handler'),
-        ):
+        with fake_daemon():
             connection = PersistentSocketConnection('/fake/path')
 
-        connection.socket = Mock()
-        connection.reader_thread = Mock()
-        connection.health_thread = Mock()
         # Time out at once rather than waiting out the real five second deadline.
-        connection.pending_responses = Mock(empty=Mock(return_value=True), get=Mock(side_effect=Empty))
+        connection.pending_responses = ImpatientQueue()
 
         response = connection.send_command('show neighbor')
 

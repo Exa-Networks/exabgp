@@ -23,7 +23,7 @@ from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.section import Kept, Values
 from exabgp.configuration.grammar.shape import Shape
-from exabgp.configuration.grammar.types.base import Type
+from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.lists import OneOrList
 from exabgp.configuration.grammar.types.network import ASN_WORD
 from exabgp.configuration.grammar.types.word import Number, Word, choice, integer, spelled, text
@@ -99,12 +99,17 @@ def _graceful_restart(word: str) -> int | bool:
     return seconds
 
 
+def _graceful_restart_words(value: int | bool) -> list[str]:
+    # a function, not a lambda: mypyc typed the lambda's value as int, and False became 0
+    return ['disable' if value is False else str(value)]
+
+
 GRACEFUL_RESTART = Word(
     'graceful-restart',
     f'<0-{GRACEFUL_RESTART_MAX}>|disable',
     _graceful_restart,
     ['', '0', '120', str(GRACEFUL_RESTART_MAX), 'disable', 'disabled', 'DISABLE'],
-    render=lambda value: ['disable' if value is False else str(value)],
+    render=_graceful_restart_words,
     shape=shape.union(shape.integer(0, GRACEFUL_RESTART_MAX), shape.enumeration('disable')),
 )
 
@@ -273,7 +278,7 @@ class APIName(Type[str]):
             raise ConfigError(where, 'invalid character in name for api')
         return name
 
-    def render(self, value: str) -> list[str]:
+    def render(self, value: str) -> list[WordOrSyntax]:
         return [] if value.startswith('auto-named-') else [value]
 
     def hint(self) -> str:
@@ -427,7 +432,7 @@ class Members(Type[tuple[ASN, ...]]):
     def parse(self, words: Words) -> tuple[ASN, ...]:
         return tuple(self._list.parse(words))
 
-    def render(self, value: tuple[ASN, ...]) -> list[str]:
+    def render(self, value: tuple[ASN, ...]) -> list[WordOrSyntax]:
         return self._list.render(list(value))
 
     def hint(self) -> str:

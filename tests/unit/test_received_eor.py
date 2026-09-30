@@ -12,8 +12,6 @@ before the peer's End-of-RIB for that family is ignored when the peer does Grace
 
 from __future__ import annotations
 
-from unittest.mock import Mock
-
 import pytest
 
 from exabgp.bgp.message.update.eor import EOR
@@ -21,16 +19,14 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.peer.context import PeerContext
 from exabgp.reactor.peer.handlers import UpdateHandler
 from exabgp.rib.incoming import IncomingRIB
+from tests import negotiation
 
 IPV4_UNICAST = (AFI.ipv4, SAFI.unicast)
 IPV6_UNICAST = (AFI.ipv6, SAFI.unicast)
 
 
-def context() -> Mock:
-    ctx = Mock(spec=PeerContext)
-    ctx.peer_id = 'peer'
-    ctx.stats = {}
-    ctx.neighbor = Mock()
+def context() -> PeerContext:
+    ctx, _ = negotiation.context()
     ctx.neighbor.rib.incoming = IncomingRIB(True, {IPV4_UNICAST, IPV6_UNICAST})
     return ctx
 

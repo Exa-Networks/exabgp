@@ -21,6 +21,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Sequence
 from typing import Any, cast
 
 from exabgp.bgp.message.update.attribute import AttributeCollection
@@ -55,7 +56,7 @@ from exabgp.configuration.grammar.tree.static import (
     value_fields,
 )
 from exabgp.configuration.grammar.types import flow as types
-from exabgp.configuration.grammar.types.base import Printed, Type
+from exabgp.configuration.grammar.types.base import Printed, Type, WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.words import Words
 from exabgp.logger import lazymsg, log
@@ -279,7 +280,7 @@ class FlowLine(RouteStatement):
                 raise ConfigError(where, str(exc)) from None
         return propagated(built.route())
 
-    def printed(self, route: Route) -> list[str]:
+    def printed(self, route: Route) -> list[WordOrSyntax]:
         # a one-line route has no next-hop, and matches what it is given: nothing is possible
         return announce_flow_words(route)
 
@@ -319,14 +320,14 @@ def rule_pairs(nlri: Any) -> list[tuple[str, list[str]]]:
     return pairs
 
 
-def action_pairs(route: Route) -> list[tuple[str, list[str]]]:
+def action_pairs(route: Route) -> list[tuple[str, list[WordOrSyntax]]]:
     """The actions of a flow route, as keyword and words; ValueError when one has no statement."""
     from exabgp.bgp.message.update.attribute import Attribute, GenericAttribute
     from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHopIPv6IETF, TrafficRedirectIPv6
     from exabgp.configuration.grammar.types.base import Syntax
     from exabgp.configuration.grammar.types.bgp import HexAttribute
 
-    actions: list[tuple[str, list[str]]] = []
+    actions: list[tuple[str, list[WordOrSyntax]]] = []
     attribute: Any
     for code, attribute in route.attributes.items():
         if isinstance(attribute, GenericAttribute):
@@ -336,7 +337,7 @@ def action_pairs(route: Route) -> list[tuple[str, list[str]]]:
             actions.append(('extended-community', [Syntax('['), *hexes, Syntax(']')]))
         elif code in (Attribute.CODE.COMMUNITY, Attribute.CODE.LARGE_COMMUNITY):
             keyword = 'community' if code == Attribute.CODE.COMMUNITY else 'large-community'
-            actions.append((keyword, str(attribute).split() or ['[', ']']))
+            actions.append((keyword, [*(str(attribute).split() or ['[', ']'])]))
         elif code == Attribute.CODE.IPV6_EXTENDED_COMMUNITY:
             for each in attribute.communities:
                 if isinstance(each, TrafficRedirectIPv6):
@@ -352,8 +353,8 @@ def action_pairs(route: Route) -> list[tuple[str, list[str]]]:
     return actions
 
 
-def _printed(words: list[str]) -> list[Any]:
-    return [Printed(words)]
+def _printed(words: Sequence[WordOrSyntax]) -> list[Any]:
+    return [Printed(list(words))]
 
 
 def route_values(route: Route) -> tuple[Any, dict[str, Any]]:
@@ -366,8 +367,8 @@ def route_values(route: Route) -> tuple[Any, dict[str, Any]]:
             values[f'_{keyword}'] = _printed(words)
         else:
             match.setdefault(f'_{keyword}', []).extend(_printed(words))
-    for keyword, words in action_pairs(route):
-        values['then'].setdefault(f'_{keyword}', []).extend(_printed(words))
+    for keyword, then in action_pairs(route):
+        values['then'].setdefault(f'_{keyword}', []).extend(_printed(then))
     if route.nexthop is not IP.NoNextHop:
         values['_next-hop'] = _printed(['self' if route.nexthop.SELF else str(route.nexthop)])
     return '', values
@@ -385,11 +386,11 @@ def block_printable(route: Route) -> bool:
     return bool(nlri.afi == AFI.ipv6) == has_ipv6_prefix
 
 
-def announce_flow_words(route: Route) -> list[str]:
+def announce_flow_words(route: Route) -> list[WordOrSyntax]:
     """The words after `flow` or `flow-vpn` in an announce family which read back as `route`."""
     if route.nexthop is not IP.NoNextHop:
         raise ValueError('an announce flow route has no next-hop statement')
-    words: list[str] = []
+    words: list[WordOrSyntax] = []
     for keyword, value in rule_pairs(route.nlri) + action_pairs(route):
         words.extend([keyword, *value])
     return words
@@ -413,7 +414,7 @@ class _Ignored(Type[str]):
     def parse(self, words: Words) -> str:
         return words.word()
 
-    def render(self, value: str) -> list[str]:
+    def render(self, value: str) -> list[WordOrSyntax]:
         return [value] if value else []
 
     def hint(self) -> str:
@@ -523,7 +524,7 @@ class AnnounceFlowLine(RouteStatement):
         elif spec.target == Target.ATTRIBUTE:
             attributes.add(value)
 
-    def printed(self, route: Route) -> list[str]:
+    def printed(self, route: Route) -> list[WordOrSyntax]:
         return announce_flow_words(route)
 
     def hint(self) -> str:

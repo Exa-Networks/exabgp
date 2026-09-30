@@ -25,8 +25,10 @@ Three separate defects, each of which leaks on its own:
 
 import asyncio
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -34,10 +36,15 @@ os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
 from exabgp.bgp.fsm import FSM  # noqa: E402
+from exabgp.protocol.family import AFI  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
 from exabgp.reactor.listener import Listener  # noqa: E402
 from exabgp.reactor.loop import Reactor  # noqa: E402
+from exabgp.reactor.network.incoming import Incoming  # noqa: E402
 from exabgp.reactor.peer.peer import Peer  # noqa: E402
+from exabgp.reactor.protocol import Protocol  # noqa: E402
+from tests import negotiation  # noqa: E402
+from tests.wire_reader import tcp_socketpair  # noqa: E402
 
 LOCAL = IP.from_string('127.0.0.1')
 PEER = IP.from_string('127.0.0.2')
@@ -60,15 +67,28 @@ def mock_logger() -> Any:
     option.formater = formater
 
 
-def passive_peer(reactor: Any, uid: str = '1') -> Peer:
+def a_reactor() -> Reactor:
+    """A real Reactor with no peer: the compiled Peer and Listener refuse anything else."""
+    reactor, _ = negotiation.reactor()
+    return reactor
+
+
+def passive_peer(reactor: Reactor | None = None) -> Peer:
     """A passive neighbour which has never had a connection, as configured on startup."""
-    neighbor = MagicMock()
-    neighbor.uid = uid
-    neighbor.api = {'neighbor-changes': False, 'fsm': False}
-    neighbor.rib = Mock()
-    neighbor.session.passive = True
-    neighbor.shutdown = False
-    return Peer(neighbor, reactor)
+    configured = negotiation.api_asks(negotiation.neighbor())
+    configured.session.passive = True
+    return Peer(configured, a_reactor() if reactor is None else reactor)
+
+
+@contextmanager
+def incoming_connection() -> Iterator[Incoming]:
+    """A connection the listener accepted, over a real TCP socket."""
+    accepted, connecting = tcp_socketpair()
+    try:
+        yield Incoming(AFI.ipv4, '127.0.0.2', '127.0.0.1', accepted)
+    finally:
+        accepted.close()
+        connecting.close()
 
 
 # ============================================================================
@@ -83,8 +103,7 @@ def test_a_removed_passive_peer_is_still_given_a_turn() -> None:
     what makes it vanish the moment a connection arrives: the connection gives the peer a
     proto, which is the only reason active_peers() would have returned it.
     """
-    reactor = Reactor.__new__(Reactor)
-    reactor._peers = {}
+    reactor = a_reactor()
     peer = passive_peer(reactor)
     reactor._peers['removed'] = peer
 
@@ -97,8 +116,7 @@ def test_a_removed_passive_peer_is_still_given_a_turn() -> None:
 
 def test_a_shut_down_passive_peer_is_still_given_a_turn() -> None:
     """The reactor exits when `_peers` empties, so an unreapable peer is a hang."""
-    reactor = Reactor.__new__(Reactor)
-    reactor._peers = {}
+    reactor = a_reactor()
     peer = passive_peer(reactor)
     reactor._peers['down'] = peer
 
@@ -112,8 +130,7 @@ def test_a_peer_waiting_to_reconnect_is_left_alone() -> None:
 
     A passive peer does not dial out, so running it would be pointless work every turn.
     """
-    reactor = Reactor.__new__(Reactor)
-    reactor._peers = {}
+    reactor = a_reactor()
     peer = passive_peer(reactor)
     reactor._peers['back-soon'] = peer
 
@@ -133,8 +150,7 @@ def test_a_peer_which_dials_out_is_active_even_with_no_connection() -> None:
     Turning the `and` into an `or` parks every peer which has no connection yet, which is
     every peer at startup, and no session would ever be opened.
     """
-    reactor = Reactor.__new__(Reactor)
-    reactor._peers = {}
+    reactor = a_reactor()
     peer = passive_peer(reactor)
     peer.neighbor.session.passive = False
     reactor._peers['dials-out'] = peer
@@ -144,10 +160,9 @@ def test_a_peer_which_dials_out_is_active_even_with_no_connection() -> None:
 
 def test_a_passive_peer_with_a_connection_is_active() -> None:
     """The other half of the same condition."""
-    reactor = Reactor.__new__(Reactor)
-    reactor._peers = {}
+    reactor = a_reactor()
     peer = passive_peer(reactor)
-    peer.proto = Mock()
+    peer.proto = Protocol(peer)
     reactor._peers['connected'] = peer
 
     assert 'connected' in reactor.active_peers()
@@ -159,11 +174,10 @@ def test_an_idle_peer_does_not_hide_the_peers_after_it() -> None:
     With one peer in the dictionary the two are indistinguishable, which is why this needs
     a second peer sitting behind the one being skipped.
     """
-    reactor = Reactor.__new__(Reactor)
-    reactor._peers = {}
-    idle = passive_peer(reactor, uid='1')
-    working = passive_peer(reactor, uid='2')
-    working.proto = Mock()
+    reactor = a_reactor()
+    idle = passive_peer(reactor)
+    working = passive_peer(reactor)
+    working.proto = Protocol(working)
     reactor._peers['idle'] = idle
     reactor._peers['working'] = working
 
@@ -176,9 +190,7 @@ def test_a_removed_peer_finishes_rather_than_idling() -> None:
     The reactor drops a peer whose task has completed, so run() returning is what makes
     the peer go away. A peer which parked here would be kept for the life of the process.
     """
-    reactor = Mock()
-    reactor.processes.broken.return_value = False
-    peer = passive_peer(reactor)
+    peer = passive_peer()
 
     peer.remove()
 
@@ -199,7 +211,7 @@ def bound(listener: Listener) -> set:
 
 def test_a_listener_no_configuration_asks_for_is_closed() -> None:
     """A removed neighbour's port stayed bound and kept accepting connections."""
-    listener = Listener(MagicMock())
+    listener = Listener(a_reactor())
     assert listener.listen_on(LOCAL, PEER, NEIGHBOR_PORT, None, False, None)
     assert bound(listener) == {(LOCAL.top(), NEIGHBOR_PORT)}
 
@@ -211,7 +223,7 @@ def test_a_listener_no_configuration_asks_for_is_closed() -> None:
 
 def test_a_listener_the_configuration_still_asks_for_is_kept() -> None:
     """Neighbours share a socket per address and port, so removing one must not close it."""
-    listener = Listener(MagicMock())
+    listener = Listener(a_reactor())
     assert listener.listen_on(LOCAL, PEER, NEIGHBOR_PORT, None, False, None)
     assert listener.listen_on(LOCAL, PEER, GLOBAL_PORT, None, False, None)
 
@@ -222,7 +234,7 @@ def test_a_listener_the_configuration_still_asks_for_is_kept() -> None:
 
 def test_closing_the_last_listener_stops_the_service() -> None:
     """serving drives incoming(), so it has to follow the sockets which are left."""
-    listener = Listener(MagicMock())
+    listener = Listener(a_reactor())
     assert listener.listen_on(LOCAL, PEER, NEIGHBOR_PORT, None, False, None)
     assert listener.serving
 
@@ -241,30 +253,24 @@ def test_a_removed_peer_refuses_an_incoming_connection() -> None:
 
     Accepting it is how the reported CLOSE_WAIT is created.
     """
-    peer = passive_peer(Mock())
+    peer = passive_peer()
     peer.remove()
 
-    connection = MagicMock()
-    connection.name.return_value = 'incoming-1'
-
-    with patch('exabgp.reactor.peer.peer.Protocol') as protocol:
+    with incoming_connection() as connection:
         denied = peer.handle_connection(connection)
 
     assert denied is not None, 'a peer being torn down accepted a connection'
     assert peer.proto is None, 'the connection was attached to a peer which is going away'
-    protocol.assert_not_called()
 
 
 def test_a_live_peer_still_accepts_an_incoming_connection() -> None:
     """The refusal has to be about the teardown and nothing else."""
-    peer = passive_peer(Mock())
+    peer = passive_peer()
     peer.fsm.change(FSM.IDLE)
 
-    connection = MagicMock()
-    connection.name.return_value = 'incoming-1'
-
-    with patch('exabgp.reactor.peer.peer.Protocol'):
+    with incoming_connection() as connection:
         denied = peer.handle_connection(connection)
 
-    assert denied is None
-    assert peer.proto is not None
+        assert denied is None
+        assert peer.proto is not None
+        assert peer.proto.connection is connection

@@ -8,6 +8,9 @@ announce or session reset happened to reload the policy directory.
 
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -21,14 +24,21 @@ def commits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """Isolate the policy directory and record every cl-acltool run."""
     recorded: list[str] = []
 
-    def record(cls: type[ACL]) -> bytes:
-        recorded.append('reload')
-        return b''
+    class Acltool:
+        """cl-acltool, as subprocess.Popen starts it: a compiled ACL calls its own _commit
+        directly, so the process it runs is replaced rather than the method."""
+
+        def __init__(self, command: list[str], **_: Any) -> None:
+            assert command == ['cl-acltool', '-i']
+            recorded.append('reload')
+
+        def communicate(self) -> tuple[bytes, None]:
+            return b'', None
 
     monkeypatch.setattr(ACL, 'path', f'{tmp_path}/')
     monkeypatch.setattr(ACL, '_known', {})
     monkeypatch.setattr(ACL, 'dry', False)
-    monkeypatch.setattr(ACL, '_commit', classmethod(record))
+    monkeypatch.setattr(subprocess, 'Popen', Acltool)
     return recorded
 
 
@@ -71,3 +81,32 @@ def test_clear_reloads_once_for_every_flow(commits: list[str]) -> None:
 
     assert not first.exists() and not second.exists(), 'every rule file must be deleted'
     assert commits == ['reload'], 'clear() reloads once for the whole batch'
+
+
+@pytest.mark.parametrize('value', [None, '', '0', 'false', 'off', '1', 'yes', 'on', 'enable', 'TrUe'])
+def test_environment_dry_run_controls_acl_installation(value: str | None, tmp_path: Path, monkeypatch) -> None:
+    """Read the environment at import, then exercise whether the policy tool runs."""
+    tool = tmp_path / 'cl-acltool'
+    tool.write_text('#!/bin/sh\nprintf "applied\\n"\n')
+    tool.chmod(0o700)
+    monkeypatch.setenv('PATH', str(tmp_path))
+    if value is None:
+        monkeypatch.delenv('CUMULUS_FLOW_RIB', raising=False)
+    else:
+        monkeypatch.setenv('CUMULUS_FLOW_RIB', value)
+    result = subprocess.run(
+        [
+            sys.executable,
+            '-c',
+            'import json; from exabgp.application.flow import ACL; '
+            'print(json.dumps([ACL.dry, ACL._commit().decode()]))',
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    dry, output = json.loads(result.stdout)
+    assert type(dry) is bool
+    expected = value in ('1', 'yes', 'on', 'enable', 'TrUe')
+    assert dry is expected
+    assert output == ('' if expected else 'applied\n')
