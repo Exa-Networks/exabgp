@@ -3,6 +3,12 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.14:
+ * Fix: RouterID.create() constructs a RouterID and enforces its IPv4-only
+   check. It returned a plain IPv4 or IPv6 object. The configuration
+   already refuses a neighbour which could reach it with an IPv6 address,
+   so no OPEN was affected.
+
 Version 5.0.13:
  * Fix: the end of RIB marker reported to an API process was not JSON.
    Every other NLRI renders an object, and the caller puts the result in a

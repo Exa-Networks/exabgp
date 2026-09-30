@@ -108,5 +108,27 @@ class TestData(unittest.TestCase):
         self.assertEqual(o.capabilities, {})
 
 
+class TestRouterID(unittest.TestCase):
+    def test_create_ipv4_open(self) -> None:
+        for packed in (None, b'\xc0\x00\x02\x01'):
+            with self.subTest(packed=packed):
+                router_id = RouterID.create('192.0.2.1', packed)
+                self.assertIsInstance(router_id, RouterID)
+                self.assertEqual(router_id.pack(), b'\xc0\x00\x02\x01')
+                message = Open(Version(4), ASN(65000), HoldTime(180), router_id, Capabilities())
+                wire = message.message()
+                self.assertEqual(wire[24:28], b'\xc0\x00\x02\x01')
+                decoded = Open.unpack_message(wire[Message.HEADER_LEN :])
+                self.assertEqual(decoded.router_id, router_id)
+
+    def test_create_rejects_ipv6(self) -> None:
+        # Dynamic neighbours without a router-id use this factory on the
+        # discovered address; an IPv6 address must not reach the OPEN encoder.
+        for address in ('2001:db8::1', '::ffff:192.0.2.1'):
+            for packed in (None, RouterID.pton('192.0.2.1')):
+                with self.subTest(address=address, packed=packed), self.assertRaises(ValueError):
+                    RouterID.create(address, packed)
+
+
 if __name__ == '__main__':
     unittest.main()
