@@ -352,6 +352,15 @@ ExaBGP is self-contained and easy to upgrade/downgrade by:
 - **Published RFC compliance ledger** - [`doc/RFC_COMPLIANCE.md`](doc/RFC_COMPLIANCE.md) quotes every normative sentence of the RFCs ExaBGP implements, says what we do about it, names the tests which prove it, and names what we do not do
 - **Python 3.12+ support** - Updated compatibility and bug fixes
 
+⚠️ **Moving from 5.0 to main:** some configurations will not load and some API output changes shape. The [5.x to 6.0.0 migration guide](https://github.com/Exa-Networks/exabgp/wiki/From-5.x-to-6.x) lists every change and what to do about it. The ones most setups meet:
+- `role { otc disable; }` and the per-route `otc none` are gone, and a configuration using either does not load
+- a route from an EBGP neighbour whose AS_PATH does not start with that neighbour's AS is treated as withdrawn: the neighbour of a route server needs `enforce-first-as false;`
+- the routes an API process announced are withdrawn when it exits: add `on-exit keep;` to a process which announces and exits on purpose
+- in the JSON API, the capabilities of an OPEN are keyed by their name (`"asn4"`, with `"code": 65` inside) rather than their code, and the `data` of a received NOTIFICATION is the Data field in hex, with the text in `message`
+- the BGP-LS JSON members which a peer may repeat are arrays
+
+Run `exabgp configuration validate <file>` against your configuration before switching over.
+
 The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://github.com/Exa-Networks/exabgp/blob/main/doc/CHANGELOG.rst) and check their setup after any upgrade.
 
 ## Documentation
