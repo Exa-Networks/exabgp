@@ -51,6 +51,10 @@ def command_too_large(pending: bytes, limit: int = MAX_COMMAND_SIZE) -> bool:
 
 MAX_BACKLOG_SIZE = 100 * mb
 
+# what a turned away client may have sent, read and dropped before closing it, and for how long
+TURN_AWAY_DRAIN_SIZE = 64 * kb
+TURN_AWAY_DRAIN_SECONDS = 0.2
+
 
 class ResponseType(Enum):
     """Type of response from ExaBGP reactor."""
@@ -440,12 +444,31 @@ class Control:
             # is all we wanted from it.
             with contextlib.suppress(OSError):
                 new_socket.shutdown(socket.SHUT_WR)
+            Control._drain(new_socket)
             new_socket.close()
         except OSError:
             # The rejection could not be delivered, so dropping the connection has to say it
             # instead.
             with contextlib.suppress(OSError):
                 new_socket.close()
+
+    @staticmethod
+    def _drain(new_socket: socket.socket) -> None:
+        """Read and drop what the client sent, until it hangs up, briefly.
+
+        On Linux, closing a unix socket with unread data in it resets the connection: the
+        client, reading the refusal, got ECONNRESET instead of the end of the stream.
+        """
+        deadline = time.monotonic() + TURN_AWAY_DRAIN_SECONDS
+        drained = 0
+        with contextlib.suppress(OSError, ValueError):
+            while drained < TURN_AWAY_DRAIN_SIZE:
+                # ValueError: settimeout refuses the negative time left once the deadline passed
+                new_socket.settimeout(deadline - time.monotonic())
+                data = new_socket.recv(TURN_AWAY_DRAIN_SIZE)
+                if not data:
+                    return
+                drained += len(data)
 
     def read_on(self, reading: list[int | None]) -> list[int]:
         """Poll file descriptors for readable data."""
