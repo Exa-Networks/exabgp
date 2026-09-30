@@ -21,6 +21,10 @@ class ASYNC:
     def __init__(self) -> None:
         self._async: deque[tuple[str, Any]] = deque()
         self._error_handler: Callable[[str], None] | None = None
+        # True while the coroutines of API commands run. They yield to the loop, and a
+        # peer reading its RIB then would send half of what a helper wrote together,
+        # so the peers wait for this to fall (peer.py, _holding_for_commands)
+        self.applying_commands: bool = False
 
     def set_error_handler(self, handler: Callable[[str], None]) -> None:
         """Set a callback to notify services when their async callback fails.
@@ -125,22 +129,11 @@ class ASYNC:
             # Process ALL coroutines in the queue atomically
             # This ensures commands sent together (like "announce\nclear\n") are
             # executed atomically before peers read the RIB
-            while self._async:
-                uid, callback = self._async.popleft()
-                try:
-                    if inspect.iscoroutine(callback):
-                        await callback
-                    elif inspect.iscoroutinefunction(callback):
-                        await callback()
-                    else:
-                        # Mixed queue - shouldn't happen, but handle gracefully
-                        # Put it back and switch to generator processing
-                        self._async.appendleft((uid, callback))
-                        break
-                except Exception as exc:
-                    log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
-                    self._notify_error(uid)
-                    # Continue to next callback even if one fails
+            self.applying_commands = True
+            try:
+                await self._run_coroutines()
+            finally:
+                self.applying_commands = False
             return False  # All coroutines processed
         else:
             # Original generator processing logic
@@ -184,3 +177,22 @@ class ASYNC:
             if inspect.isgenerator(callback):
                 self._async.appendleft((uid, callback))
             return True
+
+    async def _run_coroutines(self) -> None:
+        """Run every queued coroutine, including those the ones running schedule."""
+        while self._async:
+            uid, callback = self._async.popleft()
+            try:
+                if inspect.iscoroutine(callback):
+                    await callback
+                elif inspect.iscoroutinefunction(callback):
+                    await callback()
+                else:
+                    # Mixed queue - shouldn't happen, but handle gracefully
+                    # Put it back and switch to generator processing
+                    self._async.appendleft((uid, callback))
+                    break
+            except Exception as exc:
+                log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
+                self._notify_error(uid)
+                # Continue to next callback even if one fails

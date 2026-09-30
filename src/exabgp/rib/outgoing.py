@@ -230,6 +230,10 @@ class OutgoingRIB(Cache):
         log.debug(lazymsg('rib.flush.callback.registered total={n}', n=len(self._flush_callbacks)), 'rib')
         return event
 
+    def flush_awaited(self) -> bool:
+        """Whether an API command is waiting for the next flush to reach the wire."""
+        return bool(self._flush_callbacks)
+
     def fire_flush_callbacks(self) -> None:
         """Fire all registered flush callbacks.
 

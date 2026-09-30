@@ -7,35 +7,56 @@ prefix being replaced is withdrawn before the route replacing it is advertised, 
 holds, for as long as the two packets are apart, a route it was told to drop.  The .ci file
 puts each of them in a sequence of its own, which is what makes the test assert the order
 rather than only the contents.
+
+Each step waits for the UPDATEs of the one before to have been sent, never for a pause: a
+slow machine stretches a pause until two steps share a flush, and the test then asserts an
+order nobody asked for.
 """
 
-import time
+from exabgp_api import counters, send, trace, wait_for_ack, wait_for_shutdown
 
-from exabgp_api import send, wait_for_ack, wait_for_shutdown
+BARRIER_TIMEOUT = 20.0
 
-PAUSE_SECONDS = 0.3
+
+def barrier(what: str, expected_count: int = 1, **events) -> None:
+    if wait_for_ack(expected_count=expected_count, timeout=BARRIER_TIMEOUT, **events):
+        trace(f'{what} ok')
+        return
+    raise SystemExit(f'{what} never happened, saw {counters()}')
 
 
 def main() -> None:
-    batches = [
+    # (what is written in one go, what must have been sent before the next step)
+    steps = [
         # The two families, announced one at a time, so each opening UPDATE is on its own.
-        'announce route 10.0.0.0/24 next-hop 192.0.2.1 med 100',
-        'announce route 2001:db8:1::/64 next-hop 2001:db8::1 med 100',
+        (
+            'announce route 10.0.0.0/24 next-hop 192.0.2.1 med 100',
+            {'announce': (('10.0.0.0/24', 1),)},
+        ),
+        (
+            'announce route 2001:db8:1::/64 next-hop 2001:db8::1 med 100',
+            {'announce': (('2001:db8:1::/64', 1),)},
+        ),
         # One write, announcement asked for first: the legacy IPv4 fields.
-        'announce route 10.0.2.0/24 next-hop 192.0.2.1 med 100\n'
-        'withdraw route 10.0.0.0/24 next-hop 192.0.2.1 med 100',
+        (
+            'announce route 10.0.2.0/24 next-hop 192.0.2.1 med 100\n'
+            'withdraw route 10.0.0.0/24 next-hop 192.0.2.1 med 100',
+            {'announce': (('10.0.2.0/24', 1),), 'withdraw': (('10.0.0.0/24', 1),)},
+        ),
         # One write, announcement asked for first: an MP family.
-        'announce route 2001:db8:2::/64 next-hop 2001:db8::1 med 100\n'
-        'withdraw route 2001:db8:1::/64 next-hop 2001:db8::1 med 100',
+        (
+            'announce route 2001:db8:2::/64 next-hop 2001:db8::1 med 100\n'
+            'withdraw route 2001:db8:1::/64 next-hop 2001:db8::1 med 100',
+            {'announce': (('2001:db8:2::/64', 1),), 'withdraw': (('2001:db8:1::/64', 1),)},
+        ),
     ]
 
-    time.sleep(PAUSE_SECONDS)
+    barrier('the session coming up', expected_count=0, state=(('up', 1),))
 
-    for batch in batches:
-        send(batch)
-        time.sleep(PAUSE_SECONDS)
+    for command, sent in steps:
+        send(command)
+        barrier(command.replace('\n', ' then '), expected_count=command.count('\n') + 1, **sent)
 
-    wait_for_ack(expected_count=len(batches) + 2)
     wait_for_shutdown()
 
 

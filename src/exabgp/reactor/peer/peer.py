@@ -786,7 +786,7 @@ class Peer:
             Tuple of (updated new_routes generator, updated include_withdraw flag)
         """
         assert self.proto is not None, 'Protocol must be established'
-        if not new_routes and self.neighbor.rib.outgoing.pending():
+        if not new_routes and not self._holding_for_commands() and self.neighbor.rib.outgoing.pending():
             log.debug(lazymsg('peer.update.generator.creating'), self.id())
             new_routes = self.proto.new_update_generator(include_withdraw)
 
@@ -814,6 +814,10 @@ class Peer:
             Updated send_eor flag
         """
         assert self.proto is not None, 'Protocol must be established'
+        # an End-of-RIB says the routes before it are all there, which they are not yet
+        if self._holding_for_commands():
+            return send_eor
+
         if not new_routes and send_eor:
             send_eor = False
             await self.proto.new_eors()
@@ -827,6 +831,18 @@ class Peer:
             self._end_of_rib_sent.add((new_eor.afi, new_eor.safi))
 
         return send_eor
+
+    def _holding_for_commands(self) -> bool:
+        """Whether to leave the RIB alone while the reactor applies API commands.
+
+        The commands a helper wrote together are applied in one pass, but their
+        coroutines yield to the loop: a batch started then would carry the first of
+        them without the rest. A command waiting for this very flush (sync) is not
+        kept waiting, or it and the peer would each wait for the other.
+        """
+        if not self.reactor.asynchronous.applying_commands:
+            return False
+        return not self.neighbor.rib.outgoing.flush_awaited()
 
     def _teardown_asked(self) -> bool:
         """Read teardown state afresh after another task may have changed it.

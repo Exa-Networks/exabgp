@@ -1,20 +1,35 @@
 #!/usr/bin/env python3
+"""Flap the dnsr watchdog, and wait for each flap to be on the wire before the next.
 
-import os
-import time
+The configuration starts 77.77.77.77/32 withdrawn under the dnsr watchdog. A flap sent
+while the previous one is still waiting for the RIB to flush cancels it, and the peer
+never sees either, so each command waits for its UPDATE rather than for a pause.
+"""
 
-from exabgp_api import send
+from exabgp_api import counters, send, trace, wait_for_ack, wait_for_shutdown
+
+BARRIER_TIMEOUT = 20.0
+WATCHED_ROUTE = '77.77.77.77/32'
+# the flaps qa/encoding/conf-watchdog.ci expects: announced then withdrawn, three times
+FLAP_COUNT = 3
+
+
+def barrier(what: str, **events) -> None:
+    if wait_for_ack(expected_count=1, timeout=BARRIER_TIMEOUT, **events):
+        trace(f'{what} ok')
+        return
+    raise SystemExit(f'{what} never happened, saw {counters()}')
 
 
 def main() -> None:
-    while os.getppid() != 1:
+    for flap in range(1, FLAP_COUNT + 1):
         send('announce watchdog dnsr')
-        time.sleep(0.2)
+        barrier(f'announce {flap}', announce=((WATCHED_ROUTE, flap),))
 
         send('withdraw watchdog dnsr')
-        time.sleep(0.2)
+        barrier(f'withdraw {flap}', withdraw=((WATCHED_ROUTE, flap),))
 
-    time.sleep(1)  # time for configuration routes to pass
+    wait_for_shutdown()
 
 
 if __name__ == '__main__':

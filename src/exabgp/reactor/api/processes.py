@@ -161,6 +161,10 @@ class Processes:
     # A single API command must fit on one line: without a cap a helper process which
     # never sends a newline would grow _buffer until the daemon runs out of memory.
     MAX_COMMAND_SIZE: ClassVar[int] = 1024 * 1024
+    # The commands the reactor applies in one pass. Everything queued goes in the same
+    # pass, so what a helper wrote together reaches the RIB before a peer reads it; the
+    # cap only stops a helper flooding the pipe from starving the peers of the loop.
+    MAX_COMMANDS_PER_PASS: ClassVar[int] = 1000
     WRITE_QUEUE_LOW_WATER: ClassVar[int] = 100  # Resume writes when queue drops below this
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
@@ -769,8 +773,8 @@ class Processes:
 
             # Read available data (non-blocking) - use os.read() directly on FD
             # to avoid blocking even with O_NONBLOCK set on the descriptor
-            # Note: We read in larger chunks for efficiency, but only process ONE
-            # command per reactor loop iteration via received_async() to match sync behavior
+            # Note: We read in larger chunks for efficiency, and received_async() hands
+            # every complete command to the same reactor pass
             fd = self._get_stdout(process_name).fileno()
             raw_data = os.read(fd, 16384)
             buf = str(raw_data, 'ascii')
@@ -794,8 +798,8 @@ class Processes:
                 return
 
             # Extract complete lines and queue as commands
-            # Note: We queue all available commands here, but received_async() will
-            # yield them ONE at a time to ensure proper interleaving with message sending
+            # Note: We queue all available commands here, received_async() hands them to
+            # the reactor together so a peer never sees half of what was written at once
             while '\n' in raw:
                 line, raw = raw.split('\n', 1)
                 line = line.rstrip()
@@ -839,18 +843,21 @@ class Processes:
         """Async-compatible version of received() that yields buffered commands
 
         In async mode, commands are read by callbacks registered with the event
-        loop and buffered in _command_queue. This method yields them one at a time
-        to match sync version behavior and ensure commands are interleaved with
-        message sending.
+        loop and buffered in _command_queue. Every command queued so far is handed
+        to the same reactor pass, up to MAX_COMMANDS_PER_PASS.
 
-        CRITICAL: Only yield ONE command per call to match sync version, which
-        polls and returns one command at a time. This ensures proper interleaving.
+        One command per pass let a peer flush between two lines a helper wrote
+        together: "announce A" then "withdraw B" in one write could reach the peer
+        as A before B was withdrawn, depending on a timer.
 
         Yields:
             Tuple of (process_name, command) for each buffered command
         """
-        # Yield only ONE buffered command (matches sync version behavior)
-        if self._command_queue:
+        for _ in range(min(len(self._command_queue), self.MAX_COMMANDS_PER_PASS)):
+            # the reactor runs each command before asking for the next, and one may
+            # take the queue with it (a helper stopped, a reload)
+            if not self._command_queue:
+                return
             yield self._command_queue.popleft()
 
     def _log_response(self, process: str, string: str) -> None:
