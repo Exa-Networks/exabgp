@@ -1,0 +1,281 @@
+#!/usr/bin/env python3
+"""
+Build ExaBGP as one executable file, with Python and the mypyc compiled modules inside,
+so a host needs no Python to run it (doc/user/compiled-build.md, "One-file executable").
+
+The steps:
+  1. the compiled wheel (EXABGP_MYPYC=1, setup.py), built from a copy of the sources in
+     build/binary/source, so nothing else under build/ is used or changed
+  2. a scratch virtual environment, build/binary/venv, with the wheel and PyInstaller
+  3. PyInstaller --onefile on the exabgp entry point, collecting every exabgp module, its
+     data files (port_data.json), its metadata (the version) and the shared library mypyc
+     builds outside the package (<hash>__mypyc)
+  4. every compiled extension is checked to be in the binary, then the binary is run:
+     `version` must say `Build  : mypyc`, a route is encoded and decoded back,
+     etc/exabgp/conf-ipself6.conf validated, and the server started on it and stopped
+  5. with --functional, the decoding, encoding, api and cli suites run against it
+
+The binary is dist/exabgp-<version>-<system>-<machine>, e.g. dist/exabgp-6.0.0-darwin-arm64.
+It only runs on the platform it was built on, and on Linux needs a glibc as recent as the
+one it was built with.
+
+Run it with the Python the binary should bundle, which needs mypy and setuptools
+(uv sync installs them):
+
+    uv run ./qa/bin/build_binary
+    uv run ./qa/bin/build_binary --functional
+    uv run ./qa/bin/build_binary --wheel dist/exabgp-6.0.0-cp312-cp312-macosx_26_0_arm64.whl
+    uv run ./qa/bin/build_binary --test dist/exabgp-6.0.0-darwin-arm64 --functional
+
+sbin/exabgp runs the binary instead of a Python tree when EXABGP_BINARY names it, which is
+how the functional suites are pointed at it.
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import platform
+import shutil
+import signal
+import subprocess
+import sys
+import threading
+import time
+from importlib import metadata
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.parent
+WORK = ROOT / 'build' / 'binary'
+DIST = ROOT / 'dist'
+
+# what setup.py needs to build the wheel, copied so the build never touches build/ at the root
+SOURCES = ('setup.py', 'setup.cfg', 'pyproject.toml', 'README.md', 'LICENCE.txt', 'src', 'etc/exabgp', 'stubs')
+IGNORED = shutil.ignore_patterns('__pycache__', '*.pyc', '*.so', '.DS_Store')
+
+CONFIGURATION = ROOT / 'etc' / 'exabgp' / 'conf-ipself6.conf'
+ROUTE = 'route 10.0.0.0/24 next-hop 1.2.3.4 as-path [65000 65001]'
+SUITES = ('decoding', 'encoding', 'api', 'cli')
+
+# a one-file binary unpacks itself before it starts, which a loaded machine makes slow
+COMMAND_TIMEOUT = 300
+# what the server logs once its configuration is loaded, and once it stopped on SIGTERM
+SERVER_READY = 'config.loaded'
+SERVER_STOPPED = 'reactor.shutdown'
+
+# the console script of [project.scripts], as pip writes it
+ENTRY = 'import sys\nfrom exabgp.application.main import main\n\nsys.exit(main())\n'
+
+
+def environment(**extra: str) -> dict[str, str]:
+    """os.environ without what would point Python at another exabgp: a PYTHONPATH naming
+    src would have PyInstaller bundle the pure Python sources instead of the wheel."""
+    cleaned = {key: value for key, value in os.environ.items() if key not in ('PYTHONPATH', 'PYTHONHOME')}
+    return dict(cleaned, **extra)
+
+
+def run(command: list[str], **extra: str) -> None:
+    print('+', ' '.join(command), flush=True)
+    subprocess.run(command, check=True, cwd=WORK, env=environment(**extra))
+
+
+def output(command: list[str]) -> str:
+    return subprocess.run(command, check=True, cwd=WORK, env=environment(), capture_output=True, text=True).stdout
+
+
+def uv() -> str:
+    found = shutil.which('uv')
+    if not found:
+        sys.exit('build_binary: uv is needed, see CLAUDE.md')
+    return found
+
+
+def copy_sources(target: Path) -> None:
+    if target.exists():
+        shutil.rmtree(target)
+    target.mkdir(parents=True)
+    for name in SOURCES:
+        source = ROOT / name
+        if source.is_dir():
+            shutil.copytree(source, target / name, ignore=IGNORED)
+        elif source.is_file():
+            shutil.copy2(source, target / name)
+
+
+def build_wheel() -> Path:
+    """The compiled wheel, built by this Python from a copy of the checkout."""
+    source = WORK / 'source'
+    wheels = WORK / 'wheel'
+    copy_sources(source)
+    if wheels.exists():
+        shutil.rmtree(wheels)
+    command = [uv(), 'build', '--wheel', '--no-build-isolation', '--python', sys.executable]
+    run(command + ['--out-dir', str(wheels), str(source)], EXABGP_MYPYC='1')
+    found = sorted(wheels.glob('exabgp-*.whl'))
+    if len(found) != 1:
+        sys.exit(f'build_binary: expected one wheel in {wheels}, found {len(found)}')
+    return found[0]
+
+
+def pyinstaller_requirement() -> str:
+    """PyInstaller at the version uv.lock installed here, so every platform builds alike."""
+    try:
+        return f'pyinstaller=={metadata.version("pyinstaller")}'
+    except metadata.PackageNotFoundError:
+        return 'pyinstaller'
+
+
+def make_venv(wheel: Path) -> Path:
+    venv = WORK / 'venv'
+    if venv.exists():
+        shutil.rmtree(venv)
+    run([uv(), 'venv', '--python', sys.executable, str(venv)])
+    python = venv / 'bin' / 'python'
+    run([uv(), 'pip', 'install', '--python', str(python), str(wheel), pyinstaller_requirement()])
+    return python
+
+
+def site_packages(python: Path) -> Path:
+    return Path(output([str(python), '-c', 'import sysconfig; print(sysconfig.get_paths()["platlib"])']).strip())
+
+
+def extensions(python: Path) -> set[str]:
+    """Every extension the wheel installed: the compiled exabgp modules and mypyc's runtime."""
+    platlib = site_packages(python)
+    found = set(platlib.glob('exabgp/**/*.so')) | set(platlib.glob('*__mypyc*.so'))
+    return {str(path.relative_to(platlib)) for path in found}
+
+
+def binary_name(python: Path) -> str:
+    version = output([str(python), '-c', 'from importlib.metadata import version; print(version("exabgp"))']).strip()
+    return f'exabgp-{version}-{sys.platform}-{platform.machine().lower()}'
+
+
+def freeze(python: Path, name: str) -> Path:
+    entry = WORK / 'exabgp_main.py'
+    entry.write_text(ENTRY)
+    # mypyc builds its runtime as a top level module next to the package, which the
+    # compiled modules load by name and so PyInstaller cannot find by itself
+    runtime = sorted(name.split('.')[0] for name in extensions(python) if '/' not in name)
+    if not runtime:
+        sys.exit('build_binary: the wheel holds no mypyc runtime library, it was not compiled')
+    command = [str(python), '-m', 'PyInstaller', '--onefile', '--noconfirm', '--clean', '--name', name]
+    command += ['--distpath', str(DIST), '--workpath', str(WORK / 'pyinstaller'), '--specpath', str(WORK)]
+    command += ['--collect-all', 'exabgp', '--copy-metadata', 'exabgp']
+    for module in runtime:
+        command += ['--hidden-import', module]
+    run(command + [str(entry)])
+    return DIST / name
+
+
+def check_bundle(python: Path, binary: Path) -> None:
+    """Every compiled module the wheel installed is in the binary."""
+    viewer = python.parent / 'pyi-archive_viewer'
+    bundled = {line.strip() for line in output([str(viewer), '--recursive', '--brief', str(binary)]).splitlines()}
+    missing = sorted(extensions(python) - bundled)
+    if missing:
+        sys.exit(f'build_binary: {len(missing)} compiled modules are not in the binary: {" ".join(missing[:5])}')
+    print(f'build_binary: {len(extensions(python))} compiled extensions bundled')
+
+
+def execute(binary: Path, *arguments: str, stdin: str = '') -> str:
+    """What the binary prints, run as sbin/exabgp would run it: EXABGP_ROOT names the checkout."""
+    print('+', binary.name, ' '.join(arguments), flush=True)
+    result = subprocess.run(
+        [str(binary), *arguments],
+        input=stdin,
+        capture_output=True,
+        text=True,
+        env=environment(EXABGP_ROOT=str(ROOT)),
+        timeout=COMMAND_TIMEOUT,
+    )
+    if result.returncode:
+        sys.exit(f'build_binary: {" ".join(arguments)} failed ({result.returncode}):\n{result.stdout}{result.stderr}')
+    return result.stdout
+
+
+def check_server(binary: Path) -> None:
+    """The server starts on a configuration and stops cleanly on SIGTERM."""
+    print('+', binary.name, 'server', CONFIGURATION, flush=True)
+    command = [str(binary), 'server', str(CONFIGURATION)]
+    server = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=environment(EXABGP_ROOT=str(ROOT))
+    )
+    assert server.stdout is not None
+    lines: list[str] = []
+    ready = threading.Event()
+
+    def read() -> None:
+        assert server.stdout is not None
+        for line in server.stdout:
+            lines.append(line.rstrip())
+            if SERVER_READY in line:
+                ready.set()
+
+    reader = threading.Thread(target=read, daemon=True)
+    reader.start()
+    started = ready.wait(COMMAND_TIMEOUT)
+    server.send_signal(signal.SIGTERM)
+    try:
+        code = server.wait(COMMAND_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        server.kill()
+        code = server.wait()
+    reader.join(COMMAND_TIMEOUT)
+    stopped = any(SERVER_STOPPED in line for line in lines)
+    if not started or not stopped or code:
+        log = '\n'.join(lines)
+        sys.exit(f'build_binary: the server did not start and stop cleanly (exit {code}):\n{log}')
+
+
+def check_commands(binary: Path) -> None:
+    """version, encode, decode, configuration validate and server, the way a user runs them."""
+    report = execute(binary, 'version')
+    print(report, end='')
+    if 'Build  : mypyc' not in report:
+        sys.exit(f'build_binary: {binary} does not run the compiled modules')
+    update = execute(binary, 'encode', ROUTE).strip()
+    decoded = execute(binary, 'decode', stdin=update + '\n')
+    if '10.0.0.0/24' not in decoded or '65001' not in decoded:
+        sys.exit(f'build_binary: {update} decodes to {decoded}')
+    execute(binary, 'configuration', 'validate', '-nrv', str(CONFIGURATION))
+    check_server(binary)
+    print(f'build_binary: {binary} runs version, encode, decode, validate and server')
+
+
+def check_functional(binary: Path) -> None:
+    """The functional suites, with sbin/exabgp running the binary (EXABGP_BINARY)."""
+    for suite in SUITES:
+        command = [sys.executable, str(ROOT / 'qa' / 'bin' / 'functional'), suite, '--quiet']
+        print('+', ' '.join(command), flush=True)
+        result = subprocess.run(command, cwd=ROOT, env=dict(os.environ, EXABGP_BINARY=str(binary.resolve())))
+        if result.returncode:
+            sys.exit(f'build_binary: the {suite} suite failed against {binary}')
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--wheel', metavar='WHEEL', help='use this compiled wheel rather than building one')
+    parser.add_argument('--test', metavar='BINARY', help='do not build, check this binary')
+    parser.add_argument('--functional', action='store_true', help=f'also run the {", ".join(SUITES)} suites')
+    arguments = parser.parse_args()
+
+    started_at = time.monotonic()
+    if arguments.test:
+        binary = Path(arguments.test).resolve()
+    else:
+        WORK.mkdir(parents=True, exist_ok=True)
+        wheel = Path(arguments.wheel).resolve() if arguments.wheel else build_wheel()
+        python = make_venv(wheel)
+        binary = freeze(python, binary_name(python))
+        check_bundle(python, binary)
+    check_commands(binary)
+    if arguments.functional:
+        check_functional(binary)
+    size = binary.stat().st_size / 1024 / 1024
+    print(f'build_binary: {binary} ({size:.1f} MB, {time.monotonic() - started_at:.0f}s)')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

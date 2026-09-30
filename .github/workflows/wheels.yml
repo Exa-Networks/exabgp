@@ -1,0 +1,46 @@
+name: Compiled wheels (mypyc)
+
+# Builds wheels with the implementation compiled by mypyc (EXABGP_MYPYC=1, setup.py) for
+# each supported Python and platform, installs each one and runs the functional suites
+# against it (qa/bin/test_wheel). The wheels are kept as artifacts: publishing them is a
+# release decision, see plan/wip-mypyc.md and doc/user/compiled-build.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wheels:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "ubuntu-24.04-arm", "macos-latest"]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build, install and test the compiled wheels
+        uses: pypa/cibuildwheel@v4.2.1
+        env:
+          CIBW_BUILD: "cp312-* cp313-* cp314-*"
+          CIBW_SKIP: "*-musllinux_*"
+          CIBW_ENVIRONMENT: "EXABGP_MYPYC=1"
+          # mypyc comes with mypy, which a pure build does not need: installed for this
+          # build only, at the version the code is checked with (uv.lock)
+          CIBW_BEFORE_BUILD: "pip install mypy==1.20.1 setuptools wheel"
+          CIBW_BUILD_FRONTEND: "pip; args: --no-build-isolation"
+          CIBW_TEST_REQUIRES: "psutil"
+          CIBW_TEST_COMMAND: "cd {project} && python qa/bin/test_wheel"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl

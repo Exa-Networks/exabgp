@@ -90,7 +90,8 @@ class TestCmdline:
             output = mock_stdout.getvalue()
 
         lines = output.strip().split('\n')
-        assert len(lines) == 4
+        # ExaBGP, Python, Build (mypyc or python), Uname, From
+        assert len(lines) == 5
 
         # Each line should have format "Label : value"
         for line in lines:

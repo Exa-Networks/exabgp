@@ -1,0 +1,117 @@
+name: One-file binary
+
+# Builds ExaBGP as one executable per platform, Python and the mypyc compiled modules
+# inside (qa/bin/build_binary, doc/user/compiled-build.md), then checks it on a clean
+# runner: version, encode, decode, configuration validate, server, and the functional
+# suites through sbin/exabgp with EXABGP_BINARY. The binaries are kept as artifacts.
+#
+# The Linux binaries are built in AlmaLinux 8 (glibc 2.28), so they run on RHEL 8, Debian
+# 10, Ubuntu 20.04 and anything newer: a binary only runs on a glibc at least as recent as
+# the one it was built with. They are tested on the runner itself, a newer system.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    container: almalinux:8
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "ubuntu-24.04-arm"]
+    env:
+      # the Python of the container, whose libpython the binary bundles
+      UV_PYTHON: /usr/bin/python3.12
+      UV_PYTHON_DOWNLOADS: never
+
+    steps:
+      - name: Install Python 3.12, a C compiler and git
+        run: dnf install -y python3.12 python3.12-devel gcc git
+
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Build the binary
+        run: uv run ./qa/bin/build_binary
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: exabgp-binary-${{ matrix.os }}
+          path: dist/exabgp-*-linux-*
+          if-no-files-found: error
+
+  macos:
+    name: build macos-latest
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+
+      - name: Install dependencies
+        run: uv sync --frozen --python python3.12
+
+      - name: Build the binary
+        run: uv run ./qa/bin/build_binary
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: exabgp-binary-macos-latest
+          path: dist/exabgp-*-darwin-*
+          if-no-files-found: error
+
+  test:
+    name: test ${{ matrix.os }}
+    needs: [linux, macos]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest", "ubuntu-24.04-arm", "macos-latest"]
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # the functional harness, and the API programs the configurations run, are Python:
+      # the binary itself needs none
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+
+      - name: Install dependencies
+        run: uv sync --frozen --python python3.12
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: exabgp-binary-${{ matrix.os }}
+          path: dist
+
+      - name: Check the binary and run the functional suites against it
+        run: |
+          chmod +x dist/exabgp-*
+          uv run ./qa/bin/build_binary --test "$(ls dist/exabgp-*)" --functional

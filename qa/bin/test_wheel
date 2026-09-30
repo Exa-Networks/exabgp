@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+"""
+Test the exabgp installed in the running Python: the wheels workflow runs this against each
+compiled wheel it builds (plan/wip-mypyc.md phase 8, doc/user/compiled-build.md).
+
+It checks the message code was loaded compiled, then runs the functional suites against
+the installed package: EXABGP_TREE makes sbin/exabgp run it, INTERPRETER with this Python.
+
+Usage:
+    python qa/bin/test_wheel             # from the root of the checkout, with psutil installed
+    python qa/bin/test_wheel --pure      # the installed package is the pure Python one
+"""
+
+from __future__ import annotations
+
+import argparse
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent.parent
+SUITES = ('decoding', 'encoding', 'api', 'cli')
+
+
+def installed() -> Path:
+    """The directory holding the installed exabgp package, never the checkout's src."""
+    source = str(ROOT / 'src')
+    sys.path[:] = [entry for entry in sys.path if os.path.abspath(entry or '.') != source]
+    import exabgp
+
+    package = Path(exabgp.__file__).parent
+    if package.parent == ROOT / 'src':
+        sys.exit('test_wheel: exabgp comes from the checkout, not from an installed wheel')
+    return package.parent
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('--pure', action='store_true', help='the installed package is not compiled')
+    arguments = parser.parse_args()
+
+    tree = installed()
+    from exabgp.application.version import build
+
+    expected = 'python' if arguments.pure else 'mypyc'
+    if build() != expected:
+        print(f'test_wheel: the installed exabgp runs as {build()}, expected {expected}')
+        return 1
+    print(f'test_wheel: exabgp from {tree}, build {build()}')
+
+    environment = dict(os.environ, EXABGP_TREE=str(tree), INTERPRETER=sys.executable)
+    environment.pop('PYTHONPATH', None)
+    for suite in SUITES:
+        result = subprocess.run(
+            [sys.executable, str(ROOT / 'qa' / 'bin' / 'functional'), suite, '--quiet'], env=environment
+        )
+        if result.returncode:
+            print(f'test_wheel: the {suite} suite failed')
+            return result.returncode
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
