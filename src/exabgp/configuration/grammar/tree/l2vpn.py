@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.attribute import AttributeCollection, NextHopSelf
+from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.nlri import VPLS
 from exabgp.bgp.message.update.nlri.settings import VPLSSettings
 from exabgp.configuration.grammar import shape
@@ -37,7 +37,7 @@ from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.types.word import Number, Word
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI
-from exabgp.protocol.ip import IP
+from exabgp.protocol.ip import IP, IPSelf
 from exabgp.rib.route import Route
 
 VPLS_PARAM_MAX = 0xFFFF  # endpoint, size, offset and label base are sixteen bits
@@ -53,9 +53,10 @@ def _vpls_number(name: str) -> Number[int]:
     return Number(name, ((0, VPLS_PARAM_MAX),), convert=convert, examples=['0', '5', str(VPLS_PARAM_MAX)])
 
 
-def _nexthop(word: str) -> NextHopSelf | IP:
+def _nexthop(word: str) -> IP:
     if word.lower() == 'self':
-        return NextHopSelf(AFI.ipv4)
+        # the route's next-hop, an IP: IPSelf, as the other families use, not the attribute
+        return IPSelf(AFI.ipv4)
     return IP.from_string(word)
 
 

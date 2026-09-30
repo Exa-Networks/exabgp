@@ -41,6 +41,14 @@ from unittest.mock import Mock
 
 import pytest
 
+from exabgp.bgp.message.update.attribute import AttributeCollection, Origin
+from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.protocol.ip import IP
+from exabgp.rib import cache as cache_module
+from exabgp.rib.route import Route
+
+
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor import asynchronous as asynchronous_module
 from exabgp.reactor import listener as listener_module
@@ -157,6 +165,7 @@ def test_neither_option_failing_stops_the_listener() -> None:
 
 
 def _route(index: bytes, attributes_index: bytes, nexthop: Any) -> Any:
+    """A route shaped by hand, for the next hop no real Route can hold (see below)."""
     route = Mock()
     route.index = Mock(return_value=index)
     route.attributes.index = Mock(return_value=attributes_index)
@@ -167,6 +176,20 @@ def _route(index: bytes, attributes_index: bytes, nexthop: Any) -> Any:
     return route
 
 
+def _real_route(nexthop: str) -> Route:
+    """10.0.0.0/24 with an ORIGIN, through the given next hop."""
+    nlri = INET.from_cidr(CIDR.create_cidr(bytes([10, 0, 0, 0]), 24), AFI.ipv4, SAFI.unicast)
+    attributes = AttributeCollection()
+    attributes.add(Origin.from_int(Origin.IGP))
+    return Route(nlri, attributes, nexthop=IP.from_string(nexthop))
+
+
+# the compiled build (plan/wip-mypyc.md) checks in_cache is given a Route, whose next hop is
+# an IP: the next hop without an index can not reach it there, which is what the branch
+# the test pins stands in for
+COMPILED = not cache_module.__file__.endswith('.py')
+
+
 class NextHopWithoutIndex:
     """A next hop whose index() is missing, which is what the handler was written for."""
 
@@ -175,6 +198,7 @@ class NextHopWithoutIndex:
         raise AttributeError('this next hop has no index')
 
 
+@pytest.mark.skipif(COMPILED, reason='the compiled Cache refuses a route which is not a Route')
 def test_an_unexpected_error_means_not_cached_rather_than_cached() -> None:
     """False re-announces, True drops the route. Only one of those is safe to guess."""
     cache = Cache(cache=True, families={(AFI.ipv4, SAFI.unicast)})
@@ -194,14 +218,9 @@ def test_an_identical_route_is_still_reported_as_cached() -> None:
     """The deduplication must still work, or the assertion above is satisfied by nothing."""
     cache = Cache(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
-    def nexthop() -> Any:
-        value = Mock()
-        value.index = Mock(return_value=b'nh')
-        return value
-
-    cached = _route(b'r1', b'attr', nexthop())
-    incoming = _route(b'r1', b'attr', nexthop())
-    cache._seen = {(AFI.ipv4, SAFI.unicast): {b'r1': cached}}
+    cached = _real_route('192.0.2.1')
+    incoming = _real_route('192.0.2.1')
+    cache._seen = {(AFI.ipv4, SAFI.unicast): {cached.index(): cached}}
 
     assert cache.in_cache(incoming) is True, 'an identical route was not recognised as already advertised'
 
@@ -209,13 +228,8 @@ def test_an_identical_route_is_still_reported_as_cached() -> None:
 def test_a_different_next_hop_is_not_cached() -> None:
     cache = Cache(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
-    first = Mock()
-    first.index = Mock(return_value=b'nh-1')
-    second = Mock()
-    second.index = Mock(return_value=b'nh-2')
-
-    cached = _route(b'r1', b'attr', first)
-    incoming = _route(b'r1', b'attr', second)
-    cache._seen = {(AFI.ipv4, SAFI.unicast): {b'r1': cached}}
+    cached = _real_route('192.0.2.1')
+    incoming = _real_route('192.0.2.2')
+    cache._seen = {(AFI.ipv4, SAFI.unicast): {cached.index(): cached}}
 
     assert cache.in_cache(incoming) is False

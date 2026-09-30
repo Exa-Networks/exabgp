@@ -152,14 +152,26 @@ class Run:
         peer = self.peer
         assert peer.proto is not None
         assert peer.recv_timer is not None
-        outgoing = peer.neighbor.rib.outgoing
+        # the RIB is compiled (plan/wip-mypyc.md) and its methods can not be patched, so the
+        # peer methods which call replace_restart and replace_reload are wrapped instead
+        restore, reload = peer._restore_outgoing_rib, peer._apply_reload
+
+        def restored() -> None:
+            self.events.append('replace_restart')
+            restore()
+
+        def reloaded() -> None:
+            if peer._neighbor:
+                self.events.append('replace_reload')
+            reload()
+
         with (
             patch.object(peer.recv_timer, 'check_ka', side_effect=self.check_ka),
             patch.object(peer.proto, 'read_message', side_effect=self.read_message),
             patch.object(peer, '_resume_incoming', side_effect=self.record('resume')),
             patch.object(peer, '_announce_up_to_the_api', side_effect=self.record('api-up')),
-            patch.object(outgoing, 'replace_restart', side_effect=self.record('replace_restart')),
-            patch.object(outgoing, 'replace_reload', side_effect=self.record('replace_reload')),
+            patch.object(peer, '_restore_outgoing_rib', side_effect=restored),
+            patch.object(peer, '_apply_reload', side_effect=reloaded),
             patch('exabgp.reactor.peer.peer.KA.send_if_needed', new=AsyncMock(side_effect=self.record('send_ka'))),
             patch.object(peer.stats, 'changed_statistics', side_effect=self.statistics),
             patch.object(UpdateHandler, 'handle_async', new=self.handler('update-handler')),

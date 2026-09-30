@@ -7,7 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar
+from copy import deepcopy
+from typing import ClassVar, Self
 
 from exabgp.rib.incoming import IncomingRIB
 from exabgp.rib.outgoing import OutgoingRIB
@@ -25,34 +26,48 @@ class RIB:
     incoming: IncomingRIB
     outgoing: OutgoingRIB
 
-    def __init__(
-        self,
+    def __init__(self, name: str, enabled: bool, incoming: IncomingRIB, outgoing: OutgoingRIB) -> None:
+        self.name = name
+        self.enabled = enabled
+        self.incoming = incoming
+        self.outgoing = outgoing
+
+    @classmethod
+    def make_rib(
+        cls,
         name: str,
         adj_rib_in: bool,
         adj_rib_out: bool,
         families: set[FamilyTuple],
         enabled: bool = True,
-    ) -> None:
-        self.name = name
-        self.enabled = enabled
+    ) -> RIB:
+        """The RIB of this name: a new one, or the tables the cache kept for it across a reload."""
+        if name not in cls._cache:
+            incoming = IncomingRIB(adj_rib_in, families, enabled)
+            outgoing = OutgoingRIB(adj_rib_out, families, enabled)
+            outgoing.membership = incoming
+            rib = cls(name, enabled, incoming, outgoing)
+            cls._cache[name] = rib
+            return rib
 
-        if name not in self._cache:
-            self.incoming = IncomingRIB(adj_rib_in, families, enabled)
-            self.outgoing = OutgoingRIB(adj_rib_out, families, enabled)
-            self.outgoing.membership = self.incoming
-            self._cache[name] = self
-            return
-
-        self.incoming = self._cache[name].incoming
-        self.outgoing = self._cache[name].outgoing
-        self.incoming.families = families
-        self.outgoing.families = families
-        self.outgoing.delete_cached_family(families)
+        cached = cls._cache[name]
+        rib = cls(name, enabled, cached.incoming, cached.outgoing)
+        rib.incoming.families = families
+        rib.outgoing.families = families
+        rib.outgoing.delete_cached_family(families)
 
         if not adj_rib_out:
-            self.outgoing.clear()
+            rib.outgoing.clear()
         if not adj_rib_in:
-            self.incoming.clear()
+            rib.incoming.clear()
+        return rib
+
+    # A copy has its own tables and is not in the cache: built by __init__, which does not
+    # touch the cache, as copy's generic path cannot build a compiled class (plan/wip-mypyc.md)
+    def __deepcopy__(self, memo: dict[int, object]) -> Self:
+        copied = type(self)(self.name, self.enabled, deepcopy(self.incoming, memo), deepcopy(self.outgoing, memo))
+        memo[id(self)] = copied
+        return copied
 
     def enable(self, new_name: str, adj_rib_in: bool, adj_rib_out: bool, families: set[FamilyTuple]) -> None:
         """Enable a disabled RIB with proper name and settings."""

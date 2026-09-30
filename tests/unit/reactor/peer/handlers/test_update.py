@@ -5,6 +5,12 @@ import pytest
 from exabgp.bgp.message import Message
 from unittest.mock import Mock, patch
 
+from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.peer.handlers.update import UpdateHandler
 from exabgp.reactor.peer.context import PeerContext
@@ -44,11 +50,11 @@ class TestUpdateHandler:
 
     def test_handle_stores_nlris(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """UpdateHandler stores NLRIs in incoming RIB."""
-        nlri1, nlri2 = Mock(), Mock()
+        nlri1, nlri2 = _make_announce(b'p1', (AFI.ipv4, SAFI.unicast)), _make_announce(b'p2', (AFI.ipv4, SAFI.unicast))
         parsed = Mock()
         parsed.announces = [nlri1, nlri2]
         parsed.withdraws = []
-        parsed.attributes = Mock()
+        parsed.attributes = AttributeCollection()
         update = Mock()
         update.ID = Message.CODE.UPDATE
         update.IS_EOR = False
@@ -65,7 +71,7 @@ class TestUpdateHandler:
         parsed = Mock()
         parsed.announces = []
         parsed.withdraws = []
-        parsed.attributes = Mock()
+        parsed.attributes = AttributeCollection()
         update = Mock()
         update.ID = Message.CODE.UPDATE
         update.IS_EOR = False
@@ -80,7 +86,7 @@ class TestUpdateHandler:
         parsed = Mock()
         parsed.announces = []
         parsed.withdraws = []
-        parsed.attributes = Mock()
+        parsed.attributes = AttributeCollection()
         update = Mock()
         update.ID = Message.CODE.UPDATE
         update.IS_EOR = False
@@ -102,7 +108,7 @@ class TestUpdateHandler:
         parsed = Mock()
         parsed.announces = []
         parsed.withdraws = [Mock(), Mock(), Mock()]
-        parsed.attributes = Mock()
+        parsed.attributes = AttributeCollection()
         update = Mock()
         update.ID = Message.CODE.UPDATE
         update.IS_EOR = False
@@ -118,7 +124,7 @@ class TestUpdateHandler:
         parsed = Mock()
         parsed.announces = []
         parsed.withdraws = []
-        parsed.attributes = Mock()
+        parsed.attributes = AttributeCollection()
         update = Mock()
         update.ID = Message.CODE.UPDATE
         update.IS_EOR = False
@@ -151,11 +157,11 @@ class TestUpdateHandlerAsync:
     @pytest.mark.asyncio
     async def test_handle_async_stores_nlris(self, handler: UpdateHandler, mock_context: PeerContext) -> None:
         """handle_async stores NLRIs in incoming RIB."""
-        nlri1, nlri2 = Mock(), Mock()
+        nlri1, nlri2 = _make_announce(b'p1', (AFI.ipv4, SAFI.unicast)), _make_announce(b'p2', (AFI.ipv4, SAFI.unicast))
         parsed = Mock()
         parsed.announces = [nlri1, nlri2]
         parsed.withdraws = []
-        parsed.attributes = Mock()
+        parsed.attributes = AttributeCollection()
         update = Mock()
         update.ID = Message.CODE.UPDATE
         update.IS_EOR = False
@@ -171,7 +177,7 @@ class TestUpdateHandlerAsync:
         parsed = Mock()
         parsed.announces = []
         parsed.withdraws = []
-        parsed.attributes = Mock()
+        parsed.attributes = AttributeCollection()
         update = Mock()
         update.ID = Message.CODE.UPDATE
         update.IS_EOR = False
@@ -183,47 +189,44 @@ class TestUpdateHandlerAsync:
         assert handler._number == 2
 
 
-_path_counter = 0
+# Real routes: the RIB is compiled (plan/wip-mypyc.md) and refuses a Mock for an NLRI.
+# A prefix is named by a test (b'p1', b'p2') and a path by its id (b'id1'), each made a
+# real prefix and a real ADD-PATH Path Identifier.
+PREFIXES = {b'p1': 0, b'p2': 1}
+_path_ids: dict[bytes, int] = {}
 
 
-def _make_announce(prefix_index_bytes: bytes, family: tuple, path_id: bytes | None = None) -> Mock:
-    global _path_counter
+def _nlri(name: bytes, family: tuple, path_id: bytes | None) -> INET:
+    afi, safi = family
     if path_id is None:
-        _path_counter += 1
-        path_id = prefix_index_bytes + b':' + str(_path_counter).encode()
-    nlri = Mock()
-    nlri.prefix_index = Mock(return_value=prefix_index_bytes)
-    nlri.index = Mock(return_value=path_id)
-    afi_safi_mock = Mock()
-    afi_safi_mock.afi_safi = Mock(return_value=family)
-    nlri.family = Mock(return_value=afi_safi_mock)
-    nlri.__str__ = Mock(return_value=f'<nlri {prefix_index_bytes!r}>')
-    routed = Mock()
-    routed.nlri = nlri
-    routed.nexthop = Mock()
-    return routed
+        path_id = name + b':' + str(len(_path_ids)).encode()
+    number = _path_ids.setdefault(path_id, len(_path_ids) + 1)
+    if afi == AFI.ipv4:
+        packed = bytes([10, 0, PREFIXES[name], 0])
+    else:
+        packed = bytes([0x20, 0x01, 0x0D, 0xB8, 0, PREFIXES[name]]) + bytes(10)
+    cidr = CIDR.create_cidr(packed, 24 if afi == AFI.ipv4 else 48)
+    return INET.from_cidr(cidr, afi, safi, path_info=PathInfo.make_from_integer(number))
 
 
-def _make_withdraw(prefix_index_bytes: bytes, family: tuple, path_id: bytes | None = None) -> Mock:
-    global _path_counter
-    if path_id is None:
-        _path_counter += 1
-        path_id = prefix_index_bytes + b':' + str(_path_counter).encode()
-    nlri = Mock()
-    nlri.prefix_index = Mock(return_value=prefix_index_bytes)
-    nlri.index = Mock(return_value=path_id)
-    afi_safi_mock = Mock()
-    afi_safi_mock.afi_safi = Mock(return_value=family)
-    nlri.family = Mock(return_value=afi_safi_mock)
-    nlri.__str__ = Mock(return_value=f'<nlri {prefix_index_bytes!r}>')
-    return nlri
+def index(name: bytes, family: tuple = (AFI.ipv4, SAFI.unicast)) -> bytes:
+    """The prefix index the RIB keys the prefix a test calls `name` by."""
+    return _nlri(name, family, b'index').prefix_index()
+
+
+def _make_announce(prefix_index_bytes: bytes, family: tuple, path_id: bytes | None = None) -> RoutedNLRI:
+    return RoutedNLRI(_nlri(prefix_index_bytes, family, path_id), IP.from_string('192.0.2.1'))
+
+
+def _make_withdraw(prefix_index_bytes: bytes, family: tuple, path_id: bytes | None = None) -> INET:
+    return _nlri(prefix_index_bytes, family, path_id)
 
 
 def _make_update(announces: list, withdraws: list) -> Mock:
     parsed = Mock()
     parsed.announces = announces
     parsed.withdraws = withdraws
-    parsed.attributes = Mock()
+    parsed.attributes = AttributeCollection()
     msg = Mock()
     msg.ID = Message.CODE.UPDATE
     msg.IS_EOR = False
@@ -278,7 +281,7 @@ class TestUpdateHandlerPathsLimitAudit:
             )
             list(handler.handle(ctx_with_real_rib, msg))
         rib = ctx_with_real_rib.neighbor.rib.incoming
-        assert rib.path_count(self.FAMILY, b'p1') == 2
+        assert rib.path_count(self.FAMILY, index(b'p1')) == 2
         assert rib._path_warned == set()
 
     def test_violation_logs_warning(self, handler, ctx_with_real_rib):
@@ -294,8 +297,8 @@ class TestUpdateHandlerPathsLimitAudit:
             )
             list(handler.handle(ctx_with_real_rib, msg))
         rib = ctx_with_real_rib.neighbor.rib.incoming
-        assert rib.path_count(self.FAMILY, b'p1') == 3
-        assert (self.FAMILY, b'p1') in rib._path_warned
+        assert rib.path_count(self.FAMILY, index(b'p1')) == 3
+        assert (self.FAMILY, index(b'p1')) in rib._path_warned
 
     def test_reannounce_same_path_no_inflate(self, handler, ctx_with_real_rib):
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
@@ -304,7 +307,7 @@ class TestUpdateHandlerPathsLimitAudit:
                 msg = _make_update([_make_announce(b'p1', self.FAMILY, path_id=b'id1')], [])
                 list(handler.handle(ctx_with_real_rib, msg))
         rib = ctx_with_real_rib.neighbor.rib.incoming
-        assert rib.path_count(self.FAMILY, b'p1') == 1
+        assert rib.path_count(self.FAMILY, index(b'p1')) == 1
 
     def test_independent_prefixes_independent_warnings(self, handler, ctx_with_real_rib):
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
@@ -322,8 +325,8 @@ class TestUpdateHandlerPathsLimitAudit:
             )
             list(handler.handle(ctx_with_real_rib, msg))
         rib = ctx_with_real_rib.neighbor.rib.incoming
-        assert (self.FAMILY, b'p1') in rib._path_warned
-        assert (self.FAMILY, b'p2') in rib._path_warned
+        assert (self.FAMILY, index(b'p1')) in rib._path_warned
+        assert (self.FAMILY, index(b'p2')) in rib._path_warned
 
     def test_only_audited_family_counts(self, handler, ctx_with_real_rib):
         other = (AFI.ipv6, SAFI.unicast)
@@ -346,7 +349,7 @@ class TestUpdateHandlerPathsLimitAudit:
             list(handler.handle(ctx_with_real_rib, msg))
             wmsg = _make_update([], [_make_withdraw(b'p1', self.FAMILY, path_id=b'id2')])
             list(handler.handle(ctx_with_real_rib, wmsg))
-        assert ctx_with_real_rib.neighbor.rib.incoming.path_count(self.FAMILY, b'p1') == 1
+        assert ctx_with_real_rib.neighbor.rib.incoming.path_count(self.FAMILY, index(b'p1')) == 1
 
     def test_withdraw_to_zero_clears_warning(self, handler, ctx_with_real_rib):
         with patch('exabgp.reactor.peer.handlers.update.getenv') as mock_env:
@@ -361,7 +364,7 @@ class TestUpdateHandlerPathsLimitAudit:
             )
             list(handler.handle(ctx_with_real_rib, msg))
             rib = ctx_with_real_rib.neighbor.rib.incoming
-            assert (self.FAMILY, b'p1') in rib._path_warned
+            assert (self.FAMILY, index(b'p1')) in rib._path_warned
             wmsg = _make_update(
                 [],
                 [
@@ -371,7 +374,7 @@ class TestUpdateHandlerPathsLimitAudit:
                 ],
             )
             list(handler.handle(ctx_with_real_rib, wmsg))
-            assert (self.FAMILY, b'p1') not in rib._path_warned
+            assert (self.FAMILY, index(b'p1')) not in rib._path_warned
 
     def test_withdraw_no_audit_when_no_limit(self, handler, ctx_with_real_rib):
         ctx_with_real_rib.negotiated.advertised_paths_limit = {}
@@ -392,5 +395,5 @@ class TestUpdateHandlerPathsLimitAudit:
             )
             await handler.handle_async(ctx_with_real_rib, msg)
         rib = ctx_with_real_rib.neighbor.rib.incoming
-        assert rib.path_count(self.FAMILY, b'p1') == 3
-        assert (self.FAMILY, b'p1') in rib._path_warned
+        assert rib.path_count(self.FAMILY, index(b'p1')) == 3
+        assert (self.FAMILY, index(b'p1')) in rib._path_warned

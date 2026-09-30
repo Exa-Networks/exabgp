@@ -118,7 +118,7 @@ def membership(target: int | None) -> Route:
 def vpn_rib(monkeypatch: pytest.MonkeyPatch, member_of: list[int | None]) -> tuple[RIB, Route, Route]:
     """An adj-rib-out holding a route for 65000:1 and one for 65000:2, the peer a member of `member_of`."""
     monkeypatch.setattr(RIB, '_cache', {})
-    rib = RIB('rfc4684-output-filtering', True, True, {IPV4_VPN, IPV4_RTC})
+    rib = RIB.make_rib('rfc4684-output-filtering', True, True, {IPV4_VPN, IPV4_RTC})
     for target in member_of:
         rib.incoming.update_cache(membership(target))
     wanted = vpn_route('10.0.1.0/24', WANTED_TARGET)

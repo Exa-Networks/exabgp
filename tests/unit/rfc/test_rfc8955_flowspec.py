@@ -67,6 +67,7 @@ from exabgp.reactor.peer.handlers.update import UpdateHandler
 from exabgp.rib import RIB
 from exabgp.rib.flow_validation import validate_flows
 from exabgp.rib.incoming import IncomingRIB
+from tests import negotiation
 
 IPV4_UNICAST: FamilyTuple = (AFI.ipv4, SAFI.unicast)
 IPV4_FLOW: FamilyTuple = (AFI.ipv4, SAFI.flow_ip)
@@ -221,11 +222,9 @@ def peer_context(validation: str = 'enable') -> Any:
     its `flow-validation` setting and counters.  Validation is on unless told otherwise:
     the section 6 tests below are about what it does once asked for."""
     ctx = Mock(spec=PeerContext)
-    ctx.neighbor = Mock()
+    ctx.neighbor = negotiation.neighbor()
     ctx.neighbor.flow_validation = validation
     ctx.neighbor.route_target_filter = False
-    ctx.neighbor.prefix_limit = {}
-    ctx.neighbor.rib = Mock()
     ctx.neighbor.rib.incoming = IncomingRIB(True, {IPV4_UNICAST, IPV4_FLOW})
     ctx.negotiated = Mock()
     ctx.negotiated.advertised_paths_limit = {}

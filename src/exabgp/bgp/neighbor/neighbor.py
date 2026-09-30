@@ -125,7 +125,7 @@ class Neighbor:
         # Not in __eq__: the peer never learns it, so a reload applies it without a reset
         self.prefix_limit = {}
         # Create disabled RIB with placeholder name - will be enabled by make_rib()
-        self.rib = RIB(
+        self.rib = RIB.make_rib(
             name=f'disabled-{self._GLOBAL["uid"]}',
             adj_rib_in=True,
             adj_rib_out=True,

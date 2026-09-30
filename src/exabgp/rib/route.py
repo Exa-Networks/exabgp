@@ -59,6 +59,14 @@ class Route:
         # Refcount for global route store (tracks how many neighbors reference this route)
         self._refcount = 0
 
+    # A route is not changed once built (with_nexthop() returns a new one), so a copy is the
+    # route itself: copy's generic path cannot build a compiled class (plan/wip-mypyc.md)
+    def __copy__(self) -> Route:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, object]) -> Route:
+        return self
+
     def ref_inc(self) -> int:
         """Increment reference count. Returns new count."""
         self._refcount += 1

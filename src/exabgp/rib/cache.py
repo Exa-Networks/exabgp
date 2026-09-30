@@ -7,7 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Iterator
+from copy import deepcopy
+from typing import TYPE_CHECKING, Iterator, Self, cast
 
 from exabgp.logger import log, lazymsg
 from exabgp.protocol.family import FamilyTuple
@@ -32,6 +33,17 @@ class Cache:
         # we need route.index() in other part of the code
         # we pre-compute route.index() so that it is only allocted once
         self.families = families
+
+    # A copy holds its own copy of every table. Built by __init__ and then given the state:
+    # copy's generic path calls the class with no argument, which a compiled class refuses
+    # (plan/wip-mypyc.md). __getstate__ lists every attribute, the subclasses' included.
+    def __deepcopy__(self, memo: dict[int, object]) -> Self:
+        copied = type(self)(self.cache, set(self.families), self.enabled)
+        memo[id(self)] = copied
+        state = cast(dict[str, object], self.__getstate__())
+        for name, value in state.items():
+            setattr(copied, name, deepcopy(value, memo))
+        return copied
 
     def clear_cache(self) -> None:
         self._seen = {}

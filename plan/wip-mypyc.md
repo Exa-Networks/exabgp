@@ -487,3 +487,32 @@ the plan asked for a commit per phase.
 - compiled run: 14700 passed, 0 failed (was 503)
 
 Resume at phase 7: widen the compile list (rib/, then reactor framing, then the remaining NLRI families).
+
+### 2026-09-30: phase 7, rib compiled; reactor framing measured and left out
+
+rib/ is in COMPILED.
+- RIB construction moved to `RIB.make_rib()` (the cache lookup); `__init__` only holds name, enabled and the two tables, so a copy can be built without touching the cache
+- `Cache.__deepcopy__` (IncomingRIB, OutgoingRIB) builds through `__init__` and copies every attribute `__getstate__()` lists; `RIB.__deepcopy__` copies both tables; `Route` copies are the route (documented immutable)
+- found by the compiled types: an RTC or VPLS route written with `next-hop self` held the NextHopSelf attribute as its next-hop, where every other family holds IPSelf. Both now hold IPSelf
+- tests: real NLRIs, routes and neighbours in the update handler, flowspec, cache verdict and peer loop tests; the one test of a next hop without index() is skipped compiled, as the compiled Cache refuses anything but a Route there
+
+| stage | ci before | ci | bulk before | bulk |
+|---|---|---|---|---|
+| decode | 1.55x | 1.54x | 2.10x | 2.03x |
+| json | 1.26x | 1.26x | 2.10x | 2.09x |
+| encode | 1.85x | 1.79x | 1.65x | 1.67x |
+| rib | 1.57x | 1.96x | 1.58x | 2.26x |
+
+Pure tree against the baseline: 0.97x to 1.21x, inside the 5% budget.
+
+Reactor framing: protocol.py has an async generator (new_update_generator), which mypyc
+1.20 does not compile. connection.py (with incoming.py and outgoing.py, its subclasses)
+compiles; framing alone reads 287k messages/s compiled against 238k pure, about 0.7 us of
+the ~24 us a compiled UPDATE decode costs, some 3% end to end. It breaks ~26 tests which
+patch select.poll and the socket with Mocks. Left out pending Thomas's decision.
+
+Regression found by `functional decoding` (G, bgp-open-sofware-version) and fixed: with the
+Capabilities keys narrowed to CapabilityCode (773a6242d), the OPEN JSON printed each
+capability under str(code), its name ("multiprotocol"), where a decoded OPEN printed the
+number ("1"). `JSON._json_kv` prints int(key). A sent OPEN, whose keys were already codes,
+now prints numbers too, as the decoded one always did.

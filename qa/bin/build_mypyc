@@ -55,6 +55,7 @@ COMPILED = [
     'exabgp/bgp/message/update/nlri/label.py',
     'exabgp/bgp/message/update/nlri/ipvpn.py',
     'exabgp/bgp/message/update/nlri/qualifier',
+    'exabgp/rib',
 ]
 
 # Modules left out of COMPILED's patterns

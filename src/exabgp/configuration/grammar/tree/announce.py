@@ -181,14 +181,15 @@ class _RTCNextHop(Type[Any]):
         where = words.where()
         word = words.word()
         if word.lower() == 'self':
-            return NextHopSelf(AFI.ipv4)
+            # the route's next-hop, an IP: IPSelf, as the other families use, not the attribute
+            return IPSelf(AFI.ipv4)
         try:
             return IP.from_string(word)
         except (OSError, IndexError, ValueError):
             raise ConfigError(where, f"'{word}' is not a valid next-hop", expected=['<ip>', 'self']) from None
 
     def render(self, value: Any) -> list[str]:
-        return ['self'] if isinstance(value, NextHopSelf) else [str(value)]
+        return ['self'] if value.SELF else [str(value)]
 
     def hint(self) -> str:
         return '<ip>|self'
