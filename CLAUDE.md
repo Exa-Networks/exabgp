@@ -49,6 +49,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Encoding tests: `./qa/bin/functional encoding`
 - Linting: `ruff format && ruff check`
 
+## Session Acceptance Criteria
+
+- Treat every explicit user requirement, "ensure" request, and correction as an acceptance criterion for the rest of the session, unless the user explicitly supersedes it.
+- Record each criterion with its scope, comparison baseline where applicable, and the observable check that will prove it.
+- Before claiming completion, verify every applicable criterion against the final state after the last relevant edit. An earlier passing check is insufficient if later work could invalidate it.
+- Check the user's actual requirement, not a substitute. Never silently change the baseline, scope, or meaning of a check; a different check passing does not satisfy the original criterion.
+- A user correction must remain enforced during subsequent cleanup, audits, and follow-up work. Do not reintroduce the corrected mistake.
+- Report the checks actually performed and their results. If a criterion cannot be verified, state that limitation and do not claim it is satisfied.
+
 ## Git Workflow
 
 **🚨 CRITICAL GIT RULES - NEVER VIOLATE THESE 🚨**
