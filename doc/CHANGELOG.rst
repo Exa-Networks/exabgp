@@ -4,6 +4,24 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: sending or receiving OPERATIONAL messages no longer fails with missing statistics
+   counters; the counters are initialized and cleared with the session.
+ * Fix: compiled peers observe teardown requests made during an await, and exceptions
+   raised in the main loop retain their type so a Notify sends its NOTIFICATION.
+ * Fix: RouterID.from_string returns a RouterID rather than a plain IPv4 address.
+ * Fix: neighbor displays preserve unknown capabilities and add-path state before an OPEN,
+   convert TriState values at the JSON/text boundary, and report send/receive consistently.
+ * Fix: wheel build metadata reads its version from pyproject.toml rather than executing
+   a runtime module outside its package.
+ * Fix: compiled process configuration preserves missing/inaccessible executable errors;
+   descriptor cleanup only runs after the file has been opened.
+ * Fix: the retained Cumulus ACL helper parses CUMULUS_FLOW_RIB as a boolean, accepting
+   1, yes, on, enable and true case-insensitively. Other values, including false, 0 and
+   off, disable dry-run; previously every nonempty value enabled it.
+ * Feature: the experimental mypyc build compiles the whole implementation, except the
+   import-time fallback in util/mypyc.py and package initializers. Compiled wheels and
+   one-file executables use the same module selection; see doc/user/compiled-build.md.
+   Memory introspection with server --memory remains limited by a mypyc GC-traversal bug.
  * Incompatible: in the JSON API, the capabilities of an OPEN are filed under their name
    ("multiprotocol", "asn4", ...), with the capability code inside as "code". A received
    OPEN used to file them under the code ("1", "65", ...) and a sent one under the name,
@@ -672,10 +690,10 @@ Version 6.0.0:
    bytes, got 7" and never which token caused it.
  * Compatibility: Drop support for Python 3.7
  * Feature: Add type annotations to the codebase for better type safety
- * Change: **BREAKING** - The engine now runs on asyncio
-   - An async/await event loop replaces the generator-based reactor, there is no way back
-   - The full unit and functional test suites pass on the asyncio engine
-   - It brings modern event loop integration and easier integration with other asyncio code
+ * Change: the engine runs on asyncio, Python's event loop, in place of ExaBGP's own, with no
+   way back. Nothing changes for a user: the configuration, the API and the behaviour are the
+   same, API callbacks written as generators still work, and the full unit and functional
+   test suites pass on the asyncio engine.
  * Feature: Dynamic shell completion generation for Bash, Zsh, and Fish
    - Install with: `exabgp shell install [bash|zsh|fish]`
    - Auto-detects current shell if not specified

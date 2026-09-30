@@ -19,12 +19,36 @@ We will review all code changes sent via Pull Requests and welcome them. There i
 
 To contribute:
 
-1. Fork the repo and create your branch from `main`.
+1. Fork the repo and create your branch from `main` for a new feature, or from `5.0` for a bug fix (we may backport it).
 2. If you've added code that should be tested, please consider adding tests.
 3. Ensure the test suite passes. You can run it locally (see below)
 4. If you've changed APIs, please update the documentation.
-5. Make sure your code is formatted with black (see below)
+5. Make sure your code is formatted with `ruff format` (see below)
 6. Issue the pull request!
+
+## Development setup
+
+```
+git clone https://github.com/Exa-Networks/exabgp
+cd exabgp
+pip install -e .
+pip install -r qa/requirements.txt
+```
+
+`uv sync` does the same if you use [uv](https://docs.astral.sh/uv/).
+
+`main`, the future 6.0, requires Python 3.12 or later (3.12, 3.13 and 3.14 are supported)
+and runs on asyncio. The 5.0 branch runs on Python 3.8 or later, with the homemade
+generator-based reactor. We favour reliability over adopting the latest Python features.
+
+Some history explains the difference. Version 3.x supported Python 2 only, 4.x added
+Python 3 support while keeping Python 2 (minimum Python 3.6), 5.0 requires Python 3.8,
+and 6.0 requires Python 3.12, which lets us use the modern type annotation syntax, the
+buffer protocol improvements and other language features. ExaBGP is nearly as old as
+Python 3: Python 3.0 was released in December 2008 and the first ExaBGP commit is from
+September 2009. asyncio only reached the standard library with Python 3.4 in March 2014,
+so the 5.0 branch still runs the async core engine written years before it, while `main`
+hands the job to asyncio.
 
 ## License
 
@@ -78,13 +102,54 @@ equivalent is `sudo ifconfig lo0 alias 127.0.0.2 netmask 255.0.0.0`.
 it, rather than letting the stage which needs it stand down and report a green suite which
 never tested that code.
 
-### Running the tests
+The functional tests open many connections: make sure `ulimit -n` is at least 64000 before
+running them.
 
 ```
-./qa/bin/functional encoding
-./qa/bin/parsing
-env exabgp_log_enable=false pytest --with-coverage ./tests/unit/*_test.py ./tests/fuzz/*_test.py
-env exabgp_tcp_bind='' ./sbin/exabgp ./etc/exabgp/api-open.conf --decode FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
+ulimit -n 64000
+```
+
+### Running the tests
+
+`./qa/bin/test_everything` runs every suite. To run them one at a time:
+
+The **functional tests** validate BGP message encoding and decoding. Each test starts an
+IBGP daemon expecting a number of pre-recorded UPDATEs for the matching configuration file.
+
+```
+./qa/bin/functional encoding --list   # list all the tests
+./qa/bin/functional encoding          # run them all
+./qa/bin/functional encoding A        # run one, using its letter from --list
+```
+
+You can also run the server and the client of a test yourself, each in its own shell:
+
+```
+./qa/bin/functional encoding --server A   # in shell 1
+./qa/bin/functional encoding --client A   # in shell 2
+```
+
+The **unit tests** complement the functional testing, with coverage reporting (they need
+`pytest` and `pytest-cov`):
+
+```
+env exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/
+```
+
+The **configuration parsing tests** validate every configuration in `etc/exabgp/`:
+
+```
+./qa/bin/test_parsing
+```
+
+### Decoding a message
+
+`decode` prints a BGP message given in hexadecimal as JSON, using a configuration for the
+context:
+
+```
+env exabgp_tcp_bind='' ./sbin/exabgp decode -c ./etc/exabgp/api-open.conf \
+  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
 ```
 
 using `main`, more options are available: only decoding nlri for example:
@@ -92,6 +157,20 @@ using `main`, more options are available: only decoding nlri for example:
 ./sbin/exabgp decode --nlri etc/exabgp/conf-bgpls.conf "00 02 FF FF 03 00 00 00 00 00 00 00 00 01 00 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 0a 0a 0a 01 01 00 20 02 00 00 04 00 00 00 01 02 01 00 04 c0 a8 7a 7e 02 02 00 04 00 00 00 00 02 03 00 04 0a 02 02 02"
 { "ls-nlri-type": "bgpls-link", "l3-routing-topology": 0, "protocol-id": 3, "local-node-descriptors": { "autonomous-system": 1, "bgp-ls-identifier": "3232266878", "ospf-area-id": "0.0.0.0", "router-id": "10.10.10.10" }, "remote-node-descriptors": { "autonomous-system": 1, "bgp-ls-identifier": "3232266878", "ospf-area-id": "0.0.0.0", "router-id": "10.2.2.2" }, "interface-address": {  }, "neighbor-address": {  } }
 ```
+
+### Debug options
+
+These "unsupported" options are available to help with development:
+
+```
+exabgp.debug.configuration  # Trace configuration parsing errors with pdb
+exabgp.debug.pdb            # Enable python debugger on runtime errors
+                            # (be ready to use `killall python` for orphaned processes)
+exabgp.debug.route          # Similar to using decode but using the environment
+```
+
+The wiki page [Debugging](https://github.com/Exa-Networks/exabgp/wiki/Debugging) covers
+debugging a running installation.
 
 
 ## RFC compliance
@@ -130,9 +209,10 @@ larger than any fix being carried across.
 
 ## Coding Style
 
-Really coding style is not something we really have strong opinion but to make things consistent, we format the code using black once in while with:
+Really coding style is not something we really have strong opinion but to make things consistent, the code is formatted with ruff (single quotes, 120 characters), and must pass its checks:
 ```
-black -S -l 120
+uv run ruff format src
+uv run ruff check src
 ```
 
 ## References

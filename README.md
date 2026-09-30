@@ -10,52 +10,17 @@ ExaBGP has a fully backward-compatible successor written in Go, called Ze (**[ze
 
 ## Table of Contents
 
-<table width="100%">
-<tr valign="top">
-<td>
-
-**Getting Started**
 - [Use Cases](#use-cases)
 - [Features](#features)
 - [Quick Start](#quick-start)
 - [Version Notice](#version-notice)
 - [Related Project: Ze](#related-project-ze)
-
-</td>
-<td>
-
-**Installation**
-- [Docker](#docker)
-- [Zipapp](#zipapp)
-- [pip releases](#pip-releases)
-- [GitHub releases](#github-releases)
-- [git (stable)](#git-stable)
-- [git (development)](#git-development)
-- [OS packages](#os-packages)
-- [Compiled build](#compiled-build-experimental)
-
-</td>
-<td>
-
-**Usage**
+- [Installation](#installation)
 - [Upgrade](#upgrade)
+- [Compiled build (experimental)](#compiled-build-experimental)
 - [Documentation](#documentation)
 - [Support](#support)
 - [Contributing](#contributing)
-
-</td>
-<td>
-
-**Development**
-- [Requirements](#requirements)
-- [Version Information](#version-information)
-- [Testing](#testing)
-- [Debug Options](#debug-options)
-- [Message Decoding](#message-decoding)
-
-</td>
-</tr>
-</table>
 
 ## Use Cases
 
@@ -81,37 +46,19 @@ See [RFC compliance details](https://github.com/Exa-Networks/exabgp/wiki/RFC-Inf
 ### Architecture
 - **JSON API**: Control BGP via external programs (Python, shell scripts, etc.)
 - **No FIB Manipulation**: Pure BGP protocol implementation
-- **Event-Driven**: Custom reactor pattern (pre-dates asyncio)
+- **Event-Driven**: asyncio on `main`, a homemade reactor (which pre-dates asyncio) on 5.0
 - **Extensible**: Registry-based plugin architecture
 
 **Note**: If you need FIB manipulation, consider other open source BGP daemons such as [BIRD](http://bird.network.cz/) or [FRRouting](https://frrouting.org/).
 
 ## Quick Start
 
-The fastest way to get started:
-
 ```sh
-# Using Docker
-docker pull ghcr.io/exa-networks/exabgp:latest
-docker run -it --rm ghcr.io/exa-networks/exabgp:latest --help
-
-# Using zipapp (self-contained executable)
-git clone https://github.com/Exa-Networks/exabgp
-cd exabgp
-./release binary /usr/local/sbin/exabgp
-/usr/local/sbin/exabgp version
-
-# Using pip
 pip install exabgp
 exabgp --help
-
-# From source
-git clone https://github.com/Exa-Networks/exabgp
-cd exabgp
-./sbin/exabgp --help
 ```
 
-See [Installation](#installation) for detailed options and [Documentation](#documentation) for configuration examples.
+The [Quick Start](https://github.com/Exa-Networks/exabgp/wiki/Quick-Start) tutorial on the wiki takes you from there to a running BGP session, and the [`etc/exabgp`](https://github.com/Exa-Networks/exabgp/tree/main/etc/exabgp) folder holds over 100 configuration examples.
 
 ## Version Notice
 
@@ -120,453 +67,61 @@ Two branches are maintained and both are supported:
 - **`5.0` is the stable branch.** It is the released version (currently 5.0.13), it is what `pip`/`pipx` and most OS packages install, and it runs on Python 3.8 or later. Pick it if you want a tagged release, or if you are not on Python 3.12 yet.
 - **`main` is the development branch**, and the default branch of the repository. It will become 6.0, but it is not 6.0 yet and nothing is tagged: expect the odd rough edge, even though the full unit and functional test suites run on every commit. It requires Python 3.12 or later. Pick it if you want the features being built for 6.0: asyncio engine, the interactive CLI with shell completion, and health monitoring API commands.
 
-If you have no preference, use the stable branch:
-
-```sh
-git clone https://github.com/Exa-Networks/exabgp
-cd exabgp
-git checkout 5.0
-```
-
-Beware that `git clone` without a checkout, and `docker pull ghcr.io/exa-networks/exabgp:latest`, both give you `main`, while `pip install exabgp` gives you the latest 5.0 release.
-
-See [Version Information](#version-information) for details on differences between versions.
+If you have no preference, use the stable branch. Beware that `git clone` without a checkout, and `docker pull ghcr.io/exa-networks/exabgp:latest`, both give you `main`, while `pip install exabgp` gives you the latest 5.0 release.
 
 ## Related Project: Ze
 
-**[Ze](https://github.com/ze-software/ze)** is a new project by the ExaBGP author, a ground-up rewrite in Go aiming to be a fully programmable network stack for device configuration and network automation. Beyond BGP, Ze manages network interfaces, programs the FIB, and serves a config editor over SSH and a web UI. Everything beyond the core engine is a plugin (Go modules or external processes in any language), and an MCP server lets AI assistants discover and operate its features directly.
+**[Ze](https://github.com/ze-software/ze)** is a new project by the ExaBGP author, a ground-up rewrite in Go aiming to be a fully programmable network stack. Beyond BGP, it manages network interfaces, programs the FIB, and serves a config editor over SSH and a web UI.
 
-**Key points for ExaBGP users:**
-- **Pre-alpha** -- core BGP engine works, but many advanced features are incomplete or untested. APIs and config syntax will change without notice.
-- **ExaBGP bridge** -- existing ExaBGP plugins work unchanged, and `ze config migrate` converts ExaBGP configs.
-- **Feedback wanted** -- if you use ExaBGP, try `ze config migrate` with your configs and share what works and what does not.
+Ze is **pre-alpha**: the core BGP engine works, but APIs and config syntax will change without notice. Existing ExaBGP plugins work unchanged, and `ze config migrate` converts ExaBGP configs. If you use ExaBGP, try it with your configs and tell us what works and what does not.
 
-**Links:**
-- Official repo: [github.com/ze-software/ze](https://github.com/ze-software/ze)
-- Development: [codeberg.org/thomas-mangin/ze](https://codeberg.org/thomas-mangin/ze)
-- Discord: [discord.gg/ykJb8meS4](https://discord.gg/ykJb8meS4)
+Official repo: [github.com/ze-software/ze](https://github.com/ze-software/ze), development: [codeberg.org/thomas-mangin/ze](https://codeberg.org/thomas-mangin/ze), Discord: [discord.gg/ykJb8meS4](https://discord.gg/ykJb8meS4).
 
 ## Installation
 
-Should you encounter any issues, we will ask you to install the latest version from git.
-The simplest way to install ExaBGP is as a zipapp.
-
-### Docker
-
-Official container images are built and published on [GitHub](https://github.com/Exa-Networks/exabgp/pkgs/container/exabgp). To install from the command line use:
-
 ```sh
-docker pull ghcr.io/exa-networks/exabgp:latest
-docker run -it --rm ghcr.io/exa-networks/exabgp:latest version
-```
+# pip or pipx, the latest 5.0 release
+pipx install exabgp
 
-You can also build your own container image from the repository:
+# the container, from ghcr.io
+docker pull ghcr.io/exa-networks/exabgp:5.0.13
+docker run -it --rm ghcr.io/exa-networks/exabgp:5.0.13 version
 
-```sh
-git clone https://github.com/Exa-Networks/exabgp exabgp-git
-cd exabgp-git
-docker build -t exabgp ./
-docker run -p 179:1790 --mount type=bind,source=`pwd`/etc/exabgp,target=/etc/exabgp -it exabgp -v /etc/exabgp/parse-simple-v4.conf
-```
-
-It is possible to add your configuration file within the docker image and/or use the container like the exabgp binary. You can also use the `Docker.remote` file to build it using pip (does not require any other file).
-
-### Zipapp
-
-From the source folder, it is possible to create a self-contained executable which only requires an installed python3 interpreter:
-
-```sh
-git clone https://github.com/Exa-Networks/exabgp exabgp-git
-cd exabgp-git
-./release binary /usr/local/sbin/exabgp
-/usr/local/sbin/exabgp version
-```
-
-which is a helper function and creates a python3 zipapp:
-
-```sh
-git clone https://github.com/Exa-Networks/exabgp exabgp-git
-cd exabgp-git
-python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application.main:main -p "/usr/bin/env python3" src
-/usr/local/sbin/exabgp version
-```
-
-### pip releases
-
-The latest version is available on [`pypi`](https://pypi.org/project/exabgp/), the Python Package Index:
-
-```sh
-pip install exabgp
-
-exabgp version
-exabgp --help
-
-exabgp healthcheck --help
-python3 -m exabgp healthcheck --help
-```
-
-### GitHub releases
-
-It is also possible to download releases from GitHub:
-
-```sh
-curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.13.tar.gz | tar zx
-cd exabgp-5.0.13
-./sbin/exabgp version
-./sbin/exabgp --help
-
-./sbin/exabgp healthcheck --help
-env PYTHONPATH=./src python3 -m exabgp healthcheck --help
-./bin/healthcheck --help
-```
-
-### git (stable)
-
-For the released version, clone and checkout the stable 5.0 branch (Python 3.8+):
-
-```sh
-git clone https://github.com/Exa-Networks/exabgp exabgp-git
-cd exabgp-git
-git checkout 5.0
-./sbin/exabgp version
-./sbin/exabgp --help
-```
-
-### git (development)
-
-For the features listed in [Version Notice](#version-notice), use the `main` branch (Python 3.12+), which will become 6.0. It is the branch you get by default:
-
-```sh
-git clone https://github.com/Exa-Networks/exabgp exabgp-git
-cd exabgp-git
-./sbin/exabgp version
-./sbin/exabgp --help
-
-./sbin/exabgp healthcheck --help
-env PYTHONPATH=./src python3 -m exabgp healthcheck --help
-./bin/healthcheck --help
-```
-
-You can switch between branches or checkout specific releases:
-
-```sh
-git checkout 5.0      # Stable branch
-git checkout main     # Development branch (future 6.0)
-git checkout 5.0.13   # Specific release tag
+# git, running from the checkout (main by default, `git checkout 5.0` for stable)
+git clone https://github.com/Exa-Networks/exabgp
+cd exabgp
 ./sbin/exabgp version
 ```
 
-### OS packages
-
-The program is packaged for many systems such as [Debian](https://packages.debian.org/search?keywords=exabgp), [Ubuntu](https://packages.ubuntu.com/search?keywords=exabgp), [ArchLinux](https://aur.archlinux.org/packages/exabgp), [Gentoo](https://packages.gentoo.org/packages/net-misc/exabgp), [FreeBSD](https://www.freshports.org/net/exabgp/), [OSX](https://ports.macports.org/port/exabgp/).
-
-RHEL users can find help [here](https://github.com/Exa-Networks/exabgp/wiki/Building-From-Source#creating-rpm-packages).
-
-Many OS distributions provide older releases, but on the plus side, the packaged version will be integrated with systemd.
-
-Feel free to use your preferred installation option, but should you encounter any issues, we will ask you to install the latest code (the main branch) using git.
-
-### Pick and Choose
-
-Multiple versions can be used simultaneously without conflict when ExaBGP is run from extracted archives, docker, and/or local git repositories. If you are using `main`, you can use `exabgp version` to identify the location of your installation.
-
-### Shell Completion
-
-ExaBGP provides dynamic shell completion generation for Bash, Zsh, and Fish to autocomplete commands and options.
-
-**⚠️ Note:** This feature is newly implemented and not yet extensively tested. Feedback and bug reports are welcome.
-
-**Installation:**
-
-Install completion scripts for your shell using the built-in command:
-
-```sh
-# Install completion for current shell (auto-detects Bash/Zsh/Fish)
-./sbin/exabgp shell install
-
-# Or specify shell explicitly
-./sbin/exabgp shell install bash
-./sbin/exabgp shell install zsh
-./sbin/exabgp shell install fish
-
-# Uninstall completion (auto-detects shell)
-./sbin/exabgp shell uninstall
-
-# Or specify shell explicitly
-./sbin/exabgp shell uninstall bash
-```
-
-The completion script will be generated dynamically and installed to your user's completion directory (e.g., `~/.local/share/bash-completion/completions/`).
-
-**Verify completion is working:**
-
-```sh
-exabgp <TAB>
-# Should show: cli  configuration  decode  encode  env  healthcheck  migrate  run  schema  server  shell  version
-```
-
-**Manual Generation (advanced):**
-
-Generate the completion script to stdout for manual installation:
-
-```sh
-# Generate bash completion
-./sbin/exabgp shell completion bash > ~/.local/share/bash-completion/completions/exabgp
-source ~/.local/share/bash-completion/completions/exabgp
-
-# Generate zsh completion
-mkdir -p ~/.zsh/completions
-./sbin/exabgp shell completion zsh > ~/.zsh/completions/_exabgp
-echo 'fpath=(~/.zsh/completions $fpath)' >> ~/.zshrc
-autoload -Uz compinit && compinit
-
-# Generate fish completion
-mkdir -p ~/.config/fish/completions
-./sbin/exabgp shell completion fish > ~/.config/fish/completions/exabgp.fish
-```
-
-### Compiled build (experimental)
-
-On `main`, the message code (every BGP message, path attribute and address family) and the RIB can be compiled with [mypyc](https://mypyc.readthedocs.io/) into C extensions, from the same Python source. The compiled tree decodes, encodes and prints BGP messages between 1.4 and 2.1 times as fast:
-
-| Stage | Pure Python | Compiled | |
-|-------|-------------|----------|---|
-| decode an UPDATE of 400 prefixes | 180,400 prefixes/s | 353,200 prefixes/s | 1.96x |
-| JSON for an API process | 391,600 prefixes/s | 752,400 prefixes/s | 1.92x |
-| encode UPDATEs of every address family | 58,603 UPDATE/s | 125,363 UPDATE/s | 2.14x |
-| adj-rib-out, every address family | 276,831 UPDATE/s | 548,452 UPDATE/s | 1.98x |
-
-Measured with `./qa/bin/benchmark_codec` on an Apple M4 Max, Python 3.12. It needs a C compiler and a git checkout:
-
-```sh
-uv sync                      # brings mypy, and so mypyc
-./qa/bin/build_mypyc         # compiles into build/mypyc, the source tree is untouched
-export EXABGP_ROOT=$PWD
-env PYTHONPATH=build/mypyc .venv/bin/python -m exabgp server /etc/exabgp/exabgp.conf
-```
-
-Build again after every `git pull`, as `build/mypyc` is a copy of the source taken when it was built. `sbin/exabgp` always runs the pure Python tree. The unit test suite passes against the compiled tree, the functional suites have not been run against it yet, and there is no compiled wheel: see [doc/user/compiled-build.md](doc/user/compiled-build.md) for what is compiled, the full measurements, and how to check which tree is running.
+Should you encounter any issues, we will ask you to install the latest version from git. The wiki [Installation Guide](https://github.com/Exa-Networks/exabgp/wiki/Installation-Guide) covers the other ways: a self-contained zipapp, GitHub release archives, OS packages, building your own container image, and running several versions side by side.
 
 ## Upgrade
 
-ExaBGP is self-contained and easy to upgrade/downgrade by:
+Moving from 5.0 to `main` (the future 6.0) needs Python 3.12, and some configurations will not load and some API output changes shape. The [5.x to 6.0.0 migration guide](https://github.com/Exa-Networks/exabgp/wiki/From-5.x-to-6.x) lists every change and what to do about it. Run `exabgp configuration validate <file>` against your configuration before switching over.
 
-- replacing the downloaded release folder for releases downloaded from GitHub
-- running `git pull` in the repository folder for installation using git main
-- running `pip install -U exabgp`, for pip installations
-- running `apt update; apt upgrade exabgp` for Debian/Ubuntu
+Every effort is made to keep backward compatibility, but read the [CHANGELOG](https://github.com/Exa-Networks/exabgp/blob/main/doc/CHANGELOG.rst) and check your setup after any upgrade. Coming from 3.4, read [From 3.4 to 4.x](https://github.com/Exa-Networks/exabgp/wiki/From-3.4-to-4.x).
 
-**If you are migrating your application from ExaBGP 3.4 to 4.x please read this [wiki](https://github.com/Exa-Networks/exabgp/wiki/From-3.4-to-4.x) entry**.
+## Compiled build (experimental)
 
-**ExaBGP 5.0.0 introduces new features** including the `silence-ack` API command. The acknowledgment feature caused issues with simple programs that did not expect ACK messages. The `silence-ack` command resolves this problem by allowing external processes to disable acknowledgment messages.
+On `main`, the whole implementation can be compiled with [mypyc](https://mypyc.readthedocs.io/) into C extensions from the same Python source, including configuration, the reactor, API and CLI. Only package initializers and the import-time `util/mypyc.py` fallback remain Python. Build a compiled tree, wheel, or one-file executable with bundled Python; no compiled wheel is published to PyPI yet. The pure-Python build remains the default and is required for reliable `server --memory` GC inspection. See [doc/user/compiled-build.md](doc/user/compiled-build.md) for measurements, build commands and limitations, and the wiki page [Compiled Build](https://github.com/Exa-Networks/exabgp/wiki/Compiled-Build).
 
-**ExaBGP 6.0.0 (not released yet, in development on main) will introduce significant improvements** since 5.0.0:
-
-⚠️ **BREAKING CHANGE - asyncio engine:**
-- **The engine runs on asyncio** - the homemade generator-based core engine was replaced by an async/await event loop, there is no option to switch back
-- **Same behaviour** - the full unit and functional test suites pass on both 5.0 and main
-- **Why the change?** Modern event loop integration and easier integration with other asyncio code
-- **Python 3.12+ required** - use the 5.0 branch if you run an older interpreter
-
-🎯 **New Features:**
-- **Shell completion** - Install with `exabgp shell install [bash|zsh|fish]` for smart command completion
-- **Enhanced CLI** - Interactive mode with tab completion, JSON formatting, inline help (?)
-- **Health monitoring** - New API commands for ping and status checks
-- **Published RFC compliance ledger** - [`doc/RFC_COMPLIANCE.md`](doc/RFC_COMPLIANCE.md) quotes every normative sentence of the RFCs ExaBGP implements, says what we do about it, names the tests which prove it, and names what we do not do
-- **Python 3.12+ support** - Updated compatibility and bug fixes
-
-⚠️ **Moving from 5.0 to main:** some configurations will not load and some API output changes shape. The [5.x to 6.0.0 migration guide](https://github.com/Exa-Networks/exabgp/wiki/From-5.x-to-6.x) lists every change and what to do about it. The ones most setups meet:
-- `role { otc disable; }` and the per-route `otc none` are gone, and a configuration using either does not load
-- a route from an EBGP neighbour whose AS_PATH does not start with that neighbour's AS is treated as withdrawn: the neighbour of a route server needs `enforce-first-as false;`
-- the routes an API process announced are withdrawn when it exits: add `on-exit keep;` to a process which announces and exits on purpose
-- in the JSON API, the capabilities of an OPEN are keyed by their name (`"asn4"`, with `"code": 65` inside) rather than their code, and the `data` of a received NOTIFICATION is the Data field in hex, with the text in `message`
-- the BGP-LS JSON members which a peer may repeat are arrays
-
-Run `exabgp configuration validate <file>` against your configuration before switching over.
-
-The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://github.com/Exa-Networks/exabgp/blob/main/doc/CHANGELOG.rst) and check their setup after any upgrade.
+The whole-package build measured 1.4–2.4x faster on the documented message/RIB workloads (Apple M4 Max, Python 3.12.14). That excludes startup: the one-file macOS binary took 8.16s for `version`, so prefer the wheel for frequent short-lived commands.
 
 ## Documentation
 
-### 📚 Official Wiki Documentation
+The [**ExaBGP Wiki**](https://github.com/Exa-Networks/exabgp/wiki) is the documentation. The most useful pages:
 
-Comprehensive documentation is available in the [**ExaBGP Wiki**](https://github.com/Exa-Networks/exabgp/wiki):
-
-**🚀 Getting Started:**
-- [**Home**](https://github.com/Exa-Networks/exabgp/wiki) - Main documentation hub
 - [**Quick Start**](https://github.com/Exa-Networks/exabgp/wiki/Quick-Start) - 5-minute tutorial
 - [**Installation Guide**](https://github.com/Exa-Networks/exabgp/wiki/Installation-Guide) - Detailed installation for all platforms
 - [**First BGP Session**](https://github.com/Exa-Networks/exabgp/wiki/First-BGP-Session) - Step-by-step BGP setup
-
-**🔧 API Documentation:**
-- [**API Overview**](https://github.com/Exa-Networks/exabgp/wiki/API-Overview) - Architecture and patterns
-- [**Text API Reference**](https://github.com/Exa-Networks/exabgp/wiki/Text-API-Reference) - Complete text command reference
-- [**JSON API Reference**](https://github.com/Exa-Networks/exabgp/wiki/JSON-API-Reference) - JSON message format
-- [**API Commands**](https://github.com/Exa-Networks/exabgp/wiki/API-Commands) - A-Z command reference
-
-**🛡️ FlowSpec & DDoS Mitigation:**
-- [**FlowSpec Overview**](https://github.com/Exa-Networks/exabgp/wiki/FlowSpec-Overview) - DDoS mitigation guide
-- [**Match Conditions**](https://github.com/Exa-Networks/exabgp/wiki/Match-Conditions) - All match types
-- [**Actions Reference**](https://github.com/Exa-Networks/exabgp/wiki/Actions-Reference) - All actions (discard, rate-limit, redirect)
-
-**⚙️ Configuration:**
 - [**Configuration Syntax**](https://github.com/Exa-Networks/exabgp/wiki/Configuration-Syntax) - Complete syntax guide
-- [**Directives Reference**](https://github.com/Exa-Networks/exabgp/wiki/Directives-Reference) - A-Z configuration directives
-
-**📖 Additional Resources:**
-- [**RFC Compliance**](https://github.com/Exa-Networks/exabgp/wiki/RFC-Information) - the RFCs and drafts implemented
-- [**RFC compliance ledger**](doc/RFC_COMPLIANCE.md) - generated, in this repository: 24 RFCs requirement by requirement, with the tests which prove each one and the gaps we have not closed. Every quote in it is checked against the published RFC on every test run
-- [**Migration Guide**](https://github.com/Exa-Networks/exabgp/wiki/From-3.4-to-4.x) - Upgrading from 3.4 to 4.x
-- [**Related Projects**](https://github.com/Exa-Networks/exabgp/wiki/Projects) - Community tools and integrations
-
-### 💡 Examples
-
-To understand ExaBGP configuration in practice, explore the **100+ configuration examples** in the [`etc/exabgp`](https://github.com/Exa-Networks/exabgp/tree/main/etc/exabgp) folder covering:
-- Basic BGP peering
-- FlowSpec rules
-- IPv4/IPv6 unicast and multicast
-- L3VPN, EVPN, BGP-LS
-- API integration patterns
-- Health checks and failover
+- [**API Overview**](https://github.com/Exa-Networks/exabgp/wiki/API-Overview) - Architecture and patterns
+- [**JSON API Reference**](https://github.com/Exa-Networks/exabgp/wiki/JSON-API-Reference) - JSON message format
+- [**FlowSpec Overview**](https://github.com/Exa-Networks/exabgp/wiki/FlowSpec-Overview) - DDoS mitigation guide
+- [**Debugging**](https://github.com/Exa-Networks/exabgp/wiki/Debugging) - Finding out what went wrong
+- [**RFC compliance ledger**](doc/RFC_COMPLIANCE.md) - generated, in this repository: 24 RFCs requirement by requirement, with the tests which prove each one and the gaps we have not closed. Every quote in it is checked against the published RFC on every test run. The concept comes from [Ze](https://github.com/ze-software/ze), ExaBGP's successor, and was backported here in a simpler form
 
 Run `exabgp --help` for command-line options and built-in documentation.
-
-### 🤝 Contributing to Documentation
-
-Documentation contributions are genuinely welcomed! Even small improvements help the community. See the [Contributing](#contributing) section below.
-
-## Development
-
-### Requirements
-
-- **Python 3.12+** required on main / future 6.0 (supports versions 3.12, 3.13, 3.14), Python 3.8+ on the 5.0 branch
-- **Engine**: asyncio on main, homemade generator-based reactor on 5.0
-- **Compatibility**: Focus on reliability over adopting latest Python features
-
-**Version 3.x** supported Python 2 only. **Version 4.x** introduced Python 3 support while maintaining Python 2 compatibility (minimum: Python 3.6). **Version 5.0** requires Python 3.8 or later. **Version 6.0** requires Python 3.12 or later, enabling use of modern type annotation syntax, buffer protocol improvements, and other language features.
-
-ExaBGP is nearly as old as Python 3: Python 3.0 was released in December 2008, the first ExaBGP commit is from September 2009. A lot has changed since then, and asyncio only reached the standard library with Python 3.4 in March 2014. The 5.0 branch still runs the homemade async core engine written years before that, while main hands the job to asyncio. Our primary goal remains ensuring reliability for current and new users.
-
-### Version Information
-
-- **Stable**: 5.0 branch, released as 5.0.13, Python 3.8+
-- **Development**: main branch, will become 6.0, nothing tagged yet, Python 3.12+
-  - **Changes since 5.0**: Python 3.12+ required, the engine runs on asyncio, some BGP-LS JSON keys renamed
-  - **New features**: interactive CLI with tab completion, shell completion, health monitoring API commands
-  - **Note**: the configuration syntax and API remain compatible, but until 6.0 is released, non-backward compatible changes are still possible
-
-Both branches are supported. Use `git checkout 5.0` if you want the released version, stay on `main` if you want the features being built for 6.0. See [Version Notice](#version-notice).
-
-### Testing
-
-**File descriptor limit**: Ensure `ulimit -n` ≥ 64000 before running tests:
-
-```sh
-ulimit -n 64000
-```
-
-**Functional tests** - BGP message encoding/decoding validation:
-
-ExaBGP comes with a set of functional tests. Each test starts an IBGP daemon expecting a number of pre-recorded UPDATEs for the matching configuration file.
-
-```sh
-# List all available tests
-./qa/bin/functional encoding --list
-
-# Run all tests
-./qa/bin/functional encoding
-
-# Run specific test (using letter from --list, e.g., A, B)
-./qa/bin/functional encoding A
-```
-
-You can also manually run both the server and client for any given test:
-
-```sh
-# In shell 1
-./qa/bin/functional encoding --server A
-
-# In shell 2
-./qa/bin/functional encoding --client A
-```
-
-**Unit tests** - with coverage reporting:
-
-A test suite is present to complement the functional testing (requires `pip3 install pytest pytest-cov`):
-
-```sh
-env exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/
-```
-
-**Configuration parsing tests**:
-
-```sh
-./qa/bin/test_parsing
-```
-
-### Debug Options
-
-The following "unsupported" options are available to help with development:
-
-```sh
-exabgp.debug.configuration  # Trace configuration parsing errors with pdb
-exabgp.debug.pdb           # Enable python debugger on runtime errors
-                           # (be ready to use `killall python` for orphaned processes)
-exabgp.debug.route         # Similar to using decode but using the environment
-```
-
-### Message Decoding
-
-You can decode UPDATE messages using ExaBGP's `decode` option:
-
-```sh
-env exabgp_tcp_bind='' ./sbin/exabgp decode -c ./etc/exabgp/api-open.conf \
-  FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:003C:02:0000001C4001010040020040030465016501800404000000C840050400000064000000002001010101
-```
-
-Output (JSON format, reformatted for readability):
-```json
-{
-  "exabgp": "6.0.0",
-  "time": 1785586660.872494,
-  "host": "localhost",
-  "pid": 10696,
-  "ppid": 10691,
-  "counter": 1,
-  "type": "update",
-  "neighbor": {
-    "address": {
-      "local": "127.0.0.1",
-      "peer": "127.0.0.1"
-    },
-    "asn": {
-      "local": 1,
-      "peer": 1
-    },
-    "router-id": "1.2.3.4",
-    "direction": "in",
-    "message": {
-      "update": {
-        "attribute": {
-          "origin": "igp",
-          "med": 200,
-          "local-preference": 100
-        },
-        "announce": {
-          "ipv4 unicast": {
-            "101.1.101.1": [
-              {
-                "nlri": "1.1.1.1/32",
-                "path-information": "0.0.0.0"
-              }
-            ]
-          }
-        }
-      }
-    }
-  }
-}
-```
 
 ## Support
 
@@ -574,35 +129,14 @@ Output (JSON format, reformatted for readability):
 
 ExaBGP is supported through GitHub's [issue tracker](https://github.com/Exa-Networks/exabgp/issues). So should you encounter any problems, please do not hesitate to [report it](https://github.com/Exa-Networks/exabgp/issues?labels=bug&page=1&state=open) so we can help you.
 
-During "day time" (GMT/BST) feel free to contact us on [Slack](https://join.slack.com/t/exabgp/shared_invite/enQtNTM3MTU5NTg5NTcyLTMwNmZlMGMyNTQyNWY3Y2RjYmQxODgyYzY2MGFkZmYwODMxNDZkZjc4YmMyM2QzNzA1YWM0MmZjODhlYThjNTQ). We will try to respond if available.
+During "day time" (GMT/BST) feel free to contact us on [Slack](https://join.slack.com/t/exabgp/shared_invite/enQtNTM3MTU5NTg5NTcyLTMwNmZlMGMyNTQyNWY3Y2RjYmQxODgyYzY2MGFkZmYwODMxNDZkZjc4YmMyM2QzNzA1YWM0MmZjODhlYThjNTQ). We will try to respond if available. The best way to be informed about our progress/releases is to follow us on [Twitter](https://twitter.com/search?q=exabgp).
 
-The best way to be informed about our progress/releases is to follow us on [Twitter](https://twitter.com/search?q=exabgp).
-
-If there are any bugs, we'd like to ask you to help us fix the issue using the main branch. We will backport critical fixes to stable releases.
-
-Please remove any non `git main` installations if you are trying the latest release to prevent running the wrong code by accident; it happens more than you think. Verify the binary by running `exabgp version`.
+If there are any bugs, we'd like to ask you to help us fix the issue using the main branch. We will backport critical fixes to stable releases. Please remove any non `git main` installations if you are trying the latest release to prevent running the wrong code by accident; it happens more than you think. Verify the binary by running `exabgp version`.
 
 We will nearly systematically ask for the **FULL** output of exabgp with the option `-d`.
 
 ## Contributing
 
-Contributions are welcome! Here's how you can help:
+Contributions are welcome, from bug reports on the [issue tracker](https://github.com/Exa-Networks/exabgp/issues) to pull requests, and documentation improvements, even small ones, are genuinely appreciated. Target `main` for new features and `5.0` for bug fixes, and include tests.
 
-1. **Report Issues**: Use our [issue tracker](https://github.com/Exa-Networks/exabgp/issues)
-2. **Improve Documentation**: Even small improvements are genuinely appreciated
-3. **Submit Pull Requests**:
-   - Target the `main` branch for new features
-   - Target `5.0` branch for bug fixes (we may backport)
-   - Include tests for new functionality
-   - Run `ruff format` before committing
-
-### Development Setup
-
-```sh
-git clone https://github.com/Exa-Networks/exabgp
-cd exabgp
-pip install -e .
-pip install -r qa/requirements.txt
-```
-
-See [CLAUDE.md](./CLAUDE.md) for detailed AI development guidelines and architecture overview.
+[CONTRIBUTING.md](CONTRIBUTING.md) explains the development setup, how to run the tests, and the debugging options. See [CLAUDE.md](./CLAUDE.md) for the AI development guidelines and the architecture overview.

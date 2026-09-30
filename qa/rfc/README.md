@@ -14,6 +14,9 @@ and tests elsewhere in the tree carry `@pytest.mark.rfc('<id>')`, naming the
 requirements they prove. `./qa/bin/check_rfc_compliance` joins the two and fails when
 they disagree.
 
+The ledger is a concept taken from [Ze](https://github.com/ze-software/ze), the successor of ExaBGP, and backported
+here in a simpler form.
+
 ## Why the quote is verbatim
 
 Requirement lists written from memory are wrong in both directions: they invent MUSTs a
