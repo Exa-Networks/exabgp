@@ -22,6 +22,9 @@ Version 5.0.14:
  * QA: the RIB, route-refresh, MVPN and teardown API examples use buffered
    input and wait for sent-route and neighbour-state events, not just
    command acknowledgements or sleeps. Their processes do not respawn.
+ * Cleanup: remove the unused VyOS CLI prototype, Python-2-only JSON
+   converter and experimental exabgp.conf.yang package. The supported
+   exabgp-cli entry point remains.
 
 Version 5.0.13:
  * Fix: automatic local-AS sessions advertise the resolved peer identity,
