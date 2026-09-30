@@ -11,15 +11,12 @@ Version 5.0.14:
  * Fix: sending or receiving an OPERATIONAL message no longer raises
    KeyError on missing peer counters. Both counters reset when the
    session closes or the peer stops.
+ * Fix: end-of-RIB NLRI JSON is a complete object, including when used
+   in a list. The API response builder no longer double-wraps that
+   object. The public end-of-RIB API layout remains
+   '"message": { "eor": {...} }'.
 
 Version 5.0.13:
- * Fix: the end of RIB marker reported to an API process was not JSON.
-   Every other NLRI renders an object, and the caller puts the result in a
-   list, so a bare '"eor": {...}' made the whole line unparseable and a
-   process reading sent updates could not decode it. It is now
-   '{ "eor": {...} }'. Nothing recorded that line, which is why it went
-   unseen; etc/exabgp/run/api-rr-rib.run had been dropping it silently in
-   its "except ValueError: continue".
  * Fix: automatic local-AS sessions advertise the resolved peer identity,
    including the correct ASN4 capability. An unresolved ASN,
    AS_TRANS as a local identity, or a four-octet identity with ASN4

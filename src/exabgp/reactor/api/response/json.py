@@ -344,8 +344,8 @@ class JSON:
 
         nlri = ''
         if not add and not remove:
-            if update.nlris:  # an EOR
-                return {'message': self._json(f'{{ {update.nlris[0].json()} }}')}
+            if update.nlris:  # an EOR, whose json() is already an object
+                return {'message': self._json(update.nlris[0].json())}
         if add:
             add_str = ', '.join(add)
             nlri += f'"announce": {{ {add_str} }}'
