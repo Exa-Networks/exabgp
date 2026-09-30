@@ -26,22 +26,29 @@ Released under the MIT licence.
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
+# Changed for ExaBGP: typed for mypy --strict and compiled with mypyc. The Python 2
+# branches (old-style instances, im_self/im_func, basestring, iteritems) are gone, and
+# the walk no longer skips its own frames. It skipped them because gc.get_referrers()
+# returned the frame of a running function as a referrer of its locals. On Python 3.12
+# a running frame is not traversed by gc and never appears there, and a function
+# compiled by mypyc has no frame at all.
+
 from __future__ import annotations
 
-import codecs
 import gc
 import re
 import inspect
 import types
 import operator
 import os
+import shutil
 import subprocess
 import tempfile
 import sys
 import itertools
-
-# Python 3: InstanceType doesn't exist, use sentinel value for comparison
-InstanceType = type(None)
+from collections.abc import Callable
+from collections.abc import Sequence
+from typing import TextIO
 
 
 __author__ = 'Marius Gedminas (marius@gedmin.as)'
@@ -50,15 +57,16 @@ __license__ = 'MIT'
 __version__ = '2.0.1'
 __date__ = '2015-07-28'
 
+# A predicate over any object of the heap: filter, highlight, cull and chain ends.
+Predicate = Callable[[object], bool]
+# What gc.get_referrers and gc.get_referents look like: the neighbours of an object.
+EdgeFunction = Callable[[object], list[object]]
 
-# Python 3: basestring doesn't exist
-basestring = str
-
-# Python 3: dict.iteritems doesn't exist
-iteritems = dict.items
+# The peak counts show_growth compares against when its caller keeps none of its own.
+_PEAK_STATS: dict[str, int] = {}
 
 
-def count(typename, objects=None):
+def count(typename: str, objects: Sequence[object] | None = None) -> int:
     """Count objects tracked by the garbage collector with a given class name.
 
     Example:
@@ -91,7 +99,7 @@ def count(typename, objects=None):
         del objects  # clear cyclic references to frame
 
 
-def typestats(objects=None, shortnames=True):
+def typestats(objects: Sequence[object] | None = None, shortnames: bool = True) -> dict[str, int]:
     """Count the number of instances for each type tracked by the GC.
 
     Note that the GC does not track simple objects like int or str.
@@ -118,11 +126,8 @@ def typestats(objects=None, shortnames=True):
     if objects is None:
         objects = gc.get_objects()
     try:
-        if shortnames:
-            typename = _short_typename
-        else:
-            typename = _long_typename
-        stats = {}
+        typename = _short_typename if shortnames else _long_typename
+        stats: dict[str, int] = {}
         for o in objects:
             n = typename(o)
             stats[n] = stats.get(n, 0) + 1
@@ -131,7 +136,9 @@ def typestats(objects=None, shortnames=True):
         del objects  # clear cyclic references to frame
 
 
-def most_common_types(limit=10, objects=None, shortnames=True):
+def most_common_types(
+    limit: int | None = 10, objects: Sequence[object] | None = None, shortnames: bool = True
+) -> list[tuple[str, int]]:
     """Count the names of types with the most instances.
 
     Returns a list of (type_name, count), sorted most-frequent-first.
@@ -161,7 +168,9 @@ def most_common_types(limit=10, objects=None, shortnames=True):
     return stats
 
 
-def show_most_common_types(limit: int = 10, objects: object = None, shortnames: bool = True) -> None:
+def show_most_common_types(
+    limit: int | None = 10, objects: Sequence[object] | None = None, shortnames: bool = True
+) -> None:
     """Print the table of types of most common instances.
 
     The caveats documented in :func:`typestats` apply.
@@ -185,12 +194,13 @@ def show_most_common_types(limit: int = 10, objects: object = None, shortnames: 
 
     """
     stats = most_common_types(limit, objects, shortnames=shortnames)
-    width = max(len(name) for name, count in stats)
-    for name, count in stats:
-        print('%-*s %i' % (width, name, count))
+    # max() of nothing raises: an empty list of objects prints an empty table.
+    width = max((len(name) for name, _ in stats), default=0)
+    for name, number in stats:
+        print('%-*s %i' % (width, name, number))
 
 
-def show_growth(limit=10, peak_stats={}, shortnames=True):
+def show_growth(limit: int | None = 10, peak_stats: dict[str, int] | None = None, shortnames: bool = True) -> None:
     """Show the increase in peak object counts since last call.
 
     Limits the output to ``limit`` largest deltas.  You may set ``limit`` to
@@ -198,7 +208,8 @@ def show_growth(limit=10, peak_stats={}, shortnames=True):
 
     Uses and updates ``peak_stats``, a dictionary from type names to previously
     seen peak object counts.  Usually you don't need to pay attention to this
-    argument.
+    argument: without one, a dictionary kept by this module is used, so one
+    call compares against the previous one.
 
     The caveats documented in :func:`typestats` apply.
 
@@ -216,24 +227,27 @@ def show_growth(limit=10, peak_stats={}, shortnames=True):
        New parameter: ``shortnames``.
 
     """
+    # The original used a mutable default argument as the store, a dictionary made once
+    # when the function is defined. A module level one is the same thing, said plainly.
+    peaks = _PEAK_STATS if peak_stats is None else peak_stats
     gc.collect()
     stats = typestats(shortnames=shortnames)
-    deltas = {}
-    for name, count in iteritems(stats):
-        old_count = peak_stats.get(name, 0)
-        if count > old_count:
-            deltas[name] = count - old_count
-            peak_stats[name] = count
-    deltas = sorted(deltas.items(), key=operator.itemgetter(1), reverse=True)
+    growth: dict[str, int] = {}
+    for name, number in stats.items():
+        old_count = peaks.get(name, 0)
+        if number > old_count:
+            growth[name] = number - old_count
+            peaks[name] = number
+    deltas = sorted(growth.items(), key=operator.itemgetter(1), reverse=True)
     if limit:
         deltas = deltas[:limit]
     if deltas:
-        width = max(len(name) for name, count in deltas)
+        width = max(len(name) for name, _ in deltas)
         for name, delta in deltas:
             print('%-*s%9d %+9d' % (width, name, stats[name], delta))
 
 
-def get_leaking_objects(objects=None):
+def get_leaking_objects(objects: Sequence[object] | None = None) -> list[object]:
     """Return objects that do not have any referents.
 
     These could indicate reference-counting bugs in C code.  Or they could
@@ -248,15 +262,17 @@ def get_leaking_objects(objects=None):
         objects = gc.get_objects()
     try:
         ids = set(id(i) for i in objects)
-        for i in objects:
-            ids.difference_update(id(j) for j in gc.get_referents(i))
+        for referrer in objects:
+            ids.difference_update(map(id, gc.get_referents(referrer)))
         # this then is our set of objects without referrers
         return [i for i in objects if id(i) in ids]
     finally:
-        del objects, i  # clear cyclic references to frame
+        # The loop variable is not deleted: with no objects it was never bound, and
+        # `del` raised UnboundLocalError over the empty result.
+        del objects  # clear cyclic references to frame
 
 
-def by_type(typename: str, objects: object = None) -> list[object]:
+def by_type(typename: str, objects: Sequence[object] | None = None) -> list[object]:
     """Return objects tracked by the garbage collector with a given class name.
 
     Example:
@@ -285,7 +301,7 @@ def by_type(typename: str, objects: object = None) -> list[object]:
         del objects  # clear cyclic references to frame
 
 
-def at(addr):
+def at(addr: int) -> object:
     """Return an object at a given memory address.
 
     The reverse of id(obj):
@@ -302,7 +318,9 @@ def at(addr):
     return None
 
 
-def find_ref_chain(obj, predicate, max_depth=20, extra_ignore=()):
+def find_ref_chain(
+    obj: object, predicate: Predicate, max_depth: int = 20, extra_ignore: Sequence[int] = ()
+) -> list[object]:
     """Find a shortest chain of references leading from obj.
 
     The end of the chain will be some object that matches your predicate.
@@ -326,7 +344,9 @@ def find_ref_chain(obj, predicate, max_depth=20, extra_ignore=()):
     return _find_chain(obj, predicate, gc.get_referents, max_depth=max_depth, extra_ignore=extra_ignore)[::-1]
 
 
-def find_backref_chain(obj, predicate, max_depth=20, extra_ignore=()):
+def find_backref_chain(
+    obj: object, predicate: Predicate, max_depth: int = 20, extra_ignore: Sequence[int] = ()
+) -> list[object]:
     """Find a shortest chain of references leading to obj.
 
     The start of the chain will be some object that matches your predicate.
@@ -355,15 +375,15 @@ def find_backref_chain(obj, predicate, max_depth=20, extra_ignore=()):
 def show_backrefs(
     objs: object,
     max_depth: int = 3,
-    extra_ignore: tuple[object, ...] = (),
-    filter: object = None,
+    extra_ignore: Sequence[int] = (),
+    filter: Predicate | None = None,
     too_many: int = 10,
-    highlight: object = None,
+    highlight: Predicate | None = None,
     filename: str | None = None,
-    extra_info: object = None,
+    extra_info: Callable[[object], object] | None = None,
     refcounts: bool = False,
     shortnames: bool = True,
-    output: object = None,
+    output: TextIO | None = None,
 ) -> None:
     """Generate an object reference graph ending at ``objs``.
 
@@ -432,35 +452,37 @@ def show_backrefs(
     # cull_func here, but not in show_graph().
     _show_graph(
         objs,
-        max_depth=max_depth,
-        extra_ignore=extra_ignore,
-        filter=filter,
-        too_many=too_many,
-        highlight=highlight,
-        edge_func=gc.get_referrers,
-        swap_source_target=False,
-        filename=filename,
-        output=output,
-        extra_info=extra_info,
-        refcounts=refcounts,
-        shortnames=shortnames,
-        cull_func=is_proper_module,
+        _GraphOptions(
+            edge_func=gc.get_referrers,
+            swap_source_target=False,
+            max_depth=max_depth,
+            too_many=too_many,
+            filter=filter,
+            highlight=highlight,
+            extra_info=extra_info,
+            refcounts=refcounts,
+            shortnames=shortnames,
+            cull_func=is_proper_module,
+        ),
+        extra_ignore,
+        filename,
+        output,
     )
 
 
 def show_refs(
-    objs,
-    max_depth=3,
-    extra_ignore=(),
-    filter=None,
-    too_many=10,
-    highlight=None,
-    filename=None,
-    extra_info=None,
-    refcounts=False,
-    shortnames=True,
-    output=None,
-):
+    objs: object,
+    max_depth: int = 3,
+    extra_ignore: Sequence[int] = (),
+    filter: Predicate | None = None,
+    too_many: int = 10,
+    highlight: Predicate | None = None,
+    filename: str | None = None,
+    extra_info: Callable[[object], object] | None = None,
+    refcounts: bool = False,
+    shortnames: bool = True,
+    output: TextIO | None = None,
+) -> None:
     """Generate an object reference graph starting at ``objs``.
 
     The graph will show you what objects are reachable from ``objs``, directly
@@ -520,22 +542,34 @@ def show_refs(
     """
     _show_graph(
         objs,
-        max_depth=max_depth,
-        extra_ignore=extra_ignore,
-        filter=filter,
-        too_many=too_many,
-        highlight=highlight,
-        edge_func=gc.get_referents,
-        swap_source_target=True,
-        filename=filename,
-        extra_info=extra_info,
-        refcounts=refcounts,
-        shortnames=shortnames,
-        output=output,
+        _GraphOptions(
+            edge_func=gc.get_referents,
+            swap_source_target=True,
+            max_depth=max_depth,
+            too_many=too_many,
+            filter=filter,
+            highlight=highlight,
+            extra_info=extra_info,
+            refcounts=refcounts,
+            shortnames=shortnames,
+            cull_func=None,
+        ),
+        extra_ignore,
+        filename,
+        output,
     )
 
 
-def show_chain(*chains, **kw):
+def show_chain(
+    *chains: Sequence[object],
+    backrefs: bool = True,
+    highlight: Predicate | None = None,
+    extra_info: Callable[[object], object] | None = None,
+    refcounts: bool = False,
+    shortnames: bool = True,
+    filename: str | None = None,
+    output: TextIO | None = None,
+) -> None:
     """Show a chain (or several chains) of object references.
 
     Useful in combination with :func:`find_ref_chain` or
@@ -565,20 +599,43 @@ def show_chain(*chains, **kw):
        New parameter: ``output``.
 
     """
-    backrefs = kw.pop('backrefs', True)
-    chains = [chain for chain in chains if chain]  # remove empty ones
+    kept = [chain for chain in chains if chain]  # remove empty ones
+    if not kept:
+        # Nothing to draw. The original raised ValueError, from max() of an empty list.
+        return
+    ids = set(map(id, itertools.chain(*kept)))
 
-    def in_chains(x, ids=set(map(id, itertools.chain(*chains)))):
+    def in_chains(x: object) -> bool:
         return id(x) in ids
 
-    max_depth = max(map(len, chains)) - 1
+    max_depth = max(map(len, kept)) - 1
     if backrefs:
-        show_backrefs([chain[-1] for chain in chains], max_depth=max_depth, filter=in_chains, **kw)
+        show_backrefs(
+            [chain[-1] for chain in kept],
+            max_depth=max_depth,
+            filter=in_chains,
+            highlight=highlight,
+            extra_info=extra_info,
+            refcounts=refcounts,
+            shortnames=shortnames,
+            filename=filename,
+            output=output,
+        )
     else:
-        show_refs([chain[0] for chain in chains], max_depth=max_depth, filter=in_chains, **kw)
+        show_refs(
+            [chain[0] for chain in kept],
+            max_depth=max_depth,
+            filter=in_chains,
+            highlight=highlight,
+            extra_info=extra_info,
+            refcounts=refcounts,
+            shortnames=shortnames,
+            filename=filename,
+            output=output,
+        )
 
 
-def is_proper_module(obj):
+def is_proper_module(obj: object) -> bool:
     """
     Returns ``True`` if ``obj`` can be treated like a garbage collector root.
 
@@ -594,8 +651,9 @@ def is_proper_module(obj):
 
     .. versionadded:: 1.8
     """
-    name = getattr(obj, '__name__', None)
-    return inspect.ismodule(obj) and name is not None and obj is sys.modules.get(name)
+    if not inspect.ismodule(obj):
+        return False
+    return obj is sys.modules.get(obj.__name__)
 
 
 #
@@ -603,27 +661,55 @@ def is_proper_module(obj):
 #
 
 
-def _find_chain(obj, predicate, edge_func, max_depth=20, extra_ignore=()):
+class _GraphOptions:
+    """How one graph is drawn: which way the edges go, how deep and how wide, and what is shown."""
+
+    def __init__(
+        self,
+        *,
+        edge_func: EdgeFunction,
+        swap_source_target: bool,
+        max_depth: int,
+        too_many: int,
+        filter: Predicate | None,
+        highlight: Predicate | None,
+        extra_info: Callable[[object], object] | None,
+        refcounts: bool,
+        shortnames: bool,
+        cull_func: Predicate | None,
+    ) -> None:
+        self.edge_func = edge_func
+        # The names "source" and "target" are reversed when this is False, because
+        # originally there was just show_backrefs() and it walked the graph backwards.
+        self.swap_source_target = swap_source_target
+        self.max_depth = max_depth
+        self.too_many = too_many
+        self.filter = filter
+        self.highlight = highlight
+        self.extra_info = extra_info
+        self.refcounts = refcounts
+        self.shortnames = shortnames
+        self.cull_func = cull_func
+
+
+def _find_chain(
+    obj: object, predicate: Predicate, edge_func: EdgeFunction, max_depth: int = 20, extra_ignore: Sequence[int] = ()
+) -> list[object]:
     queue = [obj]
     depth = {id(obj): 0}
-    parent = {id(obj): None}
+    # None marks the start: it is never a referrer or a referent, gc does not track it.
+    parent: dict[int, object | None] = {id(obj): None}
     ignore = set(extra_ignore)
     ignore.add(id(extra_ignore))
     ignore.add(id(queue))
     ignore.add(id(depth))
     ignore.add(id(parent))
     ignore.add(id(ignore))
-    ignore.add(id(sys._getframe()))  # this function
-    ignore.add(id(sys._getframe(1)))  # find_chain/find_backref_chain
     gc.collect()
     while queue:
         target = queue.pop(0)
         if predicate(target):
-            chain = [target]
-            while parent[id(target)] is not None:
-                target = parent[id(target)]
-                chain.append(target)
-            return chain
+            return _chain_to(target, parent)
         tdepth = depth[id(target)]
         if tdepth < max_depth:
             referrers = edge_func(target)
@@ -638,141 +724,160 @@ def _find_chain(obj, predicate, edge_func, max_depth=20, extra_ignore=()):
     return [obj]  # not found
 
 
+def _chain_to(target: object, parent: dict[int, object | None]) -> list[object]:
+    """The chain from target back to where the search started, following parent."""
+    chain = [target]
+    link = parent[id(target)]
+    # Each object is given a parent once, when it is first reached, so the walk back
+    # visits each entry at most once: the bound only fires if parent ever held a loop.
+    for _ in range(len(parent)):
+        if link is None:
+            return chain
+        chain.append(link)
+        link = parent[id(link)]
+    raise RuntimeError('the parents of a reference chain form a loop')
+
+
 def _show_graph(
-    objs,
-    edge_func,
-    swap_source_target,
-    max_depth=3,
-    extra_ignore=(),
-    filter=None,
-    too_many=10,
-    highlight=None,
-    filename=None,
-    extra_info=None,
-    refcounts=False,
-    shortnames=True,
-    output=None,
-    cull_func=None,
-):
-    if not isinstance(objs, (list, tuple)):
-        objs = [objs]
+    objs: object,
+    options: _GraphOptions,
+    extra_ignore: Sequence[int] = (),
+    filename: str | None = None,
+    output: TextIO | None = None,
+) -> None:
+    roots: list[object] = list(objs) if isinstance(objs, (list, tuple)) else [objs]
     if filename and output:
         raise ValueError('Cannot specify both output and filename.')
-    elif output:
-        f = output
-    elif filename and filename.endswith('.dot'):
-        f = codecs.open(filename, 'w', encoding='utf-8')
-        dot_filename = filename
-    else:
-        fd, dot_filename = tempfile.mkstemp(prefix='objgraph-', suffix='.dot', text=True)
-        f = os.fdopen(fd, 'w')
-        if getattr(f, 'encoding', None):
-            # Python 3 will wrap the file in the user's preferred encoding
-            # Re-wrap it for utf-8
-            import io
-
-            f = io.TextIOWrapper(f.detach(), 'utf-8')
-    f.write('digraph ObjectGraph {\n  node[shape=box, style=filled, fillcolor=white];\n')
-    queue = []
-    depth = {}
+    # The caller's list and our copy of it both refer to every root.
     ignore = set(extra_ignore)
-    ignore.add(id(objs))
-    ignore.add(id(extra_ignore))
-    ignore.add(id(queue))
-    ignore.add(id(depth))
-    ignore.add(id(ignore))
-    ignore.add(id(sys._getframe()))  # this function
-    ignore.add(id(sys._getframe().f_locals))
-    ignore.add(id(sys._getframe(1)))  # show_refs/show_backrefs
-    ignore.add(id(sys._getframe(1).f_locals))
-    for obj in objs:
-        f.write('  %s[fontcolor=red];\n' % (_obj_node_id(obj)))
-        depth[id(obj)] = 0
-        queue.append(obj)
-        del obj
-    gc.collect()
-    nodes = 0
-    while queue:
-        nodes += 1
-        # The names "source" and "target" are reversed here because
-        # originally there was just show_backrefs() and we were
-        # traversing the reference graph backwards.
-        target = queue.pop(0)
-        tdepth = depth[id(target)]
-        f.write('  %s[label="%s"];\n' % (_obj_node_id(target), _obj_label(target, extra_info, refcounts, shortnames)))
-        h, s, v = _gradient((0, 0, 1), (0, 0, 0.3), tdepth, max_depth)
-        if inspect.ismodule(target):
-            h = 0.3
-            s = 1
-        if highlight and highlight(target):
-            h = 0.6
-            s = 0.6
-            v = 0.5 + v * 0.5
-        f.write('  %s[fillcolor="%g,%g,%g"];\n' % (_obj_node_id(target), h, s, v))
-        if v < 0.5:
-            f.write('  %s[fontcolor=white];\n' % (_obj_node_id(target)))
-        if hasattr(getattr(target, '__class__', None), '__del__'):
-            f.write(
-                '  %s->%s_has_a_del[color=red,style=dotted,'
-                'len=0.25,weight=10];\n' % (_obj_node_id(target), _obj_node_id(target))
-            )
-            f.write(
-                '  %s_has_a_del[label="__del__",shape=doublecircle,'
-                'height=0.25,color=red,fillcolor="0,.5,1",fontsize=6];\n' % (_obj_node_id(target))
-            )
-        if tdepth >= max_depth:
-            continue
-        if cull_func is not None and cull_func(target):
-            continue
-        neighbours = edge_func(target)
-        ignore.add(id(neighbours))
-        n = 0
-        skipped = 0
-        for source in neighbours:
-            if id(source) in ignore:
-                continue
-            if filter and not filter(source):
-                continue
-            if n >= too_many:
-                skipped += 1
-                continue
-            if swap_source_target:
-                srcnode, tgtnode = target, source
-            else:
-                srcnode, tgtnode = source, target
-            elabel = _edge_label(srcnode, tgtnode, shortnames)
-            f.write('  %s -> %s%s;\n' % (_obj_node_id(srcnode), _obj_node_id(tgtnode), elabel))
-            if id(source) not in depth:
-                depth[id(source)] = tdepth + 1
-                queue.append(source)
-            n += 1
-            del source
-        del neighbours
-        if skipped > 0:
-            h, s, v = _gradient((0, 1, 1), (0, 1, 0.3), tdepth + 1, max_depth)
-            if swap_source_target:
-                label = '%d more references' % skipped
-                edge = '%s->too_many_%s' % (_obj_node_id(target), _obj_node_id(target))
-            else:
-                label = '%d more backreferences' % skipped
-                edge = 'too_many_%s->%s' % (_obj_node_id(target), _obj_node_id(target))
-            f.write('  %s[color=red,style=dotted,len=0.25,weight=10];\n' % edge)
-            f.write(
-                '  too_many_%s[label="%s",shape=box,height=0.25,'
-                'color=red,fillcolor="%g,%g,%g",fontsize=6];\n' % (_obj_node_id(target), label, h, s, v)
-            )
-            f.write('  too_many_%s[fontcolor=white];\n' % (_obj_node_id(target)))
-    f.write('}\n')
+    ignore.update((id(objs), id(roots), id(extra_ignore)))
     if output:
+        _write_graph(output, roots, options, ignore)
         return
-    # The file should only be closed if this function was in charge of opening
-    # the file.
-    f.close()
+    out, dot_filename = _open_dot(filename)
+    # The file is only closed when this function was in charge of opening it.
+    try:
+        nodes = _write_graph(out, roots, options, ignore)
+    finally:
+        out.close()
     print('Graph written to %s (%d nodes)' % (dot_filename, nodes))
     _present_graph(dot_filename, filename)
 
 
-def _present_graph(dot_filename, filename=None):
+def _open_dot(filename: str | None) -> tuple[TextIO, str]:
+    """The file the .dot source is written to, and its name: filename, or a temporary file."""
+    if filename and filename.endswith('.dot'):
+        return open(filename, 'w', encoding='utf-8'), filename
+    fd, dot_filename = tempfile.mkstemp(prefix='objgraph-', suffix='.dot', text=True)
+    return os.fdopen(fd, 'w', encoding='utf-8'), dot_filename
+
+
+def _write_graph(out: TextIO, roots: list[object], options: _GraphOptions, ignore: set[int]) -> int:
+    """Walk the graph breadth first from roots, write it to out, and return how many nodes it has."""
+    out.write('digraph ObjectGraph {\n  node[shape=box, style=filled, fillcolor=white];\n')
+    queue: list[object] = []
+    depth: dict[int, int] = {}
+    ignore.update((id(queue), id(depth), id(ignore)))
+    for root in roots:
+        out.write('  %s[fontcolor=red];\n' % (_obj_node_id(root)))
+        depth[id(root)] = 0
+        queue.append(root)
+    gc.collect()
+    nodes = 0
+    # Bounded by the heap: an object is queued once, when depth first records it.
+    while queue:
+        nodes += 1
+        target = queue.pop(0)
+        tdepth = depth[id(target)]
+        _write_node(out, target, tdepth, options)
+        if tdepth >= options.max_depth:
+            continue
+        if options.cull_func is not None and options.cull_func(target):
+            continue
+        neighbours = options.edge_func(target)
+        ignore.add(id(neighbours))
+        skipped = _write_edges(out, target, neighbours, options, ignore, tdepth + 1, depth, queue)
+        if skipped > 0:
+            _write_skipped(out, target, skipped, tdepth + 1, options)
+    out.write('}\n')
+    return nodes
+
+
+def _write_node(out: TextIO, target: object, tdepth: int, options: _GraphOptions) -> None:
+    node = _obj_node_id(target)
+    label = _obj_label(target, options.extra_info, options.refcounts, options.shortnames)
+    out.write('  %s[label="%s"];\n' % (node, label))
+    h, s, v = _gradient((0.0, 0.0, 1.0), (0.0, 0.0, 0.3), tdepth, options.max_depth)
+    if inspect.ismodule(target):
+        h = 0.3
+        s = 1.0
+    if options.highlight and options.highlight(target):
+        h = 0.6
+        s = 0.6
+        v = 0.5 + v * 0.5
+    out.write('  %s[fillcolor="%g,%g,%g"];\n' % (node, h, s, v))
+    if v < 0.5:
+        out.write('  %s[fontcolor=white];\n' % (node))
+    if hasattr(getattr(target, '__class__', None), '__del__'):
+        out.write('  %s->%s_has_a_del[color=red,style=dotted,len=0.25,weight=10];\n' % (node, node))
+        out.write(
+            '  %s_has_a_del[label="__del__",shape=doublecircle,'
+            'height=0.25,color=red,fillcolor="0,.5,1",fontsize=6];\n' % (node)
+        )
+
+
+def _write_edges(
+    out: TextIO,
+    target: object,
+    neighbours: list[object],
+    options: _GraphOptions,
+    ignore: set[int],
+    next_depth: int,
+    depth: dict[int, int],
+    queue: list[object],
+) -> int:
+    """Write the edges between target and its neighbours, queue the new ones, return how many were left out."""
+    shown = 0
+    skipped = 0
+    for source in neighbours:
+        if id(source) in ignore:
+            continue
+        if options.filter and not options.filter(source):
+            continue
+        if shown >= options.too_many:
+            skipped += 1
+            continue
+        if options.swap_source_target:
+            srcnode, tgtnode = target, source
+        else:
+            srcnode, tgtnode = source, target
+        elabel = _edge_label(srcnode, tgtnode, options.shortnames)
+        out.write('  %s -> %s%s;\n' % (_obj_node_id(srcnode), _obj_node_id(tgtnode), elabel))
+        if id(source) not in depth:
+            depth[id(source)] = next_depth
+            queue.append(source)
+        shown += 1
+    return skipped
+
+
+def _write_skipped(out: TextIO, target: object, skipped: int, next_depth: int, options: _GraphOptions) -> None:
+    node = _obj_node_id(target)
+    h, s, v = _gradient((0.0, 1.0, 1.0), (0.0, 1.0, 0.3), next_depth, options.max_depth)
+    if options.swap_source_target:
+        label = '%d more references' % skipped
+        edge = '%s->too_many_%s' % (node, node)
+    else:
+        label = '%d more backreferences' % skipped
+        edge = 'too_many_%s->%s' % (node, node)
+    out.write('  %s[color=red,style=dotted,len=0.25,weight=10];\n' % edge)
+    out.write(
+        '  too_many_%s[label="%s",shape=box,height=0.25,'
+        'color=red,fillcolor="%g,%g,%g",fontsize=6];\n' % (node, label, h, s, v)
+    )
+    out.write('  too_many_%s[fontcolor=white];\n' % (node))
+
+
+def _present_graph(dot_filename: str, filename: str | None = None) -> None:
     """Present a .dot file to the user in the requested fashion.
 
     If ``filename`` is provided, runs ``dot`` to convert the .dot file
@@ -808,11 +913,13 @@ def _present_graph(dot_filename, filename=None):
             print('Image renderer (dot) not found, not doing anything else')
 
 
-def _obj_node_id(obj):
+def _obj_node_id(obj: object) -> str:
     return ('o%d' % id(obj)).replace('-', '_')
 
 
-def _obj_label(obj, extra_info=None, refcounts=False, shortnames=True):
+def _obj_label(
+    obj: object, extra_info: Callable[[object], object] | None = None, refcounts: bool = False, shortnames: bool = True
+) -> str:
     if shortnames:
         label = [_short_typename(obj)]
     else:
@@ -830,23 +937,20 @@ def _obj_label(obj, extra_info=None, refcounts=False, shortnames=True):
     return _quote('\n'.join(label))
 
 
-def _quote(s):
+def _quote(s: str) -> str:
     return s.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n').replace('\0', '\\\\0')
 
 
-def _get_obj_type(obj):
+# Python 2 had old-style instances, whose type() was InstanceType and whose class was only
+# known from __class__. The type() of every Python 3 object is its class.
+
+
+def _short_typename(obj: object) -> str:
+    return type(obj).__name__
+
+
+def _long_typename(obj: object) -> str:
     objtype = type(obj)
-    if type(obj) is InstanceType:
-        objtype = obj.__class__
-    return objtype
-
-
-def _short_typename(obj):
-    return _get_obj_type(obj).__name__
-
-
-def _long_typename(obj):
-    objtype = _get_obj_type(obj)
     name = objtype.__name__
     module = getattr(objtype, '__module__', None)
     if module:
@@ -855,29 +959,20 @@ def _long_typename(obj):
         return name
 
 
-def _safe_repr(obj):
+def _safe_repr(obj: object) -> str:
     try:
         return _short_repr(obj)
     except Exception:
+        # Any repr() may raise, and one label is not worth losing the whole graph over.
         return '(unrepresentable)'
 
 
-def _short_repr(obj):
+def _short_repr(obj: object) -> str:
     if isinstance(obj, (type, types.ModuleType, types.BuiltinMethodType, types.BuiltinFunctionType)):
         return obj.__name__
     if isinstance(obj, types.MethodType):
-        try:
-            if obj.__self__ is not None:
-                return obj.__func__.__name__ + ' (bound)'
-            else:
-                return obj.__func__.__name__
-        except AttributeError:  # pragma: nocover
-            # Python < 2.6 compatibility
-            if obj.im_self is not None:
-                return obj.im_func.__name__ + ' (bound)'
-            else:
-                return obj.im_func.__name__
-
+        # A Python 3 method object is always bound: an unbound method is the function itself.
+        return obj.__name__ + ' (bound)'
     if isinstance(obj, types.FrameType):
         return '%s:%s' % (obj.f_code.co_filename, obj.f_lineno)
     if isinstance(obj, (tuple, list, dict, set)):
@@ -885,7 +980,9 @@ def _short_repr(obj):
     return repr(obj)[:40]
 
 
-def _gradient(start_color, end_color, depth, max_depth):
+def _gradient(
+    start_color: tuple[float, float, float], end_color: tuple[float, float, float], depth: int, max_depth: int
+) -> tuple[float, float, float]:
     if max_depth == 0:
         # avoid division by zero
         return start_color
@@ -898,7 +995,7 @@ def _gradient(start_color, end_color, depth, max_depth):
     return h, s, v
 
 
-def _edge_label(source, target, shortnames=True):
+def _edge_label(source: object, target: object, shortnames: bool = True) -> str:
     if isinstance(target, dict) and target is getattr(source, '__dict__', None):
         return ' [label="__dict__",weight=10]'
     if isinstance(source, types.FrameType):
@@ -907,41 +1004,35 @@ def _edge_label(source, target, shortnames=True):
         if target is source.f_globals:
             return ' [label="f_globals",weight=10]'
     if isinstance(source, types.MethodType):
-        try:
-            if target is source.__self__:
-                return ' [label="__self__",weight=10]'
-            if target is source.__func__:
-                return ' [label="__func__",weight=10]'
-        except AttributeError:  # pragma: nocover
-            # Python < 2.6 compatibility
-            if target is source.im_self:
-                return ' [label="im_self",weight=10]'
-            if target is source.im_func:
-                return ' [label="im_func",weight=10]'
+        if target is source.__self__:
+            return ' [label="__self__",weight=10]'
+        if target is source.__func__:
+            return ' [label="__func__",weight=10]'
     if isinstance(source, types.FunctionType):
         for k in dir(source):
             if target is getattr(source, k):
                 return ' [label="%s",weight=10]' % _quote(k)
     if isinstance(source, dict):
-        for k, v in iteritems(source):
-            if v is target:
-                if isinstance(k, basestring) and _is_identifier(k):
-                    return ' [label="%s",weight=2]' % _quote(k)
-                else:
-                    if shortnames:
-                        tn = _short_typename(k)
-                    else:
-                        tn = _long_typename(k)
-                    return ' [label="%s"]' % _quote(tn + '\n' + _safe_repr(k))
+        return _dict_edge_label(source, target, shortnames)
     return ''
 
 
-_is_identifier = re.compile('[a-zA-Z_][a-zA-Z_0-9]*$').match
+def _dict_edge_label(source: dict[object, object], target: object, shortnames: bool) -> str:
+    """The label of the edge from a dict to target: the key which holds it."""
+    for k, v in source.items():
+        if v is target:
+            if isinstance(k, str) and _IDENTIFIER.match(k):
+                return ' [label="%s",weight=2]' % _quote(k)
+            if shortnames:
+                tn = _short_typename(k)
+            else:
+                tn = _long_typename(k)
+            return ' [label="%s"]' % _quote(tn + '\n' + _safe_repr(k))
+    return ''
 
 
-def _program_in_path(program):
-    # XXX: Consider using distutils.spawn.find_executable or shutil.which
-    path = os.environ.get('PATH', os.defpath).split(os.pathsep)
-    path = [os.path.join(dir, program) for dir in path]
-    path = [True for file in path if os.path.isfile(file) or os.path.isfile(file + '.exe')]
-    return bool(path)
+_IDENTIFIER = re.compile('[a-zA-Z_][a-zA-Z_0-9]*$')
+
+
+def _program_in_path(program: str) -> bool:
+    return shutil.which(program) is not None
