@@ -64,6 +64,20 @@ def test_the_configuration_reads(text: str, expected: list) -> None:
 
 
 @pytest.mark.parametrize(
+    'text,expected',
+    [
+        ('70000', [('SEQUENCE', [70000])]),
+        ('[ 65000 4200000000 ]', [('SEQUENCE', [65000, 4200000000])]),
+        ('[ 65000 ] ( 70000 )', [('SEQUENCE', [65000]), ('SET', [70000])]),
+        ('confed-sequence [ 70000 ]', [('CONFED_SEQUENCE', [70000])]),
+    ],
+)
+def test_a_four_octet_asn_is_read(text: str, expected: list) -> None:
+    # The path was packed with two octet ASNs, and struct.error escaped for any ASN above 65535.
+    assert shape(parse(text)) == expected
+
+
+@pytest.mark.parametrize(
     'text',
     [
         '[ 1 2 )',  # closed with the wrong bracket

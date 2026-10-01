@@ -451,6 +451,16 @@ _SEGMENT_KEYWORD: dict[str, type[CONFED_SEQUENCE | CONFED_SET]] = {
 }
 
 
+def _as_path(segments: list[SEQUENCE | CONFED_SEQUENCE | SET | CONFED_SET]) -> AS2Path:
+    """The path, held with four octet ASNs when one of them needs it.
+
+    Two octets were used for every path, and an ASN above 65535 raised struct.error. Paths
+    without one keep the two octet form they always had; ASPath.pack converts either.
+    """
+    asn4 = any(asn.asn4() for segment in segments for asn in segment)
+    return AS2Path.make_aspath(segments, asn4=asn4)
+
+
 class ASPathType(Type[AS2Path]):
     """`as-path [ 1 2 ] ( 3 4 ) confed-sequence [ 5 ] confed-set [ 6 7 ];`, or one AS alone."""
 
@@ -462,19 +472,19 @@ class ASPathType(Type[AS2Path]):
         try:
             if word not in _SEGMENT_OPEN and word not in _SEGMENT_KEYWORD:
                 try:
-                    return AS2Path.make_aspath([SEQUENCE([ASN.from_string(word)])])
+                    return _as_path([SEQUENCE([ASN.from_string(word)])])
                 except ValueError:
                     raise ValueError('could not parse as-path') from None
             # `as-path [ ]` alone is the empty path, which is not an empty segment
             if word == '[' and words.peek() == ']':
                 words.take()
-                return AS2Path.make_aspath([])
+                return _as_path([])
             segments = [self._segment(words, word)]
             for _ in range(MAX_LIST_ITEMS):
                 if words.peek() not in _SEGMENT_OPEN and words.peek() not in _SEGMENT_KEYWORD:
                     break
                 segments.append(self._segment(words, words.word()))
-            return AS2Path.make_aspath(segments)
+            return _as_path(segments)
         except ValueError as exc:
             raise ConfigError(where, str(exc), expected=[self.hint()]) from None
 
