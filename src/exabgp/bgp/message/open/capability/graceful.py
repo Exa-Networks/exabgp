@@ -54,17 +54,19 @@ class Graceful(CapabilityDict[FamilyTuple, int]):
         return f'Graceful Restart Flags {hex(self.restart_flag)} Time {self.restart_time} {sfamilies}'
 
     def json(self) -> str:
-        restart_str = ' "restart"'
-        forwarding_str = ' "forwarding" '
+        # RFC 4724 3: F, the family's Forwarding State, and R, the speaker's Restart State.
+        # The two names were swapped.
+        forwarding_str = ' "forwarding"'
+        restart_str = ' "restart" '
         families_json = ', '.join(
-            f'"{afi}/{safi}": [{restart_str if family & 0x80 else ""} ] '
+            f'"{afi}/{safi}": [{forwarding_str if family & Graceful.FORWARDING_STATE else ""} ] '
             for afi, safi, family in [(str(a), str(s), self[(a, s)]) for (a, s) in self.keys()]
         )
         d: dict[str, int | str] = {
             'name': '"graceful restart"',
             'time': self.restart_time,
             'address-family-flags': f'{{ {families_json}}}',
-            'restart-flags': f'[{forwarding_str if self.restart_flag & 0x8 else " "}] ',
+            'restart-flags': f'[{restart_str if self.restart_flag & Graceful.RESTART_STATE else " "}] ',
         }
         items = ', '.join(f'"{k}": {v}' for k, v in d.items())
         return f'{{ {items} }}'

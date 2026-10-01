@@ -11,8 +11,10 @@ The ledger entries these prove are in qa/rfc/rfc4724.toml.
 from __future__ import annotations
 
 import asyncio
+import json
 import socket
 from collections.abc import Callable
+from typing import Any
 from struct import pack
 
 import pytest
@@ -317,6 +319,29 @@ def test_a_peer_setting_every_reserved_bit_is_parsed_and_ignored() -> None:
     assert graceful.restart_time == RESTART_TIME, 'the reserved bits leaked into the Restart Time'
     assert graceful[(AFI.ipv4, SAFI.unicast)] & RESERVED_FAMILY_BITS == 0, 'a reserved family flag bit was kept'
     assert graceful[(AFI.ipv4, SAFI.unicast)] & Graceful.FORWARDING_STATE, 'the Forwarding State bit was lost with them'
+
+
+def graceful_json(restart_flags: int, family_flag: int) -> dict[str, Any]:
+    value = graceful_value(restart_flags, RESTART_TIME, [(AFI.ipv4, SAFI.unicast, family_flag)])
+    graceful = Capabilities.unpack(capability_parameters(value))[Capability.CODE.GRACEFUL_RESTART]
+    assert isinstance(graceful, Graceful)
+    decoded: dict[str, Any] = json.loads(graceful.json())
+    return decoded
+
+
+def test_the_restart_state_bit_is_named_restart_in_json() -> None:
+    """The R bit is the Restart State: it was printed as "forwarding", and F as "restart"."""
+    decoded = graceful_json(Graceful.RESTART_STATE, 0)
+
+    assert decoded['restart-flags'] == ['restart']
+    assert decoded['address-family-flags'] == {'ipv4/unicast': []}
+
+
+def test_the_forwarding_state_bit_is_named_forwarding_in_json() -> None:
+    decoded = graceful_json(0, Graceful.FORWARDING_STATE)
+
+    assert decoded['restart-flags'] == []
+    assert decoded['address-family-flags'] == {'ipv4/unicast': ['forwarding']}
 
 
 @pytest.mark.rfc('rfc4724#3-single-capability-instance')

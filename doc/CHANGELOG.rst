@@ -12,6 +12,8 @@ Version 6.0.0:
  * Fix: an as-path with an AS number above 65535 is read; it raised struct.error.
  * Fix: a comment after a value in the environment file is ignored. parser = true  # x
    was read as the value "true  # x", which turned the option off.
+ * Incompatible: in the JSON of the Graceful Restart capability, the Forwarding State of
+   a family is "forwarding" and the Restart State is "restart"; the names were swapped.
  * Fix: sending or receiving OPERATIONAL messages no longer fails with missing statistics
    counters; the counters are initialized and cleared with the session.
  * Fix: compiled peers observe teardown requests made during an await, and exceptions
