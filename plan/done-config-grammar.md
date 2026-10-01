@@ -622,7 +622,7 @@ Each is pinned by a form or document in `tests/unit/config_grammar/forms.py`.
 
 | Accident | Example | Where reproduced |
 |---|---|---|
-| words a value does not use are ignored | `respawn false extra;` is `respawn false;` | engine `_leaf` |
+| ~~words a value does not use are ignored~~ refused since 2026-10-01 (`plan/done-agent-reported-bugs.md` item 2) | `respawn false extra;` is `respawn false;` | engine `_leaf` |
 | words before a `}` are ignored, even an unknown keyword | `process p { run /bin/cat; hold 1 }` | engine `read` |
 | a `}` with nothing open ends the configuration, the rest is never read | `process p { ... } } anything {` | engine `read` |
 | sections still open at the end of the text are closed | `process p { run /bin/cat;` | engine `read` |

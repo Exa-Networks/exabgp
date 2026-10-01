@@ -187,7 +187,7 @@ NEIGHBOR_FORMS: list[tuple[tuple[str, ...], str, bool]] = [
     (('family',), 'l2vpn unicast', False),
     (('family',), 'bgp-ls unicast', False),
     (('family',), 'all', True),
-    (('family',), 'all extra', True),
+    (('family',), 'all extra', False),
     # add-path, which only matters with the capability, given by the documents
     *[(('add-path',), f'ipv4 {safi}', True) for safi in ('unicast', 'multicast', 'mpls-vpn', 'rtc', 'flow')],
     (('add-path',), 'ipv6 unicast', True),
@@ -222,7 +222,7 @@ NEIGHBOR_FORMS: list[tuple[tuple[str, ...], str, bool]] = [
     (('nexthop',), 'ipv4 flow ipv6', False),
     (('nexthop',), 'ipv4 unicast', False),
     (('nexthop',), 'ipv4', False),
-    (('nexthop',), 'ipv4 unicast ipv6 extra', True),
+    (('nexthop',), 'ipv4 unicast ipv6 extra', False),
     # capability
     *[
         (('capability',), f'{keyword} {value}', True)

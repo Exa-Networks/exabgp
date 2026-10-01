@@ -10,6 +10,8 @@ Version 6.0.0:
  * Fix: configuration validate no longer fails with a traceback on a route whose AS_PATH
    holds an AS_SET; the route is checked as sent rather than as RFC 9774 receives it.
  * Fix: an as-path with an AS number above 65535 is read; it raised struct.error.
+ * Incompatible: a word a configuration value does not use is refused. It was ignored,
+   so md5-password include "secret"; set the password to "include".
  * Fix: a comment after a value in the environment file is ignored. parser = true  # x
    was read as the value "true  # x", which turned the option off.
  * Incompatible: in the JSON of the Graceful Restart capability, the Forwarding State of

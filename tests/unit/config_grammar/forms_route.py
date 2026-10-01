@@ -91,7 +91,6 @@ ROUTE_VALUE_FORMS: list[tuple[str, bool]] = [
     ('extended-community redirect-to-nexthop-ietf 10.0.0.1', True),
     ('extended-community copy-to-nexthop-ietf 2001:db8::1', False),  # an IPv6 address in an IPv4 route
     ('extended-community [ redirect-to-nexthop-ietf 10.0.0.1 target:1:1 ]', True),
-    ('extended-community target:1:1 extended-community origin:2:2', True),
     ('extended-community target:1.2.3.256:1', False),
     ('extended-community nothing:1:1', False),
     ('extended-community target:70000:70000', False),
@@ -209,7 +208,7 @@ ROUTE_DOCUMENTS_BODY: list[tuple[str, bool]] = [
     ('static { origin igp; }', False),
     ('static { unknown { } }', False),
     ('static { route 10.0.0.0/24 next-hop 10.0.0.2 atomic-aggregate extra; }', False),
-    ('static { route 10.0.0.0/24 { next-hop 10.0.0.2; atomic-aggregate extra; } }', True),
+    ('static { route 10.0.0.0/24 { next-hop 10.0.0.2; atomic-aggregate extra; } }', False),
 ]
 
 # every static value tried in each announce family, compared only: which ones a family

@@ -68,8 +68,14 @@ class Engine:
         child = frame.block.leaf(keyword.word) if words else None
         if child is None:
             raise self._unknown(frame.block, keyword, [leaf.keyword for leaf in frame.block.leaves()])
-        # legacy: the words a value does not use are ignored, `respawn false extra;` is `respawn false;`
-        value = child.type.parse(self._words(statement, 1))
+        given = self._words(statement, 1)
+        value = child.type.parse(given)
+        # The words a value did not use were ignored, so `md5-password include "secret";`
+        # set the password to `include` and said nothing.
+        if not given.at_end():
+            raise ConfigError(
+                given.where(), f"'{given.peek()}' follows the value of {keyword.word}, which ends before it"
+            )
         try:
             child.keep(frame.values, value, self.context)
         except ValueError as exc:

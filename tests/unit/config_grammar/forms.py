@@ -104,9 +104,9 @@ HAND: list[Form] = [
     Form(('process',), 'respawn'),
     *[Form(('process',), f'encoder {spelling}') for spelling in ['text', 'json', 'TEXT', 'Json']],
     *[Form(('process',), f'on-exit {spelling}') for spelling in ['withdraw', 'keep', 'KEEP']],
-    # legacy: the words a value does not use are ignored
-    Form(('process',), 'respawn false extra'),
-    Form(('process',), 'encoder json extra'),
+    # words a value does not use are refused, they were ignored (plan/done-agent-reported-bugs.md)
+    Form(('process',), 'respawn false extra', valid=False),
+    Form(('process',), 'encoder json extra', valid=False),
     Form(('process',), 'respawn ""'),
     Form(('process',), 'on-exit "keep"'),
     Form(('process',), 'run /bin/cat "with space" \'and quote\''),
@@ -200,6 +200,12 @@ def route_forms() -> list[Form]:
         forms.append(Form(('neighbor', 'static'), line, valid))
         forms.append(Form(('template', 'neighbor', 'static'), line, None))
         forms.append(Form(('neighbor', 'static', 'route'), value, valid))
+    # a keyword given twice: one route line reads both, a statement in a route block ends
+    # with its value, and the second was ignored before it was refused
+    twice = 'extended-community target:1:1 extended-community origin:2:2'
+    forms.append(Form(('neighbor', 'static'), f'route 10.0.0.0/24 next-hop 10.0.0.1 {twice}', True))
+    forms.append(Form(('template', 'neighbor', 'static'), f'route 10.0.0.0/24 next-hop 10.0.0.1 {twice}', None))
+    forms.append(Form(('neighbor', 'static', 'route'), twice, False))
     forms.append(Form(('neighbor', 'static'), 'attributes next-hop 10.0.0.1 nlri nothing', False))
     forms.append(Form(('neighbor', 'static'), 'attribute next-hop 10.0.0.1 nlri nothing', False))
     return forms

@@ -85,7 +85,7 @@ MATCH_FORMS: list[tuple[str, bool]] = [
 
 THEN_FORMS: list[tuple[str, bool]] = [
     ('accept', True),
-    ('accept extra', True),
+    ('accept extra', False),
     ('discard', True),
     ('rate-limit 0', True),
     ('rate-limit 9600', True),
