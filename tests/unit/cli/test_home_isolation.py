@@ -39,8 +39,9 @@ def test_building_a_cli_leaves_the_real_home_untouched(real_home: Path, isolate_
     cli._save_history()
 
     history_file = Path(cli.history_file)
-    assert not history_file.is_relative_to(real_home), f'the CLI aimed its history at {history_file}'
-    assert history_file.is_relative_to(isolate_home)
+    # not "outside real_home": a TMPDIR inside the home (~/.cache/tmp) puts isolate_home there
+    assert history_file.is_relative_to(isolate_home), f'the CLI aimed its history at {history_file}'
+    assert history_file not in watched
     assert history_file.exists(), 'the history was written, it was written somewhere safe'
 
     if cli.history_tracker.enabled:
