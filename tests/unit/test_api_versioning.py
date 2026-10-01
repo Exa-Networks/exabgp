@@ -17,9 +17,12 @@ class TestApiVersionConfig:
     """Test API version configuration."""
 
     def test_api_version_parser_valid_values(self) -> None:
-        """Test api_version parser accepts valid values (4, 6)."""
+        """Test api_version parser accepts valid values (auto, 4, 6)."""
         from exabgp.environment.parsing import api_version
 
+        assert api_version('auto') == 0
+        assert api_version('AUTO') == 0
+        assert api_version('0') == 0
         assert api_version('4') == 4
         assert api_version('6') == 6
 
@@ -27,22 +30,22 @@ class TestApiVersionConfig:
         """Test api_version parser rejects invalid values."""
         from exabgp.environment.parsing import api_version
 
-        with pytest.raises(TypeError, match='API version must be 4 or 6'):
+        with pytest.raises(TypeError, match='API version must be auto, 4 or 6'):
             api_version('5')
 
-        with pytest.raises(TypeError, match='API version must be 4 or 6'):
+        with pytest.raises(TypeError, match='API version must be auto, 4 or 6'):
             api_version('7')
 
         with pytest.raises(TypeError, match='invalid API version'):
             api_version('invalid')
 
     def test_api_section_default_version(self) -> None:
-        """Test ApiSection defaults to version 6."""
+        """Test ApiSection defaults to auto (0): each helper's version is detected."""
         from exabgp.environment.config import ApiSection
 
         # Access the default via the descriptor
         default = ApiSection.version.default
-        assert default == 6
+        assert default == 0
 
 
 class TestV4JSONWrapper:

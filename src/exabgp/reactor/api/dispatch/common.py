@@ -82,7 +82,7 @@ COMMANDS: list[tuple[str, bool, list[str] | None]] = [
     ('system version', False, None),
     ('system crash', True, None),
     ('system queue-status', False, None),
-    ('system api version', False, ['4', '6']),
+    ('system api version', False, ['auto', '4', '6']),
     # Comment
     ('#', False, None),
     # RIB operations

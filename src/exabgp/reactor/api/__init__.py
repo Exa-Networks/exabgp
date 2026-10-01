@@ -25,9 +25,9 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message import Operational
 from exabgp.rib.route import Route
 
-from exabgp.environment import getenv
 from exabgp.logger import log, lazyexc, lazymsg
-from exabgp.reactor.api.dispatch import dispatch_v4, dispatch_v6, UnknownCommand, NoMatchingPeers
+from exabgp.reactor.api.dispatch import UnknownCommand, NoMatchingPeers
+from exabgp.reactor.api.dispatch.version import API_V6, dispatch_for
 from exabgp.configuration.configuration import Configuration
 
 # API command parsing constants
@@ -57,6 +57,14 @@ class API:
         report = '{}\nreason: {}'.format(message, error) if error else message
         log.error(lazyexc('api.failure report={report} error={exc}', exc, report=report), 'processes', level)
 
+    @staticmethod
+    def _answers_in_json(api_version: int, command: str) -> bool:
+        """v6 answers in JSON; v4, and a helper still undecided, only when the command ends in `json`."""
+        if api_version == API_V6:
+            return True
+        words = command.split()
+        return words[-1] == 'json' if words else False
+
     def process(self, reactor: 'Reactor', service: str, command: str) -> bool:
         """Process an API command (sync version).
 
@@ -64,14 +72,8 @@ class API:
         """
         from exabgp.reactor.api.command import group as group_cmd
 
-        api_version = getenv().api.version
-
-        # v6 API is JSON-only, v4 API checks for 'json' as last word
-        if api_version == 6:
-            use_json = True
-        else:
-            words = command.split()
-            use_json = words[-1] == 'json' if words else False
+        api_version = reactor.processes.detect_api_version(service, command)
+        use_json = self._answers_in_json(api_version, command)
 
         # Check if we're in group mode and this is an announce/withdraw command
         # (not group end which should be processed normally)
@@ -87,10 +89,7 @@ class API:
                 return True
 
         try:
-            if api_version == 4:
-                handler, peers, remaining = dispatch_v4(command, reactor, service)
-            else:
-                handler, peers, remaining = dispatch_v6(command, reactor, service)
+            handler, peers, remaining = dispatch_for(api_version, command, reactor, service)
             return handler(self, reactor, service, peers, remaining, use_json)
         except UnknownCommand:
             log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
@@ -109,14 +108,8 @@ class API:
         """
         from exabgp.reactor.api.command import group as group_cmd
 
-        api_version = getenv().api.version
-
-        # v6 API is JSON-only, v4 API checks for 'json' as last word
-        if api_version == 6:
-            use_json = True
-        else:
-            words = command.split()
-            use_json = words[-1] == 'json' if words else False
+        api_version = reactor.processes.detect_api_version(service, command)
+        use_json = self._answers_in_json(api_version, command)
 
         # Check if we're in group mode and this is an announce/withdraw command
         # (not group end which should be processed normally)
@@ -133,10 +126,7 @@ class API:
                 return True
 
         try:
-            if api_version == 4:
-                handler, peers, remaining = dispatch_v4(command, reactor, service)
-            else:
-                handler, peers, remaining = dispatch_v6(command, reactor, service)
+            handler, peers, remaining = dispatch_for(api_version, command, reactor, service)
             result = handler(self, reactor, service, peers, remaining, use_json)
             # Flush any queued writes immediately
             await reactor.processes.flush_write_queue()

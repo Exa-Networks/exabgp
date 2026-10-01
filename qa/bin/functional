@@ -687,12 +687,12 @@ class Exec:
         self._collected = False
         self._output_limit_exceeded = False
 
-        # Set up the default child environment to disable ExaBGP logging. API v4
-        # remains explicit for backward compatibility with the text encoder.
+        # Set up the default child environment to disable ExaBGP logging. The API version
+        # is left to auto: each helper is held to the version of the commands it writes,
+        # which is what the helpers of the suites, written for 5.x or for 6.0, rely on.
         if env is None:
             env = os.environ.copy()
             env['exabgp_log_enable'] = 'false'
-            env['exabgp_api_version'] = '4'
 
         # Back stdout/stderr with real files, not undrained pipes. Pipe buffers
         # are bounded (8192-65536 bytes on observed systems), so a chatty daemon
@@ -1918,7 +1918,6 @@ class EncodingTests(Tests):
             'exabgp_debug_rotate=true',
             'exabgp_debug_configuration=true',
             f'exabgp_api_socketname=exabgp-test-{actual_port}',  # Unique socket per test
-            'exabgp_api_version=4',  # v6 is default, v4 for backward compatibility (text encoder)
         ]
         confs = ' '.join(test.conf['confs'])
         return f'env {" ".join(env_parts)} {Path.EXABGP} -d -p {confs}'
@@ -1942,7 +1941,6 @@ class EncodingTests(Tests):
                     "exabgp_tcp_bind=''",
                     'exabgp_tcp_port=%d' % test.conf['port'],
                     f'exabgp_api_socketname=exabgp-test-{test.conf["port"]}',  # Unique socket per test
-                    'exabgp_api_version=4',  # v6 is default, v4 for backward compatibility (text encoder)
                     'INTERPRETER=%s' % INTERPRETER,
                 ]
             ),
@@ -2603,7 +2601,10 @@ class DecodingTests(Tests):
                 ]
             else:
                 raise ValueError(f'invalid message type: {message}')
-            test.run(cmd, env=None)
+            # the expected JSON of the decoding corpus was recorded in the v4 format, whose
+            # BGP-LS keys differ from v6 (sr_capability_flags, sr-capability-flags)
+            env = dict(os.environ, exabgp_log_enable='false', exabgp_api_version='4')
+            test.run(cmd, env=env)
 
         # Early result check for the tests already done. One still running is left to the
         # event loop: success() waits at most 15 seconds for it, then fails it, and a slow

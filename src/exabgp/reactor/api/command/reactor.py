@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from exabgp.version import version as _version
 
@@ -267,81 +267,67 @@ def bye(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command
 def api_version_cmd(
     self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
 ) -> bool:
-    """Display or set the API version.
+    """Display or set the API version of the helpers.
 
     Usage:
-        api version       - Show current API version (4=legacy, 6=json-only)
-        api version 4     - Set API version to 4 (legacy, supports text/json)
-        api version 6     - Set API version to 6 (json-only, default)
+        api version       - Show the setting, and this helper's version
+        api version auto  - Detect each helper's version from its commands (default)
+        api version 4     - Hold every helper to API 4 (legacy, text or json)
+        api version 6     - Hold every helper to API 6 (json only)
 
-    Note: Version changes take effect on next process restart.
+    Note: a change applies to helpers started afterwards.
     """
     from exabgp.environment import getenv
+    from exabgp.environment.parsing import api_version as parse_api_version
 
     parts = command.strip().split()
+    if not parts:
+        return _show_api_version(reactor, service, use_json)
 
-    # Check if a version number was provided (first part after command prefix stripped)
-    if parts:
-        version_str = parts[0]
-        try:
-            new_version = int(version_str)
-            if new_version not in (4, 6):
-                if use_json:
-                    reactor.processes.write(
-                        service, json.dumps({'error': 'API version must be 4 or 6'}, default=json_number)
-                    )
-                else:
-                    reactor.processes.write(service, 'error: API version must be 4 or 6')
-                reactor.processes.answer_error_sync(service)
-                return False
+    try:
+        new_version = parse_api_version(parts[0])
+    except TypeError as exc:
+        _write(reactor, service, use_json, {'error': str(exc)}, f'error: {exc}')
+        reactor.processes.answer_error_sync(service)
+        return False
 
-            # Set the new version in the environment
-            getenv().api.version = new_version
+    getenv().api.version = new_version
+    name = _api_version_name(new_version)
+    _write(
+        reactor,
+        service,
+        use_json,
+        {'status': 'API version set', 'version': name, 'note': 'effective for helpers started afterwards'},
+        f'API version set to {name} (effective for helpers started afterwards)',
+    )
+    reactor.processes.answer_done_sync(service)
+    return True
 
-            if use_json:
-                reactor.processes.write(
-                    service,
-                    json.dumps(
-                        {
-                            'status': 'API version set',
-                            'version': new_version,
-                            'note': 'effective on next process restart',
-                        },
-                        default=json_number,
-                    ),
-                )
-            else:
-                reactor.processes.write(
-                    service, f'API version set to {new_version} (effective on next process restart)'
-                )
 
-        except ValueError:
-            if use_json:
-                reactor.processes.write(
-                    service, json.dumps({'error': f'Invalid version: {version_str}'}, default=json_number)
-                )
-            else:
-                reactor.processes.write(service, f'error: invalid version: {version_str}')
-            reactor.processes.answer_error_sync(service)
-            return False
+def _api_version_name(version: int) -> str:
+    return 'auto' if version == 0 else str(version)
+
+
+def _write(reactor: 'Reactor', service: str, use_json: bool, data: dict[str, Any], text: str) -> None:
+    if use_json:
+        reactor.processes.write(service, json.dumps(data, default=json_number))
     else:
-        # Just show current version
-        current_version = getenv().api.version
-        if use_json:
-            reactor.processes.write(
-                service,
-                json.dumps(
-                    {
-                        'api_version': current_version,
-                        'description': 'legacy (text/json)' if current_version == 4 else 'json-only',
-                    },
-                    default=json_number,
-                ),
-            )
-        else:
-            desc = 'legacy (text/json)' if current_version == 4 else 'json-only'
-            reactor.processes.write(service, f'API version: {current_version} ({desc})')
+        reactor.processes.write(service, text)
 
+
+def _show_api_version(reactor: 'Reactor', service: str, use_json: bool) -> bool:
+    """The setting, and the version this helper speaks (auto until its commands tell)."""
+    from exabgp.environment import getenv
+
+    setting = _api_version_name(getenv().api.version)
+    current = _api_version_name(reactor.processes.api_version(service))
+    _write(
+        reactor,
+        service,
+        use_json,
+        {'api_version': setting, 'helper_api_version': current},
+        f'API version: {setting} (this helper: {current})',
+    )
     reactor.processes.answer_done_sync(service)
     return True
 

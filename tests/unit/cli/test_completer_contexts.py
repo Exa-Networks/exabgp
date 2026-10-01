@@ -113,8 +113,8 @@ CASES = [
     ),
     (['session', 'pi'], '', {'ping': (None, 'command')}),
     (['session', 'zz'], '', {}),
-    (['system', 'api', 'version'], '', {'4': (None, 'option'), '6': (None, 'option')}),
-    (['system', 'api', 'version', 'zz'], '', {'4': (None, 'option'), '6': (None, 'option')}),
+    (['system', 'api', 'version'], '', {'auto': (None, 'option'), '4': (None, 'option'), '6': (None, 'option')}),
+    (['system', 'api', 'version', 'zz'], '', {'auto': (None, 'option'), '4': (None, 'option'), '6': (None, 'option')}),
     (['rib', 'show', 'in'], '', {'extensive': ('Detailed neighbor information', 'option')}),
     (['group'], '', {'end': (None, 'command'), 'start': (None, 'command')}),
     # v4 action-first commands are not offered anything
@@ -206,6 +206,6 @@ def test_typing_the_options_key_walks_onto_the_options_list(completer: CommandCo
     # The tree keeps a command's options under '__options__', and the walk looks every typed
     # word up in the tree, that one included. So the list branches of the walk, which no
     # command in today's tree reaches otherwise, run for it.
-    options = {'4': (None, 'option'), '6': (None, 'option')}
+    options = {'auto': (None, 'option'), '4': (None, 'option'), '6': (None, 'option')}
     assert offered(completer, ['system', 'api', 'version', '__options__']) == options
     assert completer._get_completions(['rib', 'show', 'in', '__options__', 'x'], '') == ['extensive']

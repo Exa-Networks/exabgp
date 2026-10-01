@@ -61,12 +61,15 @@ def api(_: str) -> str:
 
 
 def api_version(_: str) -> int:
+    """`auto` (0), each helper's version detected from its commands, or 4 or 6 for all of them."""
+    if _.strip().lower() == 'auto':
+        return 0
     try:
         version = int(_)
     except ValueError:
         raise TypeError(f'invalid API version: {_}') from None
-    if version not in (4, 6):
-        raise TypeError(f'API version must be 4 or 6, got {version}')
+    if version not in (0, 4, 6):
+        raise TypeError(f'API version must be auto, 4 or 6, got {version}')
     return version
 
 

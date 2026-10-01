@@ -288,7 +288,9 @@ class ApiSection(ConfigSection):
     _section_name: ClassVar[str] = 'api'
 
     version: ConfigOption[int] = option(
-        6, 'API version (4=legacy with text/json, 6=json only)', reader=parsing.api_version
+        0,
+        'API version of every helper: auto (0, detected for each from its commands), 4 (legacy) or 6',
+        reader=parsing.api_version,
     )
     ack: ConfigOption[bool] = option(True, 'acknowledge api command(s) and report issues')
     chunk: ConfigOption[int] = option(1, 'maximum lines to print before yielding in show routes api')

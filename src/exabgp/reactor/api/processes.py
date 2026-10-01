@@ -27,7 +27,9 @@ import errno
 import fcntl
 import os
 import select
+import struct
 import subprocess
+import termios
 import time
 from exabgp.util.intvalue import json_number
 from threading import Thread
@@ -48,6 +50,7 @@ from exabgp.bgp.message.message import MessageCode
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.configuration.cli_process import API_PREFIX
 from exabgp.reactor.api.tokeniser import formated
+from exabgp.reactor.api.dispatch.version import API_AUTO, API_V4, API_V6, command_api_version
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 from exabgp.reactor.api.response import Response, ResponseEncoder
@@ -63,6 +66,30 @@ _F = TypeVar('_F', bound=Callable[..., None])
 
 
 # pylint: disable=no-self-argument,not-callable,unused-argument,invalid-name
+
+
+# what ExaBGP writes to a helper to answer one of its commands (one line each, see Answer)
+_ANSWER_LINES = frozenset(
+    f'{answer}\n'.encode('ascii')
+    for answer in (Answer.text_done, Answer.text_error, Answer.json_done, Answer.json_error)
+)
+
+
+def _is_answer(data: bytes) -> bool:
+    """True for a queued line which only answers a command (`done`, `error`, `error: <why>`)."""
+    return data in _ANSWER_LINES or data.startswith(b'error: ')
+
+
+def _unread_bytes(fd: int) -> int:
+    """How much of a pipe its reader has not read yet, -1 when the system does not say.
+
+    Linux answers FIONREAD on the writing end of a pipe; other systems may not.
+    """
+    try:
+        return int(struct.unpack('i', fcntl.ioctl(fd, termios.FIONREAD, b'\0\0\0\0'))[0])
+    except (OSError, ValueError):
+        # only a number for a log line: a descriptor already closed must not stop the reactor
+        return -1
 
 
 class ProcessError(Exception):
@@ -166,6 +193,10 @@ class Processes:
     # cap only stops a helper flooding the pipe from starving the peers of the loop.
     MAX_COMMANDS_PER_PASS: ClassVar[int] = 1000
     WRITE_QUEUE_LOW_WATER: ClassVar[int] = 100  # Resume writes when queue drops below this
+    # A helper whose pipe stays full this long, with only answers waiting behind it, is not
+    # reading its answers. A helper which reads, even one which writes many commands
+    # before reading their answers, empties the pipe well within this time.
+    UNREAD_ANSWERS_SECONDS: ClassVar[float] = 10.0
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
     _dispatch: ClassVar[dict[MessageCode, Any]] = _DISPATCH
@@ -201,6 +232,10 @@ class Processes:
         self._encoder: dict[str, ResponseEncoder] = {}
         self._ackjson: dict[str, bool] = {}
         self._ack: dict[str, bool] = {}
+        # API version per helper, API_AUTO until its commands tell (dispatch/version.py)
+        self._api_version: dict[str, int] = {}
+        # when each helper's pipe was last found full, cleared by any write which goes through
+        self._pipe_full_since: dict[str, float] = {}
         self._sync: dict[str, bool] = {}  # Per-service sync mode (default: False)
         self._broken: list[str] = []
         # helpers which exited and will not be started again
@@ -386,35 +421,76 @@ class Processes:
         self.clean()
 
     def _select_encoder(self, process: str, configuration: dict[str, Any]) -> None:
-        """Record which dialect this helper will be spoken to in.
+        """Record the API version of a helper being started, and the encoder it is spoken to with.
 
-        The choice is made once, at spawn, and not revisited: everything written to the
-        helper afterwards goes through the encoder stored here, so a helper cannot find
-        the format changing under it while it is running.
+        With exabgp.api.version set, every operator helper is held to that version; left to
+        auto, a helper is undecided until its first command says which API it was written
+        for (detect_api_version). ExaBGP's own helpers are always v6. An undecided helper is
+        written to as its `encoder` asks, v4 text or v6 JSON, until its version is known.
         """
-        # Select encoder based on API version
-        api_version = getenv().api.version
+        self._api_version[process] = self._initial_api_version(process)
+        self._pipe_full_since.pop(process, None)
         use_json = configuration.get('encoder', 'text') == 'json'
+        if self._api_version[process] == API_V4:
+            self._adopt_v4(process, use_json)
+        elif self._api_version[process] == API_V6:
+            self._adopt_v6(process, use_json)
+        elif use_json:
+            self._encoder[process] = Response.JSON(json_version)
+        else:
+            self._encoder[process] = Response.V4.Text(text_v4_version)
 
-        if api_version == 4:
-            # v4 (legacy): support both JSON and Text, log deprecation warning
+    def _initial_api_version(self, process: str) -> int:
+        """The API version a helper has before it writes anything."""
+        if process.startswith(API_PREFIX):
+            return API_V6
+        forced: int = getenv().api.version
+        return forced
+
+    def _adopt_v4(self, process: str, use_json: bool) -> None:
+        """Speak to a helper as ExaBGP 5.x did: v4 JSON, or v4 text."""
+        log.warning(
+            lazymsg('api.version.v4 process={p} the helper uses the deprecated v4 API', p=process),
+            'processes',
+        )
+        if use_json:
+            self._encoder[process] = Response.V4.JSON(json_v4_version)
+        else:
+            self._encoder[process] = Response.V4.Text(text_v4_version)
+
+    def _adopt_v6(self, process: str, use_json: bool) -> None:
+        """Speak to a helper in v6 JSON, the only format of API 6."""
+        if not use_json:
             log.warning(
-                lazymsg('API v4 is deprecated. Set exabgp_api_version=6 to use v6 (JSON only).'),
+                lazymsg('api.version.v6 process={p} API v6 is JSON only, encoder text is ignored', p=process),
                 'processes',
             )
-            # Use per-process encoder setting (already computed above from process config)
-            if use_json:
-                self._encoder[process] = Response.V4.JSON(json_v4_version)
-            else:
-                self._encoder[process] = Response.V4.Text(text_v4_version)
+        self._encoder[process] = Response.JSON(json_version)
+
+    def api_version(self, process: str) -> int:
+        """The API version of a helper: 4, 6, or API_AUTO while undecided."""
+        return self._api_version.get(process, API_AUTO)
+
+    def detect_api_version(self, process: str, command: str) -> int:
+        """Settle a helper's API version from a command it wrote, once, and return it.
+
+        The first command whose form belongs to one version holds the helper to it for as
+        long as it runs. Undecided commands leave it undecided.
+        """
+        current = self.api_version(process)
+        if current != API_AUTO:
+            return current
+        found = command_api_version(command)
+        if found == API_AUTO:
+            return API_AUTO
+        self._api_version[process] = found
+        log.debug(lazymsg('api.version.detected process={p} version={v}', p=process, v=found), 'processes')
+        use_json = self._configuration.get(process, {}).get('encoder', 'text') == 'json'
+        if found == API_V4:
+            self._adopt_v4(process, use_json)
         else:
-            # v6 (default): JSON only
-            if not use_json:
-                log.warning(
-                    lazymsg('Text encoder requested but API v6 is JSON-only. Using JSON encoder.'),
-                    'processes',
-                )
-            self._encoder[process] = Response.JSON(json_version)
+            self._adopt_v6(process, use_json)
+        return found
 
     def _child_environment(self, process: str, configuration: dict[str, Any]) -> dict[str, str]:
         """Build the environment one helper is handed, starting from our own.
@@ -1167,6 +1243,7 @@ class Processes:
             # Buffer full, put data back and try next iteration
             queue.appendleft(data)
             log.debug(lazymsg('async.write.deferred process={p} reason=buffer_full', p=process_name), 'processes')
+            self._stop_unread_answers(process_name, queue)
             return
         if exc.errno == errno.EPIPE:
             # Broken pipe - process died
@@ -1181,6 +1258,35 @@ class Processes:
             'processes',
         )
         del self._write_queue[process_name]
+
+    def _stop_unread_answers(self, process_name: str, queue: collections.deque[bytes]) -> None:
+        """Stop answering a helper which does not read its answers.
+
+        ExaBGP 5.x stopped altogether once such a helper's pipe was full; queueing the
+        answers instead grows ExaBGP's memory for as long as the helper runs. When the pipe
+        has stayed full for UNREAD_ANSWERS_SECONDS and everything waiting is an answer, the
+        helper gets no more answers (as after `session ack silence`) and the queued ones are
+        dropped. Anything else in the queue was asked for by the helper, and is kept.
+        """
+        now = time.monotonic()
+        since = self._pipe_full_since.setdefault(process_name, now)
+        if now - since < self.UNREAD_ANSWERS_SECONDS:
+            return
+        if not all(_is_answer(data) for data in queue):
+            return
+        log.warning(
+            lazymsg(
+                'api.answers.unread process={p} unread={u} dropped={d} the helper does not read its answers, '
+                'it will not be sent any more',
+                p=process_name,
+                u=_unread_bytes(self._get_stdin(process_name).fileno()),
+                d=len(queue),
+            ),
+            'processes',
+        )
+        queue.clear()
+        self._ack[process_name] = False
+        self._pipe_full_since.pop(process_name, None)
 
     def _drain_queue(self, process_name: str, queue: collections.deque[bytes], stdin_fd: int, budget: int) -> int:
         """Write at most `budget` queued lines to one helper, and report how many it took.
@@ -1223,6 +1329,7 @@ class Processes:
                     )
                     break
                 log.debug(lazymsg('async.write.flushed process={p} bytes={b}', p=process_name, b=written), 'processes')
+                self._pipe_full_since.pop(process_name, None)
             except OSError as exc:
                 self._defer_or_drop_queue(process_name, queue, data, exc)
                 break
