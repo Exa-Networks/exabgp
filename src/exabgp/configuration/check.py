@@ -124,7 +124,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
         # Validate through a synthetic iBGP session without discarding a known ASN.
         neighbor.session.local_as = neighbor.session.peer_as or neighbor.session.local_as
         neighbor.session.peer_as = neighbor.session.local_as
-        negotiated_in, negotiated_out = _negotiated(neighbor)
+        _, negotiated_out = _negotiated(neighbor)
         # A decoded advertisement is wire data, not a new desired export. A session of its
         # own rather than a copy: Negotiated, compiled, has no copy (plan/wip-mypyc.md)
         _, recode_negotiated = _negotiated(neighbor)
@@ -188,7 +188,8 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                 log.debug(lazymsg('check.update.processing'), 'parser')  # separator
 
                 pack1s = pack1[19:] if pack1.startswith(b'\xff' * 16) else pack1
-                update = UpdateCollection.unpack_message(pack1s, negotiated_in)
+                # read as what we send: a receiver's checks (RFC 9774) would withdraw an AS_SET
+                update = UpdateCollection.unpack_message(pack1s, negotiated_out)
 
                 # update.announces contains RoutedNLRI, update.nlris extracts bare NLRIs
                 # Get nexthop from RoutedNLRI if available (announces), else use NoNextHop (withdraws)

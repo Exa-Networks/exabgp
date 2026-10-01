@@ -4,6 +4,11 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: an UPDATE sent to the peer is told to the helpers subscribed to send { update; }
+   as it was sent. It was decoded with the checks made on received routes, so on an EBGP
+   session, whose AS_PATH starts with our AS, every announce was reported as a withdraw.
+ * Fix: configuration validate no longer fails with a traceback on a route whose AS_PATH
+   holds an AS_SET; the route is checked as sent rather than as RFC 9774 receives it.
  * Fix: sending or receiving OPERATIONAL messages no longer fails with missing statistics
    counters; the counters are initialized and cleared with the session.
  * Fix: compiled peers observe teardown requests made during an await, and exceptions

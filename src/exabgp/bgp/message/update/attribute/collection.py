@@ -601,6 +601,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         the marker makes the reactor ignore the whole UPDATE.
         """
         dropped: set[int] = set()
+        # an UPDATE we sent is decoded as written, it is not the peer's to filter
+        if not negotiated.from_peer:
+            return frozenset(dropped)
         if not negotiated.is_internal_neighbor:
             dropped.update(_INTERNAL_ONLY)
         if not negotiated.accepts_tunnel_encapsulation:

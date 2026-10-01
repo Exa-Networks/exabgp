@@ -117,7 +117,7 @@ neighbor 192.0.2.1 {{
     neighbor = next(iter(configuration.neighbors.values()))
 
     capabilities = Capabilities().new(neighbor, False, local_as=ASN(LOCAL_AS))
-    negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
+    negotiated = Negotiated.make_negotiated(neighbor, Direction.IN)
     # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
     negotiated.neighbor.enforce_first_as = False
     negotiated.sent(Open.make_open(Version(4), ASN(LOCAL_AS), HoldTime(180), RouterID('192.0.2.2'), capabilities))

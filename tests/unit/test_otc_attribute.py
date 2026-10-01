@@ -15,7 +15,7 @@ from exabgp.bgp.neighbor import Neighbor
 
 
 def session(local_as: int = 65000) -> Negotiated:
-    negotiated = Negotiated(Neighbor(), Direction.OUT)
+    negotiated = Negotiated(Neighbor(), Direction.IN)
     # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
     negotiated.neighbor.enforce_first_as = False
     negotiated.local_as = ASN(local_as)

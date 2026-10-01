@@ -871,16 +871,9 @@ class UpdateCollection:
 
     @classmethod
     def _parse_payload(cls, data: Buffer, negotiated: Negotiated) -> UpdateCollection:
-        """Parse raw UPDATE payload bytes into semantic UpdateCollection.
+        """Parse a raw UPDATE payload (after the BGP header) for Update.parse().
 
-        This is an internal method called by Update.parse().
-
-        Args:
-            data: Raw UPDATE message payload (after BGP header).
-            negotiated: BGP session negotiated parameters.
-
-        Returns:
-            UpdateCollection with parsed announces, withdraws, and attributes.
+        Decoded with a `negotiated.outbound()`, it is an UPDATE we sent, read as written.
         """
         withdrawn_view, attr_view, announced_view = cls.split(data)
 
@@ -901,7 +894,8 @@ class UpdateCollection:
 
         # empty string for IP.NoNextHop, the packed IP otherwise (without the 3/4 bytes of attributes headers)
         nexthop = attributes.get(Attribute.CODE.NEXT_HOP, IP.NoNextHop)
-        cls._warn_next_hop_is_ours(nexthop, negotiated)
+        if negotiated.from_peer:
+            cls._warn_next_hop_is_ours(nexthop, negotiated)
 
         withdraws = cls._unpack_withdrawn(withdrawn_bytes, addpath, negotiated)
         legacy = cls._unpack_announced(announced_bytes, cls._routed_next_hop(nexthop), addpath, negotiated)
@@ -913,14 +907,20 @@ class UpdateCollection:
             # MPURNLRI implements __iter__ yielding NLRI
             withdraws.extend(unreach)
 
+        # MP_REACH_NLRI carries its own next hop; iter_routed() preserves it while
+        # converting each contained NLRI to the semantic routed form.
+        mp_reach = list(reach.iter_routed()) if isinstance(reach, MPRNLRI) else []
+
+        # An UPDATE we sent is told to the API as it went out: the checks below are the
+        # ones a receiver makes on its peer's routes, and on our own they withdrew an EBGP
+        # route for not starting with the peer's AS, or one with an AS_SET (RFC 9774).
+        if not negotiated.from_peer:
+            return cls(legacy + mp_reach, withdraws, attributes)
+
         # RFC 7606 5.2 is decided on what the UPDATE encodes, before any route is dropped
         # below for what it means rather than for how it was written.
         has_reachable_nlri = bool(announced_view) or isinstance(reach, MPRNLRI)
         cls._reset_without_reachable_nlri(attributes, has_reachable_nlri)
-
-        # MP_REACH_NLRI carries its own next hop; iter_routed() preserves it while
-        # converting each contained NLRI to the semantic routed form.
-        mp_reach = list(reach.iter_routed()) if isinstance(reach, MPRNLRI) else []
 
         if (legacy or mp_reach) and cls._withdrawn_in_context(attributes, bool(announced_view), negotiated):
             # AttributeCollection.unpack() may have returned the session's cached

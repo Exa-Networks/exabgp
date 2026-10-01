@@ -217,9 +217,9 @@ class Protocol:
         await self.connection.writer_async(raw)
 
         if self._api.get(code, False):
-            # Parse the raw bytes to get an Update for API
+            # decoded as we sent it, not as the peer will read it
             update = Update(raw[19:])
-            update.parse(self.negotiated)
+            update.parse(self.negotiated.outbound())
             self._to_api('send', update, raw)
 
     # Read from network .......................................................

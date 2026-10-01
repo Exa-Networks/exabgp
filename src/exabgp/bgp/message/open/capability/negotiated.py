@@ -494,6 +494,36 @@ class Negotiated:
         else:
             return self.addpath.send(afi, safi)
 
+    @property
+    def from_peer(self) -> bool:
+        """Whether what is decoded with this came from the peer, and gets a receiver's checks."""
+        from exabgp.bgp.message.direction import Direction
+
+        return self.direction == Direction.IN
+
+    def outbound(self) -> 'Negotiated':
+        """This session, to decode what we sent on it rather than what the peer sent us.
+
+        An UPDATE we wrote is read with ADD-PATH as we send it, and without the checks a
+        receiver makes on its peer's routes (UpdateCollection._parse_payload). The negotiated
+        values are shared, not copied: they are fixed once both OPENs are known. The
+        attribute cache is not, so that our own UPDATEs never fill the cache of the peer's.
+        """
+        from exabgp.bgp.message.direction import Direction
+
+        sent = Negotiated(self._neighbor, Direction.OUT)
+        sent.attribute_cache_enabled = False
+        sent.sent_open, sent.received_open = self.sent_open, self.received_open
+        sent.holdtime, sent.local_as, sent.peer_as = self.holdtime, self.local_as, self.peer_as
+        sent.families, sent.nexthop, sent.asn4 = self.families, self.nexthop, self.asn4
+        sent.addpath, sent.multisession, sent.msg_size = self.addpath, self.multisession, self.msg_size
+        sent.operational, sent.refresh, sent.aigp = self.operational, self.refresh, self.aigp
+        sent.role, sent.peer_role, sent.role_otc = self.role, self.peer_role, self.role_otc
+        sent.role_error, sent.linklocal_nexthop = self.role_error, self.linklocal_nexthop
+        sent.paths_limit, sent.advertised_paths_limit = self.paths_limit, self.advertised_paths_limit
+        sent.multiple_labels, sent.mismatch = self.multiple_labels, self.mismatch
+        return sent
+
 
 # =================================================================== RequirePath
 
