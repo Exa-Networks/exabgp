@@ -79,8 +79,8 @@ neighbor <ip>[/<mask>] {  # a BGP peer
         ipv4 unicast|multicast|nlri-mpls|labeled-unicast|mpls-vpn|mcast-vpn|
                 flow|flow-vpn|mup|sr-policy|rtc [prefix-limit <n>];
         # an ipv6 family to negotiate, may be repeated
-        ipv6 unicast|nlri-mpls|labeled-unicast|mpls-vpn|mcast-vpn|mup|
-                sr-policy|flow|flow-vpn [prefix-limit <n>];
+        ipv6 unicast|multicast|nlri-mpls|labeled-unicast|mpls-vpn|mcast-vpn|
+                mup|sr-policy|flow|flow-vpn [prefix-limit <n>];
         # an l2vpn family to negotiate, may be repeated
         l2vpn vpls|evpn [prefix-limit <n>];
         # an bgp-ls family to negotiate, may be repeated
@@ -147,8 +147,8 @@ neighbor <ip>[/<mask>] {  # a BGP peer
         ipv4 unicast|multicast|nlri-mpls|labeled-unicast|mpls-vpn|mcast-vpn|
                 flow|flow-vpn|mup|sr-policy|rtc [limit <n>];
         # an ipv6 family to negotiate ADD-PATH for, may be repeated
-        ipv6 unicast|nlri-mpls|labeled-unicast|mpls-vpn|mcast-vpn|mup|
-                sr-policy|flow|flow-vpn [limit <n>];
+        ipv6 unicast|multicast|nlri-mpls|labeled-unicast|mpls-vpn|mcast-vpn|
+                mup|sr-policy|flow|flow-vpn [limit <n>];
         # an l2vpn family to negotiate ADD-PATH for, may be repeated
         l2vpn vpls|evpn [limit <n>];
         # an bgp-ls family to negotiate ADD-PATH for, may be repeated

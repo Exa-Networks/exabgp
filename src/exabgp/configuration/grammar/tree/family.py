@@ -48,6 +48,8 @@ SAFIS: dict[str, dict[str, FamilyTuple]] = {
     },
     'ipv6': {
         'unicast': (AFI.ipv6, SAFI.unicast),
+        # `all` negotiates it, so it can be asked for alone, and the printed `all` reads back
+        'multicast': (AFI.ipv6, SAFI.multicast),
         'nlri-mpls': (AFI.ipv6, SAFI.nlri_mpls),
         'labeled-unicast': (AFI.ipv6, SAFI.nlri_mpls),
         'mpls-vpn': (AFI.ipv6, SAFI.mpls_vpn),

@@ -167,7 +167,8 @@ NEIGHBOR_FORMS: list[tuple[tuple[str, ...], str, bool]] = [
     ],
     *[(('family',), f'ipv4 {safi}', True) for safi in ('mcast-vpn', 'flow', 'flow-vpn', 'mup', 'sr-policy', 'rtc')],
     *[(('family',), f'ipv6 {safi}', True) for safi in ('unicast', 'nlri-mpls', 'labeled-unicast', 'mpls-vpn', 'flow')],
-    (('family',), 'ipv6 multicast', False),
+    # refused while `all` negotiated it (plan/done-agent-reported-bugs.md item 8)
+    (('family',), 'ipv6 multicast', True),
     (('family',), 'ipv6 rtc', False),
     (('family',), 'l2vpn vpls', True),
     (('family',), 'l2vpn evpn', True),
