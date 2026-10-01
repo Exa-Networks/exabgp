@@ -14,6 +14,9 @@ from __future__ import annotations
 
 import collections
 import os
+import struct
+import sys
+import termios
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -28,10 +31,12 @@ from exabgp.reactor.api.dispatch.version import (
     command_api_version,
     dispatch_for,
 )
-from exabgp.reactor.api.processes import Processes, _is_answer, _unread_bytes
+from exabgp.reactor.api import processes as processes_module
+from exabgp.reactor.api.processes import NETBSD_FIONWRITE, Processes, _is_answer, _unread_bytes
 from exabgp.reactor.api.response.json import JSON
 from exabgp.reactor.api.response.v4.json import V4JSON
 from exabgp.reactor.api.response.v4.text import V4Text
+from tests import negotiation
 
 
 @pytest.fixture(autouse=True)
@@ -214,10 +219,41 @@ class TestUnreadAnswers:
         read_end, write_end = os.pipe()
         try:
             os.write(write_end, b'done\n' * 3)
-            assert _unread_bytes(write_end) in (15, -1)  # -1 where FIONREAD is not answered
+            if sys.platform.startswith(('linux', 'darwin', 'netbsd')):
+                # macOS answered FIONREAD on the writing end with 0, its count is the pipe size
+                assert _unread_bytes(write_end) == 15
+                os.read(read_end, 5)
+                assert _unread_bytes(write_end) == 10
+            else:
+                # FreeBSD, and what was not read: saying nothing rather than a 0 which may be wrong
+                assert _unread_bytes(write_end) == -1
         finally:
             os.close(read_end)
             os.close(write_end)
+
+    @pytest.mark.parametrize(
+        'platform,request_code',
+        [('linux', termios.FIONREAD), ('netbsd10', NETBSD_FIONWRITE)],
+    )
+    def test_each_system_is_asked_what_its_kernel_answers(self, platform: str, request_code: int) -> None:
+        # run where the kernel is not this one: the request is checked, not its answer
+        module = negotiation.interpreted(processes_module)
+        asked: list[int] = []
+
+        def ioctl(fd: int, request: int, arg: bytes) -> bytes:
+            asked.append(request)
+            return struct.pack('i', 15)
+
+        with patch.object(module.sys, 'platform', platform), patch.object(module.fcntl, 'ioctl', ioctl):
+            assert module._unread_bytes(0) == 15
+        assert asked == [request_code]
+
+    def test_freebsd_does_not_say(self) -> None:
+        # sys_pipe.c answers FIONREAD with 0 without FREAD, and has no FIONWRITE for a pipe
+        module = negotiation.interpreted(processes_module)
+        with patch.object(module.sys, 'platform', 'freebsd14'), patch.object(module.fcntl, 'ioctl') as ioctl:
+            assert module._unread_bytes(0) == -1
+        ioctl.assert_not_called()
 
     def full_pipe(self, queued: list[bytes], seconds: float) -> tuple[Processes, collections.deque[bytes]]:
         """A helper whose pipe has been full for `seconds`, with `queued` waiting behind it."""

@@ -29,6 +29,7 @@ import os
 import select
 import struct
 import subprocess
+import sys
 import termios
 import time
 from exabgp.util.intvalue import json_number
@@ -80,13 +81,32 @@ def _is_answer(data: bytes) -> bool:
     return data in _ANSWER_LINES or data.startswith(b'error: ')
 
 
+# NetBSD sys/sys/filio.h: FIONWRITE is _IOR('f', 121, int), which Python's termios does not export
+NETBSD_FIONWRITE = 0x40046679
+
+
+def _ioctl_int(fd: int, request: int) -> int:
+    return int(struct.unpack('i', fcntl.ioctl(fd, request, b'\0\0\0\0'))[0])
+
+
 def _unread_bytes(fd: int) -> int:
     """How much of a pipe its reader has not read yet, -1 when the system does not say.
 
-    Linux answers FIONREAD on the writing end of a pipe; other systems may not.
+    Read from each kernel's sys_pipe.c. Linux answers FIONREAD on the writing end, as both
+    ends share one buffer. The BSDs keep a buffer per end and a write fills the peer's, so
+    FIONREAD and the stat size of the writing end are 0. NetBSD answers FIONWRITE with the
+    peer's count. macOS gives the stat size of what is in the pipe. FreeBSD answers FIONREAD
+    with 0 on a descriptor not opened for reading and has no FIONWRITE for a pipe, so it does
+    not say, nor does any system not listed: a 0 which may be wrong is worse than nothing.
     """
     try:
-        return int(struct.unpack('i', fcntl.ioctl(fd, termios.FIONREAD, b'\0\0\0\0'))[0])
+        if sys.platform.startswith('linux'):
+            return _ioctl_int(fd, termios.FIONREAD)
+        if sys.platform.startswith('netbsd'):
+            return _ioctl_int(fd, NETBSD_FIONWRITE)
+        if sys.platform == 'darwin':
+            return os.fstat(fd).st_size
+        return -1
     except (OSError, ValueError):
         # only a number for a log line: a descriptor already closed must not stop the reactor
         return -1
