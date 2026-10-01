@@ -112,9 +112,22 @@ class TestDispatchFor:
         assert callable(handler)
 
     def test_an_undecided_helper_may_group(self) -> None:
-        # group exists in v6 only, and decides nothing
+        # group decides nothing
         handler, _, _ = dispatch_for(API_AUTO, 'group start', MagicMock(), 'helper')
         assert handler.__name__ == 'group_start'
+
+    @pytest.mark.parametrize(
+        'command,name',
+        [
+            ('group start', 'group_start'),
+            ('group end', 'group_end'),
+        ],
+    )
+    def test_a_v4_helper_may_group(self, command: str, name: str) -> None:
+        # The commands inside a group are the v4 `announce ...`, so `group start`,
+        # `announce route ...` held the helper to v4, and its `group end` was refused.
+        handler, _, _ = dispatch_for(API_V4, command, MagicMock(), 'helper')
+        assert handler.__name__ == name
 
 
 class TestVersionPerHelper:
@@ -151,6 +164,14 @@ class TestVersionPerHelper:
         assert processes.detect_api_version('helper', 'peer * announce route 192.0.2.1/32 next-hop self') == API_V6
         assert type(processes._encoder['helper']) is JSON
         assert processes.detect_api_version('helper', 'announce route 192.0.2.1/32 next-hop self') == API_V6
+
+    def test_a_group_of_v4_commands_can_be_ended(self) -> None:
+        processes = started(API_AUTO, 'json')
+        assert processes.detect_api_version('helper', 'group start') == API_AUTO
+        assert processes.detect_api_version('helper', 'announce route 192.0.2.1/32 next-hop self') == API_V4
+        version = processes.detect_api_version('helper', 'group end')
+        handler, _, _ = dispatch_for(version, 'group end', MagicMock(), 'helper')
+        assert handler.__name__ == 'group_end'
 
     def test_a_command_which_does_not_tell_leaves_it_undecided(self) -> None:
         processes = started(API_AUTO, 'json')

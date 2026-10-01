@@ -58,16 +58,15 @@ def dispatch_for(
 
     A helper is held to its version: a v4 helper writing a v6 command gets the same
     UnknownCommand as a v6 helper writing a v4 one. Before the version is known, the v4
-    dispatcher is used, as it accepts both forms, except for `group`, which only v6 has.
+    dispatcher is used, as it accepts both forms.
+
+    `group` is the v6 dispatcher's whatever the version: what it groups is the v4
+    `announce ...` and `withdraw ...`, so a v4 helper has to be able to use it.
     """
     assert version in (API_AUTO, API_V4, API_V6), f'unknown API version {version}'
-    if version == API_V6:
-        return dispatch_v6(command, reactor, service)
-    if version == API_V4:
-        if command_api_version(command) == API_V6:
-            raise UnknownCommand(command)
-        return dispatch_v4(command, reactor, service)
     words = command.split()
-    if words and words[0] == 'group':
+    if version == API_V6 or (words and words[0] == 'group'):
         return dispatch_v6(command, reactor, service)
+    if version == API_V4 and command_api_version(command) == API_V6:
+        raise UnknownCommand(command)
     return dispatch_v4(command, reactor, service)

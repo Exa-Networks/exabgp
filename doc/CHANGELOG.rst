@@ -14,6 +14,8 @@ Version 6.0.0:
    was read as the value "true  # x", which turned the option off.
  * Incompatible: in the JSON of the Graceful Restart capability, the Forwarding State of
    a family is "forwarding" and the Restart State is "restart"; the names were swapped.
+ * Fix: group start and group end are accepted from an API 4 helper. A helper writing
+   group start then announce ... was held to API 4, and its group end refused.
  * Fix: sending or receiving OPERATIONAL messages no longer fails with missing statistics
    counters; the counters are initialized and cleared with the session.
  * Fix: compiled peers observe teardown requests made during an await, and exceptions
