@@ -50,11 +50,12 @@ class Origin(ExtendedCommunity):
         return not self == other
 
 
-# ================================================================== OriginASNIP
-# RFC 4360 / RFC 7153
+# ============================================================= OriginASN2Number
+# RFC 4360 3.1 and RFC 7153: a two octet AS and a four octet number. The number was read
+# as an IPv4 address, so origin:65001:100 printed as origin:65001:0.0.0.100.
 
 
-class OriginASNIP(Origin):
+class OriginASN2Number(Origin):
     COMMUNITY_TYPE: ClassVar[int] = 0x00
     LIMIT: ClassVar[int] = 4
 
@@ -62,10 +63,10 @@ class OriginASNIP(Origin):
         Origin.__init__(self, packed)
 
     @classmethod
-    def make_origin(cls, asn: ASN | int, ip: str, transitive: bool = True) -> OriginASNIP:
-        """Create OriginASNIP from semantic values."""
+    def make_origin(cls, asn: ASN | int, number: int, transitive: bool = True) -> OriginASN2Number:
+        """Create OriginASN2Number from semantic values."""
         type_byte = cls.COMMUNITY_TYPE if transitive else cls.COMMUNITY_TYPE | cls.NON_TRANSITIVE
-        packed = pack('!BBH4s', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), IPv4.pton(ip))
+        packed = pack('!BBHL', type_byte, cls.COMMUNITY_SUBTYPE, int(asn), number)
         return cls(packed)
 
     @property
@@ -73,18 +74,19 @@ class OriginASNIP(Origin):
         return ASN(unpack('!H', self._packed[2:4])[0])
 
     @property
-    def ip(self) -> str:
-        return IPv4.ntop(self._packed[4:8])
+    def number(self) -> int:
+        value: int = unpack('!L', self._packed[4:8])[0]
+        return value
 
     def __repr__(self) -> str:
-        return 'origin:{}:{}'.format(self.asn, self.ip)
+        return 'origin:{}:{}'.format(self.asn, self.number)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> OriginASNIP:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> OriginASN2Number:
         return cls(data[:8])
 
 
-ExtendedCommunity.register_subtype(OriginASNIP)
+ExtendedCommunity.register_subtype(OriginASN2Number)
 
 
 # ================================================================== OriginIPASN

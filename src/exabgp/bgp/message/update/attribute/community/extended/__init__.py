@@ -20,7 +20,7 @@ Common Extended Community Types:
 | 0x00 | 0x02| Route Target (2-byte)   | RouteTargetASN2Number|
 | 0x01 | 0x02| Route Target (IPv4)     | RouteTargetIPNumber  |
 | 0x02 | 0x02| Route Target (4-byte)   | RouteTargetASN4Number|
-| 0x00 | 0x03| Route Origin            | OriginASNIP          |
+| 0x00 | 0x03| Route Origin            | OriginASN2Number     |
 | 0x03 | 0x0c| Encapsulation           | Encapsulation        |
 | 0x06 | 0x00| MAC Mobility (EVPN)     | MacMobility          |
 | 0x06 | 0x04| ESI Label (EVPN)        | -                    |
@@ -52,7 +52,7 @@ from exabgp.bgp.message.update.attribute.community.extended.communities import E
 
 from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
 from exabgp.bgp.message.update.attribute.community.extended.origin import Origin
-from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASNIP
+from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASN2Number
 from exabgp.bgp.message.update.attribute.community.extended.origin import OriginIPASN
 from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASN4Number
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
@@ -87,7 +87,7 @@ __all__ = [
     'ExtendedCommunitiesIPv6',
     'L2Info',
     'Origin',
-    'OriginASNIP',
+    'OriginASN2Number',
     'OriginIPASN',
     'OriginASN4Number',
     'RouteTarget',

@@ -15,6 +15,8 @@ Version 6.0.0:
  * Fix: a comment after a value in the environment file is ignored. parser = true  # x
    was read as the value "true  # x", which turned the option off.
  * Fix: family { ipv6 multicast; } is accepted, as all; already asked for it.
+ * Incompatible: the Route Origin extended community with a two octet AS prints its
+   value as a number, origin:65001:100, and no longer as an IPv4 address.
  * Incompatible: in the JSON of the Graceful Restart capability, the Forwarding State of
    a family is "forwarding" and the Restart State is "restart"; the names were swapped.
  * Fix: group start and group end are accepted from an API 4 helper. A helper writing

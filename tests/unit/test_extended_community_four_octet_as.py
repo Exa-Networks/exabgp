@@ -20,7 +20,7 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.community.extended.origin import (
     OriginASN4Number,
-    OriginASNIP,
+    OriginASN2Number,
     OriginIPASN,
 )
 from exabgp.bgp.message.update.attribute.community.extended.rt import (
@@ -53,7 +53,7 @@ def test_a_four_octet_as_is_type_two(text, klass, wire, shown) -> None:
     [
         ('target:65001:100', RouteTargetASN2Number, '0002FDE900000064'),
         ('target:192.0.2.1:100', RouteTargetIPNumber, '0102C00002010064'),
-        ('origin:65001:100', OriginASNIP, '0003FDE900000064'),
+        ('origin:65001:100', OriginASN2Number, '0003FDE900000064'),
         ('origin:192.0.2.1:100', OriginIPASN, '0103C00002010064'),
     ],
 )
@@ -61,6 +61,8 @@ def test_the_other_forms_are_unchanged(text, klass, wire) -> None:
     community = _extended_community(text)
     assert isinstance(community, klass)
     assert bytes(community.pack_attribute(Negotiated.UNSET)).hex().upper() == wire
+    # origin:65001:100 printed as origin:65001:0.0.0.100, its number read as an IPv4 address
+    assert str(community) == text
 
 
 @pytest.mark.parametrize('text', ['target:4200000000:65536', 'origin:4200000000:65536', 'target:4294967296:1'])
