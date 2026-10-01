@@ -132,6 +132,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-agent-reported-bugs.md` | 2026-10-01 | Nine agent-reported bugs reproduced and fixed on main (sent UPDATEs as sent, as-path ASN4, env comments, unused words, ipv6 multicast, origin number, GR flags, group under API 4) |
 | `done-large-function-decomposition.md` | 2026-09-29 | The ten largest functions split, `long_function` 69 → 58 |
 | `done-rfc9234-roles-otc.md` | 2026-09-29 | BGP Roles and OTC, ingress insertion included; outcome note added, cleanup moved on |
 | `done-dns-domain-name.md` | 2026-09-29 | `domain()` returned the host label; fixed, never reached the wire |
