@@ -432,7 +432,8 @@ class Environment:
         sections = env._sections()
 
         # Read INI file if exists
-        ini: ConfigParser.ConfigParser = ConfigParser.ConfigParser()
+        # `key = value  # note`: without the prefixes the note is read as part of the value
+        ini: ConfigParser.ConfigParser = ConfigParser.ConfigParser(inline_comment_prefixes=('#',))
         if os.path.exists(base.ENVFILE):
             ini.read(base.ENVFILE)
 
