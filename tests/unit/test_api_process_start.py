@@ -206,6 +206,37 @@ class TestStartEnvironment:
         assert [call.args[0] for call in fcntl_call.call_args_list] == [31, 32]
 
 
+class TestStartProcessGroup:
+    def test_a_helper_is_the_leader_of_its_own_process_group(self, environment: Any) -> None:
+        """A signal sent to the daemon's group must not reach the helper as well.
+
+        Spawns a real child: the group is set by the child between fork and exec, which
+        a mocked Popen can not show.
+        """
+        processes = configured(environment)
+
+        processes._start('helper')
+        child = processes._process['helper']
+        try:
+            assert os.getpgid(child.pid) == child.pid
+            assert os.getpgid(child.pid) != os.getpgrp()
+        finally:
+            child.kill()
+            child.wait()
+            child.stdin.close()
+            child.stdout.close()
+
+    def test_no_python_runs_in_the_child_before_exec(self, environment: Any, spawn: Any) -> None:
+        """preexec_fn can deadlock on a lock another thread held when the daemon forked."""
+        popen, _, _ = spawn
+        processes = configured(environment)
+
+        processes._start('helper')
+
+        assert popen.call_args.kwargs['process_group'] == 0
+        assert 'preexec_fn' not in popen.call_args.kwargs
+
+
 class TestStartRespawn:
     """The limit counts respawns. An ordinary start is not one.
 

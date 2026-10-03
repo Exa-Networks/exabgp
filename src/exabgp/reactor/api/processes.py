@@ -148,14 +148,6 @@ class ProcessRespawnError(ProcessError):
     pass
 
 
-def preexec_helper() -> None:
-    # make this process a new process group
-    # os.setsid()
-    # This prevent the signal to be sent to the children (and create a new process group)
-    os.setpgrp()
-    # signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-
 # do not do anything if silenced. At module level: a compiled class body can not use a name
 # it defined itself, so the decorator can not be a staticmethod of Processes
 def silenced(function: _F) -> _F:
@@ -602,9 +594,10 @@ class Processes:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             env=child_env,
-            preexec_fn=preexec_helper,
-            # This flags exists for python 2.7.3 in the documentation but on on my MAC
-            # creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+            # its own process group, so a signal sent to ours does not reach it. Set in C
+            # by the child: preexec_fn would run Python between fork and exec, which can
+            # deadlock on a lock another thread held, and forces fork over vfork
+            process_group=0,
         )
         self._update_fds()
         # Make stdout non-blocking for reading

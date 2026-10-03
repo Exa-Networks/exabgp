@@ -438,7 +438,7 @@ def check(cmd: str | None, timeout: int) -> bool:
     logger.debug('Checking command %s', repr(cmd))
     # Any: the stub says communicate() gives two bytes, and a compiled caller checks that, but
     # stderr goes to stdout and comes back None
-    p: Any = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, preexec_fn=os.setpgrp)
+    p: Any = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, process_group=0)
     if timeout:
         signal.signal(signal.SIGALRM, alarm_handler)
         signal.alarm(timeout)
