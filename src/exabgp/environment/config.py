@@ -22,6 +22,13 @@ from exabgp.util.mypyc import mypyc_attr
 T = TypeVar('T')
 
 
+class EnvironmentValueError(ValueError):
+    """An environment variable or env file entry with a value its option refuses.
+
+    The operator's mistake, not ours: main() reports it as one line and exits, without a traceback.
+    """
+
+
 # The configuration is read once at start-up, and relies on what a native compiled class
 # does not do: ConfigOption is a generic dataclass used as a descriptor, the sections are
 # walked with dir(), and Environment is a singleton made in __new__. So these stay ordinary
@@ -459,8 +466,8 @@ class Environment:
                 if conf is not None:
                     try:
                         section[option_name] = opt.parse(conf)
-                    except (TypeError, ValueError):
-                        raise ValueError(f'invalid value for {section_name}.{option_name} : {conf}') from None
+                    except (TypeError, ValueError) as exc:
+                        raise EnvironmentValueError(f'invalid value {conf!r} for {env_name}: {exc}') from None
 
         # Backward compatibility for tcp.once -> tcp.attempts
         cls._handle_tcp_compatibility(env)

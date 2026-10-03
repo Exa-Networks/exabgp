@@ -108,7 +108,7 @@ def user(_: str) -> str:
     try:
         pwd.getpwnam(_)
     except KeyError:
-        raise TypeError(f'user {_} is not found on this system') from None
+        raise TypeError(f'user {_!r} is not found on this system') from None
     return _
 
 

@@ -29,6 +29,7 @@ from exabgp.application import schema
 from exabgp.application import export
 from exabgp.application import example
 from exabgp.application import migrate
+from exabgp.environment.config import EnvironmentValueError
 
 
 # what a PyInstaller one-file binary points at the libraries it unpacked, keeping the value it
@@ -228,7 +229,11 @@ def main() -> int | None:
     options = vars(cmdarg)
 
     if 'func' in options:
-        return cast(int | None, cmdarg.func(cmdarg))
+        try:
+            return cast(int | None, cmdarg.func(cmdarg))
+        except EnvironmentValueError as exc:
+            sys.stderr.write(f'error: {exc}\n')
+            return 1
     parser.print_help()
     environ.default()
     return 1
