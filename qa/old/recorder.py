@@ -312,8 +312,171 @@ def record_configurations(configurations):
     return results
 
 
+# messages a helper is given whatever the configuration: (event, raw message as hexadecimal)
+HAND_MESSAGES = (
+    ('keepalive', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001304'),
+    ('notification', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0015030602'),  # cease, administrative shutdown
+    ('notification', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001D0306020774657374696E67'),  # with a communication
+    ('notification', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0017030102FFFF'),  # header error, with data
+    ('refresh', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00170500010001'),
+    ('refresh', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00170500010101'),  # begin of route refresh
+    ('refresh', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00170500010201'),  # end of route refresh
+    ('update', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF00170200000000'),  # end-of-rib ipv4 unicast
+    ('operational', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0023060001000C00010161206D657373616765'),  # adm "a message"
+)
+# end-of-rib ipv6 unicast, given where the session has the family: elsewhere it is an error
+EOR_IPV6 = ('update', 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF001D0200000006800F03000201')
+STATES = ('IDLE', 'ACTIVE', 'CONNECT', 'OPENSENT', 'OPENCONFIRM', 'ESTABLISHED')
+SIGNALS = (1, 15)
+NAMES = {1: 'open', 2: 'update', 3: 'notification', 4: 'keepalive', 5: 'refresh', 6: 'operational'}
+
+
+class _State:
+    def __init__(self, name):
+        self._name = name
+
+    def name(self):
+        return self._name
+
+
+def _direction():
+    try:
+        from exabgp.bgp.message.direction import Direction  # 5.0
+    except ImportError:
+        from exabgp.bgp.message import Direction  # 4.2
+    return Direction
+
+
+def _shared(neighbor, open_hexadecimal):
+    """The session of the recorded OPEN, received and sent: what both sides decode with."""
+    from exabgp.bgp.message import Message
+    from exabgp.bgp.message.open.capability import Negotiated
+
+    sent = Message.unpack(1, bytes.fromhex(open_hexadecimal)[19:], _direction().IN, None)
+    negotiated = Negotiated(neighbor)
+    negotiated.sent(sent)
+    negotiated.received(sent)
+    return negotiated
+
+
+def _line(encoder, neighbor, negotiated, raw, direction, consolidate):
+    """The line for one message: parsed, or parsed with its raw packet (`consolidate`)."""
+    from exabgp.bgp.message import Message
+
+    header, body = (raw[:19], raw[19:]) if consolidate else (b'', b'')
+    message = Message.unpack(raw[18], raw[19:], _direction().IN, negotiated)
+    name = NAMES[raw[18]]
+    if name == 'keepalive':
+        return encoder.keepalive(neighbor, direction, negotiated, header, body)
+    if name == 'operational':
+        category = getattr(message, 'category', None) or getattr(message, 'CATEGORY', '')
+        return encoder.operational(neighbor, direction, category, message, negotiated, header, body)
+    return getattr(encoder, name)(neighbor, direction, message, negotiated, header, body)
+
+
+def _safe(call, *arguments):
+    try:
+        return call(*arguments)
+    except Exception as exc:  # the release can not show what it was given: its own bug
+        return f'raised {type(exc).__name__}'
+
+
+def _inputs(neighbor, recorded, negotiated):
+    """Each event a helper is told about, by a name which says what it is given."""
+    found = [('up', ()), ('connected', ()), ('down', ('peer reset',)), ('shutdown', None), ('negotiated', 'session')]
+    found += [(f'fsm {state}', _State(state)) for state in STATES]
+    found += [(f'signal {signal}', signal) for signal in SIGNALS]
+    messages = [('open', recorded['open'])] + [('update', each) for each in recorded['updates']] + list(HAND_MESSAGES)
+    if any(family == (2, 1) or tuple(int(_) for _ in family) == (2, 1) for family in negotiated.families):
+        messages.append(EOR_IPV6)
+    for name, hexadecimal in messages:
+        for direction in ('receive', 'send'):
+            found.append((f'{name} {direction} {hexadecimal}', (direction, False)))
+        found.append((f'{name} consolidate {hexadecimal}', ('receive', True)))
+        found.append((f'{name} packets {hexadecimal}', None))
+    return found
+
+
+def _render(encoder, neighbor, negotiated, event, given):
+    name = event.split()[0]
+    if name in ('up', 'connected', 'down'):
+        return _safe(getattr(encoder, name), neighbor, *given)
+    if name == 'shutdown':
+        return _safe(encoder.shutdown)
+    if name == 'negotiated':
+        return _safe(encoder.negotiated, neighbor, negotiated)
+    if name == 'fsm':
+        return _safe(encoder.fsm, neighbor, given)
+    if name == 'signal':
+        return _safe(encoder.signal, neighbor, given)
+    raw = bytes.fromhex(event.split()[-1])
+    if event.split()[1] == 'packets':
+        return _safe(encoder.packets, neighbor, 'receive', raw[18], negotiated, raw[:19], raw[19:])
+    direction, consolidate = given
+    return _safe(_line, encoder, neighbor, negotiated, raw, direction, consolidate)
+
+
+# what changes from one run to the next in a line, by nature
+VOLATILE = ('time', 'host', 'pid', 'ppid', 'counter')
+
+
+def _stable(line):
+    """A JSON line without what changes by nature, a text line as it is."""
+    if not isinstance(line, str) or not line.startswith('{'):
+        return line
+    try:
+        found = json.loads(line)
+    except ValueError:  # the release wrote a line no helper can parse: kept as it is
+        import re
+
+        return {'invalid-json': re.sub(r'"(time|host|pid|ppid|counter)"\s*:\s*("[^"]*"|[0-9.]+),\s*', '', line)}
+    for key in VOLATILE:
+        found.pop(key, None)
+    return found
+
+
+def record_responses(recorded):
+    """What a text and a JSON helper are written, for each event of each recorded neighbor.
+
+    An event is kept once for what it is given: the same message, to a neighbor with the same
+    OPEN and the same name, is told the same. Two inputs the release showed alike are both
+    kept, so a difference this tree makes between them is seen.
+    """
+    from exabgp import version
+    from exabgp.configuration.configuration import Configuration
+    from exabgp.reactor.api.response import Response
+    from exabgp.rib import RIB
+
+    results, seen = {}, set()
+    for text, result in recorded.items():
+        old = list(result['neighbors'].values())[0]
+        if 'open' not in old:
+            continue
+        RIB._cache.clear()
+        with open('recorded.conf', 'w') as handle:
+            handle.write(text)
+        configuration = Configuration(['recorded.conf'])
+        configuration.reload()
+        neighbor = list(configuration.neighbors.values())[0]
+        negotiated = _shared(neighbor, old['open'])
+        encoders = {'text': Response.Text(version.text), 'json': Response.JSON(version.json)}
+        kept = {}
+        for event, given in _inputs(neighbor, old, negotiated):
+            key = (event, old['open'], str(getattr(neighbor, 'peer_address', '')) or neighbor['peer-address'])
+            if key in seen:
+                continue
+            seen.add(key)
+            kept[event] = {kind: _stable(_render(encoder, neighbor, negotiated, event, given)) for kind, encoder in encoders.items()}
+        if kept:
+            results[text] = kept
+    return results
+
+
 def main():
     _silence()
+    if sys.argv[1] == 'responses':
+        json.dump(record_responses(json.load(sys.stdin)), sys.stdout, sort_keys=True)
+        return
     if sys.argv[1] == 'grammar':
         json.dump({'registered': _registered(), 'sections': grammar()}, sys.stdout, indent=1, sort_keys=True)
         return

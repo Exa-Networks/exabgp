@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+"""Fail if this tree tells a 4.2 or 5.0 helper something else than the release did.
+
+A helper written for 4.2 or 5.0 reads what ExaBGP writes it: a line for each session state,
+FSM change, signal, and each OPEN, UPDATE, NOTIFICATION, KEEPALIVE and ROUTE-REFRESH it was
+sent or received, in text or in JSON. qa/old/responses-<release>.json.gz holds what the release
+wrote for the neighbors and messages of qa/old/configs-<release>.json, each distinct line
+once. This tree's API 4 encoders, the ones an API 4 helper is given, write the same events,
+and the lines are compared: JSON parsed, without the time, host, process ids and counter,
+text as it is.
+
+    ./qa/bin/test_old_responses               # both releases
+    ./qa/bin/test_old_responses 5.0           # one of them
+    ./qa/bin/test_old_responses 5.0 -v        # list every difference
+
+Every entry in ALLOWED is a line a 4.2 or 5.0 helper sees change on upgrade. Keep it short
+and argue each one.
+"""
+
+from __future__ import annotations
+
+import gzip
+import json
+import os
+import re
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT / 'src'))
+os.environ.setdefault('exabgp_log_enable', 'false')
+
+from exabgp.bgp.message import Message  # noqa: E402
+from exabgp.bgp.message.direction import Direction  # noqa: E402
+from exabgp.bgp.message.open.capability.negotiated import Negotiated  # noqa: E402
+from exabgp.configuration.configuration import Configuration  # noqa: E402
+from exabgp.reactor.api.response import Response  # noqa: E402
+from exabgp.rib import RIB  # noqa: E402
+from exabgp.version import json_v4, text_v4  # noqa: E402
+
+OLD = ROOT / 'qa' / 'old'
+RELEASES = ('4.2', '5.0')
+REPORTED = 20  # differences listed without -v
+
+VOLATILE = ('time', 'host', 'pid', 'ppid', 'counter')
+
+# the `exabgp` field of every JSON line, as the release and as this tree write it: compared
+# once for the release, not on each line
+VERSIONS: set[tuple[str, str]] = set()
+
+# (the releases it holds for, the encoder, regular expression on the event, regular
+# expression on what differs: a JSON path, or the release's text line) -> reason
+ALLOWED: dict[tuple[str, str, str, str], str] = {
+    ('4.2 5.0', 'json', r'^open ', r'/address-family-flags/'): (
+        'the Forwarding and Restart State of a Graceful Restart family had their names swapped '
+        '(RFC 4724 3); this tree names them right, for API 4 too (CHANGELOG)'
+    ),
+    ('4.2 5.0', 'json', r'^update ', r'/extended-community/\d+/string$'): (
+        'a route origin community with a two octet AS was printed as AS:IPv4, and 4.2 marked a '
+        'four octet AS with an L; this tree prints the number, as configuration reads it (CHANGELOG)'
+    ),
+    ('4.2 5.0', 'text', r'^update ', r'extended-community .*\b(origin|target):(\d+L:|\d+:\d+\.\d+\.\d+\.\d+)'): (
+        'the route origin community and the four octet AS, as in JSON (CHANGELOG)'
+    ),
+    ('4.2 5.0', 'text', r'^update ', r'as-path \( '): (
+        'an AS_SET was written in ( ) and an AS_SEQUENCE in [ ], the other way round from the '
+        'configuration; and a route with an AS_SET is treated as withdrawn (RFC 9774, CHANGELOG)'
+    ),
+    ('5.0', 'text', r'^operational ', r"advisory \"b'"): (
+        '5.0 wrote an advisory as the representation of Python bytes, "b\'a message\'"; this tree writes the message'
+    ),
+    ('4.2', 'json', r'^refresh packets ', r'^/type$'): '4.2 wrote "route refresh", 5.0 "route-refresh"',
+    ('4.2', 'json', r'^update ', r'/attribute/as-path$'): (
+        '4.2 wrote the AS path as a list of numbers, 5.0 as its segments with their type'
+    ),
+    ('4.2', 'json', r'^update ', r'/attribute/confederation-path$'): (
+        '4.2 wrote the confederation segments apart, as an empty list when there were none; 5.0 '
+        'writes them in the AS path segments'
+    ),
+    ('4.2', 'json', r'^update ', r'/attribute/attribute-0x19-0xC0$'): (
+        '4.2 did not know the IPv6 address specific extended community (RFC 5701), 5.0 does'
+    ),
+    ('4.2', 'text', r'^update ', r'attribute \[ 0x19 0xC0 '): 'the IPv6 extended community 4.2 did not know',
+    ('4.2', 'text', r'^update ', r'cluster-list \[ [^ ]+ \]'): (
+        '4.2 wrote a cluster list of one in brackets, 5.0 without'
+    ),
+    ('4.2', 'json', r'^update \S+ \S*800E[0-9A-F]{2}000285', r'/announce$'): (
+        '4.2 packed an IPv6 flow route a peer can not decode (test_old_commands counts them), and '
+        'read its own bytes back: this tree finds no route in them'
+    ),
+    (
+        '4.2',
+        'text',
+        r'^update \S+ \S*800E[0-9A-F]{2}000285',
+        r'announced flow ',
+    ): 'the IPv6 flow route of 4.2, as in JSON',
+}
+
+
+def allowed(release: str, encoder: str, event: str, where: str) -> bool:
+    return any(
+        release in names.split() and encoder == which and re.search(events, event) and re.search(places, where)
+        for names, which, events, places in ALLOWED
+    )
+
+
+class _State:
+    def __init__(self, name: str) -> None:
+        self._name = name
+
+    def name(self) -> str:
+        return self._name
+
+
+def stable(line: Any) -> Any:
+    """A JSON line without what changes by nature, a text line as it is."""
+    if not isinstance(line, str) or not line.startswith('{'):
+        return line
+    try:
+        found = json.loads(line)
+    except ValueError:
+        return {'invalid-json': re.sub(r'"(time|host|pid|ppid|counter)"\s*:\s*("[^"]*"|[0-9.]+),\s*', '', line)}
+    for key in VOLATILE:
+        found.pop(key, None)
+    return found
+
+
+def safe(call: Any, *arguments: Any) -> Any:
+    try:
+        return call(*arguments)
+    except Exception as exc:  # what a helper would be told is nothing, and the daemon logs it
+        return f'raised {type(exc).__name__}: {exc}'
+
+
+def shared(neighbor: Any, open_hexadecimal: str) -> Any:
+    """The session of the recorded OPEN, received and sent, as the recorder decoded with."""
+    negotiated = Negotiated.make_negotiated(neighbor, Direction.IN)
+    sent = Message.unpack(Message.CODE.of(1), bytes.fromhex(open_hexadecimal)[19:], negotiated)
+    negotiated.sent(sent)
+    negotiated.received(sent)
+    return negotiated
+
+
+def line(encoder: Any, neighbor: Any, negotiated: Any, raw: bytes, direction: str, consolidate: bool) -> Any:
+    """The line for one message: parsed, or parsed with its raw packet (`consolidate`)."""
+    header, body = (raw[:19], raw[19:]) if consolidate else (b'', b'')
+    message = Message.unpack(Message.CODE.of(raw[18]), raw[19:], negotiated)
+    name = NAMES[raw[18]]
+    if name == 'keepalive':
+        return encoder.keepalive(neighbor, direction, header, body, negotiated)
+    if name == 'operational':
+        return encoder.operational(neighbor, direction, message.CATEGORY, message, header, body, negotiated)
+    if name == 'update':
+        return encoder.update(neighbor, direction, message.data, header, body, negotiated)
+    return getattr(encoder, name)(neighbor, direction, message, header, body, negotiated)
+
+
+NAMES = {1: 'open', 2: 'update', 3: 'notification', 4: 'keepalive', 5: 'refresh', 6: 'operational'}
+
+
+def render(encoder: Any, neighbor: Any, negotiated: Any, event: str) -> Any:
+    """What the encoder writes for one event, named as the recorder named it."""
+    words = event.split()
+    name = words[0]
+    if name in ('up', 'connected'):
+        return safe(getattr(encoder, name), neighbor)
+    if name == 'down':
+        return safe(encoder.down, neighbor, 'peer reset')
+    if name == 'shutdown':
+        return safe(encoder.shutdown)
+    if name == 'negotiated':
+        return safe(encoder.negotiated, neighbor, negotiated)
+    if name == 'fsm':
+        return safe(encoder.fsm, neighbor, _State(words[1]))
+    if name == 'signal':
+        return safe(encoder.signal, neighbor, int(words[1]))
+    raw = bytes.fromhex(words[-1])
+    if words[1] == 'packets':
+        return safe(encoder.packets, neighbor, 'receive', Message.CODE.of(raw[18]), raw[:19], raw[19:], negotiated)
+    if words[1] == 'consolidate':
+        return safe(line, encoder, neighbor, negotiated, raw, 'receive', True)
+    return safe(line, encoder, neighbor, negotiated, raw, words[1], False)
+
+
+def neighbor_of(text: str) -> Any:
+    RIB._cache.clear()
+    with tempfile.NamedTemporaryFile('w', suffix='.conf') as handle:
+        handle.write(text)
+        handle.flush()
+        configuration = Configuration([handle.name])
+        if not configuration.reload():
+            return None  # refused, as test_old_configs allows: nothing to tell a helper about
+    return list(configuration.neighbors.values())[0]
+
+
+def compared(release: str, text: str, recorded: dict[str, Any], sent: dict[str, Any]) -> list[str] | None:
+    """What this tree writes differently, for each event the release's line was recorded for."""
+    neighbor = neighbor_of(text)
+    if neighbor is None:
+        return None
+    negotiated = shared(neighbor, sent['open'])
+    encoders = {'text': Response.V4.Text(text_v4), 'json': Response.V4.JSON(json_v4)}
+    found = []
+    for event, pair in sorted(recorded.items()):
+        for encoder, theirs in pair.items():
+            ours = stable(render(encoders[encoder], neighbor, negotiated, event))
+            if isinstance(theirs, dict) and isinstance(ours, dict) and 'exabgp' in theirs:
+                VERSIONS.add((theirs['exabgp'], ours.get('exabgp', '')))
+                theirs = {key: value for key, value in theirs.items() if key != 'exabgp'}
+                ours = {key: value for key, value in ours.items() if key != 'exabgp'}
+            if broken(theirs):
+                BROKEN[release] = BROKEN.get(release, 0) + 1
+                continue
+            for where in differences(ours, theirs):
+                if not allowed(release, encoder, event, where):
+                    found.append(
+                        f'{encoder} {event} {where}: release {json.dumps(theirs)} this tree {json.dumps(ours)}'
+                    )
+                    break
+    return found
+
+
+# lines the release could not write, by release: its exception, or JSON no helper could parse
+BROKEN: dict[str, int] = {}
+
+
+def broken(theirs: Any) -> bool:
+    return (isinstance(theirs, str) and theirs.startswith('raised ')) or (
+        isinstance(theirs, dict) and 'invalid-json' in theirs
+    )
+
+
+def differences(ours: Any, theirs: Any, path: str = '') -> list[str]:
+    """Where a helper reading what the release wrote finds something else in this tree's line.
+
+    A key this tree adds is not read by a helper written before it: only what the release
+    wrote is held to. A JSON difference is named by its path, a text one by the release's line.
+    """
+    if isinstance(theirs, dict) and isinstance(ours, dict):
+        found = []
+        for key, value in theirs.items():
+            found += differences(ours[key], value, f'{path}/{key}') if key in ours else [f'{path}/{key}']
+        return found
+    if isinstance(theirs, list) and isinstance(ours, list) and len(theirs) == len(ours):
+        return [
+            where for index, value in enumerate(theirs) for where in differences(ours[index], value, f'{path}/{index}')
+        ]
+    if isinstance(theirs, str) and isinstance(ours, str) and not path:
+        # a text difference is named by the first line of the release which this tree changed
+        mine = SHUTDOWN.sub('shutdown', ours).splitlines()
+        for index, written in enumerate(SHUTDOWN.sub('shutdown', theirs).splitlines()):
+            if index >= len(mine) or mine[index] != written:
+                return [written]
+        return [] if len(mine) == len(theirs.splitlines()) else ['(more lines)']
+    return [] if ours == theirs else [path or json.dumps(theirs)]
+
+
+# the text line of a shutdown names the daemon's process ids, which change from run to run
+SHUTDOWN = re.compile(r'^shutdown \d+ \d+')
+
+
+def check(release: str, verbose: bool) -> int:
+    recorded = json.loads(gzip.decompress((OLD / f'responses-{release}.json.gz').read_bytes()))
+    configs = json.loads((OLD / f'configs-{release}.json').read_text())
+    failures = []
+    lines = refused = 0
+    for text, events_of in recorded.items():
+        sent = list(configs[text]['neighbors'].values())[0]
+        differences = compared(release, text, events_of, sent)
+        if differences is None:
+            refused += 1
+            continue
+        lines += sum(len(pair) for pair in events_of.values())
+        failures.extend((text, why) for why in differences)
+    for text, why in failures if verbose else failures[:REPORTED]:
+        sys.stdout.write(f'{release}: {" ".join(text.split())[:200]}\n    {why}\n')
+    for theirs, ours in sorted(VERSIONS):
+        # kept as it is: 4.2 wrote 4.0.1, 5.0 5.0.0, and either value breaks the helpers of the other
+        sys.stdout.write(f'{release}: the "exabgp" field of a JSON line was {theirs}, this tree writes {ours}\n')
+    VERSIONS.clear()
+    sys.stdout.write(
+        f'{release}: {lines - len(failures)}/{lines} helper lines as {release} wrote them '
+        f'({BROKEN.get(release, 0)} {release} could not write, {refused} configurations this tree '
+        f'refuses, as test_old_configs allows)\n'
+    )
+    return len(failures)
+
+
+def main(argv: list[str]) -> int:
+    verbose = '-v' in argv
+    names = [name for name in argv if name != '-v'] or list(RELEASES)
+    failed = 0
+    for name in names:
+        if name not in RELEASES:
+            sys.stderr.write(f'no release {name}, choose from {", ".join(RELEASES)}\n')
+            return 2
+        if not (OLD / f'responses-{name}.json.gz').exists():
+            continue
+        failed += check(name, verbose)
+    return 1 if failed else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

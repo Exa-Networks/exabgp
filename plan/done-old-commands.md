@@ -118,6 +118,20 @@ authors happened to write. This plan covers the grammar itself.
   kept the pending list the neighbor also took); export and validate showed the doubles.
   4.2's `host-name`/`domain-name` digit rules fixed on the 4.2 branch.
 
+- 2026-10-03 helper output. `recorder.py responses` writes, with the release's own text and
+  JSON encoders, every event of each recorded neighbor: states, FSM, signals, `negotiated`,
+  its OPEN and UPDATEs and hand messages (KEEPALIVE, NOTIFICATION, ROUTE-REFRESH, End-of-RIB,
+  OPERATIONAL), received and sent, parsed, consolidated and raw. Both sides decode with the
+  session of the recorded OPEN; an event is kept once per input. `test_old_responses`
+  compares with this tree's API 4 encoders: JSON parsed, a key only this tree writes
+  accepted, differences allowed by JSON path. Fixed on main: the NOTIFICATION `message`
+  (RFC 9003 communication with its length octet), and API 4 written as 5.x: capabilities by
+  code, labels without raw value, flow `string` with its next-hop, text routes (no
+  `next-hop no-nexthop`, next-hop before rd, none for MUP/MVPN), cluster list in brackets.
+  Kept corrected for API 4: GR flag names, route origin, AS_SET brackets, RFC 9774. Version
+  field left at 4.0.1. A helper which never writes stays on API 6 JSON (documented).
+  4.2: 20670/20670 lines, 5.0: 23278/23278.
+
 ## Failures
 
 ## Blockers

@@ -18,6 +18,7 @@ needs the release's branch (origin/4.2, origin/5.0) and a Python it runs on:
 from __future__ import annotations
 
 import argparse
+import gzip
 import json
 import re
 import sys
@@ -263,13 +264,19 @@ def main() -> int:
         given = files + generated + api
         results = commands.recorder(arguments.python, tree, arguments.release, ['configurations'], json.dumps(given))
         grammar = commands.recorder(arguments.python, tree, arguments.release, ['grammar'])
+        accepted = {text: result for text, result in results.items() if result['accepted']}
+        # what a helper of the release is told about these neighbors, for test_old_responses
+        responses = commands.recorder(arguments.python, tree, arguments.release, ['responses'], json.dumps(accepted))
 
-    accepted = {text: result for text, result in results.items() if result['accepted']}
     if arguments.rejected:
         refused = {text: result['why'] for text, result in results.items() if not result['accepted']}
         arguments.rejected.write_text(json.dumps(refused, indent=1, sort_keys=True) + '\n')
     output = OLD / f'configs-{arguments.release}.json'
     output.write_text(json.dumps(accepted, indent=1, sort_keys=True) + '\n')
+    # compressed: one line for each distinct input is millions of characters; mtime 0, so
+    # recording the same twice writes the same file
+    told = OLD / f'responses-{arguments.release}.json.gz'
+    told.write_bytes(gzip.compress(json.dumps(responses, sort_keys=True).encode(), mtime=0))
     sys.stderr.write(
         f'{arguments.release}: {len(files)} configuration files, {len(found)} statements, '
         f'{len(accepted)} of {len(given)} accepted, written to {output.relative_to(ROOT)}\n'

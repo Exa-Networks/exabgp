@@ -32,6 +32,7 @@ input:
 |-----------|---------|------------|
 | `commands-<release>.json`: every API command, accepted or not, and the messages it sends | `qa/bin/record_old_commands` | `qa/bin/test_old_commands` |
 | `configs-<release>.json`: every configuration statement in a minimal neighbor, and every configuration file, with the OPEN and UPDATEs each neighbor is sent | `qa/bin/record_old_configs` | `qa/bin/test_old_configs` |
+| `responses-<release>.json.gz`: what a text and a JSON helper is written about those neighbors: states, FSM, signals, `negotiated`, each message received or sent, parsed, consolidated or raw | `qa/bin/record_old_configs` | `qa/bin/test_old_responses` |
 
 The inputs are not written by hand: they are harvested from the release's configurations,
 tests and documentation and from the wiki, and a keyword of the release's grammar no
