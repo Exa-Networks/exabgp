@@ -22,8 +22,28 @@ from exabgp.protocol.family import Family, FamilyTuple
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.operational import OperationalFamily
+    from exabgp.bgp.neighbor import Neighbor
     from exabgp.configuration.settings import ConfigurationSettings
     from exabgp.rib.route import Route
+
+
+def _withdrawable(neighbor: 'Neighbor', route: 'Route') -> 'Route':
+    """The route to withdraw, `next-hop self` resolved when it can be, dropped when not.
+
+    A withdrawal sends no next-hop: `withdraw route 2001:db8::/32 next-hop self` on an IPv4
+    session raised TypeError resolving self, and the route stayed announced.
+    """
+    try:
+        return neighbor.resolve_self(route)
+    except TypeError:
+        from exabgp.bgp.message.update.attribute import Attribute
+        from exabgp.protocol.ip import IP
+        from exabgp.rib.route import Route
+
+        attributes = route.attributes.copy()
+        if Attribute.CODE.NEXT_HOP in attributes:
+            attributes.remove(Attribute.CODE.NEXT_HOP)
+        return Route(route.nlri, attributes, nexthop=IP.NoNextHop)
 
 
 class _Configuration:
@@ -125,7 +145,7 @@ class _Configuration:
                 neighbor = self.neighbors[neighbor_name]
                 if route.nlri.family().afi_safi() in neighbor.families():
                     # resolve_self creates a copy with resolved nexthop
-                    neighbor.rib.outgoing.del_from_rib(neighbor.resolve_self(route))
+                    neighbor.rib.outgoing.del_from_rib(_withdrawable(neighbor, route))
                     result = True
                 else:
                     log.error(
@@ -176,7 +196,7 @@ class _Configuration:
             if neighbor_name in peers:
                 neighbor = self.neighbors[neighbor_name]
                 if route.nlri.family().afi_safi() in neighbor.families():
-                    neighbor.rib.outgoing.del_from_rib(neighbor.resolve_self(route))
+                    neighbor.rib.outgoing.del_from_rib(_withdrawable(neighbor, route))
                     result = True
 
         # Release from global store

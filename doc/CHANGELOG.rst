@@ -17,6 +17,8 @@ Version 6.0.0:
  * Fix: a route given `next-hop` twice takes the first, address and attribute alike. The
    attribute kept the first and the address the last, and `next-hop self next-hop <ip>`
    could not be packed.
+ * Fix: a withdrawal with `next-hop self` of the other address family than the session is
+   withdrawn; resolving self raised, the helper was answered an error and the route stayed.
  * Fix: an End-of-RIB is told to the API as its own message, "message": { "eor": {...} },
    as 4.2 and 5.x told it. It was filed as an announced route with a "null" next-hop, so
    a helper written for them never saw one, and one waiting for it stopped.
