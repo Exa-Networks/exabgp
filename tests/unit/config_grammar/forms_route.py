@@ -228,8 +228,9 @@ ANNOUNCE_FORMS: list[tuple[str, str, str, bool]] = [
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 med 4294967295', True),
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 med 4294967296', False),
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 local-preference 4294967296', False),
-    ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 name x', False),
-    ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 path-information 1', False),
+    # refused until 5.0's commands were checked against this tree (plan/wip-old-commands.md)
+    ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 name x', True),
+    ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 path-information 1', True),
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 label 5', False),
     ('ipv4', 'unicast', '2001:db8::/48 next-hop 10.0.0.1', True),
     ('ipv4', 'unicast', 'nothing next-hop 10.0.0.1', False),
@@ -250,7 +251,7 @@ ANNOUNCE_FORMS: list[tuple[str, str, str, bool]] = [
     ('ipv6', 'nlri-mpls', '2001:db8::/48 next-hop 2001:db8::1 label 5', True),
     ('ipv6', 'nlri-mpls', '2001:db8::/48 next-hop 2001:db8::1 label x', False),
     ('ipv6', 'mpls-vpn', '2001:db8::/48 next-hop 2001:db8::1 rd x', False),
-    ('ipv6', 'unicast', '2001:db8::/48 next-hop 2001:db8::1 name x', False),
+    ('ipv6', 'unicast', '2001:db8::/48 next-hop 2001:db8::1 name x', True),
     ('ipv6', 'mpls-vpn', '2001:db8::/48 next-hop 2001:db8::1 rd 1:1 label 5', True),
     ('ipv6', 'labeled-unicast', '2001:db8::/48 next-hop 2001:db8::1 label 5', False),
 ]

@@ -4,6 +4,9 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: `announce ipv4|ipv6 <family>` takes atomic-aggregate, originator-id, cluster-list,
+   aigp, attribute, name, split, watchdog, withdraw and path-information, as a static route
+   does. They were refused, while 5.0 accepted them and sent them.
  * Fix: an End-of-RIB is told to the API as its own message, "message": { "eor": {...} },
    as 4.2 and 5.x told it. It was filed as an announced route with a "null" next-hop, so
    a helper written for them never saw one, and one waiting for it stopped.

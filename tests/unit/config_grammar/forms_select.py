@@ -46,7 +46,7 @@ SELECT_FORMS: list[tuple[str, str, str, bool]] = [
     ('ipv4', 'mcast-vpn', 'shared-join source 10.0.0.1 group 239.0.0.1 rd 1:1 source-as 1', False),
     ('ipv4', 'mcast-vpn', 'source-ad source 10.0.0.1 group 239.0.0.1', False),
     ('ipv4', 'mcast-vpn', 'source-ad source 2001:db8::1 group 239.0.0.1 rd 1:1', False),
-    ('ipv4', 'mcast-vpn', 'source-ad source 10.0.0.1 group 239.0.0.1 rd 1:1 name x', False),
+    ('ipv4', 'mcast-vpn', 'source-ad source 10.0.0.1 group 239.0.0.1 rd 1:1 name x', True),
     ('ipv4', 'mcast-vpn', 'nothing source 10.0.0.1', False),
     ('ipv6', 'mcast-vpn', 'source-ad source fd00::1 group ff0e::1 rd 1:1 next-hop 10.0.0.1', True),
     ('ipv6', 'mcast-vpn', 'source-join source fd00::1 group ff0e::1 rd 1:1 source-as 65000', True),

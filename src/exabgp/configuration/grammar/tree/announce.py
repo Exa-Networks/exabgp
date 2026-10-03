@@ -8,8 +8,8 @@
 
 The families of an `announce` block read their values with the rules the legacy parser gave
 them, which are not quite those of `static`: `next-hop self` is IPv4 whatever the family,
-`med` and `local-preference` are capped at 32 bits, and a list of keywords which static
-routes take are refused, whatever their value (see REFUSED).
+and `med` and `local-preference` are capped at 32 bits. The other keywords of a static
+route are read as on a static route (see AS_ON_A_ROUTE).
 
 Copyright (c) 2009-2026 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
@@ -41,6 +41,7 @@ from exabgp.configuration.grammar.tree.static import (
     attribute_words,
     normalize,
     route_words,
+    split,
     static_block,
     value_fields,
 )
@@ -59,13 +60,7 @@ ANNOUNCED = '_announced'  # the routes of an address family block, until the blo
 
 
 class Refused(Type[Any]):
-    """A keyword the legacy parser accepts and can never use: every value of it is refused.
-
-    legacy: the announce families declare `name`, `split`, `atomic-aggregate`, ... with
-    validators which return a string, a number or an address where an attribute is needed,
-    and the route can not be built. `path-information` reads an address where a path id is
-    needed. They are refused here up front, which is what the legacy parser ends up doing.
-    """
+    """A keyword which is listed and can never be used: every value of it is refused."""
 
     def __init__(self, name: str) -> None:
         self.name = name
@@ -126,7 +121,10 @@ def _capped(name: str, make: Any) -> Any:
     return convert
 
 
-REFUSED = (
+# Read as on a static route. They were refused in an announce family, which 5.0 accepted
+# and sent (plan/wip-old-commands.md): `announce ipv4 unicast ... atomic-aggregate` from a
+# 5.0 helper was answered with an error.
+AS_ON_A_ROUTE = (
     'atomic-aggregate',
     'originator-id',
     'cluster-list',
@@ -165,9 +163,9 @@ IP_VALUES: dict[str, RouteValue] = {
     'community': ROUTE_VALUES['community'],
     'large-community': ROUTE_VALUES['large-community'],
     'extended-community': ROUTE_VALUES['extended-community'],
-    **{keyword: RouteValue(Refused(keyword), Target.ATTRIBUTE) for keyword in REFUSED},
+    **{keyword: ROUTE_VALUES[keyword] for keyword in AS_ON_A_ROUTE},
 }
-PATH_VALUES = {**IP_VALUES, 'path-information': RouteValue(Refused('path-information'), Target.NLRI, 'path_info')}
+PATH_VALUES = {**IP_VALUES, 'path-information': ROUTE_VALUES['path-information']}
 LABEL_VALUES = {**PATH_VALUES, 'label': ROUTE_VALUES['label']}
 VPN_VALUES = {**LABEL_VALUES, 'rd': ROUTE_VALUES['rd']}
 
@@ -251,6 +249,8 @@ RTC_VALUES: dict[str, RouteValue] = {
         _Default(), Target.NLRI, 'default', 'the default route target membership, every route target'
     ),
     **{keyword: value for keyword, value in IP_VALUES.items() if keyword not in ('split', 'aigp', 'otc', 'next-hop')},
+    # a membership is no route: what an announce family now reads as on a route stays refused
+    **{keyword: RouteValue(Refused(keyword), Target.ATTRIBUTE) for keyword in AS_ON_A_ROUTE if keyword != 'split'},
 }
 
 
@@ -296,7 +296,8 @@ class AnnounceLine(RouteStatement):
             nlri = self.announce_safi.nlri.from_settings(settings)
         except ValueError as exc:
             raise ConfigError(words.where(), str(exc)) from None
-        return [Route(nlri, attributes, nexthop=settings.nexthop)]
+        # `split /<len>` stands for the more specifics, as on a static route
+        return list(split(Route(nlri, attributes, nexthop=settings.nexthop)))
 
     def printed(self, route: Route) -> list[WordOrSyntax]:
         return announce_words(route)
