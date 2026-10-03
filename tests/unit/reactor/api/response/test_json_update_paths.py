@@ -15,10 +15,8 @@ of an empty UPDATE and the unparseable JSON of the `nlris` branch included.
 from __future__ import annotations
 
 import socket
-from types import SimpleNamespace
 from typing import Any
 
-import pytest
 
 from exabgp.bgp.message.update.attribute import AttributeCollection, NextHop, Origin
 from exabgp.bgp.message.update.collection import RouteLeak, RoutedNLRI, UpdateCollection
@@ -155,34 +153,13 @@ def test_the_attribute_format_and_next_hop_flag_are_passed_on() -> None:
 
 
 def test_an_end_of_rib_collection() -> None:
+    # its own message, as 4.2 and 5.x told it, not an announced route with a "null" next-hop
     assert _message(UpdateCollection.make_eor(AFI.ipv6, SAFI.unicast)) == (
-        '{ "update": { "announce": { "ipv6 unicast": { "null": '
-        '[ { "eor": { "afi" : "ipv6", "safi" : "unicast" } } ] } } } }'
+        '{ "eor": { "afi" : "ipv6", "safi" : "unicast" } }'
     )
 
 
 def test_an_end_of_rib_message() -> None:
     # EOR is an Update, not an UpdateCollection: Processes hands the encoders its decoded
     # UpdateCollection, the End-of-RIB marker of the family
-    assert _message(EOR.make_eor(AFI.ipv4, SAFI.unicast).data) == (
-        '{ "update": { "announce": { "ipv4 unicast": { "null": '
-        '[ { "eor": { "afi" : "ipv4", "safi" : "unicast" } } ] } } } }'
-    )
-
-
-@pytest.mark.skipif(
-    COMPILED, reason='the compiled encoder refuses the stand-in, and no UpdateCollection reaches the branch'
-)
-def test_nlris_with_nothing_announced_or_withdrawn() -> None:
-    # No real UPDATE reaches this branch: an UpdateCollection's nlris are its announces and
-    # withdraws, and an End-of-RIB puts its one NLRI in the announces.  Pinned with a stand-in
-    # so a split keeps it, output (not valid JSON) and all.
-    update = SimpleNamespace(
-        IS_EOR=False,
-        announces=[],
-        withdraws=[],
-        nlris=[EOR.EOR_NLRI(AFI.ipv4, SAFI.unicast)],
-        attributes=_attributes(),
-        route_leaks=None,
-    )
-    assert _message(update) == '{ { "eor": { "afi" : "ipv4", "safi" : "unicast" } } }'
+    assert _message(EOR.make_eor(AFI.ipv4, SAFI.unicast).data) == ('{ "eor": { "afi" : "ipv4", "safi" : "unicast" } }')

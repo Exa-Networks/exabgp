@@ -186,6 +186,15 @@ class API:
         message = neighbor.get('message')
         if not isinstance(message, dict):
             return
+
+        # an end of RIB is its own message, not inside an update
+        eor = message.get('eor')
+        if isinstance(eor, dict):
+            family = f'{eor.get("afi")} {eor.get("safi")}'
+            self._sent_announce['eor'] = self._sent_announce.get('eor', 0) + 1
+            self._sent_announce[family] = self._sent_announce.get(family, 0) + 1
+            return
+
         update = message.get('update')
         if not isinstance(update, dict):
             return

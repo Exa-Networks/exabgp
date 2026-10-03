@@ -431,23 +431,16 @@ class JSON:
         plus: dict[FamilyTuple, dict[str, list[tuple[NLRI, IP]]]] = {}
         minus: dict[FamilyTuple, list[NLRI]] = {}
 
-        if update_msg.IS_EOR:
-            # an End-of-RIB has no route, its one NLRI names the family
-            for nlri in update_msg.nlris:
-                nexthop_ip = getattr(nlri, 'nexthop', IP.NoNextHop)
-                nexthop_str = str(nexthop_ip) if nexthop_ip is not IP.NoNextHop else 'null'
-                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop_str, []).append((nlri, nexthop_ip))
-        else:
-            # UpdateCollection - get nexthop from RoutedNLRI container
-            for routed in update_msg.announces:
-                nlri = routed.nlri
-                nexthop_ip = routed.nexthop
-                nexthop_str = str(nexthop_ip)
-                plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop_str, []).append((nlri, nexthop_ip))
+        assert not update_msg.IS_EOR, 'an End-of-RIB is its own message, see _update'
+        for routed in update_msg.announces:
+            nlri = routed.nlri
+            nexthop_ip = routed.nexthop
+            nexthop_str = str(nexthop_ip)
+            plus.setdefault(nlri.family().afi_safi(), {}).setdefault(nexthop_str, []).append((nlri, nexthop_ip))
 
-            # Process withdraws - no nexthop needed
-            for nlri in update_msg.withdraws:
-                minus.setdefault(nlri.family().afi_safi(), []).append(nlri)
+        # Process withdraws - no nexthop needed
+        for nlri in update_msg.withdraws:
+            minus.setdefault(nlri.family().afi_safi(), []).append(nlri)
         return plus, minus
 
     def _announce_sections(
@@ -483,15 +476,17 @@ class JSON:
         return remove
 
     def _update(self, update_msg: UpdateCollection, include_meta: bool = True) -> dict[str, str]:
+        if update_msg.IS_EOR:
+            # its own message, `{ "eor": {...} }`, as 4.2 and 5.x told it: filed as an announced
+            # route with a "null" next-hop, a helper written for them never saw its End-of-RIB
+            assert update_msg.nlris, 'an End-of-RIB has the NLRI which names its family'
+            return {'message': self._nlri_to_json(update_msg.nlris[0])}
         plus, minus = self._update_by_family(update_msg)
-        leaks = update_msg.route_leaks if include_meta and not update_msg.IS_EOR else None
+        leaks = update_msg.route_leaks if include_meta else None
         add = self._announce_sections(plus, leaks)
         remove = self._withdraw_sections(minus)
 
         nlri_str = ''
-        if not add and not remove:
-            if update_msg.nlris:  # an EOR
-                return {'message': f'{{ {self._nlri_to_json(update_msg.nlris[0])} }}'}
         if add:
             add_str = ', '.join(add)
             nlri_str += f'"announce": {{ {add_str} }}'

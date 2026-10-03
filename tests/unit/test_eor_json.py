@@ -9,9 +9,12 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.reactor.api.response.json import JSON
 
 
 def test_eor_nlri_json_is_an_object():
@@ -29,3 +32,16 @@ def test_eor_nlri_json_survives_being_put_in_a_list():
     rendered = json.loads('[ {} ]'.format(', '.join(nlris)))
 
     assert rendered == [{'eor': {'afi': 'ipv6', 'safi': 'unicast'}}]
+
+
+@pytest.mark.parametrize('v4', [False, True])
+@pytest.mark.parametrize('afi,safi', [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast), (AFI.l2vpn, SAFI.evpn)])
+def test_an_eor_is_its_own_message(v4: bool, afi: AFI, safi: SAFI) -> None:
+    # 5.x and 4.2 told a helper `"message": { "eor": {...} }`. Filed as an announced route
+    # with a "null" next-hop, a helper written for them never saw its End-of-RIB.
+    encoder = JSON('test')
+    encoder.use_v4_json = v4
+
+    message = json.loads(encoder._update(EOR.make_eor(afi, safi).data)['message'])
+
+    assert message == {'eor': {'afi': str(afi), 'safi': str(safi)}}
