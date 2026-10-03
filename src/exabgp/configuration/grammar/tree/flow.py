@@ -47,7 +47,7 @@ from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.context import PrintContext, ReadContext
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
-from exabgp.configuration.grammar.section import Collector, Kept, Pending, Values
+from exabgp.configuration.grammar.section import Collector, Pending, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
     ROUTE_VALUES,
@@ -441,14 +441,6 @@ class FlowRouteSection(Collector[list[Route]]):
         return route_values(built)
 
 
-class FlowSection(Kept):
-    def build(self, name: Any, values: Values, context: ReadContext) -> Values:
-        # legacy: the flow section keeps the very list of the routes not yet taken, and the
-        # neighbor adds them from it after taking them: each is announced twice
-        values['routes'] = context.routes
-        return values
-
-
 ROUTE_BLOCK = Block(
     'route',
     field='_routes',
@@ -466,10 +458,11 @@ ROUTE_BLOCK = Block(
     ),
 )
 
+# the routes of the block reach the neighbor with the others not yet taken
+# (ReadContext.take_routes): the block keeps none, or each would be the neighbor's twice
 FLOW = Block(
     'flow',
     field='flow',
-    section=FlowSection(),
     doc='FlowSpec routes (RFC 8955, RFC 8956)',
     children=(Leaf('route', FlowLine(), field='_line', store=ROUTES, multiple=True), ROUTE_BLOCK),
 )

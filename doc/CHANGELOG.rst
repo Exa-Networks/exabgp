@@ -4,6 +4,11 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: a neighbor with a flow block holds each of its routes once. The flow block kept the
+   list of the routes read so far, which the neighbor took as well, so every route of the
+   neighbor, static ones included, was there twice: "exabgp configuration export" listed
+   each twice and "configuration validate" inserted each twice. A peer was always sent it
+   once. Found by qa/bin/test_old_configs.
  * Fix: `exabgp run` and `exabgp cli` take the commands of 5.x again: `show neighbor`,
    `shutdown`, `reload`, `reset` and the shortcuts which expand to them were refused as
    unknown, the daemon holding its own CLI helper to API v6. The helper still answers in

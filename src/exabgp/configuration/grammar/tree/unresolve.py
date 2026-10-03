@@ -158,11 +158,8 @@ def api(api: dict[str, Any], names: Iterator[int]) -> dict[str, Any]:
 def routes(routes: list[Any]) -> dict[str, Any]:
     """The static, announce and flow sections which print the routes, each where a statement reads it back.
 
-    The order of the routes is kept within a section, not across them. A flow section makes
-    every route of the neighbor count twice (legacy: it keeps the list of routes, which the
-    neighbor adds again): when the routes hold such doubles, one of each is printed and the
-    flow routes go in a flow section, which doubles them again on reading; otherwise the flow
-    routes are printed as announce lines, which do not.
+    The order of the routes is kept within a section, not across them. A flow route goes in a
+    flow section when a route block reads it back, and is printed as an announce line otherwise.
     """
     from exabgp.bgp.message.update.nlri import RTC, VPLS, Flow
     from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
@@ -170,22 +167,20 @@ def routes(routes: list[Any]) -> dict[str, Any]:
     from exabgp.configuration.grammar.tree.flow import action_pairs, block_printable
     from exabgp.configuration.grammar.tree.static import Unprintable
 
-    unique = list({id(route): route for route in routes}.values())
-    flow_section = len(unique) != len(routes)
     static: dict[str, list[Any]] = {'_routes': [], '_attributes': [], '_rtc': [], '_sr-policy': []}
     announce: dict[str, dict[str, list[Any]]] = {}
     flows: list[Any] = []
     flow_lines: list[Any] = []
-    for route in unique if flow_section else routes:
+    for route in routes:
         if isinstance(route.nlri, Flow):
             try:
                 action_pairs(route)
             except ValueError as exc:
                 raise Unprintable(str(exc)) from None
-            if flow_section and not route.nlri.rules and route.nexthop is IP.NoNextHop:
+            if not route.nlri.rules and route.nexthop is IP.NoNextHop:
                 # no match: only the one-line route of a flow section writes it
                 flow_lines.append([route])
-            elif flow_section and block_printable(route):
+            elif block_printable(route):
                 flows.append(route)
             else:
                 safi_keyword = 'flow-vpn' if route.nlri.safi == SAFI.flow_vpn else 'flow'
@@ -209,6 +204,6 @@ def routes(routes: list[Any]) -> dict[str, Any]:
     printed: dict[str, Any] = {'static': static}
     if announce:
         printed['announce'] = announce
-    if flow_section:
+    if flows or flow_lines:
         printed['flow'] = {'_routes': flows, '_line': flow_lines}
     return printed

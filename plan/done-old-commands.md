@@ -114,8 +114,9 @@ authors happened to write. This plan covers the grammar itself.
   octet AS changes already allowed for commands, `static { attributes ... nlri }` (5.0
   sent nothing, 4.2 withdrawals), and 4.2's missing hostname capability, misread
   `target:<ip>:<n>`, draft SRv6 syntax and IPv6 flow label routes it never sent.
-  Noticed, left: a flow route is in `neighbor.routes` twice, kept from the legacy parser on
-  purpose (grammar/tree/flow.py FlowSection); the RIB sends it once.
+  Then fixed: a neighbor with a flow block held each of its routes twice (the flow block
+  kept the pending list the neighbor also took); export and validate showed the doubles.
+  4.2's `host-name`/`domain-name` digit rules fixed on the 4.2 branch.
 
 ## Failures
 
