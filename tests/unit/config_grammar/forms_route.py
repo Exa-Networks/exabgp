@@ -228,7 +228,7 @@ ANNOUNCE_FORMS: list[tuple[str, str, str, bool]] = [
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 med 4294967295', True),
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 med 4294967296', False),
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 local-preference 4294967296', False),
-    # refused until 5.0's commands were checked against this tree (plan/wip-old-commands.md)
+    # refused until 5.0's commands were checked against this tree (plan/done-old-commands.md)
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 name x', True),
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 path-information 1', True),
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 label 5', False),

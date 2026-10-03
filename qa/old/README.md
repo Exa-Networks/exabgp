@@ -21,3 +21,25 @@ To take a newer copy of a branch:
     git archive origin/5.0 qa/encoding qa/sbin/bgp etc/exabgp | tar -x -C qa/old/5.0
 
 and update the commit above. 4.2 keeps its tests in `qa/ci` instead of `qa/encoding`.
+
+## Every command and every configuration statement
+
+The copied tests only cover what their authors wrote. `recorder.py` runs inside a 4.2 or 5.0
+tree, on the Python that release needs, and records what the release itself makes of each
+input:
+
+| Recording | Made by | Checked by |
+|-----------|---------|------------|
+| `commands-<release>.json`: every API command, accepted or not, and the messages it sends | `qa/bin/record_old_commands` | `qa/bin/test_old_commands` |
+| `configs-<release>.json`: every configuration statement in a minimal neighbor, and every configuration file, with the OPEN and UPDATEs each neighbor is sent | `qa/bin/record_old_configs` | `qa/bin/test_old_configs` |
+
+The inputs are not written by hand: they are harvested from the release's configurations,
+tests and documentation and from the wiki, and a keyword of the release's grammar no
+accepted input uses fails the recording. The checks run in `test_everything` and need
+neither the old trees nor their Python. To record again:
+
+    ./qa/bin/record_old_commands 5.0 --python python3.10 --wiki ../wiki
+    ./qa/bin/record_old_configs 5.0 --python python3.10 --wiki ../wiki
+
+4.2 needs `pyasyncore` in that Python. `neighbor-4.2.conf` is the neighbor 4.2 accepts,
+`neighbor.conf` the one 5.0 does.

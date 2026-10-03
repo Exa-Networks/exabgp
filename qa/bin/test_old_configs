@@ -1,0 +1,299 @@
+#!/usr/bin/env python3
+"""Fail if a configuration 4.2 or 5.0 accepts is refused, or makes this tree send something else.
+
+qa/old/configs-<release>.json holds every configuration qa/bin/record_old_configs made from
+the release's statements, with the OPEN and the UPDATEs the release sends each neighbor.
+This tree loads the same text and builds what it sends the same neighbor. Both are decoded
+by this tree's decoder: the OPEN's version, AS, hold time, router-id and capabilities, and
+the routes announced with their attributes, must be the same.
+
+    ./qa/bin/test_old_configs               # both releases
+    ./qa/bin/test_old_configs 5.0           # one of them
+    ./qa/bin/test_old_configs 5.0 -v        # list every failing configuration
+
+Every entry in ALLOWED is a configuration a 4.2 or 5.0 user sees change on upgrade. Keep it
+short and argue each one.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import sys
+import tempfile
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
+from typing import Any
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT / 'src'))
+os.environ.setdefault('exabgp_log_enable', 'false')
+
+from exabgp.bgp.message.open import Open, Version  # noqa: E402
+from exabgp.bgp.message.open.capability import Capabilities  # noqa: E402
+from exabgp.bgp.message.update.collection import RoutedNLRI, UpdateCollection  # noqa: E402
+from exabgp.configuration.check import _negotiated  # noqa: E402
+from exabgp.configuration.configuration import Configuration  # noqa: E402
+from exabgp.reactor.api.response.json import JSON  # noqa: E402
+from exabgp.rib import RIB  # noqa: E402
+
+commands = SourceFileLoader('test_old_commands', str(ROOT / 'qa' / 'bin' / 'test_old_commands')).load_module()
+
+OLD = ROOT / 'qa' / 'old'
+RELEASES = ('4.2', '5.0')
+REPORTED = 20  # failing configurations listed without -v
+MAX_ROUTES = 4096  # routes packed for one neighbor, as the recorder caps the release
+
+# (the releases it holds for, regular expression on the configuration) -> reason
+ALLOWED: dict[tuple[str, str], str] = {
+    ('4.2 5.0', r'\b(redirect|copy) \d+\.\d+\.\d+\.\d+'): (
+        'a flow redirect to an address sends the draft-ietf-idr-flowspec-redirect-ip community, '
+        'which carries the address, not the draft-simpson one with the address as next-hop: '
+        'CHANGELOG "Incompatible", `redirect-simpson <ip>` sends the old bytes'
+    ),
+    ('4.2 5.0', r'\b(origin|target):(\d+L|\d{6,}|[7-9]\d{4}|6[6-9]\d{3}|65[6-9]\d\d|655[4-9]\d|6553[6-9]):'): (
+        'a four octet AS in a route target or origin: 5.0 sent type 0x01, an IPv4 address, '
+        'this tree type 0x02 (RFC 5668); CHANGELOG'
+    ),
+    (
+        '4.2 5.0',
+        r'(?s)\b(port|destination-port|source-port) [^;]*;.*\bicmp-(type|code)\b|\bicmp-(type|code) [^;]*;.*\b(port|destination-port|source-port)\b',
+    ): (
+        'a flow route matching an ICMP type or code and a port matches no packet: RFC 8955 4.2 '
+        'says not to propagate it, this tree drops it with a warning (CHANGELOG)'
+    ),
+    ('4.2 5.0', r'\badd-path (send|receive|send/receive);'): (
+        'ADD-PATH for FlowSpec, issue #1140: with no `add-path { }` block it is offered for flow '
+        'and flow-vpn too (CHANGELOG)'
+    ),
+    ('4.2 5.0', r'\bmulti-session( enable)?;'): (
+        '5.0 meant one session per family for a multi-session neighbor, but its copies kept every '
+        'family and one name, so one session carried them all, with the draft capability sent '
+        'twice and naming no capability; this tree opens one session per family, as intended'
+    ),
+    ('4.2 5.0', r'\brouter-id \S+ local-as\b'): (
+        '`router-id <ip> local-as <asn>;` on one line: 5.0 ignored what followed the router-id, this tree refuses it'
+    ),
+    ('4.2 5.0', r'(?s)\bstatic \{.*\battributes .*\bnlri\b'): (
+        '`attributes ... nlri ...` in a static block: 5.0 announced nothing, 4.2 sent each prefix '
+        'as a withdrawal; this tree announces them, as the API command of the same words does'
+    ),
+    ('4.2', r'\bhost-name '): (
+        '4.2 never sent the FQDN capability (draft-walton-bgp-hostname-capability), its builder '
+        'was commented out; 5.0 and this tree send the configured host-name'
+    ),
+    ('4.2', r'\b(origin|target):\d+\.\d+\.\d+\.\d+:'): (
+        '4.2 read the IPv4 address of `target:<ip>:<n>` and `origin:<ip>:<n>` as a number and '
+        'sent a two octet AS community (type 0x00); this tree sends type 0x01, RFC 4360 3.2'
+    ),
+    ('4.2', r'\bbgp-prefix-sid-srv6 \( (ipv6|vpn|l3vpn) '): (
+        "4.2's SRv6 SID (`( ipv6|vpn|l3vpn <sid> )`) followed an early draft; 5.0 replaced it "
+        "with RFC 9252's `( l3-service|l2-service ... )`, and refuses it as this tree does"
+    ),
+    ('4.2', r'(?s)\bflow \{.*\b(flow-label|traffic-class) '): (
+        '4.2 took an IPv6 flow route matching a flow label or a traffic class and sent nothing; '
+        'this tree sends it (RFC 8956)'
+    ),
+    ('4.2 5.0', r'\bsource-interface <'): (
+        'an interface name longer than 15 characters can not exist (IFNAMSIZ): 5.0 took the '
+        "documentation's placeholder, this tree refuses it"
+    ),
+}
+
+
+def allowed(release: str, text: str) -> bool:
+    return any(release in names.split() and re.search(pattern, text) for names, pattern in ALLOWED)
+
+
+# families left out of the family lists of an OPEN, by release, when the configuration does
+# not name them: a neighbor with no family block negotiates every family the release knows
+UNLISTED: dict[str, tuple[str, ...]] = {
+    # 6.0 negotiates RTC only when asked for: with nothing announced a reflector following
+    # RFC 4684 6 sends no VPN route at all (CHANGELOG, "a neighbor with no family block")
+    '4.2 5.0': ('ipv4/rtc',),
+    # families the release did not have
+    '5.0': ('ipv4/sr-policy', 'ipv6/sr-policy'),
+    '4.2': ('ipv4/sr-policy', 'ipv6/sr-policy', 'ipv4/mcast-vpn', 'ipv6/mcast-vpn', 'ipv4/mup', 'ipv6/mup'),
+}
+
+
+def unlisted(release: str, text: str) -> set[str]:
+    found = set()
+    for names, families in UNLISTED.items():
+        if release in names.split():
+            found.update(family for family in families if family.split('/')[1] not in text)
+    return found
+
+
+def without(value: Any, ignored: set[str]) -> Any:
+    """The decoded capability without the ignored families, wherever they are named in it."""
+    if isinstance(value, dict):
+        return {key: without(each, ignored) for key, each in value.items() if key not in ignored}
+    if isinstance(value, list):
+        return [without(each, ignored) for each in value if each not in ignored]
+    return value
+
+
+def opened(raw: bytes, negotiated: Any, ignored: set[str]) -> str:
+    """An OPEN as what a peer learns from it."""
+    message = Open.unpack_message(raw[19:], negotiated)
+    capabilities = {str(int(code)): json.loads(value.json()) for code, value in message.capabilities.items()}
+    if 'software' in capabilities.get('75', {}):
+        capabilities['75']['software'] = 'ExaBGP'  # the version differs between releases by definition
+    capabilities = without(capabilities, ignored)
+    return json.dumps(
+        {
+            'version': int(message.version),
+            'asn': int(message.asn),
+            'hold_time': int(message.hold_time),
+            'router_id': str(message.router_id),
+            'capabilities': capabilities,
+        },
+        sort_keys=True,
+    )
+
+
+def difference(release: str, mine: str) -> str:
+    """What of the OPEN differs: the fields, and the capabilities by code."""
+    theirs, ours = json.loads(release), json.loads(mine)
+    found = []
+    for key in sorted(set(theirs) | set(ours)):
+        if key == 'capabilities':
+            for code in sorted(set(theirs[key]) | set(ours[key]), key=int):
+                if theirs[key].get(code) != ours[key].get(code):
+                    found.append(f'capability {code}: release {theirs[key].get(code)} this tree {ours[key].get(code)}')
+        elif theirs.get(key) != ours.get(key):
+            found.append(f'{key}: release {theirs.get(key)} this tree {ours.get(key)}')
+    return '; '.join(found)
+
+
+def sent(neighbor: Any) -> tuple[bytes, list[bytes], Any]:
+    """The OPEN and the UPDATEs this tree sends the neighbor, as Protocol.new_open and the RIB do."""
+    local_as = neighbor.session.open_asn() if neighbor.session.local_as else neighbor.session.peer_as
+    capabilities = Capabilities().new(neighbor, False, local_as=local_as)
+    message = Open.make_open(Version(4), local_as, neighbor.hold_time, neighbor.session.router_id, capabilities)
+    _, negotiated = _negotiated(neighbor)
+    updates: list[bytes] = []
+    if neighbor.rib.enabled:
+        for _ in neighbor.rib.outgoing.updates(False):
+            pass
+        for route in list(neighbor.rib.outgoing.cached_routes())[:MAX_ROUTES]:
+            route = neighbor.resolve_self(route)
+            collection = UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes)
+            updates.extend(collection.messages(negotiated))
+    return message.pack_message(negotiated), updates, negotiated
+
+
+def loaded(text: str) -> Configuration | str:
+    # a RIB outlives a reload by its neighbor's name: each configuration starts with none
+    RIB._cache.clear()
+    # from a file, as the release read it: a line ending with `\` continues only in a file
+    with tempfile.NamedTemporaryFile('w', suffix='.conf') as handle:
+        handle.write(text)
+        handle.flush()
+        configuration = Configuration([handle.name])
+        return _reloaded(configuration)
+
+
+def _reloaded(configuration: Configuration) -> Configuration | str:
+    try:
+        if configuration.reload():
+            return configuration
+    except Exception as exc:  # what the loader raises on a configuration is a refusal too
+        return f'raised {type(exc).__name__}: {exc}'
+    return f'refused: {configuration.error}'
+
+
+def final(messages: list[bytes], sessions: tuple[Any, ...], encoder: JSON) -> list[str]:
+    """The routes the peer ends with: of a route announced twice, the last announcement."""
+    found: dict[str, str] = {}
+    for message in messages:
+        for route in commands.routes(commands.content([message], sessions, encoder)):
+            if route.startswith('undecodable:'):
+                found[route] = route
+                continue
+            action, family, _, nlri, _ = json.loads(route)
+            # a flow NLRI is shown with the next-hop of its UPDATE, which is not part of the route
+            if isinstance(nlri, dict):
+                nlri = {key: value for key, value in nlri.items() if key != 'next-hop'}
+            found[json.dumps([family, nlri], sort_keys=True)] = route
+    return sorted(found.values())
+
+
+UNREADABLE = 'unreadable'  # what judged() answers when the release sent an UPDATE a peer can not decode
+
+
+def judged(release: str, text: str, result: dict[str, Any], encoder: JSON) -> str | None:
+    """None when this tree sends each neighbor what the release did, else what differs."""
+    configuration = loaded(text)
+    if isinstance(configuration, str):
+        return configuration
+    theirs = list(result['neighbors'].values())
+    ours = list(configuration.neighbors.values())[: len(theirs)]
+    if len(ours) != len(theirs):
+        return f'{len(theirs)} neighbors, this tree {len(ours)}'
+    for old, neighbor in zip(theirs, ours):
+        if 'error' in old or 'too_many' in old:
+            continue  # the release could not send this neighbor what it accepted
+        try:
+            message, updates, negotiated = sent(neighbor)
+        except Exception as exc:
+            return f'cannot send: {type(exc).__name__}: {exc}'
+        ignored = unlisted(release, text)
+        differs = difference(
+            opened(bytes.fromhex(old['open']), negotiated, ignored), opened(message, negotiated, ignored)
+        )
+        if differs:
+            return f'OPEN {differs}'
+        sessions = (negotiated.outbound(),)
+        mine = final(updates, sessions, encoder)
+        before = final([bytes.fromhex(each) for each in old['updates']], sessions, encoder)
+        if any(found.startswith('undecodable:') for found in before):
+            return UNREADABLE
+        if mine != before:
+            return f'routes: release {before[:2]} this tree {mine[:2]}'
+    return None
+
+
+def check(release: str, verbose: bool) -> int:
+    recorded = json.loads((OLD / f'configs-{release}.json').read_text())
+    encoder = JSON('test')
+    encoder.use_v4_json = True
+    failures, permitted, unreadable = [], 0, 0
+    for text, result in recorded.items():
+        why = judged(release, text, result, encoder)
+        if why is None:
+            continue
+        if why == UNREADABLE:
+            unreadable += 1
+            continue
+        if allowed(release, text):
+            permitted += 1
+            continue
+        failures.append((text, why))
+    for text, why in failures if verbose else failures[:REPORTED]:
+        sys.stdout.write(f'{release}: {" ".join(text.split())[:400]}\n    {why[:600]}\n')
+    sys.stdout.write(
+        f'{release}: {len(recorded) - len(failures)}/{len(recorded)} configurations behave as on {release} '
+        f'({permitted} allowed, {unreadable} where {release} sent an UPDATE a peer can not decode)\n'
+    )
+    return len(failures)
+
+
+def main(argv: list[str]) -> int:
+    verbose = '-v' in argv
+    names = [name for name in argv if name != '-v'] or list(RELEASES)
+    failed = 0
+    for name in names:
+        if name not in RELEASES:
+            sys.stderr.write(f'no release {name}, choose from {", ".join(RELEASES)}\n')
+            return 2
+        if not (OLD / f'configs-{name}.json').exists():
+            continue
+        failed += check(name, verbose)
+    return 1 if failed else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

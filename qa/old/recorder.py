@@ -6,10 +6,13 @@ and only uses what both releases have.
 
     python3.10 recorder.py grammar  < neighbor.conf               # the keyword tables
     python3.10 recorder.py record neighbor.conf < commands.json   # what each command does
+    python3.10 recorder.py configurations < configurations.json   # what each configuration sends
 
 `record` reads a JSON list of commands and prints, for each, whether the release accepts
 it and the BGP messages it would send: the UPDATEs a route command makes, the End-of-RIB,
-ROUTE-REFRESH or OPERATIONAL message of those commands, as hexadecimal.
+ROUTE-REFRESH or OPERATIONAL message of those commands, as hexadecimal. `configurations` reads
+a JSON list of configurations and prints, for each, whether the release loads it and, for each
+neighbor, the OPEN and the UPDATEs it sends once the session is up.
 """
 
 import importlib
@@ -78,7 +81,7 @@ def _registered():
     return sorted(functions, key=len, reverse=True)
 
 
-def _negotiated_42(neighbor):
+def _negotiated_42(neighbor, ibgp=True):
     """4.2 has no _negotiated: the session its check_neighbor builds, iBGP over the peer AS."""
     import copy
 
@@ -87,7 +90,8 @@ def _negotiated_42(neighbor):
     from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotiated
 
     neighbor = copy.deepcopy(neighbor)
-    neighbor.local_as = neighbor.peer_as
+    if ibgp:
+        neighbor.local_as = neighbor.peer_as
     capa = Capabilities().new(neighbor, False)
     capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
     peer_id = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.router_id).split('.'))
@@ -235,10 +239,86 @@ def record(configuration_file, commands):
     return results
 
 
+def _open(neighbor):
+    """The OPEN the release sends this neighbor, as its Protocol.new_open builds it."""
+    from exabgp.bgp.message import Open
+    from exabgp.bgp.message.open import Version
+    from exabgp.bgp.message.open.capability import Capabilities
+
+    if hasattr(neighbor, 'local_as'):  # 4.2
+        capabilities = Capabilities().new(neighbor, False)
+        return Open(Version(4), neighbor.local_as, neighbor.hold_time, neighbor.router_id, capabilities)
+    local_as = neighbor['local-as'] or neighbor['peer-as']
+    capabilities = Capabilities().new(neighbor, False, local_as=local_as)
+    return Open(Version(4), local_as, neighbor['hold-time'], neighbor['router-id'], capabilities)
+
+
+def _session_of(neighbor):
+    """The session of this neighbor as configured, not made iBGP: eBGP changes what is sent."""
+    try:
+        from exabgp.configuration.check import _negotiated  # 5.0
+    except ImportError:
+        return _negotiated_42(neighbor, ibgp=False)
+    return _negotiated(neighbor)
+
+
+def _sent(neighbor):
+    """The OPEN and the UPDATEs the release sends a neighbor once the session is up."""
+    found = {'open': bytes(_open(neighbor).message()).hex().upper(), 'updates': []}
+    negotiated = _session_of(neighbor)
+    for update in neighbor.rib.outgoing.updates(False):
+        if not hasattr(update, 'messages'):
+            continue  # a route refresh marker, there is none on a first session
+        for message in update.messages(negotiated):
+            found['updates'].append(bytes(message).hex().upper())
+            if len(found['updates']) > MAX_MESSAGES:
+                found['too_many'] = f'over {MAX_MESSAGES}'
+                found['updates'] = []
+                return found
+    return found
+
+
+# a configuration with more neighbors is recorded for the first ones only
+MAX_NEIGHBORS = 8
+
+
+def record_configurations(configurations):
+    """Each configuration loaded by the release, and what it sends each of its neighbors."""
+    from exabgp.configuration.configuration import Configuration
+    from exabgp.rib import RIB
+
+    results = {}
+    for text in configurations:
+        # a RIB outlives a reload by its neighbor's name: each configuration starts with none
+        RIB._cache.clear()
+        with open('recorded.conf', 'w') as handle:
+            handle.write(text)
+        try:
+            configuration = Configuration(['recorded.conf'])
+            loaded = configuration.reload()
+        except Exception as exc:
+            results[text] = {'accepted': False, 'why': f'{type(exc).__name__}: {exc}'}
+            continue
+        if not loaded:
+            results[text] = {'accepted': False, 'why': str(configuration.error)}
+            continue
+        neighbors = {}
+        for name, neighbor in list(configuration.neighbors.items())[:MAX_NEIGHBORS]:
+            try:
+                neighbors[name] = _sent(neighbor)
+            except Exception as exc:  # accepted, and can not be sent: the release's own bug
+                neighbors[name] = {'error': f'{type(exc).__name__}: {exc}'}
+        results[text] = {'accepted': True, 'neighbors': neighbors}
+    return results
+
+
 def main():
     _silence()
     if sys.argv[1] == 'grammar':
         json.dump({'registered': _registered(), 'sections': grammar()}, sys.stdout, indent=1, sort_keys=True)
+        return
+    if sys.argv[1] == 'configurations':
+        json.dump(record_configurations(json.load(sys.stdin)), sys.stdout, indent=1, sort_keys=True)
         return
     json.dump(record(sys.argv[2], json.load(sys.stdin)), sys.stdout, indent=1, sort_keys=True)
 

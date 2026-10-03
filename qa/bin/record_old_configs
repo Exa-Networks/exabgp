@@ -1,0 +1,284 @@
+#!/usr/bin/env python3
+"""Record what 4.2 and 5.0 make of every configuration statement they accept, for qa/bin/test_old_configs.
+
+The statements are not written by hand. Every configuration of the release, every code block
+of its documentation and of the wiki is read into its sections, and each statement of a
+neighbor is taken out on its own: a neighbor statement (`hold-time 30;`), one entry of a
+`family` or `capability` block, one route of a `static`, `flow`, `l2vpn` or `announce` block,
+with its block when it has one. Each is put into a minimal neighbor, and the release loads
+the configuration with its own code and records the OPEN and the UPDATEs it would send. The
+whole configuration files are recorded too.
+
+The result, qa/old/configs-<release>.json, is what test_old_configs holds this tree to. It
+needs the release's branch (origin/4.2, origin/5.0) and a Python it runs on:
+
+    ./qa/bin/record_old_configs 5.0 --python python3.10 [--wiki ../wiki]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+import tempfile
+from dataclasses import dataclass, field
+from importlib.machinery import SourceFileLoader
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+OLD = ROOT / 'qa' / 'old'
+
+# the harvest and the recorder of the API commands, shared
+commands = SourceFileLoader('record_old_commands', str(ROOT / 'qa' / 'bin' / 'record_old_commands')).load_module()
+
+MAX_DEPTH = 16  # sections nested deeper are not a configuration
+MAX_TEXT = 200_000  # characters of one configuration read, a larger file is not one
+MAX_UNITS = 8000  # statements recorded for one release
+
+# a block of a neighbor which holds routes: each of its entries is a statement, with its block
+ROUTES = {'static', 'flow', 'l2vpn', 'announce', 'vpls'}
+# a neighbor block left out: what it refers to (a process) is not in the minimal neighbor
+SKIPPED = {'api'}
+
+
+# statements of a keyword nothing harvested uses: (the block it goes in, the statement)
+HAND_STATEMENTS = [
+    ('', 'auto-flush true;'),
+    ('', 'auto-flush false;'),
+    ('', 'host-name routerone;'),
+    ('', 'domain-name example.com;'),
+    (
+        'flow',
+        '\troute r {\n\t\tmatch { source 10.0.0.1/32; }\n\t\tscope { interface-set transitive:input:1234:1234; }'
+        '\n\t\tthen { discard; }\n\t}',
+    ),
+    ('', 'adj-rib-out false;'),
+    ('', 'adj-rib-out true;'),
+    ('', 'md5-password c2VjcmV0;\n\tmd5-base64 true;'),
+    ('flow', '\troute r {\n\t\tmatch { destination-ipv4 10.0.0.0/24; }\n\t\tthen { accept; }\n\t}'),
+    ('flow', '\troute r {\n\t\tmatch { source-ipv4 10.0.0.0/24; }\n\t\tthen { discard; }\n\t}'),
+    ('flow', '\troute r {\n\t\tmatch { destination-ipv6 2001:db8::/32/0; }\n\t\tthen { discard; }\n\t}'),
+    ('flow', '\troute r {\n\t\tmatch { source-ipv6 2001:db8::/32/0; }\n\t\tthen { discard; }\n\t}'),
+    (
+        'flow',
+        '\troute r {\n\t\troute-distinguisher 65000:1;\n\t\tmatch { source 10.0.0.1/32; }\n\t\tthen { discard; }\n\t}',
+    ),
+    ('static', '\t\troute 10.0.0.0/24 next-hop 1.2.3.4 route-distinguisher 65000:1 label 100;'),
+    ('static', '\t\tattributes next-hop 1.2.3.4 community 1:1 nlri 10.0.0.0/24 10.0.1.0/24;'),
+    *[
+        ('operational', f'\t\t{name} afi ipv4 safi unicast {fields};')
+        for name, fields in (
+            ('adm', 'advisory "a message"'),
+            ('rpcq', 'sequence 1'),
+            ('rpcp', 'sequence 1 counter 2'),
+            ('apcq', 'sequence 1'),
+            ('apcp', 'sequence 1 counter 2'),
+            ('lpcq', 'sequence 1'),
+            ('lpcp', 'sequence 1 counter 2'),
+        )
+    ],
+]
+
+# the api block refers to a process: whole configurations, the neighbor's base added
+HAND_API = [
+    'neighbor-changes;',
+    'fsm;',
+    'negotiated;',
+    'signal;',
+    'send { notification; refresh; }',
+    'receive { notification; refresh; }',
+    'send { packets; }',
+    'receive { parsed; update; open; keepalive; operational; }',
+]
+
+
+# (release, keyword) no accepted configuration can use, and why
+UNREACHABLE = {
+    ('4.2', 'adm'): "4.2 raises on every advisory under Python 3 ('bytes' object has no attribute 'encode')",
+    ('4.2', 'asm'): "4.2 raises on every advisory under Python 3 ('bytes' object has no attribute 'encode')",
+}
+
+
+def uncovered(grammar: dict, accepted: list[str], release: str) -> list[str]:
+    """The keywords of the configuration sections no accepted configuration uses."""
+    used = {word for text in accepted for word in re.findall(r'[A-Za-z][\w-]*', text)}
+    missing = []
+    for name, section in sorted(grammar['sections'].items()):
+        if '.announce.' in name:  # the API commands' sections, test_old_commands covers them
+            continue
+        for keyword in section.get('keywords', []):
+            if keyword not in used and (release, keyword) not in UNREACHABLE:
+                missing.append(f'{keyword} ({name})')
+    return missing
+
+
+@dataclass
+class Block:
+    header: str
+    children: list[Block | str] = field(default_factory=list)
+
+    def text(self, indent: str = '') -> str:
+        inner = '\n'.join(
+            child.text(indent + '\t') if isinstance(child, Block) else f'{indent}\t{child};' for child in self.children
+        )
+        return f'{indent}{self.header} {{\n{inner}\n{indent}}}'
+
+
+def uncommented(text: str) -> str:
+    return '\n'.join(re.sub(r'(^|\s)#.*$', '', line) for line in text.splitlines())
+
+
+def parsed(text: str) -> list[Block | str] | None:
+    """The sections of a configuration, or None when it is not one (unbalanced, too deep)."""
+    if len(text) > MAX_TEXT:
+        return None
+    top = Block('')
+    stack = [top]
+    buffer: list[str] = []
+    for character in uncommented(text):
+        if character not in ';{}':
+            buffer.append(character)
+            continue
+        words = ' '.join(''.join(buffer).split())
+        buffer = []
+        if character == ';':
+            if words:
+                stack[-1].children.append(words)
+        elif character == '{':
+            if not words or len(stack) > MAX_DEPTH:
+                return None
+            block = Block(words)
+            stack[-1].children.append(block)
+            stack.append(block)
+        else:
+            if words:
+                stack[-1].children.append(words)  # the last statement of a block may lack its `;`
+            if len(stack) == 1:
+                return None
+            stack.pop()
+    if len(stack) != 1 or ''.join(buffer).strip():
+        return None
+    return top.children
+
+
+def units(sections: list[Block | str]) -> set[tuple[str, str]]:
+    """Each statement of each neighbor: (the block it goes in, '' for the neighbor, the statement)."""
+    found: set[tuple[str, str]] = set()
+    for neighbor in sections:
+        if not isinstance(neighbor, Block) or not neighbor.header.startswith('neighbor '):
+            continue
+        for child in neighbor.children:
+            if isinstance(child, str):
+                found.add(('', f'{child};'))
+                continue
+            name = child.header.split()[0]
+            if name in SKIPPED:
+                continue
+            nested = any(isinstance(each, Block) for each in child.children)
+            for each in child.children:
+                if isinstance(each, Block):
+                    found.add((child.header, each.text('\t')))
+                elif not nested or name not in ROUTES:
+                    found.add((child.header, f'\t\t{each};'))
+    return found
+
+
+def configuration(base: list[str], where: str, statement: str) -> str:
+    """The minimal neighbor with this statement in it."""
+    lines = list(base)
+    if not where:
+        keyword = statement.split()[0]
+        lines = [line for line in lines if line.split()[0] != keyword]
+        lines.append(statement)
+    else:
+        if where.split()[0] == 'family':
+            lines = [line for line in lines if not line.startswith('family')]
+        lines.append(f'{where} {{\n{statement}\n\t}}')
+    body = '\n'.join(f'\t{line}' for line in lines)
+    return f'neighbor 127.0.0.1 {{\n{body}\n}}\n'
+
+
+def base_of(release: str) -> list[str]:
+    specific = OLD / f'neighbor-{release}.conf'
+    sections = parsed((specific if specific.exists() else OLD / 'neighbor.conf').read_text())
+    assert sections and isinstance(sections[0], Block), 'qa/old/neighbor.conf is one neighbor'
+    found = []
+    for child in sections[0].children:
+        found.append(f'{child};' if isinstance(child, str) else child.text().replace('\n', ' ').replace('\t', ''))
+    return found
+
+
+def harvested(tree: Path, wiki: Path | None) -> tuple[list[str], set[tuple[str, str]]]:
+    """The configuration files of the release, and every statement written anywhere."""
+    files = []
+    for path in sorted((tree / 'etc').rglob('*.conf')):
+        text = path.read_text(errors='replace')
+        if parsed(text) is not None:
+            # the program is looked for when the configuration loads, from where the file was:
+            # one which exists everywhere, the program itself is not what is checked
+            files.append(re.sub(r'(?m)^(\s*run\s+)[^;]*;', r'\1/bin/cat;', text))
+    found: set[tuple[str, str]] = set()
+    for chunk in chunks(tree, wiki):
+        sections = parsed(chunk)
+        if sections:
+            found |= units(sections)
+    return files, found
+
+
+def chunks(tree: Path, wiki: Path | None) -> list[str]:
+    """Each configuration file, and each code block of the documentation, apart."""
+    paths = [path for folder in ('etc', 'qa', 'doc') for path in (tree / folder).rglob('*') if path.is_file()]
+    paths += sorted(wiki.rglob('*.md')) if wiki else []
+    found = []
+    for path in paths:
+        try:
+            text = path.read_text(errors='replace')
+        except OSError:
+            continue
+        if path.suffix in ('.md', '.rst'):
+            found.extend(re.findall(r'```[^\n]*\n(.*?)```', text, re.S))
+            found.extend(re.findall(r'::\n\n((?:[ \t]+.*\n|\n)+)', text))  # rst literal blocks
+        elif 'neighbor' in text:
+            found.append(text)
+    return found
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('release', choices=sorted(commands.SOURCE))
+    parser.add_argument('--python', default='python3.10', help='a Python the release runs on')
+    parser.add_argument('--wiki', type=Path, default=None, help='a checkout of the wiki, for its examples')
+    parser.add_argument('--rejected', type=Path, default=None, help='where to write what the release refused, and why')
+    arguments = parser.parse_args()
+
+    base = base_of(arguments.release)
+    with tempfile.TemporaryDirectory() as scratch:
+        tree = commands.old_tree(arguments.release, Path(scratch))
+        files, found = harvested(tree, arguments.wiki)
+        found.update(HAND_STATEMENTS)
+        generated = sorted({configuration(base, where, statement) for where, statement in found})[:MAX_UNITS]
+        process = 'process helper {\n\trun /bin/cat;\n\tencoder json;\n}\n'
+        api = [process + configuration(base, 'api', f'\t\tprocesses [ helper ];\n\t\t{each}') for each in HAND_API]
+        given = files + generated + api
+        results = commands.recorder(arguments.python, tree, arguments.release, ['configurations'], json.dumps(given))
+        grammar = commands.recorder(arguments.python, tree, arguments.release, ['grammar'])
+
+    accepted = {text: result for text, result in results.items() if result['accepted']}
+    if arguments.rejected:
+        refused = {text: result['why'] for text, result in results.items() if not result['accepted']}
+        arguments.rejected.write_text(json.dumps(refused, indent=1, sort_keys=True) + '\n')
+    output = OLD / f'configs-{arguments.release}.json'
+    output.write_text(json.dumps(accepted, indent=1, sort_keys=True) + '\n')
+    sys.stderr.write(
+        f'{arguments.release}: {len(files)} configuration files, {len(found)} statements, '
+        f'{len(accepted)} of {len(given)} accepted, written to {output.relative_to(ROOT)}\n'
+    )
+    missing = uncovered(grammar, list(accepted), arguments.release)
+    for keyword in missing:
+        sys.stderr.write(f'  no accepted configuration uses {keyword}\n')
+    return 1 if missing else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

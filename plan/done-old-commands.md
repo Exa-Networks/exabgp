@@ -1,6 +1,6 @@
 # Every 4.2 and 5.0 command and configuration statement still works
 
-**Status:** 🔄 Active
+**Status:** ✅ Complete
 **Created:** 2026-10-02
 **From:** the 4.2/5.0 compatibility work of `done-agent-reported-bugs.md`
 
@@ -43,8 +43,8 @@ authors happened to write. This plan covers the grammar itself.
 4. [x] Recorder and check: flow, vpls, attributes, eor, route-refresh, operational (5.0)
 5. [x] Recorder and check: the other commands (show, teardown, flush, clear, ...), accepted (5.0)
 6. [x] 4.2: the same
-7. [ ] Configuration statements, 5.0 then 4.2
-8. [ ] Wire into `test_everything` and CI; CHANGELOG
+7. [x] Configuration statements, 5.0 then 4.2
+8. [x] Wire into `test_everything`; CHANGELOG not needed (no behaviour of this tree changed)
 
 ## Progress
 
@@ -96,11 +96,33 @@ authors happened to write. This plan covers the grammar itself.
   only the first, `target:<ip>:<n>` sent as a two octet AS community, a `then` of a flow
   route kept only its first action, 224.0.0.0/4 sent as unicast, the draft SRv6 syntax.
 
+- 2026-10-03 configurations done. `recorder.py configurations` loads each configuration in
+  the release and records, for each neighbor, its OPEN and the UPDATEs its RIB sends.
+  `record_old_configs` harvests every configuration file and documentation code block,
+  takes each neighbor statement, `family`/`capability` entry and route (with its block) on
+  its own into the minimal neighbor, adds hand statements for keywords nothing used, and
+  fails when a keyword of the release's configuration grammar is still unused.
+  `test_old_configs` loads the same text from a file (a `\` continuation exists only in a
+  file), compares the OPEN by field and capability and the routes the peer ends with.
+  4.2: 1141/1141 (21 allowed), 5.0: 1193/1193 (18 allowed), 3.5 s, stage `old-configs`.
+  Not differences: the RIB outlives a load by neighbor name (cleared per configuration on
+  both sides); a neighbor with no family block gets the families the release knew, less
+  RTC in 6.0 (CHANGELOG); a route given twice is sent twice by the old releases and once
+  here, the peer keeps the last. No main bug found. Allowed, all argued in the file:
+  multi-session (5.0 meant one session per family and sent one), ADD-PATH for flow
+  (#1140), an unmatchable flow route dropped (RFC 8955 4.2), the redirect-ip and four
+  octet AS changes already allowed for commands, `static { attributes ... nlri }` (5.0
+  sent nothing, 4.2 withdrawals), and 4.2's missing hostname capability, misread
+  `target:<ip>:<n>`, draft SRv6 syntax and IPv6 flow label routes it never sent.
+  Noticed, left: a flow route is in `neighbor.routes` twice, kept from the legacy parser on
+  purpose (grammar/tree/flow.py FlowSection); the RIB sends it once.
+
 ## Failures
 
 ## Blockers
 
 ## Resume Point
 
-Step 7: configuration statements, 5.0 then 4.2: the old release's OPEN and UPDATEs for each
-statement, compared decoded with what this tree sends.
+Done. Possible next: the `api` statements are checked for acceptance only (their effect is
+on the helper, not the wire); a helper-side check would need a running session, as
+test_old_scripts has.

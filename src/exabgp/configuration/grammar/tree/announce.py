@@ -123,7 +123,7 @@ def _capped(name: str, make: Any) -> Any:
 
 
 # Read as on a static route. They were refused in an announce family, which 5.0 accepted
-# and sent (plan/wip-old-commands.md): `announce ipv4 unicast ... atomic-aggregate` from a
+# and sent (plan/done-old-commands.md): `announce ipv4 unicast ... atomic-aggregate` from a
 # 5.0 helper was answered with an error.
 AS_ON_A_ROUTE = (
     'atomic-aggregate',

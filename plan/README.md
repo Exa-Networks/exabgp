@@ -18,7 +18,6 @@
 
 | Plan | Description |
 |------|-------------|
-| `wip-old-commands.md` | Every 4.2 and 5.0 API command and configuration statement checked against main; 5.0 commands done, 4.2 and configuration next |
 | `wip-mypyc.md` | Whole-package mypyc build, wheel and binary integration; completion awaits green artifact CI |
 | `type-safety/` | MyPy error reduction |
 
@@ -133,6 +132,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-old-commands.md` | 2026-10-03 | Every 4.2 and 5.0 API command and configuration statement checked against main (qa/old) |
 | `done-agent-reported-bugs.md` | 2026-10-01 | Nine agent-reported bugs reproduced and fixed on main (sent UPDATEs as sent, as-path ASN4, env comments, unused words, ipv6 multicast, origin number, GR flags, group under API 4) |
 | `done-large-function-decomposition.md` | 2026-09-29 | The ten largest functions split, `long_function` 69 → 58 |
 | `done-rfc9234-roles-otc.md` | 2026-09-29 | BGP Roles and OTC, ingress insertion included; outcome note added, cleanup moved on |
