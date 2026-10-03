@@ -37,6 +37,25 @@ def validate_announce(route: 'Route') -> str | None:
     return validate_announce_nlri(route.nlri, route.nexthop)
 
 
+async def refused(self: 'API', reactor: 'Reactor', service: str, peers: list[str], routes: list['Route']) -> bool:
+    """Answer an error for the first route which can not be sent, before any is announced.
+
+    Only `announce route` checked: `announce attributes ... rd 100:100 nlri ...` with no label
+    was taken, answered done, and failed when the RIB packed it.
+    """
+    neighbors = [reactor.configuration.neighbors[peer] for peer in peers if peer in reactor.configuration.neighbors]
+    for route in routes:
+        error = validate_announce(route) or next(
+            (why for why in (neighbor.next_hop_refused(route.nexthop) for neighbor in neighbors) if why), ''
+        )
+        if error:
+            peer_list = ', '.join(peers) if peers else 'all peers'
+            self.log_failure(f'invalid route for {peer_list}: {error}')
+            await reactor.processes.answer_error(service, error)
+            return True
+    return False
+
+
 def parse_sync_mode(command: str, reactor: 'Reactor', service: str) -> tuple[str, bool]:
     """Parse sync/async keyword from command and determine sync mode.
 
@@ -115,15 +134,10 @@ def announce_route(
             # Register flush callbacks for connected peers (if sync mode)
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
-            for route in routes:
-                # Validate route before announcing (early feedback)
-                error = validate_announce(route)
-                if error:
-                    peer_list = ', '.join(peers) if peers else 'all peers'
-                    self.log_failure(f'invalid route for {peer_list}: {error}')
-                    await reactor.processes.answer_error(service, error)
-                    return
+            if await refused(self, reactor, service, peers, routes):
+                return
 
+            for route in routes:
                 reactor.configuration.announce_route(peers, route, service)
                 peer_list = ', '.join(peers) if peers else 'all peers'
                 self.log_message(f'route added to {peer_list} : {route.extensive()}')
@@ -218,6 +232,9 @@ def announce_vpls(
                 await reactor.processes.answer_error(service)
                 return
 
+            if await refused(self, reactor, service, peers, routes):
+                return
+
             # Register flush callbacks for connected peers (if sync mode)
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
@@ -298,6 +315,9 @@ def announce_attributes(
             if not routes:
                 self.log_failure(f'command could not parse route in : {cmd}')
                 await reactor.processes.answer_error(service)
+                return
+
+            if await refused(self, reactor, service, peers, routes):
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -392,6 +412,9 @@ def announce_flow(
             if not routes:
                 self.log_failure(f'command could not parse flow in : {cmd}')
                 await reactor.processes.answer_error(service)
+                return
+
+            if await refused(self, reactor, service, peers, routes):
                 return
 
             # Register flush callbacks for connected peers (if sync mode)
@@ -601,6 +624,9 @@ def announce_ipv4(
                 await reactor.processes.answer_error(service)
                 return
 
+            if await refused(self, reactor, service, peers, routes):
+                return
+
             # Register flush callbacks for connected peers (if sync mode)
             flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
@@ -681,6 +707,9 @@ def announce_ipv6(
             if not routes:
                 self.log_failure(f'command could not parse ipv6 in : {cmd}')
                 await reactor.processes.answer_error(service)
+                return
+
+            if await refused(self, reactor, service, peers, routes):
                 return
 
             # Register flush callbacks for connected peers (if sync mode)

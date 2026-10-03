@@ -10,6 +10,10 @@ Version 6.0.0:
  * Fix: a labelled or VPN route withdrawn without a label is sent with a label field, the
    Compatibility field 0x800000 of RFC 8277 2.4. It had none, so the receiver read the
    first octets of the route distinguisher, or of the prefix, as the label.
+ * Fix: every announce command refuses a route which can not be sent before announcing any:
+   a VPN route with no label, or a link-local next-hop without the link-local next-hop
+   capability. Only `announce route` checked; the others answered done and the route
+   failed when the RIB packed it.
  * Fix: an End-of-RIB is told to the API as its own message, "message": { "eor": {...} },
    as 4.2 and 5.x told it. It was filed as an announced route with a "null" next-hop, so
    a helper written for them never saw one, and one waiting for it stopped.

@@ -389,6 +389,17 @@ class Neighbor:
     def __ne__(self, other: object) -> bool:
         return not self == other
 
+    def next_hop_refused(self, nexthop: IP) -> str:
+        """Why a route with this next-hop can not be announced to this neighbor, '' when it can.
+
+        A link-local next-hop reaches only the peer sharing the link, and only with the
+        link-local next-hop capability. Configuration validation refused it, the API did
+        not: `announce route 2001:db8::/32 next-hop fe80::1` raised when the RIB packed it.
+        """
+        if not nexthop.is_link_local() or self.capability.link_local_nexthop.is_enabled():
+            return ''
+        return f'next-hop {nexthop} is link-local but the link-local next-hop capability is not enabled'
+
     def ip_self(self, afi: AFI) -> IP:
         chosen = self.session.ip_self(afi)
         if not chosen.is_link_local():
