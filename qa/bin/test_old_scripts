@@ -100,12 +100,6 @@ ALLOWED: dict[tuple[str, str], str] = {
     ),
     ('5.0', 'conf-ebgp'): 'the same test peer OPEN as api-flow-merge',
     ('4.2', 'api-teardown'): 'the same `teardown 4` communication as 5.0 api-teardown',
-    ('4.2', 'api-no-respawn'): (
-        'issue #304: the routes of a helper which exits are withdrawn, so the one this helper '
-        'announces before it exits never reaches the peer; `on-exit keep;` in its process '
-        'block is what 4.2 did'
-    ),
-    ('5.0', 'api-no-respawn'): 'the routes of a helper which exits, as 4.2 api-no-respawn',
     ('4.2', 'api-reload'): (
         '4.2 announced again the routes a reload left unchanged; 5.0 and 6.0 send what changed, '
         'and the peer ends with the same routes'

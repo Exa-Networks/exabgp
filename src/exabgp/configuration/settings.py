@@ -40,16 +40,19 @@ class ProcessSettings:
     run: list[str]
     encoder: Encoder = Encoder.TEXT
     respawn: bool = True
-    on_exit: OnExit = OnExit.WITHDRAW
+    # unset, the API version of the program decides: see Processes._queue_exit
+    on_exit: OnExit | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """The form the reactor takes a process in, the keys being the configuration keywords."""
-        return {
+        process: dict[str, Any] = {
             'run': list(self.run),
             'encoder': str(self.encoder),
             'respawn': self.respawn,
-            'on-exit': str(self.on_exit),
         }
+        if self.on_exit is not None:
+            process['on-exit'] = str(self.on_exit)
+        return process
 
     @classmethod
     def from_dict(cls, process: dict[str, Any]) -> ProcessSettings:
@@ -58,7 +61,7 @@ class ProcessSettings:
             run=list(process['run']),
             encoder=Encoder(process.get('encoder', Encoder.TEXT)),
             respawn=process.get('respawn', True),
-            on_exit=OnExit(process.get('on-exit', OnExit.WITHDRAW)),
+            on_exit=OnExit(process['on-exit']) if 'on-exit' in process else None,
         )
 
 

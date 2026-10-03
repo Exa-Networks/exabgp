@@ -49,8 +49,10 @@ PROCESS = Block(
             'on-exit',
             Choice(OnExit, 'on-exit'),
             field='on_exit',
-            default=OnExit.WITHDRAW,
-            doc='what happens to the routes the program announced when it exits',
+            doc=(
+                'what happens to the routes the program announced when it exits; unset, they are '
+                'kept for a program using API 4 and withdrawn otherwise'
+            ),
         ),
     ),
 )

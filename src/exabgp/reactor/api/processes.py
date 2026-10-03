@@ -266,6 +266,20 @@ class Processes:
         """The helpers which are gone for good: never started, or ended and not respawned."""
         return sorted(set(self._broken) | set(self._ended))
 
+    def _on_exit(self, process: str) -> tuple[str, str]:
+        """What to do with the routes of a helper which exited, and why.
+
+        `on-exit` in its process block decides. Unset, a helper using API 4 keeps them, as
+        4.x and 5.x did, and any other has them withdrawn (issue #304).
+        """
+        configured = self._configuration.get(process, {}).get('on-exit')
+        if configured is not None:
+            return configured, 'on-exit'
+        version = self.api_version(process)
+        if version == API_V4:
+            return 'keep', 'API 4'
+        return 'withdraw', 'API 6' if version == API_V6 else 'API undecided'
+
     def _queue_exit(self, process: str) -> None:
         """Tell the reactor a helper has exited, unless its routes are to be kept.
 
@@ -274,7 +288,9 @@ class Processes:
         """
         if process.startswith(API_PREFIX):
             return
-        if self._configuration.get(process, {}).get('on-exit', 'withdraw') != 'withdraw':
+        action, why = self._on_exit(process)
+        log.info(lazymsg('process.exited process={p} routes={a} by={w}', p=process, a=action, w=why), 'processes')
+        if action != 'withdraw':
             return
         self._command_queue.append((process, self.EXITED))
 

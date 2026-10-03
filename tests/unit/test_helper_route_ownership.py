@@ -26,6 +26,7 @@ from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
+from exabgp.reactor.api.dispatch.version import API_AUTO, API_V4, API_V6
 from exabgp.reactor.loop import Reactor
 from exabgp.rib.outgoing import OutgoingRIB
 from exabgp.rib.route import Route
@@ -171,8 +172,12 @@ def _process(on_exit: str) -> dict:
     return c.processes['helper']
 
 
-def test_on_exit_defaults_to_withdraw() -> None:
-    assert _process('')['on-exit'] == 'withdraw'
+def test_on_exit_is_left_unset_for_the_api_version_to_decide() -> None:
+    assert 'on-exit' not in _process('')
+
+
+def test_on_exit_withdraw_is_accepted() -> None:
+    assert _process('withdraw')['on-exit'] == 'withdraw'
 
 
 def test_on_exit_keep_is_accepted() -> None:
@@ -208,8 +213,11 @@ def processes():
                 created._terminate(name)
 
 
-def _start(processes, name: str, on_exit: str = 'withdraw') -> None:
-    processes.start({name: {'run': ['/bin/cat'], 'encoder': 'text', 'respawn': False, 'on-exit': on_exit}}, False)
+def _start(processes, name: str, on_exit: str | None = 'withdraw') -> None:
+    process = {'run': ['/bin/cat'], 'encoder': 'text', 'respawn': False}
+    if on_exit is not None:
+        process['on-exit'] = on_exit
+    processes.start({name: process}, False)
     assert name in processes._process
 
 
@@ -231,6 +239,36 @@ def test_on_exit_keep_queues_nothing(processes) -> None:
     processes._handle_problem('helper')
 
     assert not processes._command_queue
+
+
+@pytest.mark.parametrize(
+    ('version', 'withdrawn'),
+    [
+        (API_V4, False),  # a helper written for 4.x and 5.x keeps the routes it leaves, as they did
+        (API_V6, True),  # issue #304
+        (API_AUTO, True),  # it never said which: the default of this release
+    ],
+)
+def test_without_on_exit_the_api_version_decides(processes, version: int, withdrawn: bool) -> None:
+    _start(processes, 'helper', on_exit=None)
+    processes._api_version['helper'] = version
+
+    processes._handle_problem('helper')
+
+    assert (processes.EXITED in [command for _, command in processes._command_queue]) is withdrawn
+
+
+@pytest.mark.parametrize('version', [API_V4, API_V6])
+def test_on_exit_wins_over_the_api_version(processes, version: int) -> None:
+    _start(processes, 'keeper', on_exit='keep')
+    _start(processes, 'withdrawer', on_exit='withdraw')
+    processes._api_version['keeper'] = version
+    processes._api_version['withdrawer'] = version
+
+    processes._handle_problem('keeper')
+    processes._handle_problem('withdrawer')
+
+    assert list(processes._command_queue) == [('withdrawer', processes.EXITED)]
 
 
 def test_the_cli_helper_never_owns_routes(processes) -> None:

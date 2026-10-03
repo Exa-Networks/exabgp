@@ -120,7 +120,6 @@
       "fsm": [],
       "negotiated": [],
       "neighbor-changes": [],
-      "on-exit": "withdraw",
       "respawn": true,
       "run": [
         "/Users/thomas/Code/github.com/exa-networks/exabgp/main/etc/exabgp/run/api-announce.run"

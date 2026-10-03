@@ -146,6 +146,29 @@ class TestMigrateConf5ToMain:
         assert result.content == config
         assert len(result.changes) == 0
 
+    def test_a_process_keeps_its_routes_when_it_exits(self) -> None:
+        # unset, on-exit follows the API version: a helper moved to API 6 by --wrap-api would
+        # have its routes withdrawn on exit, which 4.x and 5.x never did
+        config = 'process one {\n\trun ./one.py;\n\tencoder json;\n}\nprocess two { run ./two.py; }\n'
+        result = migrate_conf_5_to_main(config)
+        assert result.content == (
+            'process one {\n\trun ./one.py;\n\tencoder json;\n\ton-exit keep;\n}\n'
+            'process two { run ./two.py; on-exit keep; }\n'
+        )
+        assert len(result.changes) == 2
+
+    def test_a_process_with_on_exit_is_left_alone(self) -> None:
+        config = 'process one {\n\trun ./one.py;\n\ton-exit withdraw;\n}\n'
+        assert migrate_conf_5_to_main(config).content == config
+
+    def test_the_migrated_process_loads(self) -> None:
+        from exabgp.configuration.configuration import Configuration
+
+        content = migrate_conf('process one {\n\trun /bin/cat;\n}\n', '4', 'main').content
+        configuration = Configuration([content], text=True)
+        assert configuration.reload(), configuration.error
+        assert configuration.processes['one']['on-exit'] == 'keep'
+
 
 class TestMigrateConfChain:
     """Tests for full migration chain."""

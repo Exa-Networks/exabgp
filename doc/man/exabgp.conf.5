@@ -18,8 +18,8 @@ process <name> {  # an external program exabgp runs and talks to over the API
     # how messages to the program are written, default text
     encoder text|json;
     respawn true|false;  # restart the program when it exits, default true
-    # what happens to the routes the program announced when it exits, default
-    # withdraw
+    # what happens to the routes the program announced when it exits; unset,
+    # they are kept for a program using API 4 and withdrawn otherwise
     on-exit withdraw|keep;
 }
 neighbor <ip>[/<mask>] {  # a BGP peer
@@ -497,15 +497,24 @@ template {  # statements shared by neighbors
 .\" syntax: end
 .Ed
 .Pp
-When a process exits, the routes it announced are withdrawn from every
-neighbor, and a route which replaced one from the configuration gives the
-configured one back.
+When a process exits,
+.Cm on-exit withdraw
+withdraws the routes it announced from every neighbor, and a route which
+replaced one from the configuration gives the configured one back.
 This happens even when the process is respawned: the new process starts
 with nothing announced.
 .Cm on-exit keep
 leaves the routes announced, as releases before 6.0 did.
-The default is
-.Cm withdraw .
+.Pp
+Without
+.Cm on-exit ,
+the API version of the process decides: the routes of a process using
+API 4, the commands of releases before 6.0, are kept, and those of any
+other process are withdrawn.
+.Nm exabgp migrate conf
+writes
+.Cm on-exit keep
+in each process section it migrates.
 .Pp
 Please note that multi-line sections really do need to be written as
 multiple lines: the first one ending in "{", and ending with a line

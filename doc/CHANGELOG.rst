@@ -190,12 +190,15 @@ Version 6.0.0:
    treated as withdrawn, as RFC 9774 requires, and an AS4_PATH from a two octet peer is
    checked the same way. They used to be accepted and passed to the API as announcements.
    "as-set accept;" on a neighbor keeps the old behaviour, for route collectors.
- * Incompatible: the routes an API process announced are withdrawn when it exits, issue
+ * Incompatible: the routes an API 6 process announced are withdrawn when it exits, issue
    #304. They used to stay announced with nothing left to withdraw them, so a crashed
    DDoS detector kept its blackholes up. A route which replaced one from the configuration
    gives the configured route back. A respawned process starts with nothing announced and
-   has to announce its routes again. "on-exit keep;" in the process block keeps the old
-   behaviour. Routes sent from the CLI are never withdrawn this way.
+   has to announce its routes again. A process using API 4, the commands of 4.x and 5.x,
+   keeps its routes as before, so an old helper which announces and exits works unchanged.
+   "on-exit keep;" or "on-exit withdraw;" in the process block decides for either API.
+   "exabgp migrate conf" writes "on-exit keep;" in every process block, as "--wrap-api"
+   moves the helper to API 6. Routes sent from the CLI are never withdrawn this way.
  * Fix: "api.terminate" stops exabgp when a helper process dies, issue #304. It had stopped
    working with the move to asyncio, and a helper which exited, rather than failing a write,
    was never noticed at all, so its routes stayed announced with nobody left to withdraw

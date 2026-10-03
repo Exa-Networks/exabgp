@@ -3,7 +3,8 @@
 from exabgp_api import counters, send, trace, wait_for_ack
 
 # the process exits once its route is on the wire, without waiting for a shutdown:
-# ExaBGP must then withdraw what it announced (on-exit defaults to withdraw).
+# ExaBGP must then withdraw what it announced: without on-exit, the routes of an API 6
+# helper are withdrawn (an API 4 one keeps them, as 4.x and 5.x did)
 # exiting before the session is up would cancel the announce inside the RIB, and
 # the peer would see neither message
 BARRIER_TIMEOUT = 20.0
@@ -18,7 +19,7 @@ def barrier(what: str, expected_count: int = 1, **events) -> None:
 
 def main() -> None:
     barrier('the session coming up', expected_count=0, state=(('up', 1),))
-    send('announce route 1.1.1.1/32 next-hop 11.11.11.11')
+    send('peer * announce route 1.1.1.1/32 next-hop 11.11.11.11')
     barrier('1.1.1.1/32 on the wire', announce=(('1.1.1.1/32', 1),))
     trace('exiting')
 

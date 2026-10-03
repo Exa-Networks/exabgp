@@ -159,11 +159,47 @@ def migrate_conf_4_to_5(content: str, verbose: bool = False) -> MigrationResult:
     return MigrationResult(result, changes, '4', '5')
 
 
+def keep_on_exit(content: str) -> tuple[str, list[str]]:
+    """Add `on-exit keep;` to each process block which does not say what happens on exit.
+
+    4.x and 5.x kept the routes of a program which exited. Unset, main keeps them for a
+    program using API 4 only, and `--wrap-api` moves the program to API 6.
+    """
+    changes: list[str] = []
+    result = content
+    position = 0
+    for _ in range(content.count('process')):  # at most one block per occurrence of the word
+        found = re.compile(r'\bprocess\s+([\w.-]+)\s*\{').search(result, position)
+        if found is None:
+            break
+        close = find_balanced_braces(result, found.end() - 1)
+        if close == -1:
+            break
+        position = close
+        if re.search(r'\bon-exit\b', result[found.end() : close]):
+            continue
+        before = result[found.end() : close]
+        if '\n' in before.rstrip(' \t'):
+            indent = re.search(r'\n([ \t]*)\S', before)
+            addition = f'{indent.group(1) if indent else "    "}on-exit keep;\n'
+            insert = found.end() + len(before.rstrip(' \t'))
+        else:
+            addition = 'on-exit keep; '
+            insert = close
+        result = result[:insert] + addition + result[insert:]
+        position = close + len(addition)
+        changes.append(
+            f"Added 'on-exit keep;' to process {found.group(1)}: its routes stay when it exits, as in 4.x and 5.x"
+        )
+    return result, changes
+
+
 def migrate_conf_5_to_main(content: str, verbose: bool = False) -> MigrationResult:
     """Migrate configuration from 5.x to main (6.0) format.
 
     Changes:
     - 'nlri-mpls' -> 'labeled-unicast' (optional, both work)
+    - 'on-exit keep;' in each process block without 'on-exit'
     """
     changes: list[str] = []
     result = content
@@ -171,6 +207,9 @@ def migrate_conf_5_to_main(content: str, verbose: bool = False) -> MigrationResu
     if re.search(r'\bnlri-mpls\b', result):
         result = re.sub(r'\bnlri-mpls\b', 'labeled-unicast', result)
         changes.append("Changed 'nlri-mpls' to 'labeled-unicast' (RFC 8277 terminology)")
+
+    result, kept = keep_on_exit(result)
+    changes.extend(kept)
 
     return MigrationResult(result, changes, '5', 'main')
 
