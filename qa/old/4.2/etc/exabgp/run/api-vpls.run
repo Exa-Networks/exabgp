@@ -1,0 +1,27 @@
+#!/usr/bin/env python3
+
+import sys
+import time
+
+messages = [
+    'neighbor 127.0.0.1 announce vpls endpoint 5 base 10702 offset 1 size 8 rd 192.168.201.1:123 next-hop 192.168.201.1 origin igp as-path [ 30740 30740 30740 30740 30740 30740 30740 ] local-preference 100 med 2000 community [ 54591:123] extended-community [ target:54591:6 l2info:19:0:1500:111] originator-id 192.168.22.1 cluster-list [ 3.3.3.3 192.168.201.1 ]',
+    'neighbor 127.0.0.1 withdraw vpls endpoint 5 base 10702 offset 1 size 8 rd 192.168.201.1:123 next-hop 192.168.201.1',
+]
+
+time.sleep(2)  # wait for the EOR
+
+while messages:
+    message = messages.pop(0)
+    sys.stdout.write(message + '\n')
+    sys.stdout.flush()
+    time.sleep(0.3)
+
+try:
+    now = time.time()
+    while True and time.time() < now + 5:
+        line = sys.stdin.readline().strip()
+        if not line or 'shutdown' in line:
+            break
+        time.sleep(1)
+except IOError:
+    pass

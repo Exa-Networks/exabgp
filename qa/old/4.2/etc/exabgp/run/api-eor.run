@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+
+import sys
+import time
+
+messages = [
+    'announce eor',
+    'announce eor ipv6 unicast',
+    'announce eor ipv4 unicast',
+]
+
+time.sleep(2)
+
+while messages:
+    message = messages.pop(0)
+    sys.stdout.write(message + '\n')
+    sys.stdout.flush()
+    time.sleep(1)
+
+try:
+    now = time.time()
+    while True and time.time() < now + 5:
+        line = sys.stdin.readline().strip()
+        if not line or 'shutdown' in line:
+            break
+        time.sleep(1)
+except IOError:
+    pass

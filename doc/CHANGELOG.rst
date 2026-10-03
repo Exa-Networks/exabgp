@@ -22,6 +22,9 @@ Version 6.0.0:
  * Fix: an End-of-RIB is told to the API as its own message, "message": { "eor": {...} },
    as 4.2 and 5.x told it. It was filed as an announced route with a "null" next-hop, so
    a helper written for them never saw one, and one waiting for it stopped.
+ * Feature: qa/bin/test_old_scripts runs the configurations and helpers of the 4.2 and 5.0
+   functional tests, copied in qa/old/, against this tree, and compares what the peer is
+   announced and withdrawn. It is part of test_everything and of CI.
  * Fix: an UPDATE sent to the peer is told to the helpers subscribed to send { update; }
    as it was sent. It was decoded with the checks made on received routes, so on an EBGP
    session, whose AS_PATH starts with our AS, every announce was reported as a withdraw.

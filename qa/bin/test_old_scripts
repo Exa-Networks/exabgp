@@ -1,0 +1,349 @@
+#!/usr/bin/env python3
+"""Fail if a configuration or a helper written for 4.2 or 5.0 stops working on this tree.
+
+The functional encoding tests of the 4.2 and 5.0 branches are configurations and helper
+programs written for those releases, with the UPDATEs the peer must receive. A copy of
+them is kept in qa/old/<branch>/ and run here against this tree's code, unchanged: the
+branch's configurations, its helpers and its test peer, with this tree's src/ and sbin/ in
+place of the branch's own.
+
+What is compared is what was announced and withdrawn, not the bytes: 6.0 orders the
+attributes differently, sends no NEXT_HOP for a route carried in MP_REACH_NLRI, and so on.
+A message the peer did not expect is decoded, with each message it would have accepted,
+and the test passes when one of them carries the same routes and attributes.
+
+    ./qa/bin/test_old_scripts               # both branches
+    ./qa/bin/test_old_scripts 5.0           # one of them
+    ./qa/bin/test_old_scripts 5.0 api-eor   # one test of one branch
+
+Every entry in ALLOWED is something a 4.2 or 5.0 deployment sees change on upgrade. Keep it
+short and argue each one.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+# the encoding tests, configurations, helpers and test peer of each branch, see its README
+OLD = ROOT / 'qa' / 'old'
+
+# a test which takes longer has stopped: the slowest of either branch takes about 20 seconds
+TEST_TIMEOUT_SECONDS = 90
+# each test is a daemon and a peer; more at once and the slow ones time out on a laptop
+PARALLEL_TESTS = 6
+FIRST_PORT = 4790
+SERVER_START_SECONDS = 1.0
+DECODE_TIMEOUT_SECONDS = 30
+REPORTED_DIFFERENCES = 6
+TIMED_OUT = 'the test stopped or timed out'
+
+
+@dataclass(frozen=True)
+class Branch:
+    ref: str  # the directory under qa/old/
+    tests: str  # the directory of the .ci and .msg files
+    peer_arguments: tuple[str, ...]  # given to qa/sbin/bgp before the .msg file
+    environment: tuple[tuple[str, str], ...]  # what the branch's runner gives the daemon
+    # 4.2's peer finds the daemon to signal by its program, application/bgp.py in 4.2
+    program: str = 'sbin/exabgp'
+
+
+BRANCHES = {
+    '4.2': Branch(
+        ref='4.2',
+        tests='qa/ci',
+        peer_arguments=(),
+        environment=(('exabgp_tcp_once', 'true'),),
+        program='src/exabgp/application/bgp.py',
+    ),
+    '5.0': Branch(
+        ref='5.0',
+        tests='qa/encoding',
+        peer_arguments=('--view',),
+        environment=(('exabgp_version', '5.0.0-0+test'),),
+    ),
+}
+
+COMMON_ENVIRONMENT = (
+    ('exabgp_api_cli', 'false'),
+    ('exabgp_debug_rotate', 'true'),
+    ('exabgp_debug_configuration', 'true'),
+    ('exabgp_tcp_bind', ''),
+)
+
+# deliberate changes, each with the reason it is worth the cost: (branch, test) -> reason
+ALLOWED: dict[tuple[str, str], str] = {
+    ('5.0', 'api-flow'): (
+        'origin:70500:5000 has a four octet AS: 5.0 sent it as type 0x01, an IPv4 address '
+        '0.1.19.100, and 6.0 sends type 0x02 as RFC 5668 asks'
+    ),
+    ('5.0', 'conf-extended-attributes'): 'the same four octet AS Route Origin as api-flow',
+    ('5.0', 'unknown-message'): (
+        'RFC 4271 6.1: the NOTIFICATION for a bad message type carries the type, 0xFF; 5.0 sent text'
+    ),
+    ('5.0', 'api-flow-merge'): (
+        "5.0's test peer copies our four octet AS capability into its OPEN, so it claims AS "
+        '65533 while its two octet field says 65000; RFC 6793 4.1 makes the capability the '
+        "peer's AS, and 6.0 refuses the mismatch. The peer of 6.0 fixes its OPEN"
+    ),
+    ('5.0', 'conf-ebgp'): 'the same test peer OPEN as api-flow-merge',
+    ('4.2', 'api-teardown'): 'the same `teardown 4` communication as 5.0 api-teardown',
+    ('4.2', 'api-no-respawn'): (
+        'issue #304: the routes of a helper which exits are withdrawn, so the one this helper '
+        'announces before it exits never reaches the peer; `on-exit keep;` in its process '
+        'block is what 4.2 did'
+    ),
+    ('5.0', 'api-no-respawn'): 'the routes of a helper which exits, as 4.2 api-no-respawn',
+    ('4.2', 'api-reload'): (
+        '4.2 announced again the routes a reload left unchanged; 5.0 and 6.0 send what changed, '
+        'and the peer ends with the same routes'
+    ),
+    ('5.0', 'api-teardown'): (
+        '`teardown 4` is Cease, Administrative Reset, in both: 5.0 added the name of the subcode '
+        'as an RFC 9003 communication, 6.0 sends none unless it is given one'
+    ),
+}
+
+
+class CannotRun(Exception):
+    pass
+
+
+def tree(branch: Branch, scratch: Path) -> Path:
+    """The branch's tests, configurations and peer from qa/old/, with this tree's code."""
+    copied = OLD / branch.ref
+    if not (copied / branch.tests).is_dir():
+        raise CannotRun(f'no copy of {branch.ref} in {copied}')
+    built = scratch / branch.ref
+    shutil.copytree(copied, built)
+    for name in ('src', 'sbin'):
+        shutil.copytree(ROOT / name, built / name, ignore=shutil.ignore_patterns('__pycache__'))
+    shutil.copy(ROOT / 'pyproject.toml', built / 'pyproject.toml')
+    (built / 'src' / 'exabgp' / 'application' / 'bgp.py').symlink_to('main.py')
+    return built
+
+
+def peer_program(built: Path) -> Path:
+    """The branch's own test peer: only it reads the branch's .msg files.
+
+    4.2's is written on asyncore, which Python 3.12 removed; the pyasyncore dev dependency
+    puts it back.
+    """
+    peer = built / 'qa' / 'sbin' / 'bgp'
+    if 'import asyncore' in peer.read_text():
+        try:
+            import asyncore  # noqa: F401
+        except ImportError:
+            raise CannotRun('the test peer of this branch needs asyncore: uv sync installs pyasyncore') from None
+    return peer
+
+
+def tests(built: Path, branch: Branch, only: str) -> list[str]:
+    names = sorted(path.stem for path in (built / branch.tests).glob('*.ci'))
+    return [name for name in names if not only or name == only]
+
+
+def run(built: Path, branch: Branch, peer: Path, name: str, port: int) -> tuple[bool, str]:
+    """Run one test: True when the peer saw what it expected, and what the peer printed."""
+    directory = built / branch.tests
+    configurations = [str(built / 'etc' / 'exabgp' / word) for word in (directory / f'{name}.ci').read_text().split()]
+    message_file = directory / f'{name}.msg'
+    connections = re.search(r'^option:tcp_connections:(\d+)', message_file.read_text(), re.M)
+
+    port_environment = {**os.environ, 'exabgp_tcp_port': str(port)}
+    server = subprocess.Popen(
+        [sys.executable, str(peer), *branch.peer_arguments, str(message_file)],
+        env=port_environment,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=built,
+        start_new_session=True,
+    )
+    time.sleep(SERVER_START_SECONDS)
+    daemon_environment = {
+        **port_environment,
+        **dict(COMMON_ENVIRONMENT),
+        **dict(branch.environment),
+        'exabgp_tcp_connections': connections.group(1) if connections else '1',
+        # what sbin/exabgp sets, for a branch which starts the application directly
+        'EXABGP_ROOT': str(built),
+        'PYTHONPATH': str(built / 'src'),
+    }
+    client = subprocess.Popen(
+        [sys.executable, str(built / branch.program), *configurations],
+        env=daemon_environment,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        cwd=built,
+        start_new_session=True,
+    )
+    try:
+        output, _ = server.communicate(timeout=TEST_TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        _stop(server)
+        output, _ = server.communicate(timeout=TEST_TIMEOUT_SECONDS)
+    finally:
+        # the whole group: the helpers the daemon started outlive it, and hold the test up
+        _stop(client)
+        client.wait()
+    printed = output.decode('utf-8', 'replace')
+    return server.returncode == 0 and 'successful' in printed, printed
+
+
+def _stop(process: subprocess.Popen[bytes]) -> None:
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        # the group is gone already: macOS answers EPERM, not ESRCH, once its leader has
+        # exited and only a zombie is left, and there is nothing left to stop either way
+        pass
+
+
+def decoded(built: Path, message: str) -> dict:
+    """A message as this tree decodes it, without what changes from one run to the next."""
+    found = subprocess.run(
+        [sys.executable, str(built / 'sbin' / 'exabgp'), 'decode', message.replace(':', '')],
+        capture_output=True,
+        text=True,
+        env={**os.environ, 'exabgp_log_enable': 'false'},
+        timeout=DECODE_TIMEOUT_SECONDS,
+    )
+    try:
+        result = json.loads(found.stdout.splitlines()[0])
+    except (IndexError, json.JSONDecodeError):
+        return {'undecodable': (found.stdout + found.stderr)[-200:]}
+    for key in ('exabgp', 'host', 'pid', 'ppid', 'time', 'counter'):
+        result.pop(key, None)
+    return canonical(result)
+
+
+def canonical(value: object) -> object:
+    """Lists in a fixed order: the order of routes and attributes on the wire does not matter."""
+    if isinstance(value, dict):
+        return {key: canonical(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return sorted((canonical(item) for item in value), key=lambda item: json.dumps(item, sort_keys=True))
+    return value
+
+
+def differences(expected: object, received: object, path: str = '') -> list[str]:
+    if isinstance(expected, dict) and isinstance(received, dict):
+        found = []
+        for key in sorted(set(expected) | set(received)):
+            if key not in received:
+                found.append(f'{path}/{key} expected, not sent')
+            elif key not in expected:
+                found.append(f'{path}/{key} sent, not expected')
+            else:
+                found.extend(differences(expected[key], received[key], f'{path}/{key}'))
+        return found
+    if expected != received:
+        return [f'{path}: expected {json.dumps(expected)[:80]}, sent {json.dumps(received)[:80]}']
+    return []
+
+
+MESSAGE = r'(F{32}:[0-9A-F]{4}:[0-9A-F]{2}:[0-9A-F:]*)'
+
+
+def unexpected(printed: str) -> tuple[str, list[str]] | None:
+    """The message the peer did not expect, and those it would have accepted instead.
+
+    5.0's peer prints `unexpected message:`, `received <hex>` and an `option NN <hex>` for
+    each it would have taken; 4.2's prints `received N (..): <hex>` for each message, then
+    `expected       : <hex>`, or `expected one of the following :` and a line for each.
+    """
+    found = re.search(r'unexpected message:\s*\nreceived\s+(\S+)', printed)
+    if found:
+        return found.group(1), re.findall(r'^option \d+\s+(\S+)', printed[found.end() :], re.M)
+    single = re.search(r'expected\s+: ' + MESSAGE, printed)
+    expected = single.start() if single else printed.find('expected one of the following')
+    if expected < 0:
+        return None
+    received = re.findall(r'received \d+ \([^)]*\): ' + MESSAGE, printed[:expected])
+    if not received:
+        return None
+    if single:
+        return received[-1], [single.group(1)]
+    return received[-1], re.findall(r'^\s*(?:\S+ \d+ )?\s+' + MESSAGE + r'\s*$', printed[expected:], re.M)
+
+
+def judged(built: Path, printed: str) -> list[str] | None:
+    """None when the unexpected message carries what an expected one does, else what differs."""
+    found = unexpected(printed)
+    if found is None:
+        return [f'{TIMED_OUT}: the peer reported no unexpected message']
+    message, options = found
+    received = decoded(built, message)
+    best: list[str] | None = None
+    for option in options:
+        missing = differences(decoded(built, option), received)
+        if not missing:
+            return None
+        if best is None or len(missing) < len(best):
+            best = missing
+    return best or ['the peer listed no message it would have accepted']
+
+
+def check(name: str, branch: Branch, only: str) -> int:
+    with tempfile.TemporaryDirectory() as scratch:
+        built = tree(branch, Path(scratch))
+        peer = peer_program(built)
+        selected = tests(built, branch, only)
+        if not selected:
+            raise CannotRun(f'{name} has no test {only}')
+        with ThreadPoolExecutor(PARALLEL_TESTS) as pool:
+            runs = list(pool.map(lambda job: run(built, branch, peer, *job), zip(selected, range(FIRST_PORT, 65535))))
+        failed = 0
+        for index, (test, (passed, printed)) in enumerate(zip(selected, runs)):
+            if passed:
+                continue
+            missing = judged(built, printed)
+            if missing is not None and missing[0].startswith(TIMED_OUT):
+                # run again, alone: on a loaded machine six at once can miss the timeout
+                passed, printed = run(built, branch, peer, test, FIRST_PORT + len(selected) + index)
+                if passed:
+                    continue
+                missing = judged(built, printed)
+            if missing is None:
+                continue
+            if (name, test) in ALLOWED:
+                continue
+            failed += 1
+            sys.stderr.write(f'{name} {test}:\n')
+            for line in missing[:REPORTED_DIFFERENCES]:
+                sys.stderr.write(f'    {line}\n')
+        sys.stderr.write(f'{name}: {len(selected) - failed}/{len(selected)} tests behave as on {branch.ref}\n')
+        return failed
+
+
+def main(argv: list[str]) -> int:
+    names = [argv[0]] if argv else list(BRANCHES)
+    only = argv[1] if len(argv) > 1 else ''
+    failed = 0
+    for name in names:
+        if name not in BRANCHES:
+            sys.stderr.write(f'no branch {name}, choose from {", ".join(BRANCHES)}\n')
+            return 2
+        try:
+            failed += check(name, BRANCHES[name], only)
+        except CannotRun as exc:
+            sys.stderr.write(f'{exc}\n')
+            return 2
+    return 1 if failed else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

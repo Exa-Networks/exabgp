@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+
+import os
+
+from exabgp_api import counters, send, trace, wait_for_ack, wait_for_shutdown
+
+# every announcement has to be on the wire before the matching withdrawal is
+# asked for. A withdrawal which reaches the RIB while its announcement is still
+# pending there cancels it, and the peer then never sees either
+BARRIER_TIMEOUT = 20.0
+
+ROUTES = [
+    'ipv4 mcast-vpn shared-join rp 10.99.199.1 group 239.251.255.228 rd 65000:99999 source-as 65000 next-hop 10.10.6.3 extended-community [ target:192.168.94.12:5 ]',
+    'ipv4 mcast-vpn source-join source 10.99.12.2 group 239.251.255.228 rd 65000:99999 source-as 65000 next-hop 10.10.6.3 extended-community [ target:192.168.94.12:5 ]',
+    'ipv6 mcast-vpn shared-join rp fd00::1 group ff0e::1 rd 65000:99999 source-as 65000 next-hop 10.10.6.3 extended-community [ target:192.168.94.12:5 ]',
+    'ipv6 mcast-vpn source-join source fd12::2 group ff0e::1 rd 65000:99999 source-as 65000 next-hop 10.10.6.3 extended-community [ target:192.168.94.12:5 ]',
+    'ipv6 mcast-vpn source-ad source fd12::4 group ff0e::1 rd 65000:99999 next-hop 10.10.6.4 extended-community [ target:65000:99999 ]',
+    'ipv4 mcast-vpn source-ad source 10.99.12.4 group 239.251.255.228 rd 65000:99999 next-hop 10.10.6.4 extended-community [ target:65000:99999 ]',
+]
+
+# a barrier names the family rather than each route, because an mcast-vpn route
+# renders its own fields and has no single string which identifies it
+PER_FAMILY = (('ipv4 mcast-vpn', 3), ('ipv6 mcast-vpn', 3))
+
+
+def barrier(what: str, expected_count: int = 1, **events) -> None:
+    if wait_for_ack(expected_count=expected_count, timeout=BARRIER_TIMEOUT, **events):
+        trace(f'{what} ok')
+        return
+    raise SystemExit(f'{what} never reached the wire, saw {counters()}')
+
+
+def main() -> None:
+    trace('start api-mvpn.run ppid=' + str(os.getppid()))
+    try:
+        barrier('the session coming up', expected_count=0, state=(('up', 1),))
+        # one end of RIB per configured family: announcing into a reactor which is
+        # still flushing them changes what the peer sees and in which order
+        barrier('both end of RIB markers', expected_count=0, announce=(('eor', 2),))
+
+        for route in ROUTES:
+            send('announce ' + route)
+        barrier('the six announcements', expected_count=len(ROUTES), announce=PER_FAMILY)
+
+        for route in ROUTES:
+            send('withdraw ' + route)
+        barrier('the six withdrawals', expected_count=len(ROUTES), withdraw=PER_FAMILY)
+
+        trace('work done')
+
+        # stay until ExaBGP is done with us. The conf sets respawn false so a
+        # return would not be restarted, but leaving while the daemon is still
+        # writing loses whatever it had left to say
+        wait_for_shutdown(timeout=15.0)
+        trace('finished')
+    except IOError:
+        pass
+
+
+if __name__ == '__main__':
+    main()

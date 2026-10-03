@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+
+import sys
+import time
+import json
+
+expect = [
+    'open',
+]
+
+try:
+    while expect:
+        line = sys.stdin.readline().strip()
+
+        expected = expect.pop(0)
+        if expected not in line:
+            sys.stderr.write('not expected json message (%s)\n' % expected)
+            sys.stderr.flush()
+            sys.exit(1)
+
+        try:
+            json.loads(line)
+        except Exception:
+            sys.stderr.write('failure, json can not be decoded\n')
+            sys.stderr.flush()
+            sys.exit(1)
+
+        sys.stderr.write('json received: %s\n' % line.rstrip())
+        sys.stderr.flush()
+
+        if 'shutdown' in line:
+            sys.exit(1)
+except KeyboardInterrupt:
+    pass
+except IOError as e:
+    sys.stderr.write('something went wrong\n')
+    if e.errno == 32:  # broken pipe
+        sys.exit(1)
+
+try:
+    sys.stdout.write('announce route 1.1.1.1/32 next-hop 101.1.101.1 med 200\n')
+    sys.stdout.flush()
+
+    time.sleep(1)
+
+    line = sys.stdin.readline().strip()
+    if not line or line in ['done', 'shutdown']:
+        sys.exit(0)
+    sys.stderr.write('Bad termination\n')
+    sys.exit(1)
+except KeyboardInterrupt:
+    pass
+except IOError as e:
+    sys.stderr.write('could not send command to ExaBGP\n')
+    if e.errno == 32:  # broken pipe
+        sys.exit(1)

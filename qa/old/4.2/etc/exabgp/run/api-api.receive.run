@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+
+import sys
+import time
+
+while True:
+    try:
+        line = sys.stdin.readline().strip()
+
+        if 'shutdown' in line:
+            sys.stderr.write('   (ok) api.receive shutdown received\n%s\n' % line)
+            sys.stdout.flush()
+            sys.exit(1)
+        elif 'done' in line:
+            sys.stderr.write('   (ok) api.receive done received\n%s\n' % line)
+            sys.stdout.flush()
+        elif 'eor' in line:
+            sys.stderr.write('   (ok) api.receive eor received\n%s\n' % line)
+            sys.stdout.flush()
+        elif 'keepalive' in line:
+            sys.stderr.write('   (ok) api.receive keepalive received\n%s\n' % line)
+            sys.stdout.flush()
+        elif '0.0.0.0/32' in line:
+            sys.stderr.write('   (ok) api.receive 0.0.0.0/32 received\n%s\n' % line)
+            sys.stdout.flush()
+            time.sleep(2)  # make sure the other process is faster if it gets any data
+            sys.stdout.write("announce route 6.6.6.0/24 next-hop 1.1.1.1\n")
+            sys.stdout.flush()
+        else:
+            sys.stderr.write('   (failure) api.receive received unexpected data:\n%s' % line)
+            sys.stderr.flush()
+            sys.stdout.write("announce route 6.6.6.0/24 next-hop 9.9.9.9\n")
+            sys.stdout.flush()
+            time.sleep(3)
+            sys.exit(1)
+    except KeyboardInterrupt:
+        sys.exit(1)
+    except IOError:
+        # most likely a signal during readline
+        sys.exit(1)

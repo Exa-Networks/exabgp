@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+
+import sys
+import time
+
+time.sleep(1)  # time for configuration routes to pass
+
+while True:
+    sys.stdout.write("announce watchdog dnsr\n")
+    sys.stdout.flush()
+    time.sleep(1)
+
+    sys.stdout.write("withdraw watchdog dnsr\n")
+    sys.stdout.flush()
+    time.sleep(1)

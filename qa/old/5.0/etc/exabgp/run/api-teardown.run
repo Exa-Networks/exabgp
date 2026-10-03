@@ -1,0 +1,62 @@
+#!/usr/bin/env python3
+
+import os
+
+from exabgp_api import counters, send, trace, wait_for_ack, wait_for_shutdown
+
+# a teardown drops the session and ExaBGP rebuilds it, replaying what it holds.
+# waiting on the state and on what was sent keeps the next announce from landing
+# in a session which is on its way out, which no sleep can promise
+BARRIER_TIMEOUT = 20.0
+
+
+def barrier(what: str, expected_count: int = 1, **events) -> None:
+    if wait_for_ack(expected_count=expected_count, timeout=BARRIER_TIMEOUT, **events):
+        trace(f'{what} ok')
+        return
+    raise SystemExit(f'{what} never happened, saw {counters()}')
+
+
+def main() -> None:
+    trace('start api-teardown.run ppid=' + str(os.getppid()))
+    try:
+        barrier('the first session coming up', expected_count=0, state=(('up', 1),))
+
+        send('announce route 1.1.0.0/16 next-hop 1.1.1.1')
+        # each session is torn down only once its end of RIB is out, as the peer
+        # expects it before the NOTIFICATION and stops listening if it is not
+        barrier('1.1.0.0/16 on the first session', announce=(('1.1.0.0/16', 1), ('eor', 1)))
+
+        send('neighbor 127.0.0.1 teardown 4')
+        barrier('the first teardown', state=(('down', 1),))
+
+        barrier('the second session coming up', expected_count=0, state=(('up', 2),))
+        send('announce route 2.2.0.0/16 next-hop 2.2.2.2')
+        barrier(
+            '2.2.0.0/16 and the replay of 1.1.0.0/16',
+            announce=(('1.1.0.0/16', 2), ('2.2.0.0/16', 1), ('eor', 2)),
+        )
+
+        send('neighbor 127.0.0.1 teardown 4')
+        barrier('the second teardown', state=(('down', 2),))
+
+        barrier('the third session coming up', expected_count=0, state=(('up', 3),))
+        send('announce route 3.3.0.0/16 next-hop 3.3.3.3')
+        barrier(
+            '3.3.0.0/16 and the replay of the first two',
+            announce=(('1.1.0.0/16', 3), ('2.2.0.0/16', 2), ('3.3.0.0/16', 1), ('eor', 3)),
+        )
+
+        trace('work done')
+
+        # stay until ExaBGP is done with us. The conf sets respawn false so a
+        # return would not be restarted, but leaving while the daemon is still
+        # writing loses whatever it had left to say
+        wait_for_shutdown(timeout=5.0)
+        trace('finished')
+    except IOError:
+        pass
+
+
+if __name__ == '__main__':
+    main()

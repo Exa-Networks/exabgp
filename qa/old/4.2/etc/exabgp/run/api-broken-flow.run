@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+import sys
+import time
+
+announce_flow_A = 'announce flow route { match { source 170.170.170.170/32; destination 170.170.170.170/32; } then { rate-limit 1; } }'
+withdraw_flow_A = 'withdraw flow route { match { source 170.170.170.170/32; destination 170.170.170.170/32; } then { rate-limit 1; } }'
+announce_flow_B = 'announce flow route { match { source 187.187.187.187/32; destination 187.187.187.187/32; } then { rate-limit 2; } }'
+announce_flow_C = 'announce flow route { match { source 204.204.204.204/32; destination 187.187.187.187/32; } then { rate-limit 3; } }'
+
+
+messages = [
+    'sleep',
+    'sleep',
+    'sleep',
+    announce_flow_A,
+    withdraw_flow_A,
+    'sleep',
+    announce_flow_C,
+    announce_flow_B,
+    announce_flow_A,
+    'sleep',
+    withdraw_flow_A,
+    'sleep',
+    announce_flow_A,  # to catch if a withdraw 2 is sent
+    'sleep',
+    withdraw_flow_A,
+]
+
+while messages:
+    message = messages.pop(0)
+    if message == 'sleep':
+        time.sleep(0.3)
+    else:
+        sys.stdout.write(message + '\n')
+        sys.stdout.flush()
+        time.sleep(0.1)
+
+try:
+    now = time.time()
+    while True and time.time() < now + 5:
+        line = sys.stdin.readline().strip()
+        if not line or 'shutdown' in line:
+            break
+        time.sleep(1)
+except IOError:
+    pass

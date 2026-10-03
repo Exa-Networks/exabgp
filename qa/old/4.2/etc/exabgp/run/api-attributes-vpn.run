@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+import sys
+import time
+
+messages = [
+    'announce attribute route-distinguisher 63333:100 label [ 110 ] next-hop 10.0.99.12 origin igp as-path [100, 500] local-preference 100 extended-community 0:0 originator-id 10.0.99.12 nlri 128.0.64.0/18 128.0.0.0/18',
+]
+
+while messages:
+    message = messages.pop(0)
+    sys.stdout.write(message + '\n')
+    sys.stdout.flush()
+    time.sleep(0.3)
+
+try:
+    now = time.time()
+    while True and time.time() < now + 5:
+        line = sys.stdin.readline().strip()
+        if not line or 'shutdown' in line:
+            break
+        time.sleep(1)
+except IOError:
+    pass

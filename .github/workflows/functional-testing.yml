@@ -50,3 +50,7 @@ jobs:
       - name: Decoding
         run: |
           uv run ./qa/bin/functional decoding
+
+      - name: Configurations and helpers of 4.2 and 5.0
+        run: |
+          uv run ./qa/bin/test_old_scripts

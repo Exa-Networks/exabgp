@@ -68,6 +68,8 @@ dev = [
 	"mutmut>=3.0",
 	"setuptools",
 	"pyinstaller",
+	# asyncore for the test peer of 4.2, which qa/bin/test_old_scripts runs: Python 3.12 removed it
+	"pyasyncore",
 ]
 
 [tool.uv]
@@ -104,7 +106,7 @@ markers = [
 
 [tool.ruff]
 line-length = 120
-exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages"]
+exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages", "qa/old"]
 
 [tool.ruff.lint]
 # Select same critical error codes as flake8 configuration:
