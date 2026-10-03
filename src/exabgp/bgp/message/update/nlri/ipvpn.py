@@ -390,7 +390,7 @@ class IPVPNBase(Label):
         With RD now stored in _packed, we can return it directly.
         """
         send_addpath = negotiated.addpath.send(self.afi, self.safi)
-        packed = self._within_labels_limit(negotiated.labels_limit(self.afi, self.safi))
+        packed = self._with_label_field(self._within_labels_limit(negotiated.labels_limit(self.afi, self.safi)))
 
         if send_addpath:
             if self._has_addpath:

@@ -7,6 +7,9 @@ Version 6.0.0:
  * Fix: `announce ipv4|ipv6 <family>` takes atomic-aggregate, originator-id, cluster-list,
    aigp, attribute, name, split, watchdog, withdraw and path-information, as a static route
    does. They were refused, while 5.0 accepted them and sent them.
+ * Fix: a labelled or VPN route withdrawn without a label is sent with a label field, the
+   Compatibility field 0x800000 of RFC 8277 2.4. It had none, so the receiver read the
+   first octets of the route distinguisher, or of the prefix, as the label.
  * Fix: an End-of-RIB is told to the API as its own message, "message": { "eor": {...} },
    as 4.2 and 5.x told it. It was filed as an announced route with a "null" next-hop, so
    a helper written for them never saw one, and one waiting for it stopped.

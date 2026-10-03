@@ -586,3 +586,34 @@ def test_a_session_which_sent_the_capability_decodes_a_two_label_stack() -> None
     assert rest == b''
     assert cast(LabelBase, nlri).labels.labels == [100, 200]
     assert negotiated.labels_limit(*LABELLED_UNICAST) == 2
+
+
+# ------------------------------------------------------- section 2.4, a withdraw we send
+
+
+def test_a_labelled_route_with_no_label_is_sent_with_the_compatibility_field() -> None:
+    """`withdraw route ... label`-less: the NLRI has no label, and the field was left out.
+
+    The Length then counted no label, and a receiver read the first three octets of the
+    prefix (of the route distinguisher, for SAFI 128) as the label: the route withdrawn was
+    one nobody announced. The field is always there; with no label it is 0x800000.
+    """
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.label import Label
+
+    nlri = Label.from_cidr(CIDR.create_cidr(PREFIX + b'\x00', PREFIX_BITS), AFI.ipv4, SAFI.nlri_mpls)
+    assert bytes(nlri.pack_nlri(Negotiated.UNSET)) == labelled(raw(COMPATIBILITY_RECOMMENDED))
+
+
+def test_a_vpn_route_with_no_label_is_sent_with_the_compatibility_field() -> None:
+    from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
+
+    nlri = IPVPN.make_vpn_route(
+        AFI.ipv4, SAFI.mpls_vpn, PREFIX + b'\x00', PREFIX_BITS, Labels.NOLABEL, RouteDistinguisher(RD)
+    )
+    packed = bytes(nlri.pack_nlri(Negotiated.UNSET))
+    assert packed == vpn(raw(COMPATIBILITY_RECOMMENDED))
+    withdrawn, rest = decode(packed, safi=SAFI.mpls_vpn, action=Action.WITHDRAW)
+    assert rest == b''
+    assert str(withdrawn.cidr) == '10.0.0.0/24'
+    assert str(withdrawn.rd) == ' rd 1:2'

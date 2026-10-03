@@ -94,6 +94,10 @@ from exabgp.util.types import Buffer
 
 # MPLS label size in bytes
 LABEL_SIZE_BYTES = 3
+# RFC 8277 2.4 (and RFC 3107 3): the label field of a withdrawal, which a receiver ignores
+COMPATIBILITY_FIELD = b'\x80\x00\x00'
+# the length octet counts bits: a /128 behind a label field and a route distinguisher still fits
+MAX_LABELLED_MASK = 0xFF
 # Bottom of Stack bit mask (lowest bit of the 24-bit label)
 LABEL_BOS_MASK = 0x01
 
@@ -379,6 +383,25 @@ class LabelBase(INET):
     def prefix(self) -> str:
         return '{}{}'.format(INET.prefix(self), self.labels)
 
+    def _with_label_field(self, packed: Buffer) -> Buffer:
+        """The NLRI with a label field: RFC 8277 2.4's Compatibility field when it has no label.
+
+        A labelled NLRI always has one: a route given without a label (a withdrawal) was
+        sent with none, the Length counted none, and a receiver read the first three octets
+        of what followed as the label, withdrawing a route nobody announced.
+        """
+        offset = PATH_INFO_SIZE if self._has_addpath else 0
+        if self._has_labels or not packed[offset]:
+            # A length of 0 is kept as it is: with only a label field behind it, a labelled
+            # 0.0.0.0/0 is the same bytes as a stack which ate the prefix, which the decoder
+            # refuses (rfc8277#2.4), and the route would not read back
+            return packed
+        mask = packed[offset] + LABEL_SIZE_BYTES * 8
+        if mask > MAX_LABELLED_MASK:
+            # only a decoded NLRI can be this long, and it was read without a label field
+            return packed
+        return bytes(packed[:offset]) + bytes([mask]) + COMPATIBILITY_FIELD + bytes(packed[offset + 1 :])
+
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         """Pack NLRI for wire transmission (zero-copy when possible).
 
@@ -386,7 +409,7 @@ class LabelBase(INET):
         Wire format: [addpath:4?][mask:1][labels:3n][prefix:var]
         """
         send_addpath = negotiated.addpath.send(self.afi, self.safi)
-        packed = self._within_labels_limit(negotiated.labels_limit(self.afi, self.safi))
+        packed = self._with_label_field(self._within_labels_limit(negotiated.labels_limit(self.afi, self.safi)))
 
         if send_addpath:
             if self._has_addpath:
