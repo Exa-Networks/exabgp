@@ -22,7 +22,6 @@ from exabgp.application.healthcheck import (
     ip_ifname,
     drop_privileges,
     IFNAME_MAX_LENGTH,
-    IP_CMD_ADD_ERROR_CODE,
     IP_IFNAME_PARTS,
 )
 from exabgp.application import healthcheck as healthcheck_module
@@ -238,10 +237,6 @@ class TestConstants:
     def test_ifname_max_length(self) -> None:
         """IFNAME_MAX_LENGTH should be Linux kernel limit."""
         assert IFNAME_MAX_LENGTH == 15
-
-    def test_ip_cmd_add_error_code(self) -> None:
-        """IP_CMD_ADD_ERROR_CODE should be 2."""
-        assert IP_CMD_ADD_ERROR_CODE == 2
 
     def test_ip_ifname_parts(self) -> None:
         """IP_IFNAME_PARTS should be 2."""

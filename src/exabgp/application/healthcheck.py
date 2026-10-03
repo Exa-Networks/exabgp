@@ -60,7 +60,6 @@ from ipaddress import ip_address, IPv4Address, IPv6Address
 
 # Interface name validation constants
 IFNAME_MAX_LENGTH = 15  # Maximum interface name length (Linux kernel limit)
-IP_CMD_ADD_ERROR_CODE = 2  # Error code when 'ip address add' fails (address already exists)
 IP_IFNAME_PARTS = 2  # Expected format: ip%ifname
 
 logger = logging.getLogger('healthcheck')
@@ -253,7 +252,7 @@ def system_ips(
     """Retrieve IP addresses for loopback and ip-ifname given interfaces"""
     logger.debug('Retrieve IP addresses for loopback and ip-ifname interfaces')
     addresses = []
-    ifnames = set(ip_ifnames.values()) | {'lo'} if ip_ifnames else {'lo'}
+    ifnames = set(ip_ifnames.values()) | {loopback()} if ip_ifnames else {loopback()}
     output = []
 
     if sys.platform.startswith('linux'):
@@ -306,13 +305,38 @@ def system_ips(
     return addresses
 
 
+class AddressSetupError(Exception):
+    """An address the checker was told to set up, and could not: what it announces would not be here."""
+
+
+def loopback() -> str:
+    """The loopback interface: lo on Linux, lo0 on macOS and the BSDs."""
+    return 'lo' if sys.platform.startswith('linux') else 'lo0'
+
+
 def ip_ifname(ip: IPv4Network | IPv6Network, ip_ifnames: dict[IPv4Network | IPv6Network, str]) -> str:
-    ifname = ip_ifnames.get(ip)
-    if not ifname:
-        ifname = 'lo0'
-        if sys.platform.startswith('linux'):
-            ifname = 'lo'
-    return ifname
+    return ip_ifnames.get(ip) or loopback()
+
+
+def address_command(
+    action: str, ip: IPv4Network | IPv6Network, ifname: str, label: str | None, sudo: bool
+) -> list[str]:
+    """The command adding (`add`) or removing (`delete`) an address, for this system.
+
+    Linux has `ip`, which also takes the label. macOS and the BSDs have no `ip`: there an
+    address is an `ifconfig` alias, and an address has no label to carry.
+    """
+    assert action in ('add', 'delete'), f'unknown address action {action}'
+    if sys.platform.startswith('linux'):
+        cmd = ['ip', 'address', action, str(ip), 'dev', ifname]
+        if label:
+            cmd += ['label', f'{ifname}:{label}']
+    else:
+        family = 'inet6' if ip.version == 6 else 'inet'
+        cmd = ['ifconfig', ifname, family, str(ip), 'alias' if action == 'add' else '-alias']
+    if sudo:
+        cmd.insert(0, 'sudo')
+    return cmd
 
 
 def setup_ips(
@@ -329,19 +353,16 @@ def setup_ips(
     for ip in toadd:
         ifname = ip_ifname(ip, ip_ifnames)
         logger.debug('Setup %s IP address %s', ifname, ip)
-        with open(os.devnull, 'w') as fnull:
-            cmd = ['ip', 'address', 'add', str(ip), 'dev', ifname]
-            if sudo:
-                cmd.insert(0, 'sudo')
-            if label:
-                cmd += ['label', f'{ifname}:{label}']
-            try:
-                subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
-            except subprocess.CalledProcessError as e:
-                # the IP address is already setup, ignoring. Not a `continue`: mypyc does not
-                # compile one inside the try/finally the `with` is
-                if cmd[0] != 'ip' or cmd[2] != 'add' or e.returncode != IP_CMD_ADD_ERROR_CODE:
-                    raise e
+        cmd = address_command('add', ip, ifname, label, sudo)
+        result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=False)
+        if result.returncode == 0:
+            continue
+        # `ip` exits 2 for an address already there, and for an address it was not allowed to
+        # add: the exit code can not tell them apart. Whether the address is there now can.
+        if ip in system_ips(ip_ifnames, None, False, False):
+            continue
+        reason = result.stderr.decode('utf-8', 'replace').strip() or f'exit code {result.returncode}'
+        raise AddressSetupError(f'could not add {ip} to {ifname} ({reason}): run as root, or with --sudo')
 
 
 def remove_ips(
@@ -360,11 +381,7 @@ def remove_ips(
         ifname = ip_ifname(ip, ip_ifnames)
         logger.debug('Remove %s IP address %s', ifname, ip)
         with open(os.devnull, 'w') as fnull:
-            cmd = ['ip', 'address', 'delete', str(ip), 'dev', ifname]
-            if sudo:
-                cmd.insert(0, 'sudo')
-            if label:
-                cmd += ['label', f'{ifname}:{label}']
+            cmd = address_command('delete', ip, ifname, label, sudo)
             try:
                 subprocess.check_call(cmd, stdout=fnull, stderr=fnull)
             except subprocess.CalledProcessError:
@@ -654,6 +671,9 @@ def main() -> None:
         options.ips = list(options.ips)
         # Main loop
         loop(options)
+    except AddressSetupError as e:
+        logger.error(str(e))
+        sys.exit(1)
     except Exception as e:  # pylint: disable=W0703
         logger.exception(f'Uncaught exception: {e}')
         sys.exit(1)

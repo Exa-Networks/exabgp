@@ -12,6 +12,13 @@ Version 6.0.0:
  * Fix: `exabgp run` reports a command it could not write, over the socket as over the
    pipe, in one line and with exit code 1. The socket raised a traceback, and the pipe left
    both its descriptors open.
+ * Fix: healthcheck sets up its addresses on macOS and the BSDs: it read them from
+   `ifconfig lo`, where the loopback is lo0, and added them with `ip`, which is not there.
+   It now uses `ifconfig lo0 ... alias` outside Linux.
+ * Fix: healthcheck stops, saying why, when it can not add an address it is to announce.
+   `ip` exits 2 for an address already present and for one it was not allowed to add, and
+   the checker took both as present: run without root, it announced an address the host
+   did not have. Whether the address is there is now checked instead.
  * Fix: `announce ipv4|ipv6 <family>` takes atomic-aggregate, originator-id, cluster-list,
    aigp, attribute, name, split, watchdog, withdraw and path-information, as a static route
    does. They were refused, while 5.0 accepted them and sent them.
