@@ -42,7 +42,7 @@ authors happened to write. This plan covers the grammar itself.
 3. [x] Check: main against the 5.0 route corpus, triage, fix or allow
 4. [x] Recorder and check: flow, vpls, attributes, eor, route-refresh, operational (5.0)
 5. [x] Recorder and check: the other commands (show, teardown, flush, clear, ...), accepted (5.0)
-6. [ ] 4.2: the same
+6. [x] 4.2: the same
 7. [ ] Configuration statements, 5.0 then 4.2
 8. [ ] Wire into `test_everything` and CI; CHANGELOG
 
@@ -87,10 +87,20 @@ authors happened to write. This plan covers the grammar itself.
   next-hop without the capability); `next-hop` given twice (first wins now); a withdrawal
   with `next-hop self` of the other address family was refused.
 
+- 2026-10-03 4.2 done: 2541/2541 (225 allowed, 16 undecodable from 4.2, 6 where 4.2 sent
+  nothing). The recorder runs 4.2 from `lib/` on Python 3.10 with `pyasyncore`; 4.2 has no
+  `_negotiated` (`_negotiated_42` builds the iBGP session its `check_neighbor` did), no
+  `API.process` (`API.text`), and a logger which fails with nowhere to write (silenced).
+  `qa/old/neighbor-4.2.conf`: 4.2 refuses `family { all; }`. No main bug found; 4.2 bugs
+  allowed: `split` ignored on `announce attribute(s)`, a repeated `extended-community` kept
+  only the first, `target:<ip>:<n>` sent as a two octet AS community, a `then` of a flow
+  route kept only its first action, 224.0.0.0/4 sent as unicast, the draft SRv6 syntax.
+
 ## Failures
 
 ## Blockers
 
 ## Resume Point
 
-Step 6, 4.2: the recorder needs a `_negotiated` for 4.2, whose `configuration/check.py` has none.
+Step 7: configuration statements, 5.0 then 4.2: the old release's OPEN and UPDATEs for each
+statement, compared decoded with what this tree sends.

@@ -32,6 +32,10 @@ def _silence():
 
         env = environment.setup('')
         env.log.enable = False
+        # its failsafe format uses a time it never set when it has nowhere to write, and this
+        # process writes its result on stdout: the logger is made to say nothing at all
+        for level in ('debug', 'info', 'notice', 'warning', 'error', 'critical'):
+            setattr(Logger, level, lambda self, *_, **__: None)
         Logger()
         return env
     env = getenv()
@@ -74,10 +78,33 @@ def _registered():
     return sorted(functions, key=len, reverse=True)
 
 
+def _negotiated_42(neighbor):
+    """4.2 has no _negotiated: the session its check_neighbor builds, iBGP over the peer AS."""
+    import copy
+
+    from exabgp.bgp.message import Open
+    from exabgp.bgp.message.open import ASN, HoldTime, RouterID, Version
+    from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotiated
+
+    neighbor = copy.deepcopy(neighbor)
+    neighbor.local_as = neighbor.peer_as
+    capa = Capabilities().new(neighbor, False)
+    capa[Capability.CODE.MULTIPROTOCOL] = neighbor.families()
+    peer_id = '.'.join(str((int(_) + 1) % 250) for _ in str(neighbor.router_id).split('.'))
+    negotiated = Negotiated(neighbor)
+    negotiated.sent(Open(Version(4), ASN(neighbor.local_as), HoldTime(180), RouterID(str(neighbor.router_id)), capa))
+    negotiated.received(Open(Version(4), ASN(neighbor.peer_as), HoldTime(180), RouterID(peer_id), capa))
+    return negotiated
+
+
 def _session(configuration_file):
     """The neighbor the commands are for: its name, as the reactor lists it, and its session."""
-    from exabgp.configuration.check import _negotiated
     from exabgp.configuration.configuration import Configuration
+
+    try:
+        from exabgp.configuration.check import _negotiated  # 5.0
+    except ImportError:
+        _negotiated = _negotiated_42
 
     configuration = Configuration([configuration_file])
     if not configuration.reload():
@@ -184,7 +211,7 @@ def record(configuration_file, commands):
         reactor = _reactor(name, captured)
         api = API(reactor)
         try:
-            api.process(reactor, 'helper', command)
+            (getattr(api, 'process', None) or api.text)(reactor, 'helper', command)  # 5.0, or 4.2
             for callback in reactor.scheduled:
                 _run(callback)
             messages = _packed(captured, negotiated)

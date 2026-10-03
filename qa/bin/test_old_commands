@@ -45,29 +45,55 @@ OLD = ROOT / 'qa' / 'old'
 RELEASES = ('4.2', '5.0')
 REPORTED = 20  # failing commands listed without -v
 
-# (release, regular expression on the command) -> reason
+# (the releases it holds for, regular expression on the command) -> reason. A reason naming
+# 5.0 holds for 4.2 too where both are listed.
 ALLOWED: dict[tuple[str, str], str] = {
+    (
+        '4.2',
+        r'^(announce|withdraw) flow route .*\b(discard|accept|rate-limit|redirect|copy|mark|action|redirect-to-nexthop)\b.*\b(discard|accept|rate-limit|redirect|copy|mark|action|extended-community|community|redirect-to-nexthop(-ietf)?)\b',
+    ): (
+        '4.2 kept only the first extended community of the `then` of a flow route: `discard '
+        'mark 10` lost its mark; this tree sends every action, as 5.0 did'
+    ),
+    ('4.2', r'^announce route 2(2[4-9]|3\d)\.'): (
+        'a prefix in 224.0.0.0/4 is announced as SAFI 2 multicast since 5.0; 4.2 sent it as unicast'
+    ),
+    ('4.2', r'\bbgp-prefix-sid-srv6 \( (ipv6|vpn|l3vpn) '): (
+        "4.2's SRv6 SID (`( ipv6|vpn|l3vpn <sid> )`) followed an early draft; 5.0 replaced it "
+        "with RFC 9252's `( l3-service|l2-service ... )`, and refuses it as this tree does"
+    ),
+    ('4.2', r'^(announce|withdraw) attributes? .*\bsplit\b'): (
+        '4.2 took `split` in `announce attribute(s)` and ignored it, sending each prefix whole; '
+        'this tree announces the more specifics, as `announce route ... split` always did'
+    ),
+    ('4.2', r'\bextended-community .*\bextended-community\b'): (
+        '`extended-community` given twice: 4.2 sent the first list only, this tree sends both'
+    ),
+    ('4.2', r'\b(origin|target):\d+\.\d+\.\d+\.\d+:'): (
+        '4.2 read the IPv4 address of `target:<ip>:<n>` and `origin:<ip>:<n>` as a number and '
+        'sent a two octet AS community (type 0x00); this tree sends type 0x01, RFC 4360 3.2'
+    ),
     ('5.0', r'^(announce|withdraw) ipv[46] mpls-vpn '): (
         '5.0 packed the VPN route of `announce ipv4|ipv6 mpls-vpn` in the unicast NLRI field, '
         'where a peer reads the label and the route distinguisher as the prefix; this tree '
         'sends it as SAFI 128, as `announce route ... rd ... label` did in 5.0'
     ),
-    ('5.0', r'\b(redirect|copy) \d+\.\d+\.\d+\.\d+'): (
+    ('4.2 5.0', r'\b(redirect|copy) \d+\.\d+\.\d+\.\d+'): (
         'a flow redirect to an address sends the draft-ietf-idr-flowspec-redirect-ip community, '
         'which carries the address, not the draft-simpson one with the address as next-hop: '
         'CHANGELOG "Incompatible", `redirect-simpson <ip>` sends the old bytes'
     ),
-    ('5.0', r'^(announce|withdraw) (route|attributes?) (?!.*\blabel\b).*\b(rd|route-distinguisher)\b'): (
+    ('4.2 5.0', r'^(announce|withdraw) (route|attributes?) (?!.*\blabel\b).*\b(rd|route-distinguisher)\b'): (
         '5.0 sent a VPN route given without a label with no label field, so a peer read the '
         'route distinguisher as the label; this tree refuses to announce it, and withdraws it '
         'with the RFC 8277 2.4 Compatibility field (Label._with_label_field)'
     ),
-    ('5.0', r'^(announce|withdraw) flow route .*\b(flow-label|traffic-class)\b'): (
+    ('4.2 5.0', r'^(announce|withdraw) flow route .*\b(flow-label|traffic-class)\b'): (
         '5.0 took the IPv6 only components on an IPv4 flow route, and sent traffic-class as an '
         'IPv4 dscp or flow-label as nothing; this tree builds an IPv6 flow route, or refuses '
         'the mixture'
     ),
-    ('5.0', r'^announce flow route destination [0-9a-f]*:.*\bdscp\b'): (
+    ('4.2 5.0', r'^announce flow route destination [0-9a-f]*:.*\bdscp\b'): (
         'dscp is an IPv4 component (RFC 8955), traffic-class its IPv6 one (RFC 8956): 5.0 put it '
         'on an IPv6 flow route, this tree refuses it'
     ),
@@ -75,16 +101,19 @@ ALLOWED: dict[tuple[str, str], str] = {
         '5.0 took `split` in an announce family and ignored it, sending the prefix whole; this '
         'tree announces the more specifics, as `announce route ... split` always did'
     ),
-    ('5.0', r'^(announce|withdraw) (ipv[46] (multicast|nlri-mpls|mpls-vpn|flow)|attributes? .*\b(rd|route-distinguisher|label)\b) .*\bnext-hop .*\bnext-hop\b'): (
+    (
+        '4.2 5.0',
+        r'^(announce|withdraw) (ipv[46] (multicast|nlri-mpls|mpls-vpn|flow)|attributes? .*\b(rd|route-distinguisher|label)\b) .*\bnext-hop .*\bnext-hop\b',
+    ): (
         '`next-hop` given twice: 5.0 sent the first for IPv4 unicast and the last for the MP '
         'families, this tree the first for both (static.first_next_hop)'
     ),
-    ('5.0', r'\bpath-information$'): '`path-information` with no value: 5.0 ignored it, this tree refuses it',
-    ('5.0', r'\bnext-hop fe80:'): (
+    ('4.2 5.0', r'\bpath-information$'): '`path-information` with no value: 5.0 ignored it, this tree refuses it',
+    ('4.2 5.0', r'\bnext-hop fe80:'): (
         'a link-local next-hop without the link-local next-hop capability: RFC 2545 wants a '
         'global one, 5.0 sent it, this tree refuses it (Neighbor.next_hop_refused)'
     ),
-    ('5.0', r'\b(origin|target):(\d+L|\d{6,}|[7-9]\d{4}|6[6-9]\d{3}|65[6-9]\d\d|655[4-9]\d|6553[6-9]):'): (
+    ('4.2 5.0', r'\b(origin|target):(\d+L|\d{6,}|[7-9]\d{4}|6[6-9]\d{3}|65[6-9]\d\d|655[4-9]\d|6553[6-9]):'): (
         'a four octet AS in a route target or origin: 5.0 sent type 0x01, an IPv4 address, '
         'this tree type 0x02 (RFC 5668); CHANGELOG'
     ),
@@ -226,10 +255,11 @@ def routes(decoded: list[str]) -> list[str]:
 
 
 def allowed(release: str, command: str) -> bool:
-    return any(name == release and re.search(pattern, command) for name, pattern in ALLOWED)
+    return any(release in names.split() and re.search(pattern, command) for names, pattern in ALLOWED)
 
 
 UNREADABLE = 'unreadable'  # what judged() answers when the release sent nothing a peer can decode
+NOTHING_SENT = 'nothing sent'  # and when it took an announce or a withdraw and sent nothing
 
 
 class Session:
@@ -254,45 +284,50 @@ class Session:
 
 
 def judged(release: str, command: str, result: dict[str, Any], session: Session) -> str | None:
-    """None when this tree does what the release did, UNREADABLE, or what differs."""
+    """None when this tree does what the release did, UNREADABLE, NOTHING_SENT, or what differs."""
     theirs = routes(content([bytes.fromhex(found) for found in result['messages']], session.sessions, session.encoder))
-    made = handled(command, session.api, session.loop, session.peer, session.neighbor)
     if theirs and all(found.startswith('undecodable:') for found in theirs):
         # nothing a peer could read: refusing it, or sending something else, loses nobody a route
         return UNREADABLE
+    # an announce or a withdraw the release took and gave no route for: nobody had one
+    nothing = not theirs and result['command'].startswith(('announce', 'withdraw'))
+    made = handled(command, session.api, session.loop, session.peer, session.neighbor)
     if isinstance(made, str):
-        return f'refused: {made}'
+        return NOTHING_SENT if nothing else f'refused: {made}'
     try:
         ours = routes(content(packed(made, session.neighbor, session.negotiated), session.sessions, session.encoder))
     except TypeError as exc:
         # `next-hop self` this session can not resolve: the daemon answers the helper an error
-        return f'refused: {exc}'
+        return NOTHING_SENT if nothing else f'refused: {exc}'
     except Exception as exc:  # a route this tree builds and cannot pack is a failure of the command
         return f'cannot pack: {type(exc).__name__}: {exc}'
-    if ours != theirs:
-        return f'{release} sent {theirs[:2]} this tree {ours[:2]}'
-    return None
+    if ours == theirs:
+        return None
+    if nothing:
+        return NOTHING_SENT
+    return f'{release} sent {theirs[:2]} this tree {ours[:2]}'
 
 
 def check(release: str, verbose: bool) -> int:
     recorded = json.loads((OLD / f'commands-{release}.json').read_text())
     session = Session()
     failures: list[tuple[str, str]] = []
-    skipped = {'allowed': 0, UNREADABLE: 0}
+    skipped = {'allowed': 0, UNREADABLE: 0, NOTHING_SENT: 0}
     for command, result in sorted(recorded.items()):
         if allowed(release, command):
             skipped['allowed'] += 1
             continue
         why = judged(release, command, result, session)
-        if why == UNREADABLE:
-            skipped[UNREADABLE] += 1
+        if why in (UNREADABLE, NOTHING_SENT):
+            skipped[why] += 1
         elif why is not None:
             failures.append((command, why))
     for command, why in failures[: None if verbose else REPORTED]:
         sys.stderr.write(f'{release}: {command}\n    {why[:400]}\n')
     sys.stderr.write(
         f'{release}: {len(recorded) - len(failures)}/{len(recorded)} commands behave as on {release} '
-        f'({skipped["allowed"]} allowed, {skipped[UNREADABLE]} where {release} sent nothing a peer can decode)\n'
+        f'({skipped["allowed"]} allowed, {skipped[UNREADABLE]} where {release} sent nothing a peer can decode, '
+        f'{skipped[NOTHING_SENT]} where it sent nothing at all)\n'
     )
     return len(failures)
 

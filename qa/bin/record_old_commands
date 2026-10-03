@@ -19,6 +19,7 @@ A keyword no accepted command uses fails the recording, unless UNREACHABLE says 
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import os
 import re
@@ -129,7 +130,9 @@ def texts(tree: Path, wiki: Path | None) -> list[str]:
         except OSError:
             continue
         # prose gives no values: in documentation only the code blocks are read
-        found.append('\n'.join(re.findall(r'```[^\n]*\n(.*?)```', text, re.S)) if path.suffix in ('.md', '.rst') else text)
+        found.append(
+            '\n'.join(re.findall(r'```[^\n]*\n(.*?)```', text, re.S)) if path.suffix in ('.md', '.rst') else text
+        )
     return found
 
 
@@ -141,6 +144,8 @@ def harvested(corpus: list[str]) -> list[str]:
             command = ' '.join(found.split())
             if command.startswith('neighbor ') and ' announce ' not in command and ' withdraw ' not in command:
                 continue
+            if command.startswith('neighbor ') and ('{' in command or '#' in command):
+                continue  # a configuration example of the wiki written on one line, not a command
             commands.add(command)
         for found in STATIC_ROUTE.findall(text):
             commands.add('announce route ' + ' '.join(found.split()))
@@ -200,17 +205,14 @@ def kind(command: str) -> str:
     return words_found[1] if len(words_found) > 1 else ''
 
 
-IPV6 = re.compile(r'^[\[(]?\s*[0-9a-fA-F]*:[0-9a-fA-F:]*:[0-9a-fA-F:.]*(/\d+)*')
-IPV4 = re.compile(r'^[\[(]?\s*\d+\.\d+\.\d+\.\d+(/\d+)*')
-
-
 def address_family(text: str) -> str:
-    """ipv6 or ipv4 for an address or prefix, '' for anything else."""
-    if IPV6.match(text):
-        return 'ipv6'
-    if IPV4.match(text):
-        return 'ipv4'
-    return ''
+    """ipv6 or ipv4 for an address or prefix, '' for anything else: `65000:1:1` is no address."""
+    word = text.strip('[]() ').split()[0] if text.strip('[]() ') else ''
+    try:
+        found = ipaddress.ip_network(word.split('/')[0] if word.count('/') > 1 else word, strict=False)
+    except ValueError:
+        return ''
+    return 'ipv6' if found.version == 6 else 'ipv4'
 
 
 def same_family(base: str, value: str) -> bool:
@@ -268,8 +270,12 @@ def covered(results: dict, grammar: dict, release: str) -> list[str]:
     for command, result in results.items():
         if result['accepted']:
             used.setdefault(kind(command), set()).update(words(command))
+    # only the commands the release has: 4.2 has no `announce ipv4 ...`
+    registered = {name.split()[1] for name in grammar['registered'] if len(name.split()) > 1}
     missing = []
     for command_kind, sections in SECTIONS.items():
+        if command_kind not in registered:
+            continue
         for section in sections:
             for keyword in section_keywords(grammar, section):
                 if keyword in used.get(command_kind, set()) or keyword in UNREACHABLE[release]:
@@ -288,7 +294,9 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory() as scratch:
         tree = old_tree(arguments.release, Path(scratch))
-        neighbor = OLD / 'neighbor.conf'
+        # 4.2 has no `family { all; }`, a neighbor with no family block has every family there
+        specific = OLD / f'neighbor-{arguments.release}.conf'
+        neighbor = specific if specific.exists() else OLD / 'neighbor.conf'
         grammar = recorder(arguments.python, tree, arguments.release, ['grammar'])
         corpus = texts(tree, arguments.wiki)
         commands = harvested(corpus)
