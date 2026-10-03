@@ -22,7 +22,6 @@ from exabgp.application.unixsocket import unix_socket
 from exabgp.environment import ROOT, getenv
 from exabgp.reactor.api.response.answer import Answer
 from exabgp.reactor.network.error import error
-from exabgp.util.errstr import errstr
 
 # Timeout and buffer size constants
 PIPE_OPEN_TIMEOUT = 5  # Seconds to wait for pipe open
@@ -163,7 +162,15 @@ def send_command_socket(socket_path: str, command_str: str, return_output: bool 
 
     try:
         # Send command
-        client.sendall(command_str.encode('utf-8') + b'\n')
+        try:
+            client.sendall(command_str.encode('utf-8') + b'\n')
+        except OSError as exc:
+            error_msg = f'could not send command to ExaBGP ({exc})\n'
+            if return_output:
+                raise ConnectionError(error_msg.strip()) from exc
+            sys.stderr.write(error_msg)
+            sys.stderr.flush()
+            sys.exit(1)
 
         # Receive response
         client.settimeout(COMMAND_RESPONSE_TIMEOUT)
@@ -253,61 +260,6 @@ def main() -> None:
     cmdline(parser.parse_args())
 
 
-def _reset_over_pipe(sending: str, pipename: str) -> int:
-    """Hand `reset` to the named pipe. Zero only if it was written."""
-    pipes = named_pipe(ROOT, pipename)
-    if len(pipes) != 1:
-        found = 'none' if not pipes else f'{len(pipes)} candidates'
-        sys.stderr.write(f'error: reset not sent, no single named pipe to send it to ({found})\n')
-        return 1
-
-    send = pipes[0] + pipename + '.in'
-    if not check_fifo(send):
-        sys.stderr.write(f'error: reset not sent, {send} is not a usable named pipe\n')
-        return 1
-
-    writer = open_writer(send)
-    try:
-        os.write(writer, sending.encode('utf-8') + b'\n')
-    except OSError as exc:
-        sys.stderr.write(f'error: reset not sent, could not write to {send} ({errstr(exc)})\n')
-        return 1
-    finally:
-        # in a finally because the write failure path used to skip the close and leak the
-        # descriptor for the remaining life of the call
-        os.close(writer)
-    return 0
-
-
-def _reset_over_socket(sending: str, socketname: str) -> int:
-    """Hand `reset` to the unix socket. Zero only if it was sent."""
-    sockets = unix_socket(ROOT, socketname)
-    if len(sockets) != 1:
-        found = 'none' if not sockets else f'{len(sockets)} candidates'
-        sys.stderr.write(f'error: reset not sent, no single socket to send it to ({found})\n')
-        return 1
-
-    socket_path = sockets[0] + socketname + '.sock'
-    client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
-    try:
-        client.settimeout(COMMAND_TIMEOUT)
-        client.connect(socket_path)
-        client.sendall(sending.encode('utf-8') + b'\n')
-    except OSError as exc:
-        sys.stderr.write(f'error: reset not sent, could not reach {socket_path} ({errstr(exc)})\n')
-        return 1
-    finally:
-        client.close()
-    return 0
-
-
-def _send_reset(sending: str, pipename: str, socketname: str, use_pipe_transport: bool) -> int:
-    """The exit status `reset` should leave with."""
-    if use_pipe_transport:
-        return _reset_over_pipe(sending, pipename)
-    return _reset_over_socket(sending, socketname)
-
-
 def cmdline(cmdarg: argparse.Namespace) -> None:
     # Determine transport: command-line flag > environment variable > default (socket)
     # Priority: 1. Command-line flags, 2. Environment variable, 3. Default
@@ -353,18 +305,6 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
     # Show expanded command if shortcuts were used
     if sending != command_str:
         sys.stdout.write(f'command: {sending}\n')
-
-    if sending == 'reset':
-        # reset is the one command which expects no answer from the daemon, and that used
-        # to be read as "nothing here can fail": every path below ended at the same
-        # unconditional sys.exit(0), including the ones where no byte had left the process.
-        # A script checking the status was told a reset had happened when there was no
-        # socket, no fifo, no daemon listening, or a write which failed part way through.
-        #
-        # There is no acknowledgement to wait for, so zero here can only mean "the command
-        # was handed to the transport". That is still worth distinguishing from "there was
-        # no transport to hand it to".
-        sys.exit(_send_reset(sending, pipename, socketname, use_pipe_transport))
 
     # Route to appropriate transport
     if use_pipe_transport:
@@ -547,14 +487,19 @@ def cmdline_pipe(pipename: str, sending: str, exit_on_completion: bool = True) -
     writer = open_writer(send)
     try:
         os.write(writer, sending.encode('utf-8') + b'\n')
-        os.close(writer)
     except OSError as exc:
+        # both descriptors, or a caller which keeps running (the interactive CLI) leaks them
+        for descriptor in (reader, writer):
+            with contextlib.suppress(OSError):
+                os.close(descriptor)
         message = f'could not send command to ExaBGP ({exc!s})'
         sys.stdout.write(message)
         sys.stdout.flush()
         if exit_on_completion:
             sys.exit(1)
         raise RuntimeError(message) from exc
+    with contextlib.suppress(OSError):
+        os.close(writer)
 
     waited = 0.0
     buf = b''

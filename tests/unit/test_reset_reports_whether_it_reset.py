@@ -1,22 +1,17 @@
-"""`exabgp cli reset` exited 0 whether or not the reset had happened.
+"""`exabgp run reset` exits 0 only when the reset has happened.
 
-`reset` is the one command which expects no answer from the daemon, and that was read as
-"nothing here can fail". Every path through it ended at the same unconditional
-`sys.exit(0)`:
+On 5.x the daemon never answered `reset`, so the CLI sent it and exited at once. That was read
+as "nothing here can fail", and every path ended at the same unconditional `sys.exit(0)`:
 
   - no socket found in any of the search locations, so nothing was sent
   - no fifo found, or the path found was not a fifo
   - `connect` refused, or timed out, because the daemon is not running
   - `sendall` or `os.write` failed part way through
 
-All four printed nothing and exited 0. A script or a CI job which runs `exabgp cli reset`
-and checks the exit status was told the reset succeeded when no byte had left the process.
-That is the "never report success you have not verified" rule: a command which returns 0
-on a path it did not execute is lying to its caller.
-
-There is no acknowledgement to wait for, so success here can only mean "the command was
-handed to the transport". That is still worth distinguishing from "there was no transport
-to hand it to", which is what these tests pin.
+A script or a CI job checking the status was told the reset succeeded when no byte had left
+the process. 6.0 answers `session reset`, so `reset` now goes the way of every other command
+and waits for that answer: zero means the daemon said it was done. These tests pin that the
+four failures above are still failures on that common path, which had the last two holes too.
 
 The compiled run.py calls unix_socket, named_pipe, check_fifo and open_writer directly,
 so replacing them on the module changes nothing there. Where a test needs a transport to
@@ -57,6 +52,7 @@ class FakeSocket:
 
     def __init__(self, fail_on: str = '') -> None:
         self._fail_on = fail_on
+        self._answer = b'asynchronous queue cleared\ndone\n'
         self.closed = False
 
     def settimeout(self, timeout: float) -> None:
@@ -70,6 +66,11 @@ class FakeSocket:
         if self._fail_on == 'sendall':
             raise OSError(32, 'Broken pipe')
         FakeSocket.sent.append(payload)
+
+    def recv(self, size: int) -> bytes:
+        # the daemon's answer to `session reset`, then the connection closes
+        answer, self._answer = self._answer, b''
+        return answer
 
     def close(self) -> None:
         self.closed = True
@@ -169,7 +170,7 @@ def test_a_failed_send_is_not_success(monkeypatch: pytest.MonkeyPatch, listening
 
 
 def test_a_delivered_reset_is_success(monkeypatch: pytest.MonkeyPatch, listening: str) -> None:
-    """The working path must still return zero, or every assertion above is trivial."""
+    """The daemon answered done: zero, or every assertion above is trivial."""
     FakeSocket.sent = []
     monkeypatch.setattr(run_module.sock, 'socket', lambda *a, **k: FakeSocket())
     code = exit_code(monkeypatch)

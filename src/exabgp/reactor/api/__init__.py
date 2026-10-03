@@ -89,7 +89,9 @@ class API:
                 return True
 
         try:
-            handler, peers, remaining = dispatch_for(api_version, command, reactor, service)
+            handler, peers, remaining = dispatch_for(
+                reactor.processes.dispatch_version(service), command, reactor, service
+            )
             return handler(self, reactor, service, peers, remaining, use_json)
         except UnknownCommand:
             log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
@@ -126,7 +128,9 @@ class API:
                 return True
 
         try:
-            handler, peers, remaining = dispatch_for(api_version, command, reactor, service)
+            handler, peers, remaining = dispatch_for(
+                reactor.processes.dispatch_version(service), command, reactor, service
+            )
             result = handler(self, reactor, service, peers, remaining, use_json)
             # Flush any queued writes immediately
             await reactor.processes.flush_write_queue()

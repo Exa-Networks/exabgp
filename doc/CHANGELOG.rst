@@ -4,6 +4,14 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: `exabgp run` and `exabgp cli` take the commands of 5.x again: `show neighbor`,
+   `shutdown`, `reload`, `reset` and the shortcuts which expand to them were refused as
+   unknown, the daemon holding its own CLI helper to API v6. The helper still answers in
+   v6 JSON. `exabgp run reset` now waits for the daemon's answer, as 6.0 gives one, so 0
+   means the queue was cleared; it exited 0 at once, while the daemon refused the command.
+ * Fix: `exabgp run` reports a command it could not write, over the socket as over the
+   pipe, in one line and with exit code 1. The socket raised a traceback, and the pipe left
+   both its descriptors open.
  * Fix: `announce ipv4|ipv6 <family>` takes atomic-aggregate, originator-id, cluster-list,
    aigp, attribute, name, split, watchdog, withdraw and path-information, as a static route
    does. They were refused, while 5.0 accepted them and sent them.

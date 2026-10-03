@@ -491,6 +491,18 @@ class Processes:
         """The API version of a helper: 4, 6, or API_AUTO while undecided."""
         return self._api_version.get(process, API_AUTO)
 
+    def dispatch_version(self, process: str) -> int:
+        """The API version a helper's commands are dispatched as, which its answers may not share.
+
+        ExaBGP's own CLI helper relays what an operator types at `exabgp cli` or `exabgp run`,
+        and an operator coming from 5.x types `show neighbor` or `reset`. Held to v6 like its
+        answers, it refused every one of them. Its commands go to the dispatcher of an undecided
+        helper, which takes both forms; it still answers in v6 JSON.
+        """
+        if process.startswith(API_PREFIX):
+            return API_AUTO
+        return self.api_version(process)
+
     def detect_api_version(self, process: str, command: str) -> int:
         """Settle a helper's API version from a command it wrote, once, and return it.
 
