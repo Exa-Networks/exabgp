@@ -63,56 +63,48 @@ def _description(module: ModuleType) -> str | None:
     return docstring
 
 
-def main() -> int | None:
-    # Handle --env-file early, before Environment.setup() is called
-    from exabgp.environment import base as envbase
+def _tool_arguments(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """The subcommands which group further ones: configuration and migrate."""
+    # Configuration subcommand group
+    config_parser = subparsers.add_parser(
+        'configuration', help='configuration tools (validate, export)', description='Configuration management tools'
+    )
+    config_subparsers = config_parser.add_subparsers(dest='config_command')
 
-    for i, arg in enumerate(sys.argv[1:], 1):
-        if arg == '--env-file' and i < len(sys.argv) - 1:
-            envbase.ENVFILE = sys.argv[i + 1]
-            sys.argv = sys.argv[:i] + sys.argv[i + 2 :]
-            break
-        if arg.startswith('--env-file='):
-            envbase.ENVFILE = arg.split('=', 1)[1]
-            sys.argv = sys.argv[:i] + sys.argv[i + 1 :]
-            break
+    config_validate = config_subparsers.add_parser(
+        'validate', help='validate configuration file', description=_description(validate)
+    )
+    config_validate.set_defaults(func=validate.cmdline)
+    validate.setargs(config_validate)
 
-    # Check if this is a CLI subprocess (pipe or socket)
-    cli_mode = os.environ.get('exabgp_api_cli_mode', '')
+    config_export = config_subparsers.add_parser(
+        'export', help='export parsed configuration to JSON', description=_description(export)
+    )
+    config_export.set_defaults(func=export.cmdline)
+    export.setargs(config_export)
 
-    if cli_mode == 'pipe':
-        cli_named_pipe = os.environ.get('exabgp_cli_pipe', '')
-        if cli_named_pipe:
-            from exabgp.application.pipe import main
+    config_syntax = config_subparsers.add_parser(
+        'syntax', help='show what the configuration accepts', description=_description(syntax)
+    )
+    config_syntax.set_defaults(func=syntax.cmdline)
+    syntax.setargs(config_syntax)
 
-            main(cli_named_pipe)
-            sys.exit(0)
-    elif cli_mode == 'socket':
-        cli_unix_socket = os.environ.get('exabgp_cli_socket', '')
-        if cli_unix_socket:
-            from exabgp.application.unixsocket import main
+    config_example = config_subparsers.add_parser(
+        'example', help='generate documented configuration example', description=_description(example)
+    )
+    config_example.set_defaults(func=example.cmdline)
+    example.setargs(config_example)
 
-            main(cli_unix_socket)
-            sys.exit(0)
+    # Migration tools subcommand group
+    migrate_parser = subparsers.add_parser(
+        'migrate', help='migrate configuration/API between versions', description=_description(migrate)
+    )
+    migrate_parser.set_defaults(func=migrate.cmdline)
+    migrate.setargs(migrate_parser)
 
-    # compatibility with exabgp 4.x
-    if len(sys.argv) > 1 and not ('-h' in sys.argv or '--help' in sys.argv):
-        if sys.argv[1] not in (
-            'version',
-            'cli',
-            'run',
-            'healthcheck',
-            'decode',
-            'encode',
-            'configuration',
-            'server',
-            'env',
-            'shell',
-            'schema',
-            'migrate',
-        ):
-            sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
 
+def arguments() -> argparse.ArgumentParser:
+    """The command line, one subparser per subcommand."""
     formatter = argparse.RawDescriptionHelpFormatter
     parser = argparse.ArgumentParser(
         description='The BGP swiss army knife of networking\n\n'
@@ -184,42 +176,49 @@ def main() -> int | None:
     sub.set_defaults(func=schema.cmdline)
     schema.setargs(sub)
 
-    # Configuration subcommand group
-    config_parser = subparsers.add_parser(
-        'configuration', help='configuration tools (validate, export)', description='Configuration management tools'
-    )
-    config_subparsers = config_parser.add_subparsers(dest='config_command')
+    _tool_arguments(subparsers)
 
-    config_validate = config_subparsers.add_parser(
-        'validate', help='validate configuration file', description=_description(validate)
-    )
-    config_validate.set_defaults(func=validate.cmdline)
-    validate.setargs(config_validate)
+    return parser
 
-    config_export = config_subparsers.add_parser(
-        'export', help='export parsed configuration to JSON', description=_description(export)
-    )
-    config_export.set_defaults(func=export.cmdline)
-    export.setargs(config_export)
 
-    config_syntax = config_subparsers.add_parser(
-        'syntax', help='show what the configuration accepts', description=_description(syntax)
-    )
-    config_syntax.set_defaults(func=syntax.cmdline)
-    syntax.setargs(config_syntax)
+def main() -> int | None:
+    # Handle --env-file early, before Environment.setup() is called
+    from exabgp.environment import base as envbase
 
-    config_example = config_subparsers.add_parser(
-        'example', help='generate documented configuration example', description=_description(example)
-    )
-    config_example.set_defaults(func=example.cmdline)
-    example.setargs(config_example)
+    for i, arg in enumerate(sys.argv[1:], 1):
+        if arg == '--env-file' and i < len(sys.argv) - 1:
+            envbase.ENVFILE = sys.argv[i + 1]
+            sys.argv = sys.argv[:i] + sys.argv[i + 2 :]
+            break
+        if arg.startswith('--env-file='):
+            envbase.ENVFILE = arg.split('=', 1)[1]
+            sys.argv = sys.argv[:i] + sys.argv[i + 1 :]
+            break
 
-    # Migration tools subcommand group
-    migrate_parser = subparsers.add_parser(
-        'migrate', help='migrate configuration/API between versions', description=_description(migrate)
-    )
-    migrate_parser.set_defaults(func=migrate.cmdline)
-    migrate.setargs(migrate_parser)
+    # Check if this is a CLI subprocess (pipe or socket)
+    cli_mode = os.environ.get('exabgp_api_cli_mode', '')
+
+    if cli_mode == 'pipe':
+        cli_named_pipe = os.environ.get('exabgp_cli_pipe', '')
+        if cli_named_pipe:
+            from exabgp.application.pipe import main
+
+            main(cli_named_pipe)
+            sys.exit(0)
+    elif cli_mode == 'socket':
+        cli_unix_socket = os.environ.get('exabgp_cli_socket', '')
+        if cli_unix_socket:
+            from exabgp.application.unixsocket import main
+
+            main(cli_unix_socket)
+            sys.exit(0)
+
+    # compatibility with exabgp 4.x
+    if len(sys.argv) > 1 and not ('-h' in sys.argv or '--help' in sys.argv):
+        if sys.argv[1] not in shell.SUBCOMMANDS:
+            sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
+
+    parser = arguments()
 
     try:
         cmdarg = parser.parse_args()

@@ -14,6 +14,24 @@ import os
 import sys
 from pathlib import Path
 
+# The first words `exabgp` accepts, in the order the completion scripts offer them. Any other
+# first word is a configuration file for `server`, as it was in 4.x. A test holds this list,
+# and each completion script, to the subparsers of main.arguments().
+SUBCOMMANDS = (
+    'version',
+    'cli',
+    'run',
+    'healthcheck',
+    'server',
+    'env',
+    'configuration',
+    'migrate',
+    'schema',
+    'decode',
+    'encode',
+    'shell',
+)
+
 
 def detect_shell() -> str:
     """Auto-detect current shell from environment."""
@@ -66,7 +84,7 @@ _exabgp() {
     local cur prev words cword
     _init_completion || return
 
-    local subcommands="version cli run healthcheck server env validate decode encode shell"
+    local subcommands="version cli run healthcheck server env configuration migrate schema decode encode shell"
     local config_dirs="etc/exabgp /etc/exabgp"
 
     # If we're at the first argument position
@@ -187,11 +205,17 @@ _exabgp() {
             COMPREPLY=($(compgen -W "-d --diff -e --env -h --help" -- "$cur"))
             ;;
 
-        validate)
-            case "$prev" in
-                *)
+        configuration)
+            if [[ $cword -eq 2 ]]; then
+                COMPREPLY=($(compgen -W "validate export syntax example" -- "$cur"))
+                return 0
+            fi
+            case "${words[2]}" in
+                validate|export)
                     if [[ "$cur" == -* ]]; then
-                        COMPREPLY=($(compgen -W "-n --neighbor -r --route -v --verbose -p --pdb -h --help" -- "$cur"))
+                        local opts="-n --neighbor -r --route -v --verbose -p --pdb -h --help"
+                        [[ "${words[2]}" == export ]] && opts="-o --output -i --indent -p --pdb -h --help"
+                        COMPREPLY=($(compgen -W "$opts" -- "$cur"))
                     else
                         # Complete .conf files
                         for dir in . $config_dirs; do
@@ -202,7 +226,40 @@ _exabgp() {
                         _filedir conf
                     fi
                     ;;
+                syntax)
+                    COMPREPLY=($(compgen -W "--json --yang -h --help" -- "$cur"))
+                    ;;
+                example)
+                    COMPREPLY=($(compgen -W "neighbor full -h --help" -- "$cur"))
+                    ;;
             esac
+            ;;
+
+        migrate)
+            if [[ $cword -eq 2 ]]; then
+                COMPREPLY=($(compgen -W "conf api" -- "$cur"))
+                return 0
+            fi
+            case "${words[2]}" in
+                conf)
+                    if [[ "$cur" == -* ]]; then
+                        COMPREPLY=($(compgen -W "-f --from -t --to -o --output -i --inplace -n --dry-run -v --verbose -w --wrap-api -h --help" -- "$cur"))
+                    else
+                        _filedir conf
+                    fi
+                    ;;
+                api)
+                    COMPREPLY=($(compgen -W "-f --from -t --to -v --verbose -e --exec -h --help" -- "$cur"))
+                    ;;
+            esac
+            ;;
+
+        schema)
+            if [[ $cword -eq 2 ]]; then
+                COMPREPLY=($(compgen -W "export --compact -h --help" -- "$cur"))
+            else
+                COMPREPLY=($(compgen -W "--compact -h --help" -- "$cur"))
+            fi
             ;;
 
         decode)
@@ -312,7 +369,9 @@ _exabgp() {
         'healthcheck:Monitor services and announce/withdraw routes'
         'server:Start ExaBGP daemon'
         'env:Show ExaBGP configuration information'
-        'validate:Validate configuration file'
+        'configuration:Validate, export or describe a configuration'
+        'migrate:Migrate configuration or API commands between versions'
+        'schema:Export the configuration schema'
         'decode:Decode hex-encoded BGP packets'
         'encode:Encode route config to BGP packets'
         'shell:Manage shell completion'
@@ -331,7 +390,7 @@ _exabgp() {
     local subcommand="${words[2]}"
 
     # If not a known subcommand, treat as 'server' (4.x compatibility)
-    if [[ ! " version cli run healthcheck server env validate decode encode shell " =~ " $subcommand " ]]; then
+    if [[ ! " version cli run healthcheck server env configuration migrate schema decode encode shell " =~ " $subcommand " ]]; then
         subcommand="server"
     fi
 
@@ -412,14 +471,89 @@ _exabgp() {
                 '(-e --env)'{-e,--env}'[Display using environment format]'
             ;;
 
-        validate)
+        configuration)
+            if (( CURRENT == 3 )); then
+                _values 'configuration command' \\
+                    'validate[Validate configuration files]' \\
+                    'export[Export the parsed configuration as JSON]' \\
+                    'syntax[Show what the configuration accepts]' \\
+                    'example[Generate a documented configuration example]'
+                return 0
+            fi
+            shift 2 words
+            (( CURRENT -= 2 ))
+            case "${words[1]}" in
+                validate)
+                    _arguments \\
+                        '(- *)'{-h,--help}'[Show help message]' \\
+                        '(-n --neighbor)'{-n,--neighbor}'[Check parsing of neighbors]' \\
+                        '(-r --route)'{-r,--route}'[Check parsing of routes]' \\
+                        '(-v --verbose)'{-v,--verbose}'[Be verbose in display]' \\
+                        '(-p --pdb)'{-p,--pdb}'[Fire debugger on critical logging]' \\
+                        '*:configuration file:_alternative "configs:configuration file:compadd ${config_files}" "files:configuration file:_files -g \\"*.conf\\""'
+                    ;;
+                export)
+                    _arguments \\
+                        '(- *)'{-h,--help}'[Show help message]' \\
+                        '(-o --output)'{-o,--output}'[Output file]:file:_files' \\
+                        '(-i --indent)'{-i,--indent}'[JSON indentation]:spaces' \\
+                        '(-p --pdb)'{-p,--pdb}'[Fire debugger on critical logging]' \\
+                        ':configuration file:_alternative "configs:configuration file:compadd ${config_files}" "files:configuration file:_files -g \\"*.conf\\""'
+                    ;;
+                syntax)
+                    _arguments \\
+                        '(- *)'{-h,--help}'[Show help message]' \\
+                        '(--yang)--json[Print the JSON Schema of the values]' \\
+                        '(--json)--yang[Print the YANG module of the values]' \\
+                        '*:section:'
+                    ;;
+                example)
+                    _arguments \\
+                        '(- *)'{-h,--help}'[Show help message]' \\
+                        ':kind:(neighbor full)'
+                    ;;
+            esac
+            ;;
+
+        migrate)
+            if (( CURRENT == 3 )); then
+                _values 'migrate command' \\
+                    'conf[Migrate a configuration file]' \\
+                    'api[Migrate API commands]'
+                return 0
+            fi
+            shift 2 words
+            (( CURRENT -= 2 ))
+            case "${words[1]}" in
+                conf)
+                    _arguments \\
+                        '(- *)'{-h,--help}'[Show help message]' \\
+                        '(-f --from)'{-f,--from}'[Source version]:version:(3.4 4 5)' \\
+                        '(-t --to)'{-t,--to}'[Target version]:version:(4 5 main)' \\
+                        '(-o --output)'{-o,--output}'[Output file]:file:_files' \\
+                        '(-i --inplace)'{-i,--inplace}'[Modify the file in place]' \\
+                        '(-n --dry-run)'{-n,--dry-run}'[Show changes without applying]' \\
+                        '(-v --verbose)'{-v,--verbose}'[Show each transformation]' \\
+                        '(-w --wrap-api)'{-w,--wrap-api}'[Wrap run commands with the API bridge]' \\
+                        ':configuration file:_files -g "*.conf"'
+                    ;;
+                api)
+                    _arguments \\
+                        '(- *)'{-h,--help}'[Show help message]' \\
+                        '(-f --from)'{-f,--from}'[Source API version]:version:(4 5)' \\
+                        '(-t --to)'{-t,--to}'[Target API version]:version:(5 main)' \\
+                        '(-v --verbose)'{-v,--verbose}'[Show each transformation]' \\
+                        '(-e --exec)'{-e,--exec}'[Run a program and translate its commands]:command:_command_names'
+                    ;;
+            esac
+            ;;
+
+        schema)
             _arguments \\
                 '(- *)'{-h,--help}'[Show help message]' \\
-                '(-n --neighbor)'{-n,--neighbor}'[Check parsing of neighbors]' \\
-                '(-r --route)'{-r,--route}'[Check parsing of routes]' \\
-                '(-v --verbose)'{-v,--verbose}'[Be verbose in display]' \\
-                '(-p --pdb)'{-p,--pdb}'[Fire debugger on critical logging]' \\
-                '*:configuration file:_alternative "configs:configuration file:compadd ${config_files}" "files:configuration file:_files -g \\"*.conf\\""'
+                '--compact[Output minified JSON]' \\
+                '1:action:(export)' \\
+                '2:section:'
             ;;
 
         decode)
@@ -507,7 +641,7 @@ def generate_fish_completion() -> str:
 # Helper function to check if a subcommand has been given
 function __fish_exabgp_using_subcommand
     set -l cmd (commandline -opc)
-    set -l subcommands version cli run healthcheck server env validate decode encode shell
+    set -l subcommands version cli run healthcheck server env configuration migrate schema decode encode shell
 
     if set -q cmd[2]
         if contains -- $cmd[2] $subcommands
@@ -542,7 +676,9 @@ complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'run' -d 'Execute 
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'healthcheck' -d 'Monitor services and announce/withdraw routes'
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'server' -d 'Start ExaBGP daemon'
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'env' -d 'Show ExaBGP configuration information'
-complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'validate' -d 'Validate configuration file'
+complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'configuration' -d 'Validate, export or describe a configuration'
+complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'migrate' -d 'Migrate configuration or API commands between versions'
+complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'schema' -d 'Export the configuration schema'
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'decode' -d 'Decode hex-encoded BGP packets'
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'encode' -d 'Encode route config to BGP packets'
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'shell' -d 'Manage shell completion'
@@ -609,12 +745,39 @@ complete -c exabgp -n '__fish_seen_subcommand_from server' -a '(__fish_exabgp_co
 complete -c exabgp -n '__fish_seen_subcommand_from env' -s d -l diff -d 'Show only differences from defaults'
 complete -c exabgp -n '__fish_seen_subcommand_from env' -s e -l env -d 'Display using environment format'
 
-# validate subcommand
-complete -c exabgp -n '__fish_seen_subcommand_from validate' -s n -l neighbor -d 'Check parsing of neighbors'
-complete -c exabgp -n '__fish_seen_subcommand_from validate' -s r -l route -d 'Check parsing of routes'
-complete -c exabgp -n '__fish_seen_subcommand_from validate' -s v -l verbose -d 'Be verbose in display'
-complete -c exabgp -n '__fish_seen_subcommand_from validate' -s p -l pdb -d 'Fire debugger on critical logging'
-complete -c exabgp -n '__fish_seen_subcommand_from validate' -a '(__fish_exabgp_conf_files)'
+# configuration subcommand
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and not __fish_seen_subcommand_from validate export syntax example' -a 'validate' -d 'Validate configuration files'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and not __fish_seen_subcommand_from validate export syntax example' -a 'export' -d 'Export the parsed configuration as JSON'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and not __fish_seen_subcommand_from validate export syntax example' -a 'syntax' -d 'Show what the configuration accepts'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and not __fish_seen_subcommand_from validate export syntax example' -a 'example' -d 'Generate a documented configuration example'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from validate' -s n -l neighbor -d 'Check parsing of neighbors'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from validate' -s r -l route -d 'Check parsing of routes'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from validate' -s v -l verbose -d 'Be verbose in display'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from validate export' -s p -l pdb -d 'Fire debugger on critical logging'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from validate export' -a '(__fish_exabgp_conf_files)'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from export' -s o -l output -d 'Output file' -r -F
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from export' -s i -l indent -d 'JSON indentation' -r
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from syntax' -l json -d 'Print the JSON Schema of the values'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from syntax' -l yang -d 'Print the YANG module of the values'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from example' -a 'neighbor full'
+
+# migrate subcommand
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and not __fish_seen_subcommand_from conf api' -a 'conf' -d 'Migrate a configuration file'
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and not __fish_seen_subcommand_from conf api' -a 'api' -d 'Migrate API commands'
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf' -s f -l from -d 'Source version' -r -a '3.4 4 5'
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf' -s t -l to -d 'Target version' -r -a '4 5 main'
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf' -s o -l output -d 'Output file' -r -F
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf' -s i -l inplace -d 'Modify the file in place'
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf' -s n -l dry-run -d 'Show changes without applying'
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf' -s w -l wrap-api -d 'Wrap run commands with the API bridge'
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from api' -s f -l from -d 'Source API version' -r -a '4 5'
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from api' -s t -l to -d 'Target API version' -r -a '5 main'
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from api' -s e -l exec -d 'Run a program and translate its commands' -r
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf api' -s v -l verbose -d 'Show each transformation'
+
+# schema subcommand
+complete -c exabgp -n '__fish_seen_subcommand_from schema; and not __fish_seen_subcommand_from export' -a 'export' -d 'Export the configuration schema'
+complete -c exabgp -n '__fish_seen_subcommand_from schema' -l compact -d 'Output minified JSON'
 
 # decode subcommand
 complete -c exabgp -n '__fish_seen_subcommand_from decode' -s n -l nlri -d 'Data is only the NLRI'
@@ -705,7 +868,7 @@ def install_completion(shell: str) -> int:
 
     # Verify completion works
     sys.stdout.write('\nVerify by running: exabgp <TAB>\n')
-    sys.stdout.write('You should see: cli  decode  env  healthcheck  run  server  shell  validate  version\n')
+    sys.stdout.write(f'You should see: {"  ".join(sorted(SUBCOMMANDS))}\n')
 
     return 0
 
