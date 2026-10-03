@@ -134,7 +134,9 @@ class JSON:
 
     def _json_kv(self, extra: dict[Any, Any]) -> str:
         # the key is a code (CapabilityCode): the object is filed under its name, and the
-        # number is given inside it as "code"
+        # number is given inside it as "code"; API 4 files it under the number, as 5.x did
+        if self.use_v4_json:
+            return ', '.join(f'"{int(k)}": {v.json()}' for (k, v) in extra.items())
         return ', '.join(f'"{k}": {self._with_code(int(k), v.json())}' for (k, v) in extra.items())
 
     @staticmethod
@@ -303,12 +305,15 @@ class JSON:
         body: bytes,
         negotiated: 'Negotiated',
     ) -> str:
+        # `message` is the Data field made readable, an RFC 9003 Shutdown Communication decoded;
+        # `data` is the field as on the wire, and for API 4 the readable form, as 5.x gave it
+        readable = message.text
         kv_content = self._kv(
             {
                 'code': message.code,
                 'subcode': message.subcode,
-                'data': hexstring(message.data),
-                'message': message.data.decode('utf-8', 'replace'),
+                'data': hexstring(readable if self.use_v4_json else message.data),
+                'message': readable.decode('utf-8', 'replace'),
             },
         )
         return self._header(

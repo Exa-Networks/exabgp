@@ -249,6 +249,10 @@ class NLRI(Family):
         """
         return self.json(compact=compact)
 
+    def v4_text(self, nexthop: IP | None = None) -> str:
+        """The route as an API 4 text helper is told it, as 5.x wrote it: with its next-hop, if any."""
+        return f'{self.extensive()}{next_hop_text(nexthop)}'
+
     @classmethod
     def register(cls, afi: AFI, safi: SAFI, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
         def register_nlri(klass: Type[NLRI]) -> Type[NLRI]:
@@ -309,3 +313,8 @@ class NLRI(Family):
 # Initialize the NLRI singletons
 NLRI.INVALID = NLRI._create_singleton('INVALID')
 NLRI.EMPTY = NLRI._create_singleton('EMPTY')
+
+
+def next_hop_text(nexthop: IP | None) -> str:
+    """` next-hop <ip>`, or nothing for a route which has none (a flow route's)."""
+    return '' if nexthop is None or nexthop is IP.NoNextHop else f' next-hop {nexthop}'

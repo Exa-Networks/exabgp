@@ -334,6 +334,12 @@ class IPVPNBase(Label):
     def extensive(self) -> str:
         return '{}{}'.format(Label.extensive(self), str(self.rd))
 
+    def v4_qualifier(self) -> str:
+        return str(self.rd)
+
+    def v4_json_qualifier(self) -> list[str]:
+        return [self.rd.json()] if self._has_rd else []
+
     def __str__(self) -> str:
         return self.extensive()
 

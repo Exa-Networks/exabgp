@@ -81,13 +81,14 @@ from __future__ import annotations
 from typing import Any, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from exabgp.protocol.ip import IP
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.update.nlri.settings import INETSettings
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET, PATH_INFO_SIZE
-from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.nlri import NLRI, next_hop_text
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.util.types import Buffer
@@ -382,6 +383,25 @@ class LabelBase(INET):
 
     def prefix(self) -> str:
         return '{}{}'.format(INET.prefix(self), self.labels)
+
+    def v4_text(self, nexthop: IP | None = None) -> str:
+        """As 5.x wrote it: the labels without their raw value, the next-hop before the rd."""
+        return f'{INET.prefix(self)}{self.labels.text(raw=False)}{next_hop_text(nexthop)}{self.v4_qualifier()}'
+
+    def v4_qualifier(self) -> str:
+        """What 5.x wrote after the next-hop of the route: nothing, a route distinguisher for VPN."""
+        return ''
+
+    def v4_json(self, compact: bool = False, nexthop: IP | None = None) -> str:
+        """As 5.x wrote it: each label without its raw value."""
+        internal = [part for part in INET._internal(self) if part]
+        if self.labels is not Labels.NOLABEL:
+            internal.append(self.labels.json(raw=False))
+        internal += [part for part in self.v4_json_qualifier() if part]
+        return '{{ "nlri": "{}", {} }}'.format(self.cidr.prefix(), ', '.join(internal))
+
+    def v4_json_qualifier(self) -> list[str]:
+        return []
 
     def _with_label_field(self, packed: Buffer) -> Buffer:
         """The NLRI with a label field: RFC 8277 2.4's Compatibility field when it has no label.

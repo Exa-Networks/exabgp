@@ -94,7 +94,8 @@ class V4Text:
         negotiated: 'Negotiated',
     ) -> str:
         _ = self._v6.notification(neighbor, direction, message, header, body, negotiated)
-        data_hex = hexstring(message.data)
+        # as 5.x: the Data field made readable (a Shutdown Communication decoded), in hexadecimal
+        data_hex = hexstring(message.text)
         header_body = self._header_body(header, body)
         return f'neighbor {neighbor.session.peer_address} {direction} notification code {message.code} subcode {message.subcode} data {data_hex}{header_body}\n'
 
@@ -156,10 +157,7 @@ class V4Text:
         else:
             # Process announces - get nexthop from RoutedNLRI container
             for routed in update.announces:
-                nlri = routed.nlri
-                nexthop = routed.nexthop
-                nexthop_str = f' next-hop {nexthop}' if nexthop else ''
-                r += f'{prefix} announced {oneline(nlri.extensive())}{nexthop_str}{attributes}\n'
+                r += f'{prefix} announced {oneline(routed.nlri.v4_text(routed.nexthop))}{attributes}\n'
 
             # Process withdraws
             for nlri in update.withdraws:

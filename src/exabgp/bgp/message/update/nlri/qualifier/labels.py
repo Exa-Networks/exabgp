@@ -96,29 +96,34 @@ class Labels:
     def __len__(self) -> int:
         return len(self._packed)
 
-    def json(self) -> str:
+    def json(self, raw: bool = True) -> str:
+        """The labels, each with its raw value; without it, `raw=False`, as API 4 shows them."""
         labels = self.labels
-        raw_labels = self.raw_labels
+        raw_labels = self.raw_labels if raw else [None] * len(labels)
         if len(labels) >= 1:
             return '"label": [ {} ]'.format(
                 ', '.join(
-                    ['[%d%s]' % (label, opt_raw_label(raw, ', %d')) for (label, raw) in zip(labels, raw_labels)],
+                    ['[%d%s]' % (label, opt_raw_label(value, ', %d')) for (label, value) in zip(labels, raw_labels)],
                 )
             )
         return ''
 
-    def __str__(self) -> str:
+    def text(self, raw: bool = True) -> str:
+        """The labels, each with its raw value; without it, `raw=False`, as API 4 shows them."""
         labels = self.labels
-        raw_labels = self.raw_labels
+        raw_labels = self.raw_labels if raw else [None] * len(labels)
         if len(labels) > 1:
             return ' label [ {} ]'.format(
                 ' '.join(
-                    ['%d%s' % (label, opt_raw_label(raw)) for (label, raw) in zip(labels, raw_labels)],
+                    ['%d%s' % (label, opt_raw_label(value)) for (label, value) in zip(labels, raw_labels)],
                 )
             )
         if len(labels) == 1:
             return ' label %d%s' % (labels[0], opt_raw_label(raw_labels[0]))
         return ''
+
+    def __str__(self) -> str:
+        return self.text()
 
     def __repr__(self) -> str:
         labels = self.labels

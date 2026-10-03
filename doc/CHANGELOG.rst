@@ -4,6 +4,22 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: a helper using API 4 is written what 5.x wrote it, checked line by line against what
+   4.2 and 5.0 wrote for every configuration they accept (qa/bin/test_old_responses). The
+   API 4 encoders were built on the API 6 ones and had taken their changes: the
+   capabilities of an OPEN filed under their name, a label shown with its raw value
+   ("label": [[100, 1601]]), a flow route's "string" without its next-hop, and text routes
+   written with "next-hop no-nexthop" for flow, a next-hop for MUP and MVPN, the raw label
+   value, and the next-hop after the route distinguisher. A cluster list is written in
+   brackets again when it holds one cluster. The values 6.0 corrected stay corrected for
+   API 4: the Graceful Restart flag names, the route origin community, the AS_SET brackets.
+ * Fix: the "message" of a NOTIFICATION in the JSON API is the Data field made readable, an
+   RFC 9003 Shutdown Communication decoded: a helper was given "\u0007testing", the length
+   octet in the text, where 5.0 gave Shutdown Communication: "testing". API 4 is given the
+   readable form as "data" too, as 5.x did.
+ * Note: a helper is held to API 4 or 6 by the first command it writes. A 5.x helper which
+   only reads, never writing a command, is written API 6 JSON: start ExaBGP with
+   exabgp_api_version=4 for it.
  * Fix: a neighbor with a flow block holds each of its routes once. The flow block kept the
    list of the routes read so far, which the neighbor took as well, so every route of the
    neighbor, static ones included, was there twice: "exabgp configuration export" listed
@@ -89,10 +105,10 @@ Version 6.0.0:
    import-time fallback in util/mypyc.py and package initializers. Compiled wheels and
    one-file executables use the same module selection; see doc/user/compiled-build.md.
    Memory introspection with server --memory remains limited by a mypyc GC-traversal bug.
- * Incompatible: in the JSON API, the capabilities of an OPEN are filed under their name
-   ("multiprotocol", "asn4", ...), with the capability code inside as "code". A received
+ * Incompatible: in the JSON of API 6, the capabilities of an OPEN are filed under their
+   name ("multiprotocol", "asn4", ...), with the capability code inside as "code". A received
    OPEN used to file them under the code ("1", "65", ...) and a sent one under the name,
-   without the code.
+   without the code. API 4 files them under the code, as 5.x did.
  * Fix: the configuration syntax in exabgp.conf(5) is printed from the parser. The page
    written by hand said "rate-limit <enable | disable>" where a number of UPDATE messages
    per second is read, and "encoding" for the statement called "encoder".

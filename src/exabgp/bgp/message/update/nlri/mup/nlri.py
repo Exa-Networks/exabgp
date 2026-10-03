@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Any, Callable, ClassVar, Self, TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from exabgp.protocol.ip import IP
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
@@ -43,6 +44,10 @@ class MUP(NLRI):
     CODE: ClassVar[int] = 0
     NAME: ClassVar[str] = 'Unknown'
     SHORT_NAME: ClassVar[str] = 'unknown'
+
+    def v4_text(self, nexthop: IP | None = None) -> str:
+        """As 5.x wrote it: the route without its next-hop."""
+        return self.extensive()
 
     def __init__(self, afi: AFI) -> None:
         """Create a MUP NLRI.

@@ -105,10 +105,8 @@ class ClusterList(Attribute):
         return len(self._packed)
 
     def __repr__(self) -> str:
-        clusters = self.clusters
-        if len(clusters) != 1:
-            return '[ {} ]'.format(' '.join([str(_) for _ in clusters]))
-        return '{}'.format(clusters[0])
+        # in brackets, of one cluster too, as 4.2 and 5.x wrote it to a helper
+        return '[ {} ]'.format(' '.join([str(_) for _ in self.clusters]))
 
     def json(self, compact: bool = False) -> str:
         return '[ {} ]'.format(', '.join(['"{}"'.format(str(_)) for _ in self.clusters]))

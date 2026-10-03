@@ -1493,7 +1493,8 @@ class Flow(NLRI):
         nh = nexthop if nexthop is not None else IP.NoNextHop
         if nh is not IP.NoNextHop:
             members.append('"next-hop": "{}"'.format(nh))
-        members.append('"string": {}'.format(json.dumps(self.extensive(), default=json_number)))
+        # as 5.x wrote it, the string ends with the next-hop the route has
+        members.append('"string": {}'.format(json.dumps(self.v4_text(nh), default=json_number)))
         return '{' + ', '.join(members) + ' }'
 
     @classmethod
