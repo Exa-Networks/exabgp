@@ -18,6 +18,7 @@
 
 | Plan | Description |
 |------|-------------|
+| `wip-old-commands.md` | Every 4.2 and 5.0 API command and configuration statement checked against main; 5.0 commands done, 4.2 and configuration next |
 | `wip-mypyc.md` | Whole-package mypyc build, wheel and binary integration; completion awaits green artifact CI |
 | `type-safety/` | MyPy error reduction |
 
