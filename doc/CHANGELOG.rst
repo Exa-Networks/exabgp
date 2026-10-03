@@ -19,6 +19,9 @@ Version 6.0.0:
    could not be packed.
  * Fix: a withdrawal with `next-hop self` of the other address family than the session is
    withdrawn; resolving self raised, the helper was answered an error and the route stayed.
+ * Feature: qa/bin/test_old_commands gives every API command 4.2 and 5.0 accept to this
+   tree and compares what it announces and withdraws with what the release did, as
+   recorded by qa/bin/record_old_commands from the release's own grammar and code.
  * Fix: an End-of-RIB is told to the API as its own message, "message": { "eor": {...} },
    as 4.2 and 5.x told it. It was filed as an announced route with a "null" next-hop, so
    a helper written for them never saw one, and one waiting for it stopped.

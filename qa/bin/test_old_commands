@@ -1,0 +1,310 @@
+#!/usr/bin/env python3
+"""Fail if an API command 4.2 or 5.0 accepts is refused, or makes this tree send something else.
+
+qa/old/commands-<release>.json lists every command the release accepted when
+qa/bin/record_old_commands generated them from its grammar, with the messages the release
+packed for each. Each is given to this tree as an API 4 helper would write it: the v4
+dispatcher picks the handler, which runs on a stand-in reactor recording what it hands to
+the RIB. What it hands over is packed, and both sides are decoded by this tree's decoder:
+the routes announced with their attributes, and the routes withdrawn, must be the same.
+
+    ./qa/bin/test_old_commands               # both releases
+    ./qa/bin/test_old_commands 5.0           # one of them
+    ./qa/bin/test_old_commands 5.0 -v        # list every failing command
+
+Every entry in ALLOWED is a command a 4.2 or 5.0 helper sees change on upgrade. Keep it
+short and argue each one.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import re
+import sys
+from pathlib import Path
+from typing import Any
+from unittest.mock import AsyncMock, MagicMock
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROOT / 'src'))
+os.environ.setdefault('exabgp_log_enable', 'false')
+
+from exabgp.bgp.message import Message  # noqa: E402
+from exabgp.bgp.message.update import Update  # noqa: E402
+from exabgp.bgp.message.update.collection import RoutedNLRI, UpdateCollection  # noqa: E402
+from exabgp.configuration.check import _negotiated  # noqa: E402
+from exabgp.configuration.configuration import Configuration, _withdrawable  # noqa: E402
+from exabgp.reactor.api import API  # noqa: E402
+from exabgp.reactor.api.dispatch.common import UnknownCommand  # noqa: E402
+from exabgp.reactor.api.dispatch.version import API_V4, dispatch_for  # noqa: E402
+from exabgp.reactor.api.response.json import JSON  # noqa: E402
+
+OLD = ROOT / 'qa' / 'old'
+RELEASES = ('4.2', '5.0')
+REPORTED = 20  # failing commands listed without -v
+
+# (release, regular expression on the command) -> reason
+ALLOWED: dict[tuple[str, str], str] = {
+    ('5.0', r'^(announce|withdraw) ipv[46] mpls-vpn '): (
+        '5.0 packed the VPN route of `announce ipv4|ipv6 mpls-vpn` in the unicast NLRI field, '
+        'where a peer reads the label and the route distinguisher as the prefix; this tree '
+        'sends it as SAFI 128, as `announce route ... rd ... label` did in 5.0'
+    ),
+    ('5.0', r'\b(redirect|copy) \d+\.\d+\.\d+\.\d+'): (
+        'a flow redirect to an address sends the draft-ietf-idr-flowspec-redirect-ip community, '
+        'which carries the address, not the draft-simpson one with the address as next-hop: '
+        'CHANGELOG "Incompatible", `redirect-simpson <ip>` sends the old bytes'
+    ),
+    ('5.0', r'^(announce|withdraw) (route|attributes?) (?!.*\blabel\b).*\b(rd|route-distinguisher)\b'): (
+        '5.0 sent a VPN route given without a label with no label field, so a peer read the '
+        'route distinguisher as the label; this tree refuses to announce it, and withdraws it '
+        'with the RFC 8277 2.4 Compatibility field (Label._with_label_field)'
+    ),
+    ('5.0', r'^(announce|withdraw) flow route .*\b(flow-label|traffic-class)\b'): (
+        '5.0 took the IPv6 only components on an IPv4 flow route, and sent traffic-class as an '
+        'IPv4 dscp or flow-label as nothing; this tree builds an IPv6 flow route, or refuses '
+        'the mixture'
+    ),
+    ('5.0', r'^announce flow route destination [0-9a-f]*:.*\bdscp\b'): (
+        'dscp is an IPv4 component (RFC 8955), traffic-class its IPv6 one (RFC 8956): 5.0 put it '
+        'on an IPv6 flow route, this tree refuses it'
+    ),
+    ('5.0', r'^(announce|withdraw) ipv[46] \S+ .*\bsplit\b'): (
+        '5.0 took `split` in an announce family and ignored it, sending the prefix whole; this '
+        'tree announces the more specifics, as `announce route ... split` always did'
+    ),
+    ('5.0', r'^(announce|withdraw) (ipv[46] (multicast|nlri-mpls|mpls-vpn|flow)|attributes? .*\b(rd|route-distinguisher|label)\b) .*\bnext-hop .*\bnext-hop\b'): (
+        '`next-hop` given twice: 5.0 sent the first for IPv4 unicast and the last for the MP '
+        'families, this tree the first for both (static.first_next_hop)'
+    ),
+    ('5.0', r'\bpath-information$'): '`path-information` with no value: 5.0 ignored it, this tree refuses it',
+    ('5.0', r'\bnext-hop fe80:'): (
+        'a link-local next-hop without the link-local next-hop capability: RFC 2545 wants a '
+        'global one, 5.0 sent it, this tree refuses it (Neighbor.next_hop_refused)'
+    ),
+    ('5.0', r'\b(origin|target):(\d+L|\d{6,}|[7-9]\d{4}|6[6-9]\d{3}|65[6-9]\d\d|655[4-9]\d|6553[6-9]):'): (
+        'a four octet AS in a route target or origin: 5.0 sent type 0x01, an IPv4 address, '
+        'this tree type 0x02 (RFC 5668); CHANGELOG'
+    ),
+}
+
+
+class Captured:
+    """What the handler handed to the RIB, and whether it answered with an error."""
+
+    def __init__(self) -> None:
+        self.announced: list[Any] = []
+        self.withdrawn: list[Any] = []
+        self.messages: list[bytes] = []
+        self.errors: list[str] = []
+
+
+def reactor(captured: Captured, peer: str, neighbor: Any) -> MagicMock:
+    stand_in = MagicMock()
+    stand_in.configuration.neighbors = {peer: neighbor}
+    stand_in.peers.return_value = [peer]
+    stand_in.established_peers.return_value = [peer]
+    stand_in.processes.answer_error = AsyncMock(side_effect=lambda service, *why: captured.errors.append(str(why)))
+    stand_in.processes.answer_done = AsyncMock()
+    stand_in.processes.answer_error_sync.side_effect = lambda service, *why: captured.errors.append(str(why))
+    stand_in.processes.get_sync.return_value = False
+    stand_in.configuration.announce_route.side_effect = lambda peers, route, *_: captured.announced.append(route)
+    stand_in.configuration.withdraw_route.side_effect = lambda peers, route, *_: captured.withdrawn.append(route)
+    stand_in.configuration.inject_eor.side_effect = lambda peers, family: captured.messages.append(('eor', family))
+    stand_in.configuration.inject_refresh.side_effect = lambda peers, refreshes: captured.messages.extend(
+        ('refresh', refresh) for refresh in refreshes
+    )
+    stand_in.configuration.inject_operational.side_effect = lambda peers, operational: captured.messages.append(
+        ('operational', operational)
+    )
+    scheduled: list[Any] = []
+    stand_in.asynchronous.schedule.side_effect = lambda service, command, coroutine: scheduled.append(coroutine)
+    stand_in.scheduled = scheduled
+    return stand_in
+
+
+def handled(command: str, api: API, loop: asyncio.AbstractEventLoop, peer: str, neighbor: Any) -> Captured | str:
+    """What this tree makes of the command, or why it refused it.
+
+    One API and one event loop for every command: each made its own Configuration, and the
+    check took ten minutes instead of seconds.
+    """
+    captured = Captured()
+    stand_in = reactor(captured, peer, neighbor)
+    api.reactor = stand_in
+    try:
+        handler, peers, remaining = dispatch_for(API_V4, command, stand_in, 'helper')
+    except UnknownCommand:
+        return 'unknown command'
+    except Exception as exc:  # what the dispatcher raises on a helper's line is a refusal too
+        return f'dispatch raised {type(exc).__name__}: {exc}'
+    handler(api, stand_in, 'helper', peers, remaining, False)
+    for coroutine in stand_in.scheduled:
+        loop.run_until_complete(coroutine)
+    if captured.errors:
+        return f'answered error {captured.errors[0]}'
+    return captured
+
+
+def packed(captured: Captured, neighbor: Any, negotiated: Any) -> list[bytes]:
+    """What the RIB would send: `next-hop self` resolved for the neighbor, as configuration does."""
+    found: list[bytes] = []
+    for route in (neighbor.resolve_self(each) for each in captured.announced):
+        found.extend(
+            UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes).messages(negotiated)
+        )
+    for route in (_withdrawable(neighbor, each) for each in captured.withdrawn):
+        found.extend(UpdateCollection([], [route.nlri], route.attributes).messages(negotiated))
+    for what, value in captured.messages:
+        if what == 'eor':
+            from exabgp.bgp.message.update.eor import EOR
+
+            found.append(EOR.make_eor(value.afi, value.safi).pack_message(negotiated))
+        else:
+            found.append(value.pack_message(negotiated))
+    return found
+
+
+def content(messages: list[bytes], sessions: tuple[Any, ...], encoder: JSON) -> list[str]:
+    """Each message as this tree decodes it, without what only depends on how it was framed.
+
+    An UPDATE is read without ADD-PATH, then with it: 5.0 packs a Path Identifier for a
+    route given `path-information` whether or not the session negotiated it.
+    """
+    found = []
+    for raw in messages:
+        kind = raw[18]
+        body = raw[19:]
+        if kind != Message.CODE.UPDATE:
+            found.append(f'{kind}:{body.hex()}')
+            continue
+        for session in sessions:
+            try:
+                update = Update.unpack_message(body, session)
+                found.append(_canonical(json.loads(encoder._update(update.data)['message'])))
+                break
+            except Exception:  # read with the next session, or reported as undecodable below
+                continue
+        else:
+            found.append(f'undecodable:{body.hex()}')
+    return sorted(found)
+
+
+def _canonical(value: Any) -> str:
+    def ordered(item: Any) -> Any:
+        if isinstance(item, dict):
+            return {key: ordered(each) for key, each in item.items()}
+        if isinstance(item, list):
+            return sorted((ordered(each) for each in item), key=lambda each: json.dumps(each, sort_keys=True))
+        return item
+
+    return json.dumps(ordered(value), sort_keys=True)
+
+
+def routes(decoded: list[str]) -> list[str]:
+    """The announces and withdraws, one per route: two UPDATEs or one carry the same routes."""
+    found = []
+    for text in decoded:
+        if not text.startswith('{'):
+            found.append(text)
+            continue
+        message = json.loads(text)
+        update = message.get('update', message)
+        attributes = update.get('attribute', {})
+        for action in ('announce', 'withdraw'):
+            for family, by_nexthop in update.get(action, {}).items():
+                items = by_nexthop.items() if isinstance(by_nexthop, dict) else [('', by_nexthop)]
+                for nexthop, nlris in items:
+                    for nlri in nlris:
+                        shown = attributes if action == 'announce' else {}
+                        found.append(json.dumps([action, family, nexthop, nlri, shown], sort_keys=True))
+        if 'eor' in message:
+            found.append(json.dumps(message, sort_keys=True))
+    return sorted(found)
+
+
+def allowed(release: str, command: str) -> bool:
+    return any(name == release and re.search(pattern, command) for name, pattern in ALLOWED)
+
+
+UNREADABLE = 'unreadable'  # what judged() answers when the release sent nothing a peer can decode
+
+
+class Session:
+    """The neighbor the commands are for, and what deciding about a command needs."""
+
+    def __init__(self) -> None:
+        configuration = Configuration([str(OLD / 'neighbor.conf')])
+        if not configuration.reload():
+            sys.exit(f'qa/old/neighbor.conf does not load: {configuration.error}')
+        # the name the reactor gives the peer, which a `neighbor <ip> ...` selector is matched against
+        self.peer, self.neighbor = next(iter(configuration.neighbors.items()))
+        _, self.negotiated = _negotiated(self.neighbor)
+        with_paths = _negotiated(self.neighbor)[1]
+        for family in with_paths.families:
+            with_paths.addpath._send[family] = True
+            with_paths.addpath._receive[family] = True
+        self.sessions = (self.negotiated.outbound(), with_paths.outbound())
+        self.encoder = JSON('test')
+        self.encoder.use_v4_json = True
+        self.api = API(MagicMock())
+        self.loop = asyncio.new_event_loop()
+
+
+def judged(release: str, command: str, result: dict[str, Any], session: Session) -> str | None:
+    """None when this tree does what the release did, UNREADABLE, or what differs."""
+    theirs = routes(content([bytes.fromhex(found) for found in result['messages']], session.sessions, session.encoder))
+    made = handled(command, session.api, session.loop, session.peer, session.neighbor)
+    if theirs and all(found.startswith('undecodable:') for found in theirs):
+        # nothing a peer could read: refusing it, or sending something else, loses nobody a route
+        return UNREADABLE
+    if isinstance(made, str):
+        return f'refused: {made}'
+    try:
+        ours = routes(content(packed(made, session.neighbor, session.negotiated), session.sessions, session.encoder))
+    except TypeError as exc:
+        # `next-hop self` this session can not resolve: the daemon answers the helper an error
+        return f'refused: {exc}'
+    except Exception as exc:  # a route this tree builds and cannot pack is a failure of the command
+        return f'cannot pack: {type(exc).__name__}: {exc}'
+    if ours != theirs:
+        return f'{release} sent {theirs[:2]} this tree {ours[:2]}'
+    return None
+
+
+def check(release: str, verbose: bool) -> int:
+    recorded = json.loads((OLD / f'commands-{release}.json').read_text())
+    session = Session()
+    failures: list[tuple[str, str]] = []
+    skipped = {'allowed': 0, UNREADABLE: 0}
+    for command, result in sorted(recorded.items()):
+        if allowed(release, command):
+            skipped['allowed'] += 1
+            continue
+        why = judged(release, command, result, session)
+        if why == UNREADABLE:
+            skipped[UNREADABLE] += 1
+        elif why is not None:
+            failures.append((command, why))
+    for command, why in failures[: None if verbose else REPORTED]:
+        sys.stderr.write(f'{release}: {command}\n    {why[:400]}\n')
+    sys.stderr.write(
+        f'{release}: {len(recorded) - len(failures)}/{len(recorded)} commands behave as on {release} '
+        f'({skipped["allowed"]} allowed, {skipped[UNREADABLE]} where {release} sent nothing a peer can decode)\n'
+    )
+    return len(failures)
+
+
+def main(argv: list[str]) -> int:
+    verbose = '-v' in argv
+    names = [name for name in argv if name in RELEASES] or [
+        name for name in RELEASES if (OLD / f'commands-{name}.json').exists()
+    ]
+    failed = sum(check(name, verbose) for name in names)
+    return 1 if failed else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

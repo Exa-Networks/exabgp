@@ -1,0 +1,329 @@
+#!/usr/bin/env python3
+"""Record what 4.2 and 5.0 make of every API command they accept, for qa/bin/test_old_commands.
+
+The commands are not written by hand. The release's own grammar is read from its code (the
+registered API commands, the keyword table of each section), example commands and values
+are harvested from its configurations, tests and documentation, from this tree's encoding
+tests and from the wiki, and a command is generated for every keyword of every section:
+an example route of the kind, with the keyword and each value seen for it. The release
+then parses each command with its own code and packs what it would send.
+
+The result, qa/old/commands-<release>.json, is what test_old_commands holds this tree to.
+It needs the release's branch (origin/4.2, origin/5.0) and a Python it runs on:
+
+    ./qa/bin/record_old_commands 5.0 --python python3.10 [--wiki ../wiki]
+
+A keyword no accepted command uses fails the recording, unless UNREACHABLE says why.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+OLD = ROOT / 'qa' / 'old'
+RECORDER = OLD / 'recorder.py'
+
+# where each release keeps its code
+SOURCE = {'4.2': 'lib', '5.0': 'src'}
+
+# the section whose keywords follow each command, by the registered command's second word
+SECTIONS = {
+    'route': ('static.route.ParseStaticRoute',),
+    'attribute': ('static.ParseStatic',),
+    'attributes': ('static.ParseStatic',),
+    'ipv4': ('announce.ip.AnnounceIP', 'announce.label.AnnounceLabel', 'announce.vpn.AnnounceVPN'),
+    'ipv6': ('announce.ip.AnnounceIP', 'announce.label.AnnounceLabel', 'announce.vpn.AnnounceVPN'),
+    'flow': ('flow.match.ParseFlowMatch', 'flow.then.ParseFlowThen', 'flow.route.ParseFlowRoute'),
+    'vpls': ('l2vpn.vpls.ParseVPLS',),
+}
+
+# keywords no command can reach, with the reason
+UNREACHABLE: dict[str, dict[str, str]] = {'4.2': {}, '5.0': {}}
+
+# what the corpus does not give: a flow route with a match, which a flow-vpn keyword needs,
+# and a value for the keywords written nowhere with one
+HAND_BASES: dict[str, list[str]] = {
+    'flow': [
+        'announce flow route destination 10.0.0.0/24 discard',
+        'announce flow route destination 2001:db8::/32 discard',
+        # 5.0 refuses `rd` on a one-line flow route (a KeyError), the block form takes it
+        'announce flow route { rd 65000:1; match { destination 10.0.0.0/24; } then { discard; } }',
+        'announce flow route { route-distinguisher 65000:1; match { destination 10.0.0.0/24; } then { discard; } }',
+        'announce flow route { rd 65000:1; next-hop 1.2.3.4; match { destination 10.0.0.0/24; } then { redirect 1.2.3.4; } }',
+    ],
+}
+HAND_VALUES: dict[str, list[str]] = {
+    'source': ['10.0.0.1/32', '2001:db8::1/128'],
+    'rd': ['65000:1'],
+    'route-distinguisher': ['65000:1'],
+    'next-hop': ['1.2.3.4'],
+    'large-community': ['65000:1:1', '[ 65000:1:1 65000:2:2 ]'],
+}
+
+MAX_SAMPLES = 6  # values kept for one keyword
+MAX_WORDS = 40  # a value longer than this is a whole route, not a value
+COMMAND = re.compile(
+    r'((?:neighbor [^\'"]*?)?(?:announce|withdraw) '
+    r'(?:route|ipv4|ipv6|flow|vpls|attributes?|eor|route-refresh|operational|watchdog)\b[^\'"\n;{}]*)'
+)
+STATIC_ROUTE = re.compile(r'^\s*route\s+([0-9a-fA-F:.]+/\d+[^;{}\n]*);', re.M)
+
+
+# `split /32` of a /8 makes sixteen million routes, which the release builds in memory before
+# anything can stop it: a command splitting a prefix into more routes is not recorded
+MAX_SPLIT_ROUTES = 256
+
+
+def splits_too_far(command: str) -> bool:
+    found = re.search(r'\bsplit\s+/(\d+)', command)
+    if not found:
+        return False
+    into = int(found.group(1))
+    prefixes = [int(length) for length in re.findall(r'/(\d+)\b', command[: found.start()])]
+    prefixes += [int(length) for length in re.findall(r'/(\d+)\b', command[found.end() :])]
+    return any(into - length > MAX_SPLIT_ROUTES.bit_length() - 1 for length in prefixes)
+
+
+def old_tree(release: str, scratch: Path) -> Path:
+    tree = scratch / release
+    tree.mkdir()
+    archive = subprocess.run(['git', 'archive', f'origin/{release}'], cwd=ROOT, capture_output=True, check=True)
+    subprocess.run(['tar', '-x', '-C', str(tree)], input=archive.stdout, check=True)
+    return tree
+
+
+def recorder(python: str, tree: Path, release: str, arguments: list[str], given: str = '') -> dict:
+    found = subprocess.run(
+        [python, str(RECORDER), *arguments],
+        input=given,
+        capture_output=True,
+        text=True,
+        env={**os.environ, 'PYTHONPATH': str(tree / SOURCE[release]), 'exabgp_log_enable': 'false'},
+        cwd=tree,
+    )
+    if found.returncode != 0:
+        sys.exit(f'the {release} recorder failed:\n{found.stderr[-2000:]}')
+    return json.loads(found.stdout)
+
+
+def texts(tree: Path, wiki: Path | None) -> list[str]:
+    """Everything a command or a value may be written in."""
+    paths = [path for path in (tree / 'etc').rglob('*') if path.is_file()]
+    paths += [path for path in (tree / 'qa').rglob('*') if path.is_file()]
+    paths += [path for path in (tree / 'doc').rglob('*') if path.is_file()]
+    paths += sorted((ROOT / 'qa' / 'encoding').glob('*.ci'))
+    if wiki:
+        paths += sorted(wiki.rglob('*.md'))
+    found = []
+    for path in paths:
+        try:
+            text = path.read_text(errors='replace')
+        except OSError:
+            continue
+        # prose gives no values: in documentation only the code blocks are read
+        found.append('\n'.join(re.findall(r'```[^\n]*\n(.*?)```', text, re.S)) if path.suffix in ('.md', '.rst') else text)
+    return found
+
+
+def harvested(corpus: list[str]) -> list[str]:
+    """The API commands written in the corpus, and the static routes as API commands."""
+    commands: set[str] = set()
+    for text in corpus:
+        for found in COMMAND.findall(text):
+            command = ' '.join(found.split())
+            if command.startswith('neighbor ') and ' announce ' not in command and ' withdraw ' not in command:
+                continue
+            commands.add(command)
+        for found in STATIC_ROUTE.findall(text):
+            commands.add('announce route ' + ' '.join(found.split()))
+    return sorted(command for command in commands if not splits_too_far(command))
+
+
+def words(text: str) -> list[str]:
+    """Words, with a bracketed list kept as one: `[ 1 2 ]` and `( 3 )` are values."""
+    spaced = re.sub(r'([\[\]()])', r' \1 ', text)
+    found, depth, current = [], 0, []
+    for word in spaced.split():
+        current.append(word)
+        depth += word in '[(' and 1 or (word in '])' and -1 or 0)
+        if depth <= 0:
+            found.append(' '.join(current))
+            current, depth = [], 0
+    return found
+
+
+def samples(commands: list[str], keywords: set[str]) -> dict[str, list[str]]:
+    """The values each keyword is given in the commands: the word after it, if it is no keyword."""
+    seen: dict[str, list[str]] = {keyword: [] for keyword in keywords}
+    for command in commands:
+        found = words(command)
+        for index, word in enumerate(found[:-1]):
+            value = found[index + 1].rstrip(';')
+            if word not in seen or value in keywords or len(value.split()) > MAX_WORDS:
+                continue
+            if value not in seen[word] and len(seen[word]) < MAX_SAMPLES:
+                seen[word].append(value)
+    return seen
+
+
+def section_keywords(grammar: dict, section: str) -> list[str]:
+    """The keywords a command of the section takes: not the sub-sections it opens."""
+    found = grammar['sections'].get(f'exabgp.configuration.{section}', {})
+    action = found.get('action', {})
+    return [
+        keyword
+        for keyword in found.get('keywords', [])
+        if not action or action.get(keyword, 'append-route') != 'append-route'
+    ]
+
+
+def with_keyword(base: str, keyword: str) -> str:
+    """The base command with a keyword: before the NLRI of `attributes ... nlri <prefix>`."""
+    if ' nlri ' in base:
+        head, tail = base.split(' nlri ', 1)
+        return f'{head} {keyword} nlri {tail}'
+    return f'{base} {keyword}'
+
+
+def kind(command: str) -> str:
+    words_found = command.split()
+    while words_found and words_found[0] not in ('announce', 'withdraw'):
+        words_found.pop(0)
+    return words_found[1] if len(words_found) > 1 else ''
+
+
+IPV6 = re.compile(r'^[\[(]?\s*[0-9a-fA-F]*:[0-9a-fA-F:]*:[0-9a-fA-F:.]*(/\d+)*')
+IPV4 = re.compile(r'^[\[(]?\s*\d+\.\d+\.\d+\.\d+(/\d+)*')
+
+
+def address_family(text: str) -> str:
+    """ipv6 or ipv4 for an address or prefix, '' for anything else."""
+    if IPV6.match(text):
+        return 'ipv6'
+    if IPV4.match(text):
+        return 'ipv4'
+    return ''
+
+
+def same_family(base: str, value: str) -> bool:
+    """A value of the other address family would only test 5.0's leniency, not a valid command."""
+    family = address_family(value)
+    prefix = next((word for word in base.split() if '/' in word and address_family(word)), '')
+    return not family or not prefix or family == address_family(prefix)
+
+
+def generated(bases: dict[str, list[str]], grammar: dict, values: dict[str, list[str]]) -> set[str]:
+    """For each kind, each base command with each keyword of its sections, alone and with each value."""
+    commands: set[str] = set()
+    for command_kind, base_commands in bases.items():
+        keywords = set()
+        for section in SECTIONS.get(command_kind, ()):
+            keywords.update(section_keywords(grammar, section))
+        for base in base_commands:
+            commands.add(base)
+            if '{' in base:
+                continue  # a block form is recorded as written: 5.0 ignores what follows its `}`
+            for keyword in sorted(keywords):
+                commands.add(with_keyword(base, keyword))
+                for value in values.get(keyword, []):
+                    if same_family(base, value):
+                        commands.add(with_keyword(base, f'{keyword} {value}'))
+    return commands
+
+
+def shape(command: str) -> tuple[str, str, str]:
+    """What tells two base commands apart: the kind, the family word, the address family."""
+    found = command.split()
+    family = found[2] if kind(command) in ('ipv4', 'ipv6') and len(found) > 2 else ''
+    prefix = next((word for word in found if '/' in word), '')
+    return kind(command), family, 'ipv6' if ':' in prefix else 'ipv4'
+
+
+def shortest(commands: list[str], accepted: dict, per_shape: int) -> dict[str, list[str]]:
+    """The shortest accepted commands of each shape, the bases the keywords are added to."""
+    bases: dict[str, list[str]] = {}
+    counted: dict[tuple[str, str, str], int] = {}
+    for command in sorted(commands, key=lambda found: (len(found), found)):
+        if command.startswith('neighbor ') or not accepted.get(command, {}).get('accepted'):
+            continue
+        key = shape(command)
+        if counted.get(key, 0) >= per_shape:
+            continue
+        counted[key] = counted.get(key, 0) + 1
+        bases.setdefault(key[0], []).append(command)
+    return bases
+
+
+def covered(results: dict, grammar: dict, release: str) -> list[str]:
+    """The keywords of each section no accepted command uses."""
+    used: dict[str, set[str]] = {}
+    for command, result in results.items():
+        if result['accepted']:
+            used.setdefault(kind(command), set()).update(words(command))
+    missing = []
+    for command_kind, sections in SECTIONS.items():
+        for section in sections:
+            for keyword in section_keywords(grammar, section):
+                if keyword in used.get(command_kind, set()) or keyword in UNREACHABLE[release]:
+                    continue
+                missing.append(f'{command_kind}: {keyword} ({section})')
+    return sorted(set(missing))
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('release', choices=sorted(SOURCE))
+    parser.add_argument('--python', default='python3.10', help='a Python the release runs on')
+    parser.add_argument('--wiki', type=Path, default=None, help='a checkout of the wiki, for its examples')
+    parser.add_argument('--bases', type=int, default=2, help='example routes of each shape the keywords go on')
+    arguments = parser.parse_args()
+
+    with tempfile.TemporaryDirectory() as scratch:
+        tree = old_tree(arguments.release, Path(scratch))
+        neighbor = OLD / 'neighbor.conf'
+        grammar = recorder(arguments.python, tree, arguments.release, ['grammar'])
+        corpus = texts(tree, arguments.wiki)
+        commands = harvested(corpus)
+        first = recorder(arguments.python, tree, arguments.release, ['record', str(neighbor)], json.dumps(commands))
+        keywords = {keyword for section in grammar['sections'].values() for keyword in section.get('keywords', [])}
+        accepted_first = [command for command, result in first.items() if result['accepted']]
+        lines = [line for text in corpus for line in text.splitlines() if len(line) < 400]
+        values = samples(accepted_first + lines, keywords)
+        bases = shortest(commands, first, arguments.bases)
+        for command_kind, hand in HAND_BASES.items():
+            bases.setdefault(command_kind, []).extend(hand)
+        for keyword, hand in HAND_VALUES.items():
+            values.setdefault(keyword, [])
+            values[keyword].extend(value for value in hand if value not in values[keyword])
+        extra = sorted(
+            command for command in generated(bases, grammar, values) - set(commands) if not splits_too_far(command)
+        )
+        second = recorder(arguments.python, tree, arguments.release, ['record', str(neighbor)], json.dumps(extra))
+
+    results = {**first, **second}
+    missing = covered(results, grammar, arguments.release)
+    accepted = {command: result for command, result in results.items() if result['accepted'] and 'messages' in result}
+    too_many = sorted(command for command, result in results.items() if 'too_many' in result)
+    output = OLD / f'commands-{arguments.release}.json'
+    output.write_text(json.dumps(accepted, indent=1, sort_keys=True) + '\n')
+    sys.stderr.write(
+        f'{arguments.release}: {len(commands)} commands harvested, {len(extra)} generated, '
+        f'{len(accepted)} accepted, written to {output.relative_to(ROOT)}\n'
+    )
+    for command in too_many:
+        sys.stderr.write(f'  left out, {results[command]["too_many"]} messages: {command[:100]}\n')
+    for line in missing:
+        sys.stderr.write(f'  no accepted command uses {line}\n')
+    return 1 if missing else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
