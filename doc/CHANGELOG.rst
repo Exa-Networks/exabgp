@@ -19,6 +19,12 @@ Version 6.0.0:
    `ip` exits 2 for an address already present and for one it was not allowed to add, and
    the checker took both as present: run without root, it announced an address the host
    did not have. Whether the address is there is now checked instead.
+ * Fix: shell completion offers the subcommands exabgp accepts (configuration, migrate,
+   schema, not validate), the healthcheck options it has, read from its parser (it offered
+   --nexthop, --daemonize and others it never had), and in fish no file names where none
+   belong.
+ * Fix: an invalid environment value is reported in one line naming the variable, the value
+   and the reason, rather than a traceback which dropped the reason.
  * Fix: `announce ipv4|ipv6 <family>` takes atomic-aggregate, originator-id, cluster-list,
    aigp, attribute, name, split, watchdog, withdraw and path-information, as a static route
    does. They were refused, while 5.0 accepted them and sent them.

@@ -13,6 +13,9 @@ import argparse
 import os
 import sys
 from pathlib import Path
+from typing import NamedTuple
+
+from exabgp.application import healthcheck
 
 # The first words `exabgp` accepts, in the order the completion scripts offer them. Any other
 # first word is a configuration file for `server`, as it was in 4.x. A test holds this list,
@@ -31,6 +34,108 @@ SUBCOMMANDS = (
     'encode',
     'shell',
 )
+
+
+class _Option(NamedTuple):
+    """One healthcheck option, as its completion needs it."""
+
+    names: tuple[str, ...]  # '--name', '-n'
+    help: str
+    value: str  # '' for a flag, else 'command', 'file' or 'text'
+    metavar: str
+    repeat: bool  # given more than once, as --ip is
+
+
+def _healthcheck_options() -> list[_Option]:
+    """The options `exabgp healthcheck` accepts, read from its parser rather than written twice."""
+    parser = argparse.ArgumentParser(add_help=False)
+    healthcheck.setargs(parser)
+    options = []
+    for action in parser._actions:
+        value = ''
+        # nargs '?' (--syslog-facility) takes a value only when one follows: complete it as a flag
+        if action.nargs not in (0, '?'):
+            value = {'CMD': 'command', 'FILE': 'file'}.get(str(action.metavar), 'text')
+        help_text = (action.help or '').replace('%%', '%')
+        metavar = str(action.metavar or 'value').lower()
+        repeat = isinstance(action, argparse._AppendAction)
+        options.append(_Option(tuple(action.option_strings), help_text, value, metavar, repeat))
+    assert options, 'healthcheck.setargs defines no option'
+    return options
+
+
+def _healthcheck_bash() -> str:
+    options = _healthcheck_options()
+
+    def taking(kind: str) -> str:
+        return '|'.join(name for option in options if option.value == kind for name in option.names)
+
+    every = ' '.join(name for option in options for name in option.names)
+    return f"""        healthcheck)
+            case "$prev" in
+                {taking('command')})
+                    _command
+                    return 0
+                    ;;
+                {taking('file')})
+                    _filedir
+                    return 0
+                    ;;
+                {taking('text')})
+                    # a value, with nothing to offer for it
+                    return 0
+                    ;;
+                *)
+                    COMPREPLY=($(compgen -W "{every} -h --help" -- "$cur"))
+                    ;;
+            esac
+            ;;
+"""
+
+
+def _zsh_spec(option: _Option) -> str:
+    described = option.help.replace("'", "'\\''").replace('[', '\\[').replace(']', '\\]')
+    value = {'': '', 'command': ':command:_command_names', 'file': ':file:_files'}.get(
+        option.value, f':{option.metavar}:'
+    )
+    # zsh joins the quoted pieces: '(-n --name)'{-n,--name}'[help]:name:' is one word per name
+    names = option.names[0] if len(option.names) == 1 else '{' + ','.join(option.names) + '}'
+    if option.repeat:
+        prefix = "'*'"
+    elif len(option.names) > 1:
+        prefix = "'(" + ' '.join(option.names) + ")'"
+    else:
+        prefix = ''
+    return f"{prefix}{names}'[{described}]{value}'"
+
+
+def _healthcheck_zsh() -> str:
+    specs = ["'(- *)'{-h,--help}'[Show help message]'"]
+    specs.extend(_zsh_spec(option) for option in _healthcheck_options())
+    lines = ' \\\n                '.join(specs)
+    return f"""        healthcheck)
+            _arguments \\
+                {lines}
+            ;;
+"""
+
+
+def _healthcheck_fish() -> str:
+    lines = ['# healthcheck subcommand, from the options exabgp healthcheck defines']
+    for option in _healthcheck_options():
+        flags = []
+        for name in option.names:
+            if name.startswith('--'):
+                flags.append(f'-l {name[2:]}')
+            elif len(name) == 2:
+                flags.append(f'-s {name[1:]}')
+            else:
+                flags.append(f'-o {name[1:]}')
+        value = {'': '', 'command': " -r -a '(__fish_complete_command)'", 'file': ' -r -F'}.get(option.value, ' -r')
+        described = option.help.replace('\\', '\\\\').replace("'", "\\'")
+        condition = "'__fish_seen_subcommand_from healthcheck'"
+        lines.append(f"complete -c exabgp -n {condition} {' '.join(flags)} -d '{described}'{value}")
+    return '\n'.join(lines)
 
 
 def detect_shell() -> str:
@@ -147,35 +252,7 @@ _exabgp() {
             esac
             ;;
 
-        healthcheck)
-            case "$prev" in
-                --cmd)
-                    _command
-                    return 0
-                    ;;
-                --ip|--nexthop|--local-ip)
-                    # IP addresses - no completion
-                    ;;
-                --community|--large-community|--extended-community)
-                    # Community values - no completion
-                    ;;
-                --label|--rd|--route-distinguisher)
-                    # Numeric/string values - no completion
-                    ;;
-                *)
-                    local opts="--cmd --name --ip --nexthop --local-ip"
-                    opts="$opts --interval --fast-interval --slow-interval --timeout"
-                    opts="$opts --rise --disable --withdraw --label"
-                    opts="$opts --community --large-community --extended-community"
-                    opts="$opts --rd --route-distinguisher --advertisement-delay"
-                    opts="$opts --local-preference --med --origin --as-path"
-                    opts="$opts --logging --syslog --pid --daemonize --no-daemonize"
-                    opts="$opts -h --help"
-                    COMPREPLY=($(compgen -W "$opts" -- "$cur"))
-                    ;;
-            esac
-            ;;
-
+@HEALTHCHECK_BASH@
         server)
             case "$prev" in
                 --signal)
@@ -339,7 +416,7 @@ _exabgp() {
 }
 
 complete -F _exabgp exabgp
-"""
+""".replace('@HEALTHCHECK_BASH@', _healthcheck_bash())
 
 
 def generate_zsh_completion() -> str:
@@ -417,39 +494,7 @@ _exabgp() {
                 '*:command:'
             ;;
 
-        healthcheck)
-            _arguments \\
-                '(- *)'{-h,--help}'[Show help message]' \\
-                '--cmd[Command to execute for health check]:command:_command_names' \\
-                '--name[Name for this health check]:name' \\
-                '--ip[IP address or CIDR to announce]:ip address' \\
-                '--nexthop[Next-hop IP address]:ip address' \\
-                '--local-ip[Local IP address]:ip address' \\
-                '--interval[Check interval in seconds]:seconds' \\
-                '--fast-interval[Fast check interval]:seconds' \\
-                '--slow-interval[Slow check interval]:seconds' \\
-                '--timeout[Command timeout]:seconds' \\
-                '--rise[Number of successes before UP]:count' \\
-                '--disable[Disable health checks]' \\
-                '--withdraw[Withdraw route on failure]' \\
-                '--label[MPLS label]:label' \\
-                '--community[BGP community]:community' \\
-                '--large-community[Large BGP community]:community' \\
-                '--extended-community[Extended community]:community' \\
-                '--rd[Route distinguisher]:rd' \\
-                '--route-distinguisher[Route distinguisher]:rd' \\
-                '--advertisement-delay[Delay before announcing]:seconds' \\
-                '--local-preference[Local preference value]:value' \\
-                '--med[Multi-Exit Discriminator]:value' \\
-                '--origin[Origin attribute]:origin:(igp egp incomplete)' \\
-                '--as-path[AS path]:as path' \\
-                '--logging[Enable logging]' \\
-                '--syslog[Log to syslog]:facility' \\
-                '--pid[PID file location]:file:_files' \\
-                '--daemonize[Run as daemon]' \\
-                '--no-daemonize[Do not daemonize]'
-            ;;
-
+@HEALTHCHECK_ZSH@
         server)
             _arguments \\
                 '(- *)'{-h,--help}'[Show help message]' \\
@@ -629,7 +674,7 @@ _exabgp() {
 }
 
 _exabgp "$@"
-"""
+""".replace('@HEALTHCHECK_ZSH@', _healthcheck_zsh())
 
 
 def generate_fish_completion() -> str:
@@ -683,8 +728,13 @@ complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'decode' -d 'Decod
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'encode' -d 'Encode route config to BGP packets'
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a 'shell' -d 'Manage shell completion'
 
+# No file names unless asked for: fish offers them for every argument otherwise, beside the
+# subcommands and choices which belong there
+complete -c exabgp -f
+
 # Backward compatibility: suggest .conf files as first argument
 complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -a '(__fish_exabgp_conf_files)'
+complete -c exabgp -n 'not __fish_exabgp_using_subcommand' -F
 
 # Common option
 complete -c exabgp -s h -l help -d 'Show help message'
@@ -700,36 +750,7 @@ complete -c exabgp -n '__fish_seen_subcommand_from run' -l socket -d 'Use Unix s
 complete -c exabgp -n '__fish_seen_subcommand_from run' -l batch -d 'Execute commands from file' -r -F
 complete -c exabgp -n '__fish_seen_subcommand_from run' -l no-color -d 'Disable colored output'
 
-# healthcheck subcommand
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l cmd -d 'Command to execute for health check' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l name -d 'Name for this health check' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l ip -d 'IP address or CIDR to announce' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l nexthop -d 'Next-hop IP address' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l local-ip -d 'Local IP address' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l interval -d 'Check interval in seconds' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l fast-interval -d 'Fast check interval' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l slow-interval -d 'Slow check interval' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l timeout -d 'Command timeout' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l rise -d 'Number of successes before UP' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l disable -d 'Disable health checks'
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l withdraw -d 'Withdraw route on failure'
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l label -d 'MPLS label' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l community -d 'BGP community' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l large-community -d 'Large BGP community' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l extended-community -d 'Extended community' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l rd -d 'Route distinguisher' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l route-distinguisher -d 'Route distinguisher' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l advertisement-delay -d 'Delay before announcing' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l local-preference -d 'Local preference value' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l med -d 'Multi-Exit Discriminator' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l origin -d 'Origin attribute' -r -a 'igp egp incomplete'
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l as-path -d 'AS path' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l logging -d 'Enable logging'
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l syslog -d 'Log to syslog' -r
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l pid -d 'PID file location' -r -F
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l daemonize -d 'Run as daemon'
-complete -c exabgp -n '__fish_seen_subcommand_from healthcheck' -l no-daemonize -d 'Do not daemonize'
-
+@HEALTHCHECK_FISH@
 # server subcommand
 complete -c exabgp -n '__fish_seen_subcommand_from server' -s v -l verbose -d 'Toggle all logging'
 complete -c exabgp -n '__fish_seen_subcommand_from server' -s d -l debug -d 'Start Python debugger on issue'
@@ -740,6 +761,7 @@ complete -c exabgp -n '__fish_seen_subcommand_from server' -s P -l passive -d 'O
 complete -c exabgp -n '__fish_seen_subcommand_from server' -s m -l memory -d 'Display memory usage on exit'
 complete -c exabgp -n '__fish_seen_subcommand_from server' -l profile -d 'Enable profiling' -r -F
 complete -c exabgp -n '__fish_seen_subcommand_from server' -a '(__fish_exabgp_conf_files)'
+complete -c exabgp -n '__fish_seen_subcommand_from server' -F
 
 # env subcommand
 complete -c exabgp -n '__fish_seen_subcommand_from env' -s d -l diff -d 'Show only differences from defaults'
@@ -755,6 +777,7 @@ complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_see
 complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from validate' -s v -l verbose -d 'Be verbose in display'
 complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from validate export' -s p -l pdb -d 'Fire debugger on critical logging'
 complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from validate export' -a '(__fish_exabgp_conf_files)'
+complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from validate export' -F
 complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from export' -s o -l output -d 'Output file' -r -F
 complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from export' -s i -l indent -d 'JSON indentation' -r
 complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_seen_subcommand_from syntax' -l json -d 'Print the JSON Schema of the values'
@@ -764,6 +787,7 @@ complete -c exabgp -n '__fish_seen_subcommand_from configuration; and __fish_see
 # migrate subcommand
 complete -c exabgp -n '__fish_seen_subcommand_from migrate; and not __fish_seen_subcommand_from conf api' -a 'conf' -d 'Migrate a configuration file'
 complete -c exabgp -n '__fish_seen_subcommand_from migrate; and not __fish_seen_subcommand_from conf api' -a 'api' -d 'Migrate API commands'
+complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf' -F
 complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf' -s f -l from -d 'Source version' -r -a '3.4 4 5'
 complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf' -s t -l to -d 'Target version' -r -a '4 5 main'
 complete -c exabgp -n '__fish_seen_subcommand_from migrate; and __fish_seen_subcommand_from conf' -s o -l output -d 'Output file' -r -F
@@ -807,7 +831,7 @@ complete -c exabgp -n '__fish_seen_subcommand_from shell' -a 'completion' -d 'Ge
 
 # After 'shell install/uninstall/completion', suggest shells
 complete -c exabgp -n '__fish_seen_subcommand_from shell; and __fish_seen_subcommand_from install uninstall completion' -a 'bash zsh fish'
-"""
+""".replace('@HEALTHCHECK_FISH@', _healthcheck_fish())
 
 
 def generate_completion(shell: str) -> str:

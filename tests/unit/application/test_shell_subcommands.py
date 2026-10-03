@@ -68,3 +68,11 @@ def _fish_offered() -> list[str]:
 @pytest.mark.parametrize('listed', [_bash, _zsh_server_fallback, _zsh, _fish_helper, _fish_offered])
 def test_each_script_lists_the_subcommands(listed: Callable[[], list[str]]) -> None:
     assert listed() == list(SUBCOMMANDS)
+
+
+def test_fish_offers_file_names_only_where_a_file_belongs() -> None:
+    # without `-f`, fish adds the files of the directory to every argument, after
+    # `exabgp configuration` as after `exabgp server`
+    script = generate_fish_completion()
+    assert '\ncomplete -c exabgp -f\n' in script
+    assert "-n '__fish_seen_subcommand_from server' -F" in script
