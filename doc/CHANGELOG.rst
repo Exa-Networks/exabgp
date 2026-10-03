@@ -14,6 +14,9 @@ Version 6.0.0:
    a VPN route with no label, or a link-local next-hop without the link-local next-hop
    capability. Only `announce route` checked; the others answered done and the route
    failed when the RIB packed it.
+ * Fix: a route given `next-hop` twice takes the first, address and attribute alike. The
+   attribute kept the first and the address the last, and `next-hop self next-hop <ip>`
+   could not be packed.
  * Fix: an End-of-RIB is told to the API as its own message, "message": { "eor": {...} },
    as 4.2 and 5.x told it. It was filed as an announced route with a "null" next-hop, so
    a helper written for them never saw one, and one waiting for it stopped.

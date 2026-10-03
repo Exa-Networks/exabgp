@@ -40,6 +40,7 @@ from exabgp.configuration.grammar.tree.static import (
     action,
     attribute_words,
     normalize,
+    first_next_hop,
     route_words,
     split,
     static_block,
@@ -322,10 +323,11 @@ def _apply(settings: Any, attributes: AttributeCollection, spec: RouteValue, val
         settings.set(spec.field, value)
     elif spec.target == Target.NEXTHOP_ATTRIBUTE:
         ip, attribute = value
+        # given twice, the first is the route's (static.first_next_hop)
+        if attribute and not first_next_hop(attributes, attribute):
+            return
         if ip:
             settings.nexthop = ip
-        if attribute:
-            attributes.add(attribute)
     else:
         attributes.add(value)
 

@@ -97,10 +97,24 @@ class Collected:
             self.settings.set(spec.field, value)
         elif spec.target == Target.NEXTHOP_ATTRIBUTE:
             ip, attribute = value
-            self.settings.nexthop = ip
-            self.attributes.add(attribute)
+            # given twice, the first is the route's, address and attribute alike
+            if first_next_hop(self.attributes, attribute):
+                self.settings.nexthop = ip
         else:
             self.attributes.add(value)
+
+
+def first_next_hop(attributes: AttributeCollection, attribute: Attribute) -> bool:
+    """Keep the NEXT_HOP attribute unless one was given before, and say whether it was kept.
+
+    The attribute kept the first `next-hop` and the address the last, so `next-hop self
+    next-hop 1.2.3.4` made a route which said self and could not be packed. The first wins
+    for both: 5.0 sent the first for IPv4 unicast, and a repeated attribute keeps the first.
+    """
+    if attribute.ID in attributes:
+        return False
+    attributes.add(attribute)
+    return True
 
 
 def _mentions(words: Words, *keywords: str) -> bool:
