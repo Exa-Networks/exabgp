@@ -291,3 +291,26 @@ def test_api_4_eor_and_operational(text_daemon: Daemon) -> None:
     assert [str(family) for family in text_daemon.neighbor(FIRST).eor] == ['ipv4 unicast']
     assert text_daemon.send('announce operational adm afi ipv4 safi unicast advisory "x"') == ['done']
     assert [message.NAME for message in text_daemon.neighbor(FIRST).messages] == ['ADM']
+
+
+@pytest.mark.parametrize(
+    'selector',
+    [
+        '192.0.2.1',
+        '[192.0.2.1]',
+        # the address is right, the AS is not
+        f'{FIRST} peer-as 1',
+    ],
+)
+def test_a_selector_matching_no_peer_is_refused(daemon: Daemon, selector: str) -> None:
+    """It was taken as no selector, and the command went to every peer of the helper."""
+    assert daemon.send(f'peer {selector} announce route 10.0.0.0/24 next-hop 1.2.3.4') == ['error']
+    assert daemon.announced(FIRST) == []
+    assert daemon.announced(SECOND) == []
+
+
+def test_a_teardown_for_no_peer_tears_none_down(daemon: Daemon) -> None:
+    daemon.establish()
+    assert daemon.send('peer 192.0.2.1 teardown') == ['error']
+    assert daemon.peer(FIRST)._teardown is None
+    assert daemon.peer(SECOND)._teardown is None

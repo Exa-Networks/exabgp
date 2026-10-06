@@ -327,6 +327,10 @@ def dispatch(
             # Let extract_selector consume its own tokens
             # Note: must materialize generator immediately so tokens are consumed now
             peers = list(extract_selector(tokeniser, reactor, service))
+            # a selector naming no peer is not the absence of one: dispatch_v6 gives the
+            # commands which need peers every peer of the helper when none was named
+            if not peers:
+                raise NoMatchingPeers(f'no peer matches the selector starting {peeked}')
             node = node[SELECTOR_KEY]
             # Don't consume again - extract_selector already did
             if callable(node):
