@@ -16,7 +16,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.api.command.announce import validate_announce
@@ -81,6 +81,20 @@ def v6_routes(
 
     handler = globals()[_V6_ROUTES_HANDLERS[action]]
     return bool(handler(self, reactor, service, peers, afi_safi_words, remaining, use_json))
+
+
+async def _answer_results(reactor: 'Reactor', service: str, results: list[dict[str, Any]], done: str) -> None:
+    """Answer what add or remove did to each route, then done, or error when one was not done.
+
+    `done` is the key of a result saying whether its route was added or removed. The JSON
+    was the whole answer: with no done nor error after it, a client waiting for one hung.
+    """
+    assert results, 'add and remove answer for at least one route'
+    await reactor.processes.answer(service, results[0] if len(results) == 1 else results)
+    if all(result[done] for result in results):
+        await reactor.processes.answer_done(service)
+    else:
+        await reactor.processes.answer_error(service)
 
 
 def _parse_family_filter(afi_safi_words: list[str]) -> tuple[AFI | None, SAFI | None]:
@@ -156,6 +170,7 @@ def routes_list(
                     )
 
             await reactor.processes.answer(service, routes_data)
+            await reactor.processes.answer_done(service)
         except Exception as e:
             error_msg = f'Failed to list routes: {type(e).__name__}: {str(e)}'
             self.log_exception(error_msg, e)
@@ -230,11 +245,7 @@ def routes_add(
                 )
                 await asyncio.sleep(0)
 
-            # Return single result or list
-            if len(results) == 1:
-                await reactor.processes.answer(service, results[0])
-            else:
-                await reactor.processes.answer(service, results)
+            await _answer_results(reactor, service, results, 'success')
 
         except ValueError as e:
             error_msg = f'Failed to parse route: {str(e)}'
@@ -290,13 +301,7 @@ def routes_remove(
                 else:
                     self.log_failure(f'route not found for index: {index_hex}')
 
-                await reactor.processes.answer(
-                    service,
-                    {
-                        'removed': success,
-                        'index': index_hex,
-                    },
-                )
+                await _answer_results(reactor, service, [{'removed': success, 'index': index_hex}], 'removed')
                 return
 
             # Remove by route specification
@@ -326,11 +331,7 @@ def routes_remove(
                 )
                 await asyncio.sleep(0)
 
-            # Return single result or list
-            if len(results) == 1:
-                await reactor.processes.answer(service, results[0])
-            else:
-                await reactor.processes.answer(service, results)
+            await _answer_results(reactor, service, results, 'removed')
 
         except ValueError as e:
             error_msg = f'Failed to parse route: {str(e)}'
