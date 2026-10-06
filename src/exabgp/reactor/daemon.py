@@ -13,6 +13,8 @@ import sys
 import pwd
 import errno
 import socket
+import stat
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -23,6 +25,26 @@ from exabgp.environment import getenv
 from exabgp.logger import log, lazymsg
 
 MAXFD: int = 2048
+# the directory of the exabgp package, which the daemon imports from long after it started
+PACKAGE: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def can_enter(status: os.stat_result, uid: int, gids: set[int]) -> bool:
+    """Whether a user who is not root may enter the directory: the bits the kernel reads."""
+    if status.st_uid == uid:
+        return bool(status.st_mode & stat.S_IXUSR)
+    if status.st_gid in gids:
+        return bool(status.st_mode & stat.S_IXGRP)
+    return bool(status.st_mode & stat.S_IXOTH)
+
+
+def unreachable_by(path: str, uid: int, gids: set[int]) -> str:
+    """The first directory on the way to `path` which the user can not enter, or ''."""
+    assert os.path.isabs(path), 'the path is checked from the root down'
+    for directory in [*reversed(Path(path).parents), Path(path)]:
+        if not can_enter(os.stat(directory), uid, gids):
+            return str(directory)
+    return ''
 
 
 class Daemon:
@@ -124,6 +146,15 @@ class Daemon:
             nuid: int = int(user.pw_uid)
             ngid: int = int(user.pw_gid)
         except KeyError:
+            return False
+
+        # exabgp imports some of its modules only when it first needs them, and starts its
+        # helpers as this user: installed where the user can not read (a venv in a 0700
+        # directory, as `mktemp -d` makes), every session was reset as soon as it was up,
+        # with nothing logged to say why
+        blocked = unreachable_by(PACKAGE, nuid, set(os.getgrouplist(self.user, ngid))) if nuid else ''
+        if blocked:
+            log.critical(lazymsg('daemon.privileges.unreadable user={u} path={p}', u=self.user, p=blocked), 'reactor')
             return False
 
         # not sure you can change your gid if you do not have a pid of zero
