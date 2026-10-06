@@ -1,6 +1,7 @@
 # Multisession: one session per family, and the Cisco code
 
-**Status:** 🚧 3.19 fixed in both trees (uncommitted); 3.18 fixed in main, won't fix in 5.0
+**Status:** ✅ 3.19 committed in both trees (main `ff2e545f7`, 5.0 `e1ca58e85`); 3.18 fixed in main, won't fix in 5.0. The draft's collision procedure stays a gap, see the ledger.
+~~**Status:** 🚧 3.19 fixed in both trees (uncommitted); 3.18 fixed in main, won't fix in 5.0~~
 **Created:** 2026-09-29
 **Trees:** main and 5.0. 3.18 is fixed in main already (`f644fa735`, 2026-09-28).
 **Background:** `plan/wip-two-tree-parity.md` §19 and §24.

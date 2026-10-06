@@ -150,8 +150,8 @@ over; seven sites moved Notify 3/0 → 3/9.
 | 3.1 | respawn limiter shuts the daemon down on two reloads in one window | ✅ fixed both trees 2026-09-25, see §10 |
 | 3.2 | `packed_reach_attributes` raises RuntimeError to the reactor (main) | ✅ fixed 2026-09-26 | reproduced by running, and it carried a second defect: an UPDATE over the negotiated message size. See §21. |
 | 3.3 | RIB yields one `UpdateCollection` per withdrawn NLRI | ✅ fixed 2026-09-26 (main) | `rib/outgoing.py` batches by family and attribute set when `group-updates` is on. 5.0 was already right. See §20. |
-| 3.4 | `API/JSON-API-Reference.md` examples are structurally invented | 🟡 open |
-| 3.5 | `doc/README.rst` stale | 🟢 open |
+| 3.4 | `API/JSON-API-Reference.md` examples are structurally invented | ✅ fixed 2026-10-01 | wiki `db8bedd`, every page checked against the code (151 lines of that page rewritten). ~~🟡 open~~ |
+| 3.5 | `doc/README.rst` stale | ✅ fixed 2026-09-27 | `297d28273`. ~~🟢 open~~ |
 | 3.14 | main: `check_fifo` reported to the daemon, and `open_writer` had a dead handler | ✅ fixed 2026-09-26 | `0bc6c6e10`. 5.0 had both closed already. See §17. |
 | 3.6 | 5.0 attribute cache is process-wide and keyed on wire bytes only | ✅ fixed 2026-09-25 | `709706aa9`. Moved onto `Negotiated`. See §16. |
 | 3.13 | `qa/bin/functional encoding` is red ~5 runs in 10, **5.0 only** | ✅ fixed 2026-09-29 (uncommitted) | main's event barriers backported, and they found a 5.0 EOR JSON regression. See §22. |

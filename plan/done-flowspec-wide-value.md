@@ -1,6 +1,7 @@
 # FlowSpec: a one-octet component decoded from a wider value cannot be sent again
 
-**Status:** ✅ Fix and tests done, test_everything passes (25/25), not committed
+**Status:** ✅ Done, committed in `c7b78df37` (fix: refuse a flow component value too large for its field)
+~~**Status:** ✅ Fix and tests done, test_everything passes (25/25), not committed~~
 **Last Updated:** 2026-09-29
 **Created:** 2026-09-29
 **Tree:** main only. 5.0 has the same bug and keeps it (maintenance mode, not reachable from

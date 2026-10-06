@@ -2,6 +2,18 @@
 
 ## Quick Status
 
+**Measured 2026-10-06** (release 6.0.0 preparation):
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Unit tests | 11,770 collected, 5,678 test functions | `pytest tests/unit` |
+| Unit coverage | 77% (statements and branches) | pytest-cov on `tests/unit`; the functional suites are not counted |
+| MyPy | 0 errors, 401 files | `mypy src` (strict) |
+| TODO/FIXME comments | 11 | outside `vendoring/` |
+| AsyncIO | the only engine | `Reactor.run()` is `asyncio.run(...)` |
+
+Superseded (2025), kept for history:
+
 | Item | Status | Notes |
 |------|--------|-------|
 | Unit Tests | 3,404 | +149 since last update |
@@ -19,6 +31,7 @@
 | Plan | Description |
 |------|-------------|
 | `wip-mypyc.md` | Whole-package mypyc build, wheel and binary integration; completion awaits green artifact CI |
+| `wip-two-tree-parity.md` | Keep 5.0 production-safe, bring main's coverage up |
 | `type-safety/` | MyPy error reduction |
 
 ### Planning (plan-)
@@ -52,7 +65,6 @@
 | `plan-gtsm-shared-listener.md` | `incoming-ttl` on a listening socket shared by several neighbours |
 | `plan-agent-instructions.md` | AGENTS.md, evidence rule, plan journal, `.claude/backups` cleanup (decisions needed) |
 | `plan-multisession.md` | Cisco code 131 (fixed); one session per family (main fixed, 5.0 won't fix) |
-| `wip-flowspec-wide-value.md` | One-octet flow components decoded from a wider value crash on `pack()` |
 
 ### Completed (done-) and Directories
 
@@ -132,6 +144,7 @@
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-flowspec-wide-value.md` | 2026-09-29 | A flow component value too large for its field is refused on decode (`c7b78df37`) |
 | `done-old-commands.md` | 2026-10-03 | Every 4.2 and 5.0 API command and configuration statement checked against main (qa/old) |
 | `done-agent-reported-bugs.md` | 2026-10-01 | Nine agent-reported bugs reproduced and fixed on main (sent UPDATEs as sent, as-path ASN4, env comments, unused words, ipv6 multicast, origin number, GR flags, group under API 4) |
 | `done-large-function-decomposition.md` | 2026-09-29 | The ten largest functions split, `long_function` 69 → 58 |
