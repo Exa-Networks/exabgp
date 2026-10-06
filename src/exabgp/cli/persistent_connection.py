@@ -23,6 +23,17 @@ from typing import Any
 from exabgp.cli.colors import Colors
 
 
+def _rejection_reason(line: str) -> str:
+    """Why the daemon turned the connection down: `error: <why>`, or {"error": "<why>"} for API 6."""
+    if line.startswith('error:'):
+        return line[len('error:') :].strip()
+    try:
+        return str(json.loads(line)['error'])
+    except (ValueError, KeyError, TypeError):
+        # not the JSON the daemon writes: the line as it came is the best there is to show
+        return line
+
+
 class PersistentSocketConnection:
     """Persistent Unix socket connection with background health monitoring
 
@@ -139,15 +150,7 @@ class PersistentSocketConnection:
             # Check for immediate rejection (error response from daemon)
             if response_buffer.startswith(('error:', '{"error": ')):
                 # Extract and display the error message from daemon: text, or JSON for API 6
-                error_msg = response_buffer.split('\n')[0]
-                if error_msg.startswith('error:'):
-                    error_msg = error_msg[6:].strip()
-                else:
-                    try:
-                        error_msg = str(json.loads(error_msg)['error'])
-                    except (ValueError, KeyError, TypeError):
-                        # not the JSON the daemon writes: show the line as it came
-                        pass
+                error_msg = _rejection_reason(response_buffer.split('\n')[0])
                 sys.stderr.write('\n')
                 sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
                 sys.stderr.write('║  ERROR: Connection rejected by daemon                  ║\n')
