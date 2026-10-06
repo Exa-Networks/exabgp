@@ -87,8 +87,10 @@ neighbor 127.0.0.1 {
 
 # bounded: a NOTIFICATION fits in one write to an empty socket buffer
 MAX_WRITER_STEPS = 100
-# bounded: how long a Peer is given to open a connection, in steps of SETTLE_SECONDS
-MAX_CONNECT_STEPS = 200
+# bounded: how long a Peer is given to open a connection, in steps of SETTLE_SECONDS. Ten
+# seconds: two were not enough with the whole unit suite running at once, and a Peer which
+# connects ends the wait as it does
+MAX_CONNECT_STEPS = 1000
 SETTLE_SECONDS = 0.01
 # bounded: an OPEN exchange cut short by a NOTIFICATION over loopback
 SESSION_SECONDS = 5.0
