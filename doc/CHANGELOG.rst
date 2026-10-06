@@ -14,6 +14,8 @@ Version 6.0.0:
  * Fix: started as root, exabgp refuses to drop to a user who can not read its own package,
    naming the directory (`daemon.privileges.unreadable`). Installed in a 0700 directory, it
    dropped to nobody anyway and reset every session as soon as it came up, logging nothing.
+ * Fix: in a group, the next-hop of an attributes line with no nlri is given to the routes
+   which give none of their own. It was dropped, and each such route refused.
  * Fix: a peer selector which matches no peer is refused. `peer 192.0.2.1 announce ...`,
    with no such neighbor, announced to every peer of the helper, and `peer <ip> peer-as 1
    teardown`, with the AS wrong, tore every established session down.

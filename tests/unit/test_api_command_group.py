@@ -165,6 +165,20 @@ def test_shared_attributes_are_given_to_each_announcement(daemon: Daemon) -> Non
     assert route.extensive() == '10.1.0.0/24 next-hop 1.2.3.4 med 5 local-preference 200'
 
 
+def test_a_shared_next_hop_is_given_to_each_announcement(daemon: Daemon) -> None:
+    """The next-hop of an attributes line with no nlri was dropped, and the route refused."""
+    lines = daemon.send(f'peer {FIRST} group attributes next-hop 1.2.3.4 med 5 ; announce route 10.1.0.0/24')
+    assert lines[-1] == 'done', lines
+    (route,) = daemon.neighbor(FIRST).rib.outgoing.cached_routes(None)
+    assert route.extensive() == '10.1.0.0/24 next-hop 1.2.3.4 med 5'
+
+
+def test_the_next_hop_of_a_route_is_kept_over_the_shared_one(daemon: Daemon) -> None:
+    daemon.send(f'peer {FIRST} group attributes next-hop 1.2.3.4 ; announce route 10.1.0.0/24 next-hop 5.6.7.8')
+    (route,) = daemon.neighbor(FIRST).rib.outgoing.cached_routes(None)
+    assert route.extensive() == '10.1.0.0/24 next-hop 5.6.7.8'
+
+
 @pytest.mark.parametrize('command', ['peer * group', 'peer * group ;', 'peer * group  ;  ; '])
 def test_an_empty_inline_group_is_refused(daemon: Daemon, command: str) -> None:
     assert daemon.send(command) == ['{"error": "empty group"}', 'error']

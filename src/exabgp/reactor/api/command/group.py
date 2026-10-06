@@ -26,6 +26,7 @@ import json
 from typing import TYPE_CHECKING
 
 from exabgp.logger import log, lazymsg
+from exabgp.protocol.ip import IP
 
 from exabgp.reactor.api.command.announce import (
     parse_sync_mode,
@@ -302,6 +303,9 @@ async def _apply(
         # the attributes a group shares, for announcements and withdrawals alike
         if shared:
             route = route.with_merged_attributes(shared.attributes)
+            # and its next-hop, to a route which gave none of its own
+            if route.nexthop is IP.NoNextHop and shared.nexthop is not IP.NoNextHop:
+                route = route.with_nexthop(shared.nexthop)
 
         if action == 'announce':
             # Validate route before announcing (early feedback)

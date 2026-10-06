@@ -205,7 +205,8 @@ class AttributesLine(RouteStatement):
             settings_copy.action = Action.UNSET
             routes.append(Route(klass.from_settings(settings_copy), collected.attributes, nexthop=settings.nexthop))
         if not routes and collected.attributes:
-            return [Route(Empty(AFI.ipv4, SAFI.unicast), collected.attributes)]
+            # the next-hop is kept: a group shares it with routes which give none of their own
+            return [Route(Empty(AFI.ipv4, SAFI.unicast), collected.attributes, nexthop=settings.nexthop)]
         return finish(routes)
 
     def printed(self, route: Route) -> list[WordOrSyntax]:
