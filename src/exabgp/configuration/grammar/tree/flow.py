@@ -263,6 +263,11 @@ def propagated(route: Route) -> list[Route]:
     return []
 
 
+# a flow route with no match component matches every packet: 4.2 and 5.0 sent one, and a
+# `discard` or `rate-limit` on it applied to all the traffic the peer forwards
+NO_MATCH = 'a flow route needs at least one match, or it matches every packet'
+
+
 class FlowLine(RouteStatement):
     """`<keyword> <value> ...`: a flow route on one line."""
 
@@ -271,6 +276,7 @@ class FlowLine(RouteStatement):
     too_many = 'a flow route holds at most {count} values'
 
     def parse(self, words: Words) -> list[Route]:
+        start = words.where()
         built = FlowRoute()
         for where, spec in self.keywords(words, LINE):
             value = spec.type.parse(words)
@@ -278,6 +284,8 @@ class FlowLine(RouteStatement):
                 built.apply(spec, value, line=True)
             except ValueError as exc:
                 raise ConfigError(where, str(exc)) from None
+        if not built.nlri.rules:
+            raise ConfigError(start, NO_MATCH)
         return propagated(built.route())
 
     def printed(self, route: Route) -> list[WordOrSyntax]:
@@ -432,7 +440,7 @@ class FlowRouteSection(Collector[list[Route]]):
         for spec, value in entries:
             built.apply(spec, value, line=False)
         if not built.nlri.rules:
-            raise ValueError('a flow route needs at least one match, or it matches every packet')
+            raise ValueError(NO_MATCH)
         routes = propagated(built.route())
         context.routes.extend(routes)
         return routes
@@ -490,6 +498,7 @@ class AnnounceFlowLine(RouteStatement):
         self.name = f'{afi.name()} {safi.name()} route'
 
     def parse(self, words: Words) -> list[Route]:
+        start = words.where()
         settings = FlowSettings()
         settings.action = action(words)
         settings.afi, settings.safi = self.afi, self.safi
@@ -499,6 +508,8 @@ class AnnounceFlowLine(RouteStatement):
                 self._apply(settings, attributes, spec, spec.type.parse(words))
             except ValueError as exc:
                 raise ConfigError(where, str(exc)) from None
+        if not settings.rules:
+            raise ConfigError(start, NO_MATCH)
         return [Route(Flow.from_settings(settings), attributes, nexthop=settings.nexthop)]
 
     @staticmethod

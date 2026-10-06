@@ -155,6 +155,21 @@ def test_flow_refuses_what_it_can_not_parse(daemon: Daemon, command: str) -> Non
     assert daemon.send(command) == ['error']
 
 
+@pytest.mark.parametrize(
+    'command',
+    [
+        'peer * announce flow route',
+        'peer * announce flow route discard',
+        'peer * announce flow route rate-limit 9600',
+        'peer * announce ipv4 flow discard',
+    ],
+)
+def test_a_flow_route_without_a_match_is_refused(daemon: Daemon, command: str) -> None:
+    """A flow route with no match component matches every packet: 4.2 and 5.0 sent it."""
+    assert daemon.send(command) == ['error']
+    assert daemon.announced(FIRST) == []
+
+
 VPLS = 'vpls endpoint 10 offset 20 size 8 base 203 rd 1:1'
 
 

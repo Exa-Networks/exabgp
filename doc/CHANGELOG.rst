@@ -133,6 +133,10 @@ Version 6.0.0:
    whole; remove "split" to keep sending it whole.
  * Incompatible: "path-information" with no value is refused, in the configuration and on
    the API. 5.0 ignored it. Give it an identifier, or remove it.
+ * Incompatible: a flow route with no match is refused on one line too, as the "route { }"
+   block already refused it: "announce flow route discard", "announce ipv4 flow discard"
+   and "flow { route discard; }". 4.2 and 5.0 sent it, and a flow route with no component
+   matches every packet, so its discard or rate-limit applied to all the traffic.
  * Fix: the text encoder writes the message of an operational advisory as text. 5.0 wrote
    the representation of Python bytes, advisory "b'a message'".
  * Fix: a comment after a value in the environment file is ignored. parser = true  # x

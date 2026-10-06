@@ -178,7 +178,7 @@ FLOW_DOCUMENT_BODIES: list[tuple[str, bool]] = [
     ),
     ('flow { route destination 10.0.0.0/24 discard; }', True),
     ('flow { route destination 10.0.0.0/24; }', True),
-    ('flow { route discard; }', True),
+    ('flow { route discard; }', False),  # no match: it would match every packet
     ('flow { route destination 10.0.0.0/24 rd 1:1 redirect 1:1; }', True),
     ('flow { route destination 10.0.0.0/24 route-distinguisher 1:1; }', False),  # names no field of a flow route
     ('flow { route destination 10.0.0.0/24 next-hop 10.0.0.1; }', False),
