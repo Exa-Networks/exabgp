@@ -178,6 +178,11 @@ def dispatch_v6(
 
         return reactor_cmd.comment, [], command
 
+    # `group <command> ; <command> ...`, as `exabgp decode` writes it, is for every peer of
+    # the helper, as `announce ...` is: only start and end are group commands of their own
+    if token_list[0] == 'group' and len(token_list) > 1 and token_list[1] not in ('start', 'end'):
+        return dispatch_v6(f'peer * {command}', reactor, service)
+
     tree = _get_v6_tree()
     handler, peers = dispatch(tree, tokeniser, reactor, service)
 

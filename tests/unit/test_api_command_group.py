@@ -90,6 +90,25 @@ def test_what_is_not_a_route_is_not_held_by_a_group(daemon: Daemon) -> None:
     assert [str(family) for family in daemon.neighbor(FIRST).eor] == ['ipv4 unicast']
 
 
+def test_api_4_inline_group(text_daemon: Daemon) -> None:
+    """`group <command> ; <command>` is what `exabgp decode` writes and the reference shows, and
+    was refused: only `group start` and `group end` were known with no selector before them."""
+    lines = text_daemon.send(
+        'group announce route 10.1.0.0/24 next-hop 1.2.3.4 ; announce route 10.2.0.0/24 next-hop 1.2.3.4'
+    )
+    assert lines == ['group processed: 2 announced, 0 withdrawn', 'done']
+    assert text_daemon.announced(FIRST) == ['10.1.0.0/24', '10.2.0.0/24']
+    assert text_daemon.announced(SECOND) == ['10.1.0.0/24', '10.2.0.0/24']
+
+
+def test_an_inline_group_with_no_selector_is_for_every_peer(daemon: Daemon) -> None:
+    daemon.send('peer * announce route 10.9.0.0/24 next-hop 1.2.3.4')
+    lines = daemon.send('group attributes origin igp local-preference 100 ; withdraw route 10.9.0.0/24')
+    assert answer(lines) == [{'status': 'group processed', 'announced': 0, 'withdrawn': 1}]
+    assert daemon.announced(FIRST) == []
+    assert daemon.announced(SECOND) == []
+
+
 def test_an_end_with_no_start_is_refused(daemon: Daemon) -> None:
     assert daemon.send('group end') == ['{"error": "not in group block"}', 'error']
 
