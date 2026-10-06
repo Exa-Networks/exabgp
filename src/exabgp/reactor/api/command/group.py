@@ -237,109 +237,112 @@ async def _process_group(
     - First command starting with 'attributes' sets shared attributes
     - Subsequent withdraw commands get those shared attributes merged in
     """
-
-    # Collect all peers that will receive routes (for flush callbacks)
-    all_peers: set[str] = set()
-    routes_added = 0
-    routes_withdrawn = 0
+    # how many routes each action applied, the peers they went to, and what could not be applied
+    applied = {'announce': 0, 'withdraw': 0}
+    touched: set[str] = set()
     errors: list[str] = []
 
     # Shared attributes from 'attributes ...' command (first in group)
-    shared_attributes_route: Route | None = None
+    shared: Route | None = None
 
     # Determine sync mode from first command (or service default)
     first_cmd = buffered[0][1] if buffered else ''
     _, sync_mode = parse_sync_mode(first_cmd, reactor, service)
 
-    # Process each buffered command
     for cmd_peers, cmd in buffered:
-        # Determine action from command prefix
         words = cmd.split(None, 1)
         if not words:
             continue
 
-        action_word = words[0].lower()
-        remaining = words[1] if len(words) > 1 else ''
-
+        action = words[0].lower()
         # Strip sync/async/json/text from remaining command
-        remaining, _ = parse_sync_mode(remaining, reactor, service)
+        remaining, _ = parse_sync_mode(words[1] if len(words) > 1 else '', reactor, service)
 
-        if action_word in ('attribute', 'attributes'):
+        if action in ('attribute', 'attributes'):
             # Parse shared attributes - use full command including 'attributes'
             routes = _parse_routes(api, cmd, action='announce')
             if routes:
-                shared_attributes_route = routes[0]
-                log.debug(lazymsg('api.group.shared_attributes attrs={a}', a=shared_attributes_route.attributes), 'api')
+                shared = routes[0]
+                log.debug(lazymsg('api.group.shared_attributes attrs={a}', a=shared.attributes), 'api')
             else:
                 errors.append(f'could not parse attributes: {cmd}')
-
-        elif action_word == 'announce':
-            # Parse the announcement
-            routes = _parse_routes(api, remaining, action='announce')
-            if not routes:
-                errors.append(f'could not parse: {cmd}')
-                continue
-
-            for route in routes:
-                # Merge shared attributes if available
-                if shared_attributes_route:
-                    route = route.with_merged_attributes(shared_attributes_route.attributes)
-
-                # Validate route before announcing (early feedback)
-                error = validate_announce(route)
-                if error:
-                    errors.append(f'invalid route: {error}')
-                    continue
-
-                reactor.configuration.announce_route(cmd_peers, route, service)
-                all_peers.update(cmd_peers)
-                routes_added += 1
-                await asyncio.sleep(0)
-
-        elif action_word == 'withdraw':
-            # Parse the withdrawal - pass action='withdraw' for proper handling
-            routes = _parse_routes(api, remaining, action='withdraw')
-            if not routes:
-                errors.append(f'could not parse: {cmd}')
-                continue
-
-            for route in routes:
-                # Merge shared attributes if available (for withdrawals with attributes)
-                if shared_attributes_route:
-                    route = route.with_merged_attributes(shared_attributes_route.attributes)
-
-                reactor.configuration.withdraw_route(cmd_peers, route)
-                all_peers.update(cmd_peers)
-                routes_withdrawn += 1
-                await asyncio.sleep(0)
-
+        elif action in applied:
+            await _apply(api, reactor, service, cmd_peers, cmd, remaining, action, shared, applied, touched, errors)
         else:
-            errors.append(f'unknown action in group: {action_word}')
+            errors.append(f'unknown action in group: {action}')
 
-    # Register flush callbacks for all affected peers
-    flush_events = register_flush_callbacks(list(all_peers), reactor, sync_mode)
-
-    # Wait for flush if sync mode
+    # Wait for every peer given a route to have sent it (if sync mode)
+    flush_events = register_flush_callbacks(list(touched), reactor, sync_mode)
     if flush_events:
         await asyncio.gather(*[e.wait() for e in flush_events])
 
-    # Build response
+    await _answer_group(reactor, service, use_json, applied, errors)
+
+
+async def _apply(
+    api: 'API',
+    reactor: 'Reactor',
+    service: str,
+    peers: list[str],
+    cmd: str,
+    remaining: str,
+    action: str,
+    shared: 'Route | None',
+    applied: dict[str, int],
+    touched: set[str],
+    errors: list[str],
+) -> None:
+    """Apply the routes of one `announce ...` or `withdraw ...` of a group to the RIB of `peers`."""
+    routes = _parse_routes(api, remaining, action=action)
+    if not routes:
+        errors.append(f'could not parse: {cmd}')
+        return
+
+    for route in routes:
+        # the attributes a group shares, for announcements and withdrawals alike
+        if shared:
+            route = route.with_merged_attributes(shared.attributes)
+
+        if action == 'announce':
+            # Validate route before announcing (early feedback)
+            error = validate_announce(route)
+            if error:
+                errors.append(f'invalid route: {error}')
+                continue
+            reactor.configuration.announce_route(peers, route, service)
+        else:
+            reactor.configuration.withdraw_route(peers, route)
+        touched.update(peers)
+        applied[action] += 1
+        await asyncio.sleep(0)
+
+
+async def _answer_group(
+    reactor: 'Reactor', service: str, use_json: bool, applied: dict[str, int], errors: list[str]
+) -> None:
+    """Say what a group applied, and end with done, or with error when a command could not be applied.
+
+    The routes which could be applied are, whatever the others did: the errors say which were not.
+    """
     if use_json:
         response = {
             'status': 'group processed',
-            'announced': routes_added,
-            'withdrawn': routes_withdrawn,
+            'announced': applied['announce'],
+            'withdrawn': applied['withdraw'],
         }
         if errors:
             response['errors'] = errors
         reactor.processes.write(service, json.dumps(response, default=json_number))
     else:
-        msg = f'group processed: {routes_added} announced, {routes_withdrawn} withdrawn'
+        msg = f'group processed: {applied["announce"]} announced, {applied["withdraw"]} withdrawn'
         if errors:
             msg += f', {len(errors)} errors'
         reactor.processes.write(service, msg)
 
-    await reactor.processes.answer_done(service)
+    if errors:
+        await reactor.processes.answer_error(service)
+    else:
+        await reactor.processes.answer_done(service)
 
 
 def _parse_routes(api: 'API', command: str, action: str = 'announce') -> list['Route']:

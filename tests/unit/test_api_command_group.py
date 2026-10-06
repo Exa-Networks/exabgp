@@ -125,3 +125,27 @@ def test_shared_attributes_are_given_to_each_announcement(daemon: Daemon) -> Non
 @pytest.mark.parametrize('command', ['peer * group', 'peer * group ;', 'peer * group  ;  ; '])
 def test_an_empty_inline_group_is_refused(daemon: Daemon, command: str) -> None:
     assert daemon.send(command) == ['{"error": "empty group"}', 'error']
+
+
+def test_a_group_with_a_command_it_could_not_apply_ends_in_error(daemon: Daemon) -> None:
+    """The answer listed the errors and ended with done, which a helper reads as success."""
+    lines = daemon.send(
+        f'peer {SECOND} group announce route 10.3.0.0/24 next-hop 1.2.3.4 ; announce route 10.4.0.0/24 ; bogus thing'
+    )
+    assert answer(lines) == [
+        {
+            'status': 'group processed',
+            'announced': 1,
+            'withdrawn': 0,
+            'errors': ['invalid route: announce requires nexthop: 10.4.0.0/24', 'unknown action in group: bogus'],
+        }
+    ]
+    assert lines[-1] == 'error'
+    # what could be applied was
+    assert daemon.announced(SECOND) == ['10.3.0.0/24']
+
+
+def test_api_4_group_with_a_command_it_could_not_apply_ends_in_error(text_daemon: Daemon) -> None:
+    text_daemon.send('group start')
+    text_daemon.send('announce route 10.1.0.0/24')
+    assert text_daemon.send('group end') == ['group processed: 0 announced, 0 withdrawn, 1 errors', 'error']
