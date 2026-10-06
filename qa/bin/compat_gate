@@ -299,31 +299,24 @@ def observe(tree: Path, destination: Path) -> dict[str, str]:
     environment = dict(os.environ)
     environment['exabgp_log_enable'] = 'false'
     environment['PYTHONPATH'] = str(tree / 'src')
-    result = subprocess.run(
-        [
-            'uv',
-            'run',
-            '--no-project',
-            '--with',
-            'hypothesis',
-            '--python',
-            '3.12',
-            'python',
-            str(program),
-            str(destination),
-        ],
-        cwd=tree,
-        env=environment,
-        capture_output=True,
-        text=True,
-    )
+    command = ['uv', 'run', '--no-project', '--with', 'hypothesis', '--python', '3.12', 'python']
+    # removed on every path: a probe which failed was left behind in the tree it ran in
+    try:
+        result = subprocess.run(
+            [*command, str(program), str(destination)],
+            cwd=tree,
+            env=environment,
+            capture_output=True,
+            text=True,
+        )
+    finally:
+        program.unlink(missing_ok=True)
     if result.returncode != 0:
         raise CannotObserve(
             f'the probe did not run in {tree}:\n{result.stderr.strip()[-700:]}\n'
             'a tree which cannot execute this probe cannot be compared against it'
         )
     sys.stderr.write(result.stderr)
-    program.unlink()
     loaded: dict[str, dict[str, str]] = json.loads(destination.read_text())
     return loaded
 
