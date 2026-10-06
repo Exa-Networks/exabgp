@@ -17,6 +17,7 @@ import argparse
 import os
 import re
 import subprocess
+import time
 import sys
 from pathlib import Path
 
@@ -54,6 +55,40 @@ def run_suite(suite: str, environment: dict[str, str]) -> int:
     return result.returncode
 
 
+# every module of the installed package, loaded once in a process of its own
+WARM_UP = """
+import importlib, pkgutil, exabgp
+failed = []
+for module in pkgutil.walk_packages(exabgp.__path__, 'exabgp.'):
+    try:
+        importlib.import_module(module.name)
+    except Exception as exc:
+        failed.append(f'{module.name}: {exc}')
+print(*failed, sep='\\n')
+raise SystemExit(1 if failed else 0)
+"""
+WARM_UP_TIMEOUT_SECONDS = 600
+
+
+def warm_up(environment: dict[str, str]) -> None:
+    """Load every module of the installed package once, before the suites start daemons.
+
+    The first load of a freshly installed compiled wheel is slow on macOS, which checks each
+    new library as it is opened: 8.4 seconds measured locally against 0.7 for the next load.
+    A suite starts its daemons together, each with 20 seconds to answer, and on the macOS
+    runner all 47 encoding daemons, still opening their libraries, ran out of time and
+    printed nothing. A user pays this once, on the first start.
+    """
+    started = time.monotonic()
+    command = [sys.executable, '-c', WARM_UP]
+    result = subprocess.run(
+        command, env=environment, cwd='/', capture_output=True, text=True, timeout=WARM_UP_TIMEOUT_SECONDS
+    )
+    if result.returncode:
+        sys.exit(f'test_wheel: a module of the installed package does not load:\n{result.stdout}{result.stderr}')
+    print(f'test_wheel: every module loaded once in {time.monotonic() - started:.1f}s', flush=True)
+
+
 def installed() -> Path:
     """The directory holding the installed exabgp package, never the checkout's src."""
     source = str(ROOT / 'src')
@@ -82,6 +117,7 @@ def main() -> int:
 
     environment = dict(os.environ, EXABGP_TREE=str(tree), INTERPRETER=sys.executable)
     environment.pop('PYTHONPATH', None)
+    warm_up(environment)
     for suite in SUITES:
         returncode = run_suite(suite, environment)
         if returncode:
