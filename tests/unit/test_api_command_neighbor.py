@@ -203,3 +203,34 @@ def test_api_4_disable_and_enable_of_a_neighbor(text_daemon: Daemon) -> None:
     assert text_daemon.peer(FIRST).disabled()
     assert text_daemon.send(f'neighbor {FIRST} enable') == ['done']
     assert not text_daemon.peer(FIRST).disabled()
+
+
+# ================================================== show names the neighbor it is asked
+
+
+def test_show_extensive_of_one_neighbor_shows_that_one(text_daemon: Daemon) -> None:
+    """The address was looked for in the whole name of the neighbor: 127.0.0.1 matched 127.0.0.10,
+    and any neighbor whose local address, 127.0.0.100, or router-id started with it."""
+    lines = text_daemon.send(f'show neighbor {FIRST} extensive')
+    assert [line for line in lines if line.startswith('Neighbor ')] == [f'Neighbor {FIRST}']
+
+
+def test_show_configuration_of_one_neighbor_shows_that_one(text_daemon: Daemon) -> None:
+    lines = text_daemon.send(f'show neighbor {FIRST} configuration')
+    assert [line for line in lines if line.startswith('neighbor ')] == [f'neighbor {FIRST} {{']
+
+
+def test_show_in_json_of_one_neighbor_shows_that_one(daemon: Daemon) -> None:
+    """The JSON answer, the one an API 6 helper gets, ignored the selector altogether."""
+    (shown,) = answer(daemon.send(f'peer {SECOND} show'))
+    assert [entry['peer']['address'] for entry in shown] == [SECOND]
+
+
+def test_show_of_the_peers_a_selector_names(daemon: Daemon) -> None:
+    (shown,) = answer(daemon.send(f'peer [ {FIRST} , {SECOND} ] show'))
+    assert [entry['peer']['address'] for entry in shown] == [FIRST, SECOND]
+
+
+def test_api_4_show_in_json_of_one_neighbor(text_daemon: Daemon) -> None:
+    (shown,) = answer(text_daemon.send(f'show neighbor {FIRST} json'))
+    assert [entry['peer']['address'] for entry in shown] == [FIRST]

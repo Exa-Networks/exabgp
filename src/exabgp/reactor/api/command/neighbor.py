@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import shlex
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.neighbor import NeighborTemplate
@@ -18,6 +18,7 @@ from exabgp.logger import lazymsg, log
 from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
+    from exabgp.bgp.neighbor import Neighbor
     from exabgp.reactor.api import API
     from exabgp.reactor.loop import Reactor
 
@@ -152,177 +153,153 @@ def enable(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comm
     return True
 
 
+_SHOW_MODES = ('summary', 'extensive', 'configuration', 'json', 'text')
+# the words of the API 4 form which are not an address: `show neighbor [<ip>] <mode>`
+_SHOW_WORDS = ('neighbor', 'peer', 'show')
+
+
+def _selected(peers: list[str], address: str, name: str, peer_address: str) -> bool:
+    """Whether `show` is about the neighbor called `name`, whose peer address is `peer_address`.
+
+    A selector names its peers; without one, the API 4 form may end with an address, which
+    is compared with the peer address. It was searched for in the whole name of the
+    neighbor, so 10.0.0.1 matched 10.0.0.10 too, and any neighbor whose local address or
+    router-id started with it.
+    """
+    if peers:
+        return name in peers
+    return not address or peer_address == address
+
+
+async def _show_configuration(reactor: 'Reactor', service: str, peers: list[str], address: str) -> None:
+    try:
+        for name, neighbor in list(reactor.configuration.neighbors.items()):
+            if not _selected(peers, address, name, str(neighbor.session.peer_address)):
+                continue
+            for line in str(neighbor).split('\n'):
+                reactor.processes.write(service, line)
+                await asyncio.sleep(0)
+    except Exception as e:
+        await reactor.processes.answer_error(service, str(e))
+    else:
+        await reactor.processes.answer_done(service)
+
+
+def _neighbor_json(reactor: 'Reactor', name: str, neighbor: 'Neighbor') -> dict[str, Any]:
+    """What the JSON of `show` says of a neighbor: the runtime data of its peer, if it has one."""
+    if name in reactor.peers():
+        return NeighborTemplate.as_dict(reactor.neighbor_cli_data(name))
+    session = neighbor.session
+    return {
+        'peer-address': str(session.peer_address),
+        'local-address': str(session.local_address) if session.local_address else None,
+        'peer-as': session.peer_as,
+        'local-as': session.local_as,
+    }
+
+
+async def _show_json(reactor: 'Reactor', service: str, peers: list[str], address: str) -> None:
+    # every configured neighbor, connected or not, as tooling and completion want them
+    shown = []
+    try:
+        for name, neighbor in list(reactor.configuration.neighbors.items()):
+            if not _selected(peers, address, name, str(neighbor.session.peer_address)):
+                continue
+            try:
+                shown.append(_neighbor_json(reactor, name, neighbor))
+            except Exception as e:
+                # one neighbor which can not be described does not hide the others
+                reactor.processes.write(service, f'# Error processing neighbor {name}: {e}')
+    except Exception as e:
+        reactor.processes.write(service, f'# Error accessing neighbors: {e}')
+
+    for line in json.dumps(shown, default=json_number).split('\n'):
+        reactor.processes.write(service, line)
+        await asyncio.sleep(0)
+    await reactor.processes.answer_done(service)
+
+
+def _show_extensive_down(reactor: 'Reactor', service: str, neighbor: 'Neighbor') -> None:
+    """What `show extensive` says of a configured neighbor which has no peer."""
+    session = neighbor.session
+    peer_address = str(session.peer_address) if session.peer_address else 'not set'
+    local_address = str(session.local_address) if session.local_address else 'not set'
+    peer_as = session.peer_as if session.peer_as else 'not set'
+    local_as = session.local_as if session.local_as else 'not set'
+
+    reactor.processes.write(service, f'Neighbor {peer_address}')
+    reactor.processes.write(service, '')
+    reactor.processes.write(service, '    Session                         Local')
+    reactor.processes.write(service, f'    {"local-address":<20} {local_address:>15}')
+    reactor.processes.write(service, f'    {"state":<20} down (not connected)')
+    reactor.processes.write(service, '')
+    reactor.processes.write(service, '    Setup                           Local          Remote')
+    reactor.processes.write(service, f'    {"AS":<20} {local_as:>15} {peer_as:>15}')
+    reactor.processes.write(service, '')
+
+
+async def _show_extensive(reactor: 'Reactor', service: str, peers: list[str], address: str) -> None:
+    # every configured neighbor, connected or not, so one which never connects is seen
+    try:
+        for name, neighbor in list(reactor.configuration.neighbors.items()):
+            if not _selected(peers, address, name, str(neighbor.session.peer_address)):
+                continue
+            if name not in reactor.peers():
+                _show_extensive_down(reactor, service, neighbor)
+                await asyncio.sleep(0)
+                continue
+            for line in NeighborTemplate.extensive(reactor.neighbor_cli_data(name)).split('\n'):
+                if line:
+                    reactor.processes.write(service, line)
+                await asyncio.sleep(0)
+    except Exception as e:
+        await reactor.processes.answer_error(service, str(e))
+    else:
+        await reactor.processes.answer_done(service)
+
+
+async def _show_summary(reactor: 'Reactor', service: str, peers: list[str], address: str) -> None:
+    try:
+        reactor.processes.write(service, NeighborTemplate.summary_header)
+        for name in reactor.peers():
+            if not _selected(peers, address, name, reactor.neighbor_ip(name)):
+                continue
+            cli_data = reactor.neighbor_cli_data(name)
+            if not cli_data:
+                continue
+            for line in NeighborTemplate.summary(cli_data).split('\n'):
+                if line:
+                    reactor.processes.write(service, line)
+                await asyncio.sleep(0)
+    except Exception as e:
+        await reactor.processes.answer_error(service, str(e))
+    else:
+        await reactor.processes.answer_done(service)
+
+
 def show_neighbor(
     self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
 ) -> bool:
-    words = command.split()
+    """`peer [<selector>] show [summary|extensive|configuration]`, or `show neighbor [<ip>] ...`.
 
-    summary = 'summary' in words
-    extensive = 'extensive' in words
-    configuration = 'configuration' in words
-    jason = 'json' in words
-    text = 'text' in words
+    An API 6 helper is answered in JSON whatever the mode; the text modes are for API 4.
+    """
+    modes = set(command.split()) & set(_SHOW_MODES)
+    words = [word for word in command.split() if word not in _SHOW_MODES]
+    address = words[-1] if words and words[-1] not in _SHOW_WORDS else ''
 
-    if summary:
-        words.remove('summary')
-    if extensive:
-        words.remove('extensive')
-    if configuration:
-        words.remove('configuration')
-    if jason:
-        words.remove('json')
-    if text:
-        words.remove('text')
-
-    # Get IP filter from peers list or command keywords
-    # peers list may be empty for global commands like "peer show"
-    limit = ''
-    if peers and len(peers) == 1:
-        # Single peer specified - use as filter
-        # Extract IP from peer key (format: "neighbor 1.2.3.4 ...")
-        peer_parts = peers[0].split()
-        if len(peer_parts) >= 2:
-            limit = peer_parts[1]
-    elif words:
-        # Fall back to parsing command for IP filter
-        if words[-1] not in ('neighbor', 'peer', 'show', 'summary', 'extensive', 'configuration'):
-            limit = words[-1]
-
-    async def callback_configuration() -> None:
-        try:
-            for neighbor_name in reactor.configuration.neighbors.keys():
-                neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
-                if not neighbor:
-                    continue
-                if limit and limit not in neighbor_name:
-                    continue
-                for line in str(neighbor).split('\n'):
-                    reactor.processes.write(service, line)
-                    await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
-        except Exception as e:
-            await reactor.processes.answer_error(service, str(e))
-        else:
-            await reactor.processes.answer_done(service)
-
-    async def callback_json() -> None:
-        p = []
-        # Include ALL configured neighbors (not just connected ones)
-        # This is useful for tooling/completion even when neighbors are down
-        try:
-            for neighbor_name in reactor.configuration.neighbors.keys():
-                neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
-                if not neighbor:
-                    continue
-
-                # Build minimal neighbor info from configuration
-                try:
-                    neighbor_data = {
-                        'peer-address': str(neighbor.session.peer_address),
-                        'local-address': str(neighbor.session.local_address)
-                        if neighbor.session.local_address
-                        else None,
-                        'peer-as': neighbor.session.peer_as,
-                        'local-as': neighbor.session.local_as,
-                    }
-
-                    # If neighbor is also an active peer, get full runtime data
-                    if neighbor_name in reactor.peers():
-                        neighbor_data = NeighborTemplate.as_dict(reactor.neighbor_cli_data(neighbor_name))
-
-                    p.append(neighbor_data)
-                except Exception as e:
-                    # Log error but continue with other neighbors
-                    reactor.processes.write(service, f'# Error processing neighbor {neighbor_name}: {e}')
-        except Exception as e:
-            # Log error if configuration access fails
-            reactor.processes.write(service, f'# Error accessing neighbors: {e}')
-
-        for line in json.dumps(p, default=json_number).split('\n'):
-            reactor.processes.write(service, line)
-            await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
-        await reactor.processes.answer_done(service)
-
-    async def callback_extensive() -> None:
-        # Show ALL configured neighbors (both connected and disconnected)
-        # This provides visibility into neighbors that are down/not connecting
-        try:
-            for neighbor_name in reactor.configuration.neighbors.keys():
-                neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
-                if not neighbor:
-                    continue
-
-                # Check if this neighbor matches the filter
-                if limit and limit not in neighbor_name:
-                    continue
-
-                # If neighbor is connected, show full extensive output
-                if neighbor_name in reactor.peers():
-                    for line in NeighborTemplate.extensive(reactor.neighbor_cli_data(neighbor_name)).split('\n'):
-                        if line:
-                            reactor.processes.write(service, line)
-                        await asyncio.sleep(0)
-                else:
-                    # Neighbor is configured but not connected - show minimal info
-                    peer_addr = str(neighbor.session.peer_address) if neighbor.session.peer_address else 'not set'
-                    local_addr = str(neighbor.session.local_address) if neighbor.session.local_address else 'not set'
-                    peer_as = neighbor.session.peer_as if neighbor.session.peer_as else 'not set'
-                    local_as = neighbor.session.local_as if neighbor.session.local_as else 'not set'
-
-                    reactor.processes.write(service, f'Neighbor {peer_addr}')
-                    reactor.processes.write(service, '')
-                    reactor.processes.write(service, '    Session                         Local')
-                    reactor.processes.write(service, f'    {"local-address":<20} {local_addr:>15}')
-                    reactor.processes.write(service, f'    {"state":<20} down (not connected)')
-                    reactor.processes.write(service, '')
-                    reactor.processes.write(service, '    Setup                           Local          Remote')
-                    reactor.processes.write(service, f'    {"AS":<20} {local_as:>15} {peer_as:>15}')
-                    reactor.processes.write(service, '')
-                    await asyncio.sleep(0)
-        except Exception as e:
-            await reactor.processes.answer_error(service, str(e))
-        else:
-            await reactor.processes.answer_done(service)
-
-    async def callback_summary() -> None:
-        try:
-            reactor.processes.write(service, NeighborTemplate.summary_header)
-            for peer_name in reactor.peers():
-                if limit and limit != str(reactor.neighbor_ip(peer_name)):
-                    continue
-                cli_data = reactor.neighbor_cli_data(peer_name)
-                if not cli_data:
-                    continue
-                for line in NeighborTemplate.summary(cli_data).split('\n'):
-                    if line:
-                        reactor.processes.write(service, line)
-                    await asyncio.sleep(0)  # Yield control after each line (matches original yield True)
-        except Exception as e:
-            await reactor.processes.answer_error(service, str(e))
-        else:
-            await reactor.processes.answer_done(service)
-
-    # JSON output takes priority in v6 API (use_json=True)
-    # This ensures consistent JSON responses for all commands
-
-    # Full JSON output for peer <ip> show (default in v6 API)
     if use_json:
-        reactor.asynchronous.schedule(service, command, callback_json())
+        show = _show_json
+    elif 'configuration' in modes:
+        show = _show_configuration
+    elif 'summary' in modes:
+        show = _show_summary
+    elif 'extensive' in modes:
+        show = _show_extensive
+    else:
+        reactor.processes.write(service, 'usage: peer <ip> show [summary|extensive|configuration]')
+        reactor.processes.answer_done_sync(service)
         return True
 
-    # Text output modes (only for v4 API or explicit text request)
-    if configuration:
-        reactor.asynchronous.schedule(service, command, callback_configuration())
-        return True
-
-    if summary:
-        reactor.asynchronous.schedule(service, command, callback_summary())
-        return True
-
-    if extensive:
-        reactor.asynchronous.schedule(service, command, callback_extensive())
-        return True
-
-    # Fallback
-    reactor.processes.write(service, 'usage: peer <ip> show [summary|extensive|configuration]')
-    reactor.processes.answer_done_sync(service)
+    reactor.asynchronous.schedule(service, command, show(reactor, service, peers, address))
     return True
