@@ -99,6 +99,9 @@ def _show_adjrib_callback(
                 route_entry['nlri'] = str(nlri)
             routes.append(route_entry)
 
+        # one document for the chunk: written after each route, each document repeated the
+        # routes of the chunk before it
+        if routes:
             for line in json.dumps(jason, default=json_number).split('\n'):
                 reactor.processes.write(service, line)
 

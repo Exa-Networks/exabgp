@@ -14,6 +14,7 @@ from collections.abc import Iterator
 
 import pytest
 
+from exabgp.environment import getenv
 from tests.api_daemon import FIRST, SECOND, Daemon, answer
 
 VPLS = 'vpls endpoint 10 offset 20 size 8 base 203 rd 1:1'
@@ -252,3 +253,14 @@ def test_flush_and_clear_of_a_neighbor_which_is_not_there_are_refused(daemon: Da
     daemon.send('peer * announce route 10.0.0.0/24 next-hop 1.2.3.4')
     assert daemon.send(command) == ['error']
     assert daemon.announced(FIRST) == ['10.0.0.0/24']
+
+
+def test_show_in_json_gives_each_route_once_whatever_the_chunk(daemon: Daemon, monkeypatch: pytest.MonkeyPatch) -> None:
+    """With exabgp.api.chunk above 1, a document was written after each route of a chunk, each
+    one holding every route before it: the first route of a chunk of three was given three times."""
+    monkeypatch.setattr(getenv().api, 'chunk', 3)
+    for prefix in ('10.0.0.0/24', '10.0.1.0/24', '10.0.2.0/24'):
+        daemon.send(f'peer {SECOND} announce route {prefix} next-hop 1.2.3.4')
+    shown = answer(daemon.send(f'rib show out {SECOND}'))
+    prefixes = [route['prefix'] for document in shown for route in document[SECOND]['routes']]
+    assert sorted(prefixes) == ['10.0.0.0/24', '10.0.1.0/24', '10.0.2.0/24']
