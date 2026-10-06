@@ -29,10 +29,33 @@ def register_rib() -> None:
     pass
 
 
+# the words of `rib show|flush|clear <direction> [neighbor] [<ip>] [options]` which are not
+# the address of the neighbor the command is about; `routes` and `static` were always taken
+# as meaning every neighbor
+_RIB_WORDS = frozenset(
+    {'in', 'out', 'extensive', 'inet', 'flow', 'l2vpn', 'json', 'text', 'neighbor', 'routes', 'static'}
+)
+
+
+def _named_address(words: list[str]) -> str:
+    """The address of the neighbor a rib command names, or '' when it names none."""
+    named = [word for word in words if word not in _RIB_WORDS]
+    return named[0] if named else ''
+
+
+def _of_address(reactor: 'Reactor', peers: list[str], address: str) -> list[str]:
+    """The peers whose peer address is `address`, every one of them when it is ''.
+
+    The address is compared with the address of each peer: looked for in the name of the
+    peer instead, `neighbor 10.0.0.1` matched `neighbor 10.0.0.10` as well.
+    """
+    return [peer for peer in peers if not address or reactor.neighbor_ip(peer) == address]
+
+
 def _show_adjrib_callback(
     reactor: 'Reactor',
     service: str,
-    last: str,
+    address: str,
     route_type: tuple[type[NLRI], ...],
     advertised: bool,
     rib_name: str,
@@ -81,11 +104,7 @@ def _show_adjrib_callback(
 
     async def callback() -> None:
         lines_per_yield = getenv().api.chunk
-        if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
-            peers = reactor.peers()
-        else:
-            peers = [n for n in reactor.peers() if f'neighbor {last}' in n]
-        for key in peers:
+        for key in _of_address(reactor, reactor.peers(), address):
             routes = reactor.neighor_rib(key, rib_name, advertised)
             while routes:
                 extracted, routes = routes[:lines_per_yield], routes[lines_per_yield:]
@@ -123,11 +142,8 @@ def show_adj_rib(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
         words.remove('json')
         use_json = True
 
-    for remove in ('in', 'out', 'extensive', 'inet', 'flow', 'l2vpn'):
-        if remove in words:
-            words.remove(remove)
-    last = '' if not words else words[0]
-    callback = _show_adjrib_callback(reactor, service, last, klass, False, rib, extensive, use_json)
+    address = _named_address(words)
+    callback = _show_adjrib_callback(reactor, service, address, klass, False, rib, extensive, use_json)
     reactor.asynchronous.schedule(service, command, callback())
     return True
 
@@ -145,7 +161,7 @@ def flush_adj_rib_out(
         await reactor.processes.answer_done(service)
 
     try:
-        # peers list already parsed by dispatcher
+        peers = _of_address(reactor, peers, _named_address(command.split()))
         if not peers:
             self.log_failure(f'no neighbor matching the command : {command}', 'warning')
             reactor.processes.answer_error_sync(service)
@@ -178,7 +194,7 @@ def clear_adj_rib(
         await reactor.processes.answer_done(service)
 
     try:
-        # peers list already parsed by dispatcher
+        peers = _of_address(reactor, peers, _named_address(command.split()))
         if not peers:
             self.log_failure(f'no neighbor matching the command : {command}', 'warning')
             reactor.processes.answer_error_sync(service)

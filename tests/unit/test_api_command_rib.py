@@ -194,3 +194,61 @@ def test_flush_and_clear_with_no_peer_are_refused() -> None:
         assert daemon.send('rib clear out') == ['error']
     finally:
         daemon.close()
+
+
+# ============================================== the neighbor a command names, and no other
+
+
+def test_show_out_of_a_neighbor_whose_address_starts_another(text_daemon: Daemon) -> None:
+    """`neighbor 127.0.0.1` was looked for in the name of each peer, and is the start of `neighbor 127.0.0.10`."""
+    populate(text_daemon, api_4=True)
+    assert text_daemon.send(f'show adj-rib out {FIRST} inet') == [f'{FIRST} ipv4 unicast 10.0.0.0/24', 'done']
+
+
+def test_show_out_of_one_neighbor_in_json(daemon: Daemon) -> None:
+    daemon.send('peer * announce route 10.0.0.0/24 next-hop 1.2.3.4')
+    assert answer(daemon.send(f'rib show out {FIRST}')) == [
+        {FIRST: {'routes': [{'family': 'ipv4 unicast', 'prefix': '10.0.0.0/24'}]}}
+    ]
+
+
+def test_show_out_of_a_neighbor_named_as_the_reference_has_it(text_daemon: Daemon) -> None:
+    """`show adj-rib out neighbor <ip>` looked for a peer called `neighbor neighbor`, and showed none."""
+    populate(text_daemon, api_4=True)
+    assert text_daemon.send(f'show adj-rib out neighbor {SECOND}') == [f'{SECOND} ipv4 unicast 10.0.0.0/24', 'done']
+
+
+def test_clear_out_of_one_neighbor_leaves_the_others(text_daemon: Daemon) -> None:
+    """The neighbor was ignored, and every neighbor had its routes withdrawn."""
+    populate(text_daemon, api_4=True)
+    assert text_daemon.send(f'clear adj-rib out neighbor {SECOND}') == ['done']
+    assert text_daemon.announced(SECOND) == []
+    assert len(text_daemon.announced(FIRST)) == 3
+
+
+def test_clear_of_one_neighbor(daemon: Daemon) -> None:
+    receive(daemon, FIRST, '10.8.0.0/24')
+    receive(daemon, SECOND, '10.9.0.0/24')
+    daemon.send('peer * announce route 10.0.0.0/24 next-hop 1.2.3.4')
+    assert daemon.send(f'rib clear in {FIRST}') == ['done']
+    assert (received(daemon, FIRST), received(daemon, SECOND)) == ([], ['10.9.0.0/24'])
+    assert daemon.send(f'rib clear out {FIRST}') == ['done']
+    assert (daemon.announced(FIRST), daemon.announced(SECOND)) == ([], ['10.0.0.0/24'])
+
+
+def test_flush_of_one_neighbor(daemon: Daemon) -> None:
+    daemon.send('peer * announce route 10.0.0.0/24 next-hop 1.2.3.4')
+    for address in (FIRST, SECOND):
+        daemon.neighbor(address).rib.outgoing.reset()
+    assert daemon.send(f'rib flush out {SECOND}') == ['done']
+    assert not daemon.neighbor(FIRST).rib.outgoing.pending()
+    assert daemon.neighbor(SECOND).rib.outgoing.pending()
+
+
+@pytest.mark.parametrize(
+    'command', ['rib clear out 192.0.2.1', 'rib clear in neighbor 192.0.2.1', 'rib flush out 192.0.2.1']
+)
+def test_flush_and_clear_of_a_neighbor_which_is_not_there_are_refused(daemon: Daemon, command: str) -> None:
+    daemon.send('peer * announce route 10.0.0.0/24 next-hop 1.2.3.4')
+    assert daemon.send(command) == ['error']
+    assert daemon.announced(FIRST) == ['10.0.0.0/24']
