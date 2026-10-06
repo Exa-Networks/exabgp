@@ -13,7 +13,7 @@ import asyncio
 from typing import TYPE_CHECKING
 
 from exabgp.protocol.ip import IP
-from exabgp.protocol.family import Family
+from exabgp.protocol.family import Family, FamilyTuple
 from exabgp.bgp.message.update.collection import validate_announce_nlri
 
 from exabgp.logger import log, lazymsg
@@ -41,17 +41,37 @@ def validate_announce(route: 'Route') -> str | None:
     return validate_announce_nlri(route.nlri, route.nexthop)
 
 
+def carrying(reactor: 'Reactor', peers: list[str], families: list[FamilyTuple]) -> list[str]:
+    """The peers whose neighbor carries every one of the families."""
+    neighbors = reactor.configuration.neighbors
+    return [peer for peer in peers if peer in neighbors and all(f in neighbors[peer].families() for f in families)]
+
+
+def unsendable(reactor: 'Reactor', peers: list[str], route: 'Route') -> str:
+    """Why the route can not be sent to any of `peers`, or '' when it can be.
+
+    A route for a family none of the peers carries was answered done, as in 4.x and 5.x,
+    and sent nowhere.
+    """
+    error = validate_announce(route)
+    if error:
+        return error
+    family = route.nlri.family().afi_safi()
+    carriers = carrying(reactor, peers, [family])
+    if not carriers:
+        return f'no selected peer carries {family[0].name()} {family[1].name()}'
+    neighbors = [reactor.configuration.neighbors[peer] for peer in carriers]
+    return next((why for why in (neighbor.next_hop_refused(route.nexthop) for neighbor in neighbors) if why), '')
+
+
 async def refused(self: 'API', reactor: 'Reactor', service: str, peers: list[str], routes: list['Route']) -> bool:
     """Answer an error for the first route which can not be sent, before any is announced.
 
     Only `announce route` checked: `announce attributes ... rd 100:100 nlri ...` with no label
     was taken, answered done, and failed when the RIB packed it.
     """
-    neighbors = [reactor.configuration.neighbors[peer] for peer in peers if peer in reactor.configuration.neighbors]
     for route in routes:
-        error = validate_announce(route) or next(
-            (why for why in (neighbor.next_hop_refused(route.nexthop) for neighbor in neighbors) if why), ''
-        )
+        error = unsendable(reactor, peers, route)
         if error:
             peer_list = ', '.join(peers) if peers else 'all peers'
             self.log_failure(f'invalid route for {peer_list}: {error}')
@@ -508,6 +528,11 @@ def announce_eor(
             return
 
         family: Family = result
+        active_peers = carrying(reactor, active_peers, [family.afi_safi()])
+        if not active_peers:
+            self.log_failure(f'No established peer carries {family.extensive()}')
+            await reactor.processes.answer_error(service)
+            return
         reactor.configuration.inject_eor(active_peers, family)
         peer_list = ', '.join(active_peers)
         self.log_message(f'Sent to {peer_list} : {family.extensive()}')
@@ -546,6 +571,11 @@ def announce_refresh(
             await reactor.processes.answer_error(service)
             return
 
+        active_peers = carrying(reactor, active_peers, [(refresh.afi, refresh.safi) for refresh in refreshes])
+        if not active_peers:
+            self.log_failure(f'No established peer carries the family of : {command}')
+            await reactor.processes.answer_error(service)
+            return
         reactor.configuration.inject_refresh(active_peers, refreshes)
         for refresh in refreshes:
             peer_list = ', '.join(active_peers)

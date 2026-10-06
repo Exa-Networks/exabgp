@@ -244,6 +244,43 @@ def test_route_refresh_is_queued_for_the_established_peers(daemon: Daemon) -> No
     assert list(daemon.neighbor(FIRST).refresh) == []
 
 
+# ================================================== a family no selected peer carries
+#
+# 4.x and 5.x answered done and sent nothing; the helper was told it worked.
+
+
+@pytest.mark.parametrize(
+    'command',
+    [
+        f'peer {SECOND} announce route 2001:db8::/32 next-hop 2001:db8::1',
+        f'peer {SECOND} announce flow route destination 10.0.0.0/24 discard',
+        f'peer {SECOND} announce ipv6 unicast 2001:db8::/32 next-hop 2001:db8::1',
+        f'peer {SECOND} group announce route 2001:db8::/32 next-hop 2001:db8::1',
+    ],
+)
+def test_a_route_for_a_family_no_selected_peer_carries_is_refused(daemon: Daemon, command: str) -> None:
+    assert daemon.send(command)[-1] == 'error'
+    assert daemon.announced(SECOND) == []
+
+
+def test_a_route_for_a_family_one_selected_peer_carries_is_sent_to_it(daemon: Daemon) -> None:
+    assert daemon.send('peer * announce route 2001:db8::/32 next-hop 2001:db8::1') == ['done']
+    assert daemon.announced(FIRST) == ['2001:db8::/32']
+    assert daemon.announced(SECOND) == []
+
+
+def test_an_eor_for_a_family_no_established_peer_carries_is_refused(daemon: Daemon) -> None:
+    daemon.establish(SECOND)
+    assert daemon.send(f'peer {SECOND} announce eor ipv6 unicast') == ['error']
+    assert list(daemon.neighbor(SECOND).eor) == []
+
+
+def test_a_route_refresh_for_a_family_no_established_peer_carries_is_refused(daemon: Daemon) -> None:
+    daemon.establish(SECOND)
+    assert daemon.send(f'peer {SECOND} announce route-refresh ipv6 unicast') == ['error']
+    assert list(daemon.neighbor(SECOND).refresh) == []
+
+
 def test_route_refresh_with_no_established_peer_is_refused(daemon: Daemon) -> None:
     assert daemon.send('peer * announce route-refresh ipv4 unicast') == ['error']
 

@@ -31,7 +31,7 @@ from exabgp.protocol.ip import IP
 from exabgp.reactor.api.command.announce import (
     parse_sync_mode,
     register_flush_callbacks,
-    validate_announce,
+    unsendable,
 )
 from exabgp.util.intvalue import json_number
 
@@ -309,7 +309,7 @@ async def _apply(
 
         if action == 'announce':
             # Validate route before announcing (early feedback)
-            error = validate_announce(route)
+            error = unsendable(reactor, peers, route)
             if error:
                 errors.append(f'invalid route: {error}')
                 continue

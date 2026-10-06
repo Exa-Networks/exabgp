@@ -57,13 +57,14 @@ def test_a_vpn_route_with_no_label_is_refused(command: str) -> None:
 
 def test_the_routes_of_attributes_are_announced_when_they_can_be_sent() -> None:
     announced, errors = answered(
-        'announce attributes next-hop 1.2.3.4 rd 100:100 label 10 nlri 10.0.0.0/24 20.0.0.0/24'
+        'announce attributes next-hop 1.2.3.4 rd 100:100 label 10 nlri 10.0.0.0/24 20.0.0.0/24',
+        neighbors('', 'ipv4 mpls-vpn'),
     )
     assert errors == []
     assert len(announced) == 2
 
 
-def neighbors(capability: str) -> dict[str, Any]:
+def neighbors(capability: str, family: str = 'ipv6 unicast') -> dict[str, Any]:
     from exabgp.configuration.configuration import Configuration
 
     configuration = Configuration(
@@ -73,13 +74,15 @@ def neighbors(capability: str) -> dict[str, Any]:
             local-address 127.0.0.1;
             local-as 65533;
             peer-as 65533;
-            family {{ ipv6 unicast; }}
+            family {{ {family}; }}
             capability {{ {capability} }}
         }}"""
         ],
         text=True,
     )
-    assert configuration.reload(), str(configuration.error)
+    # not an assert: the optimised run of the suite would not load the configuration at all
+    if not configuration.reload():
+        raise AssertionError(str(configuration.error))
     return dict(configuration.neighbors)
 
 

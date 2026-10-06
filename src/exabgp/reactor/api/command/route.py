@@ -19,7 +19,7 @@ import asyncio
 from typing import TYPE_CHECKING, Any
 
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.reactor.api.command.announce import validate_announce
+from exabgp.reactor.api.command.announce import unsendable
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -214,7 +214,7 @@ def routes_add(
             results = []
             for route in routes:
                 # Validate route before announcing (early feedback)
-                error = validate_announce(route)
+                error = unsendable(reactor, peers, route)
                 if error:
                     peer_list = ', '.join(peers) if peers else 'all peers'
                     self.log_failure(f'invalid route for {peer_list}: {error}')

@@ -135,6 +135,9 @@ Version 6.0.0:
    whole; remove "split" to keep sending it whole.
  * Incompatible: "path-information" with no value is refused, in the configuration and on
    the API. 5.0 ignored it. Give it an identifier, or remove it.
+ * Incompatible: an API route, EOR or route-refresh for a family no selected peer carries is
+   answered error, naming the family. 4.x and 5.0 answered done and sent nothing. When one
+   selected peer carries it, it is sent to that peer and answered done, as before.
  * Incompatible: a flow route with no match is refused on one line too, as the "route { }"
    block already refused it: "announce flow route discard", "announce ipv4 flow discard"
    and "flow { route discard; }". 4.2 and 5.0 sent it, and a flow route with no component
