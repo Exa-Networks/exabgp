@@ -117,6 +117,10 @@ def main() -> int:
 
     environment = dict(os.environ, EXABGP_TREE=str(tree), INTERPRETER=sys.executable)
     environment.pop('PYTHONPATH', None)
+    if os.geteuid() == 0:
+        # cibuildwheel tests on Linux as root, from a venv in a 0700 directory: the daemon
+        # would drop to nobody, who can not read the package, and rightly refuse to start
+        environment['exabgp_daemon_user'] = 'root'
     warm_up(environment)
     for suite in SUITES:
         returncode = run_suite(suite, environment)
