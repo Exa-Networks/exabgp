@@ -59,6 +59,12 @@ SUITES = ('decoding', 'encoding', 'api', 'cli')
 
 # a one-file binary unpacks itself before it starts, which a loaded machine makes slow
 COMMAND_TIMEOUT = 300
+# the deadline qa/bin/functional gives a whole suite, sized for a run from source. Each test
+# starts the binary at least once, and each start unpacks it first: `version` took 1.5
+# seconds on the macOS runner, where decoding used 18.3 of its 20 seconds on a passing run
+# and timed out on 22 of its 23 tests on the next. A suite is given the start-up, measured,
+# once per test on top
+SUITE_TIMEOUT_SECONDS = 20
 # what the server logs once its configuration is loaded, and once it stopped on SIGTERM
 SERVER_READY = 'config.loaded'
 SERVER_STOPPED = 'reactor.shutdown'
@@ -247,10 +253,38 @@ def check_commands(binary: Path) -> None:
     print(f'build_binary: {binary} runs version, encode, decode, validate and server')
 
 
+def startup_seconds(binary: Path) -> float:
+    """How long the binary takes to start and answer, unpacking included.
+
+    The faster of two starts: one start alone can be slowed by something else on the machine,
+    and the allowance is multiplied by the number of tests.
+    """
+    measured = []
+    for _ in range(2):
+        started = time.monotonic()
+        execute(binary, 'version')
+        measured.append(time.monotonic() - started)
+    return min(measured)
+
+
+def suite_timeout(suite: str, startup: float) -> int:
+    """The suite's deadline, with the start-up of the binary allowed once per test."""
+    functional = [sys.executable, str(ROOT / 'qa' / 'bin' / 'functional'), suite, '--short-list']
+    listed = subprocess.run(functional, cwd=ROOT, capture_output=True, text=True, timeout=COMMAND_TIMEOUT)
+    if listed.returncode:
+        sys.exit(f'build_binary: could not list the {suite} suite:\n{listed.stderr}')
+    tests = len(listed.stdout.split())
+    assert tests, f'the {suite} suite lists no test'
+    return SUITE_TIMEOUT_SECONDS + int(startup * tests) + 1
+
+
 def check_functional(binary: Path) -> None:
     """The functional suites, with sbin/exabgp running the binary (EXABGP_BINARY)."""
+    startup = startup_seconds(binary)
+    print(f'build_binary: {binary.name} starts in {startup:.2f}s', flush=True)
     for suite in SUITES:
-        command = [sys.executable, str(ROOT / 'qa' / 'bin' / 'functional'), suite, '--quiet']
+        timeout = str(suite_timeout(suite, startup))
+        command = [sys.executable, str(ROOT / 'qa' / 'bin' / 'functional'), suite, '--quiet', '--timeout', timeout]
         print('+', ' '.join(command), flush=True)
         result = subprocess.run(command, cwd=ROOT, env=dict(os.environ, EXABGP_BINARY=str(binary.resolve())))
         if result.returncode:
