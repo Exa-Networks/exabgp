@@ -78,6 +78,31 @@ Version 6.0.0:
  * Fix: an as-path with an AS number above 65535 is read; it raised struct.error.
  * Incompatible: a word a configuration value does not use is refused. It was ignored,
    so md5-password include "secret"; set the password to "include".
+ * Incompatible: a multi-session neighbor with several families opens one session per
+   family, each advertising its own family alone, as draft-ietf-idr-bgp-multisession
+   intends. 5.0 meant to, but its copies of the neighbor kept every family and one name, so
+   one session carried them all and sent the draft capability twice, naming no capability.
+   The peer now sees as many sessions from the same address as there are families.
+ * Incompatible: "router-id <ip> local-as <asn>;" written on one line is refused. 5.0 read
+   the router-id and ignored the rest of the line, so the local-as was lost. Write one
+   statement per line.
+ * Incompatible: a source-interface name longer than 15 characters is refused, no
+   interface can have one (IFNAMSIZ). 5.0 took any name, the placeholder of the
+   documentation included.
+ * Incompatible: "attributes ... nlri ..." in a static block announces its prefixes, as the
+   API command of the same words does. 5.0 announced nothing for it, 4.2 sent each prefix as
+   a withdrawal, so a line which did nothing until now starts announcing.
+ * Incompatible: "announce ipv4 mpls-vpn" and "announce ipv6 mpls-vpn" from the API send
+   the route as SAFI 128, as "announce route ... rd ... label" does. 5.0 packed it in the
+   unicast NLRI field, where the peer read the label and the route distinguisher as the
+   prefix.
+ * Incompatible: "split /<len>" in "announce ipv4|ipv6 <family>" announces the more
+   specifics, as "announce route ... split" always did. 5.0 took it and sent the prefix
+   whole; remove "split" to keep sending it whole.
+ * Incompatible: "path-information" with no value is refused, in the configuration and on
+   the API. 5.0 ignored it. Give it an identifier, or remove it.
+ * Fix: the text encoder writes the message of an operational advisory as text. 5.0 wrote
+   the representation of Python bytes, advisory "b'a message'".
  * Fix: a comment after a value in the environment file is ignored. parser = true  # x
    was read as the value "true  # x", which turned the option off.
  * Fix: family { ipv6 multicast; } is accepted, as all; already asked for it.
