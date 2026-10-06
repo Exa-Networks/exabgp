@@ -129,18 +129,40 @@ def tree(branch: Branch, scratch: Path) -> Path:
     return built
 
 
+ASYNCORE_HANDLER = 'class BGPHandler(asyncore.dispatcher_with_send):\n'
+# 4.2's peer sends a NOTIFICATION after each message, then goes on writing KEEPALIVEs, so the
+# daemon closes on a socket it has unread data in, and the kernel answers the peer's next write
+# with a RST. asyncore's send() takes that to handle_close(), whose default drops the connection
+# without a word: the peer never reports the close the test waits for, and sits in select() until
+# the timeout. Which write meets the RST is timing: on Linux, with six tests at once, it is one of
+# the KEEPALIVEs most runs. The close is reported here as the read path reports it.
+ASYNCORE_CLOSE = """
+    def handle_close(self):
+        self.announce('connection closed')
+        self.close()
+        if self.options['send-notification']:
+            self.announce('successful')
+            sys.exit(0)
+"""
+
+
 def peer_program(built: Path) -> Path:
     """The branch's own test peer: only it reads the branch's .msg files.
 
     4.2's is written on asyncore, which Python 3.12 removed; the pyasyncore dev dependency
-    puts it back.
+    puts it back. The copy in the scratch tree, never the one in qa/old/, has its close
+    handler mended: see ASYNCORE_CLOSE.
     """
     peer = built / 'qa' / 'sbin' / 'bgp'
-    if 'import asyncore' in peer.read_text():
+    text = peer.read_text()
+    if 'import asyncore' in text:
         try:
             import asyncore  # noqa: F401
         except ImportError:
             raise CannotRun('the test peer of this branch needs asyncore: uv sync installs pyasyncore') from None
+        if text.count(ASYNCORE_HANDLER) != 1 or 'def handle_close' in text:
+            raise CannotRun(f'the test peer of {built.name} is not the one ASYNCORE_CLOSE mends')
+        peer.write_text(text.replace(ASYNCORE_HANDLER, ASYNCORE_HANDLER + ASYNCORE_CLOSE))
     return peer
 
 
