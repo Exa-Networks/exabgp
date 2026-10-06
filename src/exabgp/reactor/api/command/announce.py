@@ -28,6 +28,10 @@ def register_announce() -> None:
     pass
 
 
+# the operational messages `announce operational <kind>` sends (draft-ietf-idr-operational-message)
+OPERATIONAL_KINDS = frozenset({'asm', 'adm', 'rpcq', 'rpcp', 'apcq', 'apcp', 'lpcq', 'lpcp'})
+
+
 def validate_announce(route: 'Route') -> str | None:
     """Validate route for announcement, return error message or None if valid.
 
@@ -569,7 +573,12 @@ def announce_operational(
     from exabgp.bgp.message.operational import Operational
 
     async def callback() -> None:
-        result = self.api_operational(command, action)
+        try:
+            result = self.api_operational(command, action)
+        except ValueError as exc:
+            self.log_failure(f'Command could not parse operational command : {command}')
+            await reactor.processes.answer_error(service, str(exc))
+            return
         if not result or result is True:
             self.log_failure(f'Command could not parse operational command : {command}')
             await reactor.processes.answer_error(service)
@@ -582,32 +591,17 @@ def announce_operational(
         await asyncio.sleep(0)
         await reactor.processes.answer_done(service)
 
-    # Check for valid operational subcommand
-    words = command.split() + ['be', 'safe']
-    if len(words) >= 2 and words[1].lower() not in (
-        'asm',
-        'adm',
-        'rpcq',
-        'rpcp',
-        'apcq',
-        'apcp',
-        'lpcq',
-        'lpcp',
-    ):
-        reactor.processes.answer_done_sync(service)
-        return False
-
-    try:
+    # `operational <kind> ...`, or `announce operational <kind> ...` as the API 4 neighbor form has it
+    words = command.lower().split()
+    position = 1 if action else 2
+    kind = words[position] if len(words) > position else ''
+    if kind in OPERATIONAL_KINDS:
         reactor.asynchronous.schedule(service, command, callback())
         return True
-    except ValueError:
-        self.log_failure('issue parsing the command')
-        reactor.processes.answer_error_sync(service)
-        return False
-    except IndexError:
-        self.log_failure('issue parsing the command')
-        reactor.processes.answer_error_sync(service)
-        return False
+
+    self.log_failure(f'Command is no known operational message : {command}')
+    reactor.processes.answer_error_sync(service, f'unknown operational message: {command}')
+    return False
 
 
 def announce_ipv4(

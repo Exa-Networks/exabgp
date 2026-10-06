@@ -314,3 +314,31 @@ def test_a_teardown_for_no_peer_tears_none_down(daemon: Daemon) -> None:
     assert daemon.send('peer 192.0.2.1 teardown') == ['error']
     assert daemon.peer(FIRST)._teardown is None
     assert daemon.peer(SECOND)._teardown is None
+
+
+@pytest.mark.parametrize('kind', ['foo', ''])
+def test_an_operational_message_of_no_known_kind_is_refused(daemon: Daemon, kind: str) -> None:
+    """It was answered done, and nothing was sent."""
+    assert daemon.send(f'peer {FIRST} announce operational {kind}'.strip())[-1] == 'error'
+    assert list(daemon.neighbor(FIRST).messages) == []
+
+
+def test_an_operational_message_which_does_not_parse_is_refused(daemon: Daemon) -> None:
+    """The parser's ValueError went up to the reactor, which is what answered the error."""
+    assert daemon.send(f'peer {FIRST} announce operational asm afi ipv4')[-1] == 'error'
+    assert list(daemon.neighbor(FIRST).messages) == []
+
+
+def test_api_4_neighbor_operational_is_queued_for_the_peer(text_daemon: Daemon) -> None:
+    """`neighbor <ip> announce operational` read its kind one word too early: done, and nothing sent."""
+    command = f'neighbor {FIRST} announce operational adm afi ipv4 safi unicast advisory "x"'
+    assert text_daemon.send(command) == ['done']
+    assert [message.NAME for message in text_daemon.neighbor(FIRST).messages] == ['ADM']
+
+
+def test_api_4_operational_of_no_known_kind_is_refused(text_daemon: Daemon) -> None:
+    assert text_daemon.send('announce operational foo') == [
+        'error: unknown operational message: operational foo',
+        'error',
+    ]
+    assert text_daemon.send(f'neighbor {FIRST} announce operational')[-1] == 'error'
