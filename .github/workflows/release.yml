@@ -1,33 +1,70 @@
 name: Publish packages
 
+# Publishes a 6.x release to PyPI when its tag is pushed: the source distribution and the
+# pure Python wheel. 5.0 is released from its own branch, whose tags run its own workflow.
+# The compiled wheels and the one-file binaries stay build artifacts of wheels.yml and
+# binary.yml until publishing them is decided (doc/user/compiled-build.md).
+#
+# Uploaded with PyPI trusted publishing, no token is stored: the publisher configured for the
+# exabgp project on pypi.org names this repository, this file (release.yml) and the `pypi`
+# environment.
+
 on:
   push:
     tags:
-      - "v*"
+      - "6.*"
 
 permissions:
   contents: read
 
 jobs:
-  assets:
-    name: Release packages
+  build:
+    name: Build the distributions
     runs-on: ubuntu-latest
     steps:
-      - name: Check out src from Git
-        uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
+      - uses: actions/checkout@v7
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-#     - name: Build
-#       run: |
-#         make init build
 
-#       - name: Publish distribution to PyPI
-#         uses: pypa/gh-action-pypi-publish@master
-#         with:
-#           user: __token__
-#           password: ${{ secrets.GH_ACTIONS_EXABGP }}
+      - name: The tag is the version in pyproject.toml
+        run: |
+          version=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [ "$version" != "$GITHUB_REF_NAME" ]; then
+            echo "the tag is $GITHUB_REF_NAME but pyproject.toml says $version"
+            exit 1
+          fi
+
+      - name: Build the sdist and the wheel
+        run: |
+          python -m pip install build
+          python -m build
+
+      - name: The wheel is the pure Python one
+        run: |
+          ls dist/
+          test -f "dist/exabgp-${GITHUB_REF_NAME}.tar.gz"
+          test -f "dist/exabgp-${GITHUB_REF_NAME}-py3-none-any.whl"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/exabgp/${{ github.ref_name }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
