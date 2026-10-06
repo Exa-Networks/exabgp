@@ -10,7 +10,7 @@ from __future__ import annotations
 import uuid
 import copy
 import socket
-from typing import Any, ClassVar, Generator, TYPE_CHECKING
+from typing import Any, ClassVar, Generator, Iterator, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -341,13 +341,8 @@ class Listener:
                 continue
 
             set_accepted_ttl(connection, neighbor)
-            if reactor.handle_connection(key, connection):
-                log.debug(
-                    lazymsg('refused connection from {name} due to the state machine', name=connection.name()),
-                    'network',
-                )
-                return
-            log.debug(lazymsg('accepted connection from {name}', name=connection.name()), 'network')
+            if not self._refused(connection, reactor.handle_connection(key, connection)):
+                log.debug(lazymsg('accepted connection from {name}', name=connection.name()), 'network')
             return
 
         if len(ranged) > 1:
@@ -355,22 +350,39 @@ class Listener:
                 lazymsg('connection.rejected name={name} reason=multiple_neighbor_match', name=connection.name()),
                 'network',
             )
-            self._refuse(connection, b'could not accept the connection (more than one neighbor match)')
+            reason = b'could not accept the connection (more than one neighbor match)'
+            self._refuse(connection, connection.notification(6, 5, reason))
             return
         if not ranged:
             log.debug(lazymsg('no session configured for {name}', name=connection.name()), 'network')
             # RFC 4486 4 names this case for Connection Rejected: "the peer is not
             # configured locally".  It sent (6, 3) Peer De-configured, which is for a
             # peering the speaker had and decided to remove
-            self._refuse(connection, b'no session configured for the peer')
+            self._refuse(connection, connection.notification(6, 5, b'no session configured for the peer'))
             return
         self._accept_ranged(ranged[0], connection)
 
-    def _refuse(self, connection: Incoming, reason: bytes) -> None:
+    def _refused(self, connection: Incoming, refusal: Iterator[bool] | None) -> bool:
+        """Send the NOTIFICATION a peer refused the connection with, if it refused it.
+
+        Peer.handle_connection answers a refusal with the writer of its NOTIFICATION. It was
+        only tested for truth and dropped, so the peer was never told why: the socket closed
+        when it was collected.
+        """
+        if refusal is None:
+            return False
+        log.debug(
+            lazymsg('refused connection from {name} due to the state machine', name=connection.name()),
+            'network',
+        )
+        self._refuse(connection, refusal)
+        return True
+
+    def _refuse(self, connection: Incoming, notification: Iterator[bool]) -> None:
         self._reactor.asynchronous.schedule(
             str(uuid.uuid1()),
-            'sending notification (6,5)',
-            connection.notification(6, 5, reason),
+            f'sending notification to {connection.name()}',
+            notification,
         )
 
     def _accept_ranged(self, template: Neighbor, connection: Incoming) -> None:
@@ -391,13 +403,8 @@ class Listener:
 
         peer = Peer(neighbor, self._reactor)
         set_accepted_ttl(connection, neighbor)
-        if peer.handle_connection(connection):
-            log.debug(
-                lazymsg('refused connection from {name} due to the state machine', name=connection.name()),
-                'network',
-            )
-            return
-        self._reactor.register_peer(neighbor.name(), peer)
+        if not self._refused(connection, peer.handle_connection(connection)):
+            self._reactor.register_peer(neighbor.name(), peer)
 
     def close_unwanted(self, wanted: set[tuple[str, int]]) -> None:
         """Close every listening socket the configuration no longer asks for.

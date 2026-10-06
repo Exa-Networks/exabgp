@@ -192,8 +192,7 @@ The outcome happens to hold, but not the procedure.  The listener hands an incom
 connection to the first neighbour whose addresses match (listener.py) before any OPEN is
 read, and an ESTABLISHED Peer refuses it with Cease 6/7.  So the old session stays and the
 new one is closed, but whatever its Session Id, which is the RFC 4271 section 6.8
-procedure, not an evaluation of the OPEN.  The listener drops the refusal the Peer returns,
-so the Cease is not even sent: the connection closes when nothing holds it any more.
+procedure, not an evaluation of the OPEN.
 """
 
 [[requirement]]

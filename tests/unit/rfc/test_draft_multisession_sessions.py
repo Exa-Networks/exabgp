@@ -195,6 +195,12 @@ def dispatched(built: Sessions, sent: bytes) -> socket.socket:
         listener._accepted[listening] = accepted
         for _ in listener.new_connections():
             pass
+    # a refused connection is sent its NOTIFICATION by the reactor, then closed: run what
+    # the listener scheduled, as the reactor would
+    for _, refusal in built.reactor.asynchronous._async:
+        for step, _ in enumerate(refusal):
+            assert step < MAX_WRITER_STEPS, 'the NOTIFICATION was never written'
+    built.reactor.asynchronous._async.clear()
     # a connection nobody holds any more is closed now, not whenever the collector runs
     gc.collect()
     return far
