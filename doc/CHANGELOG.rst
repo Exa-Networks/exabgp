@@ -4,6 +4,28 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: a peer selector which matches no peer is refused. `peer 192.0.2.1 announce ...`,
+   with no such neighbor, announced to every peer of the helper, and `peer <ip> peer-as 1
+   teardown`, with the AS wrong, tore every established session down.
+ * Fix: `rib show`, `rib flush` and `rib clear` (`show`, `flush` and `clear adj-rib`) act on
+   the neighbor they name and no other: show matched 10.0.0.10 for 10.0.0.1 and showed
+   nothing for the documented `neighbor <ip>` form, and flush and clear ignored the
+   neighbor and acted on all of them. Naming a neighbor which is not there is refused.
+ * Fix: `show neighbor <ip>` shows that neighbor only: extensive and configuration matched
+   any neighbor whose name contained the address, its local address or router-id included,
+   and the JSON of `peer <ip> show` described every neighbor.
+ * Fix: `routes list`, `routes add` and `routes remove` end their answer with done, or with
+   error when a route was not added or removed, as every other command does; a client
+   waited for the end of the answer until its timeout. Their JSON is written with ack
+   disabled too.
+ * Fix: `announce operational` refuses a message of no known kind, and one which does not
+   parse, instead of answering done; `neighbor <ip> announce operational ...` is sent.
+ * Fix: a group ends with error when one of its commands could not be applied. An API 6
+   `peer <selector> announce|withdraw ...` written between `group start` and `group end`
+   waits for the end, and an inline group with no selector, `group announce ... ; ...` as
+   `exabgp decode` writes it, is taken for every peer of the helper.
+ * Fix: `system crash` is answered once, with error; `session reset` closes the commands
+   it drops; with exabgp.api.chunk above 1, `rib show` in JSON gives each route once.
  * Fix: a helper using API 4 is written what 5.x wrote it, checked line by line against what
    4.2 and 5.0 wrote for every configuration they accept (qa/bin/test_old_responses). The
    API 4 encoders were built on the API 6 ones and had taken their changes: the
