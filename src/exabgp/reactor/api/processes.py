@@ -25,6 +25,7 @@ import asyncio
 import collections
 import errno
 import fcntl
+import json
 import os
 import select
 import struct
@@ -77,8 +78,8 @@ _ANSWER_LINES = frozenset(
 
 
 def _is_answer(data: bytes) -> bool:
-    """True for a queued line which only answers a command (`done`, `error`, `error: <why>`)."""
-    return data in _ANSWER_LINES or data.startswith(b'error: ')
+    """True for a queued line which only answers a command (`done`, `error`, and why it failed)."""
+    return data in _ANSWER_LINES or data.startswith(b'error: ') or data.startswith(b'{"error": ')
 
 
 # NetBSD sys/sys/filio.h: FIONWRITE is _IOR('f', 121, int), which Python's termios does not export
@@ -1490,17 +1491,21 @@ class Processes:
         await self.flush_write_queue()
         log.debug(lazymsg('api.flush.async.complete service={s}', s=service), 'processes')
 
+    def _error_detail(self, service: str, message: str) -> str:
+        """Why a command failed, as the helper reads it: JSON for API 6, which is JSON only.
+
+        Most commands wrote `error: <why>` to every helper, while group and api version wrote
+        `{"error": "<why>"}`, so an API 6 helper had to read both. API 4 keeps the text 5.x wrote.
+        """
+        if self._ackjson[service] or self.api_version(service) == API_V6:
+            return json.dumps({'error': message}, default=json_number)
+        return f'error: {message}'
+
     def answer_error_sync(self, service: str, message: str = '') -> None:
         """Send error response, optionally with descriptive message"""
         if message:
             # Send error details before the error marker
-            if self._ackjson[service]:
-                import json
-
-                error_data = {'error': message}
-                self._answer_sync(service, json.dumps(error_data, default=json_number))
-            else:
-                self._answer_sync(service, f'error: {message}')
+            self._answer_sync(service, self._error_detail(service, message))
 
         # Send standard error markers
         if self._ackjson[service]:
@@ -1514,13 +1519,7 @@ class Processes:
         """Async version of answer_error() - non-blocking error response to API process"""
         if message:
             # Send error details before the error marker
-            if self._ackjson[service]:
-                import json
-
-                error_data = {'error': message}
-                await self._answer(service, json.dumps(error_data, default=json_number))
-            else:
-                await self._answer(service, f'error: {message}')
+            await self._answer(service, self._error_detail(service, message))
 
         # Send standard error markers
         if self._ackjson[service]:

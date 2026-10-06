@@ -16,7 +16,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from tests.api_daemon import FIRST, HELPER, SECOND, Daemon, answer
+from tests.api_daemon import Daemon, FIRST, HELPER, SECOND, answer, failed
 
 
 @pytest.fixture
@@ -139,7 +139,7 @@ def test_add_of_a_route_no_neighbor_named_carries(daemon: Daemon) -> None:
     ],
 )
 def test_add_refuses_what_is_not_a_route(daemon: Daemon, command: str, reason: str) -> None:
-    assert daemon.send(command) == [f'error: {reason}', 'error']
+    assert daemon.send(command) == [failed(reason), 'error']
     assert daemon.announced(FIRST) == []
 
 
@@ -183,13 +183,16 @@ def test_remove_of_an_index_which_is_not_there(daemon: Daemon) -> None:
 )
 def test_remove_refuses_what_is_not_a_route(daemon: Daemon, command: str, reason: str) -> None:
     daemon.send('peer * routes add route 10.0.0.0/24 next-hop 1.2.3.4')
-    assert daemon.send(command) == [f'error: {reason}', 'error']
+    assert daemon.send(command) == [failed(reason), 'error']
     assert daemon.announced(FIRST) == ['10.0.0.0/24']
 
 
 def test_routes_needs_an_action(daemon: Daemon) -> None:
-    assert daemon.send('peer * routes') == ['error: routes requires action: list, add, or remove', 'error']
-    assert daemon.send('peer * routes ipv4 unicast') == ['error: routes requires action: list, add, or remove', 'error']
+    assert daemon.send('peer * routes') == [failed('routes requires action: list, add, or remove'), 'error']
+    assert daemon.send('peer * routes ipv4 unicast') == [
+        failed('routes requires action: list, add, or remove'),
+        'error',
+    ]
 
 
 def test_with_ack_disabled_the_answer_is_still_given(daemon: Daemon) -> None:

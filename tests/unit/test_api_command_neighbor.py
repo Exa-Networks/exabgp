@@ -17,7 +17,7 @@ from collections.abc import Iterator
 import pytest
 
 from exabgp.bgp.neighbor import NeighborTemplate
-from tests.api_daemon import FIRST, SECOND, Daemon, answer
+from tests.api_daemon import Daemon, FIRST, SECOND, answer, failed
 
 CEASE = 6
 ADMINISTRATIVE_SHUTDOWN = 2
@@ -156,7 +156,7 @@ def test_teardown_refuses_what_can_not_be_put_on_the_wire(daemon: Daemon, argume
     daemon.establish()
     lines = daemon.send(f'peer * teardown {arguments}')
     assert lines[-1] == 'error'
-    assert lines[0].startswith('error: ')
+    assert lines[0].startswith('{"error": ')
     assert daemon.peer(FIRST)._teardown is None
 
 
@@ -188,7 +188,7 @@ def test_disable_keeps_a_peer_down_until_enable(daemon: Daemon) -> None:
 
 
 def test_disable_refuses_an_unbalanced_quote(daemon: Daemon) -> None:
-    assert daemon.send(f'peer {FIRST} disable "back') == ['error: No closing quotation', 'error']
+    assert daemon.send(f'peer {FIRST} disable "back') == [failed('No closing quotation'), 'error']
     assert not daemon.peer(FIRST).disabled()
 
 

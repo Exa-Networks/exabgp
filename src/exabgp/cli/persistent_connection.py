@@ -137,11 +137,17 @@ class PersistentSocketConnection:
                     break
 
             # Check for immediate rejection (error response from daemon)
-            if response_buffer.startswith('error:'):
-                # Extract and display the error message from daemon
+            if response_buffer.startswith(('error:', '{"error": ')):
+                # Extract and display the error message from daemon: text, or JSON for API 6
                 error_msg = response_buffer.split('\n')[0]
                 if error_msg.startswith('error:'):
                     error_msg = error_msg[6:].strip()
+                else:
+                    try:
+                        error_msg = str(json.loads(error_msg)['error'])
+                    except (ValueError, KeyError, TypeError):
+                        # not the JSON the daemon writes: show the line as it came
+                        pass
                 sys.stderr.write('\n')
                 sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
                 sys.stderr.write('║  ERROR: Connection rejected by daemon                  ║\n')

@@ -135,6 +135,9 @@ Version 6.0.0:
    whole; remove "split" to keep sending it whole.
  * Incompatible: "path-information" with no value is refused, in the configuration and on
    the API. 5.0 ignored it. Give it an identifier, or remove it.
+ * Change: an API 6 helper is told why a command failed in JSON, {"error": "<why>"}, before
+   the error line, from every command. Most wrote "error: <why>" as text while group and api
+   version wrote JSON. API 4 helpers keep the text 5.x wrote.
  * Incompatible: an API route, EOR or route-refresh for a family no selected peer carries is
    answered error, naming the family. 4.x and 5.0 answered done and sent nothing. When one
    selected peer carries it, it is sent to that peer and answered done, as before.

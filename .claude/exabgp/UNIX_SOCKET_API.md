@@ -78,9 +78,11 @@ done
 
 **If connection rejected:**
 ```
-error: <reason from daemon>
+{"error": "<reason from daemon>"}
 error
 ```
+
+The CLI helper is an API 6 process, so the reason is JSON; an API 4 helper reads `error: <reason>`.
 
 ### 3. Command/Response Cycle
 
@@ -140,7 +142,7 @@ done
 
 **Error:**
 ```
-error: <message>
+{"error": "<message>"}
 error
 ```
 

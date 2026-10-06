@@ -177,6 +177,11 @@ class Daemon:
         self.helper.close()
 
 
+def failed(reason: str) -> str:
+    """The line which says why a command failed, as an API 6 helper is written it."""
+    return json.dumps({'error': reason})
+
+
 def answer(lines: list[str]) -> list[Any]:
     """The JSON lines of an answer, decoded; the `done` or `error` closing it is left out."""
     return [json.loads(line) for line in lines if line not in ('done', 'error')]

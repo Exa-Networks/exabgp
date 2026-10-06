@@ -15,7 +15,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from tests.api_daemon import FIRST, HELPER, SECOND, Daemon
+from tests.api_daemon import Daemon, FIRST, HELPER, SECOND, failed
 
 
 @pytest.fixture
@@ -99,7 +99,7 @@ def test_a_route_which_can_not_be_sent_is_refused_and_nothing_is_announced(
     lines = daemon.send(command)
     assert lines[-1] == 'error'
     if reason is not None:
-        assert lines == [f'error: {reason}', 'error']
+        assert lines == [failed(reason), 'error']
     assert daemon.announced(FIRST) == []
     assert daemon.announced(SECOND) == []
 
