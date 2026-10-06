@@ -4,6 +4,16 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: each peer of a ranged neighbor (`neighbor 10.0.0.0/24 { passive; }`) has a session
+   and a RIB of its own. They shared the configured neighbor's, so the first peer to connect
+   moved the range to start at its own address, later peers overwrote the addresses of the
+   ones up, and a peer going away dropped the range's RIB.
+ * Fix: a connection a configured peer refuses is sent the NOTIFICATION the peer chose:
+   (6, 3) for a removed neighbor, (6, 5) for a disabled one, (6, 7) for an established
+   session or a collision. None was sent; the connection was closed with no reason.
+ * Fix: started as root, exabgp refuses to drop to a user who can not read its own package,
+   naming the directory (`daemon.privileges.unreadable`). Installed in a 0700 directory, it
+   dropped to nobody anyway and reset every session as soon as it came up, logging nothing.
  * Fix: a peer selector which matches no peer is refused. `peer 192.0.2.1 announce ...`,
    with no such neighbor, announced to every peer of the helper, and `peer <ip> peer-as 1
    teardown`, with the AS wrong, tore every established session down.
