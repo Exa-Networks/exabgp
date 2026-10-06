@@ -60,8 +60,9 @@ class _LoggingState:
         self.sources = dict(option.option)
         self.logit = dict(option.logit)
         self.log_function = log.logger
-        self.env_log = dict(env.log._values)
-        self.env_debug = dict(env.debug._values)
+        # every section, not only log and debug: `exabgp decode` sets bgp.passive, and every
+        # Peer a later test built would then wait for a connection rather than open one
+        self.env_sections = {name: dict(section._values) for name, section in env._sections().items()}
 
     def restore(self) -> None:
         env = getenv()
@@ -74,10 +75,9 @@ class _LoggingState:
         option.logit = dict(self.logit)
         # the logger is a class attribute holding a function, which mypy reads as a method
         setattr(log, 'logger', self.log_function)
-        env.log._values.clear()
-        env.log._values.update(self.env_log)
-        env.debug._values.clear()
-        env.debug._values.update(self.env_debug)
+        for name, section in env._sections().items():
+            section._values.clear()
+            section._values.update(self.env_sections[name])
 
 
 @pytest.fixture(autouse=True)
