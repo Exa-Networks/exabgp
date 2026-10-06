@@ -263,3 +263,15 @@ def test_api_version_refusal_in_text(text_daemon: Daemon, api_version: None) -> 
 def test_an_unknown_command_is_answered_error(daemon: Daemon) -> None:
     assert daemon.send('system reboot') == ['error']
     assert daemon.send('daemon') == ['error']
+
+
+def test_crash_is_answered_once_with_the_error_of_the_coroutine_which_raised(daemon: Daemon) -> None:
+    """It answered done, then the reactor answered error for the coroutine which raised.
+
+    Two answers to one command: the helper took the done as the answer, and the error as the
+    answer to whatever it wrote next.
+    """
+    assert daemon.send('system crash', escape=True) == ['error']
+    assert daemon.escaped == [HELPER]
+    daemon.escaped.clear()
+    assert daemon.send('session bye') == ['done']

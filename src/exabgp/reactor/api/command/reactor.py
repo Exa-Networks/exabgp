@@ -9,7 +9,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import asyncio
 import json
 from typing import TYPE_CHECKING, Any
 
@@ -171,12 +170,15 @@ def queue_status(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
 
 
 def crash(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+    """Raise inside a scheduled coroutine, to test what the reactor does when one does.
+
+    The reactor answers `error` for a coroutine which raised, and that is the answer: one
+    `done` before it would be read as the answer, and the `error` as the next command's.
+    """
+
     async def callback() -> None:
         raise ValueError('crash test of the API')
-        await asyncio.sleep(0)  # This line is unreachable but matches original structure
 
-    # Send acknowledgment before scheduling the crash
-    reactor.processes.answer_done_sync(service)
     reactor.asynchronous.schedule(service, command, callback())
     return True
 

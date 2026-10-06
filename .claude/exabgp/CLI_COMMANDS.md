@@ -329,21 +329,21 @@ exabgp> # This is a comment
 
 #### crash
 
-Crash daemon (debug only).
+Raise an exception inside a scheduled API callback (debug only).
 
 **Syntax:**
 ```bash
 crash
 ```
 
-**Returns:** None (daemon crashes)
+**Returns:** `error`, answered by the reactor for the callback which raised; the daemon keeps running
 
 **Example:**
 ```bash
 exabgp> crash
 ```
 
-**Warning:** Debug command only. Immediately crashes daemon.
+**Warning:** Debug command only. Tests how the reactor answers a callback which raises.
 
 ---
 
