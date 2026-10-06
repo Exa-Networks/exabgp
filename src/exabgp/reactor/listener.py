@@ -117,6 +117,23 @@ def set_accepted_ttl(connection: Incoming, neighbor: Neighbor) -> None:
         )
 
 
+def _matches(neighbor: Neighbor, connection: Incoming) -> bool:
+    """Whether the connection is one this neighbor, or its range, is configured for.
+
+    Incoming names the addresses from the remote end: its `local` is the peer's address,
+    its `peer` is ours.
+    """
+    assert neighbor.session.peer_address is not None, 'a configured neighbor has a peer address'
+    assert neighbor.session.local_address is not None, 'a configured neighbor has a local address'
+    peer_address = IP.from_string(connection.local).address()
+    range_start = neighbor.session.peer_address.address()
+    if not range_start <= peer_address < range_start + neighbor.range_size:
+        return False
+    if IP.from_string(connection.peer).address() == neighbor.session.local_address.address():
+        return True
+    return neighbor.session.auto_discovery
+
+
 class Listener:
     _family_AFI_map: ClassVar[dict[socket.AddressFamily, AFI]] = {
         socket.AF_INET: AFI.ipv4,
@@ -302,100 +319,85 @@ class Listener:
             return
         yield None
 
-        reactor: Reactor = self._reactor
-        ranged_neighbor: list[Neighbor] = []
-
         for connection in self._connected():
             log.debug(lazymsg('new connection received {name}', name=connection.name()), 'network')
-            for key in reactor.peers():
-                neighbor = reactor.neighbor(key)
-                if neighbor is None:
-                    continue
+            self._dispatch(connection)
 
-                connection_local = IP.from_string(connection.local).address()
-                assert neighbor.session.peer_address is not None  # Configured neighbors must have peer_address
-                neighbor_peer_start = neighbor.session.peer_address.address()
-                neighbor_peer_next = neighbor_peer_start + neighbor.range_size
+    def _dispatch(self, connection: Incoming) -> None:
+        """Give the connection to the neighbor configured for it, or refuse it."""
+        reactor: Reactor = self._reactor
+        # the ranges this connection falls in, and only this one: a neighbor configured for
+        # the address itself is preferred to a range, whatever the order of the peers
+        ranged: list[Neighbor] = []
 
-                if not neighbor_peer_start <= connection_local < neighbor_peer_next:
-                    continue
+        for key in reactor.peers():
+            neighbor = reactor.neighbor(key)
+            if neighbor is None or not _matches(neighbor, connection):
+                continue
+            # the peer may already have connected, so every individual peer is tried before
+            # a range is
+            if neighbor.range_size > 1:
+                ranged.append(neighbor)
+                continue
 
-                connection_peer = IP.from_string(connection.peer).address()
-                assert neighbor.session.local_address is not None  # Configured neighbors must have local_address
-                neighbor_local = neighbor.session.local_address.address()
-
-                if connection_peer != neighbor_local:
-                    if not neighbor.session.auto_discovery:
-                        continue
-
-                # we found a range matching for this connection
-                # but the peer may already have connected, so
-                # we need to iterate all individual peers before
-                # handling "range" peers
-                if neighbor.range_size > 1:
-                    ranged_neighbor.append(neighbor)
-                    continue
-
-                set_accepted_ttl(connection, neighbor)
-                denied = reactor.handle_connection(key, connection)
-                if denied:
-                    log.debug(
-                        lazymsg('refused connection from {name} due to the state machine', name=connection.name()),
-                        'network',
-                    )
-                    break
-                log.debug(lazymsg('accepted connection from {name}', name=connection.name()), 'network')
-                break
-            else:
-                # we did not break (and nothign was found/done or we have group match)
-                matched = len(ranged_neighbor)
-                if matched > 1:
-                    log.debug(
-                        lazymsg(
-                            'connection.rejected name={name} reason=multiple_neighbor_match', name=connection.name()
-                        ),
-                        'network',
-                    )
-                    reactor.asynchronous.schedule(
-                        str(uuid.uuid1()),
-                        'sending notification (6,5)',
-                        connection.notification(
-                            6, 5, b'could not accept the connection (more than one neighbor match)'
-                        ),
-                    )
-                    return
-                if not matched:
-                    log.debug(lazymsg('no session configured for {name}', name=connection.name()), 'network')
-                    # RFC 4486 4 names this case for Connection Rejected: "the peer is not
-                    # configured locally".  It sent (6, 3) Peer De-configured, which is for a
-                    # peering the speaker had and decided to remove
-                    reactor.asynchronous.schedule(
-                        str(uuid.uuid1()),
-                        'sending notification (6,5)',
-                        connection.notification(6, 5, b'no session configured for the peer'),
-                    )
-                    return
-
-                new_neighbor = copy.copy(ranged_neighbor[0])
-                new_neighbor.range_size = 1
-                new_neighbor.ephemeral = True
-                new_neighbor.session.local_address = IP.from_string(connection.peer)
-                new_neighbor.session.peer_address = IP.from_string(connection.local)
-                if not new_neighbor.session.router_id:
-                    new_neighbor.session.router_id = RouterID(connection.local)
-
-                new_peer = Peer(new_neighbor, reactor)
-                set_accepted_ttl(connection, new_neighbor)
-                denied = new_peer.handle_connection(connection)
-                if denied:
-                    log.debug(
-                        lazymsg('refused connection from {name} due to the state machine', name=connection.name()),
-                        'network',
-                    )
-                    return
-
-                reactor.register_peer(new_neighbor.name(), new_peer)
+            set_accepted_ttl(connection, neighbor)
+            if reactor.handle_connection(key, connection):
+                log.debug(
+                    lazymsg('refused connection from {name} due to the state machine', name=connection.name()),
+                    'network',
+                )
                 return
+            log.debug(lazymsg('accepted connection from {name}', name=connection.name()), 'network')
+            return
+
+        if len(ranged) > 1:
+            log.debug(
+                lazymsg('connection.rejected name={name} reason=multiple_neighbor_match', name=connection.name()),
+                'network',
+            )
+            self._refuse(connection, b'could not accept the connection (more than one neighbor match)')
+            return
+        if not ranged:
+            log.debug(lazymsg('no session configured for {name}', name=connection.name()), 'network')
+            # RFC 4486 4 names this case for Connection Rejected: "the peer is not
+            # configured locally".  It sent (6, 3) Peer De-configured, which is for a
+            # peering the speaker had and decided to remove
+            self._refuse(connection, b'no session configured for the peer')
+            return
+        self._accept_ranged(ranged[0], connection)
+
+    def _refuse(self, connection: Incoming, reason: bytes) -> None:
+        self._reactor.asynchronous.schedule(
+            str(uuid.uuid1()),
+            'sending notification (6,5)',
+            connection.notification(6, 5, reason),
+        )
+
+    def _accept_ranged(self, template: Neighbor, connection: Incoming) -> None:
+        """A neighbor of its own for a peer of a configured range, then its session."""
+        # a deep copy: a shallow one shared the Session and the RIB of the configured range,
+        # so setting this peer's addresses rewrote the range, and every peer had one RIB
+        neighbor = copy.deepcopy(template)
+        neighbor.range_size = 1
+        neighbor.ephemeral = True
+        neighbor.session.local_address = IP.from_string(connection.peer)
+        neighbor.session.peer_address = IP.from_string(connection.local)
+        if not neighbor.session.router_id:
+            neighbor.session.router_id = RouterID(connection.local)
+        # named after the peer, now its addresses are its own
+        neighbor.make_rib()
+        assert neighbor.session is not template.session, 'a ranged peer must not change its range'
+        assert neighbor.rib is not template.rib, 'a ranged peer must not share the RIB of its range'
+
+        peer = Peer(neighbor, self._reactor)
+        set_accepted_ttl(connection, neighbor)
+        if peer.handle_connection(connection):
+            log.debug(
+                lazymsg('refused connection from {name} due to the state machine', name=connection.name()),
+                'network',
+            )
+            return
+        self._reactor.register_peer(neighbor.name(), peer)
 
     def close_unwanted(self, wanted: set[tuple[str, int]]) -> None:
         """Close every listening socket the configuration no longer asks for.

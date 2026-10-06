@@ -71,9 +71,10 @@ class RIB:
 
     def enable(self, new_name: str, adj_rib_in: bool, adj_rib_out: bool, families: set[FamilyTuple]) -> None:
         """Enable a disabled RIB with proper name and settings."""
-        # Remove old placeholder from cache
+        # Remove our placeholder from the cache. Only ours: a deep copy carries the name of the
+        # RIB it was copied from, and the entry under that name belongs to the original
         old_name = self.name
-        if old_name in self._cache:
+        if self._cache.get(old_name) is self:
             del self._cache[old_name]
 
         # Update name and enabled state
