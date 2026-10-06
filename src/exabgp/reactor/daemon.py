@@ -12,8 +12,11 @@ import os
 import sys
 import pwd
 import errno
+import importlib
+import pkgutil
 import socket
 import stat
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -27,6 +30,23 @@ from exabgp.logger import log, lazymsg
 MAXFD: int = 2048
 # the directory of the exabgp package, which the daemon imports from long after it started
 PACKAGE: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def preload() -> list[str]:
+    """Import every module of the package, and the names of those which could not be."""
+    import exabgp
+
+    unloaded = []
+    # a module which warns when it is imported (the vendored profiler, without psutil) would
+    # print it at every start as root, for a feature nobody asked for
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        for module in pkgutil.walk_packages(exabgp.__path__, 'exabgp.'):
+            try:
+                importlib.import_module(module.name)
+            except ImportError as exc:
+                unloaded.append(f'{module.name}({exc})')
+    return unloaded
 
 
 def can_enter(status: os.stat_result, uid: int, gids: set[int]) -> bool:
@@ -148,11 +168,17 @@ class Daemon:
         except KeyError:
             return False
 
-        # exabgp imports some of its modules only when it first needs them, and starts its
-        # helpers as this user: installed where the user can not read (a venv in a 0700
-        # directory, as `mktemp -d` makes), every session was reset as soon as it was up,
-        # with nothing logged to say why
-        blocked = unreachable_by(PACKAGE, nuid, set(os.getgrouplist(self.user, ngid))) if nuid else ''
+        # exabgp imports some of its modules only when it first needs them: installed where the
+        # user can not read (a venv in a 0700 directory, as `mktemp -d` makes; the directory a
+        # one-file binary unpacks itself in), every session was reset as soon as it was up,
+        # with nothing logged to say why. Every module is imported now, while it still can be
+        unloaded = preload()
+        if unloaded:
+            log.warning(lazymsg('daemon.preload.failed modules={m}', m=' '.join(unloaded)), 'reactor')
+        # the helpers it starts run as the user too, and import the package from where it is
+        # installed; a one-file binary's helpers unpack a copy of their own, as that user
+        frozen = bool(getattr(sys, 'frozen', False))
+        blocked = '' if not nuid or frozen else unreachable_by(PACKAGE, nuid, set(os.getgrouplist(self.user, ngid)))
         if blocked:
             log.critical(lazymsg('daemon.privileges.unreadable user={u} path={p}', u=self.user, p=blocked), 'reactor')
             return False

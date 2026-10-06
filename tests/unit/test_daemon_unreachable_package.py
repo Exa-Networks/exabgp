@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from exabgp.reactor.daemon import PACKAGE, can_enter, unreachable_by
+from exabgp.reactor.daemon import PACKAGE, can_enter, preload, unreachable_by
 
 OWNER = 1000
 GROUP = 100
@@ -60,3 +60,15 @@ def test_the_first_directory_the_user_can_not_enter_is_named(tmp_path: Path) -> 
 def test_the_package_is_the_directory_of_exabgp() -> None:
     assert Path(PACKAGE).name == 'exabgp'
     assert (Path(PACKAGE) / 'reactor').is_dir()
+
+
+def test_every_module_of_the_package_is_loaded_before_the_drop() -> None:
+    """A one-file binary unpacks itself where the user it drops to can not read.
+
+    So the modules the daemon imports only once a session is up are imported first.
+    """
+    import sys
+
+    assert preload() == []
+    assert 'exabgp.reactor.peer.handlers' in sys.modules
+    assert 'exabgp.configuration.check' in sys.modules
