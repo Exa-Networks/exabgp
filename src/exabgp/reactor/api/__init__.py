@@ -27,12 +27,15 @@ from exabgp.rib.route import Route
 
 from exabgp.logger import log, lazyexc, lazymsg
 from exabgp.reactor.api.dispatch import UnknownCommand, NoMatchingPeers
+from exabgp.reactor.api.dispatch.common import Handler
 from exabgp.reactor.api.dispatch.version import API_V6, dispatch_for
 from exabgp.configuration.configuration import Configuration
 
 # API command parsing constants
 API_REFRESH_TOKEN_COUNT = 2  # Refresh command requires 2 tokens (AFI and SAFI)
 API_EOR_TOKEN_COUNT = 2  # EOR command requires 2 tokens (AFI and SAFI)
+# the kinds of announce and withdraw a group applies (group._parse_routes)
+GROUPED_ROUTES = frozenset({'route', 'ipv4', 'ipv6', 'flow', 'vpls', 'attribute', 'attributes'})
 
 # ======================================================================= Parser
 #
@@ -65,6 +68,34 @@ class API:
         words = command.split()
         return words[-1] == 'json' if words else False
 
+    def _held_by_group(
+        self, reactor: 'Reactor', service: str, handler: Handler, peers: list[str], remaining: str, use_json: bool
+    ) -> bool:
+        """Hold `peer <selector> announce|withdraw <route> ...` for the group block it is written in.
+
+        The API 4 lines, which start with announce or withdraw, are held before they are
+        dispatched. The API 6 form is only known for one once dispatched, which also gives
+        the peers its selector names: without this, it was applied at once and the group
+        end had nothing to do.
+        """
+        from exabgp.reactor.api.command import announce as announce_cmd
+        from exabgp.reactor.api.command import group as group_cmd
+
+        if not group_cmd.is_grouping(service):
+            return False
+        if handler is announce_cmd.v6_announce:
+            action = 'announce'
+        elif handler is announce_cmd.v6_withdraw:
+            action = 'withdraw'
+        else:
+            return False
+        # what a group applies is routes: an EOR or a route-refresh is sent as it comes
+        words = remaining.split()
+        if not words or words[0] not in GROUPED_ROUTES:
+            return False
+        group_cmd.group_add_command(self, reactor, service, peers, f'{action} {remaining}', use_json)
+        return True
+
     def process(self, reactor: 'Reactor', service: str, command: str) -> bool:
         """Process an API command (sync version).
 
@@ -92,6 +123,8 @@ class API:
             handler, peers, remaining = dispatch_for(
                 reactor.processes.dispatch_version(service), command, reactor, service
             )
+            if self._held_by_group(reactor, service, handler, peers, remaining, use_json):
+                return True
             return handler(self, reactor, service, peers, remaining, use_json)
         except UnknownCommand:
             log.warning(lazymsg('api.command.unknown command={command}', command=command), 'api')
@@ -131,6 +164,9 @@ class API:
             handler, peers, remaining = dispatch_for(
                 reactor.processes.dispatch_version(service), command, reactor, service
             )
+            if self._held_by_group(reactor, service, handler, peers, remaining, use_json):
+                await reactor.processes.flush_write_queue()
+                return True
             result = handler(self, reactor, service, peers, remaining, use_json)
             # Flush any queued writes immediately
             await reactor.processes.flush_write_queue()

@@ -66,6 +66,30 @@ def test_groups_do_not_nest(daemon: Daemon) -> None:
     assert answer(daemon.send('group end'))[0]['announced'] == 1
 
 
+def test_an_api_6_command_in_a_group_waits_for_its_end(daemon: Daemon) -> None:
+    """Only a line starting with announce or withdraw was held for the group: the API 6 form,
+    `peer <selector> announce ...`, was applied at once, and group end found nothing to do."""
+    daemon.send(f'peer {FIRST} announce route 10.9.0.0/24 next-hop 1.2.3.4')
+    daemon.send('group start')
+    assert daemon.send(f'peer {SECOND} announce route 10.1.0.0/24 next-hop 1.2.3.4') == ['done']
+    assert daemon.send(f'peer {FIRST} withdraw route 10.9.0.0/24') == ['done']
+    assert daemon.announced(SECOND) == []
+    assert daemon.announced(FIRST) == ['10.9.0.0/24']
+
+    assert answer(daemon.send('group end')) == [{'status': 'group processed', 'announced': 1, 'withdrawn': 1}]
+    # each command keeps the peers its selector named
+    assert daemon.announced(SECOND) == ['10.1.0.0/24']
+    assert daemon.announced(FIRST) == []
+
+
+def test_what_is_not_a_route_is_not_held_by_a_group(daemon: Daemon) -> None:
+    daemon.send('group start')
+    assert answer(daemon.send('system version'))[0]['application'] == 'exabgp'
+    daemon.establish()
+    assert daemon.send(f'peer {FIRST} announce eor') == ['done']
+    assert [str(family) for family in daemon.neighbor(FIRST).eor] == ['ipv4 unicast']
+
+
 def test_an_end_with_no_start_is_refused(daemon: Daemon) -> None:
     assert daemon.send('group end') == ['{"error": "not in group block"}', 'error']
 
