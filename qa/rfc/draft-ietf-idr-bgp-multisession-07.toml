@@ -192,7 +192,8 @@ The outcome happens to hold, but not the procedure.  The listener hands an incom
 connection to the first neighbour whose addresses match (listener.py) before any OPEN is
 read, and an ESTABLISHED Peer refuses it with Cease 6/7.  So the old session stays and the
 new one is closed, but whatever its Session Id, which is the RFC 4271 section 6.8
-procedure, not an evaluation of the OPEN.
+procedure, not an evaluation of the OPEN.  The listener drops the refusal the Peer returns,
+so the Cease is not even sent: the connection closes when nothing holds it any more.
 """
 
 [[requirement]]
@@ -380,7 +381,7 @@ Case 2 carries no RFC 2119 keyword.
 id = "draft-ietf-idr-bgp-multisession-07#9-reset-only-the-affected-session"
 section = "9"
 level = "SHOULD"
-status = "gap"
+status = "required"
 polarity = "both"
 text = """
 If multisession-enabled BGP speaker detects an error condition that
@@ -389,7 +390,8 @@ affected by the error.
 """
 note = """
 Each family is a Peer of its own (see the header of this file), so an error resets the
-session of that family only; no test shows it yet.
+session of that family only: a NOTIFICATION ending the IPv4 session leaves the established
+IPv6 session and its connection as they were.
 """
 
 [[requirement]]
@@ -449,8 +451,9 @@ NOTIFICATION message that caused connection reset.
 """
 note = """
 Each group is a neighbour of its own, shown as any neighbour is, with its family in its
-name (`family-allowed ipv4-unicast`); that this shows the last NOTIFICATION of each is not
-checked by a test.
+name (`family-allowed ipv4-unicast`), so the state of each can be viewed.  The NOTIFICATION
+which reset a session cannot: `show neighbor` has the state and the message counters, and
+Peer._close sets the counters back to zero.
 """
 
 [[requirement]]
