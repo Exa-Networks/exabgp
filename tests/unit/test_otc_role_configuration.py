@@ -182,9 +182,7 @@ def test_role_settings_survive_configuration_dump_and_json_export() -> None:
     rendered = str(neighbor)
     start = rendered.index('role {')
     end = rendered.index('}', start) + 1
-    # The dump still carries the removed `otc` line; the xfail below owns that defect.
-    block = '\n'.join(line for line in rendered[start:end].splitlines() if 'otc' not in line)
-    reparsed = parsed_neighbor(block)
+    reparsed = parsed_neighbor(rendered[start:end])
     exported = json.loads(config_to_json(reparsed.session))
     assert {key: exported[key] for key in ('role', 'role_strict', 'role_add_meta')} == {
         'role': 'provider',

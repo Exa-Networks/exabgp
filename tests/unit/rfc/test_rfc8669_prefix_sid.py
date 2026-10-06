@@ -234,7 +234,7 @@ def test_a_prefix_sid_carrying_a_label_index_is_not_treated_as_invalid() -> None
 
 @pytest.mark.rfc('rfc8669#4.1-no-label-index-is-invalid', polarity='negative')
 def test_an_srv6_service_attribute_without_a_label_index_stays_valid() -> None:
-    """The reason the xfail above may not be closed by refusing every Label-Index-less attribute.
+    """Why section 4.1 is applied to labelled unicast only, not to every Label-Index-less attribute.
 
     RFC 9252 puts its SRv6 L3 and L2 Service TLVs, types 5 and 6, in this same attribute,
     on VPN and EVPN families where RFC 8669's sentence does not reach and where no

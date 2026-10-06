@@ -133,11 +133,7 @@ def test_a_mac_address_length_that_is_not_48_is_refused(maclen: int) -> None:
 
 
 def test_a_mac_address_length_above_48_is_refused() -> None:
-    """The half of the same check which does fire, kept so the xfail above is precise.
-
-    This carries no `rfc` marker: on its own it does not prove
-    rfc7432#9.2.1-mac-encoding-six-octets, because a length of 24 gets through.
-    """
+    """The other side of the same check: a length above 48 is refused as well as one below."""
     with pytest.raises(Notify) as raised:
         decode(mac_route(49, NO_IP_BITS, b''))
     assert raised.value.code == 3
@@ -344,10 +340,10 @@ def test_an_inclusive_multicast_route_checks_its_ip_length_against_its_size() ->
         decode(nlri(INCLUSIVE_MULTICAST, RD + ETAG + bytes([IPV4_BITS]) + IPV6))
 
 
-# ------------------------------------------------ the gaps, shown rather than described
+# ------------------------------------------------ the gaps which were closed
 #
-# Each test below names a requirement the ledger records as a gap.  It asserts what the
-# RFC asks for and fails today for the reason its xfail gives.
+# Each test below was a strict xfail for a requirement the ledger recorded as a gap. The
+# communities and the route distinguisher check they asked for are now there.
 
 # Section 7.5: Type 0x06, Sub-Type 0x01, Flags (Single-Active set), two reserved octets
 # and the ESI Label.  Section 7.6: Type 0x06, Sub-Type 0x02 and the six octet ES-Import.
