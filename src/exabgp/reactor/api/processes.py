@@ -1531,7 +1531,10 @@ class Processes:
             await self._answer(service, Answer.text_error)
 
     async def answer(self, service: str, data: object) -> None:
-        """Async version of answer() - send JSON-serializable data to API process.
+        """Send JSON-serializable data to an API process, as the answer to its command.
+
+        This is what the command answers, not its acknowledgement, so it is written whether
+        ack is enabled or not: `session ack disable` drops done and error, and nothing else.
 
         Args:
             service: The service/process name to send to
@@ -1539,8 +1542,8 @@ class Processes:
         """
         import json
 
-        response = json.dumps(data, default=json_number)
-        await self._answer(service, response)
+        self.write(service, json.dumps(data, default=json_number))
+        await self.flush_write_queue()
 
     def set_ack(self, service: str, enabled: bool) -> None:
         """Set ACK state for a specific service/process"""

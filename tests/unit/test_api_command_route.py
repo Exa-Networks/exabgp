@@ -190,3 +190,12 @@ def test_remove_refuses_what_is_not_a_route(daemon: Daemon, command: str, reason
 def test_routes_needs_an_action(daemon: Daemon) -> None:
     assert daemon.send('peer * routes') == ['error: routes requires action: list, add, or remove', 'error']
     assert daemon.send('peer * routes ipv4 unicast') == ['error: routes requires action: list, add, or remove', 'error']
+
+
+def test_with_ack_disabled_the_answer_is_still_given(daemon: Daemon) -> None:
+    """Disabling ack drops done and error. It dropped the JSON of the routes commands too,
+    which were the only queries a helper with ack disabled could not get an answer to."""
+    daemon.send('session ack disable')
+    (added,) = answer(daemon.send('peer * routes add route 10.0.0.0/24 next-hop 1.2.3.4'))
+    assert added['success'] is True
+    assert daemon.send('peer * routes ipv6 list') == ['[]']
