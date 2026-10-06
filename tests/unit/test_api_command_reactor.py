@@ -13,6 +13,7 @@ in text, or in JSON when its command ends with `json`.
 from __future__ import annotations
 
 import collections
+import inspect
 import os
 from collections.abc import Iterator
 
@@ -275,3 +276,15 @@ def test_crash_is_answered_once_with_the_error_of_the_coroutine_which_raised(dae
     assert daemon.escaped == [HELPER]
     daemon.escaped.clear()
     assert daemon.send('session bye') == ['done']
+
+
+def test_reset_closes_the_commands_it_drops(daemon: Daemon) -> None:
+    """They were dropped unrun and left to the garbage collector, which warns of each one."""
+
+    async def scheduled() -> None:
+        pass
+
+    coroutine = scheduled()
+    daemon.reactor.asynchronous.schedule(HELPER, 'its command', coroutine)
+    daemon.send('session reset')
+    assert inspect.getcoroutinestate(coroutine) == inspect.CORO_CLOSED

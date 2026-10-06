@@ -69,16 +69,18 @@ class ASYNC:
         self._async.append((uid, callback))
 
     def clear(self, deluid: str | None = None) -> None:
-        if not self._async:
-            return
-        if deluid is None:
-            # We could delete all the generators just to be safe
-            self._async = deque()
-            return
+        """Drop the callbacks of one service, or of all of them, unrun.
+
+        A dropped coroutine or generator is closed: left to the garbage collector, a
+        coroutine never awaited is reported as a RuntimeWarning on the daemon's stderr.
+        """
         running: deque[tuple[str, Any]] = deque()
-        for uid, generator in self._async:
-            if uid != deluid:
-                running.append((uid, generator))
+        for uid, callback in self._async:
+            if deluid is None or uid == deluid:
+                if inspect.iscoroutine(callback) or inspect.isgenerator(callback):
+                    callback.close()
+                continue
+            running.append((uid, callback))
         self._async = running
 
     def run(self) -> bool:
