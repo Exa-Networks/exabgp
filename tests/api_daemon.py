@@ -102,7 +102,9 @@ class Daemon:
 
     def __init__(self, configuration: str = CONFIGURATION, encoder: str = 'json') -> None:
         parsed = Configuration([configuration], text=True)
-        assert parsed.reload(), str(parsed.error)
+        # not an assert: the optimised run of the suite (PYTHONOPTIMIZE) would not load it
+        if not parsed.reload():
+            raise AssertionError(str(parsed.error))
         self.configuration = parsed
         self.reactor = Reactor(parsed)
         self.reactor.processes = Processes()
@@ -128,7 +130,8 @@ class Daemon:
     def key(self, address: str) -> str:
         """The name the reactor knows the neighbor with this peer address by."""
         found = [key for key in self.configuration.neighbors if key.split()[1] == address]
-        assert len(found) == 1, f'no single neighbor {address} in {list(self.configuration.neighbors)}'
+        if len(found) != 1:
+            raise AssertionError(f'no single neighbor {address} in {list(self.configuration.neighbors)}')
         return found[0]
 
     def neighbor(self, address: str) -> Any:
@@ -149,8 +152,8 @@ class Daemon:
         """
         self.reactor.api.process(self.reactor, HELPER, command)
         asyncio.run(self._run_scheduled())
-        if not escape:
-            assert self.escaped == [], f'{command!r} raised through the reactor instead of answering'
+        if self.escaped and not escape:
+            raise AssertionError(f'{command!r} raised through the reactor instead of answering')
         return self.helper.lines()
 
     async def _run_scheduled(self) -> None:
@@ -158,7 +161,8 @@ class Daemon:
             if not self.reactor.asynchronous._async:
                 break
             await self.reactor.asynchronous._run_async()
-        assert not self.reactor.asynchronous._async, 'a command kept scheduling work'
+        if self.reactor.asynchronous._async:
+            raise AssertionError('a command kept scheduling work')
         await self.reactor.processes.flush_write_queue()
 
     def announced(self, address: str) -> list[str]:
