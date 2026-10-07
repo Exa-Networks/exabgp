@@ -80,11 +80,13 @@ text = """
       - whose 8-octet RD is set to zero, and
 """
 note = """
-`MPRNLRI.unpack_attribute` refuses a next hop whose leading 8 octets are not zero, with
-Notify(3, 0), and `Family.size[(AFI.ipv6, SAFI.mpls_vpn)]` gives the 24 and 40 octet
-lengths which carry that RD in front of one or two IPv6 addresses.  Both sides are worth
-testing: a zero RD has to be accepted and the address behind it read at the right offset,
-and a non-zero one has to be refused rather than shifting the address by eight octets.
+`MPRNLRI.unpack_attribute` refuses a next hop whose RD is not zero, with Notify(3, 9).
+`Family.size[(AFI.ipv6, SAFI.mpls_vpn)]` gives 24 and 48 octets: the section puts the
+link-local address in "another VPN-IPv6 address", with an RD of its own which must be zero
+too, so the pair is RD, global, RD, link-local.  The table said 40, one RD in front of two
+addresses, and the encoder sent that; both now use 48 and the decoder checks both RDs.
+Both sides are worth testing: a zero RD has to be accepted and the address behind it read
+at the right offset, and a non-zero one has to be refused rather than shifting the address.
 """
 
 [[requirement]]

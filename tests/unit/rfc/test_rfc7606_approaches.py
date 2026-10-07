@@ -59,6 +59,7 @@ DISCARD_IS_PRESCRIBED_BY = {
     Attribute.CODE.AS4_AGGREGATOR: 'RFC 6793 6, as the four octet twin of AGGREGATOR',
     Attribute.CODE.BGP_LS: 'RFC 9552 5, which names attribute discard for the BGP-LS attribute',
     Attribute.CODE.BGP_PREFIX_SID: 'RFC 8669 5, see tests/unit/test_rfc8669_prefix_sid_discard.py',
+    Attribute.CODE.AIGP: 'RFC 7311 3.2, see tests/unit/rfc/test_rfc7311_aigp.py',
 }
 
 # The attributes which do decide, or help decide, which route wins.  None of them may ever

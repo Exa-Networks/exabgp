@@ -1,0 +1,52 @@
+# RFC 8950 - Advertising IPv4 Network Layer Reachability Information (NLRI) with an IPv6 Next Hop
+# https://www.rfc-editor.org/rfc/rfc8950
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc8950.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# The two sentences which bind what crosses the wire: how a receiver reads the Next Hop
+# field, and when a sender may put an IPv6 address in it.  The capability encoding of
+# section 4 is negotiated in bgp/message/open/capability/nexthop.py and is not reached
+# here, so it is absent rather than excused.
+
+rfc = "rfc8950"
+title = "Advertising IPv4 Network Layer Reachability Information (NLRI) with an IPv6 Next Hop"
+url = "https://www.rfc-editor.org/rfc/rfc8950"
+
+[[requirement]]
+id = "rfc8950#3-length-determines-next-hop-protocol"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The BGP speaker receiving the advertisement MUST use the Length of
+Next Hop Address field to determine which network-layer protocol the
+next-hop address belongs to.
+"""
+note = """
+`next_hop_lengths` in protocol/family.py gives the lengths a family takes on a session:
+its own, and 16 or 32 (24 or 48 behind an RD) for an IPv4 <AFI, SAFI> which negotiated an
+IPv6 next hop, for that <AFI, SAFI> only.  The decoder used to switch every family to the
+table of the AFI the length suggested once any entry was negotiated: a family never
+negotiated took an IPv6 next hop, and EVPN, VPLS and BGP-LS raised KeyError.
+"""
+
+[[requirement]]
+id = "rfc8950#4-advertise-only-after-capability"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+A BGP speaker MUST only advertise the IPv4 or VPN-IPv4 NLRI with an
+IPv6 next hop to a BGP peer if the BGP speaker has first ascertained
+via the BGP Capability Advertisement that the BGP peer supports the
+Extended Next Hop Encoding capability for the relevant AFI/SAFI pair.
+"""
+note = """
+`MPNLRICollection.packed_reach_attributes` leaves out, with a warning, an IPv4 route of
+SAFI 1, 2, 4 or 128 whose next hop is IPv6 unless that <AFI, SAFI> negotiated an IPv6 next
+hop.  The configuration refuses such a route before it is sent; this is what holds for an
+API announcement, or a peer which withheld the capability.
+"""

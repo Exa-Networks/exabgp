@@ -384,12 +384,15 @@ class Family:
         (AFI.ipv6, SAFI.multicast): ((16, 32), 0),
         (AFI.ipv6, SAFI.nlri_mpls): ((16, 32), 0),
         (AFI.ipv6, SAFI.mup): ((4, 16), 0),
-        (AFI.ipv6, SAFI.mpls_vpn): ((24, 40), 8),
+        # RFC 4659 3.2.1.1: a VPN-IPv6 address, 24, "potentially followed by another VPN-IPv6
+        # address", 48: each address carries its own zero RD. This said 40, one RD for two.
+        (AFI.ipv6, SAFI.mpls_vpn): ((24, 48), 8),
         (AFI.ipv6, SAFI.mcast_vpn): ((4, 16), 0),
         (AFI.ipv6, SAFI.flow_ip): ((0, 16, 32), 0),
         (AFI.ipv6, SAFI.flow_vpn): ((0, 16, 32), 0),
         (AFI.l2vpn, SAFI.vpls): ((4,), 0),
-        (AFI.l2vpn, SAFI.evpn): ((4,), 0),
+        # RFC 7432 7: "the IPv4 or IPv6 address of the advertising PE", the length says which
+        (AFI.l2vpn, SAFI.evpn): ((4, 16), 0),
         (AFI.bgpls, SAFI.bgp_ls): ((4, 16), 0),
         # RFC 7752 section 3.2.1: for the VPN SAFI the next hop is a VPN-IPv4 or VPN-IPv6
         # address with the route distinguisher set to zero, which is the shape the mpls-vpn
@@ -484,3 +487,32 @@ class Family:
     def all_families(cls) -> list[tuple[AFI, SAFI]]:
         """Return list of all supported (AFI, SAFI) pairs."""
         return list(cls.size.keys())
+
+
+# RFC 8950 3 extends these SAFIs of AFI 1 to an IPv6 next hop: "SAFI = 1, 2, or 4" with a
+# next hop of 16 or 32 octets, and "SAFI = 128 or 129" with 24 or 48. The same SAFIs of
+# AFI 2 have taken an IPv4 next hop, four octets after any RD, when both speakers agreed
+# to it with that same capability, which older releases of exabgp did and still send.
+SAFI_WITH_EXTENDED_NEXT_HOP = frozenset({SAFI.UNICAST, SAFI.MULTICAST, SAFI.NLRI_MPLS, SAFI.MPLS_VPN})
+_NEXT_HOP_ADDRESS_SIZE = {AFI.ipv4: 4, AFI.ipv6: 16}
+
+
+def next_hop_lengths(afi: AFI, safi: SAFI, extended: list[tuple[AFI, SAFI, AFI]]) -> tuple[tuple[int, ...], int]:
+    """The Next Hop lengths MP_REACH_NLRI may carry for this family on this session, and its RD size.
+
+    `extended` is what the Extended Next Hop Encoding capability negotiated, as
+    (NLRI AFI, NLRI SAFI, next hop AFI). An entry adds lengths to its own <AFI, SAFI> and
+    to nothing else: it used to switch every family to the table of the next hop's AFI,
+    where EVPN, VPLS and BGP-LS have no entry at all.
+    """
+    lengths, rd = Family.size[(afi, safi)]
+    if safi not in SAFI_WITH_EXTENDED_NEXT_HOP:
+        return lengths, rd
+    for nlri_afi, nlri_safi, next_hop_afi in extended:
+        if (nlri_afi, nlri_safi) != (afi, safi) or next_hop_afi == afi or next_hop_afi not in _NEXT_HOP_ADDRESS_SIZE:
+            continue
+        single = rd + _NEXT_HOP_ADDRESS_SIZE[next_hop_afi]
+        # only an IPv6 next hop is "potentially followed by the link-local" one
+        added = (single, 2 * single) if next_hop_afi == AFI.ipv6 else (single,)
+        lengths = lengths + tuple(length for length in added if length not in lengths)
+    return lengths, rd

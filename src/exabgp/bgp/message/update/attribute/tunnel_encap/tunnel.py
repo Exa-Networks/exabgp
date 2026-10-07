@@ -56,9 +56,21 @@ class TunnelEncap(Attribute):
     def __init__(self, tunnel_tlvs: list[Any]) -> None:
         self.tunnel_tlvs = tunnel_tlvs
 
+    def _value(self) -> bytes:
+        return b''.join(tlv.pack() for tlv in self.tunnel_tlvs)
+
     def _comparable(self) -> tuple[int, int, object]:
-        """Built from a structure rather than kept as wire bytes, so the structure is it."""
-        return (self.ID, self.FLAG, tuple(str(tlv) for tlv in self.tunnel_tlvs))
+        """Built from a structure rather than kept as wire bytes, so its encoding is the value.
+
+        It was the text of each TLV, which leaves out SID flags, endpoint behaviours, SR
+        algorithms and the value of an unknown tunnel type, so a changed policy compared
+        equal to the one it replaced.
+        """
+        return (self.ID, self.FLAG, self._value())
+
+    def index_detail(self) -> str:
+        # the text names the policy, the encoding is what tells two policies apart
+        return ' tunnel-encap-value 0x' + self._value().hex()
 
     # ExaBGP's Attributes.pack() calls attribute.pack(negotiated), so we
     # provide a thin wrapper that reuses the pack_attribute implementation.
@@ -66,8 +78,7 @@ class TunnelEncap(Attribute):
         return self.pack_attribute(negotiated)
 
     def pack_attribute(self, negotiated: Negotiated) -> Buffer:
-        value = b''.join(tlv.pack() for tlv in self.tunnel_tlvs)
-        return self._attribute(value)
+        return self._attribute(self._value())
 
     def json(self, compact: bool = False) -> str:
         parts = ', '.join(tlv.json() for tlv in self.tunnel_tlvs)
@@ -79,7 +90,7 @@ class TunnelEncap(Attribute):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, TunnelEncap):
             return False
-        return str(self) == str(other)
+        return self._comparable() == other._comparable()
 
     def __ne__(self, other: object) -> bool:
         return not self == other

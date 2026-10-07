@@ -1,0 +1,33 @@
+# RFC 2545 - Use of BGP-4 Multiprotocol Extensions for IPv6 Inter-Domain Routing
+# https://www.rfc-editor.org/rfc/rfc2545
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc2545.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# RFC 2545 predates the habit of capitalising RFC 2119 keywords and writes every one of
+# its requirements as a lower case "shall".  It is a Standards Track document and those
+# sentences are its requirements, so they are recorded at SHALL: reading them as prose
+# would leave the IPv6 next hop with no rule at all.
+
+rfc = "rfc2545"
+title = "Use of BGP-4 Multiprotocol Extensions for IPv6 Inter-Domain Routing"
+url = "https://www.rfc-editor.org/rfc/rfc2545"
+
+[[requirement]]
+id = "rfc2545#3-next-hop-length"
+section = "3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The value of the Length of Next Hop Network Address field on a
+MP_REACH_NLRI attribute shall be set to 16, when only a global
+address is present, or 32 if a link-local address is also included in
+the Next Hop field.
+"""
+note = """
+Sending: an IPv6 route with an IPv4 next hop went out with a Next Hop field of four
+octets; it is now sixteen, the IPv4-mapped address RFC 4798 2 asks for.  Receiving: a
+four octet next hop for an IPv6 unicast route is refused, unless both speakers negotiated
+the <2, SAFI, 1> extended next hop entry that older releases of exabgp send it under.
+"""

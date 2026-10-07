@@ -9,8 +9,9 @@ the RFC says to withdraw.
 
 Four classes were in that state and are reachable from the wire: ORIGINATOR_ID,
 CLUSTER_LIST, PMSI_TUNNEL and AIGP.  RFC 7606 2 prefers treat-as-withdraw and reserves
-attribute discard for an attribute with no effect on route selection; all four affect it,
-CLUSTER_LIST most obviously, since it is the reflector loop check.
+attribute discard for an attribute with no effect on route selection; the first three
+affect it, CLUSTER_LIST most obviously, since it is the reflector loop check.  AIGP is the
+exception its own RFC makes: RFC 7311 3.2 asks for attribute discard.
 
 A fifth escaped past the decoders entirely.  UpdateCollection._parse_payload turned the
 NEXT_HOP attribute into an address with `if len(packed) == 4 ... else IPv6(packed)`, and

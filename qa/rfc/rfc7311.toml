@@ -1,0 +1,73 @@
+# RFC 7311 - The Accumulated IGP Metric Attribute for BGP
+# https://www.rfc-editor.org/rfc/rfc7311
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc7311.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# This ledger covers the decoder: what an AIGP attribute is made of and what a receiver
+# does with one it cannot read.  Sections 3.3 to 4 are about originating the attribute
+# and increasing its value as a route is propagated, which a speaker that installs no
+# routes and computes no metric does only as far as the operator tells it to; they are
+# not reached here, and are absent rather than excused.
+
+rfc = "rfc7311"
+title = "The Accumulated IGP Metric Attribute for BGP"
+url = "https://www.rfc-editor.org/rfc/rfc7311"
+
+[[requirement]]
+id = "rfc7311#3-other-tlvs-passed-along"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Any other AIGP TLVs in the AIGP attribute MUST be passed along
+unchanged if the AIGP attribute is passed along.
+"""
+note = """
+`AIGP.from_packet` keeps every TLV of the attribute and remembers where the first AIGP TLV
+starts, and `pack_attribute` emits them all.  It used to keep the first AIGP TLV only, so
+an attribute carrying anything else left with less than it arrived with.  The negative
+side is that what is carried is not what is read: the metric stays the first TLV's.
+"""
+
+[[requirement]]
+id = "rfc7311#3.2-malformed-is-attribute-discard"
+section = "3.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When receiving a BGP Update message containing a malformed AIGP
+attribute, the attribute MUST be treated exactly as if it were an
+unrecognized non-transitive attribute.
+"""
+note = """
+`AIGPBase.DISCARD`: the attribute goes, the route stays.  It was treat-as-withdraw, which
+removed the route over a metric the section says to ignore.
+"""
+
+[[requirement]]
+id = "rfc7311#3.2-repeated-or-unknown-tlvs-not-malformed"
+section = "3.2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+Note that an AIGP attribute MUST NOT be considered to be malformed
+because it contains more than one TLV of a given type or because it
+contains TLVs of unknown types.
+"""
+
+[[requirement]]
+id = "rfc7311#3.2-transitive-bit-is-malformed"
+section = "3.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a BGP path attribute is received that has the AIGP attribute
+codepoint but also has the transitive bit set, the attribute MUST be
+considered to be a malformed AIGP attribute and MUST be discarded as
+specified in this section.
+"""

@@ -26,7 +26,7 @@ import json
 from struct import pack
 from typing import ClassVar
 
-from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
+from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import MalformedSubTLV, SubTLV
 from exabgp.util.types import Buffer
 from exabgp.util.intvalue import json_number
 
@@ -77,8 +77,9 @@ class ENLPSubTLV(SubTLV):
 
     @classmethod
     def unpack(cls, data: Buffer) -> ENLPSubTLV:
-        if len(data) < cls.VALUE_SIZE:
-            return cls(0)
+        # RFC 9830 2.4.5: "The value MUST be 3." A shorter value used to read as ENLP 0.
+        if len(data) != cls.VALUE_SIZE:
+            raise MalformedSubTLV(f'SR Policy ENLP sub-TLV is {len(data)} bytes, it must be {cls.VALUE_SIZE}')
         return cls(enlp=data[2], flags=data[0])
 
 

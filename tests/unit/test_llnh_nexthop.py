@@ -298,11 +298,13 @@ def test_vpnv6_nexthop_with_lla() -> None:
 
     result = collection._encode_nexthop(global_ip, family_key, negotiated)
 
-    # 40 bytes: RD (8) + Global (16) + Link-Local (16)
-    assert len(result) == 40
+    # RFC 4659 3.2.1.1, 48 bytes: RD (8) + Global (16) + RD (8) + Link-Local (16).
+    # This pinned 40, one RD in front of both addresses, which no peer decodes.
+    assert len(result) == 48
     assert result[:8] == bytes([0] * 8)  # Zero RD
     assert result[8:24] == global_ip.pack_ip()
-    assert result[24:] == lla_ip.pack_ip()
+    assert result[24:32] == bytes([0] * 8)  # Zero RD of the link-local address
+    assert result[32:] == lla_ip.pack_ip()
 
 
 # ==============================================================================

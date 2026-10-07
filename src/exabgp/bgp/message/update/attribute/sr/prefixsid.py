@@ -131,15 +131,9 @@ class PrefixSid(Attribute):
         return f'{{ {content} }}'
 
     def __str__(self) -> str:
-        # First, we try to decode path attribute for SR-MPLS
-        label_index: Any | None = next((i for i in self.sr_attrs if i.TLV == 1), None)
-        if label_index is not None:
-            srgb: Any | None = next((i for i in self.sr_attrs if i.TLV == SR_TLV_SRGB), None)
-            if srgb is not None:
-                return f'[ {label_index!s}, {srgb!s} ]'
-            return f'[ {label_index!s} ]'
-
-        # if not, we try to decode path attribute for SRv6
+        # Every TLV, in the order they came. With a Label-Index present this used to name
+        # it and the Originator SRGB and nothing else, and AttributeCollection.index() is
+        # built from this text, so two attributes differing only in the rest were one.
         return '[ ' + ', '.join([str(attr) for attr in self.sr_attrs]) + ' ]'
 
     def pack_attribute(self, negotiated: Negotiated) -> Buffer:
@@ -160,6 +154,9 @@ class GenericSRId:
 
     def __repr__(self) -> str:
         return 'Attribute with code [ {} ] not implemented'.format(self.code)
+
+    def __str__(self) -> str:
+        return 'sr-tlv-{}:0x{}'.format(self.code, bytes(self.rep).hex())
 
     def pack_tlv(self) -> bytes:
         """Re-emit the TLV exactly as the peer sent it.

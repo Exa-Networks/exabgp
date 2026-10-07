@@ -1160,7 +1160,11 @@ def test_enlp_roundtrip():
 
 
 def test_enlp_unpack_short_data():
-    assert ENLPSubTLV.unpack(b'\x00').enlp == 0
+    # RFC 9830 2.4.5 fixes the value at three octets: a short one is malformed, not ENLP 0
+    from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import MalformedSubTLV
+
+    with pytest.raises(MalformedSubTLV):
+        ENLPSubTLV.unpack(b'\x00')
 
 
 def test_enlp_repack_zeros_received_flags():

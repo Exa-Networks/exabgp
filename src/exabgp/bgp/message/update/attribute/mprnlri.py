@@ -23,13 +23,33 @@ from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, NextHop
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.logger import lazymsg, log
-from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.protocol.family import AFI, SAFI, Family, next_hop_lengths
 from exabgp.protocol.ip import IP, IPv6
 
 # The RFC 2545 Next Hop field holds either one address or a global one followed by a
 # link-local one, so a field of exactly two addresses is the pair and nothing else is.
 NEXTHOP_ADDRESS_SIZE = 16
-NEXTHOP_PAIR_SIZE = 2 * NEXTHOP_ADDRESS_SIZE
+
+
+def _split_next_hop(field: Buffer, rd: int) -> tuple[Buffer | None, Buffer | None]:
+    """The address of a Next Hop field, and the link-local one when the field is a pair.
+
+    RFC 2545 3 and RFC 8950 3 give the pair as two addresses, 32 octets; RFC 4659 3.2.1.1
+    gives it as two VPN-IPv6 addresses, an RD in front of each, 48. Anything else is one
+    address behind its RD, and next_hop_lengths() refused every length which is neither.
+    """
+    single = rd + NEXTHOP_ADDRESS_SIZE
+    if len(field) == 2 * single:
+        return field[rd:single], field[single + rd :]
+    return (field[rd:] or None), None
+
+
+def _route_distinguishers_are_zero(field: Buffer, rd: int) -> bool:
+    """RFC 4659 3.2.1.1 and RFC 8950 3: the RD in front of each next hop address is zero."""
+    single = rd + NEXTHOP_ADDRESS_SIZE
+    if any(field[:rd]):
+        return False
+    return len(field) != 2 * single or not any(field[single : single + rd])
 
 
 class NextHopWithLinkLocal(IPv6):
@@ -133,17 +153,10 @@ class MPRNLRI(Attribute):
         if (self.afi, self.safi) not in Family.size:
             raise Notify(3, 9, 'unsupported {} {}'.format(self.afi, self.safi))
 
-        length, rd = Family.size[(self.afi, self.safi)]
-
-        size = len_nh - rd
-
-        # Parse nexthops
-        nhs = data[offset + rd : offset + rd + size]
-        nexthops = [nhs[pos : pos + NEXTHOP_ADDRESS_SIZE] for pos in range(0, len(nhs), NEXTHOP_ADDRESS_SIZE)]
-        nexthop_bytes = nexthops[0] if nexthops else None
-        # Only a field of exactly two addresses is the RFC 2545 pair. A shorter field is one
-        # address, whatever its length, and Family.size refuses a longer one before we arrive.
-        link_local_bytes = nexthops[1] if size == NEXTHOP_PAIR_SIZE and len(nexthops) == 2 else None
+        _, rd = Family.size[(self.afi, self.safi)]
+        # Only a field of exactly two addresses is the pair. A shorter field is one address,
+        # whatever its length, and unpack_attribute refused any other length before we arrive.
+        nexthop_bytes, link_local_bytes = _split_next_hop(data[offset : offset + len_nh], rd)
 
         offset += len_nh
 
@@ -273,22 +286,11 @@ class MPRNLRI(Attribute):
         if (afi, safi) not in Family.size:
             raise Notify(3, 9, 'unsupported {} {}'.format(afi, safi))
 
-        length, rd = Family.size[(afi, safi)]
-
-        # Link-Local Next Hop Capability (code 77) validation:
-        # - 16-byte IPv6 nexthops are valid (could be global or link-local)
-        # - With LLNH negotiated, 16-byte link-local (fe80::/10) is explicitly allowed
-        # - Semantic interpretation of 16-byte NH depends on LLNH negotiation
-        if negotiated.nexthop:
-            if len_nh in (16, 32, 24):
-                nh_afi = AFI.ipv6
-            elif len_nh in (4, 12):
-                nh_afi = AFI.ipv4
-            else:
-                raise Notify(
-                    3, 9, 'unsupported family {} {} with extended next-hop capability enabled'.format(afi, safi)
-                )
-            length, _ = Family.size[(nh_afi, safi)]
+        # RFC 8950 3: the length says which protocol the next hop belongs to, out of those
+        # the family allows, and the Extended Next Hop Encoding capability adds IPv6 to an
+        # IPv4 family only for the <AFI, SAFI> it was negotiated for. RFC 7606 7.11: a
+        # length "inconsistent with that which was expected" is a session reset.
+        length, rd = next_hop_lengths(afi, safi, negotiated.nexthop)
 
         if len_nh not in length:
             raise Notify(
@@ -298,8 +300,8 @@ class MPRNLRI(Attribute):
                 % (afi, safi, len_nh, ' or '.join(str(_) for _ in length)),
             )
 
-        # check the RD is well zero
-        if rd and sum([int(_) for _ in data[offset : offset + 8]]) != 0:
+        # check the RD is well zero, the RD of the link-local address too when there is one
+        if rd and not _route_distinguishers_are_zero(data[offset : offset + len_nh], rd):
             raise Notify(3, 9, "MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 
         offset += len_nh

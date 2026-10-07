@@ -61,6 +61,7 @@ class Srv6SidInformation:
         behavior: int,
         subsubtlvs: list[Any],
         packed: Buffer | None = None,
+        flags: int = 0,
     ) -> None:
         """Initialize SID Information sub-TLV.
 
@@ -69,9 +70,12 @@ class Srv6SidInformation:
             behavior: SRv6 Endpoint Behavior code
             subsubtlvs: List of sub-sub-TLVs (Srv6SidStructure or GenericSrv6ServiceDataSubSubTlv)
             packed: Optional pre-packed wire format
+            flags: SRv6 Service SID Flags octet, as the peer sent it
         """
+        assert 0 <= flags <= 0xFF, 'the SID Flags field is one octet'
         self.sid: IPv6 = sid
         self.behavior: int = behavior
+        self.flags: int = flags
         self.subsubtlvs: list[Any] = subsubtlvs
         self.packed: Buffer = self.pack_tlv()
 
@@ -92,6 +96,9 @@ class Srv6SidInformation:
         if len(data) < 21:
             raise Notify.short(3, 1, 'SRv6 SID Information', 21, len(data))
         sid: IPv6 = IPv6.unpack_ipv6(data[1:17])
+        # RFC 9252 3.1 assigns no flag, and a receiver ignores them: so they are carried,
+        # not interpreted. They were read past and then written and reported as zero.
+        flags: int = data[17]
         behavior: int = unpack('!H', data[18:20])[0]
         # what the registry decodes is its own class, not the generic one: Any, as __init__ takes
         subsubtlvs: list[Any] = []
@@ -112,34 +119,34 @@ class Srv6SidInformation:
             subsubtlvs.append(subsubtlv)
             data = data[length + 3 :]
 
-        return cls(sid=sid, behavior=behavior, subsubtlvs=subsubtlvs)
+        return cls(sid=sid, behavior=behavior, subsubtlvs=subsubtlvs, flags=flags)
 
     def pack_tlv(self) -> bytes:
         subsubtlvs_packed: bytes = b''.join([_.pack_tlv() for _ in self.subsubtlvs])
         length: int = len(subsubtlvs_packed) + 21
         reserved: int = 0
-        flags: int = 0
 
         return (
             pack('!B', self.TLV)
             + pack('!H', length)
             + pack('!B', reserved)
             + self.sid.pack_ip()
-            + pack('!B', flags)
+            + pack('!B', self.flags)
             + pack('!H', self.behavior)
             + pack('!B', reserved)
             + subsubtlvs_packed
         )
 
     def __str__(self) -> str:
-        s: str = 'sid-information [ sid:{} flags:0 endpoint_behavior:0x{:x} '.format(str(self.sid), self.behavior)
+        s: str = 'sid-information [ sid:{} flags:{} endpoint_behavior:0x{:x} '.format(
+            str(self.sid), self.flags, self.behavior
+        )
         if len(self.subsubtlvs) != 0:
             s += ' [ ' + ', '.join([str(subsubtlv) for subsubtlv in self.subsubtlvs]) + ' ]'
-        s + ' ]'
-        return s
+        return s + ' ]'
 
     def json(self, compact: bool | None = None) -> str:
-        s: str = '{{ "sid": "{}", "flags": 0, "endpoint_behavior": {}'.format(str(self.sid), self.behavior)
+        s: str = '{{ "sid": "{}", "flags": {}, "endpoint_behavior": {}'.format(str(self.sid), self.flags, self.behavior)
         content: str = ', '.join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
         if content:
             s += ', {}'.format(content)

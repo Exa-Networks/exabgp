@@ -6,6 +6,7 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 
 from __future__ import annotations
 
+from struct import pack
 from typing import ClassVar
 
 from exabgp.util.types import Buffer
@@ -31,8 +32,12 @@ class GenericSrv6ServiceSubTlv:
         # Generic/unknown TLV - show type code and hex data
         return f'{{"type": {self.code}, "raw": "{bytes(self._packed).hex()}"}}'
 
-    def pack_tlv(self) -> Buffer:
-        return self._packed
+    def __str__(self) -> str:
+        return f'sub-tlv-{self.code}:0x{bytes(self._packed).hex()}'
+
+    def pack_tlv(self) -> bytes:
+        # The type and length come back in front of the value, as for the sub-sub-TLV.
+        return pack('!BH', self.code, len(self._packed)) + bytes(self._packed)
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, length: int) -> 'GenericSrv6ServiceSubTlv':
@@ -57,11 +62,18 @@ class GenericSrv6ServiceDataSubSubTlv:
         return 'SRv6 Service Data Sub-Sub-TLV type %d not implemented' % self.code
 
     def json(self, compact: bool | None = None) -> str:
-        # Generic/unknown TLV - show type code and hex data
-        return f'{{"type": {self.code}, "raw": "{bytes(self._packed).hex()}"}}'
+        # The sub-sub-TLVs are members of the SID Information object, beside "sid" and
+        # "structure", so an unknown one is a key and a value. A bare object here made the
+        # whole line unparseable.
+        return f'"sub-sub-tlv-{self.code}": "{bytes(self._packed).hex()}"'
 
-    def pack_tlv(self) -> Buffer:
-        return self._packed
+    def __str__(self) -> str:
+        return f'sub-sub-tlv-{self.code}:0x{bytes(self._packed).hex()}'
+
+    def pack_tlv(self) -> bytes:
+        # The type and length come back in front of the value, or the re-encoded
+        # SID Information is three octets short and misframed for every unknown one.
+        return pack('!BH', self.code, len(self._packed)) + bytes(self._packed)
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, length: int) -> 'GenericSrv6ServiceDataSubSubTlv':

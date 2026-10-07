@@ -396,3 +396,105 @@ def test_the_tunnel_encapsulation_attribute_is_kept_where_it_is_not_filtered(pee
 
     encap = attributes.get(TUNNEL_ENCAP)
     assert isinstance(encap, TunnelEncap), f'the Tunnel Encapsulation attribute was filtered ({option or "default"})'
+
+
+# --------------------------------------------------------------------------------------
+# 13 again, for every SR Policy sub-TLV decoder: RFC 9830 2.4 fixes the length of each
+# value, and a value of any other length is malformed.  Each decoder used to answer a
+# default instead, a binding SID of none, an ENLP of 0, a priority of 0, an SRv6 binding
+# SID of ::, a weight of 1 or a segment of label 0, which the API reported as though the
+# peer had sent it.
+
+BINDING_SID_SUBTLV = 13
+ENLP_SUBTLV = 14
+SRV6_BINDING_SID_SUBTLV = 20
+SEGMENT_LIST_SUBTLV = 128
+SEGMENT_B_FLAG = 0x10
+
+
+def segment_list(*subsubtlvs: bytes) -> bytes:
+    """Reserved(1) and then the sub-sub-TLVs, each a one octet type and a one octet length."""
+    return bytes([0]) + b''.join(subsubtlvs)
+
+
+def subsubtlv(subtype: int, value: bytes) -> bytes:
+    return pack('!BB', subtype, len(value)) + value
+
+
+WEIGHT = subsubtlv(9, pack('!BBI', 0, 0, 1))
+
+MALFORMED_SUBTLVS = [
+    ('binding-sid-1', BINDING_SID_SUBTLV, bytes(1)),
+    ('binding-sid-4', BINDING_SID_SUBTLV, bytes(4)),
+    ('binding-sid-7', BINDING_SID_SUBTLV, bytes(7)),
+    ('binding-sid-17', BINDING_SID_SUBTLV, bytes(17)),
+    ('enlp-2', ENLP_SUBTLV, bytes(2)),
+    ('enlp-4', ENLP_SUBTLV, bytes(4)),
+    ('priority-1', PRIORITY_SUBTLV, bytes(1)),
+    ('priority-3', PRIORITY_SUBTLV, bytes(3)),
+    ('srv6-binding-sid-17', SRV6_BINDING_SID_SUBTLV, bytes(17)),
+    ('srv6-binding-sid-19', SRV6_BINDING_SID_SUBTLV, bytes(19)),
+    ('srv6-binding-sid-26-without-b-flag', SRV6_BINDING_SID_SUBTLV, bytes(26)),
+    ('srv6-binding-sid-18-with-b-flag', SRV6_BINDING_SID_SUBTLV, bytes([0x20]) + bytes(17)),
+    ('segment-list-empty', SEGMENT_LIST_SUBTLV, b''),
+    ('weight-5', SEGMENT_LIST_SUBTLV, segment_list(subsubtlv(9, bytes(5)))),
+    ('segment-a-5', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(1, bytes(5)))),
+    ('segment-b-17', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(13, bytes(17)))),
+    ('segment-b-26-without-b-flag', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(13, bytes(26)))),
+    ('segment-c-7', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(3, bytes(7)))),
+    ('segment-d-19', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(4, bytes(19)))),
+    ('segment-e-9', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(5, bytes(9)))),
+    ('segment-f-13', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(6, bytes(13)))),
+    ('segment-g-41', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(7, bytes(41)))),
+    ('segment-h-35', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(8, bytes(35)))),
+    ('segment-i-19', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(14, bytes(19)))),
+    ('segment-i-42-without-b-flag', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(14, bytes(42)))),
+    ('segment-j-43', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(15, bytes(43)))),
+    ('segment-k-35', SEGMENT_LIST_SUBTLV, segment_list(WEIGHT, subsubtlv(16, bytes(35)))),
+]
+
+
+@pytest.mark.rfc('rfc9012#13-malformed-subtlv-as-unrecognized')
+@pytest.mark.parametrize(
+    'subtype, value', [case[1:] for case in MALFORMED_SUBTLVS], ids=[c[0] for c in MALFORMED_SUBTLVS]
+)
+def test_an_sr_policy_subtlv_of_the_wrong_length_is_read_as_unrecognised(subtype: int, value: bytes) -> None:
+    wire = attribute(tunnel(SR_POLICY_TUNNEL, subtlv(subtype, value) + preference(100)))
+    attr = decoded(wire)
+    assert f'"unknown-subtlv-{subtype}"' in attr.json(), 'a malformed sub-TLV was given a meaning'
+    assert '"preference": 100' in attr.json(), 'the malformed sub-TLV took the one beside it'
+    assert bytes(attr.pack_attribute(Negotiated.UNSET)) == wire, 'the malformed sub-TLV was not propagated as it came'
+
+
+WELL_FORMED_SUBTLVS = [
+    ('binding-sid-none', BINDING_SID_SUBTLV, bytes(2), '"binding-sid": null'),
+    ('binding-sid-mpls', BINDING_SID_SUBTLV, bytes(2) + pack('!L', 24000 << 12), '"label": 24000'),
+    ('binding-sid-srv6', BINDING_SID_SUBTLV, bytes(2) + bytes(15) + b'\x01', '"sid": "::1"'),
+    ('enlp', ENLP_SUBTLV, bytes([0, 0, 4]), '"enlp": 4'),
+    ('priority', PRIORITY_SUBTLV, bytes([10, 0]), '"priority": 10'),
+    ('srv6-binding-sid', SRV6_BINDING_SID_SUBTLV, bytes(17) + b'\x01', '"srv6-binding-sid": "::1"'),
+    (
+        'segment-a',
+        SEGMENT_LIST_SUBTLV,
+        segment_list(WEIGHT, subsubtlv(1, bytes(2) + pack('!L', 16001 << 12))),
+        '"label": 16001',
+    ),
+    (
+        'segment-b-with-behavior',
+        SEGMENT_LIST_SUBTLV,
+        segment_list(WEIGHT, subsubtlv(13, bytes([SEGMENT_B_FLAG]) + bytes(16) + b'\x01' + bytes(8))),
+        '"type": "B"',
+    ),
+]
+
+
+@pytest.mark.rfc('rfc9012#13-malformed-subtlv-as-unrecognized', polarity='negative')
+@pytest.mark.parametrize(
+    'subtype, value, expected', [case[1:] for case in WELL_FORMED_SUBTLVS], ids=[c[0] for c in WELL_FORMED_SUBTLVS]
+)
+def test_an_sr_policy_subtlv_of_a_length_rfc_9830_gives_is_read(subtype: int, value: bytes, expected: str) -> None:
+    wire = attribute(tunnel(SR_POLICY_TUNNEL, subtlv(subtype, value)))
+    attr = decoded(wire)
+    assert f'"unknown-subtlv-{subtype}"' not in attr.json()
+    assert expected in attr.json()
+    assert bytes(attr.pack_attribute(Negotiated.UNSET)) == wire, 'a well formed sub-TLV did not re-encode as it came'

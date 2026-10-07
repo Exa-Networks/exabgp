@@ -1,0 +1,31 @@
+# RFC 4798 - Connecting IPv6 Islands over IPv4 MPLS Using IPv6 Provider Edge Routers (6PE)
+# https://www.rfc-editor.org/rfc/rfc4798
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc4798.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Almost all of RFC 4798 binds a 6PE router: it forwards, imposes labels and builds
+# LSPs, and exabgp does none of that.  The one sentence recorded is the encoding of the
+# next hop, which binds anything that puts an IPv4 next hop on an IPv6 route.
+
+rfc = "rfc4798"
+title = "Connecting IPv6 Islands over IPv4 MPLS Using IPv6 Provider Edge Routers (6PE)"
+url = "https://www.rfc-editor.org/rfc/rfc4798"
+
+[[requirement]]
+id = "rfc4798#2-ipv4-mapped-next-hop"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The IPv4 address of the egress 6PE
+router MUST be encoded as an IPv4-mapped IPv6 address in the BGP
+Next Hop field.
+"""
+note = """
+`MPNLRICollection._encode_nexthop` sends the IPv4 next hop of an IPv6 route as
+::ffff:a.b.c.d, behind a zero RD for the VPN SAFI as RFC 4659 3.2.1.2 asks, for every IPv6
+family which has no four octet next hop of its own.  It used to send the four octets bare.
+The negative side is an IPv6 next hop, which goes out as it is.
+"""

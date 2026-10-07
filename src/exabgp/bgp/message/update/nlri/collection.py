@@ -24,9 +24,12 @@ if TYPE_CHECKING:
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.update.nlri.nlri import _UNPARSED, NLRI
 from exabgp.logger import lazymsg, log
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, SAFI_WITH_EXTENDED_NEXT_HOP
 from exabgp.protocol.ip import IP
 from exabgp.util.types import Buffer
+
+# RFC 4291 2.5.5.2: an IPv4-mapped IPv6 address is these twelve octets and the IPv4 address
+IPV4_MAPPED_PREFIX = bytes(10) + b'\xff\xff'
 
 # How much of an NLRI we can not encode goes in the log, so that a route which is dropped can
 # be identified and decoded, without a four kilobyte FlowSpec NLRI filling the log on every
@@ -331,8 +334,8 @@ class MPNLRICollection:
         if family_key[1] in (SAFI.flow_ip, SAFI.flow_vpn) and not self._redirects_to_next_hop():
             return b''
 
-        _, rd_size = Family.size.get(family_key, (0, 0))
-        nh_rd = bytes([0]) * rd_size if rd_size else b''
+        lengths, rd_size = Family.size.get(family_key, ((), 0))
+        nh_rd = bytes(rd_size)
 
         try:
             nh_packed = nlri_nexthop.pack_ip()
@@ -343,7 +346,34 @@ class MPNLRICollection:
         # Only apply LLNH logic for IPv6 families
         if family_key[0] != AFI.ipv6:
             return nh_rd + nh_packed
-        return nh_rd + self._ipv6_next_hop(nlri_nexthop, nh_packed, negotiated)
+        if nlri_nexthop.afi == AFI.ipv4:
+            # RFC 4798 2 and RFC 4659 3.2.1.2: an IPv6 family without a four octet next hop
+            # of its own carries an IPv4 one as an IPv4-mapped IPv6 address. Four bare
+            # octets is a length RFC 2545 3 does not give an IPv6 next hop.
+            if rd_size + len(nh_packed) in lengths:
+                return nh_rd + nh_packed
+            return nh_rd + IPV4_MAPPED_PREFIX + bytes(nh_packed)
+        next_hop = self._ipv6_next_hop(nlri_nexthop, nh_packed, negotiated)
+        if rd_size and len(next_hop) == 2 * len(nh_packed):
+            # RFC 4659 3.2.1.1: the link-local address is "another VPN-IPv6 address" with
+            # its own zero RD, 48 octets in all, not a second address behind one RD
+            return nh_rd + next_hop[: len(nh_packed)] + nh_rd + next_hop[len(nh_packed) :]
+        return nh_rd + next_hop
+
+    @staticmethod
+    def _lacks_extended_next_hop(nlri_nexthop: IP, family_key: tuple[AFI, SAFI], negotiated: 'Negotiated') -> bool:
+        """An IPv4 route with an IPv6 next hop the peer did not agree to receive for this family.
+
+        RFC 8950 4: "A BGP speaker MUST only advertise the IPv4 or VPN-IPv4 NLRI with an IPv6
+        next hop to a BGP peer if the BGP speaker has first ascertained via the BGP Capability
+        Advertisement that the BGP peer supports the Extended Next Hop Encoding capability for
+        the relevant AFI/SAFI pair." The configuration refuses such a route; this catches what
+        reaches the encoder another way, an API announcement or a capability the peer withheld.
+        """
+        afi, safi = family_key
+        if afi != AFI.ipv4 or nlri_nexthop.afi != AFI.ipv6 or safi not in SAFI_WITH_EXTENDED_NEXT_HOP:
+            return False
+        return (afi, safi, AFI.ipv6) not in negotiated.nexthop
 
     @staticmethod
     def _ipv6_next_hop(nlri_nexthop: IP, packed: Buffer, negotiated: 'Negotiated') -> bytes:
@@ -498,6 +528,18 @@ class MPNLRICollection:
             nlri = routed.nlri
             nlri_nexthop = routed.nexthop
             if nlri.family().afi_safi() != family_key:
+                continue
+
+            if self._lacks_extended_next_hop(nlri_nexthop, family_key, negotiated):
+                log.warning(
+                    lazymsg(
+                        'update.route.refused nlri={nlri} nexthop={nexthop} reason="{reason}"',
+                        nlri=nlri,
+                        nexthop=nlri_nexthop,
+                        reason='the peer did not negotiate an IPv6 next hop for this family (RFC 8950)',
+                    ),
+                    'parser',
+                )
                 continue
 
             # Encode nexthop with LLNH support

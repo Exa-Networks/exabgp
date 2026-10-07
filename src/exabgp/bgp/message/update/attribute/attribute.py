@@ -235,6 +235,16 @@ class Attribute:
         """
         raise NotImplementedError(f'{self.__class__.__name__} must implement json()')
 
+    def index_detail(self) -> str:
+        """What AttributeCollection.index() needs beyond str() to tell two values apart.
+
+        The index of a set of attributes is built from the text of each one, which is exact
+        for every attribute whose str() renders its whole value, and those answer nothing
+        here.  One whose text is a summary answers its value, or two different values would
+        share an index and the RIB would take a changed route for the one already sent.
+        """
+        return ''
+
     def _comparable(self) -> tuple[int, int, object]:
         """What makes two attributes the same attribute carrying the same value.
 

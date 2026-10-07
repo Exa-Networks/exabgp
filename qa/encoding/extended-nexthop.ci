@@ -1,4 +1,7 @@
 option:file:extended-nexthop.conf
+# The IPv6 route with the IPv4 next hop 170.170.170.170 was re-recorded when the encoder began
+# sending that next hop IPv4-mapped, 16 octets, as RFC 4798 2 asks: it went out as four bare
+# octets, a length RFC 2545 3 does not give an IPv6 next hop.
 # The MP_REACH_NLRI captures in this file were re-recorded when the encoder stopped emitting
 # that attribute last.  RFC 7606 5.1: "The MP_REACH_NLRI or MP_UNREACH_NLRI attribute (if
 # present) SHALL be encoded as the very first path attribute in an UPDATE message."  Only the
@@ -8,8 +11,8 @@ option:file:extended-nexthop.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0042:02:0000002B800E1A000101100BADCAFE0BADCAFE0BADCAFE0BADCAFE0020999999994001010040020040050400000064
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":12345,"peer":12345},"router-id":"127.0.0.2","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv4 unicast":{"bad:cafe:bad:cafe:bad:cafe:bad:cafe":[{"nlri":"153.153.153.153/32"}]}}}}}}
 1:cmd:announce ipv6 unicast dead:beef:dead:beef:dead:beef:dead:beef/128 next-hop 170.170.170.170 origin igp local-preference 100
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0042:02:0000002B800E1A00020104AAAAAAAA0080DEADBEEFDEADBEEFDEADBEEFDEADBEEF4001010040020040050400000064
-1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":12345,"peer":12345},"router-id":"127.0.0.2","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv6 unicast":{"170.170.170.170":[{"nlri":"dead:beef:dead:beef:dead:beef:dead:beef/128"}]}}}}}}
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:004E:02:00000037800E260002011000000000000000000000FFFFAAAAAAAA0080DEADBEEFDEADBEEFDEADBEEFDEADBEEF4001010040020040050400000064
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":12345,"peer":12345},"router-id":"127.0.0.2","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100},"announce":{"ipv6 unicast":{"::ffff:170.170.170.170":[{"nlri":"dead:beef:dead:beef:dead:beef:dead:beef/128"}]}}}}}}
 1:cmd:announce eor ipv4 unicast
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0017:02:00000000
 1:cmd:announce eor ipv4 mpls-vpn

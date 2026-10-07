@@ -206,7 +206,7 @@ from struct import pack, unpack
 from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
+from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import MalformedSubTLV, SubTLV
 from exabgp.util.types import Buffer
 
 # SR Policy Segment Flags, the one octet every Segment sub-TLV starts with.
@@ -296,6 +296,43 @@ class SRv6EndpointBehavior:
         return cls(endpoint_behavior=eb, lb_length=lb, ln_length=ln, fun_length=fun, arg_length=arg)
 
 
+# The lengths RFC 9830 2.4.4.1 (Weight), 2.4.4.2.1 (type A), 2.4.4.2.2 (type B) and RFC 9831
+# (types C to K) give each value, keyed by sub-sub-TLV type.  A value of any other length is
+# malformed, and RFC 9012 13 treats the Segment List holding it as an unrecognized sub-TLV.
+# Each decoder used to answer a default instead, label 0, SID ::, weight 1, which the API
+# reported as though the peer had sent it.
+_VALUE_LENGTHS: dict[int, frozenset[int]] = {
+    9: frozenset((6,)),  # Weight
+    1: frozenset((6,)),  # A
+    13: frozenset((18, 26)),  # B
+    3: frozenset((6, 10)),  # C
+    4: frozenset((18, 22)),  # D
+    5: frozenset((10, 14)),  # E
+    6: frozenset((10, 14)),  # F
+    7: frozenset((42, 46)),  # G
+    8: frozenset((34, 38)),  # H
+    14: frozenset((18, 34, 42)),  # I
+    15: frozenset((42, 58, 66)),  # J
+    16: frozenset((34, 50, 58)),  # K
+}
+
+# The one length which carries the SRv6 Endpoint Behavior and SID Structure.  The B-Flag
+# says it is there, so a length the flag disagrees with is malformed too: read the other
+# way, eight octets would be lost on re-encode, or read from past the SID.
+_LENGTH_WITH_ENDPOINT_BEHAVIOR: dict[int, int] = {13: 26, 14: 42, 15: 66, 16: 58}
+
+
+def _check_length(subtype: int, data: Buffer) -> None:
+    """Refuse a sub-sub-TLV value whose length its type does not allow."""
+    assert subtype in _VALUE_LENGTHS, 'every decoded sub-sub-TLV type has its lengths listed'
+    if len(data) not in _VALUE_LENGTHS[subtype]:
+        allowed = ' or '.join(str(length) for length in sorted(_VALUE_LENGTHS[subtype]))
+        raise MalformedSubTLV(f'Segment List sub-sub-TLV {subtype} is {len(data)} bytes, it must be {allowed}')
+    with_behavior = _LENGTH_WITH_ENDPOINT_BEHAVIOR.get(subtype)
+    if with_behavior is not None and (len(data) == with_behavior) != bool(data[0] & _SEG_B_FLAG_B):
+        raise MalformedSubTLV(f'Segment List sub-sub-TLV {subtype} length {len(data)} disagrees with its B-Flag')
+
+
 class WeightSubSubTLV:
     """Segment List Weight sub-sub-TLV (type 9).
 
@@ -320,8 +357,7 @@ class WeightSubSubTLV:
 
     @classmethod
     def unpack(cls, data: Buffer) -> WeightSubSubTLV:
-        if len(data) < cls.VALUE_SIZE:
-            return cls(1)
+        _check_length(cls.SUBTYPE, data)
         flags, _, weight = unpack('!BBI', data[:6])
         return cls(weight=weight, flags=flags)
 
@@ -368,8 +404,7 @@ class SegmentTypeA:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeA:
-        if len(data) < cls.VALUE_SIZE:
-            return cls(0)
+        _check_length(cls.SUBTYPE, data)
         flags = data[0]
         label_entry: int = unpack('!L', data[2:6])[0]
         label = label_entry >> 12
@@ -426,8 +461,7 @@ class SegmentTypeB:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeB:
-        if len(data) < cls.VALUE_BASE_SIZE:
-            return cls('::')
+        _check_length(cls.SUBTYPE, data)
         flags = data[0]
         sid = socket.inet_ntop(socket.AF_INET6, bytes(data[2:18]))
         endpoint_behavior: SRv6EndpointBehavior | None = None
@@ -524,8 +558,7 @@ class SegmentTypeC:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeC:
-        if len(data) < cls.VALUE_BASE_SIZE:
-            return cls('0.0.0.0')
+        _check_length(cls.SUBTYPE, data)
 
         flags = data[0]
         algorithm = data[1]
@@ -636,8 +669,7 @@ class SegmentTypeD:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeD:
-        if len(data) < cls.VALUE_BASE_SIZE:
-            return cls('::', 0)
+        _check_length(cls.SUBTYPE, data)
 
         flags = data[0]
         algorithm = data[1]
@@ -750,8 +782,7 @@ class SegmentTypeE:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeE:
-        if len(data) < cls.VALUE_BASE_SIZE:
-            return cls(0, '0.0.0.0')
+        _check_length(cls.SUBTYPE, data)
 
         flags = data[0]
         # data[1] is reserved
@@ -866,8 +897,7 @@ class SegmentTypeF:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeF:
-        if len(data) < cls.VALUE_BASE_SIZE:
-            return cls('0.0.0.0', '0.0.0.0')
+        _check_length(cls.SUBTYPE, data)
 
         flags = data[0]
         # data[1] is reserved
@@ -996,8 +1026,7 @@ class SegmentTypeG:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeG:
-        if len(data) < cls.VALUE_BASE_SIZE:
-            return cls(0, '::', 0, '::')
+        _check_length(cls.SUBTYPE, data)
 
         flags = data[0]
         # data[1] is reserved
@@ -1117,8 +1146,7 @@ class SegmentTypeH:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeH:
-        if len(data) < cls.VALUE_BASE_SIZE:
-            return cls('::', '::')
+        _check_length(cls.SUBTYPE, data)
 
         flags = data[0]
         # data[1] is reserved
@@ -1231,8 +1259,7 @@ class SegmentTypeI:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeI:
-        if len(data) < cls.VALUE_BASE_SIZE:
-            return cls('::')
+        _check_length(cls.SUBTYPE, data)
 
         flags = data[0]
         algorithm = data[1]
@@ -1360,8 +1387,7 @@ class SegmentTypeJ:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeJ:
-        if len(data) < cls.VALUE_BASE_SIZE:
-            return cls(0, '::', 0, '::')
+        _check_length(cls.SUBTYPE, data)
 
         flags = data[0]
         algorithm = data[1]
@@ -1479,8 +1505,7 @@ class SegmentTypeK:
 
     @classmethod
     def unpack(cls, data: Buffer) -> SegmentTypeK:
-        if len(data) < cls.VALUE_BASE_SIZE:
-            return cls('::', '::')
+        _check_length(cls.SUBTYPE, data)
 
         flags = data[0]
         algorithm = data[1]
@@ -1656,7 +1681,7 @@ class SegmentListSubTLV(SubTLV):
     def unpack(cls, data: Buffer) -> SegmentListSubTLV:
         """Unpack per RFC 9830: skip Reserved(1) byte then parse sub-sub-TLVs."""
         if len(data) < 1:
-            return cls(weight=WeightSubSubTLV(1), segments=[])
+            raise MalformedSubTLV('SR Policy segment list sub-TLV has no reserved octet')
         # Skip Reserved byte
         weight, segments = _unpack_segment_subsubtlvs(data[1:])
         if weight is None:

@@ -44,6 +44,11 @@ class Origin(ExtendedCommunity):
             return False
         return self.COMMUNITY_SUBTYPE == other.COMMUNITY_SUBTYPE and ExtendedCommunity.__eq__(self, other)
 
+    # Python sets __hash__ to None in a class which defines __eq__ without it, which made
+    # every route-origin community unhashable. Equal communities have equal bytes.
+    def __hash__(self) -> int:
+        return hash(bytes(self._packed))
+
     # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
     # not a call to __eq__, so NotImplemented is answered the way Python answers it.
     def __ne__(self, other: object) -> bool:

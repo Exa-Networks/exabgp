@@ -904,7 +904,9 @@ class TestGenericSrv6:
         data = b'\x01\x02\x03\x04'
         generic = GenericSrv6ServiceSubTlv(data, code=99)
         packed = generic.pack_tlv()
-        assert packed == data
+        # the type and the two octet length in front of the value: this pinned the value
+        # alone, which re-encoded an unknown TLV three octets short and misframed
+        assert packed == bytes([99, 0, len(data)]) + data
 
     def test_generic_service_subtlv_json(self) -> None:
         """Test JSON serialization of GenericSrv6ServiceSubTlv."""
@@ -931,7 +933,9 @@ class TestGenericSrv6:
         data = b'\x0a\x0b\x0c\x0d'
         generic = GenericSrv6ServiceDataSubSubTlv(data, code=88)
         packed = generic.pack_tlv()
-        assert packed == data
+        # the type and the two octet length in front of the value: this pinned the value
+        # alone, which re-encoded an unknown TLV three octets short and misframed
+        assert packed == bytes([88, 0, len(data)]) + data
 
 
 class TestSrv6Registration:

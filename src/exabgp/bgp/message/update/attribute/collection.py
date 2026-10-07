@@ -523,7 +523,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         # Note: Using hash instead of string would save memory but risks collisions
         # since index() is used for equality comparisons. See lab/benchmark_attr_index.py
         if not self._idx:
-            idx = ''.join(self._generate_text())
+            idx = ''.join(self._generate_text()) + ''.join(self[code].index_detail() for code in sorted(self.keys()))
             nexthop = str(self.get(Attribute.CODE.NEXT_HOP, 'missing'))
             text = '{} next-hop {}'.format(idx, nexthop) if nexthop else idx
             for code in self.INTERNAL_IDENTITY:
@@ -676,6 +676,10 @@ class AttributeCollection(MutableMapping[int, Attribute]):
     # itself bounded by the negotiated message size checked upstream in Update.unpack_message.
     def parse(self, data: Buffer, negotiated: Negotiated) -> AttributeCollection:
         dropped = self._dropped_on_receipt(negotiated)
+        # RFC 7606 3 (g) keeps the first occurrence on the wire, decodable or not. A malformed
+        # first copy is stored as Discard or TreatAsWithdraw under their own codes, so asking
+        # the collection whether it holds the code let a second copy in as the first.
+        seen: set[int] = set()
         while data:
             try:
                 # We do not care if the attribute are transitive or not as we do not redistribute
@@ -732,7 +736,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             # Get the attribute class to check its behavior flags
             kls = Attribute.klass_by_id(aid)
 
-            if aid in self:
+            if aid in seen or aid in self:
                 if kls and kls.NO_DUPLICATE:
                     raise Notify(3, 1, 'multiple attribute for {}'.format(Attribute.CODE.name(aid)))
 
@@ -746,6 +750,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                     'parser',
                 )
                 continue
+            seen.add(aid)
 
             # handle the attribute if we know it
             if Attribute.registered(aid, flag):

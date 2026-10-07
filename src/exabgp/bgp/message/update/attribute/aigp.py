@@ -42,9 +42,11 @@ from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard
 
 class AIGPBase(Attribute):
     ID: ClassVar = Attribute.CODE.AIGP
-    # RFC 7311: the accumulated IGP metric decides best path, so a route whose metric we
-    # could not read must not be kept with the metric quietly missing
-    TREAT_AS_WITHDRAW: ClassVar[bool] = True
+    # RFC 7311 3.2: a malformed AIGP attribute "MUST be treated exactly as if it were an
+    # unrecognized non-transitive attribute", which the RFC itself calls attribute discard.
+    # This said treat-as-withdraw, which removed a route over the metric it carried.  The
+    # same flag answers an AIGP sent with the transitive bit set, which 3.2 calls malformed.
+    DISCARD: ClassVar[bool] = True
     FLAG: ClassVar = Attribute.Flag.OPTIONAL
     CACHING: ClassVar[bool] = True
     TYPES: ClassVar[list[int]] = [1]
@@ -52,17 +54,20 @@ class AIGPBase(Attribute):
     # TLV header for IGP metric: type=1, length=11 (3 header + 8 value)
     _TLV_HEADER: ClassVar[bytes] = b'\x01\x00\x0b'
     _TLV_LENGTH: ClassVar[int] = 11
+    _TLV_TYPE_AIGP: ClassVar[int] = 1
 
-    def __init__(self, packed: Buffer) -> None:
-        """Initialize AIGP from packed TLV bytes.
+    def __init__(self, packed: Buffer, metric_offset: int = 0) -> None:
+        """Initialize AIGP from the packed TLVs of the attribute.
 
         NO validation - trusted internal use only.
-        Use from_packet() for wire data or make_aigp() for semantic construction.
+        Use from_packet() for wire data or from_int() for semantic construction.
 
         Args:
-            packed: Raw TLV bytes (11 bytes: 1 type + 2 length + 8 value)
+            packed: every TLV of the attribute, as they are passed along
+            metric_offset: where the first AIGP TLV starts in packed
         """
         self._packed: Buffer = packed
+        self._metric_offset = metric_offset
 
     @classmethod
     def from_packet(cls, data: Buffer) -> Self:
@@ -77,11 +82,14 @@ class AIGPBase(Attribute):
         Raises:
             ValueError: If data is malformed
         """
-        # RFC 7311 section 3: the attribute is a sequence of TLVs. Every TLV must be
-        # walked, otherwise trailing bytes are silently dropped and a malformed
-        # attribute is re-advertised as if it had been well formed.
-        metric = None
+        # RFC 7311 section 3: the attribute is a sequence of TLVs, and only the first AIGP
+        # TLV is used, but "Any other AIGP TLVs in the AIGP attribute MUST be passed along
+        # unchanged".  So every TLV is walked, to refuse a broken framing, and every one is
+        # kept: the attribute used to be rebuilt from the first AIGP TLV alone.  3.2 says a
+        # repeated or unknown TLV does not make the attribute malformed.
+        metric_offset = None
         offset = 0
+        # bounded: every TLV is at least three octets, and offset only grows
         while offset < len(data):
             if len(data) - offset < 3:
                 raise ValueError(f'AIGP TLV header truncated at offset {offset}')
@@ -91,18 +99,16 @@ class AIGPBase(Attribute):
                 raise ValueError(f'AIGP TLV length {tlv_length} is smaller than its own header')
             if len(data) - offset < tlv_length:
                 raise ValueError(f'AIGP TLV truncated: {tlv_length} bytes announced, {len(data) - offset} available')
-            if tlv_type == 1:
+            if tlv_type == cls._TLV_TYPE_AIGP and metric_offset is None:
                 if tlv_length != cls._TLV_LENGTH:
                     raise ValueError(f'Invalid AIGP TLV length: {tlv_length}')
-                if metric is None:
-                    metric = data[offset : offset + tlv_length]
+                metric_offset = offset
             offset += tlv_length
 
-        # unknown TLV types are ignored per RFC 7311, but the AIGP TLV itself is required
-        if metric is None:
+        if metric_offset is None:
             raise ValueError('AIGP attribute has no AIGP TLV')
 
-        return cls(metric)
+        return cls(data, metric_offset)
 
     @classmethod
     def from_int(cls, value: int) -> Self:
@@ -119,7 +125,8 @@ class AIGPBase(Attribute):
     @property
     def aigp(self) -> int:
         """Get AIGP metric value by unpacking from bytes."""
-        value: int = unpack('!Q', self._packed[3:11])[0]
+        start = self._metric_offset + 3
+        value: int = unpack('!Q', self._packed[start : start + 8])[0]
         return value
 
     def __eq__(self, other: object) -> bool:

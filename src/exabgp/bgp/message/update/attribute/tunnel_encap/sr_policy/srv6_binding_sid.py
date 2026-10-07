@@ -24,7 +24,7 @@ import socket
 from struct import pack
 from typing import ClassVar
 
-from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV
+from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import MalformedSubTLV, SubTLV
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.segment_list import SRv6EndpointBehavior
 from exabgp.util.types import Buffer
 
@@ -91,17 +91,18 @@ class SRv6BindingSIDSubTLV(SubTLV):
 
     @classmethod
     def unpack(cls, data: Buffer) -> SRv6BindingSIDSubTLV:
-        if len(data) < _SRV6_BSID_VALUE_BASE_SIZE:
-            return cls('::')
+        # RFC 9830 2.4.3: "The value MUST be 26 when the SRv6 Endpoint Behavior and SID
+        # Structure is present; else, it MUST be 18", and the B-Flag says which.  A short
+        # value used to read as SID ::, and a length the flag disagreed with lost octets.
+        with_behavior = _SRV6_BSID_VALUE_BASE_SIZE + SRv6EndpointBehavior.SIZE
+        expected = with_behavior if data and data[0] & _SRV6_BSID_FLAG_B else _SRV6_BSID_VALUE_BASE_SIZE
+        if len(data) != expected:
+            raise MalformedSubTLV(f'SR Policy SRv6 binding SID sub-TLV is {len(data)} bytes, it must be {expected}')
         flags = data[0]
         sid = socket.inet_ntop(socket.AF_INET6, bytes(data[2:18]))
         endpoint_behavior: SRv6EndpointBehavior | None = None
-
-        # RFC 9830: If B-Flag is set, Endpoint Behavior structure follows directly (no Type/Length)
         if flags & _SRV6_BSID_FLAG_B:
-            remainder = data[18:]
-            if len(remainder) >= SRv6EndpointBehavior.SIZE:
-                endpoint_behavior = SRv6EndpointBehavior.unpack(remainder)
+            endpoint_behavior = SRv6EndpointBehavior.unpack(data[18:])
 
         return cls(sid=sid, flags=flags, endpoint_behavior=endpoint_behavior)
 

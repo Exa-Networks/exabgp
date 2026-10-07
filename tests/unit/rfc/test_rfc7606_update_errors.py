@@ -286,6 +286,23 @@ def test_an_attribute_sent_once_is_the_one_we_report() -> None:
     assert str(parsed.attributes[CODE.ORIGIN]) == 'incomplete'
 
 
+@pytest.mark.rfc('rfc7606#3g-duplicate-attribute-keeps-the-first')
+def test_a_copy_after_a_malformed_first_occurrence_is_discarded() -> None:
+    """The first occurrence is the first on the wire, whether or not it could be decoded.
+
+    A malformed first copy is stored as a Discard or TreatAsWithdraw under their own codes,
+    so the duplicate check, which asked whether the attribute code was in the collection,
+    let the second copy in as though it were the first.
+    """
+    well_formed = attribute(WELL_KNOWN_TRANSITIVE, CODE.ATOMIC_AGGREGATE, b'')
+    parsed = parse(update(MANDATORY + MALFORMED_ATOMIC + well_formed), session())
+
+    assert announced(parsed) == ['10.0.0.0/24'], 'attribute discard escalated to a withdrawal'
+    assert CODE.ATOMIC_AGGREGATE not in parsed.attributes, (
+        'the second ATOMIC_AGGREGATE was kept; RFC 7606 3 (g) discards every occurrence but the first'
+    )
+
+
 # ------------------------------------------------------------------ 3 (h)
 
 
