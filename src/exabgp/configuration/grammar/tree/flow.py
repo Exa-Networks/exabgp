@@ -53,6 +53,7 @@ from exabgp.configuration.grammar.tree.static import (
     ROUTE_VALUES,
     ROUTES,
     action,
+    add_attribute,
     value_fields,
 )
 from exabgp.configuration.grammar.types import flow as types
@@ -233,7 +234,7 @@ class FlowRoute:
                 self.nexthop = ip
             self.attributes.add(attribute)
         elif spec.target == Target.ATTRIBUTE:
-            self.attributes.add(value)
+            add_attribute(self.attributes, value)
 
     def route(self) -> Route:
         nlri = self.nlri
@@ -526,7 +527,7 @@ class AnnounceFlowLine(RouteStatement):
             if attribute:
                 attributes.add(attribute)
         elif spec.target == Target.ATTRIBUTE:
-            attributes.add(value)
+            add_attribute(attributes, value)
 
     def printed(self, route: Route) -> list[WordOrSyntax]:
         return announce_flow_words(route)

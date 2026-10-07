@@ -12,7 +12,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.configuration.grammar import shape
-from exabgp.configuration.grammar.types.word import Number, Word
+from exabgp.configuration.grammar.types.word import Number, Word, decimal
 from exabgp.protocol.ip import IP, IPRange
 
 PORT_MAX = 65535
@@ -40,7 +40,7 @@ def _ip_range(word: str) -> IPRange:
     try:
         if '/' in word:
             address, mask = word.split('/', 1)
-            return IPRange.make_range(address, int(mask))
+            return IPRange.make_range(address, decimal(mask))
         return IPRange.make_range(word, IPV6_MASK if ':' in word else IPV4_MASK)
     except (OSError, IndexError, ValueError):
         raise ValueError(f"'{word}' is not a valid IP address or range") from None
@@ -66,7 +66,7 @@ def _router_id(word: str) -> RouterID:
 
 def _hold_time(word: str) -> HoldTime:
     try:
-        hold_time = HoldTime(int(word))
+        hold_time = HoldTime(decimal(word))
     except ValueError:
         raise ValueError(f"'{word}' is not a valid hold-time") from None
     if hold_time < HOLD_TIME_MIN_NONZERO and hold_time != 0:
@@ -78,7 +78,7 @@ def _hold_time(word: str) -> HoldTime:
 
 def _port(word: str) -> int:
     try:
-        port = int(word)
+        port = decimal(word)
     except ValueError:
         raise ValueError(f"'{word}' is not a valid port") from None
     if not 1 <= port <= PORT_MAX:
@@ -88,7 +88,7 @@ def _port(word: str) -> int:
 
 def _ttl(word: str) -> int | None:
     try:
-        ttl = int(word)
+        ttl = decimal(word)
     except ValueError:
         if word in ('false', 'disable', 'disabled'):
             return None

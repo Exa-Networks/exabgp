@@ -31,6 +31,7 @@ from exabgp.configuration.grammar.section import Collector, Pending, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
+from exabgp.configuration.grammar.types.word import decimal
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.ip import isipv4
 
@@ -55,7 +56,7 @@ def _safi(word: str) -> SAFI:
 
 def _bounded(name: str, maximum: int) -> Callable[[str], int]:
     def convert(word: str) -> int:
-        number = int(word)
+        number = decimal(word)
         if number > maximum:
             raise ValueError(f'invalid operational value for {name}')
         return number

@@ -201,10 +201,17 @@ class Session:
         if not self.auto_discovery and afi == self.local_address.afi:
             return self.local_address
 
-        # attempting to not barf for next-hop self when the peer is IPv6
-        if afi == AFI.ipv4 and self.router_id is not None:
+        # attempting to not barf for next-hop self when the peer is IPv6. Only then: on an
+        # IPv4 session with local-address auto the router-id is no address of the session,
+        # and the route would go out with a next-hop nobody answers on.
+        if afi == AFI.ipv4 and self.router_id is not None and self.peer_address.afi == AFI.ipv6:
             return self.router_id
 
+        if self.auto_discovery and afi == self.peer_address.afi:
+            raise TypeError(
+                'use of "next-hop self": the local-address is auto, so the address of the session is not '
+                'known when the route is made; set local-address, or give the next-hop',
+            )
         local_afi = self.local_address.afi if not self.auto_discovery else 'unknown'
         raise TypeError(
             f'use of "next-hop self": the route ({afi}) does not have the same family as the BGP tcp session ({local_afi})',

@@ -15,11 +15,56 @@ from __future__ import annotations
 from typing import Any, Callable, Generic, TypeVar, cast
 
 from exabgp.configuration.grammar.error import ConfigError
-from exabgp.configuration.grammar.shape import INT64_MAX, INT64_MIN, TEXT, Shape, boolean, enumeration, integer_ranges
+from exabgp.configuration.grammar.shape import INT64_MAX, TEXT, Shape, boolean, enumeration, integer_ranges
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
 
 T = TypeVar('T')
+
+# A number of the configuration is ASCII digits and nothing else. int() also reads a sign,
+# `_` between digits and the digits of every script: `1_000`, `+5` and `٣` were numbers.
+DECIMAL_DIGITS = frozenset('0123456789')
+HEXADECIMAL_DIGITS = frozenset('0123456789abcdefABCDEF')
+
+
+def is_decimal(word: str) -> bool:
+    """Whether the word is a number written with the ASCII digits 0 to 9 alone."""
+    return bool(word) and all(character in DECIMAL_DIGITS for character in word)
+
+
+def decimal(word: str) -> int:
+    """The number the word writes in ASCII digits; ValueError for any other word."""
+    if not is_decimal(word):
+        raise ValueError(f"'{word}' is not a number, it is written with the digits 0 to 9")
+    return int(word)
+
+
+def is_hexadecimal(word: str) -> bool:
+    """Whether the word is 0x followed by ASCII hexadecimal digits alone."""
+    return word[:2].lower() == '0x' and len(word) > 2 and all(character in HEXADECIMAL_DIGITS for character in word[2:])
+
+
+def hexadecimal(word: str) -> int:
+    """The number the word writes as 0x and ASCII hexadecimal digits; ValueError for any other word."""
+    if not is_hexadecimal(word):
+        raise ValueError(f"'{word}' is not a hexadecimal number, it is 0x and the digits 0 to 9, a to f")
+    return int(word[2:], 16)
+
+
+def lenient_number(word: str) -> bool:
+    """Whether int() reads the word as a number which is not written in ASCII digits: `+5`, `1_0`."""
+    if is_decimal(word):
+        return False
+    try:
+        int(word)
+    except ValueError:
+        return False
+    return True
+
+
+def decimal_or_hexadecimal(word: str) -> int:
+    """The number a word writes in ASCII decimal, or in hexadecimal after 0x."""
+    return hexadecimal(word) if word[:2].lower() == '0x' else decimal(word)
 
 
 class Word(Type[T], Generic[T]):
@@ -104,10 +149,9 @@ class Number(Word[T], Generic[T]):
         )
 
     def _number(self, word: str) -> T:
-        try:
-            number = int(word)
-        except ValueError:
-            raise ValueError(f"'{word}' is not a valid {self.name}") from None
+        if not is_decimal(word):
+            raise ValueError(f"'{word}' is not a valid {self.name}")
+        number = int(word)
         if not any(low <= number <= high for low, high in self.ranges):
             raise ValueError(f'{self.name} {number} is invalid, it is {self._hint}')
         value: Any = number if self._make is None else self._make(number)
@@ -162,9 +206,9 @@ def choice(name: str, choices: list[str], lower: bool = True) -> Word[str]:
 
 
 def integer(name: str, low: int | None = None, high: int | None = None) -> Number[int]:
-    """A plain number; with no bounds any integer, a negative one included."""
+    """A plain number; with no bounds any which is not negative: a number has no sign."""
     if low is None or high is None:
-        return Number(name, ((INT64_MIN, INT64_MAX),), hint='<number>', examples=['0', '1'])
+        return Number(name, ((0, INT64_MAX),), hint='<number>', examples=['0', '1'])
     return Number(name, ((low, high),))
 
 

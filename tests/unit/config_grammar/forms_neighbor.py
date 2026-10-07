@@ -76,7 +76,13 @@ NEIGHBOR_FORMS: list[tuple[tuple[str, ...], str, bool]] = [
     ((), 'hold-time', False),
     ((), 'rate-limit 10', True),
     ((), 'rate-limit 0', True),
-    ((), 'rate-limit -5', True),
+    ((), 'rate-limit -5', False),  # a number has no sign
+    # ASCII digits only: int() also read a sign, `_` between digits and every script's digits
+    ((), 'hold-time +180', False),
+    ((), 'hold-time 1_80', False),
+    ((), 'hold-time \u0661\u0668\u0660', False),
+    ((), 'rate-limit +5', False),
+    ((), 'listen 1_79', False),
     ((), 'rate-limit disable', False),
     ((), 'rate-limit', False),
     ((), 'listen 179', True),

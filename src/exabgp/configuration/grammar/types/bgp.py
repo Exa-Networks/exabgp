@@ -56,7 +56,15 @@ from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Syntax, Type, WordOrSyntax
-from exabgp.configuration.grammar.types.word import Number, Word
+from exabgp.configuration.grammar.types.word import (
+    Number,
+    Word,
+    decimal,
+    decimal_or_hexadecimal,
+    hexadecimal,
+    is_decimal,
+    is_hexadecimal,
+)
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.ip import IP, IPRange, IPSelf, IPv4, IPv6
 
@@ -86,7 +94,7 @@ class Prefix(Type[IPRange]):
         parts = word.split('/')
         ip = parts[0] if len(parts) == 2 else word
         try:
-            mask = int(parts[1]) if len(parts) == 2 else (128 if ':' in ip else 32)
+            mask = decimal(parts[1]) if len(parts) == 2 else (128 if ':' in ip else 32)
         except ValueError:
             mask = 128 if ':' in ip else 32
         try:
@@ -112,7 +120,7 @@ class Prefix(Type[IPRange]):
 
 
 def _path_information(word: str) -> PathInfo:
-    if word.isdigit():
+    if is_decimal(word):
         return PathInfo.make_from_integer(int(word))
     return PathInfo.make_from_ip(word)
 
@@ -177,10 +185,9 @@ class HexAttribute(Type[GenericAttribute]):
             raise ConfigError(where, f"'{data}' is not valid attribute data, it is hexadecimal")
         if len(data) % 2:
             raise ConfigError(where, f"'{data}' has an odd number of hexadecimal digits")
-        try:
-            raw = bytes(int(data[index : index + 2], 16) for index in range(2, len(data), 2))
-        except ValueError:
-            raise ConfigError(where, f"'{data}' is not valid attribute data, it is hexadecimal") from None
+        if data != '0x' and not is_hexadecimal(data):
+            raise ConfigError(where, f"'{data}' is not valid attribute data, it is hexadecimal")
+        raw = bytes.fromhex(data[2:])
         if words.word() != ']':
             raise ConfigError(where, "invalid attribute format - missing closing ']'")
         return GenericAttribute.make_generic(code, flag, raw)
@@ -192,7 +199,7 @@ class HexAttribute(Type[GenericAttribute]):
         if not word.startswith('0x'):
             raise ConfigError(where, f"'{word}' is not a valid {what}, it is hexadecimal")
         try:
-            return int(word, 16)
+            return hexadecimal(word)
         except ValueError:
             raise ConfigError(where, f"'{word}' is not a valid {what}, it is hexadecimal") from None
 
@@ -214,9 +221,8 @@ class HexAttribute(Type[GenericAttribute]):
 
 
 def _aigp(word: str) -> AIGP:
-    base = 16 if word.lower().startswith('0x') else 10
     try:
-        number = int(word, base)
+        number = decimal_or_hexadecimal(word)
     except ValueError:
         raise ValueError(f"'{word}' is not a valid AIGP value") from None
     if not 0 <= number <= AIGP_MAX:
@@ -287,7 +293,7 @@ OTC_VALUE = Word(
 
 def _digits(name: str, make: Any) -> Any:
     def convert(word: str) -> Any:
-        if not word.isdigit():
+        if not is_decimal(word):
             raise ValueError(f"'{word}' is not a valid {name}, it is a non-negative integer")
         return make(int(word))
 
@@ -383,7 +389,7 @@ class AggregatorType(Type[Aggregator]):
 
 
 def _originator_id(word: str) -> OriginatorID:
-    if word.count('.') != IPv4.DOT_COUNT or not all(part.isdigit() for part in word.split('.')):
+    if word.count('.') != IPv4.DOT_COUNT or not all(is_decimal(part) for part in word.split('.')):
         raise ValueError(f"'{word}' is not a valid originator-id, it is an IPv4 address")
     return OriginatorID.from_string(word)
 
@@ -547,7 +553,7 @@ def community(word: str) -> Community:
     separator = word.find(':')
     if separator > 0:
         high, low = word[:separator], word[separator + 1 :]
-        if not high.isdigit() or not low.isdigit():
+        if not is_decimal(high) or not is_decimal(low):
             raise ValueError(f'invalid community {word}')
         if int(high) > COMMUNITY_HALF_MAX:
             raise ValueError(f'invalid community {word} (AS number must be 0-{COMMUNITY_HALF_MAX})')
@@ -555,14 +561,14 @@ def community(word: str) -> Community:
             raise ValueError(f'invalid community {word} (value must be 0-{COMMUNITY_HALF_MAX})')
         return Community(pack('!L', (int(high) << 16) + int(low)))
     if word[:2].lower() == '0x':
-        number = int(word, 16)
+        number = hexadecimal(word)
         if number > Community.MAX:
             raise ValueError(f'invalid community {word} (too large)')
         return Community(pack('!L', number))
     named = _WELL_KNOWN.get(word.lower())
     if named is not None:
         return Community(named)
-    if word.isdigit():
+    if is_decimal(word):
         number = int(word)
         if number > Community.MAX:
             raise ValueError(f'invalid community {word} (too large)')
@@ -585,16 +591,16 @@ _WELL_KNOWN = {
 def large_community(word: str) -> LargeCommunity:
     if word.find(':') > 0:
         high, middle, low = word.split(':')
-        if not any(part.isdigit() for part in (high, middle, low)):
+        if not all(is_decimal(part) for part in (high, middle, low)):
             raise ValueError(f'invalid community {word}')
         fields = [int(part) for part in (high, middle, low)]
         if any(field > LARGE_COMMUNITY_FIELD_MAX for field in fields):
             raise ValueError(f'invalid large community {word}: every field must be 0-{LARGE_COMMUNITY_FIELD_MAX}')
         return LargeCommunity(pack('!LLL', *fields))
     if word[:2].lower() == '0x':
-        number = int(word, 16)
-    elif word.lower().isdigit():
-        number = int(word.lower())
+        number = hexadecimal(word)
+    elif is_decimal(word):
+        number = int(word)
     else:
         raise ValueError(f'invalid large community name {word.lower()}')
     if number > LargeCommunity.MAX:
@@ -717,17 +723,14 @@ TAKES_AN_ADDRESS = ('redirect-to-nexthop-ietf', 'copy-to-nexthop-ietf')
 
 
 def _digit(word: str) -> bool:
-    return (word[:-1] if word.endswith('L') else word).isdigit()
+    return is_decimal(word[:-1] if word.endswith('L') else word)
 
 
 def _integer(word: str) -> int:
     # backward compatibility: a trailing L asks for a four octet AS
-    base = 10
-    if word.startswith('0x'):
-        word, base = word[2:], 16
     if word[-1] == 'L':
-        return int(word[:-1])
-    return int(word, base)
+        return decimal(word[:-1])
+    return decimal_or_hexadecimal(word)
 
 
 def _ipv4(text: str, value: str) -> int:
@@ -736,7 +739,7 @@ def _ipv4(text: str, value: str) -> int:
         raise ValueError(f'invalid extended community: {value}, expecting {IPV4_OCTETS} dotted decimal parts')
     number = 0
     for part in parts:
-        if not part.isascii() or not part.isdigit() or int(part) > _SIZE['B']:
+        if not is_decimal(part) or int(part) > _SIZE['B']:
             raise ValueError(f'invalid extended community: {value}, "{part}" is not a decimal number 0-255')
         number = (number << 8) + int(part)
     return number
@@ -774,9 +777,9 @@ def extended_community(word: str) -> ExtendedCommunity:
         return cast(ExtendedCommunity, TrafficNextHopIPv6IETF.make_traffic_nexthop_ipv6(cast(IPv6, ip), copy))
     if not word.count(':'):
         if word[:2].lower() == '0x':
-            if len(word) % 2:
+            if len(word) % 2 or not is_hexadecimal(word):
                 raise ValueError(f'invalid extended community {word}')
-            raw = bytes(int(word[index : index + 2], 16) for index in range(2, len(word), 2))
+            raw = bytes.fromhex(word[2:])
             return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(raw, None))
         if word == 'redirect-to-nexthop':
             return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(_HEADER[word] + pack('!HL', 0, 0), None))
@@ -877,7 +880,7 @@ class LabelsType(Type[Labels]):
 
     @staticmethod
     def _label(word: str) -> int:
-        label = int(word)
+        label = decimal(word)
         if not 0 <= label <= Labels.MAX:
             raise ValueError(f'MPLS label {label} out of range, it is 0 to {Labels.MAX}')
         return label
@@ -901,7 +904,7 @@ def _route_distinguisher(word: str) -> RouteDistinguisher:
         raise ValueError(f"'{word}' is not a valid route-distinguisher, it is <asn>:<n> or <ipv4>:<n>")
     administrator = word[:separator]
     try:
-        suffix = int(word[separator + 1 :])
+        suffix = decimal(word[separator + 1 :])
     except ValueError:
         raise ValueError(f"'{word}' is not a valid route-distinguisher, the suffix is a number") from None
     if '.' in administrator:
@@ -911,12 +914,12 @@ def _route_distinguisher(word: str) -> RouteDistinguisher:
         if len(octets) != RD_TYPE_1_OCTETS:
             raise ValueError(f"'{word}' is not a valid route-distinguisher, an IPv4 administrator is 4 octets")
         try:
-            raw = bytes([0, 1]) + bytes(int(octet) for octet in octets) + bytes([suffix >> 8, suffix & 0xFF])
+            raw = bytes([0, 1]) + bytes(decimal(octet) for octet in octets) + bytes([suffix >> 8, suffix & 0xFF])
         except ValueError:
             raise ValueError(f"'{word}' is not a valid route-distinguisher (invalid IPv4 address)") from None
         return RouteDistinguisher(raw)
     try:
-        number = int(administrator)
+        number = decimal(administrator)
     except ValueError:
         raise ValueError(f"'{word}' is not a valid route-distinguisher (prefix must be ASN or IPv4)") from None
     if 0 <= number < pow(2, 16) and 0 <= suffix < pow(2, 32):
@@ -983,7 +986,7 @@ class Internal(Type[Any]):
 
 
 def _split(word: str) -> int:
-    if not word or word[0] != '/' or not word[1:].isdigit():
+    if not word or word[0] != '/' or not is_decimal(word[1:]):
         raise ValueError(f"'{word}' is not a valid split value, it is /<length>")
     return int(word[1:])
 
@@ -1035,9 +1038,9 @@ MAX_PREFIX_SID_WORDS = 1024
 
 
 def _srgb_number(word: str) -> int:
-    """The number int() reads, as the legacy parser read it; SRGB_MAX, which is refused, when none."""
+    """The number the word writes in ASCII digits; SRGB_MAX, which is refused, when none."""
     try:
-        return int(word)
+        return decimal(word)
     except ValueError:
         return SRGB_MAX
 
@@ -1063,7 +1066,7 @@ class PrefixSidType(Type[Any]):
         label_sid = words.word()
         ranges = self._ranges(words, where)
         try:
-            index = int(label_sid)
+            index = decimal(label_sid)
         except ValueError:
             raise ConfigError(where, f"'{label_sid}' is not a valid label index") from None
         attributes: list[Any] = [SrLabelIndex.make_labelindex(index)] if index < LABEL_INDEX_MAX else []
@@ -1167,7 +1170,7 @@ class PrefixSidSrv6Type(Type[Any]):
 
     @staticmethod
     def _number(word: str) -> int:
-        return int(word, 16 if word.startswith('0x') else 10)
+        return decimal_or_hexadecimal(word)
 
     def _behavior(self, words: Words) -> tuple[int, list[Any]]:
         from exabgp.bgp.message.update.attribute.sr.srv6.sidstructure import Srv6SidStructure

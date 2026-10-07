@@ -67,14 +67,15 @@ def transfer(source: dict[str, Any], destination: dict[str, Any], depth: int = 0
 
     legacy: a list is extended, a dict merged, and a number, address or string of the
     template REPLACES the neighbor's own: `inherit` wins over what the neighbor says.
-    Anything else present on both sides (an `auto` AS, a tuple) is refused. A template list
-    taken whole is shared, and extended in place by a later template.
+    Anything else present on both sides (an `auto` AS, a tuple) is refused. A list or a dict
+    is copied, never taken whole: a later template extended the template's own list in
+    place, and every other neighbor inheriting it was given what it added.
     """
     if depth > MAX_TRANSFER_DEPTH:
         raise ValueError('templates nest too deep to be merged')
     for key, value in source.items():
         if key not in destination:
-            destination[key] = value
+            destination[key] = _copied(value, depth)
         elif isinstance(value, list):
             destination[key].extend(value)
         elif isinstance(value, dict):
@@ -88,10 +89,48 @@ def transfer(source: dict[str, Any], destination: dict[str, Any], depth: int = 0
             )
 
 
+def _copied(value: Any, depth: int) -> Any:
+    """A list or a dict of a template, as the neighbor's own; anything else as it is."""
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, dict):
+        copied: dict[str, Any] = {}
+        transfer(value, copied, depth + 1)
+        return copied
+    return value
+
+
+# the templates one template may inherit through, one from the other, far past a real one
+MAX_INHERIT_DEPTH = 8
+
+
 def inherit(values: dict[str, Any], templates: dict[str, dict[str, Any]]) -> None:
-    # legacy: a template which does not exist, or is only defined further down, is ignored
+    """Merge the templates a neighbor inherits, and those they inherit, into its values.
+
+    A template inheriting others takes their values first, so its own win over theirs as a
+    template's win over the neighbor's. Each template is merged once, however often it is
+    inherited; one which inherits itself, through any chain, is refused.
+    """
+    merged: set[str] = set()
     for name in values.pop('inherit', []):
-        transfer(templates.get(name, {}), values)
+        _inherit(name, values, templates, (), merged)
+
+
+def _inherit(
+    name: str, values: dict[str, Any], templates: dict[str, dict[str, Any]], chain: tuple[str, ...], merged: set[str]
+) -> None:
+    if name in chain:
+        raise ValueError(f'template {name} inherits itself: {" > ".join((*chain, name))}')
+    if len(chain) >= MAX_INHERIT_DEPTH:
+        raise ValueError(f'templates inherit each other more than {MAX_INHERIT_DEPTH} deep: {" > ".join(chain)}')
+    if name in merged:
+        return
+    merged.add(name)
+    # legacy: a template which does not exist, or is only defined further down, is ignored
+    template = templates.get(name, {})
+    for parent in template.get('inherit', []):
+        _inherit(parent, values, templates, (*chain, name), merged)
+    transfer({key: value for key, value in template.items() if key != 'inherit'}, values)
 
 
 def families(values: dict[str, Any]) -> list[FamilyTuple]:

@@ -26,7 +26,7 @@ from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.lists import OneOrList
 from exabgp.configuration.grammar.types.network import ASN_WORD
-from exabgp.configuration.grammar.types.word import Number, Word, choice, integer, spelled, text
+from exabgp.configuration.grammar.types.word import Number, Word, choice, decimal, integer, spelled, text
 from exabgp.configuration.grammar.words import Words
 
 # the spellings of the boolean validator, and of the older boolean helper some sections use
@@ -91,7 +91,7 @@ def _graceful_restart(word: str) -> int | bool:
     if word.lower() in ('disable', 'disabled'):
         return False
     try:
-        seconds = int(word)
+        seconds = decimal(word)
     except ValueError:
         raise ValueError(f"'{word}' is not valid, it is 0-{GRACEFUL_RESTART_MAX} or disable") from None
     if not 0 <= seconds <= GRACEFUL_RESTART_MAX:
@@ -118,7 +118,7 @@ def _multiple_labels(word: str) -> int:
     if word.lower() in ('disable', 'disabled'):
         return 0
     try:
-        count = int(word)
+        count = decimal(word)
     except ValueError:
         raise ValueError(
             f"'{word}' is not valid, it is {MULTIPLE_LABELS_MIN}-{MULTIPLE_LABELS_MAX} or disable"

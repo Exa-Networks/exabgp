@@ -69,7 +69,13 @@ class Engine:
         if child is None:
             raise self._unknown(frame.block, keyword, [leaf.keyword for leaf in frame.block.leaves()])
         given = self._words(statement, 1)
-        value = child.type.parse(given)
+        try:
+            value = child.type.parse(given)
+        except ConfigError:
+            raise
+        except ValueError as exc:
+            # a check on the whole value (a split, a next-hop) has no word to point at
+            raise ConfigError(keyword.where(), str(exc)) from None
         # The words a value did not use were ignored, so `md5-password include "secret";`
         # set the password to `include` and said nothing.
         if not given.at_end():

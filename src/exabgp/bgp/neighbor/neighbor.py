@@ -361,7 +361,12 @@ class Neighbor:
             and self.host_name == other.host_name
             and self.domain_name == other.domain_name
             and self.session.md5_password == other.session.md5_password
+            and self.session.md5_base64 == other.session.md5_base64
             and self.session.md5_ip == other.session.md5_ip
+            and self.session.tcp_ao_keyid == other.session.tcp_ao_keyid
+            and self.session.tcp_ao_algorithm == other.session.tcp_ao_algorithm
+            and self.session.tcp_ao_password == other.session.tcp_ao_password
+            and self.session.tcp_ao_base64 == other.session.tcp_ao_base64
             and self.session.source_interface == other.session.source_interface
             and self.session.incoming_ttl == other.session.incoming_ttl
             and self.session.outgoing_ttl == other.session.outgoing_ttl
@@ -386,6 +391,10 @@ class Neighbor:
             and self.capability == other.capability
             and self.session.auto_discovery == other.session.auto_discovery
             and self.families() == other.families()
+            # what the OPEN advertises for each family. Not prefix_limit: it is ours alone, the
+            # peer never learns it, and reconfigure() applies it to the running session
+            and sorted(self.addpaths()) == sorted(other.addpaths())
+            and sorted(self.nexthops()) == sorted(other.nexthops())
         )
 
     def __ne__(self, other: object) -> bool:

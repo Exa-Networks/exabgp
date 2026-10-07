@@ -27,6 +27,7 @@ from exabgp.configuration.grammar.section import Kept, Store, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
+from exabgp.configuration.grammar.types.word import is_decimal
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 
 PREFIX_LIMIT_MAX = 0xFFFFFFFF
@@ -114,7 +115,7 @@ class FamilyLine(Type[tuple[FamilyTuple, int]]):
         value = words.word()
         if not value:
             raise ConfigError(where, 'prefix-limit requires a number', expected=['<number>'])
-        if not value.isdigit():
+        if not is_decimal(value):
             raise ConfigError(where, f'prefix-limit must be a number, got: {value}', expected=['<number>'])
         limit = int(value)
         if not 1 <= limit <= PREFIX_LIMIT_MAX:

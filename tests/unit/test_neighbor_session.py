@@ -140,6 +140,23 @@ class TestSessionIpSelf:
         # IPv4 route with IPv6 session - use router_id
         assert session.ip_self(AFI.ipv4) == RouterID('1.2.3.4')
 
+    def test_ip_self_auto_ipv4_session_is_not_the_router_id(self) -> None:
+        """With local-address auto on an IPv4 session, the router-id is no address of the session."""
+        session = Session(
+            peer_address=IPv4.from_string('192.168.1.2'),
+            router_id=RouterID('1.2.3.4'),
+        )
+        with pytest.raises(TypeError, match='local-address is auto'):
+            session.ip_self(AFI.ipv4)
+
+    def test_ip_self_auto_ipv6_session_still_uses_the_router_id_for_ipv4(self) -> None:
+        """The router-id fallback is for an IPv4 route to an IPv6 peer, auto or not."""
+        session = Session(
+            peer_address=IPv6.from_string('2001:db8::2'),
+            router_id=RouterID('1.2.3.4'),
+        )
+        assert session.ip_self(AFI.ipv4) == RouterID('1.2.3.4')
+
     def test_ip_self_error_mismatch(self) -> None:
         """Test ip_self raises TypeError for AFI mismatch."""
         session = Session(

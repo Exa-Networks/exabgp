@@ -16,12 +16,12 @@ NEIGHBOR = (
 
 
 def _announce(count: int) -> None:
-    # `next-hop` is the first value, `med` the others
-    read_command('ipv4', 'unicast 10.0.0.0/24 next-hop 192.0.2.3' + ' med 1' * (count - 1), True)
+    # `next-hop` is the first value, `community` the others: a list, so given again it adds
+    read_command('ipv4', 'unicast 10.0.0.0/24 next-hop 192.0.2.3' + ' community 1:1' * (count - 1), True)
 
 
 def _static(count: int) -> None:
-    route = 'route 10.0.0.0/24 next-hop 192.0.2.3' + ' med 1' * (count - 1)
+    route = 'route 10.0.0.0/24 next-hop 192.0.2.3' + ' community 1:1' * (count - 1)
     read_text(NEIGHBOR.format(extra=f'static {{ {route}; }}'))
 
 

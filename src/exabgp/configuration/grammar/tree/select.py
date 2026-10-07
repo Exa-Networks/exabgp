@@ -33,12 +33,14 @@ from exabgp.configuration.grammar.tree.static import (
     ROUTE_VALUES,
     RouteValue,
     action,
+    add_attribute,
     attribute_words,
     value_fields,
 )
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.words import Words
+from exabgp.configuration.grammar.types.word import decimal, is_decimal
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPSelf, IPv4, IPv6
 from exabgp.rib.route import Route
@@ -64,7 +66,7 @@ def _rd(words: Words) -> Any:
 
 def _prefix(word: str) -> tuple[IPv4 | IPv6, int]:
     address, length = word.split('/')
-    if not length.isdigit():
+    if not is_decimal(length):
         raise ValueError(f"unexpect prefix format '{word}'")
     found = ip_address(address)
     if isinstance(found, IPv4Address):
@@ -76,7 +78,7 @@ def _prefix(word: str) -> tuple[IPv4 | IPv6, int]:
 
 def _number(words: Words, name: str, maximum: int) -> int:
     word = words.word()
-    if not word.isdigit() or int(word) > maximum:
+    if not is_decimal(word) or int(word) > maximum:
         raise ValueError(f"{name} is a number 0-{maximum}, received '{word}'")
     return int(word)
 
@@ -131,7 +133,7 @@ def mup_t2st(words: Words, afi: AFI) -> Any:
     teids = words.word().split('/')
     if len(teids) != 2:
         raise ValueError(f'invalid teid format, it is <teid>/<length> (length 0-{TEID_MAX_BITS})')
-    teid, teid_len = int(teids[0]), int(teids[1])
+    teid, teid_len = decimal(teids[0]), decimal(teids[1])
     if not 0 <= teid <= TEID_MAX:
         raise ValueError(f'TEID {teid} out of range, it is 0 to {TEID_MAX}')
     if not 0 <= teid_len <= TEID_MAX_BITS:
@@ -306,7 +308,7 @@ class SelectLine(RouteStatement):
 
     def _apply(self, route: Route, spec: RouteValue, value: Any) -> Route:
         if spec.target != Target.NEXTHOP_ATTRIBUTE:
-            route.attributes.add(value)
+            add_attribute(route.attributes, value)
             return route
         ip, attribute = value
         if ip:

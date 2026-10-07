@@ -22,6 +22,18 @@ if TYPE_CHECKING:
 IPT = TypeVar('IPT', bound='IP')
 
 
+def inet_pton(family: int, string: str) -> bytes:
+    """socket.inet_pton, refusing an IPv6 scope (`fe80::1%en0`).
+
+    macOS takes the scope and writes the interface index into the second group of the address,
+    `fe80::1%en0` became `fe80:e::1`; Linux refuses it. A scope says nothing a BGP next-hop or
+    peer can carry, so it is refused everywhere, rather than changed into another address.
+    """
+    if '%' in string:
+        raise ValueError(f"'{string}' has a scope (%), which an address in exabgp can not have")
+    return socket.inet_pton(family, string)
+
+
 class IPFactory(Protocol):
     """Protocol for IP subclass constructors that accept packed data.
 
@@ -87,7 +99,7 @@ class IP(IPBase):
 
     @staticmethod
     def pton(ip: str) -> bytes:
-        return socket.inet_pton(IP.toaf(ip), ip)
+        return inet_pton(IP.toaf(ip), ip)
 
     @staticmethod
     def ntop(data: Buffer) -> str:
@@ -231,7 +243,7 @@ class IP(IPBase):
         if isinstance(expected, AFI) and afi != expected:
             raise ValueError(f'expected an {expected} address but got {string}')
 
-        data = socket.inet_pton(cls._AFI_TO_AF[afi], string)
+        data = inet_pton(cls._AFI_TO_AF[afi], string)
         if klass is not None:
             return cast(IPT, klass(data))
 
@@ -407,7 +419,7 @@ class IPv4(IP):
 
     @staticmethod
     def pton(ip: str) -> builtins.bytes:
-        return socket.inet_pton(socket.AF_INET, ip)
+        return inet_pton(socket.AF_INET, ip)
 
     @staticmethod
     def ntop(data: Buffer) -> str:
@@ -467,7 +479,7 @@ class IPv6(IP):
 
     @staticmethod
     def pton(ip: str) -> builtins.bytes:
-        return socket.inet_pton(socket.AF_INET6, ip)
+        return inet_pton(socket.AF_INET6, ip)
 
     @staticmethod
     def ntop(data: Buffer) -> str:

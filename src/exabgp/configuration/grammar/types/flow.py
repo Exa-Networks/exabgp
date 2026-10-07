@@ -47,6 +47,7 @@ from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Printed, Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
+from exabgp.configuration.grammar.types.word import decimal, is_decimal, lenient_number
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP, IPSelf, IPv4, IPv6
@@ -138,7 +139,7 @@ def _prefix(kind: str, klass4: Any, klass6: Any) -> Callable[[Words], list[Any]]
         try:
             if is_ipv4:
                 ip, netmask = data.split('/')
-                raw = bytes(int(part) for part in ip.split('.'))
+                raw = bytes(decimal(part) for part in ip.split('.'))
                 return [klass4.make_prefix4(raw, _netmask(netmask, IPV4_MAX_NETMASK))]
             if is_ipv6:
                 ip, netmask = data.split('/')
@@ -153,14 +154,14 @@ def _prefix(kind: str, klass4: Any, klass6: Any) -> Callable[[Words], list[Any]]
 
 
 def _netmask(netmask: str, maximum: int) -> int:
-    mask = int(netmask)
+    mask = decimal(netmask)
     if not 0 <= mask <= maximum:
         raise ValueError(f'netmask {mask} is not in the range 0-{maximum}')
     return mask
 
 
 def _offset(offset: str, netmask: int) -> int:
-    value = int(offset)
+    value = decimal(offset)
     if not (value == 0 if netmask == 0 else 0 <= value < netmask):
         raise ValueError(f'offset {value} must be zero for /0 or in the range 0-{netmask - 1}')
     return value
@@ -260,6 +261,8 @@ def _expression(data: str, klass: Any, operator: Any, joined: int, bracketed: bo
             return rules, BinaryOperator.NOP
         code, rest = operator(data)
         value, data = _split_value(rest)
+        if lenient_number(value):
+            raise ValueError(f"'{value}' is not a number, it is written with the digits 0 to 9")
         rules.append(klass(code | joined, klass.converter(value)))
         if data:
             joined = BinaryOperator.AND
@@ -293,7 +296,7 @@ def _discard(words: Words) -> ExtendedCommunities:
 
 
 def _rate_limit(words: Words) -> ExtendedCommunities:
-    speed = int(words.word())
+    speed = decimal(words.word())
     unit = 'bytes'
     if words.peek() in ('bytes', 'packets'):
         unit = words.word()
@@ -334,7 +337,7 @@ def _redirect_ipv6(data: str) -> tuple[IP, ExtendedCommunitiesIPv6]:
     address, number = data[1:].split(']:', 1)
     if IP.from_string(address).ipv4():
         raise ValueError(f'redirect {data} needs an IPv6 address, an IPv4 one is written without []')
-    if not number.isdigit():
+    if not is_decimal(number):
         raise ValueError(f'redirect {data} needs a number after the address')
     if int(number) >= LOCAL_ADMIN_16:
         raise ValueError(f'Local administrator field is a 16 bits number, value too large {number}')
@@ -371,7 +374,7 @@ def _redirect_asn(word: str) -> ExtendedCommunities:
         raise ValueError(
             'this format has been deprecated as it does not make sense and it is not supported by other vendors'
         )
-    asn, number = int(prefix), int(suffix)
+    asn, number = decimal(prefix), decimal(suffix)
     if not ASN4.validate(asn):
         raise ValueError(f'asn is invalid, must be 0 to {ASN.MAX_4BYTE} (32 bits): {asn}')
     if asn > ASN.MAX_2BYTE:
@@ -411,7 +414,7 @@ def _redirect_simpson(words: Words) -> tuple[IP, ExtendedCommunities]:
 
 def _mark(words: Words) -> ExtendedCommunities:
     value = words.word()
-    if not value.isdigit() or int(value) > DSCP_MAX:
+    if not is_decimal(value) or int(value) > DSCP_MAX:
         raise ValueError(f"'{value}' is not a valid DSCP mark value, it is 0-{DSCP_MAX}")
     return ExtendedCommunities().add(TrafficMark.make_traffic_mark(int(value)))
 
@@ -438,7 +441,7 @@ def _one_interface_set(word: str) -> InterfaceSet:
         raise ValueError(f"'{asn}' is not a valid ASN, it is a 32-bit integer")
     if direction not in DIRECTIONS:
         raise ValueError(f"'{direction}' is not a valid direction, it is input, output or input-output")
-    number, group_id = int(asn), int(group)
+    number, group_id = decimal(asn), decimal(group)
     if not ASN4.validate(number):
         raise ValueError(f'ASN {number} is invalid, it is 0 to {ASN.MAX_4BYTE}')
     if not InterfaceSet.validate_group_id(group_id):

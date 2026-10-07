@@ -40,12 +40,32 @@ def _words(text: str) -> Words:
     return Words(tuple(statement.words[1:]), statement.tokens[-1])
 
 
-def _reads(number: Number[Any], value: int) -> bool:
+def _reads(number: Number[Any], value: int | str) -> bool:
     try:
         number.parse(_words(str(value)))
     except ValueError:
         return False
     return True
+
+
+# the digits of another script, which int() reads as numbers
+ARABIC_INDIC = str.maketrans('0123456789', ''.join(chr(0x0660 + digit) for digit in range(10)))
+
+
+def _lenient(value: int) -> list[str]:
+    """The spellings of a number int() reads and the configuration does not: a sign, `_`, other digits."""
+    text = str(value)
+    spellings = [f'+{text}', text.translate(ARABIC_INDIC)]
+    if len(text) > 1:
+        spellings.append(f'{text[0]}_{text[1:]}')
+    return spellings
+
+
+@pytest.mark.parametrize('number', _numbers(), ids=lambda number: f'{number.name}{number.ranges}')
+def test_a_number_is_ascii_digits_only(number: Number[Any]) -> None:
+    for low, high in number.ranges:
+        for spelling in _lenient(low) + _lenient(high):
+            assert not _reads(number, spelling), f'{number.name} reads {spelling!r}'
 
 
 @pytest.mark.parametrize('number', _numbers(), ids=lambda number: f'{number.name}{number.ranges}')

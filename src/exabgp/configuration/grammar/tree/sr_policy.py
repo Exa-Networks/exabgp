@@ -55,6 +55,7 @@ from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.words import Words
+from exabgp.configuration.grammar.types.word import decimal, decimal_or_hexadecimal, is_decimal
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.rib.route import Route
@@ -86,7 +87,7 @@ Segment = (
 
 
 def _label(word: str, name: str) -> int:
-    label = int(word)
+    label = decimal(word)
     if label < 0 or label > MPLS_LABEL_MAX:
         raise ValueError(f'{name} {label} out of range (0-{MPLS_LABEL_MAX})')
     return label
@@ -98,7 +99,7 @@ def _mpls_sid(words: Words, checked: bool) -> int | None:
         return None
     words.word()
     word = words.word()
-    return _label(word, 'MPLS SID') if checked else int(word)
+    return _label(word, 'MPLS SID') if checked else decimal(word)
 
 
 def _srv6_sid(words: Words) -> str | None:
@@ -113,8 +114,8 @@ def _behaviour(words: Words) -> SRv6EndpointBehavior | None:
     if words.peek() != 'endpoint-behavior':
         return None
     words.word()
-    behaviour = int(words.word(), 0)
-    lb, ln, fun, arg = (int(words.word()) for _ in range(4))
+    behaviour = decimal_or_hexadecimal(words.word())
+    lb, ln, fun, arg = (decimal(words.word()) for _ in range(4))
     return SRv6EndpointBehavior(endpoint_behavior=behaviour, lb_length=lb, ln_length=ln, fun_length=fun, arg_length=arg)
 
 
@@ -128,7 +129,7 @@ def _field(words: Words, keyword: str) -> str:
 
 
 def _field_number(words: Words, keyword: str) -> int:
-    return int(_field(words, keyword))
+    return decimal(_field(words, keyword))
 
 
 def _type_a(words: Words) -> Segment:
@@ -241,7 +242,7 @@ def _enlp(words: Words) -> ENLPSubTLV:
     word = words.word()
     if word in ENLP_VALUES:
         return ENLPSubTLV(enlp=ENLP_VALUES[word])
-    if word.isdigit() and 1 <= int(word) <= ENLP_MAX:
+    if is_decimal(word) and 1 <= int(word) <= ENLP_MAX:
         return ENLPSubTLV(enlp=int(word))
     raise ValueError(f"Unknown enlp value '{word}'. Expected: {', '.join(ENLP_VALUES)} or 1-{ENLP_MAX}")
 
@@ -249,7 +250,7 @@ def _enlp(words: Words) -> ENLPSubTLV:
 def _binding_sid(words: Words) -> BindingSIDSubTLV:
     kind = words.word()
     if kind == 'mpls':
-        return BindingSIDSubTLV(label=int(words.word()))
+        return BindingSIDSubTLV(label=decimal(words.word()))
     if kind == 'null':
         return BindingSIDSubTLV(label=None)
     raise ValueError(f"Unknown binding-sid type '{kind}'. Expected: mpls, null")
@@ -260,8 +261,8 @@ def _name(words: Words) -> str:
 
 
 SUBTLVS: dict[str, Callable[[Words], Any]] = {
-    'preference': lambda words: PreferenceSubTLV(preference=int(words.word())),
-    'priority': lambda words: PrioritySubTLV(priority=int(words.word())),
+    'preference': lambda words: PreferenceSubTLV(preference=decimal(words.word())),
+    'priority': lambda words: PrioritySubTLV(priority=decimal(words.word())),
     'enlp': _enlp,
     'binding-sid': _binding_sid,
     'srv6-binding-sid': lambda words: SRv6BindingSIDSubTLV(sid=words.word()),

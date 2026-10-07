@@ -102,12 +102,12 @@ def test_destination_rejects_out_of_range_octet() -> None:
 
 OUT_OF_RANGE_CASES = [
     ('10.0.0.0/33', r'netmask 33'),  # IPv4 mask above the 0-32 range
-    ('10.0.0.0/-1', r'netmask -1'),  # negative mask -- must not rely on the
-    #                                   octet-range check catching this by accident
+    # a negative mask or offset is refused as a number with a sign: ASCII digits only
+    ('10.0.0.0/-1', r"'-1' is not a number"),  # must not rely on the octet-range check
     ('2001:db8::/129', r'netmask 129'),  # IPv6 mask above the 0-128 range
-    ('2001:db8::/-1', r'netmask -1'),  # negative IPv6 mask
+    ('2001:db8::/-1', r"'-1' is not a number"),  # negative IPv6 mask
     ('2001:db8::/32/33', r'offset 33'),  # offset beyond its own netmask
-    ('2001:db8::/32/-1', r'offset -1'),  # negative offset
+    ('2001:db8::/32/-1', r"'-1' is not a number"),  # negative offset
 ]
 
 

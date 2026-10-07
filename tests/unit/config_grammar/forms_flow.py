@@ -41,6 +41,9 @@ MATCH_FORMS: list[tuple[str, bool]] = [
     ('port [ 80& ]', False),
     ('port x', False),
     ('destination-port =80', True),
+    ('destination-port =+80', False),  # ASCII digits only
+    ('destination-port =8_0', False),
+    ('destination 10.0.0.0/2_4', False),
     ('source-port >1024', True),
     ('icmp-type 8', True),
     ('icmp-type echo-request', True),
@@ -94,6 +97,7 @@ THEN_FORMS: list[tuple[str, bool]] = [
     ('rate-limit 100 bytes', True),
     ('rate-limit 2000000000000', True),
     ('rate-limit x', False),
+    ('rate-limit +100', False),
     ('rate-limit', False),
     ('redirect 65000:1', True),
     ('redirect 4200000000:1', True),

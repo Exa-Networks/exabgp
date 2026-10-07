@@ -57,7 +57,7 @@ from exabgp.configuration.grammar.words import Words
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.protocol.ip import IPRange
+from exabgp.protocol.ip import IP, IPRange
 from exabgp.util.psk import guessed_as_base64
 
 MD5_BASE64_AUTO_REMOVED = (
@@ -345,18 +345,48 @@ def _warn_hexadecimal_password(neighbor: Neighbor) -> None:
 
 
 def _check_routes(neighbor: Neighbor) -> None:
-    """Every route resolves its next-hop self, and is of a family the neighbor negotiates."""
+    """Every route resolves its next-hop self, is of a family the neighbor negotiates, and has a next-hop it may send."""
     families = neighbor.families()
     for route in neighbor.routes:
         try:
-            neighbor.resolve_self(route)
+            resolved = neighbor.resolve_self(route)
         except TypeError as exc:
             raise ValueError(str(exc)) from None
         family = route.nlri.family().afi_safi()
-        if family not in families and family != (AFI.ipv4, SAFI.unicast):
+        # IPv4 unicast is not implicit: a family block without it does not negotiate it
+        if family not in families:
             raise ValueError(
                 f'Trying to announce a route of type {family[0]},{family[1]} when we are not announcing the family to our peer'
             )
+        refused = neighbor.next_hop_refused(resolved.nexthop) or _extended_next_hop_refused(neighbor, family, resolved)
+        if refused:
+            raise ValueError(f'route {route.nlri}: {refused}')
+
+
+# the IPv4 families RFC 8950 1 gives an IPv6 next-hop with the Extended Next Hop Encoding
+EXTENDED_NEXTHOP_FAMILIES = frozenset(
+    (AFI.ipv4, safi) for safi in (SAFI.unicast, SAFI.multicast, SAFI.nlri_mpls, SAFI.mpls_vpn)
+)
+
+
+def _extended_next_hop_refused(neighbor: Neighbor, family: tuple[AFI, SAFI], route: Any) -> str:
+    """Why an IPv4 route with an IPv6 next-hop can not be sent, '' when it can.
+
+    RFC 8950 4: an IPv6 next-hop for an IPv4 route of the families it covers is sent only to
+    a peer which advertised the Extended Next Hop Encoding capability for it, which
+    `nexthop { ... }` asks for. Other families (flow, MUP) say what their next-hop is.
+    """
+    nexthop = route.nexthop
+    if family not in EXTENDED_NEXTHOP_FAMILIES or nexthop is IP.NoNextHop or nexthop.SELF:
+        return ''
+    if nexthop.afi != AFI.ipv6:
+        return ''
+    if (family[0], family[1], AFI.ipv6) in neighbor.nexthops():
+        return ''
+    return (
+        f'next-hop {nexthop} is IPv6, which an {family[0]} {family[1]} route carries only with '
+        f'"nexthop {{ {family[0]} {family[1]} ipv6; }}" (RFC 8950)'
+    )
 
 
 class TemplateSection(Kept):

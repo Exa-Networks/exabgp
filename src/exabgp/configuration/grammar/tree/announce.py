@@ -38,6 +38,7 @@ from exabgp.configuration.grammar.tree.static import (
     RouteValue,
     Unprintable,
     action,
+    add_attribute,
     attribute_words,
     normalize,
     first_next_hop,
@@ -50,7 +51,7 @@ from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.network import ASN_WORD
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
-from exabgp.configuration.grammar.types.word import Number, Word
+from exabgp.configuration.grammar.types.word import Number, Word, is_decimal
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPSelf
@@ -113,7 +114,7 @@ class AnnounceNextHop(Type[tuple[IP | IPSelf, NextHop | NextHopSelf]]):
 
 def _capped(name: str, make: Any) -> Any:
     def convert(word: str) -> Any:
-        if not word.isdigit():
+        if not is_decimal(word):
             raise ValueError(f"'{word}' is not a valid {name}, it is a non-negative integer")
         if int(word) > VALUE_MAX:
             raise ValueError(f'{int(word)} exceeds maximum {name} value ({VALUE_MAX})')
@@ -329,7 +330,7 @@ def _apply(settings: Any, attributes: AttributeCollection, spec: RouteValue, val
         if ip:
             settings.nexthop = ip
     else:
-        attributes.add(value)
+        add_attribute(attributes, value)
 
 
 class AnnouncedStore(Store):

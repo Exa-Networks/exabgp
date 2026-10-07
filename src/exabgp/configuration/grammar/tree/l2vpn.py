@@ -29,12 +29,13 @@ from exabgp.configuration.grammar.tree.static import (
     ROUTES,
     RouteValue,
     action,
+    add_attribute,
     attribute_words,
     value_fields,
 )
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
-from exabgp.configuration.grammar.types.word import Number, Word
+from exabgp.configuration.grammar.types.word import Number, Word, decimal
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP, IPSelf
@@ -45,7 +46,7 @@ VPLS_PARAM_MAX = 0xFFFF  # endpoint, size, offset and label base are sixteen bit
 
 def _vpls_number(name: str) -> Number[int]:
     def convert(word: str) -> int:
-        number = int(word)
+        number = decimal(word)
         if not 0 <= number <= VPLS_PARAM_MAX:
             raise ValueError(f'invalid l2vpn vpls {name}')
         return number
@@ -107,7 +108,7 @@ def _apply(settings: VPLSSettings, attributes: AttributeCollection, spec: RouteV
     if spec.target == Target.NLRI:
         settings.set(spec.field, value)
     else:
-        attributes.add(value)
+        add_attribute(attributes, value)
 
 
 def _vpls_route(settings: VPLSSettings, attributes: AttributeCollection, where: str) -> Route:
@@ -194,7 +195,7 @@ class LastRouteStore(Store):
         routes = context.routes
         if not routes:
             raise ValueError('there is no route for this attribute to be added to')
-        routes[-1].attributes.add(value)
+        add_attribute(routes[-1].attributes, value)
 
 
 class _NoSetter(Type[Any]):

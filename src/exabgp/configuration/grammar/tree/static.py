@@ -19,11 +19,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterator, Mapping, cast
+from typing import Any, Callable, Iterator, Mapping, cast
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute.internal import Split as InternalSplit
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
+from exabgp.bgp.message.update.attribute.community import Communities, ExtendedCommunities, LargeCommunities
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, Label
 from exabgp.bgp.message.update.nlri.empty import Empty
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -39,6 +40,7 @@ from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Syntax, Type, WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.words import Words
+from exabgp.configuration.grammar.types.word import decimal
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPRange
 from exabgp.rib.route import Route
@@ -101,7 +103,40 @@ class Collected:
             if first_next_hop(self.attributes, attribute):
                 self.settings.nexthop = ip
         else:
-            self.attributes.add(value)
+            add_attribute(self.attributes, value)
+
+
+# the attributes which are lists, by code, with what makes one of a list: given twice, the
+# second adds to the first
+LIST_ATTRIBUTES: dict[int, Callable[[list[Any]], Attribute]] = {
+    Attribute.CODE.COMMUNITY: Communities.make_communities,
+    Attribute.CODE.LARGE_COMMUNITY: LargeCommunities.make_large_communities,
+    Attribute.CODE.EXTENDED_COMMUNITY: ExtendedCommunities.make_extended_communities,
+}
+
+
+def add_attribute(attributes: AttributeCollection, attribute: Attribute) -> None:
+    """Add a configured attribute: a list one given twice is merged, any other is refused.
+
+    The second of a repeated attribute was dropped without a word, `med 10 med 20` sent 10,
+    `community 1:1 community 2:2` sent only 1:1.
+    """
+    existing = attributes.get(attribute.ID)
+    if existing is None:
+        attributes.add(attribute)
+        return
+    if attribute.ID not in LIST_ATTRIBUTES or attribute.GENERIC or existing.GENERIC:
+        name = ATTRIBUTE_KEYWORDS.get(attribute.ID, f'attribute 0x{attribute.ID:02x}')
+        raise ValueError(f'{name} is given twice, it can be given once')
+    # a new attribute rather than the first changed: the first may be shared with other routes
+    lists: Any = (existing, attribute)
+    merged = LIST_ATTRIBUTES[attribute.ID](lists[0].communities + lists[1].communities)
+    # rebuilt through add(), which keeps the order and clears what the collection cached
+    rebuilt = [merged if code == attribute.ID else each for code, each in attributes.items()]
+    for code in list(attributes):
+        del attributes[code]
+    for each in rebuilt:
+        attributes.add(each)
 
 
 def first_next_hop(attributes: AttributeCollection, attribute: Attribute) -> bool:
@@ -231,7 +266,7 @@ def _last_prefix(statement: list[str]) -> list[IPRange]:
     last = statement[-1]
     ip, _, mask = last.partition('/')
     try:
-        return [IPRange.make_range(ip, int(mask) if mask else (128 if ':' in ip else 32))]
+        return [IPRange.make_range(ip, decimal(mask) if mask else (128 if ':' in ip else 32))]
     except (ValueError, KeyError, OSError):
         return []
 
@@ -361,6 +396,21 @@ def route_words(route: Route) -> list[WordOrSyntax]:
 # --------------------------------------------------------------------------- split and NLRI type
 
 
+# the more specifics one `split` may make: an IPv4 /16 into /32, where an IPv6 /32 into
+# /128 would be 2**96 routes, more than any memory holds
+MAX_SPLIT_ROUTES = pow(2, 16)
+
+
+def _check_split(mask: int, cut: int, longest: int) -> None:
+    """Refuse a split making no more specific of the prefix, or more than MAX_SPLIT_ROUTES of them."""
+    if cut < mask:
+        raise ValueError(f'split /{cut} is shorter than the prefix /{mask}, it makes no more specific of it')
+    if cut > longest:
+        raise ValueError(f'split /{cut} is longer than an address of the family, /{longest}')
+    if pow(2, cut - mask) > MAX_SPLIT_ROUTES:
+        raise ValueError(f'split /{cut} of a /{mask} makes more than {MAX_SPLIT_ROUTES} routes')
+
+
 def split(route: Route) -> Iterator[Route]:
     """The more specifics a route with `split /<len>` stands for, or the route itself."""
     if Attribute.CODE.INTERNAL_SPLIT not in route.attributes:
@@ -369,7 +419,8 @@ def split(route: Route) -> Iterator[Route]:
     nlri: Any = route.nlri
     # the code is the class: only InternalSplit is stored under INTERNAL_SPLIT
     cut = cast(InternalSplit, route.attributes[Attribute.CODE.INTERNAL_SPLIT]).value
-    if nlri.cidr.mask >= cut:
+    _check_split(nlri.cidr.mask, cut, nlri.afi.mask())
+    if nlri.cidr.mask == cut:
         yield route
         return
     afi, safi = nlri.afi, nlri.safi
