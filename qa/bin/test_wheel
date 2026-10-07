@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import signal
 import subprocess
 import time
 import sys
@@ -52,7 +53,52 @@ def run_suite(suite: str, environment: dict[str, str]) -> int:
     if failed:
         print(f'test_wheel: the {suite} suite failed, running test {failed} alone to show why', flush=True)
         subprocess.run(functional + [failed], env=environment)
+    if suite != 'decoding':
+        stuck_daemon(environment)
     return result.returncode
+
+
+# how long a daemon with no peer is left to run before it is looked at: it should have logged
+# its start and its first connection attempts long before
+STUCK_SECONDS = 15
+SAMPLE_SECONDS = 2
+STACK_LINES = 80
+
+
+def stuck_daemon(environment: dict[str, str]) -> None:
+    """Where a daemon is, started as the suites start it, when it has said nothing.
+
+    On the macOS runner every encoding daemon printed nothing at all, not even its start, and
+    was killed at the deadline with no trace of where it was. This one is left to run, then
+    sampled (macOS `sample`, the native stack) and sent SIGABRT, which faulthandler answers
+    with the Python stack of every thread.
+    """
+    command = [sys.executable, str(ROOT / 'sbin' / 'exabgp'), '-d', '-p', str(ROOT / 'etc/exabgp/conf-addpath.conf')]
+    daemon_environment = dict(
+        environment,
+        PYTHONFAULTHANDLER='1',
+        exabgp_tcp_port='1799',
+        exabgp_tcp_connections='1',
+        exabgp_api_cli='false',
+        exabgp_tcp_bind='',
+    )
+    print(f'test_wheel: running a daemon for {STUCK_SECONDS}s to see where it is', flush=True)
+    process = subprocess.Popen(
+        command, env=daemon_environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL
+    )
+    time.sleep(STUCK_SECONDS)
+    if sys.platform == 'darwin':
+        sample = subprocess.run(
+            ['sample', str(process.pid), str(SAMPLE_SECONDS)], capture_output=True, text=True, timeout=60
+        )
+        print('test_wheel: sample of the daemon', *(sample.stdout + sample.stderr).splitlines()[:STACK_LINES], sep='\n')
+    process.send_signal(signal.SIGABRT)
+    try:
+        output, _ = process.communicate(timeout=STUCK_SECONDS)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        output, _ = process.communicate()
+    print('test_wheel: what the daemon printed', output.decode('utf-8', 'replace')[-8000:], sep='\n', flush=True)
 
 
 # every module of the installed package, loaded once in a process of its own
@@ -115,7 +161,9 @@ def main() -> int:
         return 1
     print(f'test_wheel: exabgp from {tree}, build {build()}')
 
-    environment = dict(os.environ, EXABGP_TREE=str(tree), INTERPRETER=sys.executable)
+    # unbuffered: the suites send a daemon's output to a file and kill it at the deadline,
+    # which loses what a buffered daemon had printed, and a CI log then shows nothing
+    environment = dict(os.environ, EXABGP_TREE=str(tree), INTERPRETER=sys.executable, PYTHONUNBUFFERED='1')
     environment.pop('PYTHONPATH', None)
     if os.geteuid() == 0:
         # cibuildwheel tests on Linux as root, from a venv in a 0700 directory: the daemon
