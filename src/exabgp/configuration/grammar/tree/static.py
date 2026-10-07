@@ -18,6 +18,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any, Callable, Iterator, Mapping, cast
 
@@ -38,6 +39,7 @@ from exabgp.configuration.grammar.section import Section, Store, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Syntax, Type, WordOrSyntax
+from exabgp.logger import lazymsg, log
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.words import Words
 from exabgp.configuration.grammar.types.word import decimal
@@ -115,11 +117,17 @@ LIST_ATTRIBUTES: dict[int, Callable[[list[Any]], Attribute]] = {
 }
 
 
+# set while an API command is read (read.read_command): a helper written for 4.2 or 5.0 may
+# repeat an attribute, and those releases kept the first, so a command warns where a file refuses
+READING_COMMAND: ContextVar[bool] = ContextVar('reading_command', default=False)
+
+
 def add_attribute(attributes: AttributeCollection, attribute: Attribute) -> None:
     """Add a configured attribute: a list one given twice is merged, any other is refused.
 
     The second of a repeated attribute was dropped without a word, `med 10 med 20` sent 10,
-    `community 1:1 community 2:2` sent only 1:1.
+    `community 1:1 community 2:2` sent only 1:1. An API command still keeps the first, as
+    4.2 and 5.0 did, but says which value it dropped.
     """
     existing = attributes.get(attribute.ID)
     if existing is None:
@@ -127,7 +135,18 @@ def add_attribute(attributes: AttributeCollection, attribute: Attribute) -> None
         return
     if attribute.ID not in LIST_ATTRIBUTES or attribute.GENERIC or existing.GENERIC:
         name = ATTRIBUTE_KEYWORDS.get(attribute.ID, f'attribute 0x{attribute.ID:02x}')
-        raise ValueError(f'{name} is given twice, it can be given once')
+        if not READING_COMMAND.get():
+            raise ValueError(f'{name} is given twice, it can be given once')
+        log.warning(
+            lazymsg(
+                'api.attribute.repeated name={name} kept="{kept}" dropped="{dropped}"',
+                name=name,
+                kept=existing,
+                dropped=attribute,
+            ),
+            'configuration',
+        )
+        return
     # a new attribute rather than the first changed: the first may be shared with other routes
     lists: Any = (existing, attribute)
     merged = LIST_ATTRIBUTES[attribute.ID](lists[0].communities + lists[1].communities)
@@ -419,6 +438,11 @@ def split(route: Route) -> Iterator[Route]:
     nlri: Any = route.nlri
     # the code is the class: only InternalSplit is stored under INTERNAL_SPLIT
     cut = cast(InternalSplit, route.attributes[Attribute.CODE.INTERNAL_SPLIT]).value
+    if cut < nlri.cidr.mask and READING_COMMAND.get():
+        # 4.2 and 5.0 sent the prefix itself, and a helper written for them may rely on it
+        log.warning(lazymsg('api.split.ignored route={route} split=/{cut}', route=nlri, cut=cut), 'configuration')
+        yield route
+        return
     _check_split(nlri.cidr.mask, cut, nlri.afi.mask())
     if nlri.cidr.mask == cut:
         yield route

@@ -57,3 +57,9 @@ def test_a_split_as_long_as_the_prefix_is_the_route_itself() -> None:
 def test_an_api_split_past_the_bound_is_refused() -> None:
     with pytest.raises(ValueError, match=f'more than {MAX_SPLIT_ROUTES} routes'):
         read_command('ipv6', 'unicast 2001:db8::/32 next-hop 2001:db8::1 split /128', True)
+
+
+def test_an_api_split_shorter_than_the_prefix_sends_the_prefix() -> None:
+    # 4.2 and 5.0 sent the prefix itself, and a helper written for them may rely on it
+    routes, _ = read_command('ipv4', 'unicast 1.1.0.0/24 next-hop 192.0.2.3 split /23', True)
+    assert [str(route.nlri) for route in routes] == ['1.1.0.0/24']

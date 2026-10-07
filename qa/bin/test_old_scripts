@@ -90,6 +90,15 @@ ALLOWED: dict[tuple[str, str], str] = {
         '0.1.19.100, and 6.0 sends type 0x02 as RFC 5668 asks'
     ),
     ('5.0', 'conf-extended-attributes'): 'the same four octet AS Route Origin as api-flow',
+    ('4.2', 'conf-flow'): (
+        'traffic-class 101 is refused: RFC 8956 3 applies the RFC 8955 type 11 DSCP, six bits, to '
+        'IPv6, so nothing above 63 can match; 4.2 and 5.0 sent 0x65, the configuration no longer loads'
+    ),
+    ('5.0', 'conf-flow'): 'the same traffic-class 101 as 4.2 conf-flow',
+    ('4.2', 'conf-flow-redirect'): (
+        'origin:2.3.4.5:6789 has an IPv4 address: 4.2 sent it as type 0x00, which reads back as '
+        'origin:515:67443333, and 6.0 sends type 0x01 as RFC 4360 3.2 asks'
+    ),
     ('5.0', 'unknown-message'): (
         'RFC 4271 6.1: the NOTIFICATION for a bad message type carries the type, 0xFF; 5.0 sent text'
     ),
@@ -171,10 +180,16 @@ def tests(built: Path, branch: Branch, only: str) -> list[str]:
     return [name for name in names if not only or name == only]
 
 
+def configurations_of(built: Path, branch: Branch, name: str) -> list[str]:
+    """The configuration files the test's .ci names, in the copy of the branch."""
+    directory = built / branch.tests
+    return [str(built / 'etc' / 'exabgp' / word) for word in (directory / f'{name}.ci').read_text().split()]
+
+
 def run(built: Path, branch: Branch, peer: Path, name: str, port: int) -> tuple[bool, str]:
     """Run one test: True when the peer saw what it expected, and what the peer printed."""
     directory = built / branch.tests
-    configurations = [str(built / 'etc' / 'exabgp' / word) for word in (directory / f'{name}.ci').read_text().split()]
+    configurations = configurations_of(built, branch, name)
     message_file = directory / f'{name}.msg'
     connections = re.search(r'^option:tcp_connections:(\d+)', message_file.read_text(), re.M)
 
@@ -228,10 +243,14 @@ def _stop(process: subprocess.Popen[bytes]) -> None:
         pass
 
 
-def decoded(built: Path, message: str) -> dict:
-    """A message as this tree decodes it, without what changes from one run to the next."""
+def decoded(built: Path, message: str, configuration: str) -> dict:
+    """A message as this tree decodes it, without what changes from one run to the next.
+
+    It is read with the test's configuration: an ADD-PATH or a flow UPDATE decodes only for
+    the families and capabilities the session negotiated.
+    """
     found = subprocess.run(
-        [sys.executable, str(built / 'sbin' / 'exabgp'), 'decode', message.replace(':', '')],
+        [sys.executable, str(built / 'sbin' / 'exabgp'), 'decode', '-c', configuration, message.replace(':', '')],
         capture_output=True,
         text=True,
         env={**os.environ, 'exabgp_log_enable': 'false'},
@@ -296,16 +315,19 @@ def unexpected(printed: str) -> tuple[str, list[str]] | None:
     return received[-1], re.findall(r'^\s*(?:\S+ \d+ )?\s+' + MESSAGE + r'\s*$', printed[expected:], re.M)
 
 
-def judged(built: Path, printed: str) -> list[str] | None:
+def judged(built: Path, printed: str, configuration: str) -> list[str] | None:
     """None when the unexpected message carries what an expected one does, else what differs."""
     found = unexpected(printed)
     if found is None:
         return [f'{TIMED_OUT}: the peer reported no unexpected message']
     message, options = found
-    received = decoded(built, message)
+    received = decoded(built, message, configuration)
+    if 'undecodable' in received:
+        # two messages this tree can not decode read the same: that is no proof they carry the same routes
+        return [f'the message sent can not be decoded: {received["undecodable"]}']
     best: list[str] | None = None
     for option in options:
-        missing = differences(decoded(built, option), received)
+        missing = differences(decoded(built, option, configuration), received)
         if not missing:
             return None
         if best is None or len(missing) < len(best):
@@ -326,13 +348,13 @@ def check(name: str, branch: Branch, only: str) -> int:
         for index, (test, (passed, printed)) in enumerate(zip(selected, runs)):
             if passed:
                 continue
-            missing = judged(built, printed)
+            missing = judged(built, printed, configurations_of(built, branch, test)[0])
             if missing is not None and missing[0].startswith(TIMED_OUT):
                 # run again, alone: on a loaded machine six at once can miss the timeout
                 passed, printed = run(built, branch, peer, test, FIRST_PORT + len(selected) + index)
                 if passed:
                     continue
-                missing = judged(built, printed)
+                missing = judged(built, printed, configurations_of(built, branch, test)[0])
             if missing is None:
                 continue
             if (name, test) in ALLOWED:

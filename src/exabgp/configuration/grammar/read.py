@@ -47,9 +47,15 @@ def read_command(section: str, text: str, announce: bool) -> tuple[list[Any], in
     """
     block = _command_sections().get(section)
     assert block is not None, f'partial() reads no section {section}'
+    from exabgp.configuration.grammar.tree.static import READING_COMMAND
+
     engine = Engine(block, ReadContext(announce=announce))
     statements = lex_command(text if text.endswith(';') or text.endswith('}') else text + ' ;')
-    engine.read(statements)
+    reading = READING_COMMAND.set(True)
+    try:
+        engine.read(statements)
+    finally:
+        READING_COMMAND.reset(reading)
     return list(engine.context.routes), left_open(statements)
 
 

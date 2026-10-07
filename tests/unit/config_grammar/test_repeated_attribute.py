@@ -90,9 +90,17 @@ def test_a_single_attribute_given_twice_in_a_route_block_is_refused() -> None:
         _static('route 10.0.0.0/24 { next-hop 192.0.2.3; med 10; med 20; }')
 
 
-def test_a_single_attribute_given_twice_in_an_api_command_is_refused() -> None:
-    with pytest.raises(ValueError, match='med is given twice'):
-        _announce('med 10 med 20')
+def test_a_single_attribute_given_twice_in_an_api_command_keeps_the_first() -> None:
+    # a helper written for 4.2 or 5.0 may repeat one, and those releases sent the first
+    route = _announce('med 10 med 20 local-preference 100 local-preference 10')
+    assert str(route.attributes[Attribute.CODE.MED]) == '10'
+    assert str(route.attributes[Attribute.CODE.LOCAL_PREF]) == '100'
+
+
+def test_a_file_read_after_an_api_command_still_refuses_a_repeat() -> None:
+    _announce('med 10 med 20')
+    with pytest.raises(ConfigError, match='med is given twice'):
+        _static('route 10.0.0.0/24 next-hop 192.0.2.3 med 10 med 20;')
 
 
 def test_a_raw_attribute_of_a_list_code_is_not_merged_with_a_parsed_one() -> None:
