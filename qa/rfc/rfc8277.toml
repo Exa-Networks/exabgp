@@ -7,16 +7,19 @@
 # RFC 8277 obsoletes RFC 3107 and exists almost entirely to remove one ambiguity: how a
 # receiver knows how many labels an NLRI carries.  RFC 3107 answered "look at the bottom
 # of stack bit"; RFC 8277 answers "one label, unless the Multiple Labels Capability was
-# exchanged, and then the bottom of stack bit".  exabgp does not implement the Multiple
-# Labels Capability (code 8 appears nowhere in src/exabgp/bgp/message/open/capability/),
-# so on the wire it is permanently in the section 2.2 case.
+# exchanged, and then the bottom of stack bit".  exabgp sends the capability (code 8)
+# only when `capability { multiple-labels <count>; }` asks for it, and
+# `Negotiated.labels_limit` says whether it went both ways.
 #
-# Both decoders (INETBase.unpack_nlri and IPVPNBase.unpack_nlri) used to parse the section
-# 2.3 way on every session, and three of the entries below recorded that as a gap.  They
-# now end a one field stack on the LENGTH rather than on the S bit, which is what section
-# 2.2 and section 2.4 ask for, and those three are `required`.  What is left is the
-# sending side: exabgp will still originate a two label NLRI on a session where no
-# capability was exchanged, and that is what the remaining gaps are about.
+# Both decoders (INETBase.unpack_nlri and IPVPNBase.unpack_nlri) share `read_label_stack`
+# in nlri/inet.py.  On a session without the capability they end a one field stack on the
+# LENGTH rather than on the S bit, which is what section 2.2 and section 2.4 ask for.  On
+# a session with it, an announced stack is read to its S bit (section 2.3); MP_REACH_NLRI
+# hands the decoder the session it arrived on so that it can tell the two apart.  It used
+# to hand it Negotiated.UNSET, and a two label stack whose prefix was short enough to fit
+# behind one field (any IPv6 prefix, an IPv4 /8) was cut after the first label, the second
+# label being reported as the prefix.  A withdraw always carries the one Compatibility
+# field of section 2.4, whatever was negotiated.
 #
 # Things this document states WITHOUT an RFC 2119 keyword, and which are therefore not
 # recorded as requirements:
@@ -88,10 +91,14 @@ text = """
    able to support at least two labels in the NLRI.
 """
 note = """
-Conditioned on sending the capability, which exabgp does when configured to. The decoder
-in INETBase.unpack_nlri reads a stack to its S bit with no depth limit, so a peer may bind
-two labels or more to a prefix once code 8 went both ways. Positive only: it asks what we
-can accept, and no input a peer may send should fail it.
+Conditioned on sending the capability, which exabgp does when configured to. Once code 8
+went both ways (`reads_whole_label_stack` in nlri/inet.py, from `Negotiated.labels_limit`),
+`read_label_stack` reads an announced stack to its S bit with no depth limit beyond the
+Length field, so a peer may bind two labels or more to a prefix. MP_REACH_NLRI passes the
+session to the decoder for this: it passed Negotiated.UNSET, and the decoder then ended the
+stack after the first label whenever the bits left fitted a prefix, so a two label stack in
+front of an IPv6 prefix or an IPv4 /8 lost its second label to the prefix. Positive only:
+it asks what we can accept, and no input a peer may send should fail it.
 """
 
 [[requirement]]
@@ -203,8 +210,10 @@ already: a stack of more than one label with the bit nowhere is refused rather t
 allowed to eat the prefix and report a default route, and a stack whose FIRST label sets
 it stops there even if the mask would have allowed another label.
 
-A stack of exactly one label with the bit nowhere is a section 2.2 NLRI rather than a
-malformed section 2.3 one, and is accepted: see rfc8277#2.2-s-bit-ignored-on-reception.
+On a session without the Multiple Labels Capability a stack of exactly one label with
+the bit nowhere is a section 2.2 NLRI rather than a malformed section 2.3 one, and is
+accepted: see rfc8277#2.2-s-bit-ignored-on-reception.  Once the capability went both ways
+it is a section 2.3 NLRI whose last label lacks the bit, and is refused.
 The one case the length cannot decide is a length which leaves no prefix bits behind that
 single field, where a labelled 0.0.0.0/0 and a stack which ate the prefix are the same
 bytes; that stays refused, and tests/unit/test_label_stack_end.py says so.

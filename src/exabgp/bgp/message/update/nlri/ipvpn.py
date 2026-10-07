@@ -106,11 +106,9 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import (
-    LABEL_BOTTOM_OF_STACK_BIT,
-    LABEL_NEXTHOP_VALUE,
-    LABEL_SIZE_BITS,
-    LABEL_WITHDRAW_VALUE,
     PATH_INFO_SIZE,
+    read_label_stack,
+    reads_whole_label_stack,
 )
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -351,10 +349,9 @@ class IPVPNBase(Label):
         return len(self._packed)
 
     def __hash__(self) -> int:
-        # _packed includes everything (labels + RD); use _has_addpath as discriminator
-        if self._has_addpath:
-            return hash(self._packed)
-        return hash(b'disabled' + self._packed)
+        # The key __eq__ compares (NLRI.__eq__ is index()), which leaves the labels out:
+        # hashing _packed put two equal routes with different labels in two buckets.
+        return hash(self.index())
 
     def __copy__(self) -> Self:
         new = self._blank()
@@ -452,7 +449,6 @@ class IPVPNBase(Label):
         Wire format: [addpath?][mask][labels][rd][prefix]
         Storage: _packed = [addpath?][mask][labels][rd][prefix] (complete wire format)
         """
-        from struct import unpack
 
         # Parse path_info if AddPath is enabled
         if addpath:
@@ -477,66 +473,9 @@ class IPVPNBase(Label):
         labels_bytes_list: list[bytes] = []
         mask = original_mask
 
-        # Parse labels using mask (original algorithm from INET.unpack_nlri)
-        ended = False
         if safi.has_label():
-            while mask - rd_bits >= LABEL_SIZE_BITS:
-                if len(data) < 3:
-                    raise Notify(3, 10, 'not enough data to extract the label stack of the NLRI')
-                label_chunk = bytes(data[:3])
-                label = int(unpack('!L', bytes([0]) + label_chunk)[0])
-                labels_bytes_list.append(label_chunk)
-                data = data[3:]
-                mask -= LABEL_SIZE_BITS
-
-                # The bottom of stack bit is tested first: a genuine second label whose
-                # value happens to equal a sentinel below is a label, not a terminator.
-                if label & LABEL_BOTTOM_OF_STACK_BIT:
-                    ended = True
-                    break
-
-                # Both sentinels describe a WHOLE stack rather than a label inside one, so
-                # they end a stack only when they ARE the stack.  This matters most here:
-                # below depth one the loop is reading the route distinguisher, and an RD's
-                # leading zero bytes are indistinguishable from the 0x000000 next-hop
-                # convention, so an unterminated first label "ended" on the peer's own RD.
-                if len(labels_bytes_list) > 1:
-                    continue
-
-                # RFC 8277 2.2, of the S bit: "This 1-bit field MUST be set to one on
-                # transmission and MUST be ignored on reception", and 2.4 says the same of
-                # the Compatibility field a withdraw carries where a label would be: "Upon
-                # reception, the value of the Compatibility field MUST be ignored".  Both
-                # bind every session exabgp forms, because the section 2.3 reading only
-                # applies once the Multiple Labels Capability has been exchanged and exabgp
-                # has no capability code 8 to exchange.
-                #
-                # So for a one field stack the LENGTH says where the stack ends, not the S
-                # bit: the route distinguisher and the prefix are what the length leaves
-                # behind this field, and if that is a prefix this family can hold then that
-                # is what it is.  Zero bits left is excluded, because there a /0 and a stack
-                # which ate the prefix are the same bytes.
-                if 0 < mask - rd_bits <= IP.length(afi) * 8:
-                    ended = True
-                    break
-
-                if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
-                    ended = True
-                    break
-                if label == LABEL_NEXTHOP_VALUE:
-                    ended = True
-                    break
-
-            # RFC 3107 3 and RFC 8277 2.3: beyond the first field the bottom of stack bit is
-            # the only thing on the wire which says where the stack ends, because the mask
-            # covers labels, RD and prefix together.  Running out of mask instead means the
-            # remaining bytes were eaten as labels and the route was reported as 0.0.0.0/0,
-            # which is a default route a peer chose.
-            #
-            # This decoder is a second copy of the one in inet.py and had the same defect.
-            # Fixing that one left this one, which is the pair rule: two decoders, one fix.
-            if labels_bytes_list and not ended:
-                raise Notify(3, 10, 'the label stack of the NLRI never ends: no bottom of stack bit')
+            whole_stack = reads_whole_label_stack(afi, safi, action, negotiated)
+            labels_bytes_list, data, mask = read_label_stack(data, mask, rd_bits, afi, action, whole_stack)
 
         labels_packed = b''.join(labels_bytes_list)
 
@@ -570,7 +509,8 @@ class IPVPNBase(Label):
 
         # Build _packed format: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
         # Store complete wire format including RD (original_mask already includes RD bits)
-        nlri_packed = bytes([original_mask]) + labels_packed + rd_packed + bytes(network)
+        prefix = CIDR.clear_host_bits(network, mask)
+        nlri_packed = bytes([original_mask]) + labels_packed + rd_packed + prefix
 
         has_addpath = path_info is not PathInfo.DISABLED
         if has_addpath:

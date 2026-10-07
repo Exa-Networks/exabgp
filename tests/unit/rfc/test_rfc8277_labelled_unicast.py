@@ -91,6 +91,7 @@ def decode(
     safi: SAFI = SAFI.nlri_mpls,
     action: Action = Action.ANNOUNCE,
     addpath: bool = False,
+    negotiated: Negotiated = Negotiated.UNSET,
 ) -> tuple[LabelBase, Buffer]:
     """The registered decoder for the family, called the way the UPDATE parser calls it.
 
@@ -98,7 +99,7 @@ def decode(
     typed to its base class, but both families here are registered to a LabelBase
     subclass, which is where `labels`, `rd` and `cidr` live.
     """
-    nlri, rest = NLRI.unpack_nlri(afi, safi, data, action, addpath, Negotiated.UNSET)
+    nlri, rest = NLRI.unpack_nlri(afi, safi, data, action, addpath, negotiated)
     return cast(LabelBase, nlri), rest
 
 
@@ -582,10 +583,79 @@ def test_the_capability_is_sent_for_the_labelled_families_only_when_configured()
 def test_a_session_which_sent_the_capability_decodes_a_two_label_stack() -> None:
     """What we promise by sending code 8: a peer may then bind two labels to a prefix."""
     negotiated = session(triple(2), triple(2))
-    nlri, rest = decode(labelled(label(100, bottom=False) + label(200)))
+    nlri, rest = decode(labelled(label(100, bottom=False) + label(200)), negotiated=negotiated)
     assert rest == b''
     assert cast(LabelBase, nlri).labels.labels == [100, 200]
     assert negotiated.labels_limit(*LABELLED_UNICAST) == 2
+
+
+# A /8 behind two labels: after the first label 32 bits are left, which is a prefix IPv4
+# can hold, so the section 2.2 reading ends the stack there and takes the second label for
+# the prefix. With the capability exchanged the S bit is what ends it (section 2.3).
+SHORT_PREFIX = bytes([10])
+SHORT_PREFIX_BITS = 8
+
+
+@pytest.mark.rfc('rfc8277#2.1-capability-supports-two-labels')
+@pytest.mark.rfc('rfc8277#2.3-s-bit-zero-except-in-last-label')
+def test_with_the_capability_a_two_label_stack_is_not_cut_after_the_first_label() -> None:
+    negotiated = session(triple(2), triple(2))
+    stack = label(100, bottom=False) + label(200)
+    nlri, rest = decode(labelled(stack, SHORT_PREFIX, SHORT_PREFIX_BITS), negotiated=negotiated)
+    assert rest == b''
+    assert nlri.labels is not None
+    assert nlri.labels.labels == [100, 200]
+    assert str(nlri.cidr) == '10.0.0.0/8'
+
+
+@pytest.mark.rfc('rfc8277#2.1-capability-supports-two-labels')
+@pytest.mark.rfc('rfc8277#2.3-s-bit-zero-except-in-last-label')
+def test_with_the_capability_a_two_label_ipv6_stack_is_read_to_its_s_bit() -> None:
+    """IPv6 holds 128 bits, so without the session every second label became the prefix."""
+    negotiated = session(triple(2), triple(2))
+    negotiated.multiple_labels[(AFI.ipv6, SAFI.mpls_vpn)] = 2
+    stack = label(100, bottom=False) + label(200)
+    prefix = bytes.fromhex('20010db8')
+    nlri, rest = decode(vpn(stack, prefix=prefix, prefix_bits=32), AFI.ipv6, SAFI.mpls_vpn, negotiated=negotiated)
+    assert rest == b''
+    assert nlri.labels is not None
+    assert nlri.labels.labels == [100, 200]
+    assert str(nlri.cidr) == '2001:db8::/32'
+
+
+@pytest.mark.rfc('rfc8277#2.3-s-bit-zero-except-in-last-label', polarity='negative')
+def test_with_the_capability_a_single_label_without_its_s_bit_is_refused() -> None:
+    """The section 2.2 leniency is for sessions without the capability: here the S bit
+    MUST be one in the last label, and without it the stack cannot be parsed."""
+    negotiated = session(triple(2), triple(2))
+    with pytest.raises(Notify):
+        decode(labelled(label(100, bottom=False)), negotiated=negotiated)
+
+
+@pytest.mark.rfc('rfc8277#2.2-s-bit-ignored-on-reception', polarity='negative')
+def test_without_the_capability_the_same_bytes_are_one_label_and_a_prefix() -> None:
+    """What the two tests above change only applies once code 8 went both ways."""
+    negotiated = session(triple(2), None)
+    nlri, rest = decode(labelled(label(100, bottom=False)), negotiated=negotiated)
+    assert rest == b''
+    assert nlri.labels is not None
+    assert nlri.labels.labels == [100]
+    assert str(nlri.cidr) == '10.0.0.0/24'
+
+
+@pytest.mark.rfc('rfc8277#2.1-capability-supports-two-labels')
+def test_an_mp_reach_nlri_decodes_its_nlri_with_the_session_it_arrived_on() -> None:
+    """The attribute used to hand Negotiated.UNSET to the NLRI decoder, which therefore
+    never knew the capability had been exchanged."""
+    from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+
+    negotiated = session(triple(2), triple(2))
+    nlri_bytes = labelled(label(100, bottom=False) + label(200), SHORT_PREFIX, SHORT_PREFIX_BITS)
+    value = pack('!HBB', int(AFI.ipv4), int(SAFI.nlri_mpls), 4) + bytes([192, 0, 2, 1, 0]) + nlri_bytes
+    attribute = MPRNLRI.unpack_attribute(value, negotiated)
+    (nlri,) = list(cast(MPRNLRI, attribute))
+    assert cast(LabelBase, nlri).labels.labels == [100, 200]
+    assert str(cast(LabelBase, nlri).cidr) == '10.0.0.0/8'
 
 
 # ------------------------------------------------------- section 2.4, a withdraw we send

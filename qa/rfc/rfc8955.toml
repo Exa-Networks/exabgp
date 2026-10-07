@@ -267,8 +267,11 @@ Type 9 component bitmasks MUST be encoded as 1- or
 note = """
 `FlowTCPFlag` derives from `IOperationByteShort`, whose `encode` returns one octet below
 256 and two above, so the class cannot emit a four or eight octet bitmask.  The negative
-side is the configuration boundary: no TCP flag name maps to a value which would need a
-second octet, so every flag the grammar accepts packs with len=00.
+side is the configuration boundary.  The grammar takes numbers as well as flag names, and
+it accepted any, so 65536 would have needed a third octet; `FlowTCPFlag.converter` now
+refuses anything above 0x0FFF.  That is tighter than two octets on purpose: two octets
+match TCP header octets 13 and 14 "with the data offset (leftmost 4 bits) always treated as
+0", so a bitmask with one of those four bits set matches no packet.
 """
 
 [[requirement]]

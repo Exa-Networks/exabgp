@@ -93,7 +93,11 @@ class FlowRule(TypingProtocol):
 # Flow validation constants
 MAX_PACKET_LENGTH: int = 0xFFFF  # Maximum packet length (16-bit value)
 MAX_DSCP_VALUE: int = 0x3F  # Maximum DSCP value (6 bits, 0b00111111)
-MAX_TRAFFIC_CLASS: int = 0xFFFF  # Maximum traffic class value (16-bit)
+MAX_OCTET_VALUE: int = 0xFF  # protocol, next header, ICMP type and code: one octet of the IP header
+# RFC 8955 4.2.2.9: two octets match TCP header octets 13 and 14 'with the data offset
+# (leftmost 4 bits) always treated as 0', so a bitmask with any of those four bits set
+# asks for something no packet can match
+MAX_TCP_FLAGS: int = 0x0FFF
 MAX_FLOW_LABEL: int = 0xFFFFF  # Maximum flow label value (20 bits)
 
 
@@ -639,6 +643,24 @@ def converter(function: Callable[[str], int | BaseValue], klass: Type[BaseValue]
     return _integer
 
 
+def bounded(
+    function: Callable[[str], int | BaseValue], klass: Type[BaseValue], maximum: int
+) -> Callable[[str], BaseValue]:
+    """converter, refusing a value the component's field cannot hold.
+
+    Without it a protocol of 300 parsed, and the route then failed when it was packed, out
+    of reach of the line which caused it.
+    """
+
+    def _integer(value: str) -> BaseValue:
+        number = int(function(value))
+        if not 0 <= number <= maximum:
+            raise ValueError(f'{value} is out of range for this component, it is 0 to {maximum}')
+        return klass(number)
+
+    return _integer
+
+
 def decoder(
     function: Callable[[bytes], int | BaseValue], klass: Type[BaseValue] = NumericValue
 ) -> Callable[[bytes], BaseValue]:
@@ -682,9 +704,10 @@ def dscp_value(data: str) -> int:
 
 
 def class_value(data: str) -> int:
+    # RFC 8956 3: type 11 applies to IPv6 as RFC 8955 defines it, the six bit DSCP
     _str_bad_class = 'you tried to filter a flow using an invalid traffic class for a component ..'
     number = int(data)
-    if number < 0 or number > MAX_TRAFFIC_CLASS:
+    if number < 0 or number > MAX_DSCP_VALUE:
         raise ValueError(_str_bad_class)
     return number
 
@@ -737,7 +760,7 @@ class FlowIPProtocol(IOperationByte, NumericString, FlowIPv4):
 
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'protocol'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(Protocol.from_string, Protocol)
+    converter: ClassVar[Callable[[str], BaseValue]] = bounded(Protocol.from_string, Protocol, MAX_OCTET_VALUE)
     # _number, not ord: RFC 8955 lets the operator announce any of the four widths, and
     # ord() reads exactly one byte. The width is checked against the RFC, not against
     # what this component encodes, so the decoder has to read whatever arrives.
@@ -749,7 +772,7 @@ class FlowNextHeader(IOperationByte, NumericString, FlowIPv6):
 
     ID: ClassVar[int] = 0x03
     NAME: ClassVar[str] = 'next-header'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(Protocol.from_string, Protocol)
+    converter: ClassVar[Callable[[str], BaseValue]] = bounded(Protocol.from_string, Protocol, MAX_OCTET_VALUE)
     # _number, not ord: RFC 8955 lets the operator announce any of the four widths, and
     # ord() reads exactly one byte. The width is checked against the RFC, not against
     # what this component encodes, so the decoder has to read whatever arrives.
@@ -782,14 +805,14 @@ class FlowSourcePort(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
 class FlowICMPType(IOperationByte, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x07
     NAME: ClassVar[str] = 'icmp-type'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(ICMPType.from_string, ICMPType)
+    converter: ClassVar[Callable[[str], BaseValue]] = bounded(ICMPType.from_string, ICMPType, MAX_OCTET_VALUE)
     decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, ICMPType)
 
 
 class FlowICMPCode(IOperationByte, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x08
     NAME: ClassVar[str] = 'icmp-code'
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(ICMPCode.from_string, ICMPCode)
+    converter: ClassVar[Callable[[str], BaseValue]] = bounded(ICMPCode.from_string, ICMPCode, MAX_OCTET_VALUE)
     decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, ICMPCode)
 
 
@@ -799,7 +822,7 @@ class FlowTCPFlag(IOperationByteShort, BinaryString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x09
     NAME: ClassVar[str] = 'tcp-flags'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(TCPFlag.named, TCPFlag)
+    converter: ClassVar[Callable[[str], BaseValue]] = bounded(TCPFlag.named, TCPFlag, MAX_TCP_FLAGS)
     decoder: ClassVar[Callable[[bytes], BaseValue]] = decoder(_number, TCPFlag)
 
 

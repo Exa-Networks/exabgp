@@ -135,7 +135,7 @@ class Type2SessionTransformedRoute(MUP):
             isinstance(other, Type2SessionTransformedRoute)
             and self.rd == other.rd
             and self.teid == other.teid
-            and self.endpoint_len == self.endpoint_len
+            and self.endpoint_len == other.endpoint_len
             and self.endpoint_ip == other.endpoint_ip
         )
 

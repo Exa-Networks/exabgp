@@ -821,3 +821,50 @@ class TestMUPGeneric:
         route = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
 
         assert route.safi == SAFI.mup
+
+
+# ============================================================================
+# What the session transformed routes show, and what makes two of them equal
+# ============================================================================
+
+
+def ipv6_t1st_with_ipv4_prefix() -> Type1SessionTransformedRoute:
+    """A /24 prefix behind an IPv6 endpoint: the two lengths differ, so a mix-up shows."""
+    return Type1SessionTransformedRoute.make_t1st(
+        rd=RouteDistinguisher.make_from_elements('10.0.0.1', 500),
+        prefix_ip_len=24,
+        prefix_ip=IP.from_string('192.168.1.0'),
+        teid=55555,
+        qfi=3,
+        endpoint_ip_len=128,
+        endpoint_ip=IP.from_string('2001:db8::1'),
+        source_ip_len=0,
+        source_ip=b'',
+        afi=AFI.ipv4,
+    )
+
+
+def test_t1st_text_gives_the_endpoint_its_own_length() -> None:
+    """The endpoint was printed with the prefix length behind it: 2001:db8::1/24."""
+    text = str(ipv6_t1st_with_ipv4_prefix())
+    assert '2001:db8::1/128' in text
+    assert '2001:db8::1/24' not in text
+
+
+def test_t1st_json_without_a_source_has_an_empty_source() -> None:
+    """It was the repr of the empty bytes the field is read as: "b''"."""
+    import json
+
+    decoded = json.loads(ipv6_t1st_with_ipv4_prefix().json())
+    assert decoded['source_ip_len'] == 0
+    assert decoded['source_ip'] == ''
+
+
+def test_t2st_with_another_endpoint_length_is_another_route() -> None:
+    """__eq__ compared endpoint_len with itself, so the TEID length never counted."""
+    rd = RouteDistinguisher.make_from_elements('10.0.0.1', 500)
+    endpoint_ip = IP.from_string('10.0.0.1')
+    long_teid = Type2SessionTransformedRoute.make_t2st(rd, 64, endpoint_ip, 12345, AFI.ipv4)
+    short_teid = Type2SessionTransformedRoute.make_t2st(rd, 55, endpoint_ip, 12345, AFI.ipv4)
+    assert long_teid.teid == short_teid.teid
+    assert long_teid != short_teid

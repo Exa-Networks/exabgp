@@ -15,7 +15,6 @@ from typing import ClassVar
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
@@ -46,6 +45,11 @@ from exabgp.util.types import Buffer
 # ======================================================================= Prefix
 
 # https://tools.ietf.org/html/draft-rabadan-l2vpn-evpn-prefix-advertisement-03
+
+
+IPV4_ROUTE_SIZE = 36  # header(2) + RD(8) + ESI(10) + ETag(4) + IPlen(1) + IP(4) + GW(4) + label(3)
+IPV4_PREFIX_BITS = 32
+IPV6_PREFIX_BITS = 128
 
 
 class Prefix(EVPN):
@@ -162,22 +166,6 @@ class Prefix(EVPN):
         else:  # IPv6
             return Labels.unpack_labels(self._packed[57:60])
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Prefix):
-            return False
-        return (
-            NLRI.__eq__(self, other)
-            and self.CODE == other.CODE
-            and self.rd == other.rd
-            and self.etag == other.etag
-            and self.ip == other.ip
-            and self.iplen == other.iplen
-        )
-        # esi, label and gwip must not be compared
-
-    def __ne__(self, other: object) -> bool:
-        return not self == other
-
     def __str__(self) -> str:
         return '{}:{}:{}:{}:{}{}:{}:{}'.format(
             self._prefix(),
@@ -190,9 +178,12 @@ class Prefix(EVPN):
             self.label,
         )
 
-    def __hash__(self) -> int:
-        # esi, and label, gwip must *not* be part of the hash
-        return hash('{}:{}:{}:{}'.format(self.rd, self.etag, self.ip, self.iplen))
+    def _route_key(self) -> bytes:
+        # RFC 9136 3.1: the RD, Ethernet Tag, IP prefix length and IP prefix; the ESI, the
+        # gateway and the label are attributes
+        packed = bytes(self._packed)
+        ip_end = 29 if len(packed) == IPV4_ROUTE_SIZE else 41
+        return packed[0:1] + packed[2:10] + packed[20:ip_end]
 
     @classmethod
     def unpack_evpn(cls, packed: Buffer) -> EVPN:
@@ -214,6 +205,15 @@ class Prefix(EVPN):
                 5,
                 'Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6 (36 or 60)'
                 % datalen,
+            )
+
+        # RFC 9136 3.1: "between 0 and 32 (bits) for IPv4 and between 0 and 128 for IPv6",
+        # and "The value MUST NOT be greater than 128". A longer one was accepted and then
+        # published as 10.0.0.0/200, a prefix no IP-VRF can hold.
+        maximum = IPV4_PREFIX_BITS if datalen == IPV4_ROUTE_SIZE else IPV6_PREFIX_BITS
+        if packed[24] > maximum:
+            raise Notify(
+                3, 10, 'IP prefix length %d in %s is longer than the %d bits it holds' % (packed[24], cls.NAME, maximum)
             )
 
         return cls(packed)

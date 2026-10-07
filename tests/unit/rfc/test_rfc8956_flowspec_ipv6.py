@@ -341,7 +341,7 @@ neighbor 192.0.2.1 {
                 destination 2a02:b80:15::7aca:39ff:feae:a87a/128/0;
                 source ::1/128/120;
                 next-header udp;
-                traffic-class 101;
+                traffic-class 46;
                 flow-label 2013;
             }
             then { discard; }
@@ -366,7 +366,7 @@ CONFIGURED_NLRI = bytes.fromhex(
     '11'  # type 3, =udp
     '0b'
     '81'
-    '65'  # type 11, =101
+    '2e'  # type 11, =46
     '0d'
     'a1'
     '000007dd'  # type 13, =2013, four octets as section 3.7 wants
@@ -374,7 +374,7 @@ CONFIGURED_NLRI = bytes.fromhex(
 
 CONFIGURED_STRING = (
     'flow destination-ipv6 2a02:b80:15:0:7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 '
-    'next-header =udp traffic-class =101 flow-label =2013'
+    'next-header =udp traffic-class =46 flow-label =2013'
 )
 
 
@@ -429,7 +429,7 @@ def test_a_configured_ipv6_flow_route_comes_back_off_the_wire_and_renders(isolat
         'destination-ipv6': ['2a02:b80:15:0:7aca:39ff:feae:a87a/128/0'],
         'source-ipv6': ['::1/128/120'],
         'next-header': ['=udp'],
-        'traffic-class': ['=101'],
+        'traffic-class': ['=46'],
         'flow-label': ['=2013'],
         'string': CONFIGURED_STRING,
     }

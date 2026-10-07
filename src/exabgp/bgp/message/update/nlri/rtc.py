@@ -148,9 +148,9 @@ class RTCBase(NLRI):
         return ''
 
     def __len__(self) -> int:
-        # Length in bits: for wildcard (single 0 byte), return 1
-        # For full RTC: length is stored at byte 0 (96 bits = (4+8)*8)
-        return self._packed[0] if self._packed[0] != 0 else 1
+        # Octets on the wire, as every other NLRI answers: the length octet and the prefix
+        # it announces. It was the prefix length in bits, so a full RTC claimed 96 octets.
+        return len(self._packed)
 
     def _target_prefix(self) -> str:
         """The octets of a partial route target, as hex."""

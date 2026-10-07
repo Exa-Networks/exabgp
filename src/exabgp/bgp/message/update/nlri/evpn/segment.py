@@ -100,24 +100,8 @@ class EthernetSegment(EVPN):
         iplen = self._packed[20]
         return IP.create_ip(self._packed[21 : 21 + (iplen // 8)])
 
-    def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, EthernetSegment)
-            and self.CODE == other.CODE
-            and self.rd == other.rd
-            and self.ip == other.ip
-        )
-        # esi and label must not be part of the comparaison
-
-    def __ne__(self, other: object) -> bool:
-        return not self == other
-
     def __str__(self) -> str:
         return '{}:{}:{}:{}'.format(self._prefix(), self.rd._str(), self.esi, self.ip if self.ip else '')
-
-    def __hash__(self) -> int:
-        # esi and label MUST *NOT* be part of the hash
-        return hash((self.rd, self.ip))
 
     @classmethod
     def unpack_evpn(cls, packed: Buffer) -> EVPN:

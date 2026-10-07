@@ -71,7 +71,6 @@ from __future__ import annotations
 
 from copy import copy
 
-from struct import unpack
 from typing import Any, Self, TYPE_CHECKING
 
 from exabgp.util.types import Buffer
@@ -90,12 +89,81 @@ from exabgp.protocol.ip import IP
 
 # INET NLRI label constants (RFC 3107)
 LABEL_SIZE_BITS: int = 24  # Each MPLS label is 24 bits (3 bytes)
+LABEL_SIZE_BYTES: int = 3
 LABEL_WITHDRAW_VALUE: int = 0x800000  # Special label value for route withdrawal
 LABEL_NEXTHOP_VALUE: int = 0x000000  # Special label value indicating next-hop
 LABEL_BOTTOM_OF_STACK_BIT: int = 1  # Bottom of stack bit in label
 
 # AddPath path-info size
 PATH_INFO_SIZE: int = 4  # Path Identifier is 4 bytes (RFC 7911)
+
+
+def reads_whole_label_stack(afi: AFI, safi: SAFI, action: Action, negotiated: Negotiated) -> bool:
+    """RFC 8277 2.3: whether the S bit alone says where an announced label stack ends.
+
+    That reading applies once the Multiple Labels Capability went both ways, which is
+    when labels_limit allows more than one label. UNSET is no session, so it says nothing
+    about the capability, and a withdraw carries one Compatibility field (2.4) whatever
+    was negotiated: both keep the section 2.2 reading.
+    """
+    from exabgp.bgp.message.open.capability.negotiated import LABELS_UNLIMITED
+
+    return action == Action.ANNOUNCE and 1 < negotiated.labels_limit(afi, safi) < LABELS_UNLIMITED
+
+
+def read_label_stack(
+    data: Buffer, mask: int, rd_bits: int, afi: AFI, action: Action, whole_stack: bool
+) -> tuple[list[bytes], memoryview, int]:
+    """Read the label fields of a labelled NLRI: (fields, data left, mask left).
+
+    Shared by INETBase and IPVPNBase, which used to carry a copy each and had to be fixed
+    twice. `whole_stack` is reads_whole_label_stack: the S bit is then the only delimiter,
+    and a stack whose prefix is short enough to look like one field is read to its end
+    rather than cut after the first label, which reported the second label as the prefix.
+    """
+    view = data if isinstance(data, memoryview) else memoryview(data)
+    fields: list[bytes] = []
+    # each pass consumes three octets and 24 bits of mask, so the mask bounds the loop
+    while mask - rd_bits >= LABEL_SIZE_BITS:
+        if len(view) < LABEL_SIZE_BYTES:
+            raise Notify(3, 10, 'not enough data to extract the label stack of the NLRI')
+        field = bytes(view[:LABEL_SIZE_BYTES])
+        view = view[LABEL_SIZE_BYTES:]
+        mask -= LABEL_SIZE_BITS
+        fields.append(field)
+        label = int.from_bytes(field, 'big')
+        if _ends_label_stack(label, len(fields), mask - rd_bits, afi, action, whole_stack):
+            return fields, view, mask
+    # RFC 3107 3 and RFC 8277 2.3: beyond the first field the bottom of stack bit is the
+    # only thing on the wire which says where the stack ends. Running out of mask instead
+    # means every remaining byte was eaten as a label, the prefix included, and the route
+    # was reported as 0.0.0.0/0: a default route a peer could hand us by not terminating.
+    if fields:
+        raise Notify(3, 10, 'the label stack of the NLRI never ends: no bottom of stack bit')
+    return fields, view, mask
+
+
+def _ends_label_stack(label: int, depth: int, bits_left: int, afi: AFI, action: Action, whole_stack: bool) -> bool:
+    """Whether the label field just read, the `depth`th of the stack, is its last."""
+    # The bottom of stack bit is tested first: a genuine second label whose value happens
+    # to equal one of the sentinels below is a label, not a terminator.
+    if label & LABEL_BOTTOM_OF_STACK_BIT:
+        return True
+    # Both sentinels describe a WHOLE stack rather than a label inside one, so they only
+    # end a stack when they ARE the stack. Below depth one they mean nothing: for
+    # mpls-vpn an RD's leading zero bytes look like the 0x000000 next-hop convention.
+    if whole_stack or depth > 1:
+        return False
+    # RFC 8277 2.2 says of the S bit "MUST be ignored on reception", and 2.4 the same of
+    # the Compatibility field a withdraw carries. Without the capability the LENGTH says
+    # where a one field stack ends: if the bits left are a prefix the family can hold,
+    # they are the prefix. Zero bits left is excluded on purpose, as a /0 and a stack
+    # which ate the prefix are the same bytes, so there only the sentinels end it.
+    if 0 < bits_left <= IP.length(afi) * 8:
+        return True
+    if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
+        return True
+    return label == LABEL_NEXTHOP_VALUE
 
 
 class INETBase(NLRI):
@@ -419,78 +487,9 @@ class INETBase(NLRI):
         # Parse labels if present
         labels_list: list[int] | None = None
         if safi.has_label():
-            labels_list = []
-            ended = False
-            while mask - rd_mask >= LABEL_SIZE_BITS:
-                if len(data) < 3:
-                    raise Notify(3, 10, 'not enough data to extract the label stack of the NLRI')
-                label = int(unpack('!L', bytes([0]) + bytes(data[:3]))[0])
-                data = data[3:]
-                mask -= LABEL_SIZE_BITS  # 3 bytes
-                # The last 4 bits are the bottom of Stack
-                # The last bit is set for the last label
-                labels_list.append(label >> 4)
-
-                # The bottom of stack bit is tested FIRST.  A genuine second label whose
-                # value happens to equal one of the two sentinels below is a label, not a
-                # terminator, and testing the sentinels first refuses it.
-                if label & LABEL_BOTTOM_OF_STACK_BIT:
-                    ended = True
-                    break
-
-                # Both sentinels describe a WHOLE stack rather than a label inside one, so
-                # they only end a stack when they ARE the stack.  Below depth one they mean
-                # nothing, and honouring them there is how an unterminated FIRST label went
-                # on decoding: for mpls-vpn the loop reads the route distinguisher next, and
-                # an RD's leading zero bytes are indistinguishable from the 0x000000
-                # next-hop convention, so the stack "ended" on the peer's RD and the prefix
-                # vanished anyway.  Session 5.0 found that half; a fix which only counted
-                # whether the loop terminated passed nlri-mpls and still lost mpls-vpn.
-                if len(labels_list) > 1:
-                    continue
-
-                # RFC 8277 2.2, of the S bit: "This 1-bit field MUST be set to one on
-                # transmission and MUST be ignored on reception", and 2.4 says the same of
-                # the three octet Compatibility field a withdraw carries where a label
-                # would be: "Upon reception, the value of the Compatibility field MUST be
-                # ignored".  Both bind every session exabgp forms, because the section 2.3
-                # reading only applies once the Multiple Labels Capability has been
-                # exchanged and exabgp has no capability code 8 to exchange.
-                #
-                # So for a one field stack the LENGTH says where the stack ends, not the S
-                # bit: if the bits the length leaves behind this field are a prefix this
-                # family can hold, they are the prefix.  Refusing them instead is what used
-                # to reset a session over a legal MP_UNREACH withdraw.
-                #
-                # Zero bits left is excluded on purpose.  A /0 and a stack which ate the
-                # prefix are the same bytes, and the default route below is what that costs,
-                # so there the two sentinels stay the only way out of the loop.
-                if 0 < mask - rd_mask <= IP.length(afi) * 8:
-                    ended = True
-                    break
-
-                # This is a route withdrawal
-                if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
-                    ended = True
-                    break
-                # This is a next-hop
-                if label == LABEL_NEXTHOP_VALUE:
-                    ended = True
-                    break
-            # RFC 3107 3 and RFC 8277 2.3: beyond the first field the bottom of stack bit is
-            # the only thing on the wire which says where the stack ends.  Running out of
-            # mask instead means every remaining byte was eaten as a label, INCLUDING the
-            # prefix, and the route was then reported with whatever was left, which is
-            # nothing:
-            #
-            #   announce, two labels and no bottom of stack anywhere  ->  0.0.0.0/0
-            #   withdraw, a stack whose length leaves no prefix bits  ->  0.0.0.0/0
-            #
-            # A peer could hand us a default route by sending a label stack which does not
-            # terminate.  0x800000 is the RFC 3107 withdraw value and only ends a stack on a
-            # withdraw, so an announce carrying it took that path.
-            if labels_list and not ended:
-                raise Notify(3, 10, 'the label stack of the NLRI never ends: no bottom of stack bit')
+            whole_stack = reads_whole_label_stack(afi, safi, action, negotiated)
+            fields, data, mask = read_label_stack(data, mask, rd_mask, afi, action, whole_stack)
+            labels_list = [int.from_bytes(field, 'big') >> 4 for field in fields]
 
         # Parse route distinguisher if present
         rd: RouteDistinguisher | None = None

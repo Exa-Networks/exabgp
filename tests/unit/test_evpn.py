@@ -93,14 +93,17 @@ class TestEthernetAD:
         assert not route1 != route2
 
     def test_ethernetad_hash_consistency(self) -> None:
-        """Test hash consistency - ESI and label should not affect hash"""
+        """The label does not affect the hash, the ESI does: RFC 7432 7.1 keys the route on
+        the ESI and the Ethernet Tag. This test used to pin the ESI out of the hash."""
         rd = RouteDistinguisher.make_from_elements('2.2.2.2', 20)
         etag = EthernetTag.make_etag(200)
 
         route1 = EthernetAD.make_ethernetad(rd, ESI.make_default(), etag, Labels.make_labels([100], True))
-        route2 = EthernetAD.make_ethernetad(rd, ESI(bytes([1] * 10)), etag, Labels.make_labels([200], True))
+        route2 = EthernetAD.make_ethernetad(rd, ESI.make_default(), etag, Labels.make_labels([200], True))
+        route3 = EthernetAD.make_ethernetad(rd, ESI(bytes([1] * 10)), etag, Labels.make_labels([100], True))
 
         assert hash(route1) == hash(route2)
+        assert route1 != route3
 
     def test_ethernetad_string_representation(self) -> None:
         """Test string representation of EthernetAD"""
@@ -481,18 +484,20 @@ class TestEthernetSegment:
         ip = IP.from_string('192.168.1.1')
 
         route1 = EthernetSegment.make_ethernetsegment(rd, ESI.make_default(), ip)
-        route2 = EthernetSegment.make_ethernetsegment(rd, ESI(bytes([1] * 10)), ip)
+        route2 = EthernetSegment.make_ethernetsegment(rd, ESI.make_default(), ip)
+        route3 = EthernetSegment.make_ethernetsegment(rd, ESI(bytes([1] * 10)), ip)
 
-        # ESI should not affect equality
+        # RFC 7432 7.4 keys the route on the ESI: this test used to pin the ESI out of it
         assert route1 == route2
+        assert route1 != route3
 
     def test_segment_hash_consistency(self) -> None:
-        """Test hash consistency - ESI should not affect hash"""
+        """Equal routes hash alike (the ESI is part of the key, RFC 7432 7.4)"""
         rd = RouteDistinguisher.make_from_elements('27.27.27.27', 270)
         ip = IP.from_string('10.0.0.1')
 
         route1 = EthernetSegment.make_ethernetsegment(rd, ESI.make_default(), ip)
-        route2 = EthernetSegment.make_ethernetsegment(rd, ESI(bytes([1] * 10)), ip)
+        route2 = EthernetSegment.make_ethernetsegment(rd, ESI.make_default(), ip)
 
         assert hash(route1) == hash(route2)
 
@@ -636,9 +641,12 @@ class TestPrefix:
         # Routes should be equal when all parameters match
         assert route1 == route2
 
-        # Test that different gwip makes them unequal (via NLRI.index())
+        # RFC 9136 3.1: the gateway is not part of the route key, the prefix is. This test
+        # used to pin a different gateway as a different route.
         route3 = Prefix.make_prefix(rd, ESI.make_default(), etag, label, ip, iplen, IP.from_string('10.1.1.2'))
-        assert route1 != route3
+        assert route1 == route3
+        route4 = Prefix.make_prefix(rd, ESI.make_default(), etag, label, IP.from_string('10.1.2.0'), iplen, gwip)
+        assert route1 != route4
 
     def test_prefix_hash_consistency(self) -> None:
         """Test hash consistency - ESI, label, and gwip should not affect hash"""

@@ -612,6 +612,23 @@ def test_no_tcp_flag_value_could_need_a_third_octet() -> None:
         TCPFlag.named('quic')
 
 
+@pytest.mark.rfc('rfc8955#4.2.2.9-tcp-flags-width', polarity='negative')
+@pytest.mark.parametrize('text', ['0x1000', '4096', '65535'])
+def test_a_tcp_flags_bitmask_reaching_the_data_offset_is_refused_by_the_grammar(text: str) -> None:
+    """Two octets match TCP header octets 13 and 14 "with the data offset (leftmost 4
+    bits) always treated as 0", so a bitmask setting one of those bits was accepted and
+    asked for something no packet can match."""
+    with pytest.raises(ValueError):
+        FlowTCPFlag.converter(text)
+
+
+@pytest.mark.rfc('rfc8955#4.2.2.9-tcp-flags-width')
+@pytest.mark.parametrize('text', ['0x0fff', '256', 'syn+ack'])
+def test_a_tcp_flags_bitmask_below_the_data_offset_is_one_or_two_octets(text: str) -> None:
+    packed = bytes(FlowTCPFlag(BinaryOperator.MATCH, FlowTCPFlag.converter(text)).pack())
+    assert len(packed) - 1 in (1, 2)
+
+
 @pytest.mark.rfc('rfc8955#4.2.2.11-dscp-single-octet')
 @pytest.mark.parametrize('value', [0, 1, 32, 46, 63])
 def test_every_dscp_we_encode_uses_a_single_octet(value: int) -> None:

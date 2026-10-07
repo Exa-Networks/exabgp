@@ -262,7 +262,23 @@ class CIDR:
         if len(bgp) < size + 1:
             raise Notify(3, 10, f'CIDR with a /{mask} mask needs {size} octets, got {len(bgp) - 1}')
 
-        return bytes(bgp[1 : size + 1]) + bytes(IP.length(afi) - size), mask
+        return CIDR.clear_host_bits(bgp[1 : size + 1], mask) + bytes(IP.length(afi) - size), mask
+
+    @staticmethod
+    def clear_host_bits(prefix: Buffer, mask: int) -> bytes:
+        """The `CIDR.size(mask)` octets of a prefix, with the bits past the mask zeroed.
+
+        RFC 4271 4.3 and RFC 4760 5: the Prefix field is followed by enough trailing bits
+        to end on an octet, and "the value of trailing bits is irrelevant". Kept, they made
+        10.0.1.0/23 and 10.0.0.0/23 two routes: two RIB keys, two strings, unequal, and the
+        first could never be withdrawn by the second.
+        """
+        assert len(prefix) == CIDR.size(mask), 'the prefix has to be the octets the mask covers'
+        cleared = bytearray(prefix)
+        host_bits = -mask % 8
+        if cleared and host_bits:
+            cleared[-1] &= (0xFF << host_bits) & 0xFF
+        return bytes(cleared)
 
         # data = bgp[1:size+1] + '\x0\x0\x0\x0'
         # return data[:4], mask

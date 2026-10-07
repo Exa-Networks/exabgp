@@ -105,15 +105,18 @@ class MPRNLRI(Attribute):
     ID: ClassVar = Attribute.CODE.MP_REACH_NLRI
     NO_DUPLICATE: ClassVar[bool] = True
 
-    def __init__(self, packed: Buffer, addpath: bool) -> None:
+    def __init__(self, packed: Buffer, addpath: bool, negotiated: Negotiated = Negotiated.UNSET) -> None:
         """Create MPRNLRI from wire-format bytes.
 
         Args:
             packed: Wire-format payload (after attribute header)
             addpath: Whether AddPath is enabled for this AFI/SAFI
+            negotiated: The session the attribute arrived on, which the NLRI decoders read
+                the Multiple Labels Capability from (RFC 8277 2.3)
         """
         self._packed = packed
         self._addpath = addpath
+        self._negotiated = negotiated
         # read once: every NLRI decoded from the attribute asks. It inherited Family for
         # this, next to Attribute, which mypyc cannot compile (two concrete bases).
         self._afi = AFI.from_int(unpack('!H', packed[:2])[0])
@@ -171,7 +174,7 @@ class MPRNLRI(Attribute):
             while nlri_data:
                 try:
                     nlri_result, left_result = NLRI.unpack_nlri(
-                        self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._addpath, Negotiated.UNSET
+                        self.afi, self.safi, nlri_data, Action.ANNOUNCE, self._addpath, self._negotiated
                     )
                 except NLRIDiscard as discard:
                     # RFC 9552 8.2.2: framed but broken inside, so only this NLRI goes
@@ -321,8 +324,8 @@ class MPRNLRI(Attribute):
         # Get addpath flag for lazy NLRI parsing
         addpath = negotiated.required(afi, safi)
 
-        # Store wire bytes and addpath flag - NLRIs parsed lazily
-        return cls(data, addpath)
+        # Store wire bytes, addpath flag and session - NLRIs parsed lazily
+        return cls(data, addpath, negotiated)
 
 
 Attribute.register()(MPRNLRI)

@@ -116,18 +116,34 @@ class TestVPLSPackUnpack:
         # First 2 bytes should be length (0x0011 = 17 bytes following)
         assert packed[0:2] == b'\x00\x11'
 
-    def test_unpack_requires_exact_length(self) -> None:
-        """Test that VPLS unpacking requires exact length match"""
+    def test_unpack_leaves_what_follows_for_the_next_nlri(self) -> None:
+        """The bytes after one VPLS NLRI are the next NLRI, not an inconsistency.
+
+        This test used to require the length to match the data exactly, which refused
+        every MP_REACH_NLRI carrying more than one VPLS NLRI.
+        """
         rd = RouteDistinguisher.make_from_elements('172.30.5.4', 13)
         vpls = VPLS.make_vpls(rd, endpoint=3, base=262145, offset=1, size=8)
 
-        # VPLS requires exact length - extra data causes Notify
         packed = vpls.pack_nlri(create_negotiated()) + b'\x01\x02\x03\x04'
 
-        with pytest.raises(Notify) as exc_info:
-            VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, False, negotiated=create_negotiated())
+        unpacked, leftover = VPLS.unpack_nlri(
+            AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, False, negotiated=create_negotiated()
+        )
+        assert bytes(leftover) == b'\x01\x02\x03\x04'
+        assert unpacked.endpoint == 3
 
-        assert 'length is not consistent' in str(exc_info.value)
+    def test_unpack_two_nlri_one_after_the_other(self) -> None:
+        """Two VPLS NLRI in one MP_REACH_NLRI: the second was refused as inconsistent."""
+        from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+
+        first = VPLS.make_vpls(RouteDistinguisher.make_from_elements('172.30.5.4', 13), 3, 262145, 1, 8)
+        second = VPLS.make_vpls(RouteDistinguisher.make_from_elements('10.0.0.1', 100), 10, 500000, 50, 16)
+        negotiated = create_negotiated()
+        nlri = bytes(first.pack_nlri(negotiated)) + bytes(second.pack_nlri(negotiated))
+        value = bytes([0, 25, 65, 4, 192, 0, 2, 1, 0]) + nlri
+        decoded = list(MPRNLRI(value, addpath=False))
+        assert [(n.endpoint, n.base) for n in decoded] == [(3, 262145), (10, 500000)]
 
     def test_unpack_with_action_withdraw(self) -> None:
         """Test unpacking works with withdraw context (action no longer stored in NLRI)"""
@@ -327,9 +343,9 @@ class TestVPLSEdgeCases:
         assert unpacked.base == max_base
 
     def test_unpack_length_mismatch(self) -> None:
-        """Test unpacking with length mismatch raises exception"""
-        # Says 17 bytes, the only valid length, but provides 18
-        invalid = b'\x00\x11' + b'\x00' * 18
+        """A length running past the data is refused."""
+        # Says 17 bytes, the only valid length, but provides 16
+        invalid = b'\x00\x11' + b'\x00' * 16
 
         with pytest.raises(Notify) as exc_info:
             VPLS.unpack_nlri(AFI.l2vpn, SAFI.vpls, invalid, Action.ANNOUNCE, False, negotiated=create_negotiated())

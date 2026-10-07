@@ -206,15 +206,19 @@ class TestRTCStringRepresentation:
 
 
 class TestRTCLength:
-    """Test length calculations for RTC routes"""
+    """len() is the octets of the NLRI on the wire, as for every other NLRI.
+
+    These tests used to pin the prefix length in bits, 96, for a 13 octet NLRI.
+    """
 
     def test_len_rtc_with_rt(self) -> None:
         """Test length of RTC with route target"""
         rt = RouteTarget.make_route_target(64512, 100)
         nlri = RTC.make_rtc(ASN(65000), rt)
 
-        # Length should be (4 + 8) * 8 = 96 bits
-        assert len(nlri) == 96
+        # the length octet, then 4 octets of origin AS and 8 of route target
+        assert len(nlri) == 13
+        assert len(nlri) == len(nlri.pack_nlri(Negotiated.UNSET))
 
     def test_len_rtc_wildcard(self) -> None:
         """Test length of wildcard RTC"""
@@ -233,8 +237,8 @@ class TestRTCLength:
 
         for rt in rts:
             nlri = RTC.make_rtc(ASN(65000), rt)
-            # All should be same length: (4 + 8) * 8 = 96 bits
-            assert len(nlri) == 96
+            # All should be same length: 1 + 4 + 8 octets
+            assert len(nlri) == 13
 
 
 class TestRTCFeedback:

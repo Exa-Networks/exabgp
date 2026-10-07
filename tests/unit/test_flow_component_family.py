@@ -70,7 +70,7 @@ def component(parser: Operation, text: str):
 
 REFUSED = [
     ('flow-label in IPv4', ipv4_destination, flow_label, '2013'),
-    ('traffic-class in IPv4', ipv4_destination, traffic_class, '101'),
+    ('traffic-class in IPv4', ipv4_destination, traffic_class, '46'),
     ('dscp in IPv6', ipv6_destination, dscp, '46'),
     ('dont-fragment in IPv6', ipv6_destination, fragment, 'dont-fragment'),
 ]

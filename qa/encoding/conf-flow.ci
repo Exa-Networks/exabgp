@@ -40,8 +40,8 @@ option:file:conf-flow.conf
 1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0045:02:0000002E800E1200018500000C02180A000103810605910C384001010040020040050400000064C01008800C0000447A0000
 1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9226749737724149760,"string":"rate-limit:1000:packets"}]},"announce":{"ipv4 flow":{"no-nexthop":[{"source-ipv4":["10.0.1.0/24"],"protocol":["=tcp"],"destination-port":["=3128"],"string":"flow source-ipv4 10.0.1.0/24 protocol =tcp destination-port =3128"}]}}}}}}
 
-# flow destination-ipv6 2a02:b80:15::7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 next-header =UDP traffic-class =101 flow-label =2013 extended-community discard
-1:cmd:announce ipv6 flow destination-ipv6 2a02:b80:15:0:7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 next-header =udp traffic-class =101 flow-label =2013 extended-community [rate-limit:0]
+# flow destination-ipv6 2a02:b80:15::7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 next-header =UDP traffic-class =46 flow-label =2013 extended-community discard
+1:cmd:announce ipv6 flow destination-ipv6 2a02:b80:15:0:7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 next-header =udp traffic-class =46 flow-label =2013 extended-community [rate-limit:0]
 # The source-ipv6 component was re-recorded: this raw line held the pattern exabgp
 # used to write before the RFC 8956 section 3.1 sizing was fixed.  The RFC says "The
 # encoded pattern contains enough octets for the bits used in matching (length minus
@@ -51,8 +51,8 @@ option:file:conf-flow.conf
 # both encodings describe the same prefix, the old one just could not be read back.
 # The flow label was re-recorded too: RFC 8956 section 3.7 has it in four octets whatever
 # its value, so =2013 is A1 000007DD rather than 91 07DD, and the NLRI grows to 0x23.
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:005C:02:00000045800E290002850000230180002A020B80001500007ACA39FFFEAEA87A028078010381110B81650DA1000007DD4001010040020040050400000064C010088006000000000000
-1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060886715039744,"string":"rate-limit:0"}]},"announce":{"ipv6 flow":{"no-nexthop":[{"destination-ipv6":["2a02:b80:15:0:7aca:39ff:feae:a87a/128/0"],"source-ipv6":["::1/128/120"],"next-header":["=udp"],"traffic-class":["=101"],"flow-label":["=2013"],"string":"flow destination-ipv6 2a02:b80:15:0:7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 next-header =udp traffic-class =101 flow-label =2013"}]}}}}}}
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:005C:02:00000045800E290002850000230180002A020B80001500007ACA39FFFEAEA87A028078010381110B812E0DA1000007DD4001010040020040050400000064C010088006000000000000
+1:json:{"exabgp":"6.0.0","type":"update","neighbor":{"address":{"local":"127.0.0.1","peer":"127.0.0.1"},"asn":{"local":1,"peer":1},"router-id":"1.2.3.4","direction":"in","message":{"update":{"attribute":{"origin":"igp","local-preference":100,"extended-community":[{"value":9225060886715039744,"string":"rate-limit:0"}]},"announce":{"ipv6 flow":{"no-nexthop":[{"destination-ipv6":["2a02:b80:15:0:7aca:39ff:feae:a87a/128/0"],"source-ipv6":["::1/128/120"],"next-header":["=udp"],"traffic-class":["=46"],"flow-label":["=2013"],"string":"flow destination-ipv6 2a02:b80:15:0:7aca:39ff:feae:a87a/128/0 source-ipv6 ::1/128/120 next-header =udp traffic-class =46 flow-label =2013"}]}}}}}}
 
 # flow packet-length >200&<300 >400&<500 extended-community mark 10
 1:cmd:announce ipv4 flow packet-length [ >200&<300 >400&<500 ] extended-community [mark 10]

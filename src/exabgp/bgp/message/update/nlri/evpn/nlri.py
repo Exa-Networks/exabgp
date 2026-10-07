@@ -66,7 +66,8 @@ class EVPN(NLRI):
         self._packed = bytes(packed)  # Ensure bytes for storage
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed.hex()))
+        # the same key __eq__ compares, so that equal routes hash alike
+        return hash(self.index())
 
     def __len__(self) -> int:
         return len(self._packed)
@@ -122,7 +123,17 @@ class EVPN(NLRI):
         return self._packed
 
     def index(self) -> bytes:
-        return bytes(Family.index(self)) + self._packed
+        return bytes(Family.index(self)) + self._route_key()
+
+    def _route_key(self) -> bytes:
+        """The fields of the NLRI which identify the route, its route type first.
+
+        RFC 7432 7.1 to 7.4 and RFC 9136 3.1 name, per route type, the fields "considered
+        to be part of the prefix in the NLRI" for BGP route key processing, the others
+        (labels, an ESI, a gateway) being "route attributes". A route type whose key is
+        every field it carries, or which we do not know, keeps the whole NLRI.
+        """
+        return bytes(self._packed)
 
     @classmethod
     def unpack_evpn(cls, data: Buffer) -> EVPN:

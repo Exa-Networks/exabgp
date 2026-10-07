@@ -138,32 +138,14 @@ class MAC(EVPN):
 
     @property
     def label(self) -> Labels:
-        """MPLS Labels - unpacked from wire bytes."""
-        iplen_bits = self._packed[31]
-        iplen_bytes = iplen_bits // 8 if iplen_bits else 0
-        label_start = 32 + iplen_bytes
-        return Labels.unpack_labels(self._packed[label_start : label_start + 3])
+        """MPLS Label1 and, when the route carries it, MPLS Label2 (RFC 7432 7.2).
 
-    def index(self) -> bytes:
-        # Note: Per RFC 7432 Section 7.2, the route key for Type 2 should only include
-        # etag, mac, and ip (ESI and labels are attributes, not key). However, this
-        # implementation uses full packed bytes for index. The __eq__ method correctly
-        # excludes ESI and label for semantic equality comparisons.
-        return EVPN.index(self)
-
-    def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, MAC)
-            and self.CODE == other.CODE
-            and self.rd == other.rd
-            and self.etag == other.etag
-            and self.mac == other.mac
-            and self.ip == other.ip
-        )
-        # esi and label must not be part of the comparaison
-
-    def __ne__(self, other: object) -> bool:
-        return not self == other
+        unpack_evpn only accepts a route ending in three or six octets of label, so what
+        follows the IP is the one or two label fields, both shown. Label2 used to be cut,
+        so it reached neither the JSON nor the text an API client reads.
+        """
+        label_start = 32 + self._packed[31] // 8
+        return Labels(self._packed[label_start:])
 
     def __str__(self) -> str:
         return '{}:{}:{}:{}:{}{}:{}:{}'.format(
@@ -172,14 +154,17 @@ class MAC(EVPN):
             self.esi,
             self.etag,
             self.mac,
-            '' if len(self.mac) == MAC_ADDRESS_LEN_BITS else '/%d' % self.maclen,
+            '' if self.maclen == MAC_ADDRESS_LEN_BITS else '/%d' % self.maclen,
             self.ip if self.ip else '',
             self.label,
         )
 
-    def __hash__(self) -> int:
-        # esi and label MUST *NOT* be part of the hash
-        return hash((self.rd, self.etag, self.mac, self.ip))
+    def _route_key(self) -> bytes:
+        # RFC 7432 7.2: the RD, Ethernet Tag, MAC length, MAC, IP length and IP; the ESI
+        # and both labels are attributes, so a new label replaces the route
+        packed = bytes(self._packed)
+        ip_end = 32 + packed[31] // 8
+        return packed[0:1] + packed[2:10] + packed[20:ip_end]
 
     @classmethod
     def unpack_evpn(cls, packed: Buffer) -> EVPN:

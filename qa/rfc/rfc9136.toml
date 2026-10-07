@@ -1,0 +1,231 @@
+# RFC 9136 - IP Prefix Advertisement in Ethernet VPN (EVPN)
+# https://www.rfc-editor.org/rfc/rfc9136
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc9136.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# The document defines EVPN route type 5, the IP Prefix route, and the procedures an
+# NVE/PE follows with it.  exabgp decodes the route (nlri/evpn/prefix.py) and hands it to
+# the JSON API; it has no IP-VRF, resolves no Overlay Index and installs nothing, and the
+# configuration has no EVPN route statement, so it never originates one either.  What
+# binds it is therefore the encoding a peer sends us, and that is what the `required`
+# entries are about.
+#
+# Not recorded, because no RFC 2119 keyword carries it: section 3.1's "The RD, Ethernet
+# Tag ID, IP prefix length, and IP prefix are part of the route key used by BGP to compare
+# routes."  It is what `Prefix._route_key` implements all the same, and
+# tests/unit/rfc/test_rfc9136_evpn_prefix.py holds it to that.
+
+rfc = "rfc9136"
+title = "IP Prefix Advertisement in Ethernet VPN (EVPN)"
+url = "https://www.rfc-editor.org/rfc/rfc9136"
+
+[[requirement]]
+id = "rfc9136#3-nves-must-support-rt5"
+section = "3"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   In case two or more NVEs are
+   attached to different BDs of the same tenant, they MUST support the
+   RT-5 for the proper inter-subnet forwarding operation of the tenant.
+"""
+note = """
+Addressed to NVEs attached to a bridge domain, for their forwarding. exabgp is not an NVE,
+attaches to no bridge domain and forwards nothing.
+"""
+
+[[requirement]]
+id = "rfc9136#3.1-length-34-or-58"
+section = "3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+   *  The Length field of the BGP EVPN NLRI for an EVPN IP Prefix route
+      MUST be either 34 (if IPv4 addresses are carried) or 58 (if IPv6
+      addresses are carried).
+"""
+note = """
+`Prefix.unpack_evpn` refuses any other length with a NOTIFICATION, and reads the address
+family of both addresses from it.
+"""
+
+[[requirement]]
+id = "rfc9136#3.1-prefix-and-gateway-same-family"
+section = "3.1"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+The IP prefix and gateway IP address MUST
+      be from the same IP address family.
+"""
+note = """
+On reception the Length field is the only thing which says how wide each address is, and
+it says it for both at once, so a route whose two addresses are of two families cannot be
+encoded at all. Positive only: there is no input which violates it and decodes.
+"""
+
+[[requirement]]
+id = "rfc9136#3.1-rd-and-etag-as-rfc7432"
+section = "3.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   *  The Route Distinguisher (RD) and Ethernet Tag ID MUST be used as
+      defined in [RFC7432] and [RFC8365].
+"""
+note = """
+How an originator assigns the two values. exabgp originates no EVPN route (the
+configuration has no EVPN route statement) and only reports the values a peer chose.
+"""
+
+[[requirement]]
+id = "rfc9136#3.1-esi-non-zero-when-overlay-index"
+section = "3.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+   *  The Ethernet Segment Identifier MUST be a non-zero 10-octet
+      identifier if the ESI is used as an Overlay Index (see the
+      definition of "Overlay Index" in Section 3.2).  It MUST be all
+      bytes zero otherwise.
+"""
+note = """
+A rule for the originator, which decides what the Overlay Index is. exabgp originates no
+EVPN route, and on reception the ESI is what defines the Overlay Index, so it cannot be
+wrong about it.
+"""
+
+[[requirement]]
+id = "rfc9136#3.1-prefix-length-not-above-128"
+section = "3.1"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+   *  The IP prefix length can be set to a value between 0 and 32 (bits)
+      for IPv4 and between 0 and 128 for IPv6, and it specifies the
+      number of bits in the prefix.  The value MUST NOT be greater than
+      128.
+"""
+note = """
+`Prefix.unpack_evpn` refuses a length above 32 in an IPv4 route and above 128 in an IPv6
+one with Notify(3, 10). It used to accept any value, and published 192.0.2.0/200 to the
+API. The IPv4 bound is the "between 0 and 32" of the same sentence: a 32 bit prefix holds
+no more bits than that.
+"""
+
+[[requirement]]
+id = "rfc9136#3.1-gw-ip-zero-unless-overlay-index"
+section = "3.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The GW IP field MUST be all bytes zero if it is not
+      used as an Overlay Index.
+"""
+note = """
+As for the ESI: the originator decides the Overlay Index, exabgp originates no EVPN
+route, and on reception a non-zero gateway is the Overlay Index by definition.
+"""
+
+[[requirement]]
+id = "rfc9136#3.1-zero-label-needs-overlay-index"
+section = "3.1"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+If the received MPLS label value is
+      zero, the route MUST contain an Overlay Index, and the ingress
+      NVE/PE MUST perform a recursive resolution to find the egress NVE/
+      PE.
+"""
+note = """
+The first MUST is answered by the treat-as-withdraw entry below; the second is a
+forwarding procedure for an ingress NVE/PE, which exabgp is not.
+"""
+
+[[requirement]]
+id = "rfc9136#3.1-zero-label-without-overlay-index-withdrawn"
+section = "3.1"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+If the received label is zero and the route does not contain
+      an Overlay Index, it MUST be "treat as withdraw" [RFC7606].
+"""
+note = """
+The decoder does not look at the label, the ESI, the gateway or the EVPN Router's MAC
+Extended Community together, so such a route is reported as an announcement. Doing it
+needs the route's attributes, which the NLRI decoder does not see.
+"""
+
+[[requirement]]
+id = "rfc9136#3.2-no-install-without-route-to-next-hop"
+section = "3.2"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+   *  Irrespective of the recursive resolution, if there is no IGP or
+      BGP route to the BGP next hop of an RT-5, BGP MUST NOT install the
+      RT-5 even if the Overlay Index can be resolved.
+"""
+note = """
+exabgp installs nothing: it does not manipulate the FIB.
+"""
+
+[[requirement]]
+id = "rfc9136#3.2-esi-and-gw-ip-not-both-non-zero"
+section = "3.2"
+level = "MUST NOT"
+status = "not-applicable"
+polarity = "both"
+text = """
+   *  The ESI and GW IP fields may both be zero at the same time.
+      However, they MUST NOT both be non-zero at the same time.
+"""
+note = """
+A rule for the originator, and exabgp originates no EVPN route. What a receiver does with
+a route breaking it is a SHOULD (treat as withdraw), which is not gated.
+"""
+
+[[requirement]]
+id = "rfc9136#3.2-router-mac-six-octets"
+section = "3.2"
+level = "MUST"
+status = "not-applicable"
+polarity = "both"
+text = """
+The encoding of a MAC address MUST be the 6-octet MAC
+         address specified by [IEEE-802.1Q].
+"""
+note = """
+The MAC address of the EVPN Router's MAC Extended Community, which the community's own
+layout fixes at six octets. exabgp neither originates the community for an RT-5 nor
+resolves a MAC Overlay Index from it.
+"""
+
+[[requirement]]
+id = "rfc9136#3.2-invalid-router-mac-withdrawn"
+section = "3.2"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+The route
+         MUST be treat as withdraw in case of an invalid MAC address.
+"""
+note = """
+A broadcast or multicast MAC in the EVPN Router's MAC Extended Community of an RT-5 is not
+looked at, and the route is reported as an announcement. As above, the NLRI decoder does
+not see the attributes this needs.
+"""

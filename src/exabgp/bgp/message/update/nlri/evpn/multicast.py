@@ -89,9 +89,6 @@ class Multicast(EVPN):
         iplen = self._packed[14]
         return IP.create_ip(self._packed[15 : 15 + iplen // 8])
 
-    def __ne__(self, other: object) -> bool:
-        return not self == other
-
     def __str__(self) -> str:
         return '{}:{}:{}:{}'.format(
             self._prefix(),
@@ -99,9 +96,6 @@ class Multicast(EVPN):
             self.etag,
             self.ip,
         )
-
-    def __hash__(self) -> int:
-        return hash((self.afi, self.safi, self.CODE, self.rd, self.etag, self.ip))
 
     @classmethod
     def unpack_evpn(cls, packed: Buffer) -> EVPN:

@@ -212,7 +212,7 @@ class Type1SessionTransformedRoute(MUP):
             self.teid,
             self.qfi,
             self.endpoint_ip,
-            '/%d' % self.prefix_ip_len,
+            '/%d' % self.endpoint_ip_len,
         )
 
         if self.source_ip_len != 0 and isinstance(self.source_ip, IP):
@@ -299,7 +299,8 @@ class Type1SessionTransformedRoute(MUP):
         content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
         content += '"endpoint_ip": "{}", '.format(str(self.endpoint_ip))
         content += '"source_ip_len": %d, ' % self.source_ip_len
-        content += '"source_ip": "{}", '.format(str(self.source_ip))
+        # without a source the field is empty, not the repr of the empty bytes it is read as
+        content += '"source_ip": "{}", '.format(str(self.source_ip) if self.source_ip_len else '')
         content += '"raw": "{}"'.format(self._raw())
         return '{{ {} }}'.format(content)
 

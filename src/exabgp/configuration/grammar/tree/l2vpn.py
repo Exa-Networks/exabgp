@@ -41,17 +41,18 @@ from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP, IPSelf
 from exabgp.rib.route import Route
 
-VPLS_PARAM_MAX = 0xFFFF  # endpoint, size, offset and label base are sixteen bits
+VPLS_PARAM_MAX = 0xFFFF  # RFC 4761 3.2.2: VE ID, VE block offset and VE block size are two octets
+VPLS_LABEL_MAX = 0xFFFFF  # RFC 4761 3.2.2: the label base is a twenty bit label
 
 
-def _vpls_number(name: str) -> Number[int]:
+def _vpls_number(name: str, maximum: int = VPLS_PARAM_MAX) -> Number[int]:
     def convert(word: str) -> int:
         number = decimal(word)
-        if not 0 <= number <= VPLS_PARAM_MAX:
+        if not 0 <= number <= maximum:
             raise ValueError(f'invalid l2vpn vpls {name}')
         return number
 
-    return Number(name, ((0, VPLS_PARAM_MAX),), convert=convert, examples=['0', '5', str(VPLS_PARAM_MAX)])
+    return Number(name, ((0, maximum),), convert=convert, examples=['0', '5', str(maximum)])
 
 
 def _nexthop(word: str) -> IP:
@@ -79,7 +80,7 @@ VPLS_NLRI: dict[str, RouteValue] = {
     'endpoint': RouteValue(_vpls_number('endpoint'), Target.NLRI, 'endpoint', 'the VE ID of the site'),
     'offset': RouteValue(_vpls_number('block-offset'), Target.NLRI, 'offset', 'the VE block offset'),
     'size': RouteValue(_vpls_number('block-size'), Target.NLRI, 'size', 'the VE block size'),
-    'base': RouteValue(_vpls_number('label'), Target.NLRI, 'base', 'the label base'),
+    'base': RouteValue(_vpls_number('label', VPLS_LABEL_MAX), Target.NLRI, 'base', 'the label base'),
 }
 VPLS_ATTRIBUTES = (
     'attribute',

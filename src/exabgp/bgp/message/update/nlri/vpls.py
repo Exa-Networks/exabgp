@@ -240,7 +240,9 @@ class VPLSBase(NLRI):
                 10,
                 'l2vpn vpls length is %d, it needs at least %d' % (length, VPLS_PAYLOAD_SIZE),
             )
-        if len(data) != length + 2:
+        # what follows this NLRI is the next one: an MP_REACH_NLRI carries as many as fit,
+        # so only a length running past the data is inconsistent
+        if len(data) < length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
 
         # Only what the accessors read is kept, so what is packed back is what was

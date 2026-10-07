@@ -93,24 +93,13 @@ class EthernetAD(EVPN):
         """MPLS Labels - unpacked from wire bytes (variable length)."""
         return Labels.unpack_labels(self._packed[24:])
 
-    def __eq__(self, other: object) -> bool:
-        return (
-            isinstance(other, EthernetAD)
-            and self.CODE == other.CODE
-            and self.rd == other.rd
-            and self.etag == other.etag
-        )
-        # esi and label must not be part of the comparaison
-
-    def __ne__(self, other: object) -> bool:
-        return not self == other
-
     def __str__(self) -> str:
         return '{}:{}:{}:{}:{}'.format(self._prefix(), self.rd._str(), self.esi, self.etag, self.label)
 
-    def __hash__(self) -> int:
-        # esi and label MUST *NOT* be part of the hash
-        return hash((self.rd, self.etag))
+    def _route_key(self) -> bytes:
+        # RFC 7432 7.1: the RD, the ESI and the Ethernet Tag; the label is an attribute
+        packed = bytes(self._packed)
+        return packed[0:1] + packed[2:24]
 
     @classmethod
     def unpack_evpn(cls, packed: Buffer) -> EVPN:

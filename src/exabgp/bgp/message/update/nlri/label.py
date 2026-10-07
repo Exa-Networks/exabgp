@@ -50,9 +50,10 @@ https://www.rfc-editor.org/rfc/rfc3107.html
 RFC 8277 - Using BGP to Bind MPLS Labels to Address Prefixes
 https://www.rfc-editor.org/rfc/rfc8277.html
 
-    Updates RFC 3107 with clarifications on label binding.
-    Deprecates the use of SAFI 4 for some cases in favor of
-    SAFI 1 with label binding via attributes.
+    Obsoletes RFC 3107. Without the Multiple Labels Capability (code 8) exchanged,
+    an NLRI binds exactly one label and the S bit is ignored on reception (2.2);
+    with it, the S bit ends the stack (2.3). A withdraw carries one Compatibility
+    field (2.4). The decoder is read_label_stack in inet.py.
 
 Wire Format (_packed) - Packed-Bytes-First Pattern:
 ===================================================
@@ -349,10 +350,9 @@ class LabelBase(INET):
         return len(self._packed)
 
     def __hash__(self) -> int:
-        # _packed includes everything; use _has_addpath as discriminator
-        if self._has_addpath:
-            return hash(self._packed)
-        return hash(b'disabled' + self._packed)
+        # The key __eq__ compares (NLRI.__eq__ is index()), which leaves the labels out:
+        # hashing _packed put two equal routes with different labels in two buckets.
+        return hash(self.index())
 
     def __copy__(self) -> Self:
         new = self._blank()
