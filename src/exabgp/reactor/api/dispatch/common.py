@@ -186,17 +186,12 @@ def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> 
 
     first_token = tokeniser()
 
-    # Wildcard - all peers
-    if first_token == '*':
-        yield from reactor.peers(service)
-        return
-
     # Bracket syntax: [ip1 key value, ip2]
     if first_token == '[':
         yield from _parse_bracket_selector(tokeniser, reactor, service)
         return
 
-    # IP address with optional key-value pairs: IP [key value]...
+    # IP address, or * for any, with optional key-value pairs: IP [key value]...
     definition: list[str] = [f'neighbor {first_token}']
 
     # Consume any following key-value pairs
@@ -272,6 +267,9 @@ def _parse_bracket_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: s
             # Unknown token - include it anyway
             current_def.append(tok)
 
+    # `[ ]` names no peer: given nothing, match_neighbors would answer every peer
+    if not descriptions:
+        return
     yield from match_neighbors(reactor.peers(service), descriptions)
 
 

@@ -159,8 +159,10 @@ def test_protocol_initialization(mock_peer: Peer) -> None:
 
 
 def test_protocol_environment_port(mock_peer: Peer, monkeypatch: Any) -> None:
-    """Test Protocol initialization with port from environment variable."""
-    monkeypatch.setenv('exabgp.tcp.port', '2179')
+    """The port is tcp.port as the environment read it, not the variable read again."""
+    from exabgp.environment import getenv
+
+    monkeypatch.setattr(getenv().tcp, 'port', 2179)
     protocol = Protocol(mock_peer)
 
     assert protocol.port == 2179
@@ -429,8 +431,15 @@ def test_protocol_negotiated_initialization(mock_peer: Peer) -> None:
     assert protocol.negotiated.neighbor == mock_peer.neighbor
 
 
-def test_protocol_port_from_environment_legacy(mock_peer: Peer, monkeypatch: Any) -> None:
-    """Test protocol port configuration from legacy environment variable."""
+def test_protocol_port_from_environment_legacy(mock_peer: Peer, monkeypatch: Any, tmp_path: Any) -> None:
+    """The underscore variable, read when the environment is set up."""
+    from exabgp.environment import base
+    from exabgp.environment.config import Environment
+
+    monkeypatch.setattr(base, 'ENVFILE', str(tmp_path / 'absent.env'))
+    monkeypatch.setattr(Environment, '_instance', None)
+    monkeypatch.setattr(Environment, '_setup_done', False)
+    monkeypatch.delenv('exabgp.tcp.port', raising=False)
     monkeypatch.setenv('exabgp_tcp_port', '3179')
     protocol = Protocol(mock_peer)
 

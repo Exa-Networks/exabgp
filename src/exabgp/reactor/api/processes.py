@@ -205,6 +205,11 @@ class Processes:
     # pass, so what a helper wrote together reaches the RIB before a peer reads it; the
     # cap only stops a helper flooding the pipe from starving the peers of the loop.
     MAX_COMMANDS_PER_PASS: ClassVar[int] = 1000
+    # The commands read and not yet applied. Past it the helpers are not read until the
+    # reactor has caught up, and the pipe pushes back on them: without it a helper writing
+    # faster than the reactor applies grew the queue until the daemon ran out of memory.
+    # One read can still add the lines of up to its 16384 octets past the cap.
+    MAX_QUEUED_COMMANDS: ClassVar[int] = 10 * MAX_COMMANDS_PER_PASS
     WRITE_QUEUE_LOW_WATER: ClassVar[int] = 100  # Resume writes when queue drops below this
     # A helper whose pipe stays full this long, with only answers waiting behind it, is not
     # reading its answers. A helper which reads, even one which writes many commands
@@ -235,6 +240,8 @@ class Processes:
         # Write queue for async mode (process_name -> deque of strings to write)
         self._write_queue: dict[str, collections.deque[bytes]] = {}
         self._command_queue: collections.deque[tuple[str, str]] = collections.deque()
+        # the helpers no longer read while the queue is full, read again once it has drained
+        self._paused: set[str] = set()
 
     def number(self) -> int:
         return len(self._process)
@@ -874,10 +881,7 @@ class Processes:
 
         This is called automatically by asyncio when data is available.
         It reads the data, buffers incomplete lines, and queues complete
-        commands for processing.
-
-        Args:
-            process_name: Name of the process with available data
+        commands for processing, until the queue is full (MAX_QUEUED_COMMANDS).
         """
         if process_name not in self._process:
             # _handle_problem removed the process between the event loop deciding there
@@ -915,31 +919,16 @@ class Processes:
                 self._handle_problem(process_name)
                 return
 
-            # Extract complete lines and queue as commands
-            # Note: We queue all available commands here, received_async() hands them to
-            # the reactor together so a peer never sees half of what was written at once
-            while '\n' in raw:
-                line, raw = raw.split('\n', 1)
-                line = line.rstrip()
-
-                if line.startswith('debug '):
-                    log.warning(
-                        lazymsg('api.debug.received process={pn} info={info}', pn=process_name, info=line[6:]), 'api'
-                    )
-                else:
-                    log.debug(
-                        lazymsg('api.command.received process={pn} command={ln}', pn=process_name, ln=line), 'processes'
-                    )
-                    # Queue command for processing
-                    self._command_queue.append((process_name, formated(line)))
-
-            self._buffer[process_name] = raw
+            self._buffer[process_name] = self._queue_lines(process_name, raw)
 
             # Check if process exited
             if poll is not None:
                 # CRITICAL: Remove reader BEFORE calling _handle_problem to avoid race
                 self._remove_reader(fd, process_name, 'exited')
                 self._handle_problem(process_name)
+            elif len(self._command_queue) >= self.MAX_QUEUED_COMMANDS:
+                self._remove_reader(fd, process_name, 'queue full')
+                self._paused.add(process_name)
 
         except OSError as exc:
             # take the reader off first: a descriptor which raises on every read would
@@ -957,6 +946,26 @@ class Processes:
             log.debug(lazymsg('async.reader.exception process={p} error={e}', p=process_name, e=exc), 'processes')
             self._handle_problem(process_name)
 
+    def _queue_lines(self, process_name: str, raw: str) -> str:
+        """Queue each complete line of `raw` as a command: what is left of the last line.
+
+        Every available command is queued here, received_async() hands them to the
+        reactor together so a peer never sees half of what was written at once.
+        """
+        # bounded: each turn takes a line, and a newline, off raw
+        while '\n' in raw:
+            line, raw = raw.split('\n', 1)
+            line = line.rstrip()
+
+            if line.startswith('debug '):
+                log.warning(
+                    lazymsg('api.debug.received process={pn} info={info}', pn=process_name, info=line[6:]), 'api'
+                )
+                continue
+            log.debug(lazymsg('api.command.received process={pn} command={ln}', pn=process_name, ln=line), 'processes')
+            self._command_queue.append((process_name, formated(line)))
+        return raw
+
     def received_async(self) -> Generator[tuple[str, str], None, None]:
         """Async-compatible version of received() that yields buffered commands
 
@@ -971,12 +980,27 @@ class Processes:
         Yields:
             Tuple of (process_name, command) for each buffered command
         """
+        self._resume_readers()
         for _ in range(min(len(self._command_queue), self.MAX_COMMANDS_PER_PASS)):
             # the reactor runs each command before asking for the next, and one may
             # take the queue with it (a helper stopped, a reload)
             if not self._command_queue:
                 return
             yield self._command_queue.popleft()
+
+    def _resume_readers(self) -> None:
+        """Read again the helpers paused on a full queue, once it has room for a pass more."""
+        if not self._paused or len(self._command_queue) > self.MAX_QUEUED_COMMANDS - self.MAX_COMMANDS_PER_PASS:
+            return
+        paused, self._paused = self._paused, set()
+        if not (self._async_mode and self._loop):
+            return
+        for process_name in paused:
+            process = self._process.get(process_name)
+            # gone meanwhile, or started again with a reader of its own
+            if process is None or process.stdout is None or process.stdout.closed:
+                continue
+            self._loop.add_reader(process.stdout.fileno(), self._async_reader_callback, process_name)
 
     def _log_response(self, process: str, string: str) -> None:
         """Log one line on its way to a helper, at the level which suits what it is.

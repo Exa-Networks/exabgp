@@ -118,6 +118,23 @@ class Connection:
             log.warning(lazymsg('connection.close.error error={e}', e=exc), source=self.session())
         self.io = None
 
+    def send_and_close(self, data: Buffer) -> bool:
+        """Write `data` without waiting for the socket, then close it: whether all of it went.
+
+        For the NOTIFICATION of a session ended from outside the task running it (a
+        shutdown, a removal, a collision): nothing will await a write once the session is
+        gone. A message this short fits in any send buffer a peer is still reading from,
+        and one too full to take it belongs to a peer which would not read it anyway.
+        """
+        written = False
+        if self.io is not None:
+            try:
+                written = self.io.send(data) == len(data)
+            except OSError as exc:
+                log.debug(lazymsg('tcp.send.unsent peer={p} error={e}', p=self.peer, e=errstr(exc)), self.session())
+        self.close()
+        return written
+
     def writing(self) -> bool:
         if self.io is None:
             return False

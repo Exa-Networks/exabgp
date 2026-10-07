@@ -167,9 +167,10 @@ def _extract_legacy_selectors(prefix: str, remaining: str) -> tuple[list[list[st
 def match_neighbor(description: list[str], name: str) -> bool:
     for string in description:
         stripped = string.strip()
-        # Accept both 'neighbor *' (v4) and 'peer *' (v6) wildcards
+        # Accept both 'neighbor *' (v4) and 'peer *' (v6) wildcards.  The wildcard is the
+        # address only: `neighbor * peer-as 65001` still asks for that peer AS
         if stripped in ('neighbor *', 'peer *'):
-            return True
+            continue
         pattern = rf'(^|\s){re.escape(string)}($|\s|,)'
         if re.search(pattern, name) is None:
             return False

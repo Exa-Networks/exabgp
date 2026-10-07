@@ -300,7 +300,9 @@ class ApiSection(ConfigSection):
         reader=parsing.api_version,
     )
     ack: ConfigOption[bool] = option(True, 'acknowledge api command(s) and report issues')
-    chunk: ConfigOption[int] = option(1, 'maximum lines to print before yielding in show routes api')
+    chunk: ConfigOption[int] = option(
+        1, 'maximum lines to print before yielding in show routes api', reader=parsing.positive_integer
+    )
     encoder: ConfigOption[str] = option(
         'json', 'default encoder for API v4 (text or json), ignored in v6', reader=parsing.api
     )
@@ -444,6 +446,9 @@ class Environment:
         if os.path.exists(base.ENVFILE):
             ini.read(base.ENVFILE)
 
+        # the options the environment or the env file gave, as `section.option`
+        configured: set[str] = set()
+
         # Load each section
         for section_name, section in sections.items():
             for option_name, opt in section.options().items():
@@ -468,31 +473,33 @@ class Environment:
                         section[option_name] = opt.parse(conf)
                     except (TypeError, ValueError) as exc:
                         raise EnvironmentValueError(f'invalid value {conf!r} for {env_name}: {exc}') from None
+                    configured.add(f'{section_name}.{option_name}')
 
         # Backward compatibility for tcp.once -> tcp.attempts
-        cls._handle_tcp_compatibility(env)
+        cls._handle_tcp_compatibility(env, configured)
 
         # Snapshot initial API settings for restoration when switching versions
         env.api.snapshot_initial()
 
     @classmethod
-    def _handle_tcp_compatibility(cls, env: Environment) -> None:
-        """Handle backward compatibility for tcp configuration."""
+    def _handle_tcp_compatibility(cls, env: Environment, configured: set[str]) -> None:
+        """Turn the older names of tcp.attempts into it.
+
+        tcp.once was only looked for in the environment, so the env file's was ignored,
+        and a tcp.connections which was not a number was a traceback.
+        """
         # Handle exabgp_tcp_connections as an alias for exabgp_tcp_attempts
-        connections_env = os.environ.get('exabgp.tcp.connections') or os.environ.get('exabgp_tcp_connections')
-        if connections_env:
-            env.tcp.attempts = int(connections_env)
+        connections = os.environ.get('exabgp.tcp.connections') or os.environ.get('exabgp_tcp_connections')
+        if connections:
+            try:
+                env.tcp.attempts = parsing.integer(connections)
+            except ValueError:
+                raise EnvironmentValueError(f'invalid value {connections!r} for exabgp.tcp.connections') from None
+            return
 
-        # Backward compatibility: convert tcp.once to tcp.attempts if tcp.attempts not explicitly set
-        once_env = os.environ.get('exabgp.tcp.once') or os.environ.get('exabgp_tcp_once')
-        attempts_env = os.environ.get('exabgp.tcp.attempts') or os.environ.get('exabgp_tcp_attempts')
-
-        # Only apply backward compatibility if tcp.attempts wasn't explicitly set
-        if once_env and not attempts_env and not connections_env:
-            if env.tcp.once:
-                env.tcp.attempts = 1
-            else:
-                env.tcp.attempts = 0
+        # tcp.once true is tcp.attempts 1, when tcp.attempts itself was not given
+        if 'tcp.once' in configured and 'tcp.attempts' not in configured:
+            env.tcp.attempts = 1 if env.tcp.once else 0
 
     # =========================================================================
     # Backward compatibility with dict-like access

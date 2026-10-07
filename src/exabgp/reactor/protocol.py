@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import os
 import traceback
 from typing import TYPE_CHECKING, Any, cast
 from collections.abc import Iterator
@@ -38,6 +37,7 @@ from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotiated
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.collection import UpdateCollection
+from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 
 # from exabgp.reactor.network.error import NotifyError
@@ -66,14 +66,10 @@ class Protocol:
         self.negotiated: Negotiated = Negotiated.make_negotiated(self.neighbor, Direction.IN)
         self.connection: 'Incoming' | Outgoing | None = None
 
-        if self.neighbor.session.connect:
-            self.port: int = self.neighbor.session.connect
-        elif os.environ.get('exabgp.tcp.port', '').isdigit():
-            self.port = int(os.environ['exabgp.tcp.port'])
-        elif os.environ.get('exabgp_tcp_port', '').isdigit():
-            self.port = int(os.environ['exabgp_tcp_port'])
-        else:
-            self.port = 179
+        # tcp.port as the environment read it, from a variable or the env file, which is
+        # the port we listen on: the variables alone were read here, so the env file
+        # moved the listener and not the port we connect to
+        self.port: int = self.neighbor.session.connect or getenv().tcp.port
 
     def fd(self) -> int:
         if self.connection is None:

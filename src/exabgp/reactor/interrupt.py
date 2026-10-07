@@ -71,6 +71,17 @@ class Signal:
         signal.signal(signal.SIGUSR1, self.sigusr1)
         signal.signal(signal.SIGUSR2, self.sigusr2)
 
+    def request(self, action: int) -> bool:
+        """An API command asks for `action`: whether it was taken.
+
+        A shutdown already asked for is not replaced: `daemon reload` after `daemon shutdown`
+        turned the shutdown into a reload, and the daemon carried on.
+        """
+        if self.received == Signal.SHUTDOWN and action != Signal.SHUTDOWN:
+            return False
+        self.received = action
+        return True
+
     def _defer_or_schedule(self, action: int, signum: int, action_name: str) -> None:
         """Common logic for signal handlers - defer if not ready, schedule if ready."""
         if not self._ready:

@@ -103,6 +103,8 @@ class Reactor:
         self._saved_pid: bool = False
         # set once api.terminate has stopped the daemon because a helper was lost
         self._helper_lost: bool = False
+        # a reload signalled while routes were on their way to a peer, done once they are out
+        self._reload_waiting: int = Signal.NONE
 
     def _termination(self, reason: str, exit_code: int) -> None:
         self.exit_code = exit_code
@@ -259,43 +261,17 @@ class Reactor:
             loop_timer.start()
             try:
                 # Handle signals
-                if self.signal.received:
-                    signaled = self.signal.received
-
-                    # Report signal to peers
-                    for key in self._peers:
-                        peer = self._peers[key]
-                        if peer.neighbor.api and peer.neighbor.api['signal']:
-                            peer.reactor.processes.signal(peer.neighbor, self.signal.number)
-
-                    self.signal.rearm()
-
-                    # Handle SHUTDOWN
-                    if signaled == Signal.SHUTDOWN:
-                        self.exit_code = self.Exit.process if self._helper_lost else self.Exit.normal
-                        self.shutdown()
-                        break
-
-                    # Handle RESTART
-                    if signaled == Signal.RESTART:
-                        self.restart()
-                        continue
-
-                    # Wait for pending adjribout
-                    if self._pending_adjribout():
-                        continue
-
-                    # Handle RELOAD
-                    if signaled == Signal.RELOAD:
-                        self.reload()
-                        self.processes.start(self.configuration.processes, False)
-                        continue
-
-                    # Handle FULL_RELOAD
-                    if signaled == Signal.FULL_RELOAD:
-                        self.reload()
-                        self.processes.start(self.configuration.processes, True)
-                        continue
+                signaled = self._signalled()
+                if signaled == Signal.SHUTDOWN:
+                    self.exit_code = self.Exit.process if self._helper_lost else self.Exit.normal
+                    self.shutdown()
+                    break
+                if signaled == Signal.RESTART:
+                    self.restart()
+                    continue
+                if signaled != Signal.NONE:
+                    # a reload, done
+                    continue
 
                 # Check for incoming connections
                 if self.listener.incoming():
@@ -473,11 +449,43 @@ class Reactor:
     # ...
 
     def _pending_adjribout(self) -> bool:
-        for peer in self.active_peers():
+        """Whether routes are on their way to a peer: only a session can be sending them.
+
+        A peer with no session keeps its routes queued for as long as it is down, and a
+        reload waiting for those would wait for as long as that.
+        """
+        for peer in self.established_peers():
             rib = self._peers[peer].neighbor.rib
             if rib.outgoing.pending():
                 return True
         return False
+
+    def _signalled(self) -> int:
+        """Take the signal received, and the reload waiting for routes: the one to act on now.
+
+        SHUTDOWN and RESTART are returned for the caller. A reload waits until no routes are
+        on their way to a peer, and is done here once they are gone, then returned. It was
+        dropped instead: the signal was re-armed before the wait, so nothing remembered it.
+        """
+        signaled = self.signal.received
+        if signaled != Signal.NONE:
+            for key in self._peers:
+                peer = self._peers[key]
+                if peer.neighbor.api and peer.neighbor.api['signal']:
+                    peer.reactor.processes.signal(peer.neighbor, self.signal.number)
+            self.signal.rearm()
+            if signaled not in (Signal.RELOAD, Signal.FULL_RELOAD):
+                return signaled
+            # a full reload asked for while one waits is not lost to a plain one after it
+            if self._reload_waiting != Signal.FULL_RELOAD:
+                self._reload_waiting = signaled
+
+        if self._reload_waiting == Signal.NONE or self._pending_adjribout():
+            return Signal.NONE
+        signaled, self._reload_waiting = self._reload_waiting, Signal.NONE
+        self.reload()
+        self.processes.start(self.configuration.processes, signaled == Signal.FULL_RELOAD)
+        return signaled
 
     def check(self, route: str, nlri_only: bool = False) -> bool:
         from exabgp.configuration.check import check_message, check_nlri

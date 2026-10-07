@@ -7,8 +7,9 @@
 # Enrolled with the received prefix limit, `prefix-limit N` after a family, which is what
 # makes exabgp send Maximum Number of Prefixes Reached, and extended with the operator's
 # `disable`, which sends Administrative Shutdown and refuses connections with Connection
-# Rejected.  The SHOULDs for the other Cease subcodes, which the teardown command and the
-# reactor send, are not yet in this ledger.
+# Rejected, then with Peer De-configured and Connection Collision Resolution, which the
+# reactor sends.  The SHOULDs for the other Cease subcodes, which the teardown command
+# sends, are not yet in this ledger.
 
 rfc = "rfc4486"
 title = "Subcodes for BGP Cease Notification Message"
@@ -68,8 +69,27 @@ Shutdown".
 """
 note = """
 `peer <selector> disable` and `shutdown true` set by a reload close the session with
-Notify(6, 2), and keep it closed until `enable`.  Positive only: it constrains what we
-send, there is no peer input which violates it.
+Notify(6, 2), and keep it closed until `enable`.  The daemon shutting down sends it to
+every peer, but to one with Graceful Restart negotiated, which RFC 4724 wants left to
+keep our routes while we restart.  Positive only: it constrains what we send, there is
+no peer input which violates it.
+"""
+
+[[requirement]]
+id = "rfc4486#4-peer-de-configured"
+section = "4"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+If a BGP speaker decides to de-configure a peer, then the speaker
+SHOULD send a NOTIFICATION message with the Error Code Cease and the
+Error Subcode "Peer De-configured".
+"""
+note = """
+A neighbour a reload removes, or `peer delete` deletes, is sent (6, 3) by Peer.remove()
+on a session which got as far as our OPEN.  It was never sent: the connection was closed
+before the Cease was chosen.  Positive only: it constrains what we send.
 """
 
 [[requirement]]
@@ -90,4 +110,22 @@ Sent to a peer no neighbour matches, and to a disabled neighbour.  The listener 
 (6, 3) Peer De-configured to the first.  A connection from a neighbour a reload has just
 removed still gets (6, 3): the peering existed and was de-configured.  Positive only: it
 constrains what we send.
+"""
+
+[[requirement]]
+id = "rfc4486#4-connection-collision-resolution"
+section = "4"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+If a BGP speaker decides to send a NOTIFICATION message with the
+Error Code Cease as a result of the collision resolution procedure
+(as described in [BGP-4]), then the subcode SHOULD be set to
+"Connection Collision Resolution".
+"""
+note = """
+Sent on whichever connection the RFC 4271 6.8 comparison closes: the incoming one when our
+BGP Identifier is the higher, ours otherwise.  Ours used to be closed without a NOTIFICATION.
+Positive only: it constrains what we send.
 """

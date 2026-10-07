@@ -21,6 +21,7 @@ from exabgp.logger import log, lazyexc, lazymsg
 # this is imported from configuration.setup to make sure it was initialised
 from exabgp.environment import getenv
 from exabgp.environment import getconf
+from exabgp.environment.config import Environment
 from exabgp.environment import ROOT
 
 from exabgp.application.pipe import named_pipe
@@ -75,6 +76,25 @@ def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:on
 
 
+def command_line_options(env: Environment, cmdarg: argparse.Namespace) -> None:
+    """Apply the options of the command line which override the environment."""
+    if cmdarg.profile:
+        env.profile.enable = True
+        env.profile.file = cmdarg.profile
+
+    # the environment was read already: tcp.once only means something while it is read,
+    # so --once sets what the peers read, tcp.attempts
+    if cmdarg.once:
+        env.tcp.once = True
+        env.tcp.attempts = 1
+
+    if cmdarg.memory:
+        env.debug.memory = True
+
+    if cmdarg.passive:
+        env.bgp.passive = True
+
+
 def cmdline(cmdarg: argparse.Namespace) -> None:
     from exabgp.environment import base as envbase
 
@@ -96,21 +116,10 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
     log.init(env)
     trace_interceptor(env.debug.pdb)
 
-    if cmdarg.profile:
-        env.profile.enable = True
-        env.profile.file = cmdarg.profile
-
-    if cmdarg.once:
-        env.tcp.once = True
-
-    if cmdarg.memory:
-        env.debug.memory = True
+    command_line_options(env, cmdarg)
 
     if env.cache.attributes:
         Attribute.caching = env.cache.attributes
-
-    if cmdarg.passive:
-        env.bgp.passive = True
 
     # Check for stdin input
     stdin_config = None

@@ -74,6 +74,24 @@ FORCE_GRACEFUL = True
 # RFC 5492 3: the NOTIFICATION a speaker which predates capabilities sends for them
 UNSUPPORTED_OPTIONAL_PARAMETER = (2, 4)
 
+# the statistics counted per session, all zero when a peer is made
+SESSION_COUNTERS = (
+    'receive-open',
+    'send-open',
+    'receive-notification',
+    'send-notification',
+    'receive-update',
+    'send-update',
+    'receive-refresh',
+    'send-refresh',
+    'receive-keepalive',
+    'send-keepalive',
+    'receive-operational',
+    'send-operational',
+    'receive-prefixes',
+    'receive-withdraws',
+)
+
 
 class Interrupted(Exception):
     pass
@@ -201,25 +219,15 @@ class Peer:
                 'complete': 0,  # when did the peer got established
                 'up': 0,
                 'down': 0,
-                'receive-open': 0,
-                'send-open': 0,
-                'receive-notification': 0,
-                'send-notification': 0,
-                'receive-update': 0,
-                'send-update': 0,
-                'receive-refresh': 0,
-                'send-refresh': 0,
-                'receive-keepalive': 0,
-                'send-keepalive': 0,
-                'receive-operational': 0,
-                'send-operational': 0,
-                'receive-prefixes': 0,
-                'receive-withdraws': 0,
             },
         )
+        self.stats.update(dict.fromkeys(SESSION_COUNTERS, 0))
 
         self.fsm_runner: FSMRunner = FSMRunner()
         self._async_task: asyncio.Task[None] | None = None  # For async mode
+        # The task of the session in progress, inside _async_task: a connection which
+        # replaces the session, or a stop, cancels it, and _async_task goes on
+        self._session_task: asyncio.Task[None] | None = None
 
         # The peer should restart after a stop
         self._restart: bool = True
@@ -381,10 +389,44 @@ class Peer:
         update = Update.from_collection(collection)
         self.reactor.processes.message(Message.CODE.UPDATE, self, 'receive', update, b'', b'', negotiated)
 
-    def _stop(self, message: str) -> None:
+    def _stop(self, message: str, cease: Notify | None) -> None:
         self.fsm_runner.clear()
+        self._cancel_session()
         if self.proto:
+            if cease is not None:
+                self._cease_now(cease)
             self._close(f'stop, message [{message}]')
+
+    def _cancel_session(self) -> None:
+        """Stop the task running the session, which must not act on what replaces it."""
+        task = self._session_task
+        if task is None or task.done() or task is asyncio.current_task():
+            return
+        task.cancel()
+
+    def _cease_now(self, cease: Notify) -> None:
+        """Send a Cease on the current connection, and close it, without waiting.
+
+        For a session ended from outside the task running it, which is cancelled and will
+        not send it. Only a session which got as far as our OPEN is told: before it, RFC
+        4271 8.2.2 drops the TCP connection and says nothing.
+        """
+        if self.proto is None or self.proto.connection is None:
+            return
+        if self.fsm not in (FSM.OPENSENT, FSM.OPENCONFIRM, FSM.ESTABLISHED):
+            return
+        packed = cease.notification.pack_message(self.proto.negotiated)
+        if self.proto.connection.send_and_close(packed):
+            self.stats['send-notification'] += 1
+            log.debug(lazymsg('notification.sent code={c} subcode={sc}', c=cease.code, sc=cease.subcode), self.id())
+
+    def _closes_gracefully(self) -> bool:
+        """Whether the session ends without a NOTIFICATION, for the peer to keep our routes (RFC 4724)."""
+        if self.fsm != FSM.ESTABLISHED or self.proto is None or self.proto.negotiated.sent_open is None:
+            return False
+        if not self.neighbor.capability.graceful_restart:
+            return False
+        return self.proto.negotiated.sent_open.capabilities.announced(Capability.CODE.GRACEFUL_RESTART)
 
     # logging
 
@@ -436,11 +478,15 @@ class Peer:
             self.neighbor.rib.uncache()
 
     def remove(self) -> None:
-        self._stop('removed')
+        # RFC 4486 4: a peer de-configured SHOULD be sent Peer De-configured
+        self._stop('removed', Notify(6, 3, 'the peer was removed from the configuration'))
         self.stop()
 
     def shutdown(self) -> None:
-        self._stop('shutting down')
+        # RFC 4486 4: Administrative Shutdown, unless Graceful Restart was negotiated: the
+        # peer then keeps our routes while we restart, which a NOTIFICATION would end
+        cease = None if self._closes_gracefully() else Notify(6, 2, 'exabgp is shutting down')
+        self._stop('shutting down', cease)
         self.stop()
 
     def resend(self, enhanced: bool, family: FamilyTuple | None = None) -> None:
@@ -609,13 +655,25 @@ class Peer:
                 lazymsg('peer.connection.closing connection={c} reason=higher_router_id_incoming', c=connection.name()),
                 self.id(),
             )
-            self._close('closing outgoing connection as we have another incoming on with higher router-id')
+            self._supersede()
 
         self.proto = Protocol(self).accept(connection)
         self.fsm_runner.clear()
         # Let's make sure we do some work with this connection
         self._delay.reset()
         return None
+
+    def _supersede(self) -> None:
+        """Close the connection an incoming one replaces, and stop the task running it.
+
+        RFC 4271 6.8 closes the losing connection of a collision with a Cease, which RFC
+        4486 4 makes Connection Collision Resolution. It was closed without one, and the
+        task left running on it carried on with the incoming connection: the hold timer of
+        a session it never opened sent Hold Timer Expired on it.
+        """
+        self._cancel_session()
+        self._cease_now(Notify(6, 7, 'connection collision resolution'))
+        self._close('closing outgoing connection as we have another incoming on with higher router-id')
 
     def established(self) -> bool:
         return self.fsm == FSM.ESTABLISHED
@@ -695,7 +753,15 @@ class Peer:
         """Reads KEEPALIVE message using async I/O"""
         assert self.proto is not None
         assert self.recv_timer is not None
-        message = await self.proto.read_keepalive()
+        # RFC 4271 8.2.2, OpenConfirm: the hold timer expiring sends Hold Timer Expired.
+        # A hold time of zero runs no timer, but a peer which never sends its KEEPALIVE
+        # must not hold the session forever, so that one waits as long as for an OPEN.
+        holdtime = int(self.proto.negotiated.holdtime)
+        wait = holdtime if holdtime else getenv().bgp.openwait
+        try:
+            message = await asyncio.wait_for(self.proto.read_keepalive(), timeout=wait)
+        except asyncio.TimeoutError:
+            raise Notify(4, 0, f'no KEEPALIVE received within {wait} seconds') from None
         self.recv_timer.check_ka_timer(message)
 
     async def _establish(self) -> None:
@@ -1170,13 +1236,27 @@ class Peer:
 
             if self._restart:
                 log.debug(lazymsg('peer.connection.initializing peer={p}', p=self.id()), 'reactor')
-                await self._run()
+                await self._run_session()
                 # _reset clears restartable teardowns; a remaining request ends this task.
                 if self._teardown_asked():
                     break
                 await asyncio.sleep(0.1)  # Clean loop delay
             else:
                 break
+
+    async def _run_session(self) -> None:
+        """Run one session in a task of its own, which _cancel_session can end alone."""
+        self._session_task = asyncio.create_task(self._run())
+        try:
+            await self._session_task
+        except asyncio.CancelledError:
+            # this task was cancelled, not only the session: carry the cancellation on
+            current = asyncio.current_task()
+            if current is not None and current.cancelling():
+                raise
+            log.debug(lazymsg('peer.session.cancelled'), self.id())
+        finally:
+            self._session_task = None
 
     def start_async_task(self) -> None:
         """Start the async peer task"""

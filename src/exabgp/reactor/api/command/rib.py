@@ -107,6 +107,8 @@ def _show_adjrib_callback(
 
     async def callback() -> None:
         lines_per_yield = getenv().api.chunk
+        # the environment refuses less (parsing.positive_integer): with none, no route is taken
+        assert lines_per_yield >= 1, 'api.chunk is validated to be at least one'
         for key in _of_address(reactor, reactor.peers(), address):
             routes = reactor.neighor_rib(key, rib_name, advertised)
             while routes:

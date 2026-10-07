@@ -24,6 +24,14 @@ def integer(_: Any) -> int:
     return int(_)
 
 
+def positive_integer(_: str) -> int:
+    """A count which must be at least one: with none, what it counts never moves on."""
+    value = int(_)
+    if value < 1:
+        raise ValueError(f'must be 1 or more, got {value}')
+    return value
+
+
 def real(_: Any) -> float:
     return float(_)
 

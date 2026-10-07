@@ -138,47 +138,55 @@ class ASYNC:
                 self.applying_commands = False
             return False  # All coroutines processed
         else:
-            # Original generator processing logic
-            # length = range(min(len(self._async),self.LIMIT))
-            length = range(self.LIMIT)
+            await self._run_generators()
+            return bool(self._async)
+
+    async def _run_generators(self) -> None:
+        """Advance the generators at the head of the queue, LIMIT steps in all.
+
+        A coroutine met on the way is run whole, with applying_commands set as the
+        coroutine branch sets it. Whatever was taken from the queue and not finished goes
+        back at its head: the callback popped on the last step was dropped unless it was
+        a generator, so a coroutine there was never run.
+        """
+        uid, callback = self._async.popleft()
+
+        for _ in range(self.LIMIT):
+            if await self._step(uid, callback):
+                continue
+            # finished, or failed: on to the next callback
+            if not self._async:
+                return
             uid, callback = self._async.popleft()
 
-            for _ in length:
-                try:
-                    # Check if current callback is a coroutine (mixed queue case)
-                    if inspect.iscoroutine(callback) or inspect.iscoroutinefunction(callback):
-                        # Found coroutine in generator processing - handle it
-                        if inspect.iscoroutine(callback):
-                            await callback
-                        elif inspect.iscoroutinefunction(callback):
-                            await callback()
-                        # Coroutine completed - pop next callback
-                        if not self._async:
-                            return False
-                        uid, callback = self._async.popleft()
-                    elif inspect.isgenerator(callback):
-                        # Old style: resume generator (may yield multiple times)
-                        next(callback)
-                    else:
-                        # Fallback to generator behavior
-                        next(callback)
-                except StopIteration:
-                    # Generator exhausted - pop next callback
-                    if not self._async:
-                        return False
-                    uid, callback = self._async.popleft()
-                except Exception as exc:
-                    log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
-                    self._notify_error(uid)
-                    # Error occurred - pop next callback
-                    if not self._async:
-                        return False
-                    uid, callback = self._async.popleft()
+        self._async.appendleft((uid, callback))
 
-            # Only generators should be put back (they may not be exhausted)
-            if inspect.isgenerator(callback):
-                self._async.appendleft((uid, callback))
+    async def _step(self, uid: str, callback: Any) -> bool:
+        """Advance one callback once: whether it has more to do."""
+        try:
+            if inspect.iscoroutine(callback) or inspect.iscoroutinefunction(callback):
+                await self._run_command(callback)
+                return False
+            # Old style: resume generator (may yield multiple times)
+            next(callback)
             return True
+        except StopIteration:
+            return False
+        except Exception as exc:
+            log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
+            self._notify_error(uid)
+            return False
+
+    async def _run_command(self, callback: Any) -> None:
+        """Run a coroutine queued among generators as the coroutine branch would."""
+        self.applying_commands = True
+        try:
+            if inspect.iscoroutine(callback):
+                await callback
+            else:
+                await callback()
+        finally:
+            self.applying_commands = False
 
     async def _run_coroutines(self) -> None:
         """Run every queued coroutine, including those the ones running schedule."""

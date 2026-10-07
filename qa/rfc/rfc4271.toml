@@ -5,8 +5,8 @@
 # against it on every run of ./qa/bin/check_rfc_compliance.
 #
 # Scope of this file: sections 4.1 to 4.4 (message formats and the hold time), 6.1
-# (message header errors), 6.2 (OPEN errors), 6.3 (UPDATE errors) and the parts of 6 and
-# 10 which bind the hold timer.  Sections 5, 8 (the finite state machine) and 9 (the
+# (message header errors), 6.2 (OPEN errors), 6.3 (UPDATE errors), 6.8 (connection
+# collision) and the parts of 6 and 10 which bind the hold timer.  Sections 5, 8 (the finite state machine) and 9 (the
 # Decision Process and the Update-Send process) are not recorded here at all.  Their
 # absence is not a claim about them.
 #
@@ -801,6 +801,27 @@ note = """
 Positive only: the obligation is to accept, so the test is that such an UPDATE parses and
 the session lives.  An UPDATE whose attributes are not correct is a different sentence's
 business, and every other 6.3 entry here covers one of those.
+"""
+
+
+# ============================================================ 6.8 Connection Collision Detection
+
+[[requirement]]
+id = "rfc4271#6.8-collision-closes-one-connection"
+section = "6.8"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+In the
+event of connection collision, one of the connections MUST be closed.
+"""
+note = """
+exabgp holds one connection per peer, so a collision is a connection arriving while one
+is in OpenSent or OpenConfirm.  Peer.handle_connection keeps the connection initiated by
+the higher BGP Identifier: with ours the higher the new one is refused, otherwise ours is
+closed with a Cease and the task which ran it is cancelled.  Both sides are tested, the
+connection closed being the one the comparison picks.
 """
 
 

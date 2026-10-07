@@ -85,7 +85,7 @@ def help_command(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
 
 
 def shutdown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
-    reactor.signal.received = reactor.signal.SHUTDOWN
+    reactor.signal.request(reactor.signal.SHUTDOWN)
     if use_json:
         reactor.processes.write(service, json.dumps({'status': 'shutdown in progress'}, default=json_number))
     else:
@@ -95,7 +95,9 @@ def shutdown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], co
 
 
 def reload(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
-    reactor.signal.received = reactor.signal.RELOAD
+    if not reactor.signal.request(reactor.signal.RELOAD):
+        reactor.processes.answer_error_sync(service, 'shutdown in progress')
+        return False
     if use_json:
         reactor.processes.write(service, json.dumps({'status': 'reload in progress'}, default=json_number))
     else:
@@ -105,7 +107,9 @@ def reload(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comm
 
 
 def restart(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
-    reactor.signal.received = reactor.signal.RESTART
+    if not reactor.signal.request(reactor.signal.RESTART):
+        reactor.processes.answer_error_sync(service, 'shutdown in progress')
+        return False
     if use_json:
         reactor.processes.write(service, json.dumps({'status': 'restart in progress'}, default=json_number))
     else:

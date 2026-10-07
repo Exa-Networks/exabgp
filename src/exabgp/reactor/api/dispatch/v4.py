@@ -240,11 +240,13 @@ def _dispatch_neighbor_v4(
     """
     from exabgp.reactor.api.command import announce as announce_cmd
     from exabgp.reactor.api.command import neighbor as neighbor_cmd
+    from exabgp.reactor.api.command import peer as peer_cmd
     from exabgp.reactor.api.command import watchdog as watchdog_cmd
 
     # Use extract_neighbors to parse selector and get remaining command
     descriptions, remaining = extract_neighbors(command)
-    peers = list(match_neighbors(reactor.peers(service), descriptions))
+    # `neighbor [ ]` names no peer: given nothing, match_neighbors would answer every peer
+    peers = list(match_neighbors(reactor.peers(service), descriptions)) if descriptions else []
 
     remaining_parts = remaining.split()
     if not remaining_parts:
@@ -262,6 +264,11 @@ def _dispatch_neighbor_v4(
         if not peers:
             raise NoMatchingPeers(command)
         return (neighbor_cmd.disable if action == 'disable' else neighbor_cmd.enable), peers, action_args
+
+    if action == 'delete':
+        if not peers:
+            raise NoMatchingPeers(command)
+        return peer_cmd.peer_delete, peers, action_args
 
     if action == 'announce':
         if not peers:

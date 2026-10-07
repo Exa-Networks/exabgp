@@ -100,7 +100,8 @@ def _build_v6_tree() -> DispatchTree:
             'list': neighbor_cmd.list_neighbor,
             'show': neighbor_cmd.show_neighbor,
             'create': peer_cmd.neighbor_create,
-            'delete': peer_cmd.peer_delete,
+            # the peers to delete follow the command: `peer delete <selector>`
+            'delete': {SELECTOR_KEY: peer_cmd.peer_delete},
             # Selector-based commands (*, IP, or [bracket])
             SELECTOR_KEY: peer_selector_tree,
         },
