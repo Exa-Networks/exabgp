@@ -4,6 +4,11 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: exabgp starts without looking up the host's FQDN. It timed a reverse lookup to warn
+   that the resolver was slow, and that lookup was the slow part: where it is not answered
+   (mDNS on macOS without a reverse DNS entry) the daemon hung before its first log line.
+   Nothing in the daemon uses the name; a neighbor's host-name and domain-name come from
+   the configuration.
  * Fix: each peer of a ranged neighbor (`neighbor 10.0.0.0/24 { passive; }`) has a session
    and a RIB of its own. They shared the configured neighbor's, so the first peer to connect
    moved the range to start at its own address, later peers overwrote the addresses of the

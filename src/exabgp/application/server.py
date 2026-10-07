@@ -15,7 +15,6 @@ from exabgp.debug.intercept import trace_interceptor
 from exabgp.reactor.loop import Reactor
 from exabgp.configuration.configuration import Configuration
 
-from exabgp.util.dns import warn
 from exabgp.logger import log, lazyexc, lazymsg
 
 # this is imported from configuration.setup to make sure it was initialised
@@ -195,10 +194,6 @@ def run(comment: str, configurations: list[str], pid: int = 0, text: bool = Fals
 
     if comment:
         log.error(lazymsg('startup.comment message={c}', c=comment), 'startup')
-
-    warning = warn()
-    if warning:
-        log.warning(lazymsg('startup.warning message={w}', w=warning), 'startup')
 
     # Check if socket will be available (check for explicit disable)
     socket_disabled = os.environ.get('exabgp_cli_socket', None) == ''

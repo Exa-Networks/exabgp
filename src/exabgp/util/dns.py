@@ -7,20 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import time
 import socket
 
 
-__warned: bool = False
 __host_name: str = ''
 # None until resolved: '' is an answer (no domain known) and must be cached like any other
 __domain_name: str | None = None
-
-__warning: str = """
-Your OS is very slow when returning the host FQDN
-Most likely you do not have valid forward/reverse DNS setup
-Adding your hostname to the /etc/hosts file should fix the issue
-"""
 
 
 def host() -> str:
@@ -42,14 +34,3 @@ def domain() -> str:
     if __domain_name is None:
         _, _, __domain_name = socket.getfqdn().rstrip('.').partition('.')
     return __domain_name
-
-
-def warn() -> str:
-    if __warned:
-        return ''
-
-    now = time.time()
-    _ = host(), domain()
-    if time.time() - now > 1.0:
-        return __warning
-    return ''
