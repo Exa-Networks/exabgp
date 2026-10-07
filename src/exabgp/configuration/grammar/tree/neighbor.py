@@ -58,6 +58,7 @@ from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPRange
+from exabgp.util.enumeration import TriState
 from exabgp.util.psk import guessed_as_base64
 
 MD5_BASE64_AUTO_REMOVED = (
@@ -322,7 +323,7 @@ def _neighbor(name: Any, values: Values, context: ReadContext) -> NeighborSettin
     settings.operational = list(values.get('operational', {}).get('routes', []))
     neighbor = Neighbor.from_settings(settings, rib=False)
     _check(neighbor, context)
-    _check_routes(neighbor)
+    _check_routes(neighbor, settings)
     if 'md5-base64' not in values:
         _warn_hexadecimal_password(neighbor)
     return settings
@@ -344,7 +345,7 @@ def _warn_hexadecimal_password(neighbor: Neighbor) -> None:
     )
 
 
-def _check_routes(neighbor: Neighbor) -> None:
+def _check_routes(neighbor: Neighbor, settings: NeighborSettings) -> None:
     """Every route resolves its next-hop self, is of a family the neighbor negotiates, and has a next-hop it may send."""
     families = neighbor.families()
     for route in neighbor.routes:
@@ -358,7 +359,9 @@ def _check_routes(neighbor: Neighbor) -> None:
             raise ValueError(
                 f'Trying to announce a route of type {family[0]},{family[1]} when we are not announcing the family to our peer'
             )
-        refused = neighbor.next_hop_refused(resolved.nexthop) or _extended_next_hop_refused(neighbor, family, resolved)
+        refused = neighbor.next_hop_refused(resolved.nexthop) or _extended_next_hop(
+            neighbor, settings, family, resolved
+        )
         if refused:
             raise ValueError(f'route {route.nlri}: {refused}')
 
@@ -369,24 +372,46 @@ EXTENDED_NEXTHOP_FAMILIES = frozenset(
 )
 
 
-def _extended_next_hop_refused(neighbor: Neighbor, family: tuple[AFI, SAFI], route: Any) -> str:
-    """Why an IPv4 route with an IPv6 next-hop can not be sent, '' when it can.
+def _extended_next_hop(neighbor: Neighbor, settings: NeighborSettings, family: tuple[AFI, SAFI], route: Any) -> str:
+    """Ask for the Extended Next Hop Encoding an IPv4 route with an IPv6 next-hop needs, '' when it can be sent.
 
     RFC 8950 4: an IPv6 next-hop for an IPv4 route of the families it covers is sent only to
-    a peer which advertised the Extended Next Hop Encoding capability for it, which
-    `nexthop { ... }` asks for. Other families (flow, MUP) say what their next-hop is.
+    a peer which advertised the Extended Next Hop Encoding capability for it. 4.2 and 5.0 sent
+    such a route without asking, so a configuration without `nexthop { ... }` for the family
+    asks for it, with a warning; the route still goes out only if the peer agrees. Only
+    `capability { nexthop disable; }` refuses it. Other families (flow, MUP) say what their
+    next-hop is.
     """
     nexthop = route.nexthop
     if family not in EXTENDED_NEXTHOP_FAMILIES or nexthop is IP.NoNextHop or nexthop.SELF:
         return ''
     if nexthop.afi != AFI.ipv6:
         return ''
-    if (family[0], family[1], AFI.ipv6) in neighbor.nexthops():
+    entry = (family[0], family[1], AFI.ipv6)
+    if entry in neighbor.nexthops():
         return ''
-    return (
-        f'next-hop {nexthop} is IPv6, which an {family[0]} {family[1]} route carries only with '
-        f'"nexthop {{ {family[0]} {family[1]} ipv6; }}" (RFC 8950)'
+    if settings.capability.nexthop.is_disabled():
+        return (
+            f'next-hop {nexthop} is IPv6, which an {family[0]} {family[1]} route carries only with the '
+            f'Extended Next Hop Encoding, and "capability {{ nexthop disable; }}" turns it off (RFC 8950)'
+        )
+    settings.capability.nexthop = TriState.TRUE
+    neighbor.capability.nexthop = TriState.TRUE
+    settings.nexthops.append(entry)
+    neighbor.add_nexthop(*entry)
+    assert entry in neighbor.nexthops(), 'the neighbor checked against must ask for what the settings ask for'
+    log.warning(
+        lazymsg(
+            'neighbor {peer}: next-hop {nexthop} is IPv6, so "nexthop {{ {afi} {safi} ipv6; }}" is added '
+            '(RFC 8950); the {afi} {safi} routes with an IPv6 next-hop are only sent if the peer agrees',
+            peer=neighbor.session.peer_address,
+            nexthop=nexthop,
+            afi=family[0],
+            safi=family[1],
+        ),
+        'configuration',
     )
+    return ''
 
 
 class TemplateSection(Kept):

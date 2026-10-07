@@ -95,6 +95,15 @@ ALLOWED: dict[tuple[str, str], str] = {
         '4.2 took an IPv6 flow route matching a flow label or a traffic class and sent nothing; '
         'this tree sends it (RFC 8956)'
     ),
+    ('5.0', r'\btraffic-class (6[4-9]|[7-9]\d|\d{3,})\b'): (
+        'a traffic class above 63 is refused: RFC 8956 3 applies the RFC 8955 type 11 DSCP, six bits, '
+        'to IPv6, so nothing above 63 can match; 5.0 sent it, the configuration no longer loads'
+    ),
+    ('4.2 5.0', r'(?s)\A(?!.*\bnexthop \{).*\broute \d+\.\d+\.\d+\.\d+\b[^}]*?\bnext-hop [0-9a-fA-F]*:'): (
+        'an IPv4 route with an IPv6 next-hop and no `nexthop { }` block: the release sent it to a peer '
+        'which never agreed to it, RFC 8950 4 forbids that; this tree adds the Extended Next Hop '
+        'Encoding capability for the family, with a warning, and sends the route if the peer agrees'
+    ),
     ('4.2 5.0', r'\bsource-interface <'): (
         'an interface name longer than 15 characters can not exist (IFNAMSIZ): 5.0 took the '
         "documentation's placeholder, this tree refuses it"

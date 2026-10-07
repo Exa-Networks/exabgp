@@ -312,8 +312,9 @@ def nexthops(
     found: list[tuple[AFI, SAFI, AFI]] = []
     for afi_keyword in nexthop:
         for entry in nexthop[afi_keyword]:
-            afi, safi, nexthop_afi = entry
-            if (afi, safi) not in negotiated or (nexthop_afi, safi) not in negotiated:
+            afi, safi, _ = entry
+            # RFC 8950 needs the family of the route, not the family of its next-hop
+            if (afi, safi) not in negotiated:
                 log.debug(lazymsg('nexthop.skipped {entry} reason=not_negotiated', entry=entry), 'configuration')
                 continue
             found.append(entry)

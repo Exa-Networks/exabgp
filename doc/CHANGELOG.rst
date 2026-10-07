@@ -90,6 +90,13 @@ Version 6.0.0:
    a VPN route with no label, or a link-local next-hop without the link-local next-hop
    capability. Only `announce route` checked; the others answered done and the route
    failed when the RIB packed it.
+ * Change: an IPv4 or VPNv4 route with an IPv6 next-hop and no `nexthop { <afi> <safi> ipv6; }`
+   for its family adds that entry, with a warning, and so advertises the Extended Next Hop
+   Encoding capability. 4.2 and 5.x sent the route to a peer which had not agreed to an IPv6
+   next-hop, which RFC 8950 4 forbids; it is now sent only if the peer agrees, and dropped
+   with a warning otherwise. `capability { nexthop disable; }` refuses such a route.
+ * Fix: `nexthop { ipv4 unicast ipv6; }` is kept when the family block has no `ipv6
+   unicast`, which RFC 8950 does not need. It was dropped without a word.
  * Fix: a route given `next-hop` twice takes the first, address and attribute alike. The
    attribute kept the first and the address the last, and `next-hop self next-hop <ip>`
    could not be packed.

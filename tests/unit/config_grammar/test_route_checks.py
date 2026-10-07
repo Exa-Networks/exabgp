@@ -53,11 +53,41 @@ def test_an_ipv4_route_with_an_ipv6_next_hop_and_extended_next_hop_is_read() -> 
     assert _read(extra) == 1
 
 
-def test_an_ipv4_route_with_an_ipv6_next_hop_without_extended_next_hop_is_refused() -> None:
-    with pytest.raises(ConfigError, match='RFC 8950'):
-        _read('family { ipv4 unicast; } static { route 10.0.0.0/24 next-hop 2001:db8::1; }')
+def _nexthops(extra: str) -> list[tuple[str, str, str]]:
+    settings = read_text(NEIGHBOR.format(extra=extra))
+    return [
+        (afi.name(), safi.name(), nexthop.name())
+        for neighbor in settings.neighbors
+        for afi, safi, nexthop in neighbor.nexthops
+    ]
 
 
-def test_an_ipv4_vpn_route_with_an_ipv6_next_hop_without_extended_next_hop_is_refused() -> None:
-    with pytest.raises(ConfigError, match='RFC 8950'):
-        _read('family { ipv4 mpls-vpn; } static { route 10.0.0.0/24 rd 1:1 label 5 next-hop 2001:db8::1; }')
+def test_an_ipv4_route_with_an_ipv6_next_hop_asks_for_extended_next_hop() -> None:
+    """4.2 and 5.0 took it without a nexthop block: the configuration asks for the capability itself."""
+    settings = read_text(
+        NEIGHBOR.format(extra='family { ipv4 unicast; } static { route 10.0.0.0/24 next-hop 2001:db8::1; }')
+    )
+    (neighbor,) = settings.neighbors
+    assert neighbor.capability.nexthop.is_enabled()
+    assert [(afi.name(), safi.name(), nexthop.name()) for afi, safi, nexthop in neighbor.nexthops] == [
+        ('ipv4', 'unicast', 'ipv6')
+    ]
+
+
+def test_an_ipv4_vpn_route_with_an_ipv6_next_hop_asks_for_extended_next_hop() -> None:
+    extra = 'family { ipv4 mpls-vpn; } static { route 10.0.0.0/24 rd 1:1 label 5 next-hop 2001:db8::1; }'
+    assert _nexthops(extra) == [('ipv4', 'mpls-vpn', 'ipv6')]
+
+
+def test_an_ipv4_route_with_an_ipv6_next_hop_and_extended_next_hop_disabled_is_refused() -> None:
+    extra = (
+        'family { ipv4 unicast; } capability { nexthop disable; } static { route 10.0.0.0/24 next-hop 2001:db8::1; }'
+    )
+    with pytest.raises(ConfigError, match='nexthop disable'):
+        _read(extra)
+
+
+def test_a_nexthop_entry_is_kept_without_the_family_of_its_next_hop() -> None:
+    """RFC 8950 needs the IPv4 family negotiated, not the IPv6 one."""
+    extra = 'family { ipv4 unicast; } nexthop { ipv4 unicast ipv6; }'
+    assert _nexthops(extra) == [('ipv4', 'unicast', 'ipv6')]
