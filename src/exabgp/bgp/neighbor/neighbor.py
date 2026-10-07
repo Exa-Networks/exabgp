@@ -20,7 +20,7 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.operational import Operational
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
+from exabgp.bgp.neighbor.capability import GRACEFUL_RESTART_MAX_TIME, GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.message.update.attribute.otc import OTCSelf
 from exabgp.bgp.neighbor.session import Session
 from exabgp.protocol.family import AFI, SAFI, Family, FamilyTuple
@@ -238,9 +238,11 @@ class Neighbor:
         # Delegate session-related inference to Session
         self.session.infer()
 
-        # If graceful-restart is enabled but time is 0, use hold-time
+        # If graceful-restart is enabled but time is 0, use hold-time, which can be up to
+        # 65535 where the Restart Time has twelve bits (RFC 4724 3): the most it can say
         if self.capability.graceful_restart.is_enabled() and self.capability.graceful_restart.time == 0:
-            self.capability.graceful_restart = GracefulRestartConfig.with_time(int(self.hold_time))
+            restart_time = min(int(self.hold_time), GRACEFUL_RESTART_MAX_TIME)
+            self.capability.graceful_restart = GracefulRestartConfig.with_time(restart_time)
 
     def id(self) -> str:
         return f'neighbor-{self.uid}'

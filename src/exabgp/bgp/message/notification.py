@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import string
 from typing import TYPE_CHECKING, ClassVar
 
 from exabgp.util.types import Buffer
@@ -17,6 +16,10 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.message import Message, MessageCode
 from exabgp.util import hexbytes, hexstring
+
+# the printable ASCII octets, space to tilde: a Data field of only these is shown as text
+PRINTABLE_FIRST = 0x20
+PRINTABLE_LAST = 0x7E
 
 # ================================================================== Notification
 # The NOTIFICATION message, RFC 4271 Section 4.5: what we send, and what a peer sends us.
@@ -160,7 +163,9 @@ class Notification(Message):
         subcode = self.subcode
 
         if (code, subcode) not in self.SHUTDOWN_SUBCODES:
-            return raw if not len([_ for _ in str(raw) if _ not in string.printable]) else hexbytes(raw)
+            # printable ASCII as it is, anything else in hex: a control character the peer
+            # chose must not reach a terminal or a log line (str(raw) was always printable)
+            return raw if all(PRINTABLE_FIRST <= octet <= PRINTABLE_LAST for octet in raw) else hexbytes(raw)
 
         if len(raw) == 0:
             # shutdown without shutdown communication (the old fashioned way)
@@ -177,10 +182,12 @@ class Notification(Message):
             return f'invalid Shutdown Communication (buffer underrun) length : {shutdown_length} [{hexstring(payload)}]'.encode()
 
         try:
-            decoded_msg = payload[:shutdown_length].decode('utf-8').replace('\r', ' ').replace('\n', ' ')
-            result = f'Shutdown Communication: "{decoded_msg}"'.encode()
+            decoded_msg = payload[:shutdown_length].decode('utf-8')
         except UnicodeDecodeError:
             return f'invalid Shutdown Communication (invalid UTF-8) length : {shutdown_length} [{hexstring(payload)}]'.encode()
+        # shown, not interpreted: every control character becomes a space, as CR and LF did
+        shown = ''.join(character if character.isprintable() else ' ' for character in decoded_msg)
+        result = f'Shutdown Communication: "{shown}"'.encode()
 
         trailer = payload[shutdown_length:]
         if trailer:
@@ -191,10 +198,8 @@ class Notification(Message):
         code_str = self._str_code.get(self.code, 'unknown error')
         subcode_str = self._str_subcode.get((self.code, self.subcode), 'unknow reason')
         text = self.text
-        try:
-            data_str = f' / {text.decode("ascii")}' if text else ''
-        except UnicodeDecodeError:
-            data_str = f' / {hexstring(text)}'
+        # text is printable ASCII, hex, or an RFC 9003 communication already decoded as UTF-8
+        data_str = f' / {text.decode("utf-8")}' if text else ''
         return f'{code_str} / {subcode_str}{data_str}'
 
     @classmethod

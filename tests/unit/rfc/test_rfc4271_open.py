@@ -245,6 +245,39 @@ def test_our_own_identifier_on_an_ibgp_session_is_refused() -> None:
     assert (error[0], error[1]) == (OPEN_MESSAGE_ERROR, BAD_BGP_IDENTIFIER)
 
 
+@pytest.mark.rfc('rfc4271#6.2-bad-bgp-identifier')
+def test_our_own_identifier_from_a_four_octet_internal_peer_is_refused() -> None:
+    """Its OPEN says AS_TRANS, and the capability says the AS (RFC 6793 4.1).
+
+    The check compared My Autonomous System, 23456, with our AS, so a four-octet IBGP peer
+    with our identifier was never one.
+    """
+    error = judgement(
+        local_as=70000, configured_peer_as=70000, open_asn=AS_TRANS, asn4=70000, peer_identifier='192.0.2.1'
+    )
+
+    assert error is not None, 'the same router-id on both sides of a four-octet IBGP session was accepted'
+    assert (error[0], error[1]) == (OPEN_MESSAGE_ERROR, BAD_BGP_IDENTIFIER)
+
+
+@pytest.mark.rfc('rfc4271#6.2-bad-bgp-identifier')
+def test_our_own_identifier_on_an_ibgp_session_with_local_as_auto_is_refused() -> None:
+    """local-as auto leaves the configured AS at zero: the AS is the one the OPENs agreed."""
+    negotiated, neighbor = negotiate(local_as=65001, configured_peer_as=0, open_asn=65001, peer_identifier='192.0.2.1')
+    neighbor.session.local_as = ASN(0)
+
+    error = negotiated.validate(neighbor)
+
+    assert error is not None, 'the same router-id on both sides of an auto IBGP session was accepted'
+    assert (error[0], error[1]) == (OPEN_MESSAGE_ERROR, BAD_BGP_IDENTIFIER)
+
+
+@pytest.mark.rfc('rfc4271#6.2-bad-bgp-identifier', polarity='negative')
+def test_our_own_identifier_from_an_external_peer_is_accepted() -> None:
+    """RFC 6286 2.2 refuses it only "from an internal peer", and 2.3 resolves EBGP collisions."""
+    assert judgement(open_asn=65002, peer_identifier='192.0.2.1') is None
+
+
 @pytest.mark.parametrize('identifier', ['192.0.2.2', '10.0.0.1', '255.255.255.254'], ids=lambda value: value)
 @pytest.mark.rfc('rfc4271#6.2-bad-bgp-identifier', polarity='negative')
 def test_a_non_zero_identifier_is_accepted(identifier: str) -> None:

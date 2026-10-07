@@ -35,12 +35,13 @@ class ReceiveTimer:
         self.code = code
         self.subcode = subcode
         self.message = message
-        self.single = False
 
     # `message` is None when nothing was read: only a message received restarts the timer
     def check_ka_timer(self, message: Message | None = None) -> bool:
         if self.holdtime == 0:
-            return message is None or message.ID != Message.CODE.KEEPALIVE
+            # RFC 4271 8.2.2: a KEEPALIVE restarts the hold timer "if the negotiated
+            # HoldTime value is non-zero", and the session remains Established either way
+            return True
         now = int(time.time())
         if message is not None:
             self.last_read = now
@@ -54,11 +55,7 @@ class ReceiveTimer:
         return True
 
     def check_ka(self, message: Message | None = None) -> None:
-        if self.check_ka_timer(message):
-            return
-        if self.single:
-            raise Notify(2, 6, 'Negotiated holdtime was zero, it was invalid to send us a keepalive messages')
-        self.single = True
+        self.check_ka_timer(message)
 
 
 class SendTimer:

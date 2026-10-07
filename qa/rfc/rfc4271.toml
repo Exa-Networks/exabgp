@@ -426,10 +426,15 @@ incorrect, then the Error Subcode MUST be set to Bad BGP Identifier.
 """
 note = """
 The next sentence of 6.2 defines syntactic correctness as "a valid unicast IP host
-address", and RFC 6286 section 2.2 replaced that with "the BGP Identifier ... MUST be
-non-zero".  exabgp follows RFC 6286: it refuses 0.0.0.0, and refuses a peer whose
-identifier equals ours on an IBGP session, and accepts everything else.  A multicast or
-broadcast identifier is therefore accepted, which is RFC 6286 behaviour rather than a
+address".  RFC 6286 section 2.2 replaced it, with no RFC 2119 keyword: "If the BGP
+Identifier field of the OPEN message is zero, or if it is the same as the BGP Identifier
+of the local BGP speaker and the message is from an internal peer, then the Error Subcode
+is set to "Bad BGP Identifier"" (2.1 defines the identifier as "non-zero" and "should be
+unique within an AS", lower case).  exabgp follows RFC 6286: it refuses 0.0.0.0, refuses
+our own identifier from an internal peer, and accepts everything else.  Internal is
+decided on the negotiated ASes, the four-octet capability's rather than the AS_TRANS of
+My Autonomous System, and a Member-AS of our confederation is internal (RFC 6286 3).  A
+multicast or broadcast identifier is accepted, which is RFC 6286 behaviour rather than a
 gap.
 """
 

@@ -670,3 +670,32 @@ async def test_the_api_is_told_when_the_restart_time_removes_stale_routes() -> N
     await asyncio.sleep(PEER_RESTART_TIME + RESTART_TIME_MARGIN)
 
     assert withdrawn(told) == [KEPT]
+
+
+# ------------------------------------------------- 3 a Restart Time inferred from the hold time
+
+
+def restart_time_advertised(hold_time: int) -> int:
+    """The Restart Time our OPEN carries for `graceful-restart` with no time given."""
+    from exabgp.bgp.neighbor.capability import GracefulRestartConfig
+
+    neighbor = Neighbor()
+    neighbor.session.local_as = ASN(65001)
+    neighbor.hold_time = HoldTime(hold_time)
+    neighbor.capability.graceful_restart = GracefulRestartConfig.with_time(0)
+    neighbor.infer()
+    packed = Capabilities().new(neighbor, False).pack_capabilities()
+    graceful = Capabilities.unpack(packed)[Capability.CODE.GRACEFUL_RESTART]
+    assert isinstance(graceful, Graceful)
+    return graceful.restart_time
+
+
+@pytest.mark.parametrize(('hold_time', 'expected'), [(180, 180), (4095, 4095), (5000, 4095), (65535, 4095)])
+def test_a_restart_time_taken_from_the_hold_time_is_capped_at_twelve_bits(hold_time: int, expected: int) -> None:
+    """Unmarked: section 3 gives the field twelve bits and no keyword. A hold time of 5000
+    was masked to twelve bits on the wire, which advertised a Restart Time of 904."""
+    assert restart_time_advertised(hold_time) == expected
+
+
+def test_a_restart_time_too_large_for_the_field_is_capped_not_masked() -> None:
+    assert Graceful().set(0, 5000, []).extract_capability_bytes()[0][:2] == pack('!H', 4095)

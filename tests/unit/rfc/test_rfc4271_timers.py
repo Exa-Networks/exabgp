@@ -154,19 +154,42 @@ def test_the_hold_timer_expiring_uses_a_subcode_of_zero(clock: Clock, hold_time:
 
 
 @pytest.mark.rfc('rfc4271#6-zero-subcode-when-none-is-specified', polarity='negative')
-def test_an_error_whose_subcode_is_specified_keeps_it(clock: Clock) -> None:
+def test_an_error_whose_subcode_is_specified_keeps_it() -> None:
     """A speaker which zeroed every subcode would pass the test above and say nothing.
 
-    A keepalive on a session whose negotiated hold time is zero is the error the timer
-    reports with a subcode of its own: 2/6, Unacceptable Hold Time.
+    A hold time of one second is the timer error RFC 4271 6.2 gives a subcode of its own:
+    2/6, Unacceptable Hold Time. This used to be a second keepalive on a zero hold time
+    session, which is no error at all (see the 8.2.2 test below).
+    """
+    neighbor = Neighbor()
+    neighbor.session.local_as = ASN(65001)
+    neighbor.session.peer_as = ASN(65002)
+    neighbor.session.router_id = RouterID('192.0.2.1')
+    negotiated = Negotiated.make_negotiated(neighbor, Direction.IN)
+    negotiated.sent(Open.make_open(Version(4), ASN(65001), HoldTime(180), RouterID('192.0.2.1'), Capabilities()))
+    negotiated.received(Open.make_open(Version(4), ASN(65002), HoldTime(1), RouterID('192.0.2.2'), Capabilities()))
+
+    error = negotiated.validate(neighbor)
+
+    assert error is not None
+    assert (error[0], error[1]) == (OPEN_MESSAGE_ERROR, UNACCEPTABLE_HOLD_TIME)
+
+
+# --------------------------------------------- 8.2.2 a KEEPALIVE in Established
+
+
+def test_keepalives_on_a_zero_hold_time_session_keep_it_established(clock: Clock) -> None:
+    """Unmarked, 8.2.2 has no keyword: a KEEPALIVE "restarts its HoldTimer, if the
+    negotiated HoldTime value is non-zero, and remains in the Established state".
+
+    The second one raised Notify(2, 6) and closed a session whose peer only sent a
+    keepalive more than the zero hold time asked for.
     """
     timer_under_test = receiver(0)
-    timer_under_test.check_ka(KeepAlive.make_keepalive())
 
-    with pytest.raises(Notify) as caught:
+    for _ in range(5):
+        clock.advance(60)
         timer_under_test.check_ka(KeepAlive.make_keepalive())
-
-    assert (caught.value.code, caught.value.subcode) == (OPEN_MESSAGE_ERROR, UNACCEPTABLE_HOLD_TIME)
 
 
 # ----------------------------------------------- 6.2 the value the timer is actually run at

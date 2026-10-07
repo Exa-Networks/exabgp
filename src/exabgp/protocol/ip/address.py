@@ -186,10 +186,12 @@ class IP(IPBase):
         assert encoding in ('utf-8', 'ascii')
         return 'no-nexthop' if not self._packed else IP.ntop(self._packed)
 
+    # equality and hash both on index(): equal addresses must hash alike, whatever class
+    # built them, and an unresolved next-hop self is not the absence of a next hop
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, IP):
             return False
-        return self._packed == other._packed
+        return bytes(self.index()) == bytes(other.index())
 
     def __ne__(self, other: object) -> bool:
         return not self == other
@@ -207,7 +209,7 @@ class IP(IPBase):
         return bytes(self._packed) >= bytes(other._packed)
 
     def __hash__(self) -> int:
-        return hash((self.__class__.__name__, self._packed))
+        return hash(bytes(self.index()))
 
     @classmethod
     def klass(cls, ip: str) -> IPFactory | None:

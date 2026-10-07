@@ -175,14 +175,8 @@ class Negotiated:
             self.peer_as = recv_capa.four_octet_asn()
         self._negotiate_role(sent_capa, recv_capa)
 
-        self.families = []
-        if recv_capa.announced(Capability.CODE.MULTIPROTOCOL) and sent_capa.announced(Capability.CODE.MULTIPROTOCOL):
-            recv_mp = recv_capa[Capability.CODE.MULTIPROTOCOL]
-            sent_mp = sent_capa[Capability.CODE.MULTIPROTOCOL]
-            if isinstance(recv_mp, MultiProtocol) and isinstance(sent_mp, MultiProtocol):
-                for family in recv_mp:
-                    if family in sent_mp:
-                        self.families.append(family)
+        sent_families = self._multiprotocol(sent_capa)
+        self.families = [family for family in self._multiprotocol(recv_capa) if family in sent_families]
 
         self.nexthop = []
         if recv_capa.announced(Capability.CODE.NEXTHOP) and sent_capa.announced(Capability.CODE.NEXTHOP):
@@ -269,7 +263,11 @@ class Negotiated:
                 # MULTIPROTOCOL, but received Session IDs remain peer input: a
                 # named capability must exist on both sides before comparison.
                 for capa in sent_ms_capa:
-                    if capa not in sent_capa or capa not in recv_capa or sent_capa[capa] != recv_capa[capa]:
+                    if (
+                        capa not in sent_capa
+                        or capa not in recv_capa
+                        or not sent_capa[capa].same_values(recv_capa[capa])
+                    ):
                         self.multisession = (
                             2,
                             8,
@@ -281,6 +279,19 @@ class Negotiated:
             Capability.CODE.MULTISESSION_CISCO
         ):
             self.multisession = (2, 9, 'multisession is mandatory with this peer')
+
+    @staticmethod
+    def _multiprotocol(capabilities: Capabilities) -> list[FamilyTuple]:
+        """The families an OPEN offers: those of its Multiprotocol capability, else IPv4 unicast.
+
+        A speaker which sends no Multiprotocol capability is a plain RFC 4271 speaker, and
+        RFC 4271 carries IPv4 unicast and nothing else. Refusing it every family left an
+        established session which could exchange no route at all.
+        """
+        if not capabilities.announced(Capability.CODE.MULTIPROTOCOL):
+            return [(AFI.ipv4, SAFI.unicast)]
+        # the registry decodes code 1 as MultiProtocol
+        return list(cast(MultiProtocol, capabilities[Capability.CODE.MULTIPROTOCOL]))
 
     def _negotiate_role(self, sent_capa: Capabilities, recv_capa: Capabilities) -> None:
         self.role = sent_capa.role()
@@ -303,6 +314,11 @@ class Negotiated:
         assert self.sent_open is not None
         assert self.received_open is not None
 
+        # RFC 7607 2: zero as the peer AS, in My Autonomous System or in the capability
+        # standing in for it, is a Bad Peer AS, even where peer-as auto would take anything
+        if self.received_open.asn == 0 or self._four_octet_asn_is_zero():
+            return (2, 2, 'the peer claimed AS 0, which is reserved (RFC 7607)')
+
         if neighbor.session.peer_as and self.peer_as != neighbor.session.peer_as:
             return (
                 2,
@@ -315,16 +331,17 @@ class Negotiated:
         if self.received_open.router_id == RouterID('0.0.0.0'):
             return (2, 3, '0.0.0.0 is an invalid router_id')
 
-        if self.received_open.asn == neighbor.session.local_as:
-            # router-id must be unique within an ASN
-            if self.received_open.router_id == neighbor.session.router_id:
-                return (
-                    2,
-                    3,
-                    'BGP Identifier collision, same router-id ({}) on both sides of this IBGP session'.format(
-                        self.received_open.router_id
-                    ),
-                )
+        # RFC 6286 2.2: our identifier from an internal peer. Internal is decided on the
+        # negotiated ASes, which the four-octet capability gives (RFC 6793 4.1) and which
+        # local-as and peer-as auto have resolved, never on the AS_TRANS of the OPEN
+        if self.is_internal_neighbor and self.received_open.router_id == neighbor.session.router_id:
+            return (
+                2,
+                3,
+                'BGP Identifier collision, same router-id ({}) on both sides of this IBGP session'.format(
+                    self.received_open.router_id
+                ),
+            )
 
         if self.received_open.hold_time and self.received_open.hold_time < HoldTime.MIN:
             return (2, 6, 'Hold Time is invalid (%d)' % self.received_open.hold_time)
@@ -336,16 +353,20 @@ class Negotiated:
             # multisession is an error tuple (code, subcode, message)
             return self.multisession
 
-        sent_mp = self.sent_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, None)
-        recv_mp = self.received_open.capabilities.get(Capability.CODE.MULTIPROTOCOL, None)
-        s: set[FamilyTuple] = set(sent_mp) if isinstance(sent_mp, MultiProtocol) else set()
-        r: set[FamilyTuple] = set(recv_mp) if isinstance(recv_mp, MultiProtocol) else set()
+        s = set(self._multiprotocol(self.sent_open.capabilities))
+        r = set(self._multiprotocol(self.received_open.capabilities))
         mismatch = s ^ r
 
         for family in mismatch:
             self.mismatch.append(('exabgp' if family in r else 'peer', family))
 
         return None
+
+    def _four_octet_asn_is_zero(self) -> bool:
+        """The peer's four-octet AS capability, whether we sent ours or not, names AS 0."""
+        assert self.received_open is not None
+        received = self.received_open.capabilities
+        return received.announced(Capability.CODE.FOUR_BYTES_ASN) and received.four_octet_asn() == 0
 
     def unsupported_capability(self) -> Notify | None:
         """The (2, 7) refusing a peer which left out a capability we require, if it did.
@@ -542,6 +563,8 @@ class RequirePath:
         # a side which did not send ADD-PATH has no family: only keys() and get() are read
         receive = received_open.capabilities.get(Capability.CODE.ADD_PATH, {})
         send = sent_open.capabilities.get(Capability.CODE.ADD_PATH, {})
+        if not self._understood(receive):
+            receive = {}
 
         # python 2.4 compatibility mean no simple union but using sets.Set
         union: list[FamilyTuple] = []
@@ -557,6 +580,15 @@ class RequirePath:
 
             self._send[k] = here_will_send and they_will_recv
             self._receive[k] = here_will_recv and they_will_send
+
+    @classmethod
+    def _understood(cls, addpath: Any) -> bool:
+        """Whether every Send/Receive value of an ADD-PATH capability is one RFC 7911 defines.
+
+        RFC 7911 4: for a value other than 1, 2 or 3 "the capability SHOULD be treated as
+        not understood and ignored". Read as a bitmask, 7 claimed send and receive both.
+        """
+        return all(cls.RECEIVE <= send_receive <= cls.BOTH for send_receive in addpath.values())
 
     def send(self, afi: AFI, safi: SAFI) -> bool:
         return self._send.get((afi, safi), False)

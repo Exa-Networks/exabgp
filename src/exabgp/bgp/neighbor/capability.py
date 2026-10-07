@@ -24,7 +24,7 @@ ROUTE_REFRESH_CODE = 0x02
 ENHANCED_ROUTE_REFRESH_CODE = 0x46
 # the largest graceful restart time, in seconds. A module constant: in the compiled build a
 # ClassVar on a dataclass is taken for a field, and its __init__ fails setting it
-GRACEFUL_RESTART_MAX_TIME = 0xFFFF
+GRACEFUL_RESTART_MAX_TIME = 0x0FFF  # RFC 4724 3: the Restart Time is twelve bits
 
 
 @dataclass

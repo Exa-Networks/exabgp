@@ -77,7 +77,6 @@ class TestReceiveTimerInitialization:
         assert timer.code == 4
         assert timer.subcode == 0
         assert timer.message == 'hold timer expired'
-        assert timer.single is False
 
     def test_receive_timer_tracks_last_read(self) -> None:
         """Test ReceiveTimer tracks last read time"""
@@ -109,72 +108,12 @@ class TestReceiveTimerKeepaliveCheck:
         assert result is True
 
     def test_check_ka_with_zero_holdtime_keepalive(self) -> None:
-        """Test check_ka with zero holdtime returns False for keepalive"""
+        """A keepalive on a zero hold time session is accepted like any other message"""
         session = Mock(return_value='test-session')
         timer = ReceiveTimer(session, HoldTime(0), 4, 0)
 
         message = KeepAlive.make_keepalive()
 
-        result = timer.check_ka_timer(message)
-        assert result is False
-
-    def test_check_ka_timer_updates_last_read(self) -> None:
-        """Test check_ka_timer updates last_read on message"""
-        session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
-
-        # Set last_read to past
-        timer.last_read = int(time.time()) - 10
-
-        message = an_update()
-
-        old_last_read = timer.last_read
-        timer.check_ka_timer(message)
-
-        # last_read should be updated
-        assert timer.last_read > old_last_read
-
-    def test_check_ka_timer_ignores_nop(self) -> None:
-        """Test check_ka_timer does not count a read which returned nothing"""
-        session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
-
-        # Set last_read to past
-        timer.last_read = int(time.time()) - 10
-        old_last_read = timer.last_read
-
-        message = None  # nothing was read
-
-        time.sleep(1)
-        timer.check_ka_timer(message)
-
-        # last_read should NOT be updated when nothing was read
-        assert timer.last_read == old_last_read
-
-    def test_check_ka_timer_raises_notify_on_expiry(self) -> None:
-        """Test check_ka_timer raises Notify when timer expires"""
-        session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, HoldTime(2), 4, 0, 'timer expired')
-
-        # Set last_read to past (beyond holdtime)
-        timer.last_read = int(time.time()) - 3
-
-        message = None  # nothing was read
-
-        with pytest.raises(Notify) as exc_info:
-            timer.check_ka_timer(message)
-
-        assert exc_info.value.code == 4
-        assert exc_info.value.subcode == 0
-
-    def test_check_ka_timer_does_not_raise_within_holdtime(self) -> None:
-        """Test check_ka_timer does not raise within holdtime"""
-        session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, HoldTime(180), 4, 0)
-
-        message = an_update()
-
-        # Should not raise
         result = timer.check_ka_timer(message)
         assert result is True
 
@@ -192,40 +131,17 @@ class TestReceiveTimerCheckKa:
         # Should not raise
         timer.check_ka(message)
 
-    def test_check_ka_with_zero_holdtime_sets_single_flag(self) -> None:
-        """Test check_ka with zero holdtime sets single flag on first keepalive"""
+    def test_check_ka_with_zero_holdtime_never_raises_on_keepalives(self) -> None:
+        """RFC 4271 8.2.2: in Established a KEEPALIVE restarts the hold timer "if the
+        negotiated HoldTime value is non-zero", and the session "remains in the Established
+        state" either way. The second keepalive on a zero hold time session raised 2/6."""
         session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, HoldTime(0), 2, 6)
+        timer = ReceiveTimer(session, HoldTime(0), 4, 0)
 
         message = KeepAlive.make_keepalive()
 
-        # First keepalive should set single flag but not raise
-        timer.check_ka(message)
-        assert timer.single is True
-
-        # Second keepalive should raise
-        with pytest.raises(Notify) as exc_info:
+        for _ in range(3):
             timer.check_ka(message)
-
-        assert exc_info.value.code == 2
-        assert exc_info.value.subcode == 6
-
-    def test_check_ka_with_zero_holdtime_second_keepalive(self) -> None:
-        """Test check_ka with zero holdtime on second keepalive"""
-        session = Mock(return_value='test-session')
-        timer = ReceiveTimer(session, HoldTime(0), 2, 6)
-
-        message = KeepAlive.make_keepalive()
-
-        # First keepalive
-        try:
-            timer.check_ka(message)
-        except Notify:
-            pass
-
-        # Second keepalive should also raise (single flag is set)
-        # But the code sets single=True after first, so it won't raise again
-        # Let me verify the actual behavior
 
 
 class TestReceiveTimerElapsedTime:

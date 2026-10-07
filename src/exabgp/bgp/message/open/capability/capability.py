@@ -201,6 +201,14 @@ class Capability:
         """Unpack capability from bytes. Subclasses must implement."""
         raise NotImplementedError(f'{cls.__name__}.unpack_capability() not implemented')
 
+    def same_values(self, other: 'Capability') -> bool:
+        """Whether the other OPEN carried the same values for this capability.
+
+        The multisession draft, section 7 item 1, matches a Session Id when "for every
+        value in the received OPEN message there is corresponding value" locally.
+        """
+        return self == other
+
     @staticmethod
     def hex(data: Buffer) -> str:
         return '0x' + ''.join('{:02x}'.format(_) for _ in data)
@@ -282,6 +290,10 @@ class CapabilityList(Capability, Generic[_Item]):
 
     def extend(self, items: Iterable[_Item]) -> None:
         self.items.extend(items)
+
+    def same_values(self, other: Capability) -> bool:
+        """The same entries, whatever order each OPEN listed them in."""
+        return isinstance(other, CapabilityList) and set(self.items) == set(other.items)
 
     # defining __eq__ leaves the class unhashable, as the list was
     def __eq__(self, other: object) -> bool:

@@ -428,6 +428,38 @@ def test_a_family_only_the_peer_advertised_is_not_negotiated() -> None:
         MPRNLRI.unpack_attribute(mp_reach(2, 1, bytes(15) + bytes([1]), NLRI_V6), negotiated)
 
 
+def negotiate_with_a_plain_speaker(ours: list[FamilyTuple]) -> Negotiated:
+    """A session with a peer whose OPEN carries no Multiprotocol capability at all."""
+    neighbor = Neighbor()
+    neighbor.session.local_as = ASN(65001)
+    sent = Capabilities()
+    multiprotocol = MultiProtocol()
+    multiprotocol.extend(ours)
+    sent[Capability.CODE.MULTIPROTOCOL] = multiprotocol
+    negotiated = Negotiated(neighbor, Direction.IN)
+    negotiated.sent(Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), sent))
+    negotiated.received(Open.make_open(Version(4), ASN(65002), HoldTime(90), RouterID('192.0.2.2'), Capabilities()))
+    return negotiated
+
+
+def test_a_peer_without_the_capability_gets_ipv4_unicast() -> None:
+    """Unmarked, a decision rather than a sentence: a peer which sends no Multiprotocol
+    capability speaks plain RFC 4271, which is IPv4 unicast. It was given no family at all,
+    an established session on which no route could ever be exchanged."""
+    negotiated = negotiate_with_a_plain_speaker([IPV4_UNICAST, IPV6_UNICAST])
+
+    assert negotiated.families == [IPV4_UNICAST]
+    assert negotiated.validate(negotiated.neighbor) is None
+    assert negotiated.mismatch == [('peer', IPV6_UNICAST)], 'IPv4 unicast was reported as missing'
+
+
+def test_a_peer_without_the_capability_gets_nothing_we_did_not_offer() -> None:
+    """Implicit IPv4 unicast only when we have it: one side is still not both sides."""
+    negotiated = negotiate_with_a_plain_speaker([IPV6_UNICAST])
+
+    assert negotiated.families == []
+
+
 def test_the_neighbour_helper_used_above_really_configures_a_family() -> None:
     """Guard on the fixtures: a neighbour with no family would make the tests vacuous."""
     neighbor = Neighbor()

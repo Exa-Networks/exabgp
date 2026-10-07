@@ -38,7 +38,8 @@ class Graceful(CapabilityDict[FamilyTuple, int]):
 
     def set(self, restart_flag: int, restart_time: int, protos: Iterable[tuple[AFI, SAFI, int]]) -> Graceful:
         self.restart_flag = restart_flag
-        self.restart_time = restart_time & Graceful.TIME_MASK
+        # clamped, not masked: 5000 seconds masked to twelve bits was 904
+        self.restart_time = min(restart_time, Graceful.TIME_MASK)
         for afi, safi, family_flag in protos:
             self[(afi, safi)] = family_flag & Graceful.FORWARDING_STATE
         return self

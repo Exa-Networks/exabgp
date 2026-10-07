@@ -128,21 +128,10 @@ assert peer.fsm == FSM.IDLE
 ```
 
 ### 3. Timer Logic Corrections
-**Issue:** Misunderstood `check_ka()` behavior with zero holdtime
+**Issue:** `check_ka()` raised Notify(2, 6) on the second keepalive of a zero hold time session
 
-**Fix:** Corrected test to match actual implementation:
-- First keepalive: sets `single` flag, doesn't raise
-- Second keepalive: raises Notify
-
-```python
-# First keepalive sets flag
-timer.check_ka(message)
-assert timer.single is True
-
-# Second keepalive raises
-with pytest.raises(Notify):
-    timer.check_ka(message)
-```
+**Fix:** RFC 4271 8.2.2 restarts the hold timer only when it is non-zero and stays in
+Established: keepalives on a zero hold time session are accepted, however many arrive.
 
 ## Running the Tests
 

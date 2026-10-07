@@ -413,6 +413,10 @@ class Protocol:
             local_as = self.negotiated.received_open.asn
             if local_as == AS_TRANS and Capability.CODE.FOUR_BYTES_ASN in self.negotiated.received_open.capabilities:
                 local_as = self.negotiated.received_open.capabilities.four_octet_asn()
+            # RFC 7607 2: "A router MUST NOT initiate a connection claiming to be AS 0", and
+            # mirroring a peer which claimed it would; its OPEN is a Bad Peer AS
+            if local_as == 0:
+                raise Notify(2, 2, 'the peer claimed AS 0, which is reserved (RFC 7607)')
         else:
             raise RuntimeError('no ASN available for the OPEN message')
 

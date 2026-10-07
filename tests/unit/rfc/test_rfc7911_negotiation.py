@@ -245,6 +245,42 @@ def test_a_peer_which_splits_add_path_across_instances_loses_no_family(packed: b
     assert require.send(*IPV4_UNICAST), 'the family in the first instance was lost'
 
 
+def peer_offering(*entries: bytes) -> RequirePath:
+    """What we agree with a peer whose ADD-PATH capability carries these entries, both
+    families offered send/receive on our side."""
+    received = Opened(None)
+    received.capabilities = Capabilities.unpack(optional_parameters(add_path_capability(*entries)))
+    ours = Opened(None)
+    ours.capabilities[Capability.CODE.ADD_PATH] = AddPath([IPV4_UNICAST, (AFI.ipv6, SAFI.unicast)], SEND_RECEIVE)
+    require = RequirePath()
+    require.setup(received, ours)
+    return require
+
+
+@pytest.mark.rfc('rfc7911#4-unknown-send-receive-ignored')
+@pytest.mark.parametrize('value', [0, 4, 7, 255], ids=lambda value: f'send/receive {value}')
+def test_a_capability_with_an_undefined_send_receive_is_ignored(value: int) -> None:
+    """ "the capability SHOULD be treated as not understood and ignored": all of it.
+
+    Read as a bitmask, 7 claimed send and receive both and set the four octet path
+    identifier on every NLRI of the family.
+    """
+    require = peer_offering(add_path_tuple(AFI.ipv4, SAFI.unicast, value), IPV6_ENTRY)
+
+    for family in (IPV4_UNICAST, (AFI.ipv6, SAFI.unicast)):
+        assert not require.send(*family), f'{family} sends paths on a capability with {value} in it'
+        assert not require.receive(*family), f'{family} receives paths on a capability with {value} in it'
+
+
+@pytest.mark.rfc('rfc7911#4-unknown-send-receive-ignored', polarity='negative')
+@pytest.mark.parametrize('value', [RECEIVE, SEND, SEND_RECEIVE], ids=lambda value: f'send/receive {value}')
+def test_a_capability_of_defined_values_is_understood(value: int) -> None:
+    require = peer_offering(add_path_tuple(AFI.ipv4, SAFI.unicast, value))
+
+    assert require.send(*IPV4_UNICAST) is bool(value & RECEIVE)
+    assert require.receive(*IPV4_UNICAST) is bool(value & SEND)
+
+
 # ---------------------------------------------------------------------------
 # Section 2: re-advertisement.  exabgp re-advertises nothing on its own.
 #

@@ -77,8 +77,10 @@ A
 receiving BGP speaker MUST NOT interpret invalid UTF-8 sequences.
 """
 note = """
-Notification.data reports an invalid sequence as invalid, with the octets in hex, rather
-than decoding it with replacement characters.
+Notification.text reports an invalid sequence as invalid, with the octets in hex, rather
+than decoding it with replacement characters (Notification.data is the field as it was on
+the wire).  A valid communication is shown, not interpreted either: a control character
+in it becomes a space.
 """
 
 [[requirement]]
@@ -110,7 +112,8 @@ methods such as syslog [RFC5424].
 """
 note = """
 A received NOTIFICATION goes to the log, which can be syslog, and to the API as
-`notification` with the decoded communication.
+`notification` with the decoded communication.  The log line is str(Notification), which
+decoded the communication as ASCII and so showed any non-ASCII one in hex; it is UTF-8.
 """
 
 

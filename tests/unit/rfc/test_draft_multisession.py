@@ -276,6 +276,25 @@ def test_a_peer_whose_families_match_ours_is_accepted() -> None:
     assert negotiate(ours(), received(ipv4_unicast(), (MULTISESSION, bytes([0x00])))) is True
 
 
+@pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#7-no-matching-group-is-a-grouping-conflict')
+def test_a_peer_listing_our_families_in_another_order_is_accepted() -> None:
+    """Item 1 matches "for every value in the received OPEN message", so order is no value.
+
+    The two MultiProtocol capabilities were compared as lists, and the same two families
+    listed the other way round were a Grouping Conflict.
+    """
+    families = ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
+    sent = ours()
+    sent[MULTIPROTOCOL] = multiprotocol(*families)
+    reversed_families = multiprotocol(*reversed(families)).extract_capability_bytes()
+
+    result = negotiate(
+        sent, received(*((MULTIPROTOCOL, value) for value in reversed_families), (MULTISESSION, b'\x00'))
+    )
+
+    assert result is True
+
+
 @pytest.mark.rfc('draft-ietf-idr-bgp-multisession-07#7-no-matching-group-is-a-grouping-conflict', polarity='negative')
 def test_a_peer_whose_families_differ_from_ours_is_a_grouping_conflict() -> None:
     ipv6 = multiprotocol((AFI.ipv6, SAFI.unicast)).extract_capability_bytes()[0]

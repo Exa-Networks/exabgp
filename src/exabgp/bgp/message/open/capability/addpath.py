@@ -44,10 +44,10 @@ class AddPath(CapabilityDict[FamilyTuple, int]):
     def named(self, send_receive: int) -> str:
         """How a send/receive value is shown, including one the RFC does not define.
 
-        A peer picks this byte, and RequirePath.setup reads it as a bitmask rather than as
-        one of the four names, so a value outside the table establishes a session today.
-        Looking it up without a default put a KeyError in the writer feeding the API
-        subprocesses and in the logger instead.
+        A peer picks this byte. RequirePath.setup ignores a capability with a value outside
+        1..3 (RFC 7911 4), but the capability still reaches the API and the log as it was
+        received. Looking it up without a default put a KeyError in the writer feeding the
+        API subprocesses and in the logger instead.
         """
         return self.string.get(send_receive, f'invalid ({send_receive})')
 

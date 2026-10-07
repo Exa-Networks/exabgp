@@ -24,9 +24,9 @@ def hexstring(value: Buffer) -> str:
     return '0x' + ''.join(spaced(value))
 
 
-def hexbytes(value: bytes) -> bytes:
-    ascii_str = str(value, 'ascii')
-    return bytes(hexstring(ascii_str.encode('ascii')), 'ascii')
+def hexbytes(value: Buffer) -> bytes:
+    # any octet: going through an ASCII str raised on the first one above 0x7F
+    return hexstring(value).encode('ascii')
 
 
 def string_is_hex(s: str) -> bool:

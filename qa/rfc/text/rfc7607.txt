@@ -1,0 +1,283 @@
+
+
+
+
+
+
+Internet Engineering Task Force (IETF)                         W. Kumari
+Request for Comments: 7607                                        Google
+Updates: 4271                                                    R. Bush
+Category: Standards Track                      Internet Initiative Japan
+ISSN: 2070-1721                                              H. Schiller
+                                                                  Google
+                                                                K. Patel
+                                                           Cisco Systems
+                                                             August 2015
+
+
+                    Codification of AS 0 Processing
+
+Abstract
+
+   This document updates RFC 4271 and proscribes the use of Autonomous
+   System (AS) 0 in the Border Gateway Protocol (BGP) OPEN, AS_PATH,
+   AS4_PATH, AGGREGATOR, and AS4_AGGREGATOR attributes in the BGP UPDATE
+   message.
+
+Status of This Memo
+
+   This is an Internet Standards Track document.
+
+   This document is a product of the Internet Engineering Task Force
+   (IETF).  It represents the consensus of the IETF community.  It has
+   received public review and has been approved for publication by the
+   Internet Engineering Steering Group (IESG).  Further information on
+   Internet Standards is available in Section 2 of RFC 5741.
+
+   Information about the current status of this document, any errata,
+   and how to provide feedback on it may be obtained at
+   http://www.rfc-editor.org/info/rfc7607.
+
+Copyright Notice
+
+   Copyright (c) 2015 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+
+
+Kumari, et al.               Standards Track                    [Page 1]
+
+RFC 7607                     AS 0 Processing                 August 2015
+
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+     1.1.  Requirements Notation . . . . . . . . . . . . . . . . . .   2
+   2.  Behavior  . . . . . . . . . . . . . . . . . . . . . . . . . .   3
+   3.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   3
+   4.  Security Considerations . . . . . . . . . . . . . . . . . . .   3
+   5.  References  . . . . . . . . . . . . . . . . . . . . . . . . .   4
+     5.1.  Normative References  . . . . . . . . . . . . . . . . . .   4
+     5.2.  Informative References  . . . . . . . . . . . . . . . . .   4
+   Acknowledgements  . . . . . . . . . . . . . . . . . . . . . . . .   4
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .   5
+
+1.  Introduction
+
+   Autonomous System 0 was listed in the IANA Autonomous System Number
+   Registry as "Reserved - May be use [sic] to identify non-routed
+   networks" ([IANA.AS_Numbers]).
+
+   [RFC6491] specifies that AS 0 in a Route Origin Attestation (ROA) is
+   used to mark a prefix and all its more specific prefixes as not to be
+   used in a routing context.  This allows a resource holder to signal
+   that a prefix (and the more specifics) should not be routed by
+   publishing a ROA listing AS 0 as the only origin.  To respond to this
+   signal requires that BGP implementations not accept or propagate
+   routes containing AS 0.
+
+   No clear statement that AS 0 was proscribed could be found in any BGP
+   specification.  This document corrects this omission, most
+   importantly in the case of the AS_PATH.  This represents an update to
+   the error handling procedures given in Sections 6.2 and 6.3 of
+   [RFC4271] by specifying the behavior in the presence of AS 0.
+
+   At least two implementations discard routes containing AS 0, and this
+   document codifies this behavior.
+
+1.1.  Requirements Notation
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in [RFC2119].
+
+
+
+
+
+
+
+
+
+
+Kumari, et al.               Standards Track                    [Page 2]
+
+RFC 7607                     AS 0 Processing                 August 2015
+
+
+2.  Behavior
+
+   A BGP speaker MUST NOT originate or propagate a route with an AS
+   number of zero in the AS_PATH, AS4_PATH, AGGREGATOR, or
+   AS4_AGGREGATOR attributes.
+
+   An UPDATE message that contains the AS number of zero in the AS_PATH
+   or AGGREGATOR attribute MUST be considered as malformed and be
+   handled by the procedures specified in [RFC7606].
+
+   An UPDATE message that contains the AS number of zero in the AS4_PATH
+   or AS4_AGGREGATOR attribute MUST be considered as malformed and be
+   handled by the procedures specified in [RFC6793].
+
+   If a BGP speaker receives zero as the peer AS in an OPEN message, it
+   MUST abort the connection and send a NOTIFICATION with Error Code
+   "OPEN Message Error" and subcode "Bad Peer AS" (see Section 6 of
+   [RFC4271]).  A router MUST NOT initiate a connection claiming to be
+   AS 0.
+
+   Authors of future protocol extensions that carry the Autonomous
+   System number are encouraged to keep in mind that AS 0 is reserved
+   and to provide clear direction on how to handle AS 0.
+
+3.  IANA Considerations
+
+   The IANA has updated the registry for "16-bit Autonomous System
+   Numbers" so that the entry for AS 0 is simply "Reserved".
+
+4.  Security Considerations
+
+   By allowing a Resource Public Key Infrastructure (RPKI) resource
+   holder to issue a ROA saying that AS 0 is the only valid origin for a
+   route, we allow them to state that a particular address resource is
+   not in use.  By ensuring that all implementations that see AS 0 in a
+   route ignore that route, we prevent a malicious party from announcing
+   routes containing AS 0 in an attempt to hijack those resources.
+
+   In addition, by standardizing the behavior upon reception of an
+   AS_PATH (or AS4_PATH) containing AS 0, this document makes the
+   behavior better defined.
+
+
+
+
+
+
+
+
+
+
+Kumari, et al.               Standards Track                    [Page 3]
+
+RFC 7607                     AS 0 Processing                 August 2015
+
+
+5.  References
+
+5.1.  Normative References
+
+   [IANA.AS_Numbers]
+              IANA, "Autonomous System (AS) Numbers",
+              <http://www.iana.org/assignments/as-numbers>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <http://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC4271]  Rekhter, Y., Ed., Li, T., Ed., and S. Hares, Ed., "A
+              Border Gateway Protocol 4 (BGP-4)", RFC 4271,
+              DOI 10.17487/RFC4271, January 2006,
+              <http://www.rfc-editor.org/info/rfc4271>.
+
+   [RFC6793]  Vohra, Q. and E. Chen, "BGP Support for Four-Octet
+              Autonomous System (AS) Number Space", RFC 6793,
+              DOI 10.17487/RFC6793, December 2012,
+              <http://www.rfc-editor.org/info/rfc6793>.
+
+   [RFC7606]  Chen, E., Ed., Scudder, J., Ed., Mohapatra, P., and K.
+              Patel, "Revised Error Handling for BGP UPDATE Messages",
+              RFC 7606, DOI 10.17487/RFC7606, July 2015,
+              <http://www.rfc-editor.org/info/rfc7606>.
+
+5.2.  Informative References
+
+   [RFC6491]  Manderson, T., Vegoda, L., and S. Kent, "Resource Public
+              Key Infrastructure (RPKI) Objects Issued by IANA",
+              RFC 6491, DOI 10.17487/RFC6491, February 2012,
+              <http://www.rfc-editor.org/info/rfc6491>.
+
+Acknowledgements
+
+   The authors wish to thank Elwyn Davies, Enke Chen, Brian Dickson,
+   Bruno Decraene, Robert Raszuk, Jakob Heitz, Danny McPherson, Chris
+   Morrow, iLya, John Scudder, Jeff Tantsura, Daniel Ginsburg, and Susan
+   Hares.  Apologies to those we may have missed; it was not
+   intentional.
+
+
+
+
+
+
+
+
+
+Kumari, et al.               Standards Track                    [Page 4]
+
+RFC 7607                     AS 0 Processing                 August 2015
+
+
+Authors' Addresses
+
+   Warren Kumari
+   Google
+   1600 Amphitheatre Parkway
+   Mountain View, CA  94043
+   United States
+
+   Email: warren@kumari.net
+
+
+   Randy Bush
+   Internet Initiative Japan
+   5147 Crystal Springs
+   Bainbridge Island, WA  98110
+   United States
+
+   Email: randy@psg.com
+
+
+   Heather Schiller
+   Google
+   1600 Amphitheatre Parkway
+   Mountain View, CA  94043
+   United States
+
+   Email: has@google.com
+
+
+   Keyur Patel
+   Cisco Systems
+   170 W. Tasman Drive
+   San Jose, CA  95134
+   United States
+
+   Email: keyupate@cisco.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Kumari, et al.               Standards Track                    [Page 5]
+

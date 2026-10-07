@@ -121,6 +121,11 @@ text = """
 If any other value is received, then the capability SHOULD be
 treated as not understood and ignored [RFC5492].
 """
+note = """
+RequirePath.setup ignores the whole received capability, every family of it, when one
+Send/Receive value is not 1, 2 or 3: "the capability", not the entry. It used to read
+each value as a bitmask, so 7 enabled path identifiers in both directions.
+"""
 
 [[requirement]]
 id = "rfc7911#5-unknown-withdraw-identifier-ignored"

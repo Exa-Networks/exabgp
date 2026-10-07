@@ -1,0 +1,97 @@
+# RFC 7607 - Codification of AS 0 Processing
+# https://www.rfc-editor.org/rfc/rfc7607
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc7607.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Section 2 is the whole of the document. The OPEN half is enforced by Negotiated.validate
+# and by Protocol.new_open; the UPDATE half is about AS_PATH and AGGREGATOR and is not.
+
+rfc = "rfc7607"
+title = "Codification of AS 0 Processing"
+url = "https://www.rfc-editor.org/rfc/rfc7607"
+
+
+# ================================================================== 2 Behavior
+
+[[requirement]]
+id = "rfc7607#2-open-from-as-zero-is-bad-peer-as"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a BGP speaker receives zero as the peer AS in an OPEN message, it
+MUST abort the connection and send a NOTIFICATION with Error Code
+"OPEN Message Error" and subcode "Bad Peer AS" (see Section 6 of
+[RFC4271]).
+"""
+note = """
+Negotiated.validate answers (2, 2) when My Autonomous System is zero, and when the
+four-octet AS capability (RFC 6793), which stands in for it, carries zero. Before this
+was enrolled, `peer-as auto` took AS 0 as any other number and established the session.
+"""
+
+[[requirement]]
+id = "rfc7607#2-never-claim-as-zero"
+section = "2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+A router MUST NOT initiate a connection claiming to be
+AS 0.
+"""
+note = """
+A configured local-as is never zero: zero means `auto`, which mirrors the peer's AS and
+so sends our OPEN after reading the peer's. Protocol.new_open refuses to mirror AS 0 and
+answers the peer's OPEN with (2, 2) instead of sending an OPEN claiming AS 0.
+"""
+
+[[requirement]]
+id = "rfc7607#2-never-originate-as-zero"
+section = "2"
+level = "MUST NOT"
+status = "gap"
+polarity = "both"
+text = """
+A BGP speaker MUST NOT originate or propagate a route with an AS
+number of zero in the AS_PATH, AS4_PATH, AGGREGATOR, or
+AS4_AGGREGATOR attributes.
+"""
+note = """
+The configuration and the API accept an as-path or an aggregator naming AS 0 and send
+it. Refusing it belongs to the attribute grammar, which this enrolment did not touch.
+"""
+
+[[requirement]]
+id = "rfc7607#2-as-zero-in-as-path-is-malformed"
+section = "2"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+An UPDATE message that contains the AS number of zero in the AS_PATH
+or AGGREGATOR attribute MUST be considered as malformed and be
+handled by the procedures specified in [RFC7606].
+"""
+note = """
+The AS_PATH and AGGREGATOR decoders accept AS 0. RFC 7606 would have the route treated
+as withdrawn; the attribute decoders are outside the OPEN work which enrolled this RFC.
+"""
+
+[[requirement]]
+id = "rfc7607#2-as-zero-in-as4-path-is-malformed"
+section = "2"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+An UPDATE message that contains the AS number of zero in the AS4_PATH
+or AS4_AGGREGATOR attribute MUST be considered as malformed and be
+handled by the procedures specified in [RFC6793].
+"""
+note = """
+As for AS_PATH: the AS4_PATH and AS4_AGGREGATOR decoders accept AS 0, where RFC 6793 6
+would have the attribute discarded.
+"""

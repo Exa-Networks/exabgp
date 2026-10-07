@@ -91,3 +91,41 @@ def test_an_overlong_encoding_is_not_accepted() -> None:
 def test_what_we_send_is_shortest_form() -> None:
     sent = Notify(CEASE, ADMINISTRATIVE_SHUTDOWN, 'é').data
     assert sent == b'\x02\xc3\xa9'
+
+
+@pytest.mark.rfc('rfc9003#2-report-the-communication')
+def test_a_utf8_communication_is_logged_as_text_not_hex() -> None:
+    """The log line is str(): it decoded the text as ASCII, so one accented letter turned
+    the whole communication into hex, which no operator reads."""
+    notification = Notification.make_notification(CEASE, ADMINISTRATIVE_SHUTDOWN, b'\x0dmaintenance\xc3\xa9')
+
+    assert str(notification) == 'Cease / Administrative Shutdown / Shutdown Communication: "maintenanceé"'
+
+
+@pytest.mark.parametrize('control', [b'\x1b', b'\x00', b'\x07', b'\r\n'], ids=['escape', 'nul', 'bell', 'crlf'])
+def test_a_control_character_in_a_communication_is_shown_as_a_space(control: bytes) -> None:
+    """Valid UTF-8 can still carry a terminal escape: the text is shown, never interpreted."""
+    decoded = received(ADMINISTRATIVE_SHUTDOWN, b'down' + control + b'now')
+
+    assert decoded == b'Shutdown Communication: "down' + b' ' * len(control) + b'now"'
+
+
+@pytest.mark.parametrize(
+    'data', [b'\x1b[2Jcleared', b'tab\there', b'\x00\x01', b'caf\xc3\xa9'], ids=['escape', 'tab', 'nul', 'utf8']
+)
+def test_a_data_field_which_is_not_printable_ascii_is_shown_in_hex(data: bytes) -> None:
+    """Outside 6/2 and 6/4 the Data field is shown as it is only when it is printable.
+
+    The check ran on str(bytes), the repr, which is always printable: an escape sequence
+    from the peer went to the log and the terminal as it was.
+    """
+    notification = Notification.make_notification(CEASE, PEER_DECONFIGURED, data)
+
+    assert notification.text == ('0x' + data.hex().upper()).encode()
+    assert str(notification).endswith('/ 0x' + data.hex().upper())
+
+
+def test_a_printable_data_field_is_shown_as_it_is() -> None:
+    notification = Notification.make_notification(CEASE, PEER_DECONFIGURED, b'removed by operator')
+
+    assert notification.text == b'removed by operator'
