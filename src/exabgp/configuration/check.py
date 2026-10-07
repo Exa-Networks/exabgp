@@ -19,6 +19,7 @@ from exabgp.util.types import Buffer
 
 from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.bgp.message.update.nlri.collection import IPV4_MAPPED_PREFIX
 from exabgp.bgp.message.update.attribute import Attribute, OTC, OTCSelf
 from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI, SAFI
@@ -117,6 +118,19 @@ def _negotiated(neighbor: Neighbor) -> tuple[Negotiated, Negotiated]:
 
 # =============================================================== check_neighbor
 # ...
+
+
+def _as_mapped_next_hop(text: str, configured: IP, decoded: IP) -> str:
+    """The configured route as it reads back once an IPv4 next hop went out IPv4-mapped.
+
+    RFC 4798 2: an IPv6 route given an IPv4 next hop carries it as an IPv4-mapped IPv6 address,
+    so 170.170.170.170 decodes as ::ffff:170.170.170.170. The wire is the same, the text is not.
+    """
+    if configured.afi != AFI.ipv4 or decoded.afi != AFI.ipv6:
+        return text
+    if decoded.pack_ip() != IPV4_MAPPED_PREFIX + configured.pack_ip():
+        return text
+    return text.replace(f'next-hop {configured}'.lower(), f'next-hop {decoded}'.lower())
 
 
 def check_generation(neighbors: dict[str, Neighbor]) -> bool:
@@ -249,6 +263,8 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                         str1r = str1r.replace('next-hop self', 'next-hop ::1')
                     else:
                         str1r = str1r.replace('next-hop self', 'next-hop {}'.format(neighbor.session.local_address))
+
+                str1r = _as_mapped_next_hop(str1r, route1.nexthop, nexthop)
 
                 if ' name ' in str1r:
                     parts = str1r.split(' ')

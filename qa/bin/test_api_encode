@@ -646,12 +646,19 @@ def encode_api_command(
     # Extract LLNH settings from source neighbor if available
     llnh_enabled = False
     local_link_local = None
+    nexthop_entries: list[str] = []
+    nexthop_families: list[str] = []
     if source_neighbor:
         from exabgp.util.enumeration import TriState
 
         llnh_enabled = source_neighbor.capability.link_local_nexthop == TriState.TRUE
         if source_neighbor.session.local_link_local:
             local_link_local = str(source_neighbor.session.local_link_local)
+        # RFC 8950 4: an IPv4 route with an IPv6 next hop is only sent where the file's
+        # neighbor configured extended next hop for it, so the synthetic neighbor needs it too
+        nexthop_entries = [f"{afi} {safi} {nhafi};" for afi, safi, nhafi in source_neighbor.nexthops()]
+        # the grammar keeps a nexthop entry only when the next hop's own family is configured
+        nexthop_families = sorted({f"{nhafi} {safi};" for _, safi, nhafi in source_neighbor.nexthops()})
     global _encode_counter
     _encode_counter += 1
 
@@ -1387,8 +1394,12 @@ neighbor {neighbor_ip} {{
             capability_parts.append("asn4 disable;")
         if llnh_enabled and is_ipv6_family:
             capability_parts.append("link-local-nexthop enable;")
+        if nexthop_entries:
+            capability_parts.append("nexthop true;")
         capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
         addpath_section = f"add-path {{ {family}; }}" if needs_addpath else ""
+        nexthop_section = f"nexthop {{ {' '.join(nexthop_entries)} }}" if nexthop_entries else ""
+        extra_families = " ".join(entry for entry in nexthop_families if entry != f"{family};")
 
         # Build local-link-local section if LLNH enabled
         llnh_section = ""
@@ -1404,8 +1415,9 @@ neighbor {neighbor_ip} {{
     local-as {local_as};
     peer-as {peer_as};
     {capability_section}
-    family {{ {family}; }}
+    family {{ {family}; {extra_families} }}
     {addpath_section}
+    {nexthop_section}
     static {{ {route_text}; }}
 }}
 """
