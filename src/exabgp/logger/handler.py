@@ -23,6 +23,34 @@ levels: dict[str, int] = {
     'NOTSET': logging.NOTSET,
 }
 
+# RFC 5426 3.2: syslog over UDP is received on port 514
+SYSLOG_UDP_PORT = 514
+PORT_MAX = 0xFFFF
+
+
+def remote_syslog_address(location: str) -> tuple[str, int]:
+    """The (host, port) of a `host:` log destination: `addr`, `addr:port` or `[ipv6]:port`.
+
+    An IPv6 address without brackets has colons of its own, so it takes the default port.
+    """
+    port = str(SYSLOG_UDP_PORT)
+    if location.startswith('['):
+        host, _, rest = location[1:].partition(']')
+        if rest:
+            if not rest.startswith(':'):
+                raise ValueError(f'invalid syslog host {location!r}')
+            port = rest[1:]
+    elif location.count(':') == 1:
+        host, port = location.split(':')
+    else:
+        host = location
+    if not host:
+        raise ValueError(f'invalid syslog host {location!r}: no address')
+    if not port.isascii() or not port.isdigit() or not 0 < int(port) <= PORT_MAX:
+        raise ValueError(f'invalid syslog port {port!r} in {location!r}')
+    return host, int(port)
+
+
 # prevent recreation of already created logger
 _created: dict[str | None, logging.Logger] = {}
 
@@ -61,7 +89,7 @@ def _build_config(
     level: str = 'DEBUG',
     format_str: str = CLEAR,
     stream: Any = None,
-    address: str | None = None,
+    address: str | tuple[str, int] | None = None,
     syslog: bool = False,
     filename: str | None = None,
     max_bytes: int = 1048576,

@@ -38,11 +38,11 @@ The CLI supports context-aware shortcuts that expand to full commands based on:
 | `f` | `flush` | First token OR after IP | `f adj-rib out` → `flush adj-rib out` |
 | `h` | `help` | First token only | `h` → `help` |
 | `i` | `in` | After `adj-rib` | `show adj-rib i` → `show adj-rib in` |
-| `n` | `neighbor` | First token only | `n 10.0.0.1 show` → `neighbor 10.0.0.1 show` |
+| `n` | `neighbor` | First token, or after a leading `show` | `n 10.0.0.1 show` → `neighbor 10.0.0.1 show` |
 | `o` | `operational` | After `announce` | `announce o ...` → `announce operational ...` |
 | `o` | `out` | After `adj-rib` | `show adj-rib o` → `show adj-rib out` |
 | `r` | `route` | After `announce` or `withdraw` | `announce r 10.0.0.0/24 ...` → `announce route 10.0.0.0/24 ...` |
-| `r` | `route-refresh` | After `announce route` | `announce r r ipv4 unicast` → `announce route route-refresh ipv4 unicast`<br>**Note:** Usually `announce route-refresh` directly |
+| `r` | `route-refresh` | After `announce route` (replaces `route`) | `announce r r ipv4 unicast` → `announce route-refresh ipv4 unicast` |
 | `s` | `show` | First token only | `s neighbor` → `show neighbor` |
 | `s` | `summary` | NOT first token | `show neighbor s` → `show neighbor summary` |
 | `t` | `teardown` | First token OR after IP | `t neighbor 10.0.0.1` → `teardown neighbor 10.0.0.1` |
@@ -57,7 +57,7 @@ The CLI supports context-aware shortcuts that expand to full commands based on:
 | Shortcut | Expands To | Context Rule | Notes |
 |----------|-----------|--------------|-------|
 | `id` | `router-id` | In neighbor context only | `show neighbor id 1.1.1.1` → `show neighbor router-id 1.1.1.1` |
-| `neighbour` | `neighbor` | Always | Common UK spelling |
+| `neighbour` | `neighbor` | Always (whole word only) | Common UK spelling |
 | `neigbour` | `neighbor` | Always | Common typo |
 | `neigbor` | `neighbor` | Always | Common typo |
 

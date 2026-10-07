@@ -8,6 +8,7 @@ typo correction, and multi-letter shortcuts.
 
 from __future__ import annotations
 
+import pytest
 
 from exabgp.application.shortcuts import CommandShortcuts
 
@@ -75,9 +76,9 @@ class TestContextAwareShortcuts:
         result = CommandShortcuts.expand_shortcuts('show neighbor e')
         assert result == 'show neighbor extensive'
 
-    def test_o_as_operation_after_announce(self):
+    def test_o_as_operational_after_announce(self):
         result = CommandShortcuts.expand_shortcuts('announce o')
-        assert result == 'announce operation'
+        assert result == 'announce operational'
 
     def test_o_as_out_after_adjrib(self):
         result = CommandShortcuts.expand_shortcuts('show adj-rib o')
@@ -108,7 +109,7 @@ class TestMultiLetterShortcuts:
     def test_rr_as_route_refresh(self):
         # 'rr' shortcut removed - use 'announce r r' instead
         result = CommandShortcuts.expand_shortcuts('announce r r ipv4 unicast')
-        assert result == 'announce route refresh ipv4 unicast'
+        assert result == 'announce route-refresh ipv4 unicast'
 
     def test_rr_only_after_announce(self):
         # 'rr' should only expand after 'announce'
@@ -376,7 +377,7 @@ class TestRealWorldScenarios:
     def test_announce_route_refresh(self):
         # 'rr' shortcut removed - use 'a r r' instead
         result = CommandShortcuts.expand_shortcuts('a r r ipv6 unicast')
-        assert result == 'announce route refresh ipv6 unicast'
+        assert result == 'announce route-refresh ipv6 unicast'
 
 
 class TestConsistency:
@@ -402,3 +403,33 @@ class TestConsistency:
         expanded_list = CommandShortcuts.expand_token_list(tokens)
         expanded_str = CommandShortcuts.expand_shortcuts(' '.join(tokens))
         assert ' '.join(expanded_list) == expanded_str
+
+
+class TestAuditExpansions:
+    """Shortcuts which expanded to a word no command has, or expanded what is a value."""
+
+    @pytest.mark.parametrize(
+        ('command', 'expected'),
+        [
+            ('a v x', 'announce vpls x'),
+            ('withdraw v x', 'withdraw vpls x'),
+            ('a o x', 'announce operational x'),
+            ('announce r r ipv4 unicast', 'announce route-refresh ipv4 unicast'),
+            ('announce route r ipv4 unicast', 'announce route-refresh ipv4 unicast'),
+            (
+                'neighbor 192.0.2.1 a r 10.0.0.0/24 next-hop self',
+                'neighbor 192.0.2.1 announce route 10.0.0.0/24 next-hop self',
+            ),
+            ('neighbor 192.0.2.1 w r 10.0.0.0/24', 'neighbor 192.0.2.1 withdraw route 10.0.0.0/24'),
+            ('neighbor 192.0.2.1 id 1.2.3.4', 'neighbor 192.0.2.1 router-id 1.2.3.4'),
+            ('announce watchdog n', 'announce watchdog n'),
+            ('withdraw watchdog s', 'withdraw watchdog s'),
+            ('a w a', 'announce watchdog a'),
+            ('announce route 10.0.0.0/24 next-hop 192.0.2.1 n', 'announce route 10.0.0.0/24 next-hop 192.0.2.1 n'),
+            ('show neighbor 192.0.2.1 ne', 'show neighbor 192.0.2.1 ne'),
+            ('s n s', 'show neighbor summary'),
+            ('show neighbour', 'show neighbor'),
+        ],
+    )
+    def test_expansion(self, command: str, expected: str) -> None:
+        assert CommandShortcuts.expand_shortcuts(command) == expected

@@ -34,12 +34,26 @@ if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
 
 
+# RFC 6793 3: an AS number is four octets
+ASN_MAX = 0xFFFFFFFF
+
+
+def _asn(text: str) -> int:
+    """An AS number from the command line: argparse reports a bad one, not a traceback."""
+    if not text.isascii() or not text.isdigit():
+        raise argparse.ArgumentTypeError(f'invalid AS number: {text!r}')
+    value = int(text)
+    if value > ASN_MAX:
+        raise argparse.ArgumentTypeError(f'AS number out of range (0-{ASN_MAX}): {text}')
+    return value
+
+
 def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:off
     sub.add_argument('route', help='route in config format (e.g., "route 10.0.0.0/24 next-hop 1.2.3.4")', type=str, nargs='?')
     sub.add_argument('-f', '--family', help='address family (e.g., "ipv4 unicast")', type=str, default='ipv4 unicast')
-    sub.add_argument('-a', '--local-as', help='local AS number', type=int, default=65533, dest='local_as')
-    sub.add_argument('-z', '--peer-as', help='peer AS number', type=int, default=65533, dest='peer_as')
+    sub.add_argument('-a', '--local-as', help='local AS number', type=_asn, default=65533, dest='local_as')
+    sub.add_argument('-z', '--peer-as', help='peer AS number', type=_asn, default=65533, dest='peer_as')
     sub.add_argument('-i', '--path-information', help='enable add-path', action='store_true', dest='path_information')
     sub.add_argument('-n', '--nlri-only', help='output only NLRI bytes (no UPDATE wrapper)', action='store_true', dest='nlri_only')
     sub.add_argument('--no-header', help='exclude BGP 19-byte header', action='store_true', dest='no_header')

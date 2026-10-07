@@ -72,6 +72,9 @@ LogMsg = Callable[[], str]
 BGP_MSG_OPEN = 1  # BGP OPEN message type
 BGP_MSG_UPDATE = 2  # BGP UPDATE message type
 BGP_MSG_NOTIFICATION = 3  # BGP NOTIFICATION message type
+BGP_MSG_KEEPALIVE = 4  # BGP KEEPALIVE message type
+# RFC 4271 4.1: marker (16), length (2) and type (1); a KEEPALIVE is this header alone (4.4)
+BGP_HEADER_SIZE = 19
 
 
 def _hexa(data: str) -> bytes:
@@ -307,17 +310,35 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
 #
 
 
+def _header(raw: bytes) -> tuple[int, int] | None:
+    """The type and length of a message with a BGP header, or None and why, when it is too short."""
+    if len(raw) < BGP_HEADER_SIZE:
+        sys.stdout.write(f'invalid BGP header: {len(raw)} bytes, a header is {BGP_HEADER_SIZE}\n')
+        return None
+    size = (raw[16] << 8) + raw[17]
+    if size != len(raw):
+        sys.stdout.write(f'warning: BGP header size ({size}) does not match data length ({len(raw)})\n')
+    return raw[18], size
+
+
+def _keepalive(raw: bytes) -> bool:
+    """RFC 4271 4.4: a KEEPALIVE is the header alone, 19 octets."""
+    if len(raw) != BGP_HEADER_SIZE:
+        sys.stdout.write(f'invalid KEEPALIVE: {len(raw)} bytes, a KEEPALIVE is {BGP_HEADER_SIZE}\n')
+        return False
+    return True
+
+
 def check_message(neighbor: Neighbor, message: str) -> bool:
     raw = _hexa(message)
 
     if not raw.startswith(b'\xff' * 16):
         return check_update(neighbor, raw)
 
-    kind = raw[18]
-    # Validate message size from header matches actual data length
-    header_size = (raw[16] << 8) + raw[17]
-    if header_size != len(raw):
-        sys.stdout.write(f'warning: BGP header size ({header_size}) does not match data length ({len(raw)})\n')
+    header = _header(raw)
+    if header is None:
+        return False
+    kind, _ = header
 
     if kind == BGP_MSG_OPEN:
         return check_open(neighbor, raw[19:])
@@ -325,6 +346,8 @@ def check_message(neighbor: Neighbor, message: str) -> bool:
         return check_update(neighbor, raw)
     if kind == BGP_MSG_NOTIFICATION:
         return check_notification(raw)
+    if kind == BGP_MSG_KEEPALIVE:
+        return _keepalive(raw)
 
     sys.stdout.write(f'unknown type {kind}\n')
     return False
@@ -340,11 +363,10 @@ def display_message(neighbor: Neighbor, message: str, generic: bool = False, com
         # Note: calling display_update directly since we synthesized an UPDATE header
         return display_update(neighbor, header + raw, generic=generic, command=command)
 
-    kind = raw[18]
-    # Validate message size from header matches actual data length
-    header_size = (raw[16] << 8) + raw[17]
-    if header_size != len(raw):
-        sys.stdout.write(f'warning: BGP header size ({header_size}) does not match data length ({len(raw)})\n')
+    parsed = _header(raw)
+    if parsed is None:
+        return False
+    kind, _ = parsed
 
     if kind == BGP_MSG_OPEN:
         return display_open(neighbor, raw[19:])
@@ -352,6 +374,12 @@ def display_message(neighbor: Neighbor, message: str, generic: bool = False, com
         return display_update(neighbor, raw, generic=generic, command=command)
     if kind == BGP_MSG_NOTIFICATION:
         return display_notification(neighbor, raw)
+    if kind == BGP_MSG_KEEPALIVE:
+        if not _keepalive(raw):
+            return False
+        sys.stdout.write(Response.JSON(json_version).keepalive(neighbor, 'in', b'', b'', Negotiated.UNSET))
+        sys.stdout.write('\n')
+        return True
     sys.stdout.write(f'unknown type {kind}\n')
     return False
 
@@ -457,6 +485,9 @@ def _make_update(neighbor: Neighbor, raw: bytes) -> UpdateCollection | None:
 
     while raw:
         if raw.startswith(b'\xff' * 16):
+            if len(raw) < BGP_HEADER_SIZE:
+                log.error(lazymsg('message.header.short size={size}', size=len(raw)), 'parser')
+                return None
             kind = raw[18]
             size = (raw[16] << 8) + raw[17]
 
@@ -502,6 +533,9 @@ def _make_notification(neighbor: Neighbor, raw: bytes) -> Notification | None:
     negotiated_in, negotiated_out = _negotiated(neighbor)
 
     if raw.startswith(b'\xff' * 16):
+        if len(raw) < BGP_HEADER_SIZE:
+            log.error(lazymsg('message.header.short size={size}', size=len(raw)), 'parser')
+            return None
         kind = raw[18]
         size = (raw[16] << 8) + raw[17]
 
@@ -644,7 +678,8 @@ def _get_dummy_negotiated() -> Negotiated:
 
 
 def check_notification(raw: bytes) -> bool:
-    notification = Notification.unpack_message(raw[18:], _get_dummy_negotiated())
+    # the body follows the 19 byte header: raw[18] is the type, not the error code
+    notification = Notification.unpack_message(raw[BGP_HEADER_SIZE:], _get_dummy_negotiated())
     _notification: Notification = notification
     log.info(lazymsg('notification.decoded notification={notification}', notification=_notification), 'parser')
     return True

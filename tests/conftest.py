@@ -22,7 +22,8 @@ neighbour's RIB by name and keeps the routes the API gave it.  Across tests that
 neighbour named like one an earlier test configured inherits that test's routes.  Measured:
 after test_configuration_export loaded conf-no-asn4.conf, `exabgp encode` run in process
 printed its own UPDATE and that file's static route as well, and test_otc_parsing decoded
-the second message as garbage.
+the second message as garbage.  Each test also starts with an empty cache: restoring the
+dict alone left the tables of a RIB cached before the test shared with it.
 
 Logging is process wide too.  `exabgp validate --verbose`, run in process, turns every log
 source on at DEBUG and leaves it on: the environment it edits and the logger options it
@@ -89,6 +90,10 @@ def restore_process_state() -> Iterator[None]:
     umask = os.umask(0o022)
     os.umask(umask)
     ribs = dict(RIB._cache)
+    # Start empty, not only end restored: a RIB cached before the test (at collection, or by
+    # a test outside this fixture) is shared by reference, and the routes a test puts into
+    # its tables outlive the restore of the dict around them
+    RIB._cache.clear()
     logging_state = _LoggingState()
     try:
         yield

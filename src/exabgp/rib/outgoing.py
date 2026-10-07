@@ -699,23 +699,44 @@ class OutgoingRIB(Cache):
         for family, withdrawals in pending_withdraws.items():
             yield from self._withdraw_updates(family, withdrawals, grouped, changed)
 
+        # The buckets go out in the order they were first created. A route queued A, B, A
+        # has A's bucket before B's, so B would be sent last and stay with the peer.
+        position = {attr_index: rank for rank, attr_index in enumerate(attr_af_nlri)}
+        no_role = negotiated is None or negotiated.role == RoleValue.NO_ROLE
         for attr_index, per_family in attr_af_nlri.items():
             for family, routes in per_family.items():
                 limit = paths_limit.get(family, 0)
-                # Role eligibility is a transition of the latest desired route, not
-                # the order in which its attribute buckets were first created.
-                selected = [
-                    route
-                    for index, route in routes.items()
-                    if index in latest_routes
-                    and (negotiated is None or negotiated.role == RoleValue.NO_ROLE or latest_routes[index] is route)
-                ]
+                selected = self._still_wanted(routes, latest_routes, position, attr_index, no_role)
                 if selected:
                     yield from self._select_updates(
                         selected, new_attr[attr_index], family, limit, grouped, negotiated, changed
                     )
         # Only prefixes touched by withdrawals need candidate promotion.
         yield from self._promote_paths(changed, paths_limit, grouped, negotiated)
+
+    @staticmethod
+    def _still_wanted(
+        routes: dict[bytes, Route],
+        latest_routes: dict[bytes, Route],
+        position: dict[bytes, int],
+        attr_index: bytes,
+        no_role: bool,
+    ) -> list[Route]:
+        """The routes of one attribute bucket which still go out in this batch.
+
+        Role eligibility is a transition of the latest desired route, not the order in
+        which its attribute buckets were first created. Without a role an earlier attribute
+        set still goes out, as a redefinition always has, if the latest follows it.
+        """
+        return [
+            route
+            for index, route in routes.items()
+            if index in latest_routes
+            and (
+                latest_routes[index] is route
+                or (no_role and position[latest_routes[index].attributes.index()] > position[attr_index])
+            )
+        ]
 
     def _take_refresh_routes(self) -> dict[bytes, Route]:
         """The routes to replay in this batch, once each, the queue left empty for the next."""

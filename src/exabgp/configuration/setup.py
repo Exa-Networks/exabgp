@@ -20,6 +20,9 @@ from exabgp.protocol.ip import IP
 if TYPE_CHECKING:
     from exabgp.configuration.configuration import Configuration
 
+# NeighborCapability.add_path: 0 disabled, 1 receive, 2 send, 3 send/receive
+ADD_PATH_SEND_RECEIVE = 3
+
 
 def parse_family(family_text: str) -> list[FamilyTuple]:
     """Parse family text into AFI/SAFI tuples.
@@ -92,18 +95,19 @@ def create_minimal_configuration(
 
     if add_path:
         neighbor_settings.addpaths = neighbor_settings.families.copy()
+        # RFC 7911 4: the families are only add-path ones once the capability says so,
+        # send and receive, so what is encoded carries a Path Identifier and what is
+        # decoded is read with one
+        neighbor_settings.capability.add_path = ADD_PATH_SEND_RECEIVE
 
     # Enable Extended Next Hop (RFC 8950) when using all families
     # so decode accepts IPv6 next-hops for IPv4 NLRI
     if families.lower().strip() == 'all':
-        from exabgp.bgp.neighbor.capability import NeighborCapability
         from exabgp.bgp.message.open.capability.capabilities import Capabilities
         from exabgp.util.enumeration import TriState
 
         neighbor_settings.nexthops = list(Capabilities._NEXTHOP)
-        cap = NeighborCapability()
-        cap.nexthop = TriState.TRUE
-        neighbor_settings.capability = cap
+        neighbor_settings.capability.nexthop = TriState.TRUE
 
     config_settings = ConfigurationSettings()
     config_settings.neighbors = [neighbor_settings]

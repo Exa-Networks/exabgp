@@ -55,6 +55,7 @@ import collections
 
 from enum import Enum
 from typing import Any
+from collections.abc import Collection
 from ipaddress import ip_network, IPv4Network, IPv6Network
 from ipaddress import ip_address, IPv4Address, IPv6Address
 
@@ -345,17 +346,24 @@ def setup_ips(
     label: str | None,
     label_exact_match: bool,
     sudo: bool = False,
-) -> None:
-    """Setup missing IP on loopback or physical interface"""
+) -> set[IPv4Network | IPv6Network]:
+    """Setup missing IP on loopback or physical interface, returning those it added.
+
+    Each --ip is one address, with its prefix length. It used to be expanded into every
+    address of the prefix, one `ip address add` each: 16 million for a /8, and a loop
+    which never ends for an IPv6 /64.
+    """
 
     existing = set(system_ips(ip_ifnames, label, False, label_exact_match))
-    toadd = set([ip_network(ip) for net in ips for ip in net]) - existing
+    toadd = set(ips) - existing
+    added: set[IPv4Network | IPv6Network] = set()
     for ip in toadd:
         ifname = ip_ifname(ip, ip_ifnames)
         logger.debug('Setup %s IP address %s', ifname, ip)
         cmd = address_command('add', ip, ifname, label, sudo)
         result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=False)
         if result.returncode == 0:
+            added.add(ip)
             continue
         # `ip` exits 2 for an address already there, and for an address it was not allowed to
         # add: the exit code can not tell them apart. Whether the address is there now can.
@@ -363,20 +371,25 @@ def setup_ips(
             continue
         reason = result.stderr.decode('utf-8', 'replace').strip() or f'exit code {result.returncode}'
         raise AddressSetupError(f'could not add {ip} to {ifname} ({reason}): run as root, or with --sudo')
+    return added
 
 
 def remove_ips(
-    ips: list[IPv4Network | IPv6Network],
+    ips: Collection[IPv4Network | IPv6Network],
     ip_ifnames: dict[IPv4Network | IPv6Network, str],
     label: str | None,
     label_exact_match: bool,
     sudo: bool = False,
-) -> None:
-    """Remove added IP on loopback or physical interface"""
+) -> set[IPv4Network | IPv6Network]:
+    """Remove the IPs given from the interfaces, returning those it removed.
+
+    On exit the IPs given are those setup_ips() added: an address which was on the box
+    before the checker started is not its to remove, and was removed when no label told
+    them apart.
+    """
     existing = set(system_ips(ip_ifnames, label, True, label_exact_match))
 
-    # Get intersection of IPs (ips setup, and IPs configured by ExaBGP)
-    toremove = set([ip_network(ip) for net in ips for ip in net]) & existing
+    toremove = set(ips) & existing
     for ip in toremove:
         ifname = ip_ifname(ip, ip_ifnames)
         logger.debug('Remove %s IP address %s', ifname, ip)
@@ -391,6 +404,7 @@ def remove_ips(
                     ifname,
                     str(ip),
                 )
+    return toremove
 
 
 def drop_privileges(user: str | None, group: str | None) -> None:
@@ -461,6 +475,10 @@ def check(cmd: str | None, timeout: int) -> bool:
 
 def loop(options: argparse.Namespace) -> None:
     """Main loop."""
+    # the addresses this checker put on the box, the only ones it takes off again
+    added: set[IPv4Network | IPv6Network] = vars(options).setdefault('ips_added', set())
+    # the networks as given to --ip, before --deaggregate-networks split them for announcing
+    networks: list[IPv4Network | IPv6Network] = vars(options).get('ips_setup') or options.ips
 
     def exabgp(target: States) -> None:
         """Communicate new state to ExaBGP"""
@@ -471,7 +489,9 @@ def loop(options: argparse.Namespace) -> None:
         # if ips was deleted with dyn ip, re-setup them
         if target == States.UP and options.ip_dynamic:
             logger.info('service up, restoring loopback and ip-ifname ips')
-            setup_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+            added.update(
+                setup_ips(networks, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+            )
 
         logger.info(f'send announces for {target} state to ExaBGP')
         metric = vars(options).get(f'{target.value.lower()}_metric', 0)
@@ -508,8 +528,8 @@ def loop(options: argparse.Namespace) -> None:
                 if as_path:
                     announce = f'{announce} as-path [ {as_path} ]'
 
-            # append path ID if required
-            if options.path_id:
+            # append path ID if required: 0 is a Path Identifier like any other (RFC 7911 3)
+            if options.path_id is not None:
                 announce = f'{announce} path-information {options.path_id}'
 
             metric += options.increase
@@ -530,11 +550,16 @@ def loop(options: argparse.Namespace) -> None:
         # dynamic ip management. When the service fail, remove the setup ips
         if target in (States.EXIT,) and (options.ip_dynamic or options.ip_setup):
             logger.info('exiting, deleting setup ips')
-            remove_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+            added.difference_update(
+                remove_ips(added, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+            )
         # dynamic ip management. When the service fail, remove the setup ips
         if target in (States.DOWN, States.DISABLED) and options.ip_dynamic:
+            # --dynamic-ip-setup: the addresses follow the service, whoever put them there
             logger.info('service down, deleting setup ips')
-            remove_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+            added.difference_update(
+                remove_ips(networks, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+            )
 
     def trigger(target: States) -> States:
         """Trigger a state change and execute the appropriate commands"""
@@ -658,8 +683,12 @@ def main() -> None:
         if not options.ips:
             logger.error('No IP found')
             sys.exit(1)
+        options.ips_setup = list(options.ips)
+        options.ips_added = set()
         if options.ip_setup:
-            setup_ips(options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo)
+            options.ips_added = setup_ips(
+                options.ips, options.ip_ifnames, options.label, options.label_exact_match, options.sudo
+            )
         drop_privileges(options.user, options.group)
 
         # Parse defined networks into a list of IPs for advertisement

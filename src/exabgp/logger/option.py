@@ -9,7 +9,7 @@ import logging
 if TYPE_CHECKING:
     from exabgp.environment.config import Environment
 
-from exabgp.logger.handler import get_logger, _get_syslog_address
+from exabgp.logger.handler import get_logger, _get_syslog_address, remote_syslog_address
 from exabgp.logger.format import formater as get_formater, FormatterFunc
 
 
@@ -177,6 +177,10 @@ class option:
             cls.formater = fmt if fmt else echo
             return
 
+        if cls.destination.startswith('host:'):
+            cls._setup_remote_syslog(env, now)
+            return
+
         # anything else is treated as a file path
         filename = os.path.realpath(os.path.normpath(os.path.join(cls.cwd, cls.destination)))
         try:
@@ -201,4 +205,19 @@ class option:
         fmt = get_formater(env.log.short, 'file')
         cls.formater = fmt if fmt else echo
 
-        # need to re-add remote syslog
+    @classmethod
+    def _setup_remote_syslog(cls, env: 'Environment', now: str) -> None:
+        """host:<addr>[:<port>] logs to a remote syslog server over UDP, not to a local file."""
+        try:
+            address = remote_syslog_address(cls.destination[len('host:') :])
+            # dictConfig reports a handler it could not build (an unresolvable host) as ValueError
+            cls.logger = get_logger(f'ExaBGP syslog {now}', format='%(message)s', address=address, level=cls.level)
+        except ValueError as exc:
+            sys.stderr.write(f'warning: could not log to {cls.destination!r}: {exc}; falling back to stdout\n')
+            cls.destination = 'stdout'
+            cls.logger = get_logger(f'ExaBGP stdout {now}', format='%(message)s', stream=sys.stderr, level=cls.level)
+            fmt = get_formater(env.log.short, 'stdout')
+            cls.formater = fmt if fmt else echo
+            return
+        fmt = get_formater(env.log.short, 'syslog')
+        cls.formater = fmt if fmt else echo

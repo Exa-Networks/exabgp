@@ -52,15 +52,22 @@ class RIB:
 
         cached = cls._cache[name]
         rib = cls(name, enabled, cached.incoming, cached.outgoing)
-        rib.incoming.families = families
-        rib.outgoing.families = families
-        rib.outgoing.delete_cached_family(families)
+        rib._reconfigure(adj_rib_in, adj_rib_out, families)
+        return rib
+
+    def _reconfigure(self, adj_rib_in: bool, adj_rib_out: bool, families: set[FamilyTuple]) -> None:
+        """Apply a reloaded configuration to the tables the cache kept for this name."""
+        self.incoming.families = families
+        self.outgoing.families = families
+        self.outgoing.delete_cached_family(families)
 
         if not adj_rib_out:
-            rib.outgoing.clear()
+            self.outgoing.clear()
         if not adj_rib_in:
-            rib.incoming.clear()
-        return rib
+            self.incoming.clear()
+        # The switches are the new configuration's, not those the tables were first built with
+        self.incoming.cache = adj_rib_in
+        self.outgoing.cache = adj_rib_out
 
     # A copy has its own tables and is not in the cache: built by __init__, which does not
     # touch the cache, as copy's generic path cannot build a compiled class (plan/wip-mypyc.md)
@@ -89,14 +96,7 @@ class RIB:
             self.outgoing = cached_rib.outgoing
             self.incoming.enabled = True
             self.outgoing.enabled = True
-            self.incoming.families = families
-            self.outgoing.families = families
-            self.outgoing.delete_cached_family(families)
-
-            if not adj_rib_out:
-                self.outgoing.clear()
-            if not adj_rib_in:
-                self.incoming.clear()
+            self._reconfigure(adj_rib_in, adj_rib_out, families)
         else:
             # No cached RIB - enable our own incoming/outgoing
             self.incoming.enabled = True
@@ -117,9 +117,21 @@ class RIB:
         if self.name in self._cache:
             del self._cache[self.name]
 
-    # This code was never tested ...
     def clear(self) -> None:
-        families = self._cache[self.name].incoming.families
-        self._cache[self.name].incoming = IncomingRIB(self.incoming.cache, families, self.enabled)
-        self._cache[self.name].outgoing = OutgoingRIB(self.outgoing.cache, families, self.enabled)
-        self._cache[self.name].outgoing.membership = self._cache[self.name].incoming
+        """Start this RIB again with empty tables.
+
+        Our own tables, not those of the cache entry under our name: a deep copy carries the
+        name of the RIB it was copied from, and that entry belongs to the original. A RIB
+        built by make_rib() on a reload shares its tables with the cache entry, which then
+        takes the new ones too, so the next reload does not bring the old routes back.
+        """
+        families = self.incoming.families
+        cached = self._cache.get(self.name)
+        shared = cached is not None and cached.incoming is self.incoming and cached.outgoing is self.outgoing
+        self.incoming = IncomingRIB(self.incoming.cache, families, self.enabled)
+        self.outgoing = OutgoingRIB(self.outgoing.cache, families, self.enabled)
+        self.outgoing.membership = self.incoming
+        if shared:
+            assert cached is not None
+            cached.incoming = self.incoming
+            cached.outgoing = self.outgoing

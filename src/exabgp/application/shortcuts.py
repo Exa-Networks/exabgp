@@ -54,8 +54,8 @@ def _in_context(pos: int, pre: list[str]) -> bool:
     return bool(pre) and pre[-1] == 'adj-rib'
 
 
-def _operation_context(pos: int, pre: list[str]) -> bool:
-    """Match 'o' → 'operation' after announce."""
+def _operational_context(pos: int, pre: list[str]) -> bool:
+    """Match 'o' → 'operational' after announce."""
     return bool(pre) and pre[-1] == 'announce'
 
 
@@ -74,8 +74,8 @@ def _teardown_context(pos: int, pre: list[str]) -> bool:
     return pos == 0 or (bool(pre) and (pre[-1].count('.') == IPv4.DOT_COUNT or ':' in pre[-1]))
 
 
-def _vps_context(pos: int, pre: list[str]) -> bool:
-    """Match 'v' → 'vps' after announce/withdraw."""
+def _vpls_context(pos: int, pre: list[str]) -> bool:
+    """Match 'v' → 'vpls' after announce/withdraw."""
     return bool(pre) and (pre[-1] == 'announce' or pre[-1] == 'withdraw')
 
 
@@ -110,15 +110,17 @@ class CommandShortcuts:
         ('h', 'help', lambda pos, pre: pos == 0),
         ('i', 'in', _in_context),
         ('id', 'router-id', lambda pos, pre: 'neighbor' in pre),  # CLI shortcut: id → router-id in neighbor context
-        ('n', 'neighbor', lambda pos, pre: pos == 0),  # Only at start - removed 'show n' → 'show neighbor' support
-        ('o', 'operation', _operation_context),
+        # At the start, or as 'show n': nowhere else, where an 'n' is a value
+        ('n', 'neighbor', lambda pos, pre: pos == 0 or pre == ['show']),
+        ('o', 'operational', _operational_context),
         ('o', 'out', _out_context),
         ('r', 'route', _route_context),
-        ('r', 'refresh', lambda pos, pre: len(pre) >= 2 and pre[-2] == 'announce' and pre[-1] == 'route'),
+        # 'announce r r' replaces the 'route' before it: see expand_token_list
+        ('r', 'route-refresh', lambda pos, pre: len(pre) >= 2 and pre[-2] == 'announce' and pre[-1] == 'route'),
         ('s', 'show', lambda pos, pre: pos == 0),
         ('s', 'summary', lambda pos, pre: pos != 0),
         ('t', 'teardown', _teardown_context),
-        ('v', 'vps', _vps_context),
+        ('v', 'vpls', _vpls_context),
         ('w', 'withdraw', _withdraw_context),
         ('w', 'watchdog', _watchdog_context),
         # Multi-letter shortcuts
@@ -129,6 +131,23 @@ class CommandShortcuts:
         ('neigbour', 'neighbor', lambda pos, pre: True),
         ('neigbor', 'neighbor', lambda pos, pre: True),
     ]
+
+    @staticmethod
+    def _matches(token: str, nickname: str, full_name: str) -> bool:
+        """Whether a token names this shortcut: the nickname, the full name, or a short prefix.
+
+        A short prefix only stands for a full name the nickname abbreviates. 'id' is not the
+        start of 'router-id' and the typo 'neighbour' is not the start of 'neighbor', so 'r'
+        was taken for router-id and every 'n' or 'ne' for neighbor.
+        """
+        if token == nickname or token == full_name:
+            return True
+        return len(token) <= 2 and full_name.startswith(nickname) and full_name.startswith(token)
+
+    @staticmethod
+    def _is_name(pos: int, tokens: list[str]) -> bool:
+        """The token is a name the operator chose, never a shortcut: the one after watchdog."""
+        return pos >= 2 and tokens[-1] == 'watchdog' and tokens[-2] in ('announce', 'withdraw')
 
     @classmethod
     def expand_shortcuts(cls, command: str) -> str:
@@ -176,23 +195,15 @@ class CommandShortcuts:
         expanded: list[str] = []
 
         for pos, token in enumerate(tokens):
-            # Try to match against shortcuts
-            matched = False
-            for nickname, full_name, match_condition in cls.SHORTCUTS:
-                # Check if token matches:
-                # 1. Exact nickname match (e.g., 'r' == 'r')
-                # 2. Exact full_name match (e.g., 'route' == 'route')
-                # 3. Prefix match for short tokens only (e.g., 'ro' matches 'route')
-                #    This prevents 'route' from matching 'router-id'
-                is_match = token == nickname or token == full_name or (len(token) <= 2 and full_name.startswith(token))
-                if is_match and match_condition(pos, expanded):
-                    expanded.append(full_name)
-                    matched = True
-                    break
-
-            # If no shortcut matched, use the token as-is
-            if not matched:
+            if cls._is_name(pos, expanded):
                 expanded.append(token)
+                continue
+            full_name = cls.get_expansion(token, pos, expanded)
+            if full_name == 'route-refresh' and expanded[-1:] == ['route']:
+                # 'announce r r': the command is 'announce route-refresh', not 'route refresh'
+                expanded[-1] = full_name
+                continue
+            expanded.append(full_name)
 
         return expanded
 
@@ -217,8 +228,7 @@ class CommandShortcuts:
             'announce'
         """
         for nickname, full_name, match_condition in cls.SHORTCUTS:
-            is_match = token == nickname or token == full_name or (len(token) <= 2 and full_name.startswith(token))
-            if is_match and match_condition(position, previous_tokens):
+            if cls._matches(token, nickname, full_name) and match_condition(position, previous_tokens):
                 return full_name
         return token
 
@@ -244,8 +254,7 @@ class CommandShortcuts:
         """
         expansions = []
         for nickname, full_name, match_condition in cls.SHORTCUTS:
-            is_match = token == nickname or token == full_name or (len(token) <= 2 and full_name.startswith(token))
-            if is_match and match_condition(position, previous_tokens):
+            if cls._matches(token, nickname, full_name) and match_condition(position, previous_tokens):
                 if full_name not in expansions:
                     expansions.append(full_name)
         return expansions
