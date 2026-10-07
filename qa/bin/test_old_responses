@@ -71,6 +71,24 @@ ALLOWED: dict[tuple[str, str, str, str], str] = {
     ('5.0', 'text', r'^operational ', r"advisory \"b'"): (
         '5.0 wrote an advisory as the representation of Python bytes, "b\'a message\'"; this tree writes the message'
     ),
+    ('4.2 5.0', 'json', r'^notification ', r'^/neighbor/notification/message$'): (
+        'a Data field which is not printable ASCII is written in hexadecimal, "0xFFFF": 5.0 '
+        'decoded it as UTF-8 with replacement characters, and a control character the peer '
+        'chose reached the helper (CHANGELOG)'
+    ),
+    ('4.2 5.0', 'json', r'^update \S+ \S*800E[0-9A-F]{2}00020104', r'.'): (
+        'an IPv6 route with a four octet next hop and no extended next hop negotiated is '
+        'malformed (RFC 2545 3, RFC 8950 3): the release took it, this tree treats it as an error'
+    ),
+    (
+        '4.2 5.0',
+        'text',
+        r'^update \S+ \S*800E[0-9A-F]{2}00020104',
+        r'.',
+    ): 'the IPv6 route with a four octet next hop, as in JSON',
+    ('5.0', 'text', r'^update ', r'bgp-prefix-sid \[ l[23]-service \['): (
+        '5.0 wrote an SRv6 prefix SID one closing bracket short; this tree closes every one'
+    ),
     ('4.2', 'json', r'^refresh packets ', r'^/type$'): '4.2 wrote "route refresh", 5.0 "route-refresh"',
     ('4.2', 'json', r'^update ', r'/attribute/as-path$'): (
         '4.2 wrote the AS path as a list of numbers, 5.0 as its segments with their type'

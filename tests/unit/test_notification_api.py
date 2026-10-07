@@ -66,3 +66,15 @@ def test_an_api_4_text_helper_is_given_what_5_0_gave() -> None:
 def test_other_data_is_shown_as_before(body: bytes) -> None:
     shown = notification(Response.JSON(json_version), body)
     assert shown['data'] == hexstring(body[2:])
+
+
+def test_an_api_4_helper_is_given_data_which_is_not_text_hexed_once() -> None:
+    """The readable form hexes a Data field which is not printable: API 4 must not hex it again.
+
+    5.0 gave `data 0xFFFF`; this tree gave `data 0x307846464646`, the hexadecimal of "0xFFFF".
+    """
+    body = bytes.fromhex('0102FFFF')
+    assert notification(Response.V4.JSON(json_v4), body)['data'] == '0xFFFF'
+    neighbor, negotiated, message = received(body)
+    line = Response.V4.Text(text_v4).notification(neighbor, 'receive', message, b'', b'', negotiated)
+    assert ' data 0xFFFF\n' in line

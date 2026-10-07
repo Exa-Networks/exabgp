@@ -95,7 +95,7 @@ class V4Text:
     ) -> str:
         _ = self._v6.notification(neighbor, direction, message, header, body, negotiated)
         # as 5.x: the Data field made readable (a Shutdown Communication decoded), in hexadecimal
-        data_hex = hexstring(message.text)
+        data_hex = hexstring(message.v4_data)
         header_body = self._header_body(header, body)
         return f'neighbor {neighbor.session.peer_address} {direction} notification code {message.code} subcode {message.subcode} data {data_hex}{header_body}\n'
 

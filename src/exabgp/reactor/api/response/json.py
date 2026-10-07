@@ -312,7 +312,7 @@ class JSON:
             {
                 'code': message.code,
                 'subcode': message.subcode,
-                'data': hexstring(readable if self.use_v4_json else message.data),
+                'data': hexstring(message.v4_data if self.use_v4_json else message.data),
                 'message': readable.decode('utf-8', 'replace'),
             },
         )

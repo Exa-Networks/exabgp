@@ -159,13 +159,18 @@ class Notification(Message):
     def text(self) -> bytes:
         """The Data field made readable: an RFC 9003 Shutdown Communication decoded, else hex."""
         raw = self.data
-        code = self.code
-        subcode = self.subcode
-
-        if (code, subcode) not in self.SHUTDOWN_SUBCODES:
+        if (self.code, self.subcode) not in self.SHUTDOWN_SUBCODES:
             # printable ASCII as it is, anything else in hex: a control character the peer
             # chose must not reach a terminal or a log line (str(raw) was always printable)
             return raw if all(PRINTABLE_FIRST <= octet <= PRINTABLE_LAST for octet in raw) else hexbytes(raw)
+        return self.v4_data
+
+    @property
+    def v4_data(self) -> bytes:
+        """The Data field 5.x hexed for an API 4 helper: a Shutdown Communication decoded, else the wire."""
+        raw = self.data
+        if (self.code, self.subcode) not in self.SHUTDOWN_SUBCODES:
+            return raw
 
         if len(raw) == 0:
             # shutdown without shutdown communication (the old fashioned way)
