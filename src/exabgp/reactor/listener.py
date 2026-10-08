@@ -28,6 +28,8 @@ from exabgp.reactor.network.tcp import saved_syn_ttl
 from exabgp.reactor.network.tcp import sending_ttl
 from exabgp.reactor.network.tcp import set_minimum_ttl
 from exabgp.reactor.network.tcp import set_sending_ttl
+from exabgp.reactor.network.tcp import listener_minimum_needed
+from exabgp.reactor.network.tcp import set_listening_minimum
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno
 from exabgp.reactor.network.error import NetworkError
@@ -184,6 +186,60 @@ def _matches(neighbor: Neighbor, connection: Incoming) -> bool:
     if IP.from_string(connection.peer).address() == neighbor.session.local_address.address():
         return True
     return neighbor.session.auto_discovery
+
+
+def _behind(local: str, neighbor: Neighbor) -> bool:
+    """A connection to the listening socket bound to `local` may be dispatched to this neighbour.
+
+    _dispatch matches on the addresses, not on the port: a neighbour of the same family
+    whose local address is the socket's, any when the socket is bound to the wildcard, and
+    one which discovers its local address.
+    """
+    address = IP.from_string(local)
+    if neighbor.session.peer_address is None or neighbor.session.peer_address.afi != address.afi:
+        return False
+    if neighbor.session.auto_discovery or not address.address():
+        return True
+    return neighbor.session.local_address is not None and neighbor.session.local_address.address() == address.address()
+
+
+def shared_minimum(local: str, neighbors: list[Neighbor]) -> int:
+    """The minimum TTL every neighbour behind the listening socket asks for, 0 unless they agree.
+
+    RFC 5082 3: a minimum on a shared socket must drop nothing a neighbour would not. One
+    asking for none, or for another, would see its Trusted or Unknown packets dropped.
+    """
+    minimums = {neighbor.session.incoming_ttl or 0 for neighbor in neighbors if _behind(local, neighbor)}
+    if len(minimums) != 1:
+        return 0
+    (minimum,) = minimums
+    return minimum
+
+
+def _without_routes_to_the_peer(neighbor: Neighbor) -> None:
+    """RFC 4271 5.1.3 for a peer of a range, whose address is known only once it connects.
+
+    The configuration checked the routes of the range against its first address, and the
+    API checks a route against each peer it goes to (Configuration._sendable). The copy a
+    connection gets holds the routes of the range: the ones whose next hop is this peer's
+    address are taken out before anything is sent, the range keeping them for its others.
+    """
+    outgoing = neighbor.rib.outgoing
+    held = {route.index(): route for route in outgoing.queued_routes()}
+    held.update((route.index(), route) for route in outgoing.cached_routes())
+    for route in held.values():
+        refused = neighbor.next_hop_is_the_peer(route)
+        if not refused:
+            continue
+        log.warning(
+            lazymsg(
+                'route.skipped route={route} neighbor={n} reason={r}', route=route.nlri, n=neighbor.name(), r=refused
+            ),
+            'configuration',
+        )
+        outgoing.drop_unsent(route)
+    # what a reload or a reconnection puts back in the RIB
+    neighbor.routes = [route for route in neighbor.routes if not neighbor.next_hop_is_the_peer(route)]
 
 
 class Listener:
@@ -444,6 +500,7 @@ class Listener:
         neighbor.make_rib()
         assert neighbor.session is not template.session, 'a ranged peer must not change its range'
         assert neighbor.rib is not template.rib, 'a ranged peer must not share the RIB of its range'
+        _without_routes_to_the_peer(neighbor)
 
         if not admit_by_ttl(connection, neighbor):
             connection.close()
@@ -452,6 +509,34 @@ class Listener:
         set_accepted_ttl(connection, neighbor)
         if not self._refused(connection, peer.handle_connection(connection)):
             self._reactor.register_peer(neighbor.name(), peer)
+
+    def install_shared_minimum(self, neighbors: list[Neighbor]) -> None:
+        """RFC 5082 3 where the SYN is not kept for admit_by_ttl to check (FreeBSD).
+
+        The handshake, and what arrives before the accepted socket is given its neighbour's
+        minimum, is checked only by a minimum on the listening socket. It carries one when
+        every neighbour behind it asks for the same, and none otherwise, said in the log;
+        the accepted socket is given the neighbour's either way. Run on every reload.
+        """
+        if not listener_minimum_needed():
+            return
+        for sock, (local, port, _, _, _) in self._sockets.items():
+            minimum = shared_minimum(local, neighbors)
+            asked = any(neighbor.session.incoming_ttl for neighbor in neighbors if _behind(local, neighbor))
+            if asked and not minimum:
+                log.warning(
+                    lazymsg(
+                        'listener.ttl.minimum.unset ip={ip} port={port} reason={reason}',
+                        ip=local,
+                        port=port,
+                        reason='the neighbours on this socket ask for different incoming-ttl, the handshake is not checked',
+                    ),
+                    'network',
+                )
+            try:
+                set_listening_minimum(sock, IP.from_string(local).afi, minimum)
+            except NetworkError as exc:
+                log.error(lazymsg('listener.ttl.minimum.failed ip={ip} error={e}', ip=local, e=str(exc)), 'network')
 
     def close_unwanted(self, wanted: set[tuple[str, int]]) -> None:
         """Close every listening socket the configuration no longer asks for.

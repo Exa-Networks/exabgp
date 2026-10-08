@@ -55,6 +55,9 @@ class BindingSIDSubTLV(SubTLV):
         srv6_sid: an SRv6 BSID, the form RFC 9830 2.4.2 keeps for backward compatibility.
         """
         assert label is None or srv6_sid is None, 'a binding SID is an MPLS label or an SRv6 SID, not both'
+        # the configuration refuses a reserved label too, but a peer may send one (RFC 9830
+        # 2.4.2 leaves validating it to the SRPM), so only the width is ours to hold
+        assert label is None or 0 <= label < 1 << 20, 'an MPLS label is twenty bits'
         self.label = label
         self.flags = flags
         self.srv6_sid = srv6_sid

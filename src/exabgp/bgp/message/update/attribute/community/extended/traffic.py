@@ -283,8 +283,11 @@ class TrafficRedirectASN4(ExtendedCommunity):
     def __repr__(self) -> str:
         # The text of the other two encodings, which reads back as configuration. It was
         # __str__, 'redirect:ASN4(<asn>):<n>', and json() goes through __repr__, so the API
-        # was given the community as hex.
-        return 'redirect:{}:{}'.format(self.asn, self.target)
+        # was given the community as hex.  RFC 8955 7.4: 0x8208 and 0x8008 are two encodings,
+        # so an AS below 65536 carries the trailing L which asks for this one, or the text
+        # reads back as 0x8008.
+        suffix = 'L' if self.asn <= ASN.MAX_2BYTE else ''
+        return 'redirect:{}{}:{}'.format(self.asn, suffix, self.target)
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRedirectASN4:

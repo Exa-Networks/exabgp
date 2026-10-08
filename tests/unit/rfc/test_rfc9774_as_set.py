@@ -24,6 +24,7 @@ from rfc.rfc7606_wire import (
     WELL_KNOWN_TRANSITIVE,
     announced,
     attribute,
+    internal_session,
     parse,
     session,
     update,
@@ -80,14 +81,16 @@ def test_a_set_arriving_in_the_as4_path_of_an_old_speaker_withdraws_the_route() 
 
 @pytest.mark.rfc('rfc9774#3-treat-as-withdraw-on-as-set', polarity='negative')
 @pytest.mark.parametrize(
-    'name,path',
+    'name,path,internal',
     [
-        ('AS_SEQUENCE', as_path(segment(SEQ, 65002, 65003))),
-        ('AS_CONFED_SEQUENCE', as_path(segment(CONFED_SEQ, 65020), segment(SEQ, 65002))),
+        ('AS_SEQUENCE', as_path(segment(SEQ, 65002, 65003)), False),
+        # from an internal peer: an external one may not send confederation segments at
+        # all (RFC 5065 5), which would withdraw the route for another reason than a set
+        ('AS_CONFED_SEQUENCE', as_path(segment(CONFED_SEQ, 65020), segment(SEQ, 65002)), True),
     ],
 )
-def test_a_route_with_only_sequences_is_advertised(name: str, path: bytes) -> None:
-    parsed = parse(update(ORIGIN_IGP + path + NEXT_HOP), session())
+def test_a_route_with_only_sequences_is_advertised(name: str, path: bytes, internal: bool) -> None:
+    parsed = parse(update(ORIGIN_IGP + path + NEXT_HOP), internal_session() if internal else session())
 
     assert announced(parsed) == ['10.0.0.0/24'], f'a route with only an {name} was withdrawn'
     assert withdrawn_routes(parsed) == []

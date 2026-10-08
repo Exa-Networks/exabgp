@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import chain, islice
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Generator, cast
 
@@ -25,7 +26,11 @@ from exabgp.bgp.message.update.attribute.otc import OTC
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, SEQUENCE, ASPath
 from exabgp.bgp.message.update.attribute.attribute import Discard, TreatAsWithdraw
-from exabgp.bgp.message.update.attribute.collection import in_type_order
+from exabgp.bgp.message.update.attribute.collection import (
+    NEXT_HOP_IGNORED_ACTION,
+    TREAT_AS_WITHDRAW_ACTION,
+    in_type_order,
+)
 from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
@@ -37,6 +42,12 @@ from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP, IPv4, IPv6
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
+
+# RFC 7606 6 asks for the NLRI involved and the entire malformed UPDATE in an error log. A
+# peer sets the size of both, so each is capped: the NLRI by count, the message at the size
+# of any message sent without RFC 8654 Extended Message, which it therefore holds whole.
+MAX_LOGGED_NLRI = 16
+MAX_LOGGED_UPDATE_OCTETS = Message.STANDARD_MAX
 
 
 def validate_announce_nlri(nlri: 'NLRI', nexthop: IP) -> str | None:
@@ -807,32 +818,32 @@ class UpdateCollection:
     # These exceptions are caught by the caller in reactor/protocol.py:read_message() which
     # wraps them in a Notify(1, 0) to signal a malformed message to the peer.
     @staticmethod
-    def _withdrawn_in_context(attributes: AttributeCollection, legacy: bool, negotiated: Negotiated) -> bool:
-        """Whether the announced routes of this UPDATE are to be treated as withdrawn."""
+    def _withdrawn_in_context(attributes: AttributeCollection, legacy: bool, negotiated: Negotiated) -> str | None:
+        """Why the announced routes of this UPDATE are to be treated as withdrawn, None to keep them."""
         # RFC 7606: an UPDATE carrying reachable NLRI must include the attributes
         # needed to interpret those routes. NEXT_HOP applies to the legacy IPv4
         # NLRI field; MP_REACH_NLRI carries its own next hop.
-        if (
-            Attribute.CODE.ORIGIN not in attributes
-            or Attribute.CODE.AS_PATH not in attributes
-            or (legacy and Attribute.CODE.NEXT_HOP not in attributes)
-        ):
-            return True
-        if UpdateCollection._malformed_confederation_path(attributes.get(Attribute.CODE.AS_PATH, None), negotiated):
-            return True
-        if UpdateCollection._not_first_as_of_peer(attributes.get(Attribute.CODE.AS_PATH, None), negotiated):
-            return True
+        mandatory = [Attribute.CODE.ORIGIN, Attribute.CODE.AS_PATH] + ([Attribute.CODE.NEXT_HOP] if legacy else [])
+        for code in mandatory:
+            if code not in attributes:
+                return f'the well-known mandatory attribute {Attribute.CODE.name(code)} is missing'
+        path = attributes.get(Attribute.CODE.AS_PATH, None)
+        reason = UpdateCollection._malformed_confederation_path(path, negotiated)
+        if reason is None:
+            reason = UpdateCollection._not_first_as_of_peer(path, negotiated)
+        if reason is not None:
+            return reason
         # RFC 9774 3: a route with an AS_SET or AS_CONFED_SET is treated as withdrawn,
         # unless the operator configured the neighbour to accept them (`as-set accept`).
         # An AS4_PATH still here was not dropped by RFC 6793 and its sets now count.
         neighbor = getattr(negotiated, 'neighbor', None)
         if getattr(neighbor, 'as_set', 'withdraw') == 'accept':
-            return False
+            return None
         for code in (Attribute.CODE.AS_PATH, Attribute.CODE.AS4_PATH):
             path = attributes.get(code, None)
             if isinstance(path, ASPath) and path.has_set():
-                return True
-        return False
+                return f'an AS_SET or AS_CONFED_SET in the {Attribute.CODE.name(code)} (RFC 9774)'
+        return None
 
     @staticmethod
     def _withdraw_malformed_routes(mp_reach: list[RoutedNLRI], withdraws: list[NLRI]) -> list[RoutedNLRI]:
@@ -858,8 +869,8 @@ class UpdateCollection:
     @staticmethod
     def _withdrawn_for_its_routes(
         mp_reach: list[RoutedNLRI], attributes: AttributeCollection, negotiated: Negotiated
-    ) -> bool:
-        """Whether a route of MP_REACH_NLRI makes this UPDATE treat-as-withdraw.
+    ) -> str | None:
+        """Why a route of MP_REACH_NLRI makes this UPDATE treat-as-withdraw, None if none does.
 
         Decided once the NLRI are built, as the rules need both the routes and the
         attributes, and the action is on the UPDATE: RFC 7606 withdraws all its routes.
@@ -867,34 +878,33 @@ class UpdateCollection:
         for routed in mp_reach:
             reason = _withdraw_reason(routed.nlri, attributes, negotiated)
             if reason is not None:
-                log.warning(
-                    lazymsg('update.treat-as-withdraw nlri={nlri} reason="{reason}"', nlri=routed.nlri, reason=reason),
-                    'parser',
-                )
-                return True
-        return False
+                return f'{routed.nlri}: {reason}'
+        return None
 
     @staticmethod
-    def _malformed_confederation_path(path: Attribute | None, negotiated: Negotiated) -> bool:
-        """RFC 5065 5: the two AS_PATHs a member of a confederation must call malformed.
+    def _malformed_confederation_path(path: Attribute | None, negotiated: Negotiated) -> str | None:
+        """RFC 5065 5: the two AS_PATHs a speaker must call malformed, None for any other.
 
-        Only once a confederation is configured: a speaker outside one has no members to
-        tell apart, and exabgp used to accept these paths from any peer. RFC 7606 turns
-        the malformed AS_PATH RFC 4271 6.3 would reset the session for into a withdraw.
+        RFC 7606 turns the malformed AS_PATH RFC 4271 6.3 would reset the session for into
+        a withdraw.
         """
-        if not isinstance(path, ASPath) or not negotiated.confederation:
-            return False
-        # confederation segments from a peer outside the confederation
-        if negotiated.confed_outside:
-            return path.has_confed()
+        if not isinstance(path, ASPath):
+            return None
+        # Confederation segments from a neighbour not in our confederation. With none
+        # configured, no external neighbour is in the same one as us; an internal one is
+        # in our own AS, and is left alone.
+        outside = negotiated.confed_outside if negotiated.confederation else not negotiated.is_internal_neighbor
+        if outside:
+            return 'confederation segments from outside the confederation (RFC 5065 5)' if path.has_confed() else None
         # from another Member-AS, a path which does not start with an AS_CONFED_SEQUENCE
         if negotiated.confed_member:
             segments = path.aspath
-            return not segments or not isinstance(segments[0], CONFED_SEQUENCE)
-        return False
+            if not segments or not isinstance(segments[0], CONFED_SEQUENCE):
+                return 'a path from another Member-AS not starting with an AS_CONFED_SEQUENCE (RFC 5065 5)'
+        return None
 
     @staticmethod
-    def _not_first_as_of_peer(path: Attribute | None, negotiated: Negotiated) -> bool:
+    def _not_first_as_of_peer(path: Attribute | None, negotiated: Negotiated) -> str | None:
         """RFC 8955 6 and RFC 4271 6.3: an EBGP route's AS_PATH starts with the neighbour's AS.
 
         RFC 4271 makes the check optional, RFC 8955 makes it a MUST. A route server does
@@ -903,23 +913,14 @@ class UpdateCollection:
         turns the malformed AS_PATH of RFC 4271 6.3 into a withdraw.
         """
         if not isinstance(path, ASPath) or negotiated.is_internal_neighbor:
-            return False
+            return None
         neighbor = getattr(negotiated, 'neighbor', None)
         if neighbor is None or not neighbor.enforce_first_as:
-            return False
+            return None
         segments = path.aspath
         if segments and isinstance(segments[0], SEQUENCE) and segments[0] and segments[0][0] == negotiated.peer_as:
-            return False
-        log.warning(
-            lazymsg(
-                'update.first-as.withdraw peer={peer} peer-as={asn} as-path="{path}"',
-                peer=negotiated.peer_address,
-                asn=negotiated.peer_as,
-                path=path,
-            ),
-            'routes',
-        )
-        return True
+            return None
+        return f'the AS_PATH does not start with the peer AS {negotiated.peer_as}'
 
     @classmethod
     def _parse_payload(cls, data: Buffer, negotiated: Negotiated) -> UpdateCollection:
@@ -970,15 +971,18 @@ class UpdateCollection:
         if not negotiated.from_peer:
             return cls(legacy + mp_reach, withdraws, attributes)
 
+        attributes = cls._with_next_hop_decided(attributes, bool(announced_view), isinstance(reach, MPRNLRI))
         # RFC 7606 5.2 is decided on what the UPDATE encodes, before any route is dropped
         # below for what it means rather than for how it was written.
         has_reachable_nlri = bool(announced_view) or isinstance(reach, MPRNLRI)
         cls._reset_without_reachable_nlri(attributes, has_reachable_nlri)
 
-        if (legacy or mp_reach) and (
-            cls._withdrawn_in_context(attributes, bool(announced_view), negotiated)
-            or cls._withdrawn_for_its_routes(mp_reach, attributes, negotiated)
-        ):
+        context = None
+        if legacy or mp_reach:
+            context = cls._withdrawn_in_context(attributes, bool(announced_view), negotiated)
+            if context is None:
+                context = cls._withdrawn_for_its_routes(mp_reach, attributes, negotiated)
+        if context is not None:
             # AttributeCollection.unpack() may have returned the session's cached
             # collection. These reasons are UPDATE context, not an interpretation of
             # the attribute bytes, so adding the marker to that shared object would
@@ -986,7 +990,68 @@ class UpdateCollection:
             attributes = attributes.copy()
             attributes.add(TreatAsWithdraw())
 
-        return cls._routes(legacy, mp_reach, withdraws, attributes)
+        collection = cls._routes(legacy, mp_reach, withdraws, attributes)
+        cls._log_malformed(data, negotiated, collection, attributes.malformed, context)
+        return collection
+
+    @staticmethod
+    def _with_next_hop_decided(attributes: AttributeCollection, legacy: bool, mp_reach: bool) -> AttributeCollection:
+        """What a malformed NEXT_HOP does to this UPDATE, now the UPDATE is known.
+
+        RFC 7606 7.3 makes it treat-as-withdraw. RFC 4760 3 has the NEXT_HOP of an UPDATE
+        whose only NLRI are in MP_REACH_NLRI ignored, so there it withdraws nothing: those
+        routes carry their own next hop. It used to withdraw them all.
+        """
+        reason = attributes.next_hop_malformed
+        if not reason:
+            return attributes
+        # the collection may be the session's cached one, so the change is made on a copy
+        decided = attributes.copy()
+        if mp_reach and not legacy:
+            decided.malformed.append((Attribute.CODE.NEXT_HOP, NEXT_HOP_IGNORED_ACTION, reason))
+            return decided
+        decided.malformed.append((Attribute.CODE.NEXT_HOP, TREAT_AS_WITHDRAW_ACTION, reason))
+        decided.add(TreatAsWithdraw(Attribute.CODE.NEXT_HOP))
+        return decided
+
+    @staticmethod
+    def _log_malformed(
+        payload: Buffer,
+        negotiated: Negotiated,
+        collection: UpdateCollection,
+        malformed: list[tuple[int, str, str]],
+        context: str | None,
+    ) -> None:
+        """RFC 7606 6: one error per malformed UPDATE, naming its NLRI and holding its bytes.
+
+        Treat-as-withdraw and attribute discard change the routes with no NOTIFICATION, so
+        this line is the only record of why. Both lists the peer sizes are capped.
+        """
+        reasons = [f'{Attribute.CODE.name(code)} {action}: {reason}' for code, action, reason in malformed]
+        if context is not None:
+            reasons.append(f'{TREAT_AS_WITHDRAW_ACTION}: {context}')
+        if not reasons:
+            return
+        everything = chain((routed.nlri for routed in collection.announces), collection.withdraws)
+        nlri = [str(nlri) for nlri in islice(everything, MAX_LOGGED_NLRI + 1)]
+        if len(nlri) > MAX_LOGGED_NLRI:
+            nlri[MAX_LOGGED_NLRI:] = [
+                f'and {len(collection.announces) + len(collection.withdraws) - MAX_LOGGED_NLRI} more'
+            ]
+        message = Message.frame(Message.CODE.UPDATE, payload)
+        shown = message[:MAX_LOGGED_UPDATE_OCTETS].hex()
+        if len(message) > MAX_LOGGED_UPDATE_OCTETS:
+            shown += f'... ({len(message)} octets)'
+        log.error(
+            lazymsg(
+                'update.malformed peer={peer} reason="{reason}" nlri=[{nlri}] update={update}',
+                peer=negotiated.peer_address,
+                reason='; '.join(reasons),
+                nlri=', '.join(nlri),
+                update=shown,
+            ),
+            'parser',
+        )
 
     @classmethod
     def _routes(

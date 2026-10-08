@@ -104,6 +104,15 @@ ALLOWED: dict[tuple[str, str], str] = {
         'which never agreed to it, RFC 8950 4 forbids that; this tree adds the Extended Next Hop '
         'Encoding capability for the family, with a warning, and sends the route if the peer agrees'
     ),
+    (
+        '4.2 5.0',
+        r'(?s)\A(?!.*\bnexthop \{).*\bnexthop true;|\bnexthop \{\s*ipv6 unicast ipv4;\s*\}',
+    ): (
+        'the release sent the Extended Next Hop Encoding capability with a value of zero octets: '
+        '`nexthop true` with no `nexthop { }` entry, or one for ipv6 unicast with an IPv4 next hop, '
+        'a family RFC 8950 does not define and so not one we offer. Capability 5 is a list of '
+        'triples (RFC 8950 4), empty it says nothing; this tree leaves it out (CHANGELOG)'
+    ),
     ('4.2 5.0', r'\bsource-interface <'): (
         'an interface name longer than 15 characters can not exist (IFNAMSIZ): 5.0 took the '
         "documentation's placeholder, this tree refuses it"

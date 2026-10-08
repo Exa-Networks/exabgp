@@ -31,3 +31,25 @@ octets; it is now sixteen, the IPv4-mapped address RFC 4798 2 asks for.  Receivi
 four octet next hop for an IPv6 unicast route is refused, unless both speakers negotiated
 the <2, SAFI, 1> extended next hop entry that older releases of exabgp send it under.
 """
+
+[[requirement]]
+id = "rfc2545#3-link-local-if-and-only-if-common-subnet"
+section = "3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+The link-local address shall be included in the Next Hop field if and
+only if the BGP speaker shares a common subnet with the entity
+identified by the global IPv6 address carried in the Network Address
+of Next Hop field and the peer the route is being advertised to.
+"""
+note = """
+exabgp has no interface table, so it only knows the subnet it shares with the peer when
+the global next hop is its own address on the session (next-hop self, or the local-address
+written out) and the session is one hop away.  Only then is the configured local-link-local
+appended, and only once draft-ietf-idr-linklocal-capability is negotiated, which is the
+operator saying the link is shared.  It used to be appended to every global next hop,
+a third party's too, whose link-local address is not ours.  Without the capability no
+link-local address is sent, as before.
+"""

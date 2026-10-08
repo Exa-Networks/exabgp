@@ -271,16 +271,39 @@ def test_every_ipv6_fragment_bitmask_we_encode_uses_a_single_octet(name: str) ->
     assert len(packed) == 2
 
 
-@pytest.mark.rfc('rfc8956#3.6-fragment-single-octet', polarity='negative')
-def test_an_ipv6_fragment_component_of_two_octets_is_not_what_we_generate() -> None:
-    """`FlowFragment` is an `IOperationByteShort` and would widen above 255.
+def api_fragment(fragment: str) -> tuple[bytes, str]:
+    """The packed NLRI of an IPv6 API flow route matching `fragment`, or the error refusing it."""
+    configuration = Configuration([''], text=True)
+    if not configuration.partial('ipv6', f'flow source 2001:db8::/32 fragment {fragment} discard', 'announce'):
+        return b'', str(configuration.error)
+    (route,) = configuration.pop_routes()
+    return bytes(route.nlri.pack_nlri(Negotiated.UNSET)), ''
 
-    The class does not state the single octet rule, so what keeps exabgp inside it is
-    that every name `Fragment` defines is 0x0F or below.
-    """
-    assert max(Fragment.codes.values()) <= 0x0F
-    with pytest.raises(ValueError):
-        Fragment.named('reassembled')
+
+@pytest.mark.rfc('rfc8956#3.6-fragment-single-octet')
+@pytest.mark.parametrize('fragment, value', [('2', 0x02), ('14', 0x0E), ('last-fragment', 0x08)])
+def test_an_ipv6_fragment_given_as_a_number_of_defined_bits_is_one_octet(fragment: str, value: int) -> None:
+    packed, error = api_fragment(fragment)
+    assert error == ''
+    assert packed.endswith(bytes([0x0C, EOL, value]))
+
+
+@pytest.mark.rfc('rfc8956#3.6-fragment-single-octet', polarity='negative')
+@pytest.mark.rfc('rfc8956#3.6-fragment-reserved-bits-zero', polarity='negative')
+@pytest.mark.parametrize('fragment', ['16', '256', '0xf0'])
+def test_an_ipv6_fragment_with_a_reserved_bit_is_refused(fragment: str) -> None:
+    """`fragment 256` on an IPv6 flow route went out as 0C 90 0100, two octets."""
+    packed, error = api_fragment(fragment)
+    assert packed == b''
+    assert 'reserved' in error, error
+
+
+@pytest.mark.rfc('rfc8956#3.6-fragment-reserved-bits-zero', polarity='negative')
+@pytest.mark.parametrize('fragment', ['1', 'dont-fragment'])
+def test_an_ipv6_fragment_asking_for_dont_fragment_is_refused(fragment: str) -> None:
+    packed, error = api_fragment(fragment)
+    assert packed == b''
+    assert error
 
 
 @pytest.mark.rfc('rfc8956#3.6-fragment-reserved-bits-zero')

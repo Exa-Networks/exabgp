@@ -64,16 +64,26 @@ def _rd(words: Words) -> Any:
     return rd
 
 
-def _prefix(word: str) -> tuple[IPv4 | IPv6, int]:
-    address, length = word.split('/')
+def _prefix(word: str, afi: AFI) -> tuple[IPv4 | IPv6, int]:
+    """The prefix of an ISD or a T1ST route, of the AFI's family and no longer than its address.
+
+    draft-mpmz-bess-mup-safi-05 3.1.1 and 3.1.3: a prefix length past 32 bits for IPv4, or
+    128 for IPv6, is a malformed NLRI, so it is refused here rather than sent.
+    """
+    address, _, length = word.partition('/')
     if not is_decimal(length):
         raise ValueError(f"unexpect prefix format '{word}'")
     found = ip_address(address)
-    if isinstance(found, IPv4Address):
-        return IPv4.from_string(address), int(length)
-    if isinstance(found, IPv6Address):
-        return IPv6.from_string(address), int(length)
-    raise ValueError(f"unexpect ipaddress format '{address}'")
+    if afi == AFI.ipv4 and isinstance(found, IPv4Address):
+        prefix: IPv4 | IPv6 = IPv4.from_string(address)
+    elif afi == AFI.ipv6 and isinstance(found, IPv6Address):
+        prefix = IPv6.from_string(address)
+    else:
+        raise ValueError(f"'{address}' is not an {afi} address, which the family of the route needs")
+    bits = prefix.BITS
+    if int(length) > bits:
+        raise ValueError(f'prefix length {length} is past the {bits} bits of an {afi} address')
+    return prefix, int(length)
 
 
 def _number(words: Words, name: str, maximum: int) -> int:
@@ -84,7 +94,7 @@ def _number(words: Words, name: str, maximum: int) -> int:
 
 
 def mup_isd(words: Words, afi: AFI) -> Any:
-    prefix, length = _prefix(words.word())
+    prefix, length = _prefix(words.word(), afi)
     words.expect('rd')
     return InterworkSegmentDiscoveryRoute.make_isd(rd=_rd(words), prefix_ip_len=length, prefix_ip=prefix, afi=afi)
 
@@ -96,7 +106,7 @@ def mup_dsd(words: Words, afi: AFI) -> Any:
 
 
 def mup_t1st(words: Words, afi: AFI) -> Any:
-    prefix, length = _prefix(words.word())
+    prefix, length = _prefix(words.word(), afi)
     words.expect('rd')
     rd = _rd(words)
     words.expect('teid')

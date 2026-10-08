@@ -429,13 +429,13 @@ def triple(count: int, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.nlri_mpls) -> byte
     return pack('!HBB', int(afi), int(safi), count)
 
 
-def capabilities(multiple_labels: bytes | None = None) -> Capabilities:
-    """An OPEN's capabilities offering IPv4 labelled unicast, decoded off the wire.
+def capabilities(multiple_labels: bytes | None = None, safi: SAFI = SAFI.nlri_mpls) -> Capabilities:
+    """An OPEN's capabilities offering IPv4 labelled unicast (or `safi`), decoded off the wire.
 
     `multiple_labels` is the value of a Multiple Labels Capability, or None for an OPEN
     which does not carry one.
     """
-    fields = [(MULTIPROTOCOL, pack('!HBB', int(AFI.ipv4), 0, int(SAFI.nlri_mpls)))]
+    fields = [(MULTIPROTOCOL, pack('!HBB', int(AFI.ipv4), 0, int(safi)))]
     if multiple_labels is not None:
         fields.append((MULTIPLE_LABELS, multiple_labels))
     body = b''.join(bytes([code, len(value)]) + value for code, value in fields)
@@ -443,7 +443,9 @@ def capabilities(multiple_labels: bytes | None = None) -> Capabilities:
     return Capabilities.unpack(bytes([len(parameter)]) + parameter)
 
 
-def session(ours: bytes | None, theirs: bytes | None, direction: Direction = Direction.OUT) -> Negotiated:
+def session(
+    ours: bytes | None, theirs: bytes | None, direction: Direction = Direction.OUT, safi: SAFI = SAFI.nlri_mpls
+) -> Negotiated:
     """A negotiated session, each OPEN carrying the given Multiple Labels value.
 
     Outgoing unless told otherwise: Direction.IN is the session a peer's UPDATE is read
@@ -454,18 +456,20 @@ def session(ours: bytes | None, theirs: bytes | None, direction: Direction = Dir
     negotiated = Negotiated(neighbor, direction)
     # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
     negotiated.neighbor.enforce_first_as = False
-    negotiated.sent(Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), capabilities(ours)))
-    negotiated.received(
-        Open.make_open(Version(4), ASN(65002), HoldTime(90), RouterID('192.0.2.2'), capabilities(theirs))
+    negotiated.sent(
+        Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), capabilities(ours, safi))
     )
-    assert LABELLED_UNICAST in negotiated.families, 'the session did not negotiate labelled unicast'
+    negotiated.received(
+        Open.make_open(Version(4), ASN(65002), HoldTime(90), RouterID('192.0.2.2'), capabilities(theirs, safi))
+    )
+    assert (AFI.ipv4, safi) in negotiated.families, 'the session did not negotiate the labelled family'
     return negotiated
 
 
-def configured(labels: str) -> list[Route]:
+def configured(labels: str, rd: str = '') -> list[Route]:
     """The routes a static labelled route produces, through the configuration parser."""
     configuration = Configuration([''], text=True)
-    line = f'route 10.0.0.0/24 next-hop 192.0.2.1 label {labels}'
+    line = f'route 10.0.0.0/24 {rd}next-hop 192.0.2.1 label {labels}'
     assert configuration.partial('static', line, 'announce'), str(configuration.error)
     routes = configuration.pop_routes()
     assert routes, 'the line parsed to no route at all'
@@ -820,3 +824,66 @@ def test_a_default_route_withdrawn_without_a_label_carries_the_compatibility_fie
         read, rest = decode(packed + labelled(label(100)), afi, action=action)
         assert bytes(rest) == labelled(label(100)), 'the field was not read as part of the default route'
         assert str(read.cidr) == f'{address}/0'
+
+
+# ------------------------------------- section 2.4, a withdrawal we send carries one field
+#
+# "This encoding is used whether or not the Multiple Labels Capability has been sent or
+# received on the session": a withdrawal is one Compatibility field and the prefix, never
+# the stack the route was announced with.  It used to be that stack, so with the capability
+# both ways `label [ 100 200 ]` was withdrawn as 48 000640 000c81 0a0000, which a receiver
+# reading figure 4 takes for a /48 whose prefix starts with the second label.
+
+TWO_LABEL_STACK = '[ 100 200 ]'
+VPN_RD = 'rd 1:2 '
+
+
+def mp_unreach_nlri(routes: list[Route], negotiated: Negotiated) -> bytes:
+    """The NLRI field of the MP_UNREACH_NLRI of the UPDATE withdrawing `routes`."""
+    found = b''
+    for message in UpdateCollection([], [route.nlri for route in routes], routes[0].attributes).messages(negotiated):
+        update = Update.unpack_message(message[19:], negotiated)
+        assert isinstance(update, Update), 'what we generated did not decode as an UPDATE'
+        body = bytes(message[19:])
+        attributes_at = 2 + int.from_bytes(body[0:2], 'big') + 2
+        attributes = body[attributes_at:]
+        while attributes:
+            flags, code = attributes[0], attributes[1]
+            size_bytes = 2 if flags & 0x10 else 1
+            length = int.from_bytes(attributes[2 : 2 + size_bytes], 'big')
+            value = attributes[2 + size_bytes : 2 + size_bytes + length]
+            if code == 15:
+                found += value[3:]  # after AFI and SAFI
+            attributes = attributes[2 + size_bytes + length :]
+    assert found, 'no MP_UNREACH_NLRI was generated, so there is nothing to look at'
+    return found
+
+
+@pytest.mark.rfc('rfc8277#2.4-compatibility-sent-on-withdrawal')
+@pytest.mark.parametrize('ours, theirs', [(triple(2), triple(2)), (None, None), (triple(2), None)])
+def test_a_labelled_withdrawal_carries_one_compatibility_field(ours: bytes | None, theirs: bytes | None) -> None:
+    negotiated = session(ours, theirs)
+    nlri = mp_unreach_nlri(configured(TWO_LABEL_STACK), negotiated)
+    assert nlri == labelled(raw(COMPATIBILITY_RECOMMENDED))
+    withdrawn, rest = decode(nlri, action=Action.WITHDRAW, negotiated=negotiated)
+    assert rest == b''
+    assert str(withdrawn.cidr) == '10.0.0.0/24'
+
+
+@pytest.mark.rfc('rfc8277#2.4-compatibility-sent-on-withdrawal')
+@pytest.mark.parametrize('count', [2, None])
+def test_a_vpn_withdrawal_carries_one_compatibility_field(count: int | None) -> None:
+    multiple_labels = None if count is None else triple(count, safi=SAFI.mpls_vpn)
+    negotiated = session(multiple_labels, multiple_labels, safi=SAFI.mpls_vpn)
+    nlri = mp_unreach_nlri(configured(TWO_LABEL_STACK, VPN_RD), negotiated)
+    assert nlri == vpn(raw(COMPATIBILITY_RECOMMENDED))
+    withdrawn, rest = decode(nlri, safi=SAFI.mpls_vpn, action=Action.WITHDRAW, negotiated=negotiated)
+    assert rest == b''
+    assert str(withdrawn.cidr) == '10.0.0.0/24'
+    assert str(withdrawn.rd) == ' rd 1:2'
+
+
+def test_an_announcement_still_carries_its_stack() -> None:
+    """The withdrawal encoding is for MP_UNREACH_NLRI only: what is announced keeps its labels."""
+    negotiated = session(triple(2), triple(2))
+    assert labels_sent(configured(TWO_LABEL_STACK), negotiated) == [[100, 200]]

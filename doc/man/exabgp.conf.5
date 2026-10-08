@@ -608,12 +608,15 @@ IPv4
 is not enforced.
 .Pp
 .Ic incoming-ttl
-is checked on each accepted connection, once it is matched to its neighbor,
-and never set on the listening socket, which every neighbor on one address
-and port shares.
+is checked on each accepted connection, once it is matched to its neighbor.
 On Linux the TTL of the connection's SYN is read back from the kernel and a
-connection below the minimum is closed; elsewhere only the segments after the
-handshake are checked.
+connection below the minimum is closed, and the listening socket, which every
+neighbor on one address shares, carries no minimum.
+On FreeBSD the SYN is not kept, so the listening socket carries the minimum
+when every neighbor which can connect to it asks for the same
+.Ic incoming-ttl ,
+and none, with a warning, when they differ or one asks for none: then only
+the segments after the handshake are checked.
 Until 6.0.0 the minimum was set on the listening socket, so the last neighbor
 configured decided for all of them, and a session reaching the global
 listener was not checked at all.

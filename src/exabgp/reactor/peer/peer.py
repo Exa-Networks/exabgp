@@ -381,7 +381,9 @@ class Peer:
 
         RFC 4724 4.2: the stale routes of a family go at once when the new OPEN has no
         Graceful Restart capability, does not name the family, or clears its Forwarding
-        State bit for it.
+        State bit for it. They go too when the new session did not negotiate the family:
+        its End-of-RIB, which would end them, is ignored (UpdateHandler._end_of_rib), so
+        nothing else would before the Restart Time this new session cancels.
         """
         self._cancel_restart_timer()
         incoming = self.neighbor.rib.incoming
@@ -392,8 +394,10 @@ class Peer:
             graceful = cast(Graceful, received.capabilities[Capability.CODE.GRACEFUL_RESTART])
         kept: set[FamilyTuple] = set()
         removed: list[Route] = []
+        negotiated = set(self.proto.negotiated.families)
         for family in incoming.restarting_families():
-            if graceful is not None and graceful.get(family, 0) & Graceful.FORWARDING_STATE:
+            forwarding = graceful is not None and graceful.get(family, 0) & Graceful.FORWARDING_STATE
+            if forwarding and family in negotiated:
                 kept.add(family)
                 continue
             removed.extend(incoming.end_restart(family))

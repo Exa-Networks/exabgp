@@ -78,6 +78,14 @@ def parse_pmsi(value: bytes) -> AttributeCollection:
     return AttributeCollection().parse(pmsi_attribute(value), session())
 
 
+def parse_pmsi_update(value: bytes) -> AttributeCollection:
+    """The PMSI in a whole UPDATE announcing one route: the error is logged per UPDATE (RFC 7606 6)."""
+    from rfc.rfc7606_wire import MANDATORY, parse, update
+    from rfc.rfc7606_wire import session as wire_session
+
+    return parse(update(MANDATORY + pmsi_attribute(value)), wire_session()).attributes
+
+
 def withdrawn(collection: AttributeCollection) -> bool:
     return TREAT_AS_WITHDRAW in collection
 
@@ -427,7 +435,7 @@ def test_a_malformed_pmsi_is_logged_as_an_error(monkeypatch: pytest.MonkeyPatch,
     """
     enable_every_log(monkeypatch, caplog)
 
-    collection = parse_pmsi(bytes(PMSI_HEADER_SIZE_BYTES - 2))
+    collection = parse_pmsi_update(bytes(PMSI_HEADER_SIZE_BYTES - 2))
     assert withdrawn(collection)
 
     messages = [record.getMessage().lower() for record in caplog.records]
@@ -445,7 +453,7 @@ def test_a_well_formed_pmsi_logs_no_error(monkeypatch: pytest.MonkeyPatch, caplo
     """An error logged for every PMSI would pass the test above and bury the real ones."""
     enable_every_log(monkeypatch, caplog)
 
-    collection = parse_pmsi(pmsi_value(TUNNEL_TYPE_INGRESS_REPLICATION, bytes([10, 0, 0, 1])))
+    collection = parse_pmsi_update(pmsi_value(TUNNEL_TYPE_INGRESS_REPLICATION, bytes([10, 0, 0, 1])))
     assert not withdrawn(collection)
     assert PMSI_TUNNEL in collection
 

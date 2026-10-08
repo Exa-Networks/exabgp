@@ -5,16 +5,15 @@ This handler processes UPDATE messages and stores NLRIs in the incoming RIB.
 
 from __future__ import annotations
 
-from struct import pack
 from typing import TYPE_CHECKING, Generator, cast
 
 from exabgp.bgp.message import Message, Update
-from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.environment import getenv
 from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.reactor.peer.handlers.base import MessageHandler
 from exabgp.protocol.family import SAFI
+from exabgp.rib import prefix_limit
 from exabgp.rib.route import Route
 
 if TYPE_CHECKING:
@@ -67,30 +66,6 @@ class UpdateHandler(MessageHandler):
                 'rib',
             )
 
-    def _limit_announce(self, ctx: PeerContext, nlri: NLRI) -> None:
-        """RFC 4486 4: past the family's prefix-limit, end the session with Cease (6, 1)."""
-        limits = ctx.neighbor.prefix_limit
-        if not limits:
-            return
-        family = nlri.family().afi_safi()
-        limit = limits.get(family)
-        if limit is None:
-            return
-        count = ctx.neighbor.rib.incoming.count_prefix(nlri)
-        # Not only one past: a reload applies a lower limit live, to a peer already over it
-        if count <= limit:
-            return
-        raise Notify(
-            *Notify.MAXIMUM_NUMBER_OF_PREFIXES_REACHED,
-            f'more than {limit} routes received for {family[0]} {family[1]}',
-            # the MAY of section 4: <AFI, SAFI> and the upper bound, as in its Figure 1
-            data=pack('!HBI', family[0].value, family[1].value, limit),
-        )
-
-    def _limit_withdraw(self, ctx: PeerContext, nlri: NLRI) -> None:
-        if ctx.neighbor.prefix_limit:
-            ctx.neighbor.rib.incoming.uncount_prefix(nlri)
-
     def _audit_withdraw(self, ctx: PeerContext, nlri: NLRI) -> None:
         if not ctx.negotiated.advertised_paths_limit:
             return
@@ -130,6 +105,34 @@ class UpdateHandler(MessageHandler):
         if any(nlri.safi == SAFI.rtc for nlri in changed):
             ctx.neighbor.rib.outgoing.membership_changed()
 
+    def _apply(self, ctx: PeerContext, parsed: UpdateCollection) -> None:
+        """Apply one parsed UPDATE to the adj-rib-in, its withdrawn routes first.
+
+        RFC 4271 9 processes the WITHDRAWN ROUTES before the NLRI, and 4.3 treats a prefix
+        in both as announced. The prefix-limit counts in the same order, so a peer at its
+        limit which replaces one prefix by another in one UPDATE is not over it.
+        """
+        self._number += 1
+        log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
+
+        for nlri in parsed.withdraws:
+            ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
+            self._audit_withdraw(ctx, nlri)
+            prefix_limit.release(ctx.neighbor, nlri)
+            ctx.stats['receive-withdraws'] += 1
+            log.debug(lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str), ctx.peer_id)
+
+        # parsed.announces holds RoutedNLRI: the bare NLRI and its next hop make the Route
+        for routed in parsed.announces:
+            nlri = routed.nlri
+            prefix_limit.admit(ctx.neighbor, nlri)
+            ctx.neighbor.rib.incoming.update_cache(Route(nlri, parsed.attributes, nexthop=routed.nexthop))
+            self._audit_announce(ctx, nlri)
+            ctx.stats['receive-prefixes'] += 1
+            log.debug(lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str), ctx.peer_id)
+
+        self._membership(ctx, parsed)
+
     def handle(self, ctx: PeerContext, message: Message) -> Generator[Message, None, None]:
         """Process the UPDATE message synchronously.
 
@@ -141,37 +144,7 @@ class UpdateHandler(MessageHandler):
         if update.IS_EOR:
             self._end_of_rib(ctx, cast(EOR, update))
             return
-        parsed = update.data  # Already parsed by unpack_message
-        self._number += 1
-
-        log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
-
-        # Process announces - create Route objects for cache
-        # parsed.announces contains RoutedNLRI objects; extract the bare NLRI for RIB
-        for routed in parsed.announces:
-            nlri = routed.nlri
-            self._limit_announce(ctx, nlri)
-            route = Route(nlri, parsed.attributes, nexthop=routed.nexthop)
-            ctx.neighbor.rib.incoming.update_cache(route)
-            self._audit_announce(ctx, nlri)
-            ctx.stats['receive-prefixes'] += 1
-            log.debug(
-                lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
-                ctx.peer_id,
-            )
-
-        # Process withdraws - use dedicated method
-        for nlri in parsed.withdraws:
-            ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
-            self._audit_withdraw(ctx, nlri)
-            self._limit_withdraw(ctx, nlri)
-            ctx.stats['receive-withdraws'] += 1
-            log.debug(
-                lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
-                ctx.peer_id,
-            )
-
-        self._membership(ctx, parsed)
+        self._apply(ctx, update.data)
 
         return
         yield  # Make this a generator
@@ -187,34 +160,4 @@ class UpdateHandler(MessageHandler):
         if update.IS_EOR:
             self._end_of_rib(ctx, cast(EOR, update))
             return
-        parsed = update.data  # Already parsed by unpack_message
-        self._number += 1
-
-        log.debug(lazymsg('update.received number={number}', number=self._number), ctx.peer_id)
-
-        # Process announces - create Route objects for cache
-        # parsed.announces contains RoutedNLRI objects; extract the bare NLRI for RIB
-        for routed in parsed.announces:
-            nlri = routed.nlri
-            self._limit_announce(ctx, nlri)
-            route = Route(nlri, parsed.attributes, nexthop=routed.nexthop)
-            ctx.neighbor.rib.incoming.update_cache(route)
-            self._audit_announce(ctx, nlri)
-            ctx.stats['receive-prefixes'] += 1
-            log.debug(
-                lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
-                ctx.peer_id,
-            )
-
-        # Process withdraws - use dedicated method
-        for nlri in parsed.withdraws:
-            ctx.neighbor.rib.incoming.update_cache_withdraw(nlri)
-            self._audit_withdraw(ctx, nlri)
-            self._limit_withdraw(ctx, nlri)
-            ctx.stats['receive-withdraws'] += 1
-            log.debug(
-                lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str),
-                ctx.peer_id,
-            )
-
-        self._membership(ctx, parsed)
+        self._apply(ctx, update.data)

@@ -224,7 +224,115 @@ def test_the_ipv6_next_hop_of_an_ipv6_route_is_sent_as_it_is() -> None:
 def test_a_vpn_ipv6_route_sent_with_a_link_local_address_carries_two_route_distinguishers() -> None:
     configured = negotiation.neighbor()
     configured.session.local_link_local = IP.from_string('fe80::1')
+    # RFC 2545 3: our link-local address follows our own global address only
+    configured.session.local_address = IP.from_string('2001:db8::1')
     negotiated = negotiation.negotiated(FAMILIES, linklocal_nexthop=True, session=configured)
     assert sent_next_hops(IPV6_VPN, v6_vpn_route(), '2001:db8::1', negotiated) == [
         RD_ZERO + GLOBAL + RD_ZERO + LINK_LOCAL
     ]
+
+
+# ------------------------------------------------------------ who said what in the OPEN
+
+
+def opened(ours: tuple[tuple[AFI, SAFI, AFI], ...], theirs: tuple[tuple[AFI, SAFI, AFI], ...]) -> Negotiated:
+    """A session negotiated from two OPENs, each with these Extended Next Hop Encoding triples."""
+    from exabgp.bgp.message.direction import Direction
+    from exabgp.bgp.message.open.capability.mp import MultiProtocol
+    from exabgp.bgp.message.open.capability.nexthop import NextHop
+
+    def message(triples: tuple[tuple[AFI, SAFI, AFI], ...]) -> object:
+        families = MultiProtocol()
+        families.extend([IPV4_UNICAST])
+        capabilities = [families] + ([NextHop(triples)] if triples else [])
+        return negotiation.open_message(capabilities)
+
+    negotiated = Negotiated(negotiation.neighbor(), Direction.IN)
+    negotiated.sent(message(ours))
+    negotiated.received(message(theirs))
+    return negotiated
+
+
+IPV4_OVER_IPV6 = (AFI.ipv4, SAFI.unicast, AFI.ipv6)
+
+
+@pytest.mark.rfc('rfc8950#4-triple-says-what-may-be-advertised')
+@pytest.mark.rfc('rfc8950#3-length-determines-next-hop-protocol')
+def test_the_ipv6_next_hop_we_offered_is_received_whatever_the_peer_offered() -> None:
+    negotiated = opened((IPV4_OVER_IPV6,), ())
+    assert str(decoded_next_hop(IPV4_UNICAST, GLOBAL, negotiated)) == '2001:db8::1'
+    pair = decoded_next_hop(IPV4_UNICAST, GLOBAL + LINK_LOCAL, negotiated)
+    assert isinstance(pair, NextHopWithLinkLocal)
+
+
+@pytest.mark.rfc('rfc8950#4-triple-says-what-may-be-advertised', polarity='negative')
+def test_the_ipv6_next_hop_only_the_peer_offered_is_not_received() -> None:
+    refused(IPV4_UNICAST, GLOBAL, opened((), (IPV4_OVER_IPV6,)))
+
+
+@pytest.mark.rfc('rfc8950#4-advertise-only-after-capability', polarity='negative')
+def test_the_ipv6_next_hop_only_we_offered_is_not_sent() -> None:
+    assert sent_next_hops(IPV4_UNICAST, v4_route(), '2001:db8::1', opened((IPV4_OVER_IPV6,), ())) == []
+
+
+@pytest.mark.rfc('rfc8950#4-advertise-only-after-capability')
+def test_the_ipv6_next_hop_both_offered_is_sent() -> None:
+    negotiated = opened((IPV4_OVER_IPV6,), (IPV4_OVER_IPV6,))
+    assert sent_next_hops(IPV4_UNICAST, v4_route(), '2001:db8::1', negotiated) == [GLOBAL]
+
+
+def test_our_own_updates_are_read_back_with_what_the_peer_accepts() -> None:
+    # outbound() decodes what we sent: the peer's triples, never our own offer, bind it
+    outbound = opened((IPV4_OVER_IPV6,), ()).outbound()
+    refused(IPV4_UNICAST, GLOBAL, outbound)
+
+
+# ------------------------------------------------------------- the capability we send
+
+
+def advertised(*triples: tuple[AFI, SAFI, AFI]) -> bytes | None:
+    """The Extended Next Hop Encoding TLV our OPEN carries for a neighbour with these triples."""
+    from exabgp.bgp.message.open.capability.capabilities import Capabilities
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.util.enumeration import TriState
+
+    configured = negotiation.neighbor()
+    configured.add_family(IPV4_UNICAST)
+    configured.capability.nexthop = TriState.TRUE
+    for afi, safi, next_hop_afi in triples:
+        configured.add_nexthop(afi, safi, next_hop_afi)
+    capabilities = Capabilities().new(configured, False)
+    if Capability.CODE.NEXTHOP not in capabilities:
+        return None
+    return bytes(capabilities.tlvs(Capability.CODE.NEXTHOP))
+
+
+@pytest.mark.rfc('rfc8950#4-capability-fields')
+def test_the_capability_carries_one_triple_per_family() -> None:
+    assert advertised(IPV4_OVER_IPV6) == bytes([5, 6]) + pack('!HHH', 1, 1, 2)
+
+
+@pytest.mark.rfc('rfc8950#4-capability-fields')
+def test_a_capability_with_no_triple_is_not_sent() -> None:
+    assert advertised() is None
+    # IPv6 unicast over IPv4 is not one of the triples section 4 allows
+    assert advertised((AFI.ipv6, SAFI.unicast, AFI.ipv4)) is None
+
+
+def test_requiring_the_capability_with_no_triple_to_offer_asks_nothing_of_the_peer() -> None:
+    """The session of a multisession family with no triple: nothing of ours to send or require."""
+    from exabgp.bgp.message.direction import Direction
+    from exabgp.bgp.message.open.capability.capabilities import Capabilities
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.util.enumeration import TriState
+
+    configured = negotiation.neighbor()
+    configured.add_family(IPV4_UNICAST)
+    configured.capability.nexthop = TriState.TRUE
+    configured.capability.required = frozenset({Capability.CODE.NEXTHOP})
+    ours = Capabilities().new(configured, False)
+    assert Capability.CODE.NEXTHOP not in ours
+    negotiated = Negotiated(configured, Direction.IN)
+    negotiated.sent(negotiation.open_message(ours.values()))
+    negotiated.received(negotiation.open_message())
+    assert negotiated.unsupported_capability() is None

@@ -210,3 +210,153 @@ of MP_REACH_NLRI answers `malformed_with`, and `_routes` then moves every route 
 UPDATE to the withdrawals, as RFC 7606 2 defines the strategy. Decided in the UPDATE, as
 the rule needs the NLRI and its sibling attributes together. The reason is logged.
 """
+
+[[requirement]]
+id = "rfc9830#2.4.1-preference-once"
+section = "2.4.1"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+   The Preference sub-TLV is OPTIONAL; it MUST NOT appear more than once
+   in the SR Policy encoding.
+"""
+note = """
+The configuration and the API refuse a second Preference sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); until 2026-10-08 only ENLP was refused, and a
+repeat of any other was packed and sent.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+"""
+
+[[requirement]]
+id = "rfc9830#2.4.2-binding-sid-once"
+section = "2.4.2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+   The Binding SID sub-TLV is OPTIONAL; it MUST NOT appear more than
+   once in the SR Policy encoding.
+"""
+note = """
+The configuration and the API refuse a second Binding SID sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); until 2026-10-08 only ENLP was refused, and a
+repeat of any other was packed and sent.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+"""
+
+[[requirement]]
+id = "rfc9830#2.4.2-binding-sid-label-not-reserved"
+section = "2.4.2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+      The Label field is validated by the SRPM but MUST NOT contain the
+      reserved MPLS label values (0-15).
+"""
+note = """
+`sr_policy._binding_sid` refuses `binding-sid mpls` with a label of 0 to 15, and one past
+twenty bits, which used to fail with struct.error when the route was packed.  Until
+2026-10-08 a reserved label was sent as given.  Both tests are of what we send: the
+sentence gives the validation of a received label to the SRPM, which exabgp is not, so a
+received reserved label is decoded and reported as it came.
+"""
+
+[[requirement]]
+id = "rfc9830#2.4.5-enlp-once"
+section = "2.4.5"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+   The ENLP sub-TLV is OPTIONAL; it MUST NOT appear more than once in
+   the SR Policy encoding.
+"""
+note = """
+The configuration and the API refuse a second ENLP sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); this one has been refused
+for longer than the others.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+"""
+
+[[requirement]]
+id = "rfc9830#2.4.6-priority-once"
+section = "2.4.6"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+   The Priority sub-TLV is OPTIONAL; it MUST NOT appear more than once
+   in the SR Policy encoding.
+"""
+note = """
+The configuration and the API refuse a second Priority sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); until 2026-10-08 only ENLP was refused, and a
+repeat of any other was packed and sent.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+"""
+
+[[requirement]]
+id = "rfc9830#2.4.7-candidate-path-name-once"
+section = "2.4.7"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+   The SR Policy Candidate Path Name sub-TLV is OPTIONAL; it MUST NOT
+   appear more than once in the SR Policy encoding.
+"""
+note = """
+The configuration and the API refuse a second Candidate Path Name sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); until 2026-10-08 only ENLP was refused, and a
+repeat of any other was packed and sent.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+"""
+
+[[requirement]]
+id = "rfc9830#2.4.8-policy-name-once"
+section = "2.4.8"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+   The SR Policy Name sub-TLV is OPTIONAL; it MUST NOT appear more than
+   once in the SR Policy encoding.
+"""
+note = """
+The configuration and the API refuse a second Policy Name sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); until 2026-10-08 only ENLP was refused, and a
+repeat of any other was packed and sent.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+"""
+
+[[requirement]]
+id = "rfc9830#2.4.4.2.4-sid-structure-at-most-128"
+section = "2.4.4.2.4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+   The total of the locator block, locator node, function, and argument
+   lengths MUST be less than or equal to 128.
+"""
+note = """
+`sr_policy._behaviour` refuses an `endpoint-behavior` whose four lengths total more than
+128 bits, which also keeps each in its octet (256 used to fail with struct.error when the
+route was packed), and a behaviour code past two octets.  Until 2026-10-08 a total of 129
+to 1020 was sent.  Both tests are of what we send: the section says nothing of a receiver,
+and `SRv6EndpointBehavior.unpack` reports a received structure as it came.
+"""

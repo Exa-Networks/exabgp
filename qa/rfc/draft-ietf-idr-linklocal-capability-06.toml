@@ -1,0 +1,225 @@
+# draft-ietf-idr-linklocal-capability-06 - Link-Local Next Hop Capability for BGP
+# https://datatracker.ietf.org/doc/html/draft-ietf-idr-linklocal-capability-06
+#
+# Every `text` below is quoted verbatim from
+# qa/rfc/text/draft-ietf-idr-linklocal-capability-06.txt and is checked against it on every
+# run of ./qa/bin/check_rfc_compliance.
+#
+# This is an Internet-Draft, not an RFC, but it is what the Link-Local Next Hop capability
+# (code 77) in src/exabgp/bgp/message/open/capability/linklocal.py and the next hop
+# encoding in src/exabgp/bgp/message/update/nlri/collection.py implement.
+#
+# Section 2 frames the rest: "all procedures described are applicable only when the
+# capability described herein has been successfully advertised by both BGP speakers".  So
+# what our configuration enables is not enough: the encoder asks Negotiated, and a route
+# whose next hop the session can not carry is withheld, with a warning, rather than raised
+# out of the encoder, which reset the session in a loop.
+#
+# exabgp does not know which interface a route is reachable through, or whether a peer is
+# directly attached: a session is taken to be one hop away unless outgoing-ttl is above one.
+
+rfc = "draft-ietf-idr-linklocal-capability-06"
+title = "Link-Local Next Hop Capability for BGP"
+url = "https://datatracker.ietf.org/doc/html/draft-ietf-idr-linklocal-capability-06"
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#3-link-local-only-is-sixteen-octets"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+If an implementation intends to send a single IPv6 Link-Local
+forwarding address in the Next Hop field of the MP_REACH_NLRI, it
+MUST set the length of the Next Hop field to 16 and include only the
+IPv6 Link-Local address in the Next Hop field.
+"""
+note = """
+Positive only: an obligation on the encoder, which no peer input can break.  When the
+session can not carry a link-local only next hop the route is withheld, which is the
+other requirements of this file.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#3-global-and-link-local-is-thirty-two-octets"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+If an implementation intends to send both a IPv6 Global and Link-
+Local forwarding address in the Next Hop field of the MP_REACH_NLRI,
+it MUST set the length of the Next Hop field to 32 and include both
+the IPv6 Global and Link-Local addresses in the Next Hop field.
+"""
+note = """
+Positive only: an obligation on the encoder, which no peer input can break.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#4-no-next-hop-not-advertised"
+section = "4"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+If, after completing these procedures, there are no IPv6 next hop
+addresses included in the next hop, the BGP route MUST not be
+advertised to its peer.
+"""
+note = """
+A link-local next hop which the session can not carry, the capability not negotiated or
+the peer more than one hop away, leaves no address: the route is not sent, and a warning
+names it.  This used to raise RuntimeError out of the encoder, which reset the session,
+which came back up with the route still in the RIB.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#4-internal-multihop-no-link-local"
+section = "4"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+If the internal peer is more than one IP hop away, the BGP
+speaker MUST NOT include a Link-Local IPv6 next hop.
+"""
+note = """
+Our own link-local address is not appended for a session with outgoing-ttl above one,
+and a link-local next hop is refused by the configuration and the API for such a
+neighbour, and withheld by the encoder when it gets there anyway.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#4-own-link-local-included"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the route is directly connected to the
+speaker, or if the interface address of the router through which
+the announced network is reachable for the speaker is the
+internal peer's address, the next hop MUST include its own Link-
+Local IPv6 address.
+"""
+note = """
+exabgp has no interface table, so "its own" is read as the global next hop being the local
+address of the session, which is what next-hop self resolves to.  The link-local address
+is the one configured as local-link-local: without it there is nothing to include.  The
+negative side: the next hop of a third party is not given our link-local address.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#4-internal-no-next-hop-not-announced"
+section = "4"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+If, after evaluating the above procedures, there are no IPv6 next
+hops included with the route, the route MUST NOT be announced to
+the remote BGP speaker.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#4-route-reflector-link-local-only"
+section = "4"
+level = "MUST NOT"
+status = "not-applicable"
+text = """
+A Route Reflector (RR)
+reflecting a route with a link-local-only next hop MUST NOT
+advertise that route to a client unless the client shares the
+same link-layer segment as the original advertiser.
+"""
+note = """
+exabgp does not reflect routes.  What it advertises comes from its configuration or from
+an API process, never from a route received from another peer, so it is never the RR
+this sentence binds.  A program which re-announces learned routes through the API is
+held to the same next hop checks as any other announcement.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#4-route-reflector-rewrite-or-withhold"
+section = "4"
+level = "MUST"
+status = "not-applicable"
+text = """
+For all
+other clients, the RR MUST either rewrite the next hop to its own
+address (next-hop-self) or consider the route ineligible for
+advertisement to that specific peer.
+"""
+note = """
+exabgp does not reflect routes, see the previous requirement.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#4-external-no-next-hop-not-announced"
+section = "4"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+If no next hops
+are included, the route MUST NOT be announced (treat-as-
+withdraw).
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#4-multihop-external-no-link-local"
+section = "4"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+Link-Local IPv6 next hops MUST NOT be included.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#4-multihop-external-needs-global"
+section = "4"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+If a Global IPv6 next hop is not included, the route MUST NOT
+be advertised to the external peer (treat-as-withdraw).
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#5-thirty-two-octets-without-the-combination"
+section = "5"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+When this combination has not
+been negotiated, a sender MUST follow the rules in Section 3 of
+[RFC8950] and encode the Next Hop as 32 octets.
+"""
+note = """
+An IPv4 route with a link-local only next hop goes out as 16 octets when both the
+Link-Local Next Hop and the Extended Next Hop Encoding capabilities were negotiated and
+the peer is one hop away.  With Extended Next Hop Encoding alone it goes out as the 32
+octets the section describes, the unspecified address then the link-local one (48, each
+behind a zero RD, for VPN-IPv4).  To a peer further than one hop it is not sent at all:
+no next hop of link scope reaches it.  It used to go out as 16 octets in every case.
+"""
+
+[[requirement]]
+id = "draft-ietf-idr-linklocal-capability-06#6-malformed-next-hop-treat-as-withdraw"
+section = "6"
+level = "MUST"
+status = "gap"
+text = """
+If the Next Hop field is malformed, the implementation MUST handle
+the malformed UPDATE message using the approach of "treat-as-
+withdraw", as described in section 7.3 of [RFC7606].
+"""
+note = """
+A 32 octet Next Hop whose second address is not link-local is decoded as it is, global
+then whatever follows, rather than being found malformed.  The length checks of
+MP_REACH_NLRI hold, so nothing is misread, but the route is not withdrawn.
+"""

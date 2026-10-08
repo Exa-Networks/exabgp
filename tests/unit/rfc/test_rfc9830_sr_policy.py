@@ -356,3 +356,123 @@ def test_an_sr_policy_withdrawal_needs_no_community() -> None:
 
     configuration = Configuration([''], text=True)
     assert configuration.partial('ipv4', SR_POLICY_ROUTE, 'withdraw'), str(configuration.error)
+
+
+# ---------------------------------------------- sections 2.4.1 to 2.4.8, one of each sub-TLV
+#
+# Preference, Binding SID, ENLP, Priority, Candidate Path Name and Policy Name each "MUST NOT
+# appear more than once in the SR Policy encoding".  The configuration refused a second ENLP
+# only; a second of any other was packed and sent.  What a receiver does with a repeat is
+# RFC 9012 13's: the first is kept, the rest disregarded, and the route is not malformed.
+
+NO_ADVERTISE_WORDS = 'community [ no-advertise ]'
+SEGMENT_LIST = 'segment-list weight 1 segment type-a mpls 16001'
+SINGLE_SUBTLVS = {
+    'rfc9830#2.4.1-preference-once': ('preference 100', 'preference 200'),
+    'rfc9830#2.4.2-binding-sid-once': ('binding-sid mpls 24000', 'binding-sid null'),
+    'rfc9830#2.4.5-enlp-once': ('enlp push-ipv4', 'enlp no-push'),
+    'rfc9830#2.4.6-priority-once': ('priority 10', 'priority 20'),
+    'rfc9830#2.4.7-candidate-path-name-once': ('candidate-path-name first', 'candidate-path-name second'),
+    'rfc9830#2.4.8-policy-name-once': ('policy-name first', 'policy-name second'),
+}
+
+
+@pytest.mark.rfc('rfc9830#2.4.1-preference-once')
+@pytest.mark.rfc('rfc9830#2.4.2-binding-sid-once')
+@pytest.mark.rfc('rfc9830#2.4.5-enlp-once')
+@pytest.mark.rfc('rfc9830#2.4.6-priority-once')
+@pytest.mark.rfc('rfc9830#2.4.7-candidate-path-name-once')
+@pytest.mark.rfc('rfc9830#2.4.8-policy-name-once')
+@pytest.mark.parametrize('first, second', list(SINGLE_SUBTLVS.values()))
+def test_a_single_instance_sub_tlv_given_once_is_configured(first: str, second: str) -> None:
+    loaded, error = configured_sr_policy(f'{SR_POLICY_ROUTE} {first} {SEGMENT_LIST} {NO_ADVERTISE_WORDS}')
+    assert loaded, error
+
+
+@pytest.mark.rfc('rfc9830#2.4.1-preference-once')
+@pytest.mark.rfc('rfc9830#2.4.2-binding-sid-once')
+@pytest.mark.rfc('rfc9830#2.4.5-enlp-once')
+@pytest.mark.rfc('rfc9830#2.4.6-priority-once')
+@pytest.mark.rfc('rfc9830#2.4.7-candidate-path-name-once')
+@pytest.mark.rfc('rfc9830#2.4.8-policy-name-once')
+@pytest.mark.parametrize('first, second', list(SINGLE_SUBTLVS.values()))
+def test_a_single_instance_sub_tlv_given_twice_is_refused(first: str, second: str) -> None:
+    loaded, error = configured_sr_policy(f'{SR_POLICY_ROUTE} {first} {SEGMENT_LIST} {second} {NO_ADVERTISE_WORDS}')
+    assert not loaded
+    assert 'only once' in error, error
+
+
+@pytest.mark.rfc('rfc9830#2.4.1-preference-once', polarity='negative')
+@pytest.mark.rfc('rfc9830#2.4.2-binding-sid-once', polarity='negative')
+@pytest.mark.rfc('rfc9830#2.4.5-enlp-once', polarity='negative')
+@pytest.mark.rfc('rfc9830#2.4.6-priority-once', polarity='negative')
+@pytest.mark.rfc('rfc9830#2.4.7-candidate-path-name-once', polarity='negative')
+@pytest.mark.rfc('rfc9830#2.4.8-policy-name-once', polarity='negative')
+def test_a_repeat_received_is_disregarded_and_the_first_kept() -> None:
+    from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import (
+        BindingSIDSubTLV,
+        CandidatePathNameSubTLV,
+        ENLPSubTLV,
+        PolicyNameSubTLV,
+        PreferenceSubTLV,
+        PrioritySubTLV,
+        SRPolicyTunnel,
+    )
+
+    pairs = [
+        (PreferenceSubTLV(preference=100), PreferenceSubTLV(preference=200)),
+        (BindingSIDSubTLV(label=24000), BindingSIDSubTLV(label=None)),
+        (ENLPSubTLV(enlp=1), ENLPSubTLV(enlp=4)),
+        (PrioritySubTLV(priority=10), PrioritySubTLV(priority=20)),
+        (CandidatePathNameSubTLV(name='first'), CandidatePathNameSubTLV(name='second')),
+        (PolicyNameSubTLV(name='first'), PolicyNameSubTLV(name='second')),
+    ]
+    for first, second in pairs:
+        once = SRPolicyTunnel(subtlvs=[first])
+        twice = SRPolicyTunnel.unpack(SRPolicyTunnel(subtlvs=[first, second]).pack_value())
+        assert twice.json() == once.json(), type(first).__name__
+
+
+# ------------------------------------------------- section 2.4.2, the label of a Binding SID
+
+
+@pytest.mark.rfc('rfc9830#2.4.2-binding-sid-label-not-reserved')
+@pytest.mark.parametrize('label', ['16', '24000', '1048575'])
+def test_a_binding_sid_label_outside_the_reserved_range_is_configured(label: str) -> None:
+    loaded, error = configured_sr_policy(
+        f'{SR_POLICY_ROUTE} binding-sid mpls {label} {SEGMENT_LIST} {NO_ADVERTISE_WORDS}'
+    )
+    assert loaded, error
+
+
+@pytest.mark.rfc('rfc9830#2.4.2-binding-sid-label-not-reserved', polarity='negative')
+@pytest.mark.parametrize('label', ['0', '3', '15', '1048576'])
+def test_a_reserved_or_too_large_binding_sid_label_is_refused(label: str) -> None:
+    """A reserved label was sent as given; 1048576 failed with struct.error when packed."""
+    loaded, error = configured_sr_policy(
+        f'{SR_POLICY_ROUTE} binding-sid mpls {label} {SEGMENT_LIST} {NO_ADVERTISE_WORDS}'
+    )
+    assert not loaded
+    assert 'binding-sid' in error, error
+
+
+# --------------------------------------------- section 2.4.4.2.4, the structure of an SRv6 SID
+
+SRV6_SEGMENT = 'segment-list weight 1 segment type-b srv6 fc00::1 endpoint-behavior 65 {lengths}'
+
+
+@pytest.mark.rfc('rfc9830#2.4.4.2.4-sid-structure-at-most-128')
+@pytest.mark.parametrize('lengths', ['32 16 16 0', '64 32 16 16', '128 0 0 0'])
+def test_an_srv6_sid_structure_of_at_most_128_bits_is_configured(lengths: str) -> None:
+    segment = SRV6_SEGMENT.format(lengths=lengths)
+    loaded, error = configured_sr_policy(f'{SR_POLICY_ROUTE} {segment} {NO_ADVERTISE_WORDS}')
+    assert loaded, error
+
+
+@pytest.mark.rfc('rfc9830#2.4.4.2.4-sid-structure-at-most-128', polarity='negative')
+@pytest.mark.parametrize('lengths', ['64 32 16 17', '129 0 0 0', '255 255 255 255', '256 0 0 0'])
+def test_an_srv6_sid_structure_longer_than_128_bits_is_refused(lengths: str) -> None:
+    segment = SRV6_SEGMENT.format(lengths=lengths)
+    loaded, error = configured_sr_policy(f'{SR_POLICY_ROUTE} {segment} {NO_ADVERTISE_WORDS}')
+    assert not loaded
+    assert '128' in error, error

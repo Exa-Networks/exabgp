@@ -450,10 +450,12 @@ IPV6_HOP_LIMIT_OFFSET = 7
 def save_syn(io: socket.socket) -> None:
     """Ask the kernel to keep the headers of the SYN of every connection this socket accepts.
 
-    Linux only. Elsewhere, or on a kernel too old for it (before 4.2), the first segment of
-    an accepted session is not checked against the minimum TTL, and every later one still is.
+    Linux only. Elsewhere the listening socket carries the minimum when every neighbour
+    behind it asks for the same one (Listener.install_shared_minimum). On a kernel too old
+    for it (before 4.2) the first segment of an accepted session is not checked against
+    the minimum TTL, and every later one still is.
     """
-    if platform.system() != 'Linux':
+    if not syn_is_saved():
         return
     try:
         io.setsockopt(socket.IPPROTO_TCP, TCP_SAVE_SYN, 1)
@@ -461,9 +463,37 @@ def save_syn(io: socket.socket) -> None:
         log.debug(lazymsg('listener.save_syn.unavailable error={error}', error=errstr(exc)), 'network')
 
 
+def syn_is_saved() -> bool:
+    """The platform keeps the SYN of an accepted connection for us to check (save_syn)."""
+    return platform.system() == 'Linux'
+
+
+def listener_minimum_needed() -> bool:
+    """The kernel can drop below a minimum TTL, but the SYN is not kept to check it from.
+
+    FreeBSD: only a minimum on the listening socket checks the handshake and what arrives
+    before the accepted socket is given its neighbour's (RFC 5082 3).
+    """
+    return not syn_is_saved() and ip_minttl() is not None
+
+
+def set_listening_minimum(io: socket.socket, afi: AFI, minimum: int) -> None:
+    """Install, or with 0 clear, the minimum TTL (hop limit) of a listening socket."""
+    assert 0 <= minimum <= 255, 'a TTL is one octet'
+    option = ip_minttl()
+    assert option is not None, 'only called where the platform has the option (listener_minimum_needed)'
+    try:
+        if afi == AFI.ipv6:
+            io.setsockopt(socket.IPPROTO_IPV6, getattr(socket, 'IPV6_MINHOPCOUNT', 73), minimum)
+            return
+        io.setsockopt(socket.IPPROTO_IP, option, minimum)
+    except OSError as exc:
+        raise TTLError(f'could not set the minimum TTL {minimum} of a listening socket ({errstr(exc)})') from None
+
+
 def saved_syn_ttl(io: socket.socket) -> int | None:
     """The TTL (or hop limit) the SYN of this accepted connection arrived with, if it was kept."""
-    if platform.system() != 'Linux':
+    if not syn_is_saved():
         return None
     try:
         headers = io.getsockopt(socket.IPPROTO_TCP, TCP_SAVED_SYN, SAVED_SYN_MAX_BYTES)

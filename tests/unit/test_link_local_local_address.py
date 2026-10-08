@@ -133,20 +133,20 @@ def _negotiated(linklocal_nexthop: bool, is_multihop: bool) -> Negotiated:
     return negotiation.negotiated((), linklocal_nexthop=linklocal_nexthop, session=session)
 
 
-def test_encoding_a_link_local_next_hop_without_the_capability_is_a_bug() -> None:
-    collection = MPNLRICollection([], {}, AFI.ipv6, SAFI.unicast)
+def test_a_link_local_next_hop_without_the_negotiated_capability_is_withheld() -> None:
+    # the peer may leave the capability out of its OPEN whatever our configuration says,
+    # so this is not our bug: the route is not sent, the session is not reset
     nexthop = IPv6.from_string('fe80::2')
+    why = MPNLRICollection._next_hop_refused(nexthop, (AFI.ipv6, SAFI.unicast), _negotiated(False, False))
 
-    with pytest.raises(RuntimeError, match='link-local next-hop capability'):
-        collection._encode_nexthop(nexthop, (AFI.ipv6, SAFI.unicast), _negotiated(False, False))
+    assert 'link-local next hop capability' in why
 
 
-def test_encoding_a_link_local_next_hop_for_a_multihop_peer_is_a_bug() -> None:
-    collection = MPNLRICollection([], {}, AFI.ipv6, SAFI.unicast)
+def test_a_link_local_next_hop_for_a_multihop_peer_is_withheld() -> None:
     nexthop = IPv6.from_string('fe80::2')
+    why = MPNLRICollection._next_hop_refused(nexthop, (AFI.ipv6, SAFI.unicast), _negotiated(True, True))
 
-    with pytest.raises(RuntimeError, match='multihop'):
-        collection._encode_nexthop(nexthop, (AFI.ipv6, SAFI.unicast), _negotiated(True, True))
+    assert 'multihop' in why
 
 
 def test_a_global_next_hop_is_untouched_on_both_paths() -> None:

@@ -30,6 +30,8 @@ class KA:
     def __init__(self, session: Any, proto: 'Protocol') -> None:
         self._proto = proto
         self.send_timer: SendTimer = SendTimer(session, proto.negotiated.holdtime)
+        # RFC 4271 8.2.2: what the session sends restarts it, the UPDATEs included
+        proto.keepalive_timer = self.send_timer
 
     async def send_if_needed(self) -> bool:
         """Send keepalive if the timer indicates one is needed.

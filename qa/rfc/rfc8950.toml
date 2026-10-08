@@ -50,3 +50,43 @@ SAFI 1, 2, 4 or 128 whose next hop is IPv6 unless that <AFI, SAFI> negotiated an
 hop.  The configuration refuses such a route before it is sent; this is what holds for an
 API announcement, or a peer which withheld the capability.
 """
+
+[[requirement]]
+id = "rfc8950#4-triple-says-what-may-be-advertised"
+section = "4"
+level = "MAY"
+status = "required"
+polarity = "both"
+text = """
+each triple <NLRI AFI, NLRI SAFI, Nexthop AFI> indicates that
+the NLRI of <NLRI AFI / NLRI SAFI> may be advertised with a
+next-hop address belonging to the network-layer protocol of
+Nexthop AFI.
+"""
+note = """
+A triple is a statement by the speaker which sends it about what it accepts, so the two
+directions of a session are decided by different OPENs.  What the peer may send us is
+what our OPEN offered, `Negotiated.nexthop_receive`, and the MP_REACH_NLRI decoder uses
+that.  It used the intersection of both OPENs, so a peer which did not advertise a triple
+of its own had the IPv6 next hops we asked for refused with a NOTIFICATION.  What we send
+keeps the intersection, `Negotiated.nexthop`: the peer's triple is what section 4 asks
+for, and ours is the operator's consent to an IPv6 next hop for the family.
+"""
+
+[[requirement]]
+id = "rfc8950#4-capability-fields"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+The fields
+in the Capabilities Optional Parameter MUST be set as follows:
+"""
+note = """
+The value is a list of <NLRI AFI, NLRI SAFI, Nexthop AFI> triples, one per family the
+speaker accepts an IPv6 next hop for.  A neighbour with `nexthop` enabled and no triple
+to offer (none configured, only some outside section 4's list, or a multisession
+session for a family without one) sent the capability with a value of zero octets,
+which says nothing.  It is now left out.  Positive only: an obligation on our OPEN.
+"""

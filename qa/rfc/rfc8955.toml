@@ -323,10 +323,12 @@ The Type 12 component bitmask MUST be encoded as
 single octet bitmask (bitmask_op len=00).
 """
 note = """
-Held, but by accident rather than by construction: `FlowFragment` derives from
-`IOperationByteShort`, which would emit two octets for a value of 256 or more, and what
-keeps it to one is that every name `Fragment` defines is 0x0F or below.  The negative test
-is therefore the one worth having, because it pins the property the class does not state.
+`FlowFragment` derives from `IOperationByteShort`, which emits two octets for a value of
+256 or more, so the single octet is held by what the component accepts.  Until 2026-10-08
+it accepted any number: every name `Fragment` defines is 0x0F or below, but a number was
+taken as it was given, and `fragment 256` went out as 0C 90 0100.  Its converter,
+`_fragment_named`, now refuses any bit the family does not define, so the value is at most
+0x0F and always one octet.
 """
 
 [[requirement]]
@@ -341,7 +343,9 @@ decoding
 """
 note = """
 The four high bits of the fragment bitmask value, not of the operator octet.  exabgp
-encodes them as zero, since `Fragment` defines nothing above 0x0F.  They were not ignored
+encodes them as zero: the configuration and the API refuse a fragment value setting one
+(`fragment 255` was sent as 0C 80 FF until 2026-10-08, a name was never the problem, a
+number was).  They were not ignored
 on decoding: `Fragment.named` reports an unknown bit rather than dropping it, so a value
 of 0xF5 was rendered as `dont-fragment+first-fragment+unknown fragment type 245`.  The
 decoder of `FlowFragment` now masks the value with the four bits this section defines, so
@@ -450,7 +454,11 @@ Whenever an UPDATE changes the peer's IPv4 or IPv6 unicast routes, `validate_flo
 every flow of the peer again: one held in the adj-rib-in which is no longer feasible is
 removed and held back, one held back which has become feasible is put in the adj-rib-in,
 and each change is told to the API as an UPDATE of its own (Update.from_collection) after
-the one which caused it. A flow the peer withdraws while held back is forgotten.
+the one which caused it. A flow the peer withdraws while held back is forgotten. A flow
+sent again which is not feasible replaces the one in the adj-rib-in (RFC 4271 9): that one
+is removed and told to the API as withdrawn, and revalidation never puts it back over the
+newer one held. A flow installed or removed by revalidation counts against the family's
+prefix-limit as one the UPDATE handler installs or withdraws (RFC 4486 4).
 """
 
 # ============================================================ section 7, actions

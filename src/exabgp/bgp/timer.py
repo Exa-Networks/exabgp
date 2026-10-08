@@ -107,7 +107,19 @@ class SendTimer:
             self.last_print = int(now)
 
         if left <= 0:
-            self.last_sent = now
-            self.interval_seconds = self._next_interval()
+            self.restart()
             return True
         return False
+
+    def restart(self) -> None:
+        """A KEEPALIVE or an UPDATE was sent: the next keepalive is a new jittered interval away.
+
+        RFC 4271 8.2.2: "Each time the local system sends a KEEPALIVE or UPDATE message, it
+        restarts its KeepaliveTimer, unless the negotiated HoldTime value is zero." Section
+        10 draws a new jitter factor each time a timer is set.
+        """
+        if not self.keepalive:
+            return
+        self.last_sent = time.time()
+        self.interval_seconds = self._next_interval()
+        assert self.interval_seconds >= KEEPALIVE_INTERVAL_MINIMUM_SECONDS, 'never more than one keepalive a second'

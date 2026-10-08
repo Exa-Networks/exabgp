@@ -379,5 +379,8 @@ note = """
 UpdateHandler._end_of_rib removes the routes of the family still marked stale from the
 restart (IncomingRIB.end_restart) when the peer's End-of-RIB for it arrives, and tells the
 API processes as a withdrawal. Before the marker nothing stale is removed; a route the peer
-sends again stops being stale.
+sends again stops being stale. A family the new session did not negotiate cannot have its
+End-of-RIB (one for it is ignored), so its stale routes are removed when the session is
+established, even when the new Graceful Restart capability names it with the Forwarding
+State bit (Peer._resume_incoming).
 """

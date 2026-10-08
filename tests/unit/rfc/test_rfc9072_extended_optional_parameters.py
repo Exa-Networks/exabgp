@@ -128,8 +128,12 @@ def test_type_255_as_the_non_ext_op_type_is_not_a_parameter() -> None:
 @pytest.mark.rfc('rfc9072#2-non-ext-op-len-not-zero', polarity='negative')
 def test_a_length_of_zero_is_no_optional_parameters_even_before_type_255() -> None:
     """A peer which sets the length octet to 0 has sent no Optional Parameters: the octet
-    after it is only inspected when the length is non-zero."""
-    assert not Capabilities.unpack(bytes([0]) + extended(EXTENDED, extended_parameter(CAPABILITIES, CAPABILITY)))
+    after it is only inspected when the length is non-zero.  What follows is then padding,
+    which RFC 4271 4.1 does not allow."""
+    assert not Capabilities.unpack(bytes([0]))
+    with pytest.raises(Notify) as caught:
+        Capabilities.unpack(bytes([0]) + extended(EXTENDED, extended_parameter(CAPABILITIES, CAPABILITY)))
+    assert (caught.value.code, caught.value.subcode) == (2, 0)
 
 
 # ------------------------------------------------------------------------ what we send

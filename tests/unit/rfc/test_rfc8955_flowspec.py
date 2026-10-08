@@ -171,10 +171,13 @@ def as_path(*asns: int) -> bytes:
     return path_attribute(WELL_KNOWN, Attribute.CODE.AS_PATH, segment)
 
 
-def flow_announce(components: bytes, path: tuple[int, ...] = (PEER_AS,)) -> bytes:
-    """An UPDATE payload announcing one IPv4 flow specification in MP_REACH_NLRI."""
+def flow_announce(components: bytes, path: tuple[int, ...] = (PEER_AS,), originator: bytes = b'') -> bytes:
+    """An UPDATE payload announcing one IPv4 flow specification in MP_REACH_NLRI, with an
+    ORIGINATOR_ID when given."""
     reach = mp_reach(1, 133, b'', nlri(components))
     attributes = path_attribute(WELL_KNOWN, Attribute.CODE.ORIGIN, bytes([0])) + as_path(*path)
+    if originator:
+        attributes += path_attribute(OPTIONAL, Attribute.CODE.ORIGINATOR_ID, originator)
     attributes += path_attribute(OPTIONAL, Attribute.CODE.MP_REACH_NLRI, reach)
     return pack('!H', 0) + pack('!H', len(attributes)) + attributes
 
@@ -759,16 +762,32 @@ def test_every_fragment_bitmask_we_encode_uses_a_single_octet(name: str) -> None
     assert len(packed) == 2
 
 
-@pytest.mark.rfc('rfc8955#4.2.2.12-fragment-single-octet', polarity='negative')
-def test_no_fragment_value_could_need_a_second_octet() -> None:
-    """`FlowFragment` is an `IOperationByteShort` and would widen at 256.
+def api_fragment(afi_keyword: str, match: str, fragment: str) -> tuple[bytes, str]:
+    """The packed NLRI of an API flow route matching `fragment`, or the error refusing it."""
+    configuration = Configuration([''], text=True)
+    if not configuration.partial(afi_keyword, f'flow {match} fragment {fragment} discard', 'announce'):
+        return b'', str(configuration.error)
+    (route,) = configuration.pop_routes()
+    return bytes(route.nlri.pack_nlri(Negotiated.UNSET)), ''
 
-    The class does not state the single octet rule, so this is the test which pins it:
-    the four bits this document defines are the only ones the grammar can produce.
-    """
-    assert max(Fragment.codes.values()) <= 0x0F
-    with pytest.raises(ValueError):
-        Fragment.named('reassembled')
+
+@pytest.mark.rfc('rfc8955#4.2.2.12-fragment-single-octet')
+@pytest.mark.rfc('rfc8955#4.2.2.12-fragment-reserved-bits-zero')
+@pytest.mark.parametrize('fragment, value', [('1', 0x01), ('8', 0x08), ('15', 0x0F), ('0x0f', 0x0F)])
+def test_a_fragment_given_as_a_number_of_defined_bits_is_one_octet(fragment: str, value: int) -> None:
+    packed, error = api_fragment('ipv4', 'destination 10.0.0.0/8', fragment)
+    assert error == ''
+    assert packed.endswith(bytes([0x0C, EOL, value]))
+
+
+@pytest.mark.rfc('rfc8955#4.2.2.12-fragment-single-octet', polarity='negative')
+@pytest.mark.rfc('rfc8955#4.2.2.12-fragment-reserved-bits-zero', polarity='negative')
+@pytest.mark.parametrize('fragment', ['16', '255', '256', '0x10', 'is-fragment+16'])
+def test_a_fragment_with_a_reserved_bit_is_refused(fragment: str) -> None:
+    """`fragment 255` went out as 0C 80 FF, and `fragment 256` as 0C 90 0100, two octets."""
+    packed, error = api_fragment('ipv4', 'destination 10.0.0.0/8', fragment)
+    assert packed == b''
+    assert 'reserved' in error, error
 
 
 @pytest.mark.rfc('rfc8955#4.2.2.12-fragment-reserved-bits-zero')
@@ -1243,6 +1262,93 @@ def test_rule_b_is_judged_against_the_longest_covering_route_not_any_covering_ro
     assert held(ctx, IPV4_FLOW) == ['flow destination-ipv4 192.0.2.0/24']
 
 
+# ------------------------------------------- a flow sent again replaces the one held (RFC 4271 9)
+
+
+def pending(ctx: Any, family: FamilyTuple) -> list[str]:
+    """The flows of one family held back as not feasible, with their attributes."""
+    return sorted(f'{route.nlri}{route.attributes}' for route in ctx.neighbor.rib.incoming.pending_flows(family))
+
+
+@pytest.mark.rfc('rfc4271#9-new-route-replaces-the-older')
+def test_a_flow_sent_again_infeasible_replaces_the_feasible_one_and_the_api_is_told() -> None:
+    """RFC 4271 9: the new route replaces the older, so an infeasible one takes the older
+    out of the adj-rib-in rather than leaving it in service beside the one held back."""
+    ctx = peer_context()
+    receive(ctx, unicast_announce(), flow_announce(DESTINATION + PORT_25), negotiated=ibgp_session())
+    assert held(ctx, IPV4_FLOW) == ['flow destination-ipv4 192.0.2.0/24 port =25']
+
+    told = receive(
+        ctx, flow_announce(DESTINATION + PORT_25, originator=bytes([10, 0, 0, 9])), negotiated=ibgp_session()
+    )
+
+    assert held(ctx, IPV4_FLOW) == []
+    assert [str(nlri) for change in told for nlri in change.withdraws] == [
+        'flow destination-ipv4 192.0.2.0/24 port =25'
+    ]
+    assert pending(ctx, IPV4_FLOW) == [
+        'flow destination-ipv4 192.0.2.0/24 port =25 origin igp as-path [ 65002 ] originator-id 10.0.0.9'
+    ]
+
+
+@pytest.mark.rfc('rfc4271#9-new-route-replaces-the-older')
+def test_revalidation_never_puts_back_an_older_flow_than_the_one_held() -> None:
+    """The peer's replacement is the flow which comes back when the unicast route does."""
+    ctx = peer_context()
+    receive(ctx, unicast_announce(), flow_announce(DESTINATION + PORT_25), negotiated=ibgp_session())
+    receive(ctx, flow_announce(DESTINATION + PORT_25, originator=bytes([10, 0, 0, 9])), negotiated=ibgp_session())
+
+    receive(ctx, unicast_withdraw(), negotiated=ibgp_session())
+
+    assert pending(ctx, IPV4_FLOW) == [
+        'flow destination-ipv4 192.0.2.0/24 port =25 origin igp as-path [ 65002 ] originator-id 10.0.0.9'
+    ]
+
+
+@pytest.mark.rfc('rfc4271#9-new-route-replaces-the-older')
+def test_a_flow_sent_again_feasible_replaces_the_one_held_back() -> None:
+    ctx = peer_context()
+    receive(ctx, flow_announce(DESTINATION + PORT_25, path=(PEER_AS, OTHER_AS)), negotiated=ibgp_session())
+    assert pending(ctx, IPV4_FLOW) != []
+
+    receive(ctx, unicast_announce(), flow_announce(DESTINATION + PORT_25), negotiated=ibgp_session())
+
+    assert pending(ctx, IPV4_FLOW) == []
+    (route,) = ctx.neighbor.rib.incoming.cached_routes([IPV4_FLOW])
+    assert str(route.attributes) == ' origin igp as-path [ 65002 ]'
+
+
+# ------------------------------------------- RFC 4486 4, the prefix-limit of flows held back
+
+
+@pytest.mark.rfc('rfc4486#4-maximum-prefixes-must-send-subcode-one')
+def test_a_flow_which_becomes_feasible_past_the_limit_ends_the_session() -> None:
+    ctx = peer_context()
+    ctx.neighbor.prefix_limit = {IPV4_FLOW: 1}
+    receive(ctx, flow_announce(DESTINATION + PORT_25), flow_announce(DESTINATION + PROTOCOL_TCP))
+    assert held(ctx, IPV4_FLOW) == []
+
+    with pytest.raises(Notify) as caught:
+        receive(ctx, unicast_announce())
+
+    assert (caught.value.code, caught.value.subcode) == (6, 1)
+    assert caught.value.data == pack('!HBI', 1, 133, 1)
+
+
+@pytest.mark.rfc('rfc4486#4-maximum-prefixes-must-send-subcode-one', polarity='negative')
+def test_a_flow_held_back_is_not_counted_and_one_no_longer_feasible_frees_its_place() -> None:
+    ctx = peer_context()
+    ctx.neighbor.prefix_limit = {IPV4_FLOW: 1}
+    receive(ctx, unicast_announce(), flow_announce(DESTINATION + PORT_25))
+    receive(ctx, unicast_withdraw())
+    assert held(ctx, IPV4_FLOW) == []
+
+    other = bytes([0x01, 0x18, 198, 51, 100])  # destination 198.51.100.0/24
+    receive(ctx, unicast_announce(OTHER_PREFIX), flow_announce(other))
+
+    assert held(ctx, IPV4_FLOW) == ['flow destination-ipv4 198.51.100.0/24']
+
+
 # --------------------------------------- 7.4 the three encodings of the rt-redirect action
 
 
@@ -1295,3 +1401,43 @@ def test_an_rt_redirect_whose_value_does_not_fit_its_encoding_is_refused(word: s
 
     with pytest.raises(ValueError):
         extended_community(word)
+
+
+# ==================================================== section 7.4, three route target encodings
+#
+# "This Extended Community allows 3 different encodings formats for the route-target": 0x8008
+# (2-octet AS) and 0x8208 (4-octet AS) are different communities even for the same AS and
+# number.  The text of 0x8208 for an AS below 65536 was `redirect:100:5`, which reads back as
+# 0x8008; it carries the trailing L which asks for the four octet form, as configuration does.
+# Section 7.4 has no RFC 2119 keyword, so there is no ledger entry to mark.
+
+
+@pytest.mark.parametrize(
+    'packed, text',
+    [
+        ('8208000000640005', 'redirect:100L:5'),
+        ('820800010d880005', 'redirect:69000:5'),
+        ('8008006400000005', 'redirect:100:5'),
+    ],
+)
+def test_a_redirect_community_reads_back_as_the_encoding_it_came_from(packed: str, text: str) -> None:
+    from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
+    from exabgp.configuration.grammar.types.bgp import extended_community
+
+    decoded = ExtendedCommunity.unpack_attribute(bytes.fromhex(packed), None)
+    assert repr(decoded) == text
+    assert bytes(extended_community(text).pack_attribute(Negotiated.UNSET)).hex() == packed
+
+
+@pytest.mark.parametrize(
+    'target, packed',
+    [('100L:5', '8208000000640005'), ('100:5', '8008006400000005'), ('69000:5', '820800010d880005')],
+)
+def test_the_flow_redirect_action_reads_the_four_octet_as_form(target: str, packed: str) -> None:
+    configuration = Configuration([''], text=True)
+    assert configuration.partial('ipv4', f'flow destination 10.0.0.0/8 redirect {target}', 'announce'), str(
+        configuration.error
+    )
+    (route,) = configuration.pop_routes()
+    communities = route.attributes[Attribute.CODE.EXTENDED_COMMUNITY].communities
+    assert [bytes(community.community).hex() for community in communities] == [packed]

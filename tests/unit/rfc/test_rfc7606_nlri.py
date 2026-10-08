@@ -351,6 +351,63 @@ def test_mp_attributes_at_or_above_their_minimum_are_accepted() -> None:
     assert withdrawn_routes(parsed) == ['::/64'], 'an MP_UNREACH of legal length was refused'
 
 
+# An empty MP attribute, and one whose Extended Length bit is set over a length of zero.
+# Zero is one more length below the minimum, so the answer is the same 3/9 as for four
+# octets. It used to be caught first by the zero length rule every attribute shares, which
+# made it treat-as-withdraw: beside legacy NLRI the session stayed up, the IPv4 route was
+# withdrawn, and whatever the MP attribute was meant to carry was never looked at.
+EMPTY_MP_ATTRIBUTES = [
+    ('an empty MP_REACH_NLRI', bytes([OPTIONAL, CODE.MP_REACH_NLRI, 0])),
+    ('an empty MP_UNREACH_NLRI', bytes([OPTIONAL, CODE.MP_UNREACH_NLRI, 0])),
+    (
+        'an empty extended length MP_REACH_NLRI',
+        bytes([OPTIONAL | Attribute.Flag.EXTENDED_LENGTH, CODE.MP_REACH_NLRI, 0, 0]),
+    ),
+]
+
+
+@pytest.mark.rfc('rfc7606#5.3-mp-minimum-attribute-length')
+@pytest.mark.rfc('rfc7606#3j-session-reset-when-nlri-cannot-be-parsed')
+@pytest.mark.parametrize('nlri', [IPV4_PREFIX, b''], ids=['with-legacy-nlri', 'alone'])
+@pytest.mark.parametrize('name,empty', EMPTY_MP_ATTRIBUTES, ids=[_[0] for _ in EMPTY_MP_ATTRIBUTES])
+def test_an_empty_mp_attribute_is_an_optional_attribute_error(name: str, empty: bytes, nlri: bytes) -> None:
+    """3/9 whatever else the UPDATE holds, with the attribute as the Data field (RFC 4271 6.3)."""
+    with pytest.raises(Notify) as raised:
+        parse(update(empty + MANDATORY, nlri=nlri), session())
+
+    assert (raised.value.code, raised.value.subcode) == (UPDATE_MESSAGE_ERROR, OPTIONAL_ATTRIBUTE_ERROR), (
+        f'{name} gave {raised.value.code}/{raised.value.subcode}'
+    )
+    assert raised.value.data == empty, f'{name}: the Data field was {raised.value.data.hex()}'
+
+
+# An MP_REACH_NLRI which claims forty octets where four are left, and one whose header is
+# cut after the flag, the type and the first octet of an extended length. Either way the
+# NLRI it carries cannot be read, so RFC 7606 3 (j) puts the session reset back, which the
+# treat-as-withdraw of section 4 otherwise standing for an overrun does not reach.
+OVERRUNNING_MP_REACH = bytes([OPTIONAL, CODE.MP_REACH_NLRI, 40]) + pack('!HB', 2, 1) + bytes([16])
+TRUNCATED_MP_REACH_HEADER = bytes([OPTIONAL | Attribute.Flag.EXTENDED_LENGTH, CODE.MP_REACH_NLRI, 0])
+CUT_MP_ATTRIBUTES = [
+    ('an MP_REACH_NLRI past the end of the attributes', OVERRUNNING_MP_REACH),
+    ('an MP_REACH_NLRI with a truncated header', TRUNCATED_MP_REACH_HEADER),
+    ('an MP_UNREACH_NLRI past the end of the attributes', bytes([OPTIONAL, CODE.MP_UNREACH_NLRI, 9, 0, 2])),
+]
+
+
+@pytest.mark.rfc('rfc7606#3j-session-reset-when-nlri-cannot-be-parsed')
+@pytest.mark.parametrize('name,cut', CUT_MP_ATTRIBUTES, ids=[_[0] for _ in CUT_MP_ATTRIBUTES])
+def test_an_mp_attribute_which_cannot_be_framed_resets_the_session(name: str, cut: bytes) -> None:
+    """Beside legacy NLRI too: withdrawing only the IPv4 route kept the session on an MP attribute
+    nobody could read."""
+    with pytest.raises(Notify) as raised:
+        parse(update(MANDATORY + cut), session())
+
+    assert (raised.value.code, raised.value.subcode) == (UPDATE_MESSAGE_ERROR, OPTIONAL_ATTRIBUTE_ERROR), (
+        f'{name} gave {raised.value.code}/{raised.value.subcode}'
+    )
+    assert raised.value.data == cut, f'{name}: the Data field was {raised.value.data.hex()}'
+
+
 # ------------------------------------------------------------------ 5.4
 
 

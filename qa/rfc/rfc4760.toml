@@ -103,6 +103,13 @@ the MP_REACH_NLRI attribute, SHOULD NOT carry the NEXT_HOP attribute.
 If such a message contains the NEXT_HOP attribute, the BGP speaker
 that receives the message SHOULD ignore this attribute.
 """
+note = """
+We send none (UpdateCollection.messages).  One we receive is ignored even when RFC 7606
+7.3 would call it malformed: UpdateCollection._with_next_hop_decided withdraws for a bad
+NEXT_HOP only when the UPDATE has an NLRI field for it to apply to, or no reachable NLRI
+at all (RFC 7606 5.2).  It used to withdraw the MP_REACH_NLRI routes, which carry their
+own next hop.
+"""
 
 [[requirement]]
 id = "rfc4760#3-no-duplicate-prefix-across-fields"

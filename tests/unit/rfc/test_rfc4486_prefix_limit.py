@@ -26,6 +26,7 @@ from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI, UpdateCollection
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
@@ -307,3 +308,77 @@ def test_a_limit_lowered_by_a_reload_below_what_the_peer_holds_ends_the_session_
 
     assert (caught.value.code, caught.value.subcode) == (CEASE, MAXIMUM_NUMBER_OF_PREFIXES_REACHED)
     assert caught.value.data == pack('!HBI', int(AFI.ipv4), int(SAFI.unicast), 1)
+
+
+# =========================================================== what is counted, and in which order
+
+
+def path(prefix: str, identifier: int) -> INET:
+    address, mask = prefix.split('/')
+    return INET.from_cidr(
+        CIDR.create_cidr(IP.pton(address), int(mask)), AFI.ipv4, SAFI.unicast, PathInfo.make_from_integer(identifier)
+    )
+
+
+@pytest.mark.rfc('rfc4486#4-maximum-prefixes-must-send-subcode-one', polarity='negative')
+def test_the_paths_of_one_prefix_count_as_one_address_prefix() -> None:
+    """ADD-PATH: the section counts address prefixes, not the paths a peer sends for each."""
+    incoming = IncomingRIB(True, {IPV4_UNICAST})
+
+    assert incoming.count_prefix(path('10.0.0.0/24', 1)) == 1
+    assert incoming.count_prefix(path('10.0.0.0/24', 2)) == 1
+    assert incoming.count_prefix(path('10.0.1.0/24', 1)) == 2
+
+
+def test_a_prefix_is_counted_until_its_last_path_is_withdrawn() -> None:
+    incoming = IncomingRIB(True, {IPV4_UNICAST})
+    incoming.count_prefix(path('10.0.0.0/24', 1))
+    incoming.count_prefix(path('10.0.0.0/24', 2))
+
+    incoming.uncount_prefix(path('10.0.0.0/24', 1))
+    assert incoming.count_prefix(path('10.0.1.0/24', 1)) == 2, 'path 2 still holds 10.0.0.0/24'
+
+    incoming.uncount_prefix(path('10.0.0.0/24', 2))
+    assert incoming.count_prefix(path('10.0.2.0/24', 1)) == 2
+
+
+def test_a_stale_path_removed_releases_its_prefix() -> None:
+    """RFC 4724 4.2: a restart ending removes stale routes, which the count must release."""
+    incoming = IncomingRIB(False, {IPV4_UNICAST})
+    incoming.count_prefix(path('10.0.0.0/24', 1))
+    incoming.count_prefix(path('10.0.0.0/24', 2))
+    incoming.retain_for_restart([IPV4_UNICAST])
+
+    incoming.end_restart(IPV4_UNICAST)
+
+    assert incoming.count_prefix(path('10.0.1.0/24', 1)) == 1
+
+
+@pytest.mark.rfc('rfc4486#4-maximum-prefixes-must-send-subcode-one', polarity='negative')
+def test_a_peer_at_its_limit_replacing_a_prefix_in_one_update_is_not_cut_off() -> None:
+    """RFC 4271 9: the withdrawn routes of an UPDATE are processed before its NLRI."""
+    ctx = context({IPV4_UNICAST: 1})
+    receive(ctx, update(['10.0.0.0/24']))
+
+    receive(ctx, update(['10.0.1.0/24'], ['10.0.0.0/24']))
+
+    assert [str(route.nlri) for route in ctx.neighbor.rib.incoming.cached_routes([IPV4_UNICAST])] == ['10.0.1.0/24']
+
+
+@pytest.mark.asyncio
+async def test_the_asynchronous_handler_processes_withdrawals_first_too() -> None:
+    ctx = context({IPV4_UNICAST: 1})
+    handler = UpdateHandler()
+
+    await handler.handle_async(ctx, update(['10.0.0.0/24']))
+    await handler.handle_async(ctx, update(['10.0.1.0/24'], ['10.0.0.0/24']))
+
+    assert [str(route.nlri) for route in ctx.neighbor.rib.incoming.cached_routes([IPV4_UNICAST])] == ['10.0.1.0/24']
+
+
+def test_a_prefix_both_withdrawn_and_announced_in_one_update_is_announced() -> None:
+    """RFC 4271 4.3: treated as though the WITHDRAWN ROUTES do not contain the prefix."""
+    ctx = context({})
+    receive(ctx, update(['10.0.0.0/24'], ['10.0.0.0/24']))
+
+    assert [str(route.nlri) for route in ctx.neighbor.rib.incoming.cached_routes([IPV4_UNICAST])] == ['10.0.0.0/24']

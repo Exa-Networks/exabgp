@@ -681,6 +681,8 @@ class Reactor:
             listening = False
 
         self.listener.close_unwanted(wanted)
+        # RFC 5082 3 where the SYN is not kept: the neighbours behind a socket decide its minimum
+        self.listener.install_shared_minimum(list(self.configuration.neighbors.values()))
         return listening
 
     def reload(self) -> bool:

@@ -147,6 +147,10 @@ class Type1SessionTransformedRoute(MUP):
         afi: AFI,
     ) -> 'Type1SessionTransformedRoute':
         """Factory method to create T1ST from semantic parameters."""
+        # draft-mpmz-bess-mup-safi-05 3.1.1 and 3.1.3: the configuration refuses anything else
+        address_bits = 32 if afi == AFI.ipv4 else 128
+        assert len(prefix_ip.pack_ip()) * 8 == address_bits, 'the prefix is of the family of the route'
+        assert 0 <= prefix_ip_len <= address_bits, 'a prefix length is no longer than its address'
         offset = prefix_ip_len // 8
         remainder = prefix_ip_len % 8
         if remainder != 0:

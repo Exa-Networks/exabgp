@@ -253,6 +253,14 @@ class NLRI(Family):
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         raise Exception('unimplemented in NLRI children class')
 
+    def pack_withdraw(self, negotiated: Negotiated) -> Buffer:
+        """The NLRI as MP_UNREACH_NLRI carries it: the announced encoding, unless a family says otherwise.
+
+        RFC 8277 2.4 is the family which does: a labelled withdrawal is one Compatibility
+        field and the prefix, whatever label stack the route was announced with.
+        """
+        return self.pack_nlri(negotiated)
+
     def json(self, announced: bool = True, compact: bool = False) -> str:
         """Serialize NLRI to JSON format. Must be implemented by subclasses.
 

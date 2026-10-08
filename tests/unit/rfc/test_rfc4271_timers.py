@@ -26,7 +26,9 @@ from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, RouterID, Versi
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.timer import ReceiveTimer, SendTimer
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.rib import RIB
+from tests import negotiation
 
 HOLD_TIMER_EXPIRED = 4
 UNSPECIFIC = 0
@@ -252,3 +254,97 @@ async def test_waiting_too_long_for_the_open_is_hold_timer_expired() -> None:
         theirs.close()
 
     assert (caught.value.code, caught.value.subcode) == (HOLD_TIMER_EXPIRED, UNSPECIFIC)
+
+
+# ------------------------------------------- 8.2.2 sending an UPDATE restarts the KeepaliveTimer
+
+
+def steady_sender(hold_time: int) -> SendTimer:
+    """A timer whose jitter factor is 1.0, so its keepalive falls a whole interval after a restart."""
+    return SendTimer(session, HoldTime(hold_time), jitter=lambda: 1.0)
+
+
+@pytest.mark.rfc('rfc4271#8.2.2-sending-restarts-the-keepalive-timer')
+def test_a_restart_puts_the_next_keepalive_a_whole_interval_later(clock: Clock) -> None:
+    timer_under_test = steady_sender(90)
+    clock.advance(20)
+    timer_under_test.restart()
+
+    clock.advance(25)
+    assert not timer_under_test.need_ka(), 'a keepalive was due 25 seconds after an UPDATE restarted the timer'
+    clock.advance(5)
+    assert timer_under_test.need_ka()
+
+
+@pytest.mark.rfc('rfc4271#10-jitter-new-value-each-time')
+def test_each_restart_draws_a_new_jitter_factor(clock: Clock) -> None:
+    factors = iter([1.0, 0.75, 0.9])
+    timer_under_test = SendTimer(session, HoldTime(90), jitter=lambda: next(factors))
+    timer_under_test.restart()
+    assert timer_under_test.interval_seconds == 30 * 0.75
+    timer_under_test.restart()
+    assert timer_under_test.interval_seconds == 30 * 0.9
+
+
+@pytest.mark.rfc('rfc4271#8.2.2-sending-restarts-the-keepalive-timer', polarity='negative')
+def test_a_zero_hold_time_has_no_keepalive_timer_to_restart(clock: Clock) -> None:
+    timer_under_test = steady_sender(0)
+    timer_under_test.restart()
+    clock.advance(86400)
+
+    assert not timer_under_test.need_ka()
+
+
+def update_on_the_wire() -> bytes:
+    from exabgp.bgp.message.update.eor import EOR
+
+    return EOR.make_eor(*IPV4_UNICAST).pack_message(Negotiated.UNSET)
+
+
+IPV4_UNICAST = (AFI.ipv4, SAFI.unicast)
+
+
+@pytest.mark.rfc('rfc4271#8.2.2-sending-restarts-the-keepalive-timer')
+@pytest.mark.asyncio
+async def test_an_update_the_session_sends_restarts_its_keepalive_timer(clock: Clock) -> None:
+    proto, _ = negotiation.protocol()
+    theirs = negotiation.connect(proto)
+    proto.keepalive_timer = steady_sender(90)
+    clock.advance(20)
+
+    await proto.send(update_on_the_wire())
+
+    clock.advance(25)
+    assert not proto.keepalive_timer.need_ka(), 'the UPDATE sent 25 seconds ago did not restart the keepalive timer'
+    theirs.close()
+
+
+@pytest.mark.rfc('rfc4271#8.2.2-sending-restarts-the-keepalive-timer')
+@pytest.mark.asyncio
+async def test_an_update_written_as_a_message_restarts_it_too(clock: Clock) -> None:
+    """The End-of-RIB goes out through write(), not send()."""
+    proto, _ = negotiation.protocol()
+    theirs = negotiation.connect(proto)
+    proto.keepalive_timer = steady_sender(90)
+    clock.advance(20)
+
+    await proto.new_eor(AFI.ipv4, SAFI.unicast)
+
+    clock.advance(25)
+    assert not proto.keepalive_timer.need_ka()
+    theirs.close()
+
+
+@pytest.mark.rfc('rfc4271#8.2.2-sending-restarts-the-keepalive-timer', polarity='negative')
+@pytest.mark.asyncio
+async def test_a_notification_does_not_restart_the_keepalive_timer(clock: Clock) -> None:
+    proto, _ = negotiation.protocol()
+    theirs = negotiation.connect(proto)
+    proto.keepalive_timer = steady_sender(90)
+    clock.advance(20)
+
+    await proto.new_notification(Notify(6, 2, 'shutdown'))
+
+    clock.advance(10)
+    assert proto.keepalive_timer.need_ka(), 'a NOTIFICATION is not one of the messages which restart it'
+    theirs.close()

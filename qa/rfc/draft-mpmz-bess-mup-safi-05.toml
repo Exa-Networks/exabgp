@@ -56,6 +56,10 @@ note = """
 `InterworkSegmentDiscoveryRoute.unpack_nlri` refuses a prefix length past the AFI's
 address, and `MUP.unpack_nlri` turns that into the skip of this NLRI alone.  The negative
 test is the maximum itself, a host route, which must be kept.
+
+What we send is held to the same bound: the configuration and the API refuse a prefix
+longer than the AFI's address, or of the other family (`select._prefix`), and `make_isd`
+asserts it.  Until 2026-10-08 `mup-isd 10.0.1.0/255` on an ipv4 route was packed and sent.
 """
 
 [[requirement]]
@@ -76,6 +80,9 @@ continue processing of rest of the Update message.
 note = """
 `Type1SessionTransformedRoute.unpack_nlri` refuses a prefix length past the AFI's address,
 and `MUP.unpack_nlri` turns that into the skip of this NLRI alone.
+
+The configuration and the API refuse to send one, or a prefix of the other family
+(`select._prefix`), and `make_t1st` asserts it.  A /33 used to be refused only by accident.
 """
 
 [[requirement]]

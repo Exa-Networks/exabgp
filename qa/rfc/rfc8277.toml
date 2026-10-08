@@ -272,12 +272,7 @@ distinguisher and the prefix whenever they can be, and the value is never looked
 A withdrawn /0 was the exception until 2026-10-08: with no prefix bits behind the field,
 only 0x800000 and 0x000000 ended it; any value does now.
 
-The SHOULD is followed for a route withdrawn without a label: `LabelBase._with_label_field`
-puts 0x800000 in front of the prefix, a 0.0.0.0/0 or ::/0 included, which used to go out
-with a Length of 0 and no field at all.  A route withdrawn with the NLRI it was announced
-with still carries the label it advertised rather than 0x800000, which is a decision
-rather than a defect: every value is legal to send, and a receiver which cares is the bug
-this entry just stopped being.
+The SHOULD is followed, and has its own entry: rfc8277#2.4-compatibility-sent-on-withdrawal.
 """
 
 [[requirement]]
@@ -302,6 +297,28 @@ there now.  Recorded separately because it is a separate normative sentence.  On
 positive side is meaningful: the requirement is that no value is rejected, so there is no
 input which can violate it by being accepted, and a negative test would only be the
 positive one with different bytes.
+"""
+
+[[requirement]]
+id = "rfc8277#2.4-compatibility-sent-on-withdrawal"
+section = "2.4"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+   Upon transmission, the Compatibility field SHOULD be set to 0x800000.
+"""
+note = """
+The sending half of the sentence the MUST above shares, recorded on its own because it is
+the half we act on.  Section 2.4 goes on, without a keyword: "This encoding is used whether
+or not the Multiple Labels Capability has been sent or received on the session."  Until
+2026-10-08 a route was withdrawn with the label stack it was announced with: one label
+without the capability, the whole stack with it, so `label [ 100 200 ]` went out in
+MP_UNREACH_NLRI as 48 000640 000c81 0a0000, and a receiver reading figure 4 took the second
+label for the start of a /48.  `NLRI.pack_withdraw` is what MPNLRICollection packs a
+withdrawal with, and `LabelBase.pack_withdraw` (SAFI 4 and SAFI 128) puts one 0x800000
+field where the stack was.  A sender obligation, with no input of the peer's to violate it:
+the receiving side is the MUST.
 """
 
 [[requirement]]

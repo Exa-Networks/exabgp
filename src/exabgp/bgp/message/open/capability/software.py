@@ -22,6 +22,8 @@ from exabgp.util.intvalue import json_number
 class Software(Capability):
     ID: ClassVar = Capability.CODE.SOFTWARE_VERSION
     SOFTWARE_VERSION_MAX_LEN: ClassVar[int] = 64
+    # revision 00's length octet is told apart from text only below the first printable character
+    OLD_LENGTH_UNAMBIGUOUS: ClassVar[int] = 0x20
 
     def __init__(self) -> None:
         software_version = f'ExaBGP/{version}'
@@ -52,14 +54,19 @@ class Software(Capability):
     def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
         """The version a peer sent, in either encoding; ignored if it cannot be shown.
 
-        A first octet which accounts for the rest of the value is the length octet of
-        revision 00, which ExaBGP sent until now and FRR still sends when told to; FRR reads
-        it the same way.  Section 3 has a zero length "treated as an encoding error and the
-        Capability MUST be ignored", and invalid UTF-8 must not be interpreted: both become
-        the UnknownCapability RFC 5492 section 3 ignores a capability with, never a
-        NOTIFICATION, as this capability is only ever displayed.
+        Revision 00 put a length octet in front of the version, which ExaBGP sent until now
+        and FRR still sends when told to.  It is read as such only when it accounts for the
+        rest of the value and is below OLD_LENGTH_UNAMBIGUOUS, a control character no
+        version string starts with.  From 32 the octet is a printable character, which
+        a current value may start with ('0' then 48 octets matched), and the current
+        layout, the one the draft defines, wins: an old value of 32 octets or more is shown
+        with its length octet in front.  Section 3 has a zero length "treated as an
+        encoding error and the Capability MUST be ignored", and invalid UTF-8 must not be
+        interpreted: both become the UnknownCapability RFC 5492 section 3 ignores a
+        capability with, never a NOTIFICATION, as this capability is only ever displayed.
         """
-        version = data[1:] if data and data[0] == len(data) - 1 else data
+        old = bool(data) and data[0] == len(data) - 1 and data[0] < cls.OLD_LENGTH_UNAMBIGUOUS
+        version = data[1:] if old else data
         try:
             decoded = bytes(version).decode('utf-8')
         except UnicodeDecodeError:

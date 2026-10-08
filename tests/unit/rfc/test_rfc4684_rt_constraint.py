@@ -14,6 +14,8 @@ whenever that membership changes.
 
 from __future__ import annotations
 
+from struct import pack
+
 
 import pytest
 
@@ -249,3 +251,20 @@ def test_only_a_route_target_type_is_read_as_a_route_target(packed: str, is_rout
     expected = [bytes([community[0] & 0x3F]) + community[1:]] if is_route_target else []
 
     assert parsed.attributes.route_targets() == expected
+
+
+@pytest.mark.parametrize(
+    'membership_type,admitted',
+    [(0x00, True), (0x40, True), (0x80, False), (0x82, False), (0xC0, False)],
+)
+def test_a_membership_matches_route_targets_by_the_rule_route_targets_are_read_by(
+    membership_type: int, admitted: bool
+) -> None:
+    """Both sides clear the T bit alone. A membership whose type is 0x80 or 0x82 with
+    sub-type 0x02 names no Route Target (RFC 4360 2: the I bit is part of the type), so
+    it does not admit the Route Target 0x00 0x02 it only resembles once 0x80 is cleared."""
+    target = bytes(RouteTargetASN2Number.make_route_target(65000, 1).pack())
+    assert target[0] == 0x00
+    membership_nlri = RTC(bytes([96]) + pack('!L', PEER_AS) + bytes([membership_type]) + target[1:])
+
+    assert membership_nlri.admits(target) is admitted

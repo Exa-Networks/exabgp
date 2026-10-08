@@ -29,6 +29,11 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 
 class RouteTarget(ExtendedCommunity):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x02
+    # What of the type octet names a Route Target: all but the T bit, cleared as the
+    # extended community registry clears it (registry_type), for the Route Targets Quagga
+    # sent with it set. The I bit is kept, 0x80 0x02 is no Route Target (RFC 4360 2).
+    # The Route Targets of a route and the RT-Constraint memberships are both read so.
+    TYPE_MASK: ClassVar[int] = 0xBF
     LIMIT: ClassVar[int] = 0
     DESCRIPTION: ClassVar[str] = 'target'
 

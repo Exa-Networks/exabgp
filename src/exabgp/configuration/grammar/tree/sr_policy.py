@@ -66,6 +66,11 @@ from exabgp.protocol.ip import IP
 from exabgp.rib.route import Route
 
 MPLS_LABEL_MAX = 1048575  # 2^20 - 1
+# RFC 9830 2.4.2: a Binding SID label "MUST NOT contain the reserved MPLS label values (0-15)"
+MPLS_LABEL_RESERVED_MAX = 15
+# RFC 9830 2.4.4.2.4: the four lengths of an SRv6 SID structure total at most 128 bits
+SID_STRUCTURE_BITS_MAX = 128
+ENDPOINT_BEHAVIOR_MAX = 0xFFFF  # two octets
 MAX_SUBTLVS = 256  # a policy holds a handful of sub-TLVs
 MAX_SEGMENTS = 256  # and a segment list a handful of segments
 FLAG_V = 0x80  # SID verification, RFC 9830 section 2.4.4.2.3
@@ -120,7 +125,16 @@ def _behaviour(words: Words) -> SRv6EndpointBehavior | None:
         return None
     words.word()
     behaviour = decimal_or_hexadecimal(words.word())
+    if behaviour > ENDPOINT_BEHAVIOR_MAX:
+        raise ValueError(f'endpoint-behavior {behaviour} is a two octet code, 0 to {ENDPOINT_BEHAVIOR_MAX}')
     lb, ln, fun, arg = (decimal(words.word()) for _ in range(4))
+    # RFC 9830 2.4.4.2.4: "The total of the locator block, locator node, function, and
+    # argument lengths MUST be less than or equal to 128."  It also keeps each one octet.
+    if lb + ln + fun + arg > SID_STRUCTURE_BITS_MAX:
+        raise ValueError(
+            f'endpoint-behavior lengths {lb} {ln} {fun} {arg} total {lb + ln + fun + arg} bits, '
+            f'an SRv6 SID structure is at most {SID_STRUCTURE_BITS_MAX}'
+        )
     return SRv6EndpointBehavior(endpoint_behavior=behaviour, lb_length=lb, ln_length=ln, fun_length=fun, arg_length=arg)
 
 
@@ -255,7 +269,14 @@ def _enlp(words: Words) -> ENLPSubTLV:
 def _binding_sid(words: Words) -> BindingSIDSubTLV:
     kind = words.word()
     if kind == 'mpls':
-        return BindingSIDSubTLV(label=decimal(words.word()))
+        label = decimal(words.word())
+        # RFC 9830 2.4.2: the label "MUST NOT contain the reserved MPLS label values (0-15)"
+        if not MPLS_LABEL_RESERVED_MAX < label <= MPLS_LABEL_MAX:
+            raise ValueError(
+                f'binding-sid mpls {label} is not a label for a binding SID, '
+                f'it is {MPLS_LABEL_RESERVED_MAX + 1} to {MPLS_LABEL_MAX} (0-15 are reserved)'
+            )
+        return BindingSIDSubTLV(label=label)
     if kind == 'null':
         return BindingSIDSubTLV(label=None)
     raise ValueError(f"Unknown binding-sid type '{kind}'. Expected: mpls, null")
@@ -276,6 +297,16 @@ SUBTLVS: dict[str, Callable[[Words], Any]] = {
     'segment-list': _segment_list,
 }
 
+
+# the sub-TLVs RFC 9830 allows once in a policy, and the name an error gives them
+SINGLE_SUBTLVS: dict[int, str] = {
+    PreferenceSubTLV.SUBTYPE: 'Preference',
+    BindingSIDSubTLV.SUBTYPE: 'Binding SID',
+    ENLPSubTLV.SUBTYPE: 'ENLP',
+    PrioritySubTLV.SUBTYPE: 'Priority',
+    CandidatePathNameSubTLV.SUBTYPE: 'Candidate Path Name',
+    PolicyNameSubTLV.SUBTYPE: 'Policy Name',
+}
 
 # RFC 9830 4.2.1: the attributes an SR policy route is given besides its tunnel
 ATTRIBUTE_VALUES = ('community', 'extended-community')
@@ -298,9 +329,12 @@ def _values(words: Words, attributes: AttributeCollection) -> list[Any]:
         if key not in SUBTLVS:
             return subtlvs
         words.word()
-        if key == 'enlp' and any(isinstance(subtlv, ENLPSubTLV) for subtlv in subtlvs):
-            raise ValueError('ENLP sub-TLV may appear only once')
-        subtlvs.append(SUBTLVS[key](words))
+        subtlv = SUBTLVS[key](words)
+        # RFC 9830 2.4.1, 2.4.2, 2.4.5, 2.4.6, 2.4.7 and 2.4.8: each of these "MUST NOT
+        # appear more than once in the SR Policy encoding"
+        if subtlv.SUBTYPE in SINGLE_SUBTLVS and any(each.SUBTYPE == subtlv.SUBTYPE for each in subtlvs):
+            raise ValueError(f'{SINGLE_SUBTLVS[subtlv.SUBTYPE]} sub-TLV may appear only once')
+        subtlvs.append(subtlv)
     raise ValueError(f'a policy holds at most {MAX_SUBTLVS} sub-TLVs')
 
 

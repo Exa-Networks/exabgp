@@ -451,7 +451,10 @@ length of the MP_REACH_NLRI attribute is less than 5.
 note = """
 The fourth bullet of the list quoted in rfc7606#5.3-mp-attribute-nlri-lengths, whose
 lead-in carries the SHALL.  Three and five are the smallest encodings that can hold an
-AFI, a SAFI and, for MP_REACH, a next hop length and the reserved octet.
+AFI, a SAFI and, for MP_REACH, a next hop length and the reserved octet.  A length of
+zero is one of them: it used to be caught first by the zero length rule of section 4 and
+treated as withdraw, which beside an NLRI field kept the session up.  It is 3/9 now, as
+an MP attribute which overruns the attributes or whose header is cut short is (3 (j)).
 """
 
 [[requirement]]
@@ -474,6 +477,30 @@ MCAST-VPN recognises the seven RFC 6514 defines: 5, 6 and 7 are decoded, 1 to 4 
 as opaque bytes, and discarding those would lose most of what an MVPN peer sends, so they
 are not "unrecognized".  A withdrawal of an unknown type is still reported, because it can
 remove nothing we hold and shows the operator what the peer sent.
+"""
+
+# ================================================== 6. Operational Considerations
+
+[[requirement]]
+id = "rfc7606#6-log-malformed-update"
+section = "6"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+At a minimum, such facilities must include logging
+an error listing the NLRI involved and containing the entire
+malformed UPDATE message when such an attribute is detected.
+"""
+note = """
+Recorded although its keyword is a lowercase "must", in a document which capitalises
+everywhere else: it is the only record an operator gets of routes changed with no
+NOTIFICATION. UpdateCollection._log_malformed writes one error per UPDATE in which a
+malformed attribute was withdrawn for, discarded or ignored, or whose routes were withdrawn
+for their context (a missing well-known mandatory attribute, an AS_PATH RFC 5065, RFC 8955
+or RFC 9774 rejects). It names the reasons, the NLRI (the first 16), and the UPDATE in hex
+with its header (the first 4096 octets, so any message without RFC 8654 whole). An UPDATE
+which resets the session is reported by its NOTIFICATION instead.
 """
 
 # ================================ 7. Error-Handling Procedures for Existing Attributes

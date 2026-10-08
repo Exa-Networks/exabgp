@@ -120,7 +120,7 @@ class RTCBase(NLRI):
         if rt is not None:
             packed_rt = rt._packed
             # Length in bits: (4 bytes origin + 8 bytes RT) * 8 = 96
-            packed = pack('!BL', 96, int(origin)) + bytes([RTC.resetFlags(packed_rt[0])]) + packed_rt[1:]
+            packed = pack('!BL', 96, int(origin)) + bytes([packed_rt[0] & RouteTarget.TYPE_MASK]) + packed_rt[1:]
         else:
             packed = pack('!B', 0)
 
@@ -204,9 +204,11 @@ class RTCBase(NLRI):
         if length <= RTC_PREFIX_MIN_BITS:
             return True
         whole, rest = divmod(length - RTC_PREFIX_MIN_BITS, 8)
-        # The targets come with their type flags reset, and so is the membership's here
+        # The targets come with their T bit cleared and their I bit kept (route_targets), and
+        # so is the membership's here: clearing the I bit too made a membership of type 0x80
+        # sub-type 0x02, which is no Route Target, admit the Route Target 0x00 0x02
         stored = self._packed[RTC_ROUTE_TARGET_OFFSET:]
-        carried = bytes([RTC.resetFlags(stored[0])]) + bytes(stored[1:])
+        carried = bytes([stored[0] & RouteTarget.TYPE_MASK]) + bytes(stored[1:])
         if bytes(carried[:whole]) != bytes(target[:whole]):
             return False
         if not rest:

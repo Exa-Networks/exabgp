@@ -30,7 +30,9 @@ note = """
 a four octet VSI-ID), which exabgp does not implement: it is stepped over with an
 `NLRIDiscard`, logged, and the NLRI after it in the same MP_REACH_NLRI is decoded.  It used
 to be refused with a plain `Notify`, so a peer running BGP-AD alongside VPLS reset the
-session.  Any other length below the seventeen octets of RFC 4761 is framed by the same
-length and goes the same way.  The negative side: a length running past the attribute
-cannot be stepped over, and still resets the session.
+session.  Only twelve: any other length below the seventeen octets of RFC 4761 is neither
+NLRI, an NLRI length "inconsistent with the given AFI/SAFI", which RFC 7606 5.3 makes the
+MP_REACH_NLRI or MP_UNREACH_NLRI incorrect (Notify 3, 10, see
+rfc7606#5.3-mp-attribute-nlri-lengths).  The negative side: a length running past the
+attribute cannot be stepped over, and still resets the session.
 """

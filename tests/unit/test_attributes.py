@@ -255,7 +255,7 @@ def test_attributes_zero_length_as_path_valid() -> None:
     assert True  # If we get here without exception, test passes
 
 
-@pytest.mark.parametrize('attr_type', [1, 3, 4, 5])  # ORIGIN, NEXT_HOP, MED, LOCAL_PREF
+@pytest.mark.parametrize('attr_type', [1, 4, 5])  # ORIGIN, MED, LOCAL_PREF
 def test_attributes_zero_length_invalid_treat_as_withdraw(attr_type: Any) -> None:
     """Test that zero-length for certain attributes triggers TREAT_AS_WITHDRAW."""
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
@@ -272,6 +272,22 @@ def test_attributes_zero_length_invalid_treat_as_withdraw(attr_type: Any) -> Non
     from exabgp.bgp.message.update.attribute.attribute import Attribute
 
     assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW in attributes
+
+
+def test_attributes_zero_length_next_hop_is_left_to_the_update() -> None:
+    """An empty NEXT_HOP is malformed, but whether it withdraws depends on the NLRI around it.
+
+    RFC 4760 3 has it ignored beside MP_REACH_NLRI alone, so the attributes only record it
+    and UpdateCollection decides (tests/unit/rfc/test_rfc4760_multiprotocol.py).
+    """
+    from exabgp.bgp.message.update.attribute.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+
+    attributes = AttributeCollection.unpack(bytes([0x40, 3, 0x00]), create_negotiated_mock())
+
+    assert attributes.next_hop_malformed == 'a length of 0'
+    assert Attribute.CODE.NEXT_HOP not in attributes
+    assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW not in attributes
 
 
 # =============================================================================

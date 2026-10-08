@@ -78,11 +78,13 @@ class BitResource(Resource):
     def named(cls, string: str) -> BitResource:
         """Parse a '+'-separated string of names/values and combine them.
 
-        Used for bitmask values like TCP flags: "syn+ack" → 0x12
+        Used for bitmask values like TCP flags: "syn+ack" → 0x12. The bits are OR-ed: a
+        bit named twice is that bit, where adding them carried it into the next one
+        ("syn+syn" was rst, "is-fragment+is-fragment" first-fragment).
         """
         value = 0
         for name in string.split('+'):
-            value += cls._value(name)
+            value |= cls._value(name)
         return cls(value)
 
     def named_bits(self) -> Iterator[str]:

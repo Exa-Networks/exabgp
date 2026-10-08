@@ -220,10 +220,12 @@ the procedures of [BGP-4], Section 6.3 ("UPDATE Message Error
 Handling").
 """
 note = """
-UpdateCollection._malformed_confederation_path, once a confederation is configured.  A
-malformed AS_PATH is treat-as-withdraw since RFC 7606 section 7.2, not the session reset
-of RFC 4271 section 6.3.  Without a confederation block exabgp is no member and has no
-members to tell apart, and it keeps accepting these paths as it always did.
+UpdateCollection._malformed_confederation_path.  A malformed AS_PATH is treat-as-withdraw
+since RFC 7606 section 7.2, not the session reset of RFC 4271 section 6.3.  With a
+confederation configured, a neighbour outside it is one which is not a member.  Without
+one, every external (EBGP) neighbour is outside: we are in no confederation, so none of
+them is in the same one as us.  An internal (IBGP) neighbour is in our own AS, and its
+paths are accepted as they always were.
 """
 
 [[requirement]]

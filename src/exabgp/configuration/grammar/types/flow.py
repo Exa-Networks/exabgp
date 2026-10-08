@@ -368,16 +368,21 @@ def _redirect(words: Words) -> tuple[IP, Any]:
 
 
 def _redirect_asn(word: str) -> ExtendedCommunities:
-    """`<asn>:<nn>`, a redirect to a VRF by route-target."""
+    """`<asn>[L]:<nn>`, a redirect to a VRF by route-target.
+
+    RFC 8955 7.4: a trailing L asks for the four octet AS encoding (0x8208) of an AS which
+    fits in two, as it does for an extended community; it is how 0x8208 is printed.
+    """
     prefix, suffix = word.split(':', 1)
     if prefix.count('.'):
         raise ValueError(
             'this format has been deprecated as it does not make sense and it is not supported by other vendors'
         )
-    asn, number = decimal(prefix), decimal(suffix)
+    four_octets = prefix.endswith('L')
+    asn, number = decimal(prefix.removesuffix('L')), decimal(suffix)
     if not ASN4.validate(asn):
         raise ValueError(f'asn is invalid, must be 0 to {ASN.MAX_4BYTE} (32 bits): {asn}')
-    if asn > ASN.MAX_2BYTE:
+    if asn > ASN.MAX_2BYTE or four_octets:
         if number >= LOCAL_ADMIN_16:
             raise ValueError(f'asn is a 32 bits number, local administrator field can only be 16 bit {number}')
         return ExtendedCommunities().add(TrafficRedirectASN4.make_traffic_redirect_asn4(ASN(asn), number))

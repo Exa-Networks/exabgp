@@ -56,6 +56,7 @@ from exabgp.bgp.message.update.attribute.attribute import (
 
 # For bagpipe
 from exabgp.bgp.message.update.attribute.community import Communities, Community
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
 from exabgp.bgp.message.update.attribute.community.extended.communities import (
     ExtendedCommunities,
     ExtendedCommunitiesBase,
@@ -74,9 +75,8 @@ from exabgp.logger import lazyattribute, lazymsg, log
 _JSON_INTEGER = re.compile(r'-?(?:0|[1-9][0-9]*)')
 
 
-# The T bit is cleared as the extended community registry clears it (registry_type), for
-# the Route Targets Quagga sent with it set.  The I bit is kept: 0x80 0x02 is no Route Target.
-ROUTE_TARGET_TYPE_MASK = 0xBF
+# The T bit is cleared, the I bit kept: see RouteTarget.TYPE_MASK, which RTC.admits shares.
+ROUTE_TARGET_TYPE_MASK = RouteTarget.TYPE_MASK
 ROUTE_TARGET_SUBTYPE = 0x02
 # two-octet AS, IPv4 address, four-octet AS
 ROUTE_TARGET_TYPES = (0x00, 0x01, 0x02)
@@ -154,23 +154,22 @@ _INTERNAL_ONLY: frozenset[int] = frozenset(
 )
 
 
-def _log_malformed(aid: int, action: str, reason: str) -> None:
-    """Say which attribute a peer got wrong and what we did about it.
+# The two attributes RFC 7606 3 (j) needs parsed before treat-as-withdraw can be used. One
+# which cannot be framed or is too short is never withdrawn around: RFC 4760 7 and RFC 7606
+# 5.3 make it 3/9, "UPDATE Message Error"/"Optional Attribute Error", with the attribute as
+# the Data field (RFC 4271 6.3).
+_MP_CODES: frozenset[int] = frozenset({Attribute.CODE.MP_REACH_NLRI, Attribute.CODE.MP_UNREACH_NLRI})
 
-    RFC 6514 5 requires an error to be logged for a malformed PMSI Tunnel attribute. It
-    is done for every attribute RFC 7606 has us withdraw or discard for, because in each
-    case the routes change with no NOTIFICATION, so the log is the only record of why.
-    """
-    log.error(
-        lazymsg(
-            'attribute.malformed name={name} aid=0x{aid:02X} action={action} reason="{reason}"',
-            name=Attribute.CODE.names.get(aid, 'unset'),
-            aid=aid,
-            action=action,
-            reason=reason,
-        ),
-        'parser',
-    )
+# What AttributeCollection.parse did about a malformed attribute, as recorded in malformed.
+TREAT_AS_WITHDRAW_ACTION = 'treat-as-withdraw'
+ATTRIBUTE_DISCARD_ACTION = 'attribute-discard'
+# RFC 4760 3: a NEXT_HOP beside MP_REACH_NLRI alone is ignored, malformed or not.
+NEXT_HOP_IGNORED_ACTION = 'ignored'
+
+
+def _unframed_mp_attribute(aid: int, reason: str, attribute: Buffer) -> Notify:
+    """An MP_REACH_NLRI or MP_UNREACH_NLRI which cannot be framed, so its NLRI cannot be read."""
+    return Notify(3, 9, f'{Attribute.CODE.name(aid)} {reason}', data=bytes(attribute))
 
 
 class AttributeCollection(MutableMapping[int, Attribute]):
@@ -233,6 +232,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
     _idx: bytes
     _json: str
     cacheable: bool
+    learned_from: str
+    malformed: list[tuple[int, str, str]]
+    next_hop_malformed: str
 
     def _generate_text(self) -> Generator[str, None, None]:
         for code in sorted(self.keys()):
@@ -338,6 +340,14 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         # originate. RFC 1997, RFC 4360 and RFC 7911 bind a route received from a peer and
         # re-advertised, never one the configuration or the API gave us.
         self.learned_from = ''
+        # RFC 7606 6: what parse() found malformed and did about it, as (attribute code,
+        # action, reason). The UPDATE logs it, once, with its NLRI and its bytes: only the
+        # UPDATE knows those. Bounded by the attributes parsed, one entry at most each.
+        self.malformed: list[tuple[int, str, str]] = []
+        # Why the NEXT_HOP attribute was malformed, '' when it was not. RFC 7606 7.3 makes it
+        # treat-as-withdraw, but RFC 4760 3 has it ignored in an UPDATE whose only NLRI are
+        # in MP_REACH_NLRI, so the UPDATE, which knows which it is, decides.
+        self.next_hop_malformed = ''
         # Note: Attribute.caching is set in application/server.py at startup
 
     # MutableMapping abstract methods
@@ -397,6 +407,8 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         duplicate._data = dict(self._data)
         duplicate.cacheable = self.cacheable
         duplicate.learned_from = self.learned_from
+        duplicate.malformed = list(self.malformed)
+        duplicate.next_hop_malformed = self.next_hop_malformed
         assert len(duplicate) == len(self), 'a copy holds every attribute of its original'
         return duplicate
 
@@ -649,39 +661,62 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             dropped.add(Attribute.CODE.TUNNEL_ENCAP)
         return frozenset(dropped)
 
+    def _malformation(self, aid: int | None, action: str, reason: str) -> None:
+        """Record what a peer got wrong in one attribute, and apply the RFC 7606 action.
+
+        The record is logged at debug here and as an error by the UPDATE, once, where the
+        NLRI and the message are known (RFC 7606 6). RFC 6514 5 requires the same error for
+        a malformed PMSI Tunnel attribute, which this covers.
+        """
+        assert action in (TREAT_AS_WITHDRAW_ACTION, ATTRIBUTE_DISCARD_ACTION), f'no RFC 7606 action {action}'
+        code = -1 if aid is None else aid
+        log.debug(
+            lazymsg(
+                'attribute.malformed name={name} aid=0x{aid:02X} action={action} reason="{reason}"',
+                name=Attribute.CODE.names.get(code, 'unset'),
+                aid=code & 0xFF,
+                action=action,
+                reason=reason,
+            ),
+            'parser',
+        )
+        self.malformed.append((code, action, reason))
+        if action == TREAT_AS_WITHDRAW_ACTION:
+            self.add(TreatAsWithdraw(aid))
+            return
+        self.add(Discard(aid))
+
     def _add_registered(
         self, aid: int, flag: int, kls: type[Attribute] | None, header: Buffer, value: Buffer, negotiated: Negotiated
     ) -> None:
         """Decode an attribute we have a class for, and apply RFC 7606 to what goes wrong."""
-        if len(value) == 0 and kls and not kls.VALID_ZERO:
+        # RFC 7606 7.3: a NEXT_HOP path attribute whose length is not four, zero included,
+        # is malformed. The rule is applied here, where attribute 3 is known to be what is
+        # being read, because NextHop also decodes the next hop inside MP_REACH_NLRI, which
+        # RFC 4760 lets the family size: sixteen octets for IPv6. Sharing one length rule
+        # accepted a sixteen octet attribute 3. Not withdrawn here: see next_hop_malformed.
+        if aid == Attribute.CODE.NEXT_HOP and len(value) != NextHop.ATTRIBUTE_SIZE_BYTES:
+            self.next_hop_malformed = f'a length of {len(value)}'
+            return
+
+        # An empty MP attribute is one more length below its minimum, so it goes on to its
+        # decoder, which answers it with the 3/9 of RFC 7606 5.3 as it does four octets.
+        if len(value) == 0 and kls and not kls.VALID_ZERO and aid not in _MP_CODES:
             # A zero length is one more wrong length, so an attribute whose RFC 7606 rule
             # is attribute discard (AGGREGATOR, 7.7) is discarded rather than withdrawn.
             # Withdrawing was harmless while treat-as-withdraw with no NLRI did nothing;
             # RFC 7606 5.2 now makes it a session reset.
             if kls.DISCARD and not kls.TREAT_AS_WITHDRAW:
-                _log_malformed(aid, 'attribute-discard', 'a length of zero')
-                self.add(Discard(aid))
+                self._malformation(aid, ATTRIBUTE_DISCARD_ACTION, 'a length of zero')
                 return
-            _log_malformed(aid, 'treat-as-withdraw', 'a length of zero')
-            self.add(TreatAsWithdraw(aid))
-            return
-
-        # RFC 7606 7.3: a NEXT_HOP path attribute whose length is not four is
-        # malformed. The rule is applied here, where attribute 3 is known to be
-        # what is being read, because NextHop also decodes the next hop inside
-        # MP_REACH_NLRI, which RFC 4760 lets the family size: sixteen octets for
-        # IPv6. Sharing one length rule accepted a sixteen octet attribute 3.
-        if aid == Attribute.CODE.NEXT_HOP and len(value) != NextHop.ATTRIBUTE_SIZE_BYTES:
-            _log_malformed(aid, 'treat-as-withdraw', f'a length of {len(value)}')
-            self.add(TreatAsWithdraw(aid))
+            self._malformation(aid, TREAT_AS_WITHDRAW_ACTION, 'a length of zero')
             return
 
         try:
             decoded: Attribute = Attribute.unpack(aid, flag, value, negotiated)
         except (IndexError, ValueError) as exc:
             if kls and kls.TREAT_AS_WITHDRAW:
-                _log_malformed(aid, 'treat-as-withdraw', str(exc))
-                self.add(TreatAsWithdraw(aid))
+                self._malformation(aid, TREAT_AS_WITHDRAW_ACTION, str(exc))
                 return
             # DISCARD was honoured for Notify below but not here, so an attribute
             # RFC 7606 says to drop escaped as a raw ValueError instead: AGGREGATOR
@@ -689,35 +724,126 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             # where the reactor's catch-all turned RFC 7606 7.7 attribute discard
             # into a session reset
             if kls and kls.DISCARD:
-                _log_malformed(aid, 'attribute-discard', str(exc))
-                self.add(Discard())
+                self._malformation(aid, ATTRIBUTE_DISCARD_ACTION, str(exc))
                 return
             raise exc
         except TreatAsWithdrawNotify as exc:
             # the decoder named the RFC 7606 action itself, see TreatAsWithdrawNotify
-            _log_malformed(aid, 'treat-as-withdraw', exc.detail)
-            self.add(TreatAsWithdraw(aid))
+            self._malformation(aid, TREAT_AS_WITHDRAW_ACTION, exc.detail)
             return
         except Notify as exc:
             if kls and kls.TREAT_AS_WITHDRAW:
-                _log_malformed(aid, 'treat-as-withdraw', exc.detail)
-                self.add(TreatAsWithdraw())
+                self._malformation(aid, TREAT_AS_WITHDRAW_ACTION, exc.detail)
                 return
             if kls and kls.DISCARD:
-                _log_malformed(aid, 'attribute-discard', exc.detail)
-                self.add(Discard())
+                self._malformation(aid, ATTRIBUTE_DISCARD_ACTION, exc.detail)
                 return
             raise _with_the_attribute(exc, header, value) from None
 
         self.add(decoded)
 
+    def _add_flag_conflict(self, aid: int, flag: int, kls: type[Attribute] | None, attribute: Buffer) -> None:
+        """A known attribute whose flags are not the ones its RFC gives it (RFC 7606 3 (c))."""
+        name = Attribute.CODE.name(aid)
+        # RFC 7606 5.3 lists "the attribute flags of the attribute are inconsistent
+        # with those specified in [RFC4760]" as one of the ways an MP_REACH_NLRI or
+        # MP_UNREACH_NLRI is incorrect, and 3 (j) says that when the MP attributes
+        # cannot be successfully parsed the session reset approach MUST be followed.
+        # Treat-as-withdraw is not available here: the NLRI are inside the attribute
+        # the flags stopped us recognising, so there is nothing left to withdraw and
+        # dropping the attribute makes the routes it carried vanish in silence.
+        if aid in _MP_CODES:
+            reason = f'has the invalid flag 0x{flag:02X}, RFC 4760 makes it optional non-transitive'
+            raise _unframed_mp_attribute(aid, reason, attribute)
+        reason = f'the invalid flag 0x{flag:02X}'
+        if aid == Attribute.CODE.NEXT_HOP:
+            # treat-as-withdraw or ignored, which the UPDATE decides: see next_hop_malformed
+            self.next_hop_malformed = reason
+            return
+        if kls and kls.TREAT_AS_WITHDRAW:
+            self._malformation(aid, TREAT_AS_WITHDRAW_ACTION, reason)
+            return
+        if kls and kls.DISCARD:
+            # Discarded without a marker, as it always was: the attribute is not kept
+            self.malformed.append((aid, ATTRIBUTE_DISCARD_ACTION, reason))
+            return
+        # Attributes in neither TREAT_AS_WITHDRAW nor DISCARD are an implementation gap:
+        # if this fires, give the class one of the two
+        log.debug(lazymsg('attribute.flag.unspecified name={name} flag=0x{flag:02X}', name=name, flag=flag), 'parser')
+
+    def _add_unknown(self, aid: int, flag: int, attribute: Buffer) -> None:
+        """An attribute we have no class for: a transitive one is passed on, the rest ignored."""
+        if not flag & Attribute.Flag.TRANSITIVE:
+            log.debug(
+                lazymsg('attribute.unknown type=non-transitive flag=0x{flag:02X} aid=0x{aid:02X}', flag=flag, aid=aid),
+                'parser',
+            )
+            return
+        log.debug(
+            lazymsg('attribute.unknown type=transitive flag=0x{flag:02X} aid=0x{aid:02X}', flag=flag, aid=aid),
+            'parser',
+        )
+        try:
+            decoded_generic: Attribute = GenericAttribute.make_generic(aid, flag | Attribute.Flag.PARTIAL, attribute)
+        except IndexError as exc:
+            self._malformation(aid, TREAT_AS_WITHDRAW_ACTION, str(exc))
+            return
+        self.add(decoded_generic, attribute)
+
+    def _framed(self, data: Buffer) -> tuple[int, int, int, int] | None:
+        """The flag, type, header size and length of the attribute `data` starts with.
+
+        None when the header is cut short, which RFC 7606 4 makes treat-as-withdraw for the
+        whole UPDATE (recorded here), and 3 (j) a session reset for an MP attribute.
+        """
+        if len(data) < 2:
+            # not even a type: there is no attribute to name, and no MP attribute to reset for
+            self._malformation(None, TREAT_AS_WITHDRAW_ACTION, f'a truncated attribute header of {len(data)} octets')
+            return None
+        aid = data[1]
+        offset = 4 if data[0] & Attribute.Flag.EXTENDED_LENGTH else 3
+        if len(data) < offset:
+            if aid in _MP_CODES:
+                raise _unframed_mp_attribute(aid, 'has a truncated header', data)
+            self._malformation(aid, TREAT_AS_WITHDRAW_ACTION, f'a truncated attribute header of {len(data)} octets')
+            return None
+        length = data[2] if offset == 3 else (data[2] << 8) + data[3]
+        # RFC 7606 section 4: an Attribute Length past the end of the section is an error
+        # in the message framing, not in one attribute, so the whole UPDATE is withdrawn.
+        # Slicing does not raise on an overrun, so without this the attribute was decoded
+        # from however many bytes happened to remain and accepted as though well formed.
+        if length > len(data) - offset:
+            if aid in _MP_CODES:
+                raise _unframed_mp_attribute(aid, f'claims {length} octets where {len(data) - offset} remain', data)
+            self._malformation(aid, TREAT_AS_WITHDRAW_ACTION, f'a length of {length} past the end of the attributes')
+            return None
+        return data[0], aid, offset, length
+
+    def _is_repeated(self, aid: int, flag: int, kls: type[Attribute] | None, seen: set[int]) -> bool:
+        """RFC 7606 3 (g): a second MP attribute resets, any other second copy is skipped."""
+        if aid not in seen and aid not in self:
+            seen.add(aid)
+            return False
+        if kls and kls.NO_DUPLICATE:
+            raise Notify(3, 1, 'multiple attribute for {}'.format(Attribute.CODE.name(aid)))
+        log.debug(
+            lazymsg(
+                'attribute.duplicate name={name} flag=0x{flag:02X} aid=0x{aid:02X} action=skip',
+                name=Attribute.CODE.names.get(aid, 'unset'),
+                flag=flag,
+                aid=aid,
+            ),
+            'parser',
+        )
+        return True
+
     # Iterative, not recursive: every branch used to end `return self.parse(left, negotiated)`,
     # costing one stack frame per attribute on peer-controlled input (see
     # tests/unit/test_attribute_parse_iterative.py for the measured RecursionError crossover).
-    # The `while data:` loop is bounded: each iteration reads at least a 3 byte header and
-    # then reassigns `data` to strictly fewer bytes than it started with (`data[offset:]`
-    # then `data[length:]`), so the loop runs at most `len(data) // 3` times, and `data` is
-    # itself bounded by the negotiated message size checked upstream in Update.unpack_message.
+    # The `while data:` loop is bounded: each iteration either returns, or consumes a whole
+    # header and value (`_framed` checked both are there), so `data` strictly shrinks and the
+    # loop runs at most `len(data) // 3` times; `data` is itself bounded by the negotiated
+    # message size checked upstream in Update.unpack_message.
     def parse(self, data: Buffer, negotiated: Negotiated) -> AttributeCollection:
         dropped = self._dropped_on_receipt(negotiated)
         # RFC 7606 3 (g) keeps the first occurrence on the wire, decodable or not. A malformed
@@ -725,38 +851,13 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         # the collection whether it holds the code let a second copy in as the first.
         seen: set[int] = set()
         while data:
-            try:
-                # We do not care if the attribute are transitive or not as we do not redistribute
-                flag = data[0]
-                aid = data[1]
-            except IndexError:
-                self.add(TreatAsWithdraw())
+            framed = self._framed(data)
+            if framed is None:
                 return self
-
-            try:
-                offset = 3
-                length = data[2]
-
-                if flag & Attribute.Flag.EXTENDED_LENGTH:
-                    offset = 4
-                    length = (length << 8) + data[3]
-            except IndexError:
-                self.add(TreatAsWithdraw(aid))
-                return self
-
+            flag, aid, offset, length = framed
             header = data[:offset]
-            data = data[offset:]
-
-            # RFC 7606 section 4: an Attribute Length past the end of the section is an error
-            # in the message framing, not in one attribute, so the whole UPDATE is withdrawn.
-            # Slicing does not raise on an overrun, so without this the attribute was decoded
-            # from however many bytes happened to remain and accepted as though well formed.
-            if length > len(data):
-                self.add(TreatAsWithdraw())
-                return self
-
-            attribute = data[:length]
-            data = data[length:]
+            attribute = data[offset : offset + length]
+            data = data[offset + length :]
 
             log.debug(lazyattribute(flag, aid, length, attribute), 'parser')
 
@@ -781,104 +882,15 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
             # Get the attribute class to check its behavior flags
             kls = Attribute.klass_by_id(aid)
-
-            if aid in seen or aid in self:
-                if kls and kls.NO_DUPLICATE:
-                    raise Notify(3, 1, 'multiple attribute for {}'.format(Attribute.CODE.name(aid)))
-
-                log.debug(
-                    lazymsg(
-                        'attribute.duplicate name={name} flag=0x{flag:02X} aid=0x{aid:02X} action=skip',
-                        name=Attribute.CODE.names.get(aid, 'unset'),
-                        flag=flag,
-                        aid=aid,
-                    ),
-                    'parser',
-                )
+            if self._is_repeated(aid, flag, kls, seen):
                 continue
-            seen.add(aid)
 
-            # handle the attribute if we know it
             if Attribute.registered(aid, flag):
                 self._add_registered(aid, flag, kls, header, attribute, negotiated)
-                continue
-
-            # Note: Unknown attributes are handled below via GenericAttribute for transitive
-            # attributes, or logged/discarded for others. This differs from capability's
-            # registered fallback pattern but achieves the same goal.
-
-            # if we know the attribute but the flag is not what the RFC says.
-            if aid in Attribute.attributes_known:
-                # RFC 7606 5.3 lists "the attribute flags of the attribute are inconsistent
-                # with those specified in [RFC4760]" as one of the ways an MP_REACH_NLRI or
-                # MP_UNREACH_NLRI is incorrect, and 3 (j) says that when the MP attributes
-                # cannot be successfully parsed the session reset approach MUST be followed.
-                # Treat-as-withdraw is not available here: the NLRI are inside the attribute
-                # the flags stopped us recognising, so there is nothing left to withdraw and
-                # dropping the attribute makes the routes it carried vanish in silence.
-                # 3/9 because that is the subcode MPRNLRI and MPURNLRI already raise for an
-                # MP attribute they cannot read.
-                if aid in (Attribute.CODE.MP_REACH_NLRI, Attribute.CODE.MP_UNREACH_NLRI):
-                    raise Notify(
-                        3,
-                        9,
-                        'invalid flag 0x{:02X} for {}, RFC 4760 makes it optional non-transitive'.format(
-                            flag, Attribute.CODE.name(aid)
-                        ),
-                        data=bytes(header) + bytes(attribute),
-                    )
-                if kls and kls.TREAT_AS_WITHDRAW:
-                    log.debug(
-                        lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) treat as withdraw'.format(
-                            Attribute.CODE.names.get(aid, 'unset'), flag, aid
-                        ),
-                        'parser',
-                    )
-                    self.add(TreatAsWithdraw())
-                    # handled: without this the attribute also reached the "should not happen" log below
-                    continue
-                if kls and kls.DISCARD:
-                    log.debug(
-                        lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) discard'.format(
-                            Attribute.CODE.names.get(aid, 'unset'), flag, aid
-                        ),
-                        'parser',
-                    )
-                    continue
-                # Attributes not in TREAT_AS_WITHDRAW or DISCARD fall through to this log
-                # This catches implementation gaps - if this fires, add aid to one of the lists
-                log.debug(
-                    lambda: (
-                        'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) unspecified (should not happen)'.format(
-                            Attribute.CODE.names.get(aid, 'unset'), flag, aid
-                        )
-                    ),
-                    'parser',
-                )
-                continue
-
-            # it is an unknown transitive attribute we need to pass on
-            if flag & Attribute.Flag.TRANSITIVE:
-                log.debug(
-                    lazymsg('attribute.unknown type=transitive flag=0x{flag:02X} aid=0x{aid:02X}', flag=flag, aid=aid),
-                    'parser',
-                )
-                try:
-                    decoded_generic: Attribute = GenericAttribute.make_generic(
-                        aid, flag | Attribute.Flag.PARTIAL, attribute
-                    )
-                except IndexError:
-                    self.add(TreatAsWithdraw(aid), attribute)
-                    continue
-                self.add(decoded_generic, attribute)
-                continue
-
-            # it is an unknown non-transitive attribute we can ignore.
-            log.debug(
-                lambda: 'ignoring unknown non-transitive attribute (flag 0x{:02X}, aid 0x{:02X})'.format(flag, aid),
-                'parser',
-            )
-            continue
+            elif aid in Attribute.attributes_known:
+                self._add_flag_conflict(aid, flag, kls, bytes(header) + bytes(attribute))
+            else:
+                self._add_unknown(aid, flag, attribute)
 
         return self
 

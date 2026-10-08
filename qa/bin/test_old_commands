@@ -83,6 +83,11 @@ ALLOWED: dict[tuple[str, str], str] = {
         'which carries the address, not the draft-simpson one with the address as next-hop: '
         'CHANGELOG "Incompatible", `redirect-simpson <ip>` sends the old bytes'
     ),
+    ('4.2 5.0', r'^(neighbor \S+ )?withdraw (route|attributes?) .*\blabel\b'): (
+        'a labelled or VPN route is withdrawn with the one Compatibility field of RFC 8277 2.4, '
+        '0x800000, rather than the label it was given, whatever the Multiple Labels Capability: '
+        'CHANGELOG "Change", a receiver ignores the field'
+    ),
     ('4.2 5.0', r'^(announce|withdraw) (route|attributes?) (?!.*\blabel\b).*\b(rd|route-distinguisher)\b'): (
         '5.0 sent a VPN route given without a label with no label field, so a peer read the '
         'route distinguisher as the label; this tree refuses to announce it, and withdraws it '

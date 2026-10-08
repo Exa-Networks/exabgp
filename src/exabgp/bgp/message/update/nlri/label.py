@@ -428,15 +428,43 @@ class LabelBase(INET):
             return packed
         return bytes(packed[:offset]) + bytes([mask]) + COMPATIBILITY_FIELD + bytes(packed[offset + 1 :])
 
+    def _as_withdrawal(self) -> Buffer:
+        """The wire bytes of RFC 8277 figure 4: one Compatibility field in place of the stack.
+
+        "This encoding is used whether or not the Multiple Labels Capability has been sent
+        or received on the session." Withdrawing with the stack the route was announced
+        with sent two labels once the capability went both ways, and a receiver reading
+        figure 4 took the second label for the start of the prefix.
+        """
+        if not self._has_labels:
+            return self._with_label_field(self._packed)
+        mask_at = self._mask_offset
+        label_end = self._label_end_offset
+        dropped_bits = (label_end - mask_at - 1 - LABEL_SIZE_BYTES) * 8
+        mask = self._packed[mask_at] - dropped_bits
+        assert 0 <= mask <= MAX_LABELLED_MASK, 'one field is never longer than the stack it replaces'
+        withdrawal = (
+            bytes(self._packed[:mask_at]) + bytes([mask]) + COMPATIBILITY_FIELD + bytes(self._packed[label_end:])
+        )
+        assert len(withdrawal) == len(self._packed) - dropped_bits // 8, 'only the stack changed'
+        return withdrawal
+
+    def pack_withdraw(self, negotiated: Negotiated) -> Buffer:
+        """Pack the NLRI for MP_UNREACH_NLRI: RFC 8277 2.4, one Compatibility field of 0x800000."""
+        return self._with_session_path_info(self._as_withdrawal(), negotiated)
+
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         """Pack NLRI for wire transmission (zero-copy when possible).
 
-        _packed format: [addpath:4?][mask:1][labels:3n][prefix:var]
-        Wire format: [addpath:4?][mask:1][labels:3n][prefix:var]
+        _packed format: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
+        Wire format: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
         """
-        send_addpath = negotiated.addpath.send(self.afi, self.safi)
         packed = self._with_label_field(self._within_labels_limit(negotiated.labels_limit(self.afi, self.safi)))
+        return self._with_session_path_info(packed, negotiated)
 
+    def _with_session_path_info(self, packed: Buffer, negotiated: Negotiated) -> Buffer:
+        """The packed NLRI with a path identifier exactly when the session sends ADD-PATH."""
+        send_addpath = negotiated.addpath.send(self.afi, self.safi)
         if send_addpath:
             if self._has_addpath:
                 return packed  # Zero-copy: return directly

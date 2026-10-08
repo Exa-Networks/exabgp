@@ -64,7 +64,8 @@ We send 255.  On receipt the value is ignored once the octet after it is 255, wh
 2026-10-08 was the other way round: only a length octet of 255 was looked at, and any
 other value had the OPEN read as a parameter of type 255 and refused with 2/4.  The
 negative test is a peer which sets it to 0: that is no Optional Parameters at all, as the
-procedure below only inspects the next octet when the length is non-zero.
+procedure below only inspects the next octet when the length is non-zero.  Whatever follows
+is then padding, refused with 2/0 (rfc4271#4.1-no-padding-after-the-message).
 """
 
 [[requirement]]

@@ -586,7 +586,8 @@ def test_an_mp_withdrawal_wider_than_the_budget_does_not_oversize_the_message() 
     messages = generated([], withdraws, attributes_leaving(negotiated, 20, mp=True), negotiated)
 
     announced, withdrawn = decoded(messages, negotiated)
-    expected = '10.0.0.0/8 label 800 (12801) rd 1.2.3.4:5'
+    # RFC 8277 2.4: a withdrawal carries one Compatibility field, 0x800000, not the label
+    expected = '10.0.0.0/8 label 524288 (8388608) rd 1.2.3.4:5'
     assert withdrawn == [expected], 'the NLRI which fits was dropped with the one which did not'
     assert announced == []
 

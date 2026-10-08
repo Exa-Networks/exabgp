@@ -101,7 +101,11 @@ speaker MUST NOT interpret invalid UTF-8 sequences.
 note = """
 A received value which is not UTF-8 is not shown: it is ignored like a zero length one.
 It used to close the session with 2/0, which the draft does not ask for and which a field
-used only for display does not justify.
+used only for display does not justify. The value is read whole, as the UTF-8 string,
+unless its first octet accounts for the rest and is below 0x20: that is the length octet
+revision 00 put in front, a control character no version starts with. A first octet of
+0x20 or more is a printable character a current value may start with, so the current
+layout is read; an old value of 32 octets or more is then shown with its length octet.
 """
 
 [[requirement]]

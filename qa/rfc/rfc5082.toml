@@ -103,12 +103,16 @@ what exabgp has to get right is the number it installs and the sockets it instal
 Installing a minimum higher than the configured one would drop Trusted packets;
 installing one on a session with no ttl-security configured would drop Unknown ones.
 
-That second case is why no minimum is installed on a listening socket: it is shared by
-every neighbour on the address, port and interface, so it can only carry one minimum, and
-the last neighbour with incoming-ttl used to set it for all of them. A session the peer
-opens is checked once it is matched to its neighbour: the TTL of its SYN from the headers
-the kernel kept (TCP_SAVE_SYN, Linux), and every later segment through the minimum then
-installed on the accepted socket. tests/unit/rfc/test_rfc5082_shared_listener.py.
+That second case is why a listening socket carries a minimum only when it drops nothing a
+neighbour would not: it is shared by every neighbour on the address, so it can only carry
+one minimum, and the last neighbour with incoming-ttl used to set it for all of them. A
+session the peer opens is checked once it is matched to its neighbour: the TTL of its SYN
+from the headers the kernel kept (TCP_SAVE_SYN, Linux, where the listening socket carries
+no minimum), and every later segment through the minimum then installed on the accepted
+socket. Where the platform has IP_MINTTL but keeps no SYN (FreeBSD) the listening socket
+carries the minimum when every neighbour behind it asks for the same one, and none, with a
+warning, otherwise (Listener.install_shared_minimum, on every reload).
+tests/unit/rfc/test_rfc5082_shared_listener.py, test_rfc5082_listener_minimum.py.
 """
 
 [[requirement]]

@@ -859,6 +859,7 @@ class FlowTrafficClass(IOperationByte, NumericString, FlowIPv6):
 # and an IPv6 bitmask of 0x01 was published as a match on a field IPv6 does not have.
 FRAGMENT_BITS_IPV4: int = Fragment.DONT | Fragment.IS | Fragment.FIRST | Fragment.LAST
 FRAGMENT_BITS_IPV6: int = Fragment.IS | Fragment.FIRST | Fragment.LAST
+FRAGMENT_OCTET_MAX: int = 0xFF
 
 
 def _fragment(defined_bits: int) -> Callable[[bytes], BaseValue]:
@@ -870,13 +871,34 @@ def _fragment(defined_bits: int) -> Callable[[bytes], BaseValue]:
     return _masked
 
 
+def _fragment_named(defined_bits: int) -> Callable[[str], BaseValue]:
+    """Build the fragment value reader of one family, refusing the bits it reserves.
+
+    RFC 8955 4.2.2.12 and RFC 8956 3.6: the bitmask is one octet, and its reserved bits
+    "MUST be set to 0 on NLRI encoding".  A number is read as bits, so `fragment 255` was
+    sent as 0C 80 FF and `fragment 256` as 0C 90 0100, two octets.
+    """
+
+    def _named(word: str) -> BaseValue:
+        value = int(Fragment.named(word))
+        if value & ~defined_bits:
+            raise ValueError(
+                f'fragment {word} sets a reserved bit, the fragment bits are 0x{defined_bits:02x} '
+                f'({" ".join(Fragment.names[bit] for bit in sorted(Fragment.names) if bit & defined_bits)})'
+            )
+        assert value <= FRAGMENT_OCTET_MAX, 'the defined bits fit in the one octet of the bitmask'
+        return Fragment(value)
+
+    return _named
+
+
 class FlowFragment(IOperationByteShort, BinaryString, FlowIPv4):
     """IPv4 fragmentation flags filter (DF, IsFragment, First, Last)."""
 
     ID: ClassVar[int] = 0x0C
     NAME: ClassVar[str] = 'fragment'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(Fragment.named, Fragment)
+    converter: ClassVar[Callable[[str], BaseValue]] = _fragment_named(FRAGMENT_BITS_IPV4)
     # IOperationByteShort, so the operator byte may announce a two byte value: decode with
     # _number rather than ord, which takes a single byte and raised TypeError on the rest
     decoder: ClassVar[Callable[[bytes], BaseValue]] = _fragment(FRAGMENT_BITS_IPV4)
@@ -894,7 +916,7 @@ class FlowFragmentIPv6(IOperationByteShort, BinaryString, FlowIPv6):
     ID: ClassVar[int] = 0x0C
     NAME: ClassVar[str] = 'fragment'
     FLAG: ClassVar[bool] = True
-    converter: ClassVar[Callable[[str], BaseValue]] = converter(Fragment.named, Fragment)
+    converter: ClassVar[Callable[[str], BaseValue]] = _fragment_named(FRAGMENT_BITS_IPV6)
     decoder: ClassVar[Callable[[bytes], BaseValue]] = _fragment(FRAGMENT_BITS_IPV6)
 
 

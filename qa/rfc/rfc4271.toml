@@ -56,6 +56,27 @@ The bound we apply on receipt is Connection.msg_size, which starts at 4096 and o
 to 65535 once our OPEN has advertised RFC 8654 Extended Message (see rfc8654.toml).
 """
 
+[[requirement]]
+id = "rfc4271#4.1-no-padding-after-the-message"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+"padding" of extra data after
+the message is not allowed.  Therefore, the Length field MUST
+have the smallest value required, given the rest of the
+message.
+"""
+note = """
+The OPEN is the one message whose body says where it ends: an UPDATE's NLRI and a
+NOTIFICATION's Data run to the end of the message, and a KEEPALIVE is exactly 19 octets.
+Octets after the Optional Parameters of an OPEN were ignored.  They are refused with
+2/0: 6.2 has every error found while processing an OPEN answered with OPEN Message Error,
+and none of its subcodes is about length, while the list 6.1 gives Bad Message Length
+for is closed and does not include a message which is too long.
+"""
+
 
 # =============================================================== 4.2 OPEN Message Format
 
@@ -313,8 +334,13 @@ Neighbor.next_hop_is_the_peer compares the next-hop of the route (NEXT_HOP, or t
 of MP_REACH_NLRI, the RD of a VPN next-hop aside, an IPv4-mapped IPv6 address read as the
 IPv4 address) with the peer address. The configuration refuses such a route. The API
 refuses it when no selected peer is left, and otherwise sends it to the others only: a
-route steering one peer's traffic towards another is a legitimate use. Flow routes are
-left alone, their next-hop being a redirection target (RFC 7674).
+route steering one peer's traffic towards another is a legitimate use. A passive range
+(`neighbor 192.0.2.0/24`) is checked when configured against its first address only, so
+the peer a connection makes of it is checked again once its address is known: the routes
+whose next-hop is that address are taken out of its adj-rib-out, with a warning, before
+anything is sent (listener._without_routes_to_the_peer), and the range keeps them for its
+other peers. Flow routes are left alone, their next-hop being a redirection target
+(RFC 7674).
 """
 
 
@@ -941,6 +967,99 @@ session goes on with that OPEN if the new connection is kept.  Until 2026-10-08 
 closed ours at once, whatever the identifiers, and two speakers both doing so closed both
 connections.  Identical identifiers are RFC 6286 2.3's, see rfc6286.toml.  Both sides are
 tested in both states, the connection closed being the one the comparison picks.
+"""
+
+
+# ====================================================================== 8.2.2 Finite State Machine
+
+[[requirement]]
+id = "rfc4271#8.2.2-sending-restarts-the-keepalive-timer"
+section = "8.2.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Each time the local system sends a KEEPALIVE or UPDATE message, it
+restarts its KeepaliveTimer, unless the negotiated HoldTime value
+is zero.
+"""
+note = """
+The sentence has no RFC 2119 keyword; it is the Established state's description of what
+the speaker does, recorded at MUST as the rest of the state machine is. Protocol.write and
+Protocol.send restart the session's KeepaliveTimer (SendTimer.restart, which KA hands to
+the Protocol) after a KEEPALIVE or an UPDATE, End-of-RIB included, is written; each
+restart draws a new jitter factor (section 10). A zero hold time has no keepalive timer to
+restart. It used to restart only when a keepalive fell due, so a session sending UPDATEs
+still sent a KEEPALIVE every interval. The negative tests are the zero hold time and a
+NOTIFICATION, which is not one of the two messages.
+"""
+
+
+# ====================================================================== 9 UPDATE Message Handling
+
+[[requirement]]
+id = "rfc4271#9-new-route-replaces-the-older"
+section = "9"
+level = "SHALL"
+status = "required"
+polarity = "positive-only"
+text = """
+If the UPDATE message contains a feasible route, the Adj-RIB-In will
+be updated with this route as follows: if the NLRI of the new route
+is identical to the one the route currently has stored in the Adj-
+RIB-In, then the new route SHALL replace the older route in the Adj-
+RIB-In, thus implicitly withdrawing the older route from service.
+"""
+note = """
+The adj-rib-in (IncomingRIB) is keyed by the NLRI, so a route sent again overwrites the
+one it holds. The case which needed work is a flow specification with flow-validation on
+(RFC 8955 6): a flow sent again which is not feasible is held back, and the older one it
+replaces is taken out of the adj-rib-in and told to the API as withdrawn, rather than left
+in service beside its replacement (flow_validation._withhold). Revalidation never puts an
+older flow over the newer one held back. Positive only: this is about what we keep, there
+is no peer input which violates it.
+"""
+
+
+[[requirement]]
+id = "rfc4271#9.2-unfeasible-without-replacement-advertised"
+section = "9.2"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+All newly installed routes and all
+newly unfeasible routes for which there is no replacement route SHALL
+be advertised to its peers by means of an UPDATE message.
+"""
+note = """
+The adj-rib-out sends what changed in each batch (OutgoingRIB.updates). The case which
+needed work is routes which differ only by Path Identifier (path-information, or paths
+re-advertised from an ADD-PATH peer) towards a peer which did not negotiate ADD-PATH send
+for the family: the Path Identifier is not on the wire, so they are one route to it. The
+peer is sent the first path offered and the others are held (OutgoingRIB._path_limit, the
+same selection the Paths-Limit capability uses, with a limit of one); when the path sent is
+withdrawn a held one is sent in its place, which replaces it, and the prefix is withdrawn
+only when no path is left to send (_replaced_or_withdrawn). The negative tests show the
+last path withdrawn does withdraw the prefix, once. A route configured without
+path-information is keyed apart from the paths of its prefix and is not merged with them.
+"""
+
+[[requirement]]
+id = "rfc4271#9.2-same-route-not-advertised-again"
+section = "9.2"
+level = "SHOULD NOT"
+status = "required"
+polarity = "both"
+text = """
+A BGP speaker SHOULD NOT advertise a given feasible BGP route from
+its Adj-RIB-Out if it would produce an UPDATE message containing the
+same BGP route as was previously advertised.
+"""
+note = """
+Two paths of one prefix towards a peer without ADD-PATH send would be two UPDATEs carrying
+the same route: only the first is sent (see 9.2-unfeasible-without-replacement-advertised).
+The path sent changing its attributes is a different route, and is sent again.
 """
 
 

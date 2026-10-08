@@ -24,6 +24,7 @@ from exabgp.bgp.message.update.nlri.flow import Flow, Flow4Destination, Flow6Des
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
+from exabgp.rib import prefix_limit
 from exabgp.rib.route import Route
 
 if TYPE_CHECKING:
@@ -135,10 +136,51 @@ def _unicast_view(incoming: IncomingRIB, update: UpdateCollection) -> dict[Famil
     return {family: list(routes.values()) for family, routes in view.items()}
 
 
-def _judge_received(neighbor: Neighbor, update: UpdateCollection, view: dict[FamilyTuple, list[Route]]) -> None:
-    """Withhold the flow specifications of this UPDATE which are not feasible."""
+def _withhold(neighbor: Neighbor, route: Route) -> list[UpdateCollection]:
+    """Hold back a received flow which is not feasible, returning the withdrawal of the one it replaces.
+
+    RFC 4271 9: a route sent again replaces the one the adj-rib-in holds. Not feasible, the
+    new one is held back, so the older one leaves service rather than staying in it beside
+    the replacement, and the API is told it is withdrawn.
+    """
     incoming = neighbor.rib.incoming
+    replaced: list[UpdateCollection] = []
+    older = incoming.cached_route(route.nlri)
+    if older is not None:
+        incoming.update_cache_withdraw(older.nlri)
+        prefix_limit.release(neighbor, older.nlri)
+        replaced.append(UpdateCollection([], [older.nlri], older.attributes))
+    held = incoming.hold_pending_flow(route)
+    log.info(
+        lazymsg(
+            'flow.validation.withheld peer={peer} flow="{flow}" held={held} replaced={replaced}',
+            peer=neighbor.session.peer_address,
+            flow=route.nlri,
+            held=held,
+            replaced=older is not None,
+        ),
+        'routes',
+    )
+    assert incoming.cached_route(route.nlri) is None, 'a flow held back is not in the adj-rib-in'
+    return replaced
+
+
+def _judge_received(
+    neighbor: Neighbor, update: UpdateCollection, view: dict[FamilyTuple, list[Route]]
+) -> list[UpdateCollection]:
+    """Withhold the flow specifications of this UPDATE which are not feasible.
+
+    Returns the withdrawals of the flows they replaced, for the API to be told.
+    """
+    incoming = neighbor.rib.incoming
+    # RFC 4271 9: the withdrawn routes first. The prefix-limit stops counting them now, so a
+    # flow this UPDATE makes feasible is counted against what the peer holds once it applies
+    for nlri in update.withdraws:
+        if nlri.family().afi_safi() in VALIDATED:
+            incoming.discard_pending_flow(nlri)
+            prefix_limit.release(neighbor, nlri)
     withheld: list[RoutedNLRI] = []
+    replaced: list[UpdateCollection] = []
     for routed in update.announces:
         family = routed.nlri.family().afi_safi()
         if family not in VALIDATED:
@@ -148,21 +190,10 @@ def _judge_received(neighbor: Neighbor, update: UpdateCollection, view: dict[Fam
             incoming.discard_pending_flow(routed.nlri)
             continue
         withheld.append(routed)
-        held = incoming.hold_pending_flow(route)
-        log.info(
-            lazymsg(
-                'flow.validation.withheld peer={peer} flow="{flow}" held={held}',
-                peer=neighbor.session.peer_address,
-                flow=routed.nlri,
-                held=held,
-            ),
-            'routes',
-        )
-    for nlri in update.withdraws:
-        if nlri.family().afi_safi() in VALIDATED:
-            incoming.discard_pending_flow(nlri)
+        replaced.extend(_withhold(neighbor, route))
     if withheld:
         update.withhold(withheld)
+    return replaced
 
 
 def _revalidate(neighbor: Neighbor, view: dict[FamilyTuple, list[Route]]) -> list[UpdateCollection]:
@@ -175,11 +206,16 @@ def _revalidate(neighbor: Neighbor, view: dict[FamilyTuple, list[Route]]) -> lis
             if feasible(route, unicast, neighbor.flow_validation):
                 continue
             incoming.update_cache_withdraw(route.nlri)
-            incoming.hold_pending_flow(route)
+            prefix_limit.release(neighbor, route.nlri)
+            # RFC 4271 9: a flow held back is newer than the one in the adj-rib-in, it was
+            # sent to replace it, so it is never overwritten by the older one
+            incoming.hold_pending_flow(route, replace=False)
             changes.append(UpdateCollection([], [route.nlri], route.attributes))
         for route in incoming.pending_flows(family):
             if not feasible(route, unicast, neighbor.flow_validation):
                 continue
+            # RFC 4486 4: it enters the adj-rib-in, so it counts as one the UPDATE handler installs
+            prefix_limit.admit(neighbor, route.nlri)
             incoming.discard_pending_flow(route.nlri)
             incoming.update_cache(route)
             changes.append(UpdateCollection([RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes))
@@ -196,8 +232,8 @@ def validate_flows(neighbor: Neighbor, update: UpdateCollection) -> list[UpdateC
     if neighbor.flow_validation == DISABLED:
         return []
     view = _unicast_view(neighbor.rib.incoming, update)
-    _judge_received(neighbor, update, view)
+    replaced = _judge_received(neighbor, update, view)
     unicast = set(VALIDATED.values())
     if not any(nlri.family().afi_safi() in unicast for nlri in update.nlris):
-        return []
-    return _revalidate(neighbor, view)
+        return replaced
+    return replaced + _revalidate(neighbor, view)

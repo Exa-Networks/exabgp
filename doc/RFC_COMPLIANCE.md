@@ -16,12 +16,13 @@ them a failing (`xfail`) test demonstrates.
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | draft-abraitis-bgp-version-capability-18 | 7 | 0 | 0 | 7 | 0 | 4 | - | 100% |
 | draft-ietf-idr-bgp-multisession-07 | 11 | 0 | 0 | 11 | 6 | 13 | 9/9 | 100% |
+| draft-ietf-idr-linklocal-capability-06 | 10 | 0 | 0 | 10 | 3 | 0 | 0/1 | 100% |
 | draft-ietf-idr-operational-message-00 | 0 | 0 | 0 | 0 | 0 | 1 | - | - |
 | draft-mpmz-bess-mup-safi-05 | 10 | 0 | 0 | 10 | 0 | 0 | - | 100% |
 | rfc1997 | 5 | 0 | 0 | 5 | 0 | 3 | - | 100% |
-| rfc2545 | 1 | 0 | 0 | 1 | 0 | 0 | - | 100% |
+| rfc2545 | 2 | 0 | 0 | 2 | 0 | 0 | - | 100% |
 | rfc2918 | 1 | 0 | 0 | 1 | 0 | 2 | - | 100% |
-| rfc4271 | 36 | 0 | 0 | 36 | 9 | 7 | 1/1 | 100% |
+| rfc4271 | 40 | 0 | 0 | 40 | 9 | 8 | 1/1 | 100% |
 | rfc4360 | 0 | 0 | 0 | 0 | 2 | 3 | - | - |
 | rfc4364 | 0 | 0 | 0 | 0 | 7 | 0 | - | - |
 | rfc4456 | 0 | 0 | 0 | 0 | 2 | 6 | - | - |
@@ -46,14 +47,14 @@ them a failing (`xfail`) test demonstrates.
 | rfc7311 | 8 | 0 | 0 | 8 | 0 | 3 | - | 100% |
 | rfc7313 | 10 | 0 | 0 | 10 | 0 | 8 | - | 100% |
 | rfc7432 | 7 | 0 | 0 | 7 | 10 | 0 | - | 100% |
-| rfc7606 | 51 | 0 | 0 | 51 | 3 | 2 | - | 100% |
+| rfc7606 | 52 | 0 | 0 | 52 | 3 | 2 | - | 100% |
 | rfc7607 | 2 | 0 | 0 | 2 | 3 | 0 | 0/3 | 100% |
 | rfc7911 | 6 | 0 | 0 | 6 | 0 | 3 | - | 100% |
 | rfc8092 | 7 | 0 | 0 | 7 | 0 | 3 | - | 100% |
-| rfc8277 | 15 | 0 | 0 | 15 | 3 | 0 | - | 100% |
+| rfc8277 | 15 | 0 | 0 | 15 | 3 | 1 | - | 100% |
 | rfc8654 | 2 | 0 | 0 | 2 | 0 | 1 | - | 100% |
 | rfc8669 | 11 | 0 | 0 | 11 | 0 | 0 | - | 100% |
-| rfc8950 | 2 | 0 | 0 | 2 | 0 | 0 | - | 100% |
+| rfc8950 | 3 | 0 | 0 | 3 | 0 | 1 | - | 100% |
 | rfc8955 | 22 | 0 | 0 | 22 | 0 | 9 | - | 100% |
 | rfc8956 | 5 | 0 | 0 | 5 | 0 | 4 | - | 100% |
 | rfc9003 | 4 | 0 | 0 | 4 | 0 | 6 | - | 100% |
@@ -66,7 +67,7 @@ them a failing (`xfail`) test demonstrates.
 | rfc9514 | 1 | 0 | 0 | 1 | 0 | 1 | - | 100% |
 | rfc9552 | 17 | 0 | 0 | 17 | 0 | 1 | - | 100% |
 | rfc9774 | 2 | 0 | 0 | 2 | 2 | 3 | - | 100% |
-| rfc9830 | 8 | 0 | 0 | 8 | 0 | 1 | - | 100% |
+| rfc9830 | 16 | 0 | 0 | 16 | 0 | 1 | - | 100% |
 
 ## draft-abraitis-bgp-version-capability-18
 
@@ -110,9 +111,14 @@ is nothing for exabgp to do or refuse.
   > The Version field MUST be encoded using UTF-8. A receiving BGP speaker MUST NOT interpret invalid UTF-8 sequences.
   A received value which is not UTF-8 is not shown: it is ignored like a zero length one.
 It used to close the session with 2/0, which the draft does not ask for and which a field
-used only for display does not justify.
+used only for display does not justify. The value is read whole, as the UTF-8 string,
+unless its first octet accounts for the rest and is below 0x20: that is the length octet
+revision 00 put in front, a control character no version starts with. A first octet of
+0x20 or more is a printable character a current value may start with, so the current
+layout is read; an old value of 32 octets or more is then shown with its length octet.
   - `tests/unit/rfc/test_draft_software_version.py::test_the_value_is_the_version_string_with_no_length_octet`
   - `tests/unit/rfc/test_draft_software_version.py::test_the_current_encoding_is_read_whole`
+  - `tests/unit/rfc/test_draft_software_version.py::test_a_current_value_whose_first_character_equals_its_remaining_length_is_read_whole`
   - `tests/unit/rfc/test_draft_software_version.py::test_invalid_utf_8_is_not_interpreted`
 - **3.1** (REQUIRED) `draft-abraitis-bgp-version-capability-18#3.1-extended-optional-parameters` - proven
   > Implementations of this specification are REQUIRED Extended Optional Parameters Length for BGP OPEN Message support as defined in [RFC9072].
@@ -299,6 +305,84 @@ IPv6 session and its connection as they were.
   - `tests/unit/rfc/test_draft_multisession_sessions.py::test_an_error_resets_only_the_session_it_happened_on`
   - `tests/unit/rfc/test_draft_multisession_sessions.py::test_an_error_resets_the_session_it_happened_on`
 
+## draft-ietf-idr-linklocal-capability-06
+
+- **3** (MUST) `draft-ietf-idr-linklocal-capability-06#3-global-and-link-local-is-thirty-two-octets` - proven
+  > If an implementation intends to send both a IPv6 Global and Link- Local forwarding address in the Next Hop field of the MP_REACH_NLRI, it MUST set the length of the Next Hop field to 32 and include both the IPv6 Global and Link-Local addresses in the Next Hop field.
+  Positive only: an obligation on the encoder, which no peer input can break.
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_our_link_local_address_follows_our_own_global_next_hop`
+- **3** (MUST) `draft-ietf-idr-linklocal-capability-06#3-link-local-only-is-sixteen-octets` - proven
+  > If an implementation intends to send a single IPv6 Link-Local forwarding address in the Next Hop field of the MP_REACH_NLRI, it MUST set the length of the Next Hop field to 16 and include only the IPv6 Link-Local address in the Next Hop field.
+  Positive only: an obligation on the encoder, which no peer input can break.  When the
+session can not carry a link-local only next hop the route is withheld, which is the
+other requirements of this file.
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_a_link_local_next_hop_is_sent_alone_once_negotiated_to_a_peer_one_hop_away`
+- **4** (MUST NOT) `draft-ietf-idr-linklocal-capability-06#4-external-no-next-hop-not-announced` - proven
+  > If no next hops are included, the route MUST NOT be announced (treat-as- withdraw).
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_a_link_local_next_hop_is_sent_alone_once_negotiated_to_a_peer_one_hop_away`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_a_link_local_next_hop_is_withheld_when_the_peer_did_not_negotiate_the_capability`
+- **4** (MUST NOT) `draft-ietf-idr-linklocal-capability-06#4-internal-multihop-no-link-local` - proven
+  > If the internal peer is more than one IP hop away, the BGP speaker MUST NOT include a Link-Local IPv6 next hop.
+  Our own link-local address is not appended for a session with outgoing-ttl above one,
+and a link-local next hop is refused by the configuration and the API for such a
+neighbour, and withheld by the encoder when it gets there anyway.
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_our_link_local_address_is_not_sent_to_a_multihop_peer`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_a_link_local_next_hop_is_withheld_from_a_multihop_peer`
+- **4** (MUST NOT) `draft-ietf-idr-linklocal-capability-06#4-internal-no-next-hop-not-announced` - proven
+  > If, after evaluating the above procedures, there are no IPv6 next hops included with the route, the route MUST NOT be announced to the remote BGP speaker.
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_a_link_local_next_hop_is_sent_alone_once_negotiated_to_a_peer_one_hop_away`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_a_link_local_next_hop_is_withheld_when_the_peer_did_not_negotiate_the_capability`
+- **4** (MUST NOT) `draft-ietf-idr-linklocal-capability-06#4-multihop-external-needs-global` - proven
+  > If a Global IPv6 next hop is not included, the route MUST NOT be advertised to the external peer (treat-as-withdraw).
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_our_link_local_address_is_not_sent_to_a_multihop_peer`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_a_link_local_next_hop_is_withheld_from_a_multihop_peer`
+- **4** (MUST NOT) `draft-ietf-idr-linklocal-capability-06#4-multihop-external-no-link-local` - proven
+  > Link-Local IPv6 next hops MUST NOT be included.
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_our_link_local_address_is_not_sent_to_a_multihop_peer`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_a_link_local_next_hop_is_withheld_from_a_multihop_peer`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_an_ipv4_route_with_a_link_local_next_hop_is_withheld_from_a_multihop_peer`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_the_configuration_refuses_a_link_local_next_hop_for_a_multihop_neighbor`
+- **4** (MUST NOT) `draft-ietf-idr-linklocal-capability-06#4-no-next-hop-not-advertised` - proven
+  > If, after completing these procedures, there are no IPv6 next hop addresses included in the next hop, the BGP route MUST not be advertised to its peer.
+  A link-local next hop which the session can not carry, the capability not negotiated or
+the peer more than one hop away, leaves no address: the route is not sent, and a warning
+names it.  This used to raise RuntimeError out of the encoder, which reset the session,
+which came back up with the route still in the RIB.
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_a_link_local_next_hop_is_sent_alone_once_negotiated_to_a_peer_one_hop_away`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_a_link_local_next_hop_is_withheld_when_the_peer_did_not_negotiate_the_capability`
+- **4** (MUST) `draft-ietf-idr-linklocal-capability-06#4-own-link-local-included` - proven
+  > If the route is directly connected to the speaker, or if the interface address of the router through which the announced network is reachable for the speaker is the internal peer's address, the next hop MUST include its own Link- Local IPv6 address.
+  exabgp has no interface table, so "its own" is read as the global next hop being the local
+address of the session, which is what next-hop self resolves to.  The link-local address
+is the one configured as local-link-local: without it there is nothing to include.  The
+negative side: the next hop of a third party is not given our link-local address.
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_our_link_local_address_follows_our_own_global_next_hop`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_our_link_local_address_is_not_given_to_a_third_party_next_hop`
+- **4** (MUST NOT) `draft-ietf-idr-linklocal-capability-06#4-route-reflector-link-local-only` - not-applicable
+  > A Route Reflector (RR) reflecting a route with a link-local-only next hop MUST NOT advertise that route to a client unless the client shares the same link-layer segment as the original advertiser.
+  exabgp does not reflect routes.  What it advertises comes from its configuration or from
+an API process, never from a route received from another peer, so it is never the RR
+this sentence binds.  A program which re-announces learned routes through the API is
+held to the same next hop checks as any other announcement.
+- **4** (MUST) `draft-ietf-idr-linklocal-capability-06#4-route-reflector-rewrite-or-withhold` - not-applicable
+  > For all other clients, the RR MUST either rewrite the next hop to its own address (next-hop-self) or consider the route ineligible for advertisement to that specific peer.
+  exabgp does not reflect routes, see the previous requirement.
+- **5** (MUST) `draft-ietf-idr-linklocal-capability-06#5-thirty-two-octets-without-the-combination` - proven
+  > When this combination has not been negotiated, a sender MUST follow the rules in Section 3 of [RFC8950] and encode the Next Hop as 32 octets.
+  An IPv4 route with a link-local only next hop goes out as 16 octets when both the
+Link-Local Next Hop and the Extended Next Hop Encoding capabilities were negotiated and
+the peer is one hop away.  With Extended Next Hop Encoding alone it goes out as the 32
+octets the section describes, the unspecified address then the link-local one (48, each
+behind a zero RD, for VPN-IPv4).  To a peer further than one hop it is not sent at all:
+no next hop of link scope reaches it.  It used to go out as 16 octets in every case.
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_an_ipv4_route_with_a_link_local_next_hop_is_thirty_two_octets_without_the_combination`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_an_ipv4_route_with_a_link_local_next_hop_is_sixteen_octets_with_both_capabilities`
+- **6** (MUST) `draft-ietf-idr-linklocal-capability-06#6-malformed-next-hop-treat-as-withdraw` - gap, described but not demonstrated
+  > If the Next Hop field is malformed, the implementation MUST handle the malformed UPDATE message using the approach of "treat-as- withdraw", as described in section 7.3 of [RFC7606].
+  A 32 octet Next Hop whose second address is not link-local is decoded as it is, global
+then whatever follows, rather than being found malformed.  The length checks of
+MP_REACH_NLRI hold, so nothing is misread, but the route is not withdrawn.
+
 ## draft-ietf-idr-operational-message-00
 
 - **3.1** (MAY) `draft-ietf-idr-operational-message-00#3.1-send-only-if-received` - untested (missing: positive, negative)
@@ -307,9 +391,12 @@ IPv6 session and its connection as they were.
 in RFC 2918 section 4 for ROUTE-REFRESH. Until 2026-10-08 the Peer sent whatever was
 queued once our own configuration enabled the capability, and neither the API command
 nor the ASM replayed on session establishment asked the session. Now the negotiation
-decides (Negotiated.operational, via Peer.operational): the API answers error for a peer
-whose session did not negotiate it, and a message already queued is dropped with a
-warning.
+decides (Negotiated.operational, via Peer.sends_operational): the API answers error for a
+peer whose session did not negotiate it, and a message already queued is dropped with a
+warning. The capability is the only condition: the draft has no rule tying a message to a
+family, and the ASM replayed on establishment is the one kept for each family the
+neighbour is configured with (Peer._reannounce_asm), not each family the session
+negotiated.
 
 ## draft-mpmz-bess-mup-safi-05
 
@@ -328,8 +415,15 @@ error").
   `InterworkSegmentDiscoveryRoute.unpack_nlri` refuses a prefix length past the AFI's
 address, and `MUP.unpack_nlri` turns that into the skip of this NLRI alone.  The negative
 test is the maximum itself, a host route, which must be kept.
+
+What we send is held to the same bound: the configuration and the API refuse a prefix
+longer than the AFI's address, or of the other family (`select._prefix`), and `make_isd`
+asserts it.  Until 2026-10-08 `mup-isd 10.0.1.0/255` on an ipv4 route was packed and sent.
   - `tests/unit/rfc/test_draft_mup_safi.py::test_an_isd_route_with_a_prefix_length_past_the_address_is_skipped`
+  - `tests/unit/rfc/test_draft_mup_safi.py::test_an_isd_route_of_the_full_address_is_accepted_by_the_configuration`
   - `tests/unit/rfc/test_draft_mup_safi.py::test_an_isd_route_with_a_prefix_of_the_full_address_is_kept`
+  - `tests/unit/rfc/test_draft_mup_safi.py::test_an_isd_route_with_a_prefix_length_past_the_address_is_refused`
+  - `tests/unit/rfc/test_draft_mup_safi.py::test_an_isd_route_with_a_prefix_of_the_other_family_is_refused`
 - **3.1.2** (MUST) `draft-mpmz-bess-mup-safi-05#3.1.2-dsd-address-length-malformed-skip` - proven
   > If the AFI is IPv4 then the address length is 4 octets otherwise it is considered as a malformed NLRI. If the AFI is IPv6 then the address length is 16 octets otherwise it is considered as a malformed NLRI. A BGP speaker MUST handle such a malformed NLRI as a "Treat- as-withdraw" [RFC7606]. A BGP speaker MUST skip such NLRIs and continue processing of rest of the Update message.
   `DirectSegmentDiscoveryRoute.unpack_nlri` accepted 4 or 16 octets under either AFI.  It now
@@ -340,8 +434,14 @@ wants the AFI's size, and the address being the route key, the NLRI is skipped.
   > If the AFI is IPv4, then the maximum value of the Prefix Length field is 32. If the AFI is IPv6, then the maximum value of the Prefix Length field is 128. Any other length field is considered a a malformed NLRI. A BGP speaker MUST handle such a malformed NLRI as a "Treat- as-withdraw" [RFC7606]. A BGP speaker MUST skip such NLRIs and continue processing of rest of the Update message.
   `Type1SessionTransformedRoute.unpack_nlri` refuses a prefix length past the AFI's address,
 and `MUP.unpack_nlri` turns that into the skip of this NLRI alone.
+
+The configuration and the API refuse to send one, or a prefix of the other family
+(`select._prefix`), and `make_t1st` asserts it.  A /33 used to be refused only by accident.
   - `tests/unit/rfc/test_draft_mup_safi.py::test_a_t1st_route_with_a_prefix_length_past_the_address_is_skipped`
+  - `tests/unit/rfc/test_draft_mup_safi.py::test_a_t1st_route_of_the_full_address_is_accepted_by_the_configuration`
   - `tests/unit/rfc/test_draft_mup_safi.py::test_a_t1st_route_with_a_prefix_of_the_full_address_is_kept`
+  - `tests/unit/rfc/test_draft_mup_safi.py::test_a_t1st_route_with_a_prefix_length_past_the_address_is_refused`
+  - `tests/unit/rfc/test_draft_mup_safi.py::test_a_t1st_route_with_a_prefix_of_the_other_family_is_refused`
 - **3.1.3.1** (MUST) `draft-mpmz-bess-mup-safi-05#3.1.3.1-t1st-architecture-encoding` - proven
   > The NLRI architecture field MUST be encoded as shown above if a BGP speaker receives 3gpp-5g specific BGP Type 1 ST route. Otherwise the NLRI is considered as a malformed. A BGP speaker MUST handle such a malformed NLRI as a "Treat-as-withdraw" [RFC7606]. A BGP speaker MUST skip such NLRIs and continue processing of rest of the Update message.
   `architecture_error` in nlri/mup/t1st.py reads the part after the prefix field by field
@@ -466,6 +566,17 @@ neighbour. Positive only, as they are.
 
 ## rfc2545
 
+- **3** (SHALL) `rfc2545#3-link-local-if-and-only-if-common-subnet` - proven
+  > The link-local address shall be included in the Next Hop field if and only if the BGP speaker shares a common subnet with the entity identified by the global IPv6 address carried in the Network Address of Next Hop field and the peer the route is being advertised to.
+  exabgp has no interface table, so it only knows the subnet it shares with the peer when
+the global next hop is its own address on the session (next-hop self, or the local-address
+written out) and the session is one hop away.  Only then is the configured local-link-local
+appended, and only once draft-ietf-idr-linklocal-capability is negotiated, which is the
+operator saying the link is shared.  It used to be appended to every global next hop,
+a third party's too, whose link-local address is not ours.  Without the capability no
+link-local address is sent, as before.
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_our_link_local_address_follows_our_own_global_next_hop`
+  - `tests/unit/rfc/test_draft_linklocal_capability.py::test_our_link_local_address_is_not_given_to_a_third_party_next_hop`
 - **3** (SHALL) `rfc2545#3-next-hop-length` - proven
   > The value of the Length of Next Hop Network Address field on a MP_REACH_NLRI attribute shall be set to 16, when only a global address is present, or 32 if a link-local address is also included in the Next Hop field.
   Sending: an IPv6 route with an IPv4 next hop went out with a Next Hop field of four
@@ -531,6 +642,7 @@ assert the factor they are given is in that range.
   Positive only, for the same reason as the range.  SendTimer draws a factor each time a
 keepalive is due, Delay each time a connection attempt fails.
   - `tests/unit/rfc/test_rfc4271_jitter.py::test_each_keepalive_interval_is_scaled_by_a_new_factor`
+  - `tests/unit/rfc/test_rfc4271_timers.py::test_each_restart_draws_a_new_jitter_factor`
 - **10** (SHOULD) `rfc4271#10-jitter-timers` - proven
   > To minimize the likelihood that the distribution of BGP messages by a given BGP speaker will contain peaks, jitter SHOULD be applied to the timers associated with MinASOriginationIntervalTimer, KeepaliveTimer, MinRouteAdvertisementIntervalTimer, and ConnectRetryTimer.
   exabgp runs two of the four: the keepalive interval (SendTimer) and the delay before it
@@ -557,6 +669,16 @@ the same field is a separate obligation with its own subcode, recorded as
 rfc4271#6.1-marker-connection-not-synchronized, so a negative test here would only be
 that entry's test written twice.
   - `tests/unit/rfc/test_rfc4271_message_header.py::test_every_message_we_send_carries_the_all_ones_marker`
+- **4.1** (MUST) `rfc4271#4.1-no-padding-after-the-message` - proven
+  > "padding" of extra data after the message is not allowed. Therefore, the Length field MUST have the smallest value required, given the rest of the message.
+  The OPEN is the one message whose body says where it ends: an UPDATE's NLRI and a
+NOTIFICATION's Data run to the end of the message, and a KEEPALIVE is exactly 19 octets.
+Octets after the Optional Parameters of an OPEN were ignored.  They are refused with
+2/0: 6.2 has every error found while processing an OPEN answered with OPEN Message Error,
+and none of its subcodes is about length, while the list 6.1 gives Bad Message Length
+for is closed and does not include a message which is too long.
+  - `tests/unit/rfc/test_rfc4271_open.py::test_an_open_which_ends_with_its_optional_parameters_is_read`
+  - `tests/unit/rfc/test_rfc4271_open.py::test_an_open_with_octets_after_its_optional_parameters_is_refused`
 - **4.2** (MUST) `rfc4271#4.2-holdtime-zero-or-at-least-three` - proven
   > The Hold Time MUST be either zero or at least three seconds.
   This binds the Hold Time we propose, so the check is in the configuration parser
@@ -668,13 +790,20 @@ start with our AS in an AS_SEQUENCE, an empty `as-path [ ]` included
 of MP_REACH_NLRI, the RD of a VPN next-hop aside, an IPv4-mapped IPv6 address read as the
 IPv4 address) with the peer address. The configuration refuses such a route. The API
 refuses it when no selected peer is left, and otherwise sends it to the others only: a
-route steering one peer's traffic towards another is a legitimate use. Flow routes are
-left alone, their next-hop being a redirection target (RFC 7674).
+route steering one peer's traffic towards another is a legitimate use. A passive range
+(`neighbor 192.0.2.0/24`) is checked when configured against its first address only, so
+the peer a connection makes of it is checked again once its address is known: the routes
+whose next-hop is that address are taken out of its adj-rib-out, with a warning, before
+anything is sent (listener._without_routes_to_the_peer), and the range keeps them for its
+other peers. Flow routes are left alone, their next-hop being a redirection target
+(RFC 7674).
   - `tests/unit/rfc/test_rfc4271_originated_routes.py::test_the_configuration_accepts_any_other_next_hop`
   - `tests/unit/rfc/test_rfc4271_originated_routes.py::test_the_api_sends_a_route_with_another_next_hop_to_every_peer`
+  - `tests/unit/test_listener_ranged_neighbor.py::test_a_peer_of_a_range_is_not_sent_a_route_whose_next_hop_is_its_address`
   - `tests/unit/rfc/test_rfc4271_originated_routes.py::test_the_configuration_refuses_a_next_hop_of_the_peer`
   - `tests/unit/rfc/test_rfc4271_originated_routes.py::test_the_api_refuses_a_route_whose_next_hop_is_the_only_selected_peer`
   - `tests/unit/rfc/test_rfc4271_originated_routes.py::test_the_api_sends_it_to_the_other_peers_but_not_the_one_it_names`
+  - `tests/unit/test_listener_ranged_neighbor.py::test_another_peer_of_the_range_is_sent_both_routes`
 - **6** (MUST) `rfc4271#6-zero-subcode-when-none-is-specified` - proven
   > If no Error Subcode is specified, then a zero MUST be used.
   This is the only RFC 2119 sentence which binds section 6.5: "Hold Timer Expired Error
@@ -966,6 +1095,55 @@ tested in both states, the connection closed being the one the comparison picks.
   - `tests/unit/test_peer_session_end.py::test_in_opensent_the_incoming_connection_wins_once_its_open_names_a_higher_identifier`
   - `tests/unit/test_peer_session_end.py::test_the_connection_from_the_lower_identifier_is_the_one_closed`
   - `tests/unit/test_peer_session_end.py::test_in_opensent_the_incoming_connection_from_a_lower_identifier_is_the_one_closed`
+- **8.2.2** (MUST) `rfc4271#8.2.2-sending-restarts-the-keepalive-timer` - proven
+  > Each time the local system sends a KEEPALIVE or UPDATE message, it restarts its KeepaliveTimer, unless the negotiated HoldTime value is zero.
+  The sentence has no RFC 2119 keyword; it is the Established state's description of what
+the speaker does, recorded at MUST as the rest of the state machine is. Protocol.write and
+Protocol.send restart the session's KeepaliveTimer (SendTimer.restart, which KA hands to
+the Protocol) after a KEEPALIVE or an UPDATE, End-of-RIB included, is written; each
+restart draws a new jitter factor (section 10). A zero hold time has no keepalive timer to
+restart. It used to restart only when a keepalive fell due, so a session sending UPDATEs
+still sent a KEEPALIVE every interval. The negative tests are the zero hold time and a
+NOTIFICATION, which is not one of the two messages.
+  - `tests/unit/rfc/test_rfc4271_timers.py::test_a_restart_puts_the_next_keepalive_a_whole_interval_later`
+  - `tests/unit/rfc/test_rfc4271_timers.py::test_an_update_the_session_sends_restarts_its_keepalive_timer`
+  - `tests/unit/rfc/test_rfc4271_timers.py::test_an_update_written_as_a_message_restarts_it_too`
+  - `tests/unit/rfc/test_rfc4271_timers.py::test_a_zero_hold_time_has_no_keepalive_timer_to_restart`
+  - `tests/unit/rfc/test_rfc4271_timers.py::test_a_notification_does_not_restart_the_keepalive_timer`
+- **9** (SHALL) `rfc4271#9-new-route-replaces-the-older` - proven
+  > If the UPDATE message contains a feasible route, the Adj-RIB-In will be updated with this route as follows: if the NLRI of the new route is identical to the one the route currently has stored in the Adj- RIB-In, then the new route SHALL replace the older route in the Adj- RIB-In, thus implicitly withdrawing the older route from service.
+  The adj-rib-in (IncomingRIB) is keyed by the NLRI, so a route sent again overwrites the
+one it holds. The case which needed work is a flow specification with flow-validation on
+(RFC 8955 6): a flow sent again which is not feasible is held back, and the older one it
+replaces is taken out of the adj-rib-in and told to the API as withdrawn, rather than left
+in service beside its replacement (flow_validation._withhold). Revalidation never puts an
+older flow over the newer one held back. Positive only: this is about what we keep, there
+is no peer input which violates it.
+  - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_flow_sent_again_infeasible_replaces_the_feasible_one_and_the_api_is_told`
+  - `tests/unit/rfc/test_rfc8955_flowspec.py::test_revalidation_never_puts_back_an_older_flow_than_the_one_held`
+  - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_flow_sent_again_feasible_replaces_the_one_held_back`
+- **9.2** (SHOULD NOT) `rfc4271#9.2-same-route-not-advertised-again` - proven
+  > A BGP speaker SHOULD NOT advertise a given feasible BGP route from its Adj-RIB-Out if it would produce an UPDATE message containing the same BGP route as was previously advertised.
+  Two paths of one prefix towards a peer without ADD-PATH send would be two UPDATEs carrying
+the same route: only the first is sent (see 9.2-unfeasible-without-replacement-advertised).
+The path sent changing its attributes is a different route, and is sent again.
+  - `tests/unit/rfc/test_rfc4271_adj_rib_out.py::test_paths_of_one_prefix_go_once_to_a_peer_without_add_path`
+  - `tests/unit/rfc/test_rfc4271_adj_rib_out.py::test_the_path_sent_changing_its_attributes_is_sent_again`
+- **9.2** (SHALL) `rfc4271#9.2-unfeasible-without-replacement-advertised` - proven
+  > All newly installed routes and all newly unfeasible routes for which there is no replacement route SHALL be advertised to its peers by means of an UPDATE message.
+  The adj-rib-out sends what changed in each batch (OutgoingRIB.updates). The case which
+needed work is routes which differ only by Path Identifier (path-information, or paths
+re-advertised from an ADD-PATH peer) towards a peer which did not negotiate ADD-PATH send
+for the family: the Path Identifier is not on the wire, so they are one route to it. The
+peer is sent the first path offered and the others are held (OutgoingRIB._path_limit, the
+same selection the Paths-Limit capability uses, with a limit of one); when the path sent is
+withdrawn a held one is sent in its place, which replaces it, and the prefix is withdrawn
+only when no path is left to send (_replaced_or_withdrawn). The negative tests show the
+last path withdrawn does withdraw the prefix, once. A route configured without
+path-information is keyed apart from the paths of its prefix and is not merged with them.
+  - `tests/unit/rfc/test_rfc4271_adj_rib_out.py::test_withdrawing_the_path_sent_sends_the_one_left_instead_of_a_withdrawal`
+  - `tests/unit/rfc/test_rfc4271_adj_rib_out.py::test_withdrawing_the_last_path_withdraws_the_prefix`
+  - `tests/unit/rfc/test_rfc4271_adj_rib_out.py::test_both_paths_withdrawn_in_one_batch_withdraw_the_prefix_once`
 
 ## rfc4360
 
@@ -1156,10 +1334,20 @@ what we send, not something a peer can get wrong, so there is no negative side.
 - **4** (MUST) `rfc4486#4-maximum-prefixes-must-send-subcode-one` - proven
   > If a BGP speaker decides to terminate its peering with a neighbor because the number of address prefixes received from the neighbor exceeds a locally configured upper bound (as described in [BGP-4]), then the speaker MUST send to the neighbor a NOTIFICATION message with the Error Code Cease and the Error Subcode "Maximum Number of Prefixes Reached".
   The UPDATE handler raises Notify(6, 1) on the route which takes a family past its
-prefix-limit.  The count is of distinct routes the peer holds with us, kept in
-IncomingRIB whether or not adj-rib-in is on.
+prefix-limit (exabgp/rib/prefix_limit.py).  The count is of distinct address prefixes the
+peer holds with us, kept in IncomingRIB whether or not adj-rib-in is on: with ADD-PATH the
+paths of one prefix count once, and the prefix stops counting when its last path is
+withdrawn.  The withdrawn routes of an UPDATE are released before its NLRI are counted
+(RFC 4271 9), so a peer at its limit may replace one prefix by another in one UPDATE.  A
+flow specification held back by flow-validation (RFC 8955 6) is not in the adj-rib-in and
+is not counted; it is counted, with the same Cease past the limit, when revalidation
+installs it, and released when revalidation takes it out.
   - `tests/unit/rfc/test_rfc4486_prefix_limit.py::test_the_prefix_past_the_limit_ends_the_session_with_subcode_one`
+  - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_flow_which_becomes_feasible_past_the_limit_ends_the_session`
   - `tests/unit/rfc/test_rfc4486_prefix_limit.py::test_a_peer_at_its_limit_is_not_cut_off`
+  - `tests/unit/rfc/test_rfc4486_prefix_limit.py::test_the_paths_of_one_prefix_count_as_one_address_prefix`
+  - `tests/unit/rfc/test_rfc4486_prefix_limit.py::test_a_peer_at_its_limit_replacing_a_prefix_in_one_update_is_not_cut_off`
+  - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_flow_held_back_is_not_counted_and_one_no_longer_feasible_frees_its_place`
 - **4** (SHOULD) `rfc4486#4-peer-de-configured` - proven
   > If a BGP speaker decides to de-configure a peer, then the speaker SHOULD send a NOTIFICATION message with the Error Code Cease and the Error Subcode "Peer De-configured".
   A neighbour a reload removes, or the API deletes, is sent (6, 3) by Peer.remove()
@@ -1226,8 +1414,11 @@ withdrawn and decoded, and the VPN routes are not filtered by it. `route-target-
 true` on a neighbour takes the encouraged option: when RT-Constraint was negotiated, the
 IPv4/IPv6 VPN and EVPN routes it is sent are those carrying a Route Target covered by the
 membership it advertised (held in its adj-rib-in), and a change of membership offers them
-again, sending what is now covered and withdrawing what no longer is. The negative test is
-the filtering, the positive one the default without it.
+again, sending what is now covered and withdrawing what no longer is. The Route Targets of
+a route and the Route Target of a membership are compared by one rule (RouteTarget.TYPE_MASK):
+the T bit cleared, the I bit kept, so a type of 0x80 or 0x82 with sub-type 0x02, which is no
+Route Target, neither counts as one on a route nor admits one in a membership. The negative
+test is the filtering, the positive one the default without it.
   - `tests/unit/rfc/test_rfc4684_rt_constraint.py::test_without_route_target_filter_every_vpn_route_is_sent`
   - `tests/unit/rfc/test_rfc4684_rt_constraint.py::test_a_vpn_route_is_sent_only_for_a_route_target_the_peer_is_a_member_of`
 - **6** (MUST) `rfc4684#6-bound-the-vpn-delay` - not-applicable
@@ -1407,9 +1598,13 @@ until then, and if it never does, the previous session is kept and the new one i
   UpdateHandler._end_of_rib removes the routes of the family still marked stale from the
 restart (IncomingRIB.end_restart) when the peer's End-of-RIB for it arrives, and tells the
 API processes as a withdrawal. Before the marker nothing stale is removed; a route the peer
-sends again stops being stale.
+sends again stops being stale. A family the new session did not negotiate cannot have its
+End-of-RIB (one for it is ignored), so its stale routes are removed when the session is
+established, even when the new Graceful Restart capability names it with the Forwarding
+State bit (Peer._resume_incoming).
   - `tests/unit/rfc/test_restart_and_refresh_staleness.py::test_the_end_of_rib_still_removes_what_the_restart_retained_after_a_stray_eorr`
   - `tests/unit/rfc/test_rfc4724_graceful_restart.py::test_the_end_of_rib_removes_what_the_restarted_peer_did_not_send_again`
+  - `tests/unit/rfc/test_rfc4724_graceful_restart.py::test_the_stale_routes_of_a_family_the_new_session_did_not_negotiate_are_removed_at_once`
 - **4.2** (MUST NOT) `rfc4724#4.2-restart-state-not-set-unless-restarted` - proven
   > In re-establishing the session, the "Restart State" bit in the Graceful Restart Capability of the OPEN message sent by the Receiving Speaker MUST NOT be set unless the Receiving Speaker has restarted.
   Positive only: the bit is ours to set or not, and no peer input decides it, so the only
@@ -1476,9 +1671,16 @@ two messages, the withdrawal first.
   - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_a_prefix_announced_and_withdrawn_together_never_shares_an_update`
 - **3** (SHOULD NOT) `rfc4760#3-no-next-hop-attribute` - proven
   > An UPDATE message that carries no NLRI, other than the one encoded in the MP_REACH_NLRI attribute, SHOULD NOT carry the NEXT_HOP attribute. If such a message contains the NEXT_HOP attribute, the BGP speaker that receives the message SHOULD ignore this attribute.
+  We send none (UpdateCollection.messages).  One we receive is ignored even when RFC 7606
+7.3 would call it malformed: UpdateCollection._with_next_hop_decided withdraws for a bad
+NEXT_HOP only when the UPDATE has an NLRI field for it to apply to, or no reachable NLRI
+at all (RFC 7606 5.2).  It used to withdraw the MP_REACH_NLRI routes, which carry their
+own next hop.
   - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_an_update_carrying_only_mp_reach_has_no_next_hop_attribute`
+  - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_a_malformed_next_hop_beside_mp_reach_alone_is_ignored`
   - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_a_parsed_mp_route_carries_no_next_hop_attribute`
   - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_a_next_hop_attribute_beside_mp_reach_does_not_reach_the_mp_nlri`
+  - `tests/unit/rfc/test_rfc4760_multiprotocol.py::test_a_malformed_next_hop_beside_legacy_nlri_still_withdraws`
 - **3** (SHOULD) `rfc4760#3-reserved-ignored-on-receipt` - proven
   > A 1 octet field that MUST be set to 0, and SHOULD be ignored upon receipt.
   The receive half of the same sentence, and exabgp follows it: mprnlri.py steps over the
@@ -1646,12 +1848,16 @@ outside the confederation, whatever the operator configured.
   A rule for propagating a learned route, which exabgp does not do, see 4.1b1.
 - **5** (SHALL) `rfc5065#5-confed-segments-from-outside-malformed` - proven
   > If a BGP speaker receives such an UPDATE message, it SHALL treat the message as having a malformed AS_PATH according to the procedures of [BGP-4], Section 6.3 ("UPDATE Message Error Handling").
-  UpdateCollection._malformed_confederation_path, once a confederation is configured.  A
-malformed AS_PATH is treat-as-withdraw since RFC 7606 section 7.2, not the session reset
-of RFC 4271 section 6.3.  Without a confederation block exabgp is no member and has no
-members to tell apart, and it keeps accepting these paths as it always did.
+  UpdateCollection._malformed_confederation_path.  A malformed AS_PATH is treat-as-withdraw
+since RFC 7606 section 7.2, not the session reset of RFC 4271 section 6.3.  With a
+confederation configured, a neighbour outside it is one which is not a member.  Without
+one, every external (EBGP) neighbour is outside: we are in no confederation, so none of
+them is in the same one as us.  An internal (IBGP) neighbour is in our own AS, and its
+paths are accepted as they always were.
   - `tests/unit/rfc/test_rfc5065_confederation.py::test_confederation_segments_from_a_peer_outside_withdraw_the_route`
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_without_a_confederation_confed_segments_from_an_external_peer_withdraw`
   - `tests/unit/rfc/test_rfc5065_confederation.py::test_a_plain_path_from_a_peer_outside_is_advertised`
+  - `tests/unit/rfc/test_rfc5065_confederation.py::test_without_a_confederation_confed_segments_from_an_internal_peer_are_accepted`
 - **5** (SHALL) `rfc5065#5-member-path-must-start-with-confed-sequence` - proven
   > If a BGP speaker receives such an UPDATE message, it SHALL treat the message as having a malformed AS_PATH according to the procedures of [BGP-4], Section 6.3 ("UPDATE Message Error Handling").
   From a peer in another Member-AS, an AS_PATH which is empty or does not start with an
@@ -1736,19 +1942,25 @@ what exabgp has to get right is the number it installs and the sockets it instal
 Installing a minimum higher than the configured one would drop Trusted packets;
 installing one on a session with no ttl-security configured would drop Unknown ones.
 
-That second case is why no minimum is installed on a listening socket: it is shared by
-every neighbour on the address, port and interface, so it can only carry one minimum, and
-the last neighbour with incoming-ttl used to set it for all of them. A session the peer
-opens is checked once it is matched to its neighbour: the TTL of its SYN from the headers
-the kernel kept (TCP_SAVE_SYN, Linux), and every later segment through the minimum then
-installed on the accepted socket. tests/unit/rfc/test_rfc5082_shared_listener.py.
+That second case is why a listening socket carries a minimum only when it drops nothing a
+neighbour would not: it is shared by every neighbour on the address, so it can only carry
+one minimum, and the last neighbour with incoming-ttl used to set it for all of them. A
+session the peer opens is checked once it is matched to its neighbour: the TTL of its SYN
+from the headers the kernel kept (TCP_SAVE_SYN, Linux, where the listening socket carries
+no minimum), and every later segment through the minimum then installed on the accepted
+socket. Where the platform has IP_MINTTL but keeps no SYN (FreeBSD) the listening socket
+carries the minimum when every neighbour behind it asks for the same one, and none, with a
+warning, otherwise (Listener.install_shared_minimum, on every reload).
+tests/unit/rfc/test_rfc5082_shared_listener.py, test_rfc5082_listener_minimum.py.
   - `tests/unit/rfc/test_rfc5082_gtsm.py::test_the_minimum_installed_is_the_one_configured`
   - `tests/unit/rfc/test_rfc5082_gtsm.py::test_the_ipv6_minimum_installed_is_the_one_configured`
+  - `tests/unit/rfc/test_rfc5082_listener_minimum.py::test_every_neighbour_asking_for_one_minimum_puts_it_on_the_listener`
   - `tests/unit/rfc/test_rfc5082_shared_listener.py::test_a_neighbour_without_gtsm_is_not_dropped_by_the_minimum_of_one_sharing_its_listener`
   - `tests/unit/rfc/test_rfc5082_shared_listener.py::test_a_gtsm_neighbour_sending_255_is_accepted_and_its_session_keeps_the_minimum`
   - `tests/unit/test_ttl_security_reports_what_it_cannot_do.py::test_the_kernel_option_is_used_when_python_does_not_export_it`
   - `tests/unit/test_ttl_security_reports_what_it_cannot_do.py::test_ip_minttl_is_used_when_the_platform_has_it`
   - `tests/unit/rfc/test_rfc5082_gtsm.py::test_a_session_without_gtsm_installs_no_minimum`
+  - `tests/unit/rfc/test_rfc5082_listener_minimum.py::test_a_neighbour_asking_for_another_minimum_or_none_leaves_the_listener_without`
   - `tests/unit/rfc/test_rfc5082_shared_listener.py::test_a_gtsm_neighbour_whose_syn_arrived_below_the_minimum_is_dropped`
   - `tests/unit/test_ttl_security_reports_what_it_cannot_do.py::test_no_ttl_configured_touches_nothing`
 - **3** (MUST) `rfc5082#3-sending-ttl-is-255` - proven
@@ -1932,9 +2144,11 @@ it would leave exabgp unable to generate a community an interop exercise needs.
 a four octet VSI-ID), which exabgp does not implement: it is stepped over with an
 `NLRIDiscard`, logged, and the NLRI after it in the same MP_REACH_NLRI is decoded.  It used
 to be refused with a plain `Notify`, so a peer running BGP-AD alongside VPLS reset the
-session.  Any other length below the seventeen octets of RFC 4761 is framed by the same
-length and goes the same way.  The negative side: a length running past the attribute
-cannot be stepped over, and still resets the session.
+session.  Only twelve: any other length below the seventeen octets of RFC 4761 is neither
+NLRI, an NLRI length "inconsistent with the given AFI/SAFI", which RFC 7606 5.3 makes the
+MP_REACH_NLRI or MP_UNREACH_NLRI incorrect (Notify 3, 10, see
+rfc7606#5.3-mp-attribute-nlri-lengths).  The negative side: a length running past the
+attribute cannot be stepped over, and still resets the session.
   - `tests/unit/rfc/test_rfc6074_bgp_ad.py::test_a_bgp_ad_nlri_is_stepped_over_and_the_vpls_nlri_after_it_decoded`
   - `tests/unit/rfc/test_rfc6074_bgp_ad.py::test_a_bgp_ad_withdrawal_is_stepped_over_too`
   - `tests/unit/rfc/test_rfc6074_bgp_ad.py::test_the_decoder_says_how_far_to_skip_a_bgp_ad_nlri`
@@ -2721,6 +2935,8 @@ out.
   - `tests/unit/rfc/test_rfc7606_update_errors.py::test_a_syntactically_correct_withdrawn_routes_field_is_accepted`
 - **3** (MUST) `rfc7606#3j-session-reset-when-nlri-cannot-be-parsed` - proven
   > If this is not possible, the procedures of [RFC4271] and/or [RFC4760] continue to apply, meaning that the "session reset" approach (or the "AFI/SAFI disable" approach) MUST be followed.
+  - `tests/unit/rfc/test_rfc7606_nlri.py::test_an_empty_mp_attribute_is_an_optional_attribute_error`
+  - `tests/unit/rfc/test_rfc7606_nlri.py::test_an_mp_attribute_which_cannot_be_framed_resets_the_session`
   - `tests/unit/rfc/test_rfc7606_update_errors.py::test_an_unparseable_nlri_field_resets_the_session_even_with_an_attribute_error`
   - `tests/unit/rfc/test_rfc7606_update_errors.py::test_a_parseable_nlri_field_keeps_the_session_when_an_attribute_is_malformed`
 - **4** (MUST) `rfc7606#4-attribute-length-conflict-treat-as-withdraw` - proven
@@ -2823,13 +3039,19 @@ right and one wrong, and a single entry could only say one of those things.  Thi
 the first two bullets; the others are rfc7606#5.3-mp-attribute-flags-must-match-rfc4760
 and rfc7606#5.3-mp-minimum-attribute-length.
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_an_mp_attribute_with_an_impossible_nlri_length_is_refused`
+  - `tests/unit/rfc/test_rfc6074_bgp_ad.py::test_a_length_neither_bgp_ad_nor_vpls_is_an_incorrect_attribute`
+  - `tests/unit/rfc/test_rfc6074_bgp_ad.py::test_a_withdrawal_of_a_length_neither_bgp_ad_nor_vpls_is_an_incorrect_attribute`
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_an_mp_attribute_whose_nlri_lengths_are_consistent_is_accepted`
 - **5.3** (SHALL) `rfc7606#5.3-mp-minimum-attribute-length` - proven
   > The length of the MP_UNREACH_NLRI attribute is less than 3, or the length of the MP_REACH_NLRI attribute is less than 5.
   The fourth bullet of the list quoted in rfc7606#5.3-mp-attribute-nlri-lengths, whose
 lead-in carries the SHALL.  Three and five are the smallest encodings that can hold an
-AFI, a SAFI and, for MP_REACH, a next hop length and the reserved octet.
+AFI, a SAFI and, for MP_REACH, a next hop length and the reserved octet.  A length of
+zero is one of them: it used to be caught first by the zero length rule of section 4 and
+treated as withdraw, which beside an NLRI field kept the session up.  It is 3/9 now, as
+an MP attribute which overruns the attributes or whose header is cut short is (3 (j)).
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_an_mp_attribute_shorter_than_its_minimum_is_refused`
+  - `tests/unit/rfc/test_rfc7606_nlri.py::test_an_empty_mp_attribute_is_an_optional_attribute_error`
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_mp_attributes_at_or_above_their_minimum_are_accepted`
 - **5.3** (SHALL) `rfc7606#5.3-nlri-field-syntactic-correctness` - proven
   > The NLRI field or Withdrawn Routes field SHALL be considered "syntactically incorrect" if either of the following are true: o The length of any of the included NLRI is greater than 32. o When parsing NLRI contained in the field, the length of the last NLRI found exceeds the amount of unconsumed data remaining in the field.
@@ -2848,6 +3070,18 @@ remove nothing we hold and shows the operator what the peer sent.
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_a_typed_route_of_a_known_type_beside_an_unknown_one_is_kept`
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_a_withdrawn_typed_route_of_an_unknown_type_is_still_reported`
   - `tests/unit/rfc/test_rfc7606_nlri.py::test_an_mvpn_route_of_a_type_rfc6514_defines_but_we_do_not_decode_is_kept`
+- **6** (MUST) `rfc7606#6-log-malformed-update` - proven
+  > At a minimum, such facilities must include logging an error listing the NLRI involved and containing the entire malformed UPDATE message when such an attribute is detected.
+  Recorded although its keyword is a lowercase "must", in a document which capitalises
+everywhere else: it is the only record an operator gets of routes changed with no
+NOTIFICATION. UpdateCollection._log_malformed writes one error per UPDATE in which a
+malformed attribute was withdrawn for, discarded or ignored, or whose routes were withdrawn
+for their context (a missing well-known mandatory attribute, an AS_PATH RFC 5065, RFC 8955
+or RFC 9774 rejects). It names the reasons, the NLRI (the first 16), and the UPDATE in hex
+with its header (the first 4096 octets, so any message without RFC 8654 whole). An UPDATE
+which resets the session is reported by its NOTIFICATION instead.
+  - `tests/unit/rfc/test_rfc7606_logging.py::test_a_malformed_update_is_logged_once_with_its_nlri_and_its_bytes`
+  - `tests/unit/rfc/test_rfc7606_logging.py::test_a_well_formed_update_logs_no_error`
 - **7.1** (SHALL) `rfc7606#7.1-origin-treat-as-withdraw` - proven
   > The attribute is considered malformed if its length is not 1 or if it has an undefined value [RFC4271]. An UPDATE message with a malformed ORIGIN attribute SHALL be handled using the approach of "treat-as-withdraw".
   - `tests/unit/rfc/test_rfc7606_attributes.py::test_a_malformed_origin_withdraws_the_route`
@@ -3356,12 +3590,7 @@ distinguisher and the prefix whenever they can be, and the value is never looked
 A withdrawn /0 was the exception until 2026-10-08: with no prefix bits behind the field,
 only 0x800000 and 0x000000 ended it; any value does now.
 
-The SHOULD is followed for a route withdrawn without a label: `LabelBase._with_label_field`
-puts 0x800000 in front of the prefix, a 0.0.0.0/0 or ::/0 included, which used to go out
-with a Length of 0 and no field at all.  A route withdrawn with the NLRI it was announced
-with still carries the label it advertised rather than 0x800000, which is a decision
-rather than a defect: every value is legal to send, and a receiver which cares is the bug
-this entry just stopped being.
+The SHOULD is followed, and has its own entry: rfc8277#2.4-compatibility-sent-on-withdrawal.
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_withdraw_with_a_known_compatibility_value_decodes_to_its_prefix`
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_the_prefix_length_of_a_withdraw_is_the_nlri_length_less_the_compatibility_field`
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_default_route_withdrawn_without_a_label_carries_the_compatibility_field`
@@ -3380,6 +3609,20 @@ positive side is meaningful: the requirement is that no value is rejected, so th
 input which can violate it by being accepted, and a negative test would only be the
 positive one with different bytes.
   - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_withdraw_with_an_arbitrary_compatibility_value_decodes_to_its_prefix`
+- **2.4** (SHOULD) `rfc8277#2.4-compatibility-sent-on-withdrawal` - proven
+  > Upon transmission, the Compatibility field SHOULD be set to 0x800000.
+  The sending half of the sentence the MUST above shares, recorded on its own because it is
+the half we act on.  Section 2.4 goes on, without a keyword: "This encoding is used whether
+or not the Multiple Labels Capability has been sent or received on the session."  Until
+2026-10-08 a route was withdrawn with the label stack it was announced with: one label
+without the capability, the whole stack with it, so `label [ 100 200 ]` went out in
+MP_UNREACH_NLRI as 48 000640 000c81 0a0000, and a receiver reading figure 4 took the second
+label for the start of a /48.  `NLRI.pack_withdraw` is what MPNLRICollection packs a
+withdrawal with, and `LabelBase.pack_withdraw` (SAFI 4 and SAFI 128) puts one 0x800000
+field where the stack was.  A sender obligation, with no input of the peer's to violate it:
+the receiving side is the MUST.
+  - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_labelled_withdrawal_carries_one_compatibility_field`
+  - `tests/unit/rfc/test_rfc8277_labelled_unicast.py::test_a_vpn_withdrawal_carries_one_compatibility_field`
 - **2.5** (MUST NOT) `rfc8277#2.5-different-path-id-does-not-withdraw` - proven
   > * If I1 is not the same as I2, U2 MUST be interpreted as meaning that L2 is now bound to P at N1, but U2 MUST NOT be interpreted as meaning that L1 is no longer bound to P at N1.
   The path identifier IS in `index()`, by way of `path_info.pack_path()`, so two labelled
@@ -3578,6 +3821,7 @@ IPv6 next hop, for that <AFI, SAFI> only.  The decoder used to switch every fami
 table of the AFI the length suggested once any entry was negotiated: a family never
 negotiated took an IPv6 next hop, and EVPN, VPLS and BGP-LS raised KeyError.
   - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_the_length_says_which_protocol_the_next_hop_is`
+  - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_the_ipv6_next_hop_we_offered_is_received_whatever_the_peer_offered`
   - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_an_ipv6_next_hop_needs_the_capability_for_that_family`
 - **4** (MUST) `rfc8950#4-advertise-only-after-capability` - proven
   > A BGP speaker MUST only advertise the IPv4 or VPN-IPv4 NLRI with an IPv6 next hop to a BGP peer if the BGP speaker has first ascertained via the BGP Capability Advertisement that the BGP peer supports the Extended Next Hop Encoding capability for the relevant AFI/SAFI pair.
@@ -3586,7 +3830,29 @@ SAFI 1, 2, 4 or 128 whose next hop is IPv6 unless that <AFI, SAFI> negotiated an
 hop.  The configuration refuses such a route before it is sent; this is what holds for an
 API announcement, or a peer which withheld the capability.
   - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_an_ipv4_route_goes_out_with_an_ipv6_next_hop_once_the_capability_allows_it`
+  - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_the_ipv6_next_hop_both_offered_is_sent`
   - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_an_ipv4_route_with_an_ipv6_next_hop_is_not_sent_without_the_capability`
+  - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_the_ipv6_next_hop_only_we_offered_is_not_sent`
+- **4** (MUST) `rfc8950#4-capability-fields` - proven
+  > The fields in the Capabilities Optional Parameter MUST be set as follows:
+  The value is a list of <NLRI AFI, NLRI SAFI, Nexthop AFI> triples, one per family the
+speaker accepts an IPv6 next hop for.  A neighbour with `nexthop` enabled and no triple
+to offer (none configured, only some outside section 4's list, or a multisession
+session for a family without one) sent the capability with a value of zero octets,
+which says nothing.  It is now left out.  Positive only: an obligation on our OPEN.
+  - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_the_capability_carries_one_triple_per_family`
+  - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_a_capability_with_no_triple_is_not_sent`
+- **4** (MAY) `rfc8950#4-triple-says-what-may-be-advertised` - proven
+  > each triple <NLRI AFI, NLRI SAFI, Nexthop AFI> indicates that the NLRI of <NLRI AFI / NLRI SAFI> may be advertised with a next-hop address belonging to the network-layer protocol of Nexthop AFI.
+  A triple is a statement by the speaker which sends it about what it accepts, so the two
+directions of a session are decided by different OPENs.  What the peer may send us is
+what our OPEN offered, `Negotiated.nexthop_receive`, and the MP_REACH_NLRI decoder uses
+that.  It used the intersection of both OPENs, so a peer which did not advertise a triple
+of its own had the IPv6 next hops we asked for refused with a NOTIFICATION.  What we send
+keeps the intersection, `Negotiated.nexthop`: the peer's triple is what section 4 asks
+for, and ours is the operator's consent to an IPv6 next hop for the family.
+  - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_the_ipv6_next_hop_we_offered_is_received_whatever_the_peer_offered`
+  - `tests/unit/rfc/test_rfc8950_extended_next_hop.py::test_the_ipv6_next_hop_only_the_peer_offered_is_not_received`
 
 ## rfc8955
 
@@ -3724,21 +3990,28 @@ encoder.
 - **4.2.2.12** (MUST) `rfc8955#4.2.2.12-fragment-reserved-bits-zero` - proven
   > 0: MUST be set to 0 on NLRI encoding and MUST be ignored during decoding
   The four high bits of the fragment bitmask value, not of the operator octet.  exabgp
-encodes them as zero, since `Fragment` defines nothing above 0x0F.  They were not ignored
+encodes them as zero: the configuration and the API refuse a fragment value setting one
+(`fragment 255` was sent as 0C 80 FF until 2026-10-08, a name was never the problem, a
+number was).  They were not ignored
 on decoding: `Fragment.named` reports an unknown bit rather than dropping it, so a value
 of 0xF5 was rendered as `dont-fragment+first-fragment+unknown fragment type 245`.  The
 decoder of `FlowFragment` now masks the value with the four bits this section defines, so
 0xF5 and 0x05 decode to the same filter.
+  - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_fragment_given_as_a_number_of_defined_bits_is_one_octet`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_no_fragment_bitmask_we_encode_sets_a_reserved_bit`
+  - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_fragment_with_a_reserved_bit_is_refused`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_the_reserved_bits_of_a_fragment_bitmask_are_ignored_on_decoding`
 - **4.2.2.12** (MUST) `rfc8955#4.2.2.12-fragment-single-octet` - proven
   > The Type 12 component bitmask MUST be encoded as single octet bitmask (bitmask_op len=00).
-  Held, but by accident rather than by construction: `FlowFragment` derives from
-`IOperationByteShort`, which would emit two octets for a value of 256 or more, and what
-keeps it to one is that every name `Fragment` defines is 0x0F or below.  The negative test
-is therefore the one worth having, because it pins the property the class does not state.
+  `FlowFragment` derives from `IOperationByteShort`, which emits two octets for a value of
+256 or more, so the single octet is held by what the component accepts.  Until 2026-10-08
+it accepted any number: every name `Fragment` defines is 0x0F or below, but a number was
+taken as it was given, and `fragment 256` went out as 0C 90 0100.  Its converter,
+`_fragment_named`, now refuses any bit the family does not define, so the value is at most
+0x0F and always one octet.
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_every_fragment_bitmask_we_encode_uses_a_single_octet`
-  - `tests/unit/rfc/test_rfc8955_flowspec.py::test_no_fragment_value_could_need_a_second_octet`
+  - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_fragment_given_as_a_number_of_defined_bits_is_one_octet`
+  - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_fragment_with_a_reserved_bit_is_refused`
 - **4.2.2.9** (MUST) `rfc8955#4.2.2.9-tcp-flags-width` - proven
   > Type 9 component bitmasks MUST be encoded as 1- or 2-octet bitmask (bitmask_op len=00 or len=01).
   `FlowTCPFlag` derives from `IOperationByteShort`, whose `encode` returns one octet below
@@ -3768,7 +4041,11 @@ default is on. A neighbouring Member-AS is held to RFC 5065 instead.
 every flow of the peer again: one held in the adj-rib-in which is no longer feasible is
 removed and held back, one held back which has become feasible is put in the adj-rib-in,
 and each change is told to the API as an UPDATE of its own (Update.from_collection) after
-the one which caused it. A flow the peer withdraws while held back is forgotten.
+the one which caused it. A flow the peer withdraws while held back is forgotten. A flow
+sent again which is not feasible replaces the one in the adj-rib-in (RFC 4271 9): that one
+is removed and told to the API as withdrawn, and revalidation never puts it back over the
+newer one held. A flow installed or removed by revalidation counts against the family's
+prefix-limit as one the UPDATE handler installs or withdraws (RFC 4486 4).
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_flow_specification_is_no_longer_feasible_once_its_unicast_route_is_withdrawn`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_flow_held_back_becomes_feasible_when_its_unicast_route_arrives_and_the_api_is_told`
   - `tests/unit/rfc/test_rfc8955_flowspec.py::test_a_withdrawn_flow_is_not_brought_back_by_a_later_unicast_route`
@@ -3964,15 +4241,23 @@ Type 12 is now split per family the way type 11 already was, into `FlowFragment`
 and `FlowFragmentIPv6` for AFI 2, because the set of bits the family defines is the one
 thing about the component which differs and the decoder is where it has to be applied.
 The IPv6 decoder masks with IsF, FF and LF only, so 0x01 decodes to nothing at all.
+
+On encoding, the configuration and the API refuse a value setting a reserved bit, the four
+high bits (a number such as 16 or 0xf0 was accepted until 2026-10-08) and Don't Fragment,
+which makes the route an IPv4 one and so cannot be combined with an IPv6 component.
   - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_the_four_high_bits_of_an_ipv6_fragment_bitmask_we_encode_are_zero`
+  - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_an_ipv6_fragment_with_a_reserved_bit_is_refused`
+  - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_an_ipv6_fragment_asking_for_dont_fragment_is_refused`
   - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_the_reserved_bits_of_an_ipv6_fragment_bitmask_are_ignored_on_decoding`
 - **3.6** (MUST) `rfc8956#3.6-fragment-single-octet` - proven
   > The Type 12 component bitmask MUST be encoded as a single octet bitmask (bitmask_op len=00).
-  `FlowFragmentIPv6`, the sibling of IPv4's `FlowFragment`, so the same accidental
-compliance: it derives from `IOperationByteShort`, which would emit two octets above 255,
-and what keeps it to one is that no name `Fragment` defines is above 0x0F.
+  `FlowFragmentIPv6`, the sibling of IPv4's `FlowFragment`, derives from `IOperationByteShort`,
+which emits two octets above 255.  What keeps it to one is the converter, `_fragment_named`,
+which refuses any bit the family does not define.  Until 2026-10-08 a number was taken as
+given, and `fragment 256` on an IPv6 flow route went out as 0C 90 0100.
   - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_every_ipv6_fragment_bitmask_we_encode_uses_a_single_octet`
-  - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_an_ipv6_fragment_component_of_two_octets_is_not_what_we_generate`
+  - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_an_ipv6_fragment_given_as_a_number_of_defined_bits_is_one_octet`
+  - `tests/unit/rfc/test_rfc8956_flowspec_ipv6.py::test_an_ipv6_fragment_with_a_reserved_bit_is_refused`
 - **3.7** (SHOULD) `rfc8956#3.7-flow-label-four-octets` - proven
   > Type 13 component values SHOULD be encoded as 4-octet quantities (numeric_op len=10).
   `FlowFlowLabel` encodes through `IOperationLong`, four octets whatever the value; on
@@ -4180,7 +4465,8 @@ negative test is a short set, which stays in the RFC 4271 encoding.
 2026-10-08 was the other way round: only a length octet of 255 was looked at, and any
 other value had the OPEN read as a parameter of type 255 and refused with 2/4.  The
 negative test is a peer which sets it to 0: that is no Optional Parameters at all, as the
-procedure below only inspects the next octet when the length is non-zero.
+procedure below only inspects the next octet when the length is non-zero.  Whatever follows
+is then padding, refused with 2/0 (rfc4271#4.1-no-padding-after-the-message).
   - `tests/unit/rfc/test_rfc9072_extended_optional_parameters.py::test_more_than_255_octets_go_out_in_the_extended_encoding`
   - `tests/unit/rfc/test_rfc9072_extended_optional_parameters.py::test_a_length_of_zero_is_no_optional_parameters_even_before_type_255`
 - **2** (MUST) `rfc9072#2-non-ext-op-type-255-on-transmission` - proven
@@ -4929,6 +5215,37 @@ a repeated sub-TLV, where the repeat is disregarded and the route kept.
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_two_sr_policy_tlvs_in_one_attribute_are_treated_as_withdraw`
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_second_tunnel_tlv_of_another_type_is_not_a_duplicate`
   - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_one_sr_policy_tlv_in_an_attribute_is_accepted`
+- **2.4.1** (MUST NOT) `rfc9830#2.4.1-preference-once` - proven
+  > The Preference sub-TLV is OPTIONAL; it MUST NOT appear more than once in the SR Policy encoding.
+  The configuration and the API refuse a second Preference sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); until 2026-10-08 only ENLP was refused, and a
+repeat of any other was packed and sent.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_once_is_configured`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_twice_is_refused`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_repeat_received_is_disregarded_and_the_first_kept`
+- **2.4.2** (MUST NOT) `rfc9830#2.4.2-binding-sid-label-not-reserved` - proven
+  > The Label field is validated by the SRPM but MUST NOT contain the reserved MPLS label values (0-15).
+  `sr_policy._binding_sid` refuses `binding-sid mpls` with a label of 0 to 15, and one past
+twenty bits, which used to fail with struct.error when the route was packed.  Until
+2026-10-08 a reserved label was sent as given.  Both tests are of what we send: the
+sentence gives the validation of a received label to the SRPM, which exabgp is not, so a
+received reserved label is decoded and reported as it came.
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_binding_sid_label_outside_the_reserved_range_is_configured`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_reserved_or_too_large_binding_sid_label_is_refused`
+- **2.4.2** (MUST NOT) `rfc9830#2.4.2-binding-sid-once` - proven
+  > The Binding SID sub-TLV is OPTIONAL; it MUST NOT appear more than once in the SR Policy encoding.
+  The configuration and the API refuse a second Binding SID sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); until 2026-10-08 only ENLP was refused, and a
+repeat of any other was packed and sent.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_once_is_configured`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_twice_is_refused`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_repeat_received_is_disregarded_and_the_first_kept`
 - **2.4.4.2.3** (MUST) `rfc9830#2.4.4.2.3-unassigned-segment-flags-zero` - proven
   > The unassigned bits in the Flags field MUST be set to zero upon transmission and MUST be ignored upon receipt.
   This entry exists because reading RFC 9830 on its own gets the answer wrong.  Its IANA
@@ -4947,6 +5264,59 @@ sets bits 4-7 anyway must not change how the segment decodes, and does not, beca
 decoder here reads them.
   - `tests/unit/test_sr_policy.py::test_no_configured_segment_transmits_an_unassigned_flag_bit`
   - `tests/unit/test_sr_policy.py::test_unassigned_segment_flag_bits_are_ignored_on_receipt`
+- **2.4.4.2.4** (MUST) `rfc9830#2.4.4.2.4-sid-structure-at-most-128` - proven
+  > The total of the locator block, locator node, function, and argument lengths MUST be less than or equal to 128.
+  `sr_policy._behaviour` refuses an `endpoint-behavior` whose four lengths total more than
+128 bits, which also keeps each in its octet (256 used to fail with struct.error when the
+route was packed), and a behaviour code past two octets.  Until 2026-10-08 a total of 129
+to 1020 was sent.  Both tests are of what we send: the section says nothing of a receiver,
+and `SRv6EndpointBehavior.unpack` reports a received structure as it came.
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_an_srv6_sid_structure_of_at_most_128_bits_is_configured`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_an_srv6_sid_structure_longer_than_128_bits_is_refused`
+- **2.4.5** (MUST NOT) `rfc9830#2.4.5-enlp-once` - proven
+  > The ENLP sub-TLV is OPTIONAL; it MUST NOT appear more than once in the SR Policy encoding.
+  The configuration and the API refuse a second ENLP sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); this one has been refused
+for longer than the others.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_once_is_configured`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_twice_is_refused`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_repeat_received_is_disregarded_and_the_first_kept`
+- **2.4.6** (MUST NOT) `rfc9830#2.4.6-priority-once` - proven
+  > The Priority sub-TLV is OPTIONAL; it MUST NOT appear more than once in the SR Policy encoding.
+  The configuration and the API refuse a second Priority sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); until 2026-10-08 only ENLP was refused, and a
+repeat of any other was packed and sent.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_once_is_configured`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_twice_is_refused`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_repeat_received_is_disregarded_and_the_first_kept`
+- **2.4.7** (MUST NOT) `rfc9830#2.4.7-candidate-path-name-once` - proven
+  > The SR Policy Candidate Path Name sub-TLV is OPTIONAL; it MUST NOT appear more than once in the SR Policy encoding.
+  The configuration and the API refuse a second Candidate Path Name sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); until 2026-10-08 only ENLP was refused, and a
+repeat of any other was packed and sent.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_once_is_configured`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_twice_is_refused`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_repeat_received_is_disregarded_and_the_first_kept`
+- **2.4.8** (MUST NOT) `rfc9830#2.4.8-policy-name-once` - proven
+  > The SR Policy Name sub-TLV is OPTIONAL; it MUST NOT appear more than once in the SR Policy encoding.
+  The configuration and the API refuse a second Policy Name sub-TLV in one policy
+(`sr_policy._values`, `SINGLE_SUBTLVS`); until 2026-10-08 only ENLP was refused, and a
+repeat of any other was packed and sent.
+What a receiver does with a repeat is RFC 9012 13's: "all but the first occurrence of each
+such sub-TLV type MUST be disregarded", the route is not malformed.  `SRPolicyTunnel.json`
+reports the first and disregards the rest, the negative test.
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_once_is_configured`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_single_instance_sub_tlv_given_twice_is_refused`
+  - `tests/unit/rfc/test_rfc9830_sr_policy.py::test_a_repeat_received_is_disregarded_and_the_first_kept`
 - **4.1** (MUST) `rfc9830#4.1-no-advertise-without-route-target` - proven
   > If no route target is attached to the SR Policy NLRI, then it is assumed that the originator sends the SR Policy update directly (e.g., through a BGP session) to the intended receiver. In such a case, the NO_ADVERTISE community [RFC1997] MUST be attached to the SR Policy update (see further details in Section 4.2.3).
   exabgp originates whatever the operator configures, so the configuration is where this is

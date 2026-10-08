@@ -438,3 +438,44 @@ def test_validate_reports_open_errors_and_nothing_else() -> None:
         assert error[0] == OPEN_MESSAGE_ERROR
         rendered = str(Notification(bytes([error[0], error[1]])))
         assert 'unknow reason' not in rendered, f'{error[0]}/{error[1]} is a subcode with no name: {rendered}'
+
+
+# ------------------------------------------------------- RFC 4271 4.1, no padding
+
+
+CAPABILITY_PARAMETER = bytes([Parameter.CAPABILITIES, 2, ROUTE_REFRESH, 0])
+
+
+@pytest.mark.rfc('rfc4271#4.1-no-padding-after-the-message')
+@pytest.mark.parametrize(
+    'parameters',
+    [
+        bytes([0]),
+        bytes([len(CAPABILITY_PARAMETER)]) + CAPABILITY_PARAMETER,
+        bytes([255, 255]) + pack('!H', 5) + bytes([Parameter.CAPABILITIES]) + pack('!H', 2) + bytes([ROUTE_REFRESH, 0]),
+    ],
+    ids=['no-parameters', 'rfc-4271', 'rfc-9072'],
+)
+def test_an_open_which_ends_with_its_optional_parameters_is_read(parameters: bytes) -> None:
+    body = open_body()[:-1] + parameters
+    assert Message.unpack(Message.CODE.OPEN, body, Negotiated.UNSET) is not None
+
+
+@pytest.mark.rfc('rfc4271#4.1-no-padding-after-the-message', polarity='negative')
+@pytest.mark.parametrize(
+    'parameters',
+    [
+        bytes([0, 0]),
+        bytes([0]) + CAPABILITY_PARAMETER,
+        bytes([len(CAPABILITY_PARAMETER)]) + CAPABILITY_PARAMETER + bytes([0]),
+        bytes([255, 255]) + pack('!H', 5) + bytes([Parameter.CAPABILITIES]) + pack('!H', 2) + bytes([2, 0, 0]),
+    ],
+    ids=['after-no-parameters', 'parameters-after-length-zero', 'rfc-4271', 'rfc-9072'],
+)
+def test_an_open_with_octets_after_its_optional_parameters_is_refused(parameters: bytes) -> None:
+    """RFC 4271 6.2: found while processing the OPEN, so OPEN Message Error, and Unspecific:
+    the list of 6.1 which gives Bad Message Length is closed, and has no message too long."""
+    body = open_body()[:-1] + parameters
+    with pytest.raises(Notify) as caught:
+        Message.unpack(Message.CODE.OPEN, body, Negotiated.UNSET)
+    assert (caught.value.code, caught.value.subcode) == (OPEN_MESSAGE_ERROR, UNSPECIFIC)

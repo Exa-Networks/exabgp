@@ -343,8 +343,12 @@ class MPNLRICollection:
             # Fallback for invalid nexthop
             return bytes([0]) * 4
 
-        # Only apply LLNH logic for IPv6 families
         if family_key[0] != AFI.ipv6:
+            if family_key[0] == AFI.ipv4 and nlri_nexthop.is_link_local() and not negotiated.linklocal_nexthop:
+                # draft-ietf-idr-linklocal-capability 5: without both capabilities "a sender
+                # MUST follow the rules in Section 3 of [RFC8950] and encode the Next Hop as
+                # 32 octets", the unspecified address first (each behind its RD for VPN-IPv4)
+                return nh_rd + bytes(len(nh_packed)) + nh_rd + nh_packed
             return nh_rd + nh_packed
         if nlri_nexthop.afi == AFI.ipv4:
             # RFC 4798 2 and RFC 4659 3.2.1.2: an IPv6 family without a four octet next hop
@@ -375,47 +379,54 @@ class MPNLRICollection:
             return False
         return (afi, safi, AFI.ipv6) not in negotiated.nexthop
 
+    @classmethod
+    def _next_hop_refused(cls, nlri_nexthop: IP, family_key: tuple[AFI, SAFI], negotiated: 'Negotiated') -> str:
+        """Why this session can not carry this next hop, '' when it can.
+
+        Such a route is not sent. draft-ietf-idr-linklocal-capability 4: with "no IPv6 next
+        hop addresses included in the next hop, the BGP route MUST not be advertised". The
+        configuration and the API refuse what they can see; what is left is a capability the
+        peer did not send. It used to raise RuntimeError out of the encoder, which reset the
+        session, which came back with the route still in the RIB, and reset again.
+        """
+        if cls._lacks_extended_next_hop(nlri_nexthop, family_key, negotiated):
+            return 'the peer did not negotiate an IPv6 next hop for this family (RFC 8950)'
+        if not nlri_nexthop.is_link_local():
+            return ''
+        # draft-ietf-idr-linklocal-capability 4: "Link-Local IPv6 next hops MUST NOT be
+        # included" for a peer more than one hop away, and nothing else is left to send
+        if negotiated.is_multihop():
+            return 'a link-local next hop can not reach a multihop peer (draft-ietf-idr-linklocal-capability 4)'
+        if negotiated.linklocal_nexthop:
+            return ''
+        # an IPv4 route has the 32 octet form of draft-ietf-idr-linklocal-capability 5
+        if family_key[0] == AFI.ipv4 and family_key[1] in SAFI_WITH_EXTENDED_NEXT_HOP:
+            return ''
+        # RFC 2545 3 gives an IPv6 route a global next hop, and the draft's link-local only
+        # one applies "only when the capability ... has been ... negotiated" (section 2)
+        return 'the peer did not negotiate the link-local next hop capability (draft-ietf-idr-linklocal-capability 2)'
+
     @staticmethod
     def _ipv6_next_hop(nlri_nexthop: IP, packed: Buffer, negotiated: 'Negotiated') -> bytes:
         """The IPv6 next hop, 16 octets or global then link-local, 32 (draft-ietf-idr-linklocal-capability)."""
         nh_packed = bytes(packed)
-        is_nh_link_local = nlri_nexthop.is_link_local()
-
-        # Check if LLNH capability is negotiated
-        if not negotiated.linklocal_nexthop:
-            # RFC 2545 requires a global next-hop without LLNH. Configuration
-            # validation and Neighbor.ip_self() both refuse a link-local one long
-            # before a route reaches here, so this only fires on our own bug. It
-            # raises rather than asserts because -O must not turn a protocol
-            # violation back on.
-            if is_nh_link_local:
-                raise RuntimeError('a link-local next-hop needs the link-local next-hop capability')
-            # Without LLNH, just send the nexthop as-is
+        if nlri_nexthop.is_link_local():
+            # _next_hop_refused withheld it where the session can not carry it alone
+            assert negotiated.linklocal_nexthop and not negotiated.is_multihop(), 'an unsendable next hop was encoded'
             return nh_packed
 
-        # Check if session is multihop - link-local not usable beyond 1 hop
-        # RFC draft-ietf-idr-linklocal-capability: exclude LLA for non-directly-connected peers
-        if negotiated.is_multihop():
-            if is_nh_link_local:
-                raise RuntimeError('a link-local next-hop can not reach a multihop peer')
+        # RFC 2545 3: the link-local address "shall be included ... if and only if" we share
+        # a subnet with the global next hop and the peer. We only know that when the global
+        # next hop is our own address on a session one hop away, and the capability being
+        # negotiated is the operator saying the link is shared: a third party's next hop has
+        # a link-local address of its own, not ours. The link-local-prefer option is for the
+        # receiver's forwarding choice and never changes the order: global, then link-local.
+        if not negotiated.linklocal_nexthop or negotiated.is_multihop():
             return nh_packed
-
-        # Get link-local address if available
         link_local = negotiated.link_local_address()
-
-        # Case 1: Nexthop is already link-local - send as 16-byte (with LLNH negotiated)
-        if is_nh_link_local:
+        if link_local is None or not negotiated.is_local_address(nlri_nexthop):
             return nh_packed
-
-        # Case 2: Nexthop is global, and we have a link-local to include
-        # Wire format is ALWAYS: Global (16 bytes) + Link-local (16 bytes)
-        # The link-local-prefer config affects receiver's forwarding decision, not wire order
-        if link_local is not None:
-            lla_packed = link_local.pack_ip()
-            return nh_packed + lla_packed
-
-        # Case 3: Global nexthop, no link-local available - send as 16-byte
-        return nh_packed
+        return nh_packed + bytes(link_local.pack_ip())
 
     def _fragmented(
         self,
@@ -530,13 +541,14 @@ class MPNLRICollection:
             if nlri.family().afi_safi() != family_key:
                 continue
 
-            if self._lacks_extended_next_hop(nlri_nexthop, family_key, negotiated):
+            refused = self._next_hop_refused(nlri_nexthop, family_key, negotiated)
+            if refused:
                 log.warning(
                     lazymsg(
                         'update.route.refused nlri={nlri} nexthop={nexthop} reason="{reason}"',
                         nlri=nlri,
                         nexthop=nlri_nexthop,
-                        reason='the peer did not negotiate an IPv6 next hop for this family (RFC 8950)',
+                        reason=refused,
                     ),
                     'parser',
                 )
@@ -579,7 +591,7 @@ class MPNLRICollection:
         for nlri in self._nlris:
             if nlri.family().afi_safi() != family_key:
                 continue
-            packed_nlris.append(bytes(nlri.pack_nlri(negotiated)))
+            packed_nlris.append(bytes(nlri.pack_withdraw(negotiated)))
 
         if not packed_nlris:
             return

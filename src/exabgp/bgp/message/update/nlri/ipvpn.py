@@ -384,28 +384,6 @@ class IPVPNBase(Label):
     def has_rd(cls) -> bool:
         return True
 
-    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
-        """Pack NLRI for wire transmission (zero-copy when possible).
-
-        _packed format: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
-        Wire format: [addpath:4?][mask:1][labels:3n][rd:8?][prefix:var]
-
-        With RD now stored in _packed, we can return it directly.
-        """
-        send_addpath = negotiated.addpath.send(self.afi, self.safi)
-        packed = self._with_label_field(self._within_labels_limit(negotiated.labels_limit(self.afi, self.safi)))
-
-        if send_addpath:
-            if self._has_addpath:
-                return packed  # Zero-copy: return directly
-            # Need to prepend NOPATH (4 zero bytes)
-            return bytes(PathInfo.NOPATH.pack_path()) + packed
-        else:
-            if self._has_addpath:
-                # Strip AddPath bytes (first 4 bytes)
-                return packed[PATH_INFO_SIZE:]
-            return packed  # Zero-copy: return directly
-
     def index(self) -> bytes:
         """Generate unique index for RIB lookup.
 

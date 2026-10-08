@@ -34,8 +34,14 @@ Prefixes Reached".
 """
 note = """
 The UPDATE handler raises Notify(6, 1) on the route which takes a family past its
-prefix-limit.  The count is of distinct routes the peer holds with us, kept in
-IncomingRIB whether or not adj-rib-in is on.
+prefix-limit (exabgp/rib/prefix_limit.py).  The count is of distinct address prefixes the
+peer holds with us, kept in IncomingRIB whether or not adj-rib-in is on: with ADD-PATH the
+paths of one prefix count once, and the prefix stops counting when its last path is
+withdrawn.  The withdrawn routes of an UPDATE are released before its NLRI are counted
+(RFC 4271 9), so a peer at its limit may replace one prefix by another in one UPDATE.  A
+flow specification held back by flow-validation (RFC 8955 6) is not in the adj-rib-in and
+is not counted; it is counted, with the same Cease past the limit, when revalidation
+installs it, and released when revalidation takes it out.
 """
 
 [[requirement]]

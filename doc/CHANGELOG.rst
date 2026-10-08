@@ -4,6 +4,98 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Change: with flow-validation, a flow specification sent again which is not feasible
+   replaces the one received before it: that one is withdrawn, the API told, and the new
+   one is held until it is feasible (RFC 4271 9). The older one stayed in the adj-rib-in,
+   and a later revalidation could put it back over the newer one held.
+ * Fix: the withdrawn routes of an UPDATE are processed before its NLRI (RFC 4271 9), so a
+   peer at its prefix-limit which replaces one prefix by another in one UPDATE is not cut
+   off with 6/1.
+ * Change: prefix-limit counts address prefixes: with ADD-PATH the paths of one prefix
+   count once, until the last of them is withdrawn (RFC 4486 4). Each path counted.
+ * Change: with flow-validation, a flow specification held back counts against the
+   prefix-limit of its family once it becomes feasible, and the session ends with 6/1 past
+   it; one no longer feasible stops counting. Neither was counted nor released.
+ * Change: routes which differ only by path-information are one route to a peer which did
+   not negotiate ADD-PATH send for the family: it is sent the first, and when that one is
+   withdrawn another is sent in its place, the prefix being withdrawn only with the last
+   (RFC 4271 9.2). Each was sent, as the same UPDATE, and withdrawing one withdrew the
+   prefix while another was still announced.
+ * Change: a peer of a passive range is not sent a route whose next-hop is its own address,
+   with a warning (RFC 4271 5.1.3). Only the first address of the range was checked.
+ * Fix: after a Graceful Restart, the stale routes of a family the new session did not
+   negotiate are removed when it is established (RFC 4724 4.2). They were kept, as the
+   End-of-RIB which would have removed them is ignored for such a family.
+ * Change: a VPLS NLRI shorter than 17 octets resets the session with 3/10, unless it is a
+   12 octet BGP-AD NLRI, which is still skipped (RFC 7606 5.3, RFC 6074 7). Every length
+   below 17 was skipped.
+ * Fix: a Software Version capability value whose first character equals the number of
+   octets after it ("0" then 48 more) is shown whole. It was read as the length octet of
+   draft revision 00, which is now recognised only below 32.
+ * Fix: an RT-Constraint membership of type 0x80 or 0x82, sub-type 2, which is no Route
+   Target, no longer admits the Route Target of type 0x00 or 0x02 it resembles (RFC 4684,
+   RFC 4360 2).
+ * Change: on FreeBSD, which keeps no SYN to check, a listening socket carries the
+   incoming-ttl minimum when every neighbor able to connect to it asks for the same one, so
+   the handshake is checked; when they differ it carries none, with a warning (RFC 5082 3).
+ * Change: sending an UPDATE restarts the keepalive timer (RFC 4271 8.2.2). A KEEPALIVE was
+   sent every interval, however many UPDATEs had been sent.
+ * Fix: a flow "fragment" or "tcp-flags" naming a bit twice is that bit. The bits were
+   added: "syn+syn" was sent as rst, "is-fragment+is-fragment" as first-fragment.
+ * Change: an empty MP_REACH_NLRI or MP_UNREACH_NLRI, or one whose length runs past the
+   attributes or whose header is cut short, resets the session with 3/9 Optional Attribute
+   Error, the attribute as its Data field (RFC 7606 3 (j) and 5.3, RFC 4760 7). Beside an
+   IPv4 NLRI field it was treated as withdraw and the session stayed up; alone it was 3/1.
+ * Change: an AS_PATH with AS_CONFED_SEQUENCE or AS_CONFED_SET segments from an external
+   (EBGP) neighbour withdraws its routes when no confederation is configured too (RFC 5065
+   5). It was accepted. Internal neighbours are unchanged.
+ * Change: a malformed NEXT_HOP in an UPDATE whose only routes are in MP_REACH_NLRI is
+   ignored (RFC 4760 3). It withdrew those routes, which carry their own next hop.
+ * Change: an UPDATE with a malformed attribute treated as withdraw, discarded or ignored,
+   or whose routes are withdrawn for a missing mandatory attribute or a rejected AS_PATH, is
+   logged once as an error naming the reason, its NLRI and the UPDATE in hex (RFC 7606 6).
+   Some of these logged at debug or not at all, and none named the routes or the message.
+ * Incompatible: a link-local next hop is refused, in the configuration and from the API,
+   for a neighbor with outgoing-ttl above one (draft-ietf-idr-linklocal-capability 4).
+   When the peer did not advertise the Link-Local Next Hop capability, a route with a
+   link-local next hop is not sent, with a warning. Both raised an error when the route was
+   encoded, which reset the session in a loop, and "configuration validate" with a traceback.
+ * Change: the local-link-local address is added to an IPv6 next hop only when that next
+   hop is the local-address of the session (next-hop self, or written out) and outgoing-ttl
+   is not above one (RFC 2545 3). It was added to every global next hop, a third party's too.
+ * Change: an IPv4 route with a link-local next hop is sent as 32 octets, the unspecified
+   address then the link-local one, unless the Link-Local Next Hop capability was
+   negotiated as well as the Extended Next Hop Encoding (draft-ietf-idr-linklocal-capability
+   5). It was sent as 16 octets, to a multihop peer too, where it is now not sent.
+ * Change: an IPv4 route with an IPv6 next hop is accepted when our OPEN offered the
+   Extended Next Hop Encoding for its family, whatever the peer's offered (RFC 8950 4). It
+   needed both, and was refused with a NOTIFICATION otherwise. What we send still needs both.
+ * Change: the Extended Next Hop Encoding capability is not sent when it has no family to
+   list (RFC 8950 4). It was sent empty, with "nexthop" enabled and no entry for an IPv4
+   family, or on the session of a multisession family without one.
+ * Change: an OPEN with octets after its Optional Parameters is refused with an OPEN
+   Message Error (2/0, RFC 4271 4.1: no padding after the message). They were ignored.
+ * Incompatible: a MUP ISD or Type 1 Session Transformed route whose prefix is longer than
+   the address of its AFI (32 bits for ipv4, 128 for ipv6), or of the other family, is
+   refused (draft-mpmz-bess-mup-safi-05 3.1.1 and 3.1.3). "mup-isd 10.0.1.0/255" on an
+   ipv4 route was sent.
+ * Incompatible: a flow "fragment" given as a number is refused when it sets a bit the
+   family does not define (RFC 8955 4.2.2.12, RFC 8956 3.6): 1, 2, 4 and 8 for ipv4, the
+   same without dont-fragment for ipv6. "fragment 255" was sent with reserved bits set,
+   and "fragment 256" as two octets where the bitmask is one.
+ * Incompatible: an SR Policy route with a second preference, binding-sid, enlp, priority,
+   policy-name or candidate-path-name is refused (RFC 9830 2.4, each at most once); only
+   enlp was. A "binding-sid mpls" label of 0 to 15 is refused (reserved, RFC 9830 2.4.2),
+   and so is an "endpoint-behavior" whose four lengths total more than 128 bits (RFC 9830
+   2.4.4.2.4).
+ * Change: a labelled unicast or VPN route (SAFI 4, 128) is withdrawn with one
+   Compatibility field of 0x800000 in place of its labels, whatever the Multiple Labels
+   Capability (RFC 8277 2.4). It was withdrawn with its labels, all of them once the
+   capability was negotiated, which a receiver read as part of the prefix.
+ * Change: a flow redirect community in the four-octet AS encoding (0x8208) whose AS is
+   below 65536 is printed, and reported to the API, as "redirect:<asn>L:<number>". It was
+   printed as the two-octet AS form, and read back as that encoding (0x8008). The flow
+   "redirect <asn>L:<number>" action takes the trailing L too.
  * Incompatible: an SR Policy route is refused unless it carries the NO_ADVERTISE community
    or a Route Target in IPv4-address format, and a Tunnel Encapsulation (RFC 9830 4.2.1).
    The sr-policy statement now takes "community [ ... ]" and "extended-community [ ... ]";
@@ -56,8 +148,8 @@ Version 6.0.0:
    It was set on the listening socket, shared by every neighbor using it, so the last one
    configured decided for all of them (RFC 5082 3).
  * Change: ROUTE-REFRESH, OPERATIONAL and a manual End-of-RIB are only sent to a peer which
-   negotiated them, for its negotiated families; the API answers error when no selected
-   peer can take one. A ROUTE-REFRESH, BoRR, EoRR or End-of-RIB received for a family we
+   negotiated them, a ROUTE-REFRESH or an End-of-RIB only for its negotiated families; the
+   API answers error when no selected peer can take one. A ROUTE-REFRESH, BoRR, EoRR or End-of-RIB received for a family we
    did not negotiate is ignored.
  * Change: routes an Enhanced Route Refresh EoRR removes are withdrawn to the API. Routes
    kept for a Graceful Restart and routes marked by a BoRR are tracked apart, so neither

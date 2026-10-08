@@ -145,6 +145,32 @@ def test_a_version_whose_first_character_is_not_its_length_is_not_cut() -> None:
     assert version_of(received(FRR_VERSION)) == FRR_VERSION.decode()
 
 
+@pytest.mark.rfc('draft-abraitis-bgp-version-capability-18#3-version-utf-8')
+def test_a_current_value_whose_first_character_equals_its_remaining_length_is_read_whole() -> None:
+    """'0' is 0x30, 48, and 48 octets follow it: the old layout's rule took it for a length."""
+    value = b'0' + b'x' * 48
+    assert value[0] == len(value) - 1
+
+    assert version_of(received(value)) == value.decode()
+
+
+@pytest.mark.parametrize('length', [1, 16, 31])
+def test_every_old_value_shorter_than_32_octets_is_read(length: int) -> None:
+    """Its length octet is a control character, which no version string starts with."""
+    text = b'v' * length
+    assert version_of(received(bytes([length]) + text)) == text.decode()
+
+
+def test_an_old_value_of_32_octets_or_more_shows_its_length_octet() -> None:
+    """The ambiguity left: the length octet is then a printable character, which a current
+    value may start with, and the current layout is the one read. The version is shown,
+    a character longer, rather than a current one shown a character short."""
+    text = b'FRRouting/10.2.1-a-snapshot-build-0123456789'
+    assert len(text) >= 32
+
+    assert version_of(received(bytes([len(text)]) + text)) == chr(len(text)) + text.decode()
+
+
 def test_what_we_send_is_what_we_read() -> None:
     assert version_of(received(our_value())) == Software().software_version
 

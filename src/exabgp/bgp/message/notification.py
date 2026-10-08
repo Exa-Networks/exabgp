@@ -125,7 +125,7 @@ class Notification(Message):
     def __init__(self, packed: Buffer) -> None:
         # this guards our own construction, not the wire: unpack_message pads a short body
         # rather than letting a peer reach it, because a raw exception here is answered
-        # with a NOTIFICATION and RFC 4271 6.5 forbids that
+        # with a NOTIFICATION and RFC 4271 6.4 says an error in one cannot be reported so
         if len(packed) < self.FIXED_SIZE:
             raise ValueError(f'Notification requires at least {self.FIXED_SIZE} bytes, got {len(packed)}')
         self._packed = packed
@@ -209,21 +209,28 @@ class Notification(Message):
 
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Notification:
-        """A NOTIFICATION the peer truncated is still the peer closing the session.
+        """A NOTIFICATION the peer sent is the peer closing the session, whatever is in it.
 
-        RFC 4271 6.5 is explicit that an error found while processing a NOTIFICATION must
-        not be reported back with a NOTIFICATION.  So this cannot raise Notify, and it must
-        not raise anything raw either: a ValueError out of __init__ reached
-        reactor/protocol.py's catch-all, which turned it into
+        RFC 4271 6.4: an error found in a received NOTIFICATION cannot be reported back with
+        a NOTIFICATION.  So this does not raise Notify, and it must not raise anything raw
+        either: a ValueError out of __init__ reached reactor/protocol.py's catch-all, which
+        turned it into
 
             Notify(1, 0, 'can not decode update message of type "3"')
 
-        and sent the peer exactly the message the RFC forbids, naming the wrong error.
+        and sent the peer exactly the message the RFC rules out, naming the wrong error.
+        Returning a Notification lets protocol.py raise NotificationReceived, and the reactor
+        closes the session without replying.
 
-        Returning a Notification instead lets protocol.py raise NotificationReceived, and
-        the reactor closes the session without replying, which is what the RFC asks for.  A body too short to
-        hold a code renders as "unknown error / unknow reason", which is accurate: the peer
-        did not say.
+        One error in a NOTIFICATION IS answered, and not from here: RFC 4271 6.1 lists "the
+        Length field of a NOTIFICATION message is less than the minimum length" among the
+        Bad Message Length cases.  LENGTH_MIN is the header and FIXED_SIZE, so the header
+        check of Connection.reader_async (Message.header_refuses) sends 1/2 for a body of
+        fewer than two octets before this is called.  The short body branch below is
+        therefore never reached from a session: it is for the callers which hand a body
+        over without that header check, Message.unpack and the decoders of
+        configuration/check.py.  The padded body renders as "unknown error / unknow
+        reason", which is accurate: the peer did not say.
         """
         if len(data) < cls.FIXED_SIZE:
             return cls(bytes(cls.FIXED_SIZE))
@@ -238,7 +245,7 @@ Message.register(Notification)
 
 
 class NotificationReceived(Exception):
-    """The peer sent a NOTIFICATION: the session ends and nothing is sent back (RFC 4271 6.5).
+    """The peer sent a NOTIFICATION: the session ends and nothing is sent back (RFC 4271 6.4).
 
     Raised by the reactor when it reads one.  It is not a Notify, so no handler meant for the
     errors we report can catch it by accident, whatever order the handlers are in.

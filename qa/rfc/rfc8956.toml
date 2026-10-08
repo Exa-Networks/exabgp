@@ -164,9 +164,10 @@ The Type 12 component bitmask MUST be
 encoded as a single octet bitmask (bitmask_op len=00).
 """
 note = """
-`FlowFragmentIPv6`, the sibling of IPv4's `FlowFragment`, so the same accidental
-compliance: it derives from `IOperationByteShort`, which would emit two octets above 255,
-and what keeps it to one is that no name `Fragment` defines is above 0x0F.
+`FlowFragmentIPv6`, the sibling of IPv4's `FlowFragment`, derives from `IOperationByteShort`,
+which emits two octets above 255.  What keeps it to one is the converter, `_fragment_named`,
+which refuses any bit the family does not define.  Until 2026-10-08 a number was taken as
+given, and `fragment 256` on an IPv6 flow route went out as 0C 90 0100.
 """
 
 [[requirement]]
@@ -191,6 +192,10 @@ Type 12 is now split per family the way type 11 already was, into `FlowFragment`
 and `FlowFragmentIPv6` for AFI 2, because the set of bits the family defines is the one
 thing about the component which differs and the decoder is where it has to be applied.
 The IPv6 decoder masks with IsF, FF and LF only, so 0x01 decodes to nothing at all.
+
+On encoding, the configuration and the API refuse a value setting a reserved bit, the four
+high bits (a number such as 16 or 0xf0 was accepted until 2026-10-08) and Don't Fragment,
+which makes the route an IPv4 one and so cannot be combined with an IPv6 component.
 """
 
 [[requirement]]

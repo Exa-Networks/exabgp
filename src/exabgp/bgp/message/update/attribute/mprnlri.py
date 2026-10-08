@@ -291,9 +291,10 @@ class MPRNLRI(Attribute):
 
         # RFC 8950 3: the length says which protocol the next hop belongs to, out of those
         # the family allows, and the Extended Next Hop Encoding capability adds IPv6 to an
-        # IPv4 family only for the <AFI, SAFI> it was negotiated for. RFC 7606 7.11: a
-        # length "inconsistent with that which was expected" is a session reset.
-        length, rd = next_hop_lengths(afi, safi, negotiated.nexthop)
+        # IPv4 family only for the <AFI, SAFI> our OPEN offered it for: RFC 8950 4 has a
+        # triple say what its sender accepts. RFC 7606 7.11: a length "inconsistent with
+        # that which was expected" is a session reset.
+        length, rd = next_hop_lengths(afi, safi, negotiated.nexthop_receive)
 
         if len_nh not in length:
             raise Notify(

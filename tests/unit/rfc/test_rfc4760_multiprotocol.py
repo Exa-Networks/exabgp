@@ -225,6 +225,57 @@ def test_a_next_hop_attribute_beside_mp_reach_does_not_reach_the_mp_nlri() -> No
     assert nexthops == {'::1'}, f'the NEXT_HOP attribute leaked into the MP_REACH routes: {nexthops}'
 
 
+def mp_only_update(next_hop: bytes, nlri: bytes = b'') -> bytes:
+    """An UPDATE body announcing 2001:db8::/32 in MP_REACH_NLRI, with this NEXT_HOP beside it."""
+    value = mp_reach(2, 1, bytes(15) + bytes([1]), NLRI_V6)
+    attributes = (
+        bytes([int(Attribute.Flag.OPTIONAL), int(Attribute.CODE.MP_REACH_NLRI), len(value)])
+        + value
+        + bytes([int(Attribute.Flag.TRANSITIVE), int(Attribute.CODE.ORIGIN), 1, 0])
+        # this session negotiated no four octet AS, so the AS is two octets
+        + bytes([int(Attribute.Flag.TRANSITIVE), int(Attribute.CODE.AS_PATH), 4, 2, 1])
+        + pack('!H', 65002)
+        + next_hop
+    )
+    return pack('!H', 0) + pack('!H', len(attributes)) + attributes + nlri
+
+
+def parsed_update(body: bytes, negotiated: Negotiated) -> UpdateCollection:
+    message = Update.unpack_message(body, negotiated)
+    assert isinstance(message, Update), f'expected an UPDATE, got {type(message).__name__}'
+    return message.parse(negotiated)
+
+
+# A NEXT_HOP RFC 7606 7.3 calls malformed, by its length or by its flags. Beside an
+# MP_REACH_NLRI alone the receiver ignores it, so it cannot withdraw the MP routes.
+MALFORMED_NEXT_HOPS = [
+    ('three octets', bytes([int(Attribute.Flag.TRANSITIVE), int(Attribute.CODE.NEXT_HOP), 3]) + bytes(3)),
+    ('empty', bytes([int(Attribute.Flag.TRANSITIVE), int(Attribute.CODE.NEXT_HOP), 0])),
+    ('marked optional', bytes([0xC0, int(Attribute.CODE.NEXT_HOP), 4]) + bytes([192, 0, 2, 9])),
+]
+
+
+@pytest.mark.rfc('rfc4760#3-no-next-hop-attribute')
+@pytest.mark.parametrize('name,next_hop', MALFORMED_NEXT_HOPS, ids=[_[0] for _ in MALFORMED_NEXT_HOPS])
+def test_a_malformed_next_hop_beside_mp_reach_alone_is_ignored(name: str, next_hop: bytes) -> None:
+    """It used to make the UPDATE treat-as-withdraw, taking the MP_REACH routes with it."""
+    parsed = parsed_update(mp_only_update(next_hop), session([IPV6_UNICAST]))
+
+    assert [str(routed.nlri) for routed in parsed.announces] == ['2001:db8::/32'], f'a NEXT_HOP {name} withdrew'
+    assert parsed.withdraws == []
+    assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW not in parsed.attributes
+
+
+@pytest.mark.rfc('rfc4760#3-no-next-hop-attribute', polarity='negative')
+@pytest.mark.parametrize('name,next_hop', MALFORMED_NEXT_HOPS, ids=[_[0] for _ in MALFORMED_NEXT_HOPS])
+def test_a_malformed_next_hop_beside_legacy_nlri_still_withdraws(name: str, next_hop: bytes) -> None:
+    """With an NLRI field the NEXT_HOP is the one it uses, so RFC 7606 7.3 applies to all."""
+    parsed = parsed_update(mp_only_update(next_hop, nlri=NLRI_V4), session([IPV4_UNICAST, IPV6_UNICAST]))
+
+    assert parsed.announces == [], f'a NEXT_HOP {name} beside an NLRI field left routes announced'
+    assert sorted(str(nlri) for nlri in parsed.withdraws) == ['10.0.0.0/24', '2001:db8::/32']
+
+
 # =========================================================== 6, which SAFI we support
 
 

@@ -62,7 +62,10 @@ class Negotiated:
         self.local_as: ASN = ASN(0)
         self.peer_as: ASN = ASN(0)
         self.families: list[FamilyTuple] = []
-        self.nexthop: list[tuple[AFI, SAFI, AFI]] = []  # RFC5549 - (nlri_afi, nlri_safi, nexthop_afi)
+        # RFC 8950 4: each triple, (nlri_afi, nlri_safi, nexthop_afi), says what its sender
+        # accepts. We send what both OPENs carry, and receive what ours offered
+        self.nexthop: list[tuple[AFI, SAFI, AFI]] = []
+        self.nexthop_receive: list[tuple[AFI, SAFI, AFI]] = []
         self.asn4: bool = False
         self.addpath: RequirePath = RequirePath()
         self.multisession: bool | tuple[int, int, str] = False
@@ -119,6 +122,7 @@ class Negotiated:
         instance.peer_as = ASN(0)
         instance.families = []
         instance.nexthop = []
+        instance.nexthop_receive = []
         instance.asn4 = False
         instance.addpath = RequirePath()
         instance.multisession = False
@@ -194,14 +198,7 @@ class Negotiated:
         sent_families = self._multiprotocol(sent_capa)
         self.families = [family for family in self._multiprotocol(recv_capa) if family in sent_families]
 
-        self.nexthop = []
-        if recv_capa.announced(Capability.CODE.NEXTHOP) and sent_capa.announced(Capability.CODE.NEXTHOP):
-            recv_nh = recv_capa[Capability.CODE.NEXTHOP]
-            sent_nh = sent_capa[Capability.CODE.NEXTHOP]
-            if isinstance(recv_nh, NextHop) and isinstance(sent_nh, NextHop):
-                for nh_entry in recv_nh:
-                    if nh_entry in sent_nh:
-                        self.nexthop.append(nh_entry)
+        self._negotiate_nexthop(sent_capa, recv_capa)
 
         if recv_capa.announced(Capability.CODE.ENHANCED_ROUTE_REFRESH) and sent_capa.announced(
             Capability.CODE.ENHANCED_ROUTE_REFRESH,
@@ -297,6 +294,23 @@ class Negotiated:
             Capability.CODE.MULTISESSION_CISCO
         ):
             self.multisession = (2, 9, 'multisession is mandatory with this peer')
+
+    def _negotiate_nexthop(self, sent_capa: Capabilities, recv_capa: Capabilities) -> None:
+        """RFC 8950 4: what each side may send the other with an Extended Next Hop Encoding.
+
+        A triple "indicates that the NLRI ... may be advertised with a next-hop address
+        belonging to ... Nexthop AFI", to the speaker which sent it: the peer may send us
+        what our OPEN offered, whatever its own says. Only the intersection was kept, so a
+        peer which offered nothing had the IPv6 next hops we asked for refused. We send
+        what the peer offered and we offered too: the peer's triple is what section 4 asks
+        for, ours is the operator's consent to an IPv6 next hop for the family.
+        """
+        sent_nh = sent_capa.get(Capability.CODE.NEXTHOP, None)
+        recv_nh = recv_capa.get(Capability.CODE.NEXTHOP, None)
+        ours = list(sent_nh) if isinstance(sent_nh, NextHop) else []
+        theirs = list(recv_nh) if isinstance(recv_nh, NextHop) else []
+        self.nexthop_receive = ours
+        self.nexthop = [entry for entry in theirs if entry in ours]
 
     @staticmethod
     def _multiprotocol(capabilities: Capabilities) -> list[FamilyTuple]:
@@ -397,9 +411,13 @@ class Negotiated:
         assert self.received_open is not None
         sent = self.sent_open.capabilities
         received = self.received_open.capabilities
-        required = self.neighbor.capability.required
-        # configuration turns require into enabled, so what we require we also advertised
-        assert required <= sent.keys(), 'a required capability was not in our OPEN'
+        # configuration turns require into enabled, so what we require we also advertised,
+        # but for an Extended Next Hop Encoding with no triple to offer, which is left out
+        # of our OPEN. There is no TLV of ours to put in the Data field, and no family the
+        # peer's would be about, so it is not asked for.
+        required = self.neighbor.capability.required & sent.keys()
+        unsent = self.neighbor.capability.required - required
+        assert unsent <= {Capability.CODE.NEXTHOP}, 'a required capability was not in our OPEN'
         # in the order of our OPEN, so the Data field reads as a cut of what we sent
         missing = [code for code in sent if code in required and code not in received]
         if not missing:
@@ -425,8 +443,17 @@ class Negotiated:
         Used to determine if link-local addresses should be excluded from
         next-hop (link-local only valid for directly connected peers).
         """
-        ttl = self.neighbor.session.outgoing_ttl
-        return ttl is not None and ttl > 1
+        return self.neighbor.is_multihop()
+
+    def is_local_address(self, address: 'IP') -> bool:
+        """The address is ours on this session: what next-hop self resolves to, or written out.
+
+        RFC 2545 3 has the link-local address follow a global next hop only when we share
+        a subnet with both it and the peer. Without an interface table, our own address on
+        the session is the one global next hop for which we know that.
+        """
+        local = bytes(self.neighbor.session.local_address.pack_ip())
+        return bool(local) and local == bytes(address.pack_ip())
 
     @property
     def is_ibgp(self) -> bool:
@@ -584,6 +611,8 @@ class Negotiated:
         sent.sent_open, sent.received_open = self.sent_open, self.received_open
         sent.holdtime, sent.local_as, sent.peer_as = self.holdtime, self.local_as, self.peer_as
         sent.families, sent.nexthop, sent.asn4 = self.families, self.nexthop, self.asn4
+        # what we sent is bound by what the peer accepts, not by what we offered to accept
+        sent.nexthop_receive = self.nexthop
         sent.addpath, sent.multisession, sent.msg_size = self.addpath, self.multisession, self.msg_size
         sent.receive_msg_size = self.receive_msg_size
         sent.operational, sent.refresh, sent.aigp = self.operational, self.refresh, self.aigp

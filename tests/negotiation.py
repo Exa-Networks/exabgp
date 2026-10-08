@@ -73,6 +73,9 @@ def negotiated(
         agreed.addpath._send[family] = True
     for family in addpath_receive:
         agreed.addpath._receive[family] = True
+    # RFC 8950 4: the triples both OPENs carried, which bind both directions alike
+    if 'nexthop' in fields and 'nexthop_receive' not in fields:
+        fields['nexthop_receive'] = fields['nexthop']
     for name, value in fields.items():
         # only what Negotiated has: a misspelt name must fail here, not pass silently
         assert hasattr(agreed, name), f'Negotiated has no {name}'

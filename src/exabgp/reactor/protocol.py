@@ -13,6 +13,7 @@ from collections.abc import Iterator
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
+    from exabgp.bgp.timer import SendTimer
     from exabgp.reactor.network.error import NotifyError
     from exabgp.reactor.network.incoming import Incoming
     from exabgp.reactor.peer import Peer
@@ -76,6 +77,9 @@ class Protocol:
         # the port we listen on: the variables alone were read here, so the env file
         # moved the listener and not the port we connect to
         self.port: int = self.neighbor.session.connect or getenv().tcp.port
+        # RFC 4271 8.2.2: the KeepaliveTimer of the established session (KA), which every
+        # KEEPALIVE and UPDATE sent restarts; None before the session is established
+        self.keepalive_timer: SendTimer | None = None
 
     def fd(self) -> int:
         if self.connection is None:
@@ -203,6 +207,7 @@ class Protocol:
         self.peer.stats[code] += 1
 
         await self.connection.writer_async(raw)
+        self._sent(message.ID)
 
         # told after the write, not before it: a process which waits on this to
         # know a route has gone out gets an answer which is true, and a write
@@ -210,13 +215,22 @@ class Protocol:
         if self._api.get(code, False):
             self._to_api('send', message, raw)
 
+    def _sent(self, message_id: MessageCode) -> None:
+        """RFC 4271 8.2.2: a KEEPALIVE or an UPDATE sent restarts the KeepaliveTimer."""
+        if self.keepalive_timer is None:
+            return
+        if message_id in (Message.CODE.KEEPALIVE, Message.CODE.UPDATE):
+            self.keepalive_timer.restart()
+
     async def send(self, raw: bytes) -> None:
         """Send raw BGP message using async I/O."""
         assert self.connection is not None
-        code: str = 'send-{}'.format(Message.CODE.short(Message.CODE.of(raw[18])))
+        message_id = Message.CODE.of(raw[18])
+        code: str = 'send-{}'.format(Message.CODE.short(message_id))
         self.peer.stats[code] += 1
 
         await self.connection.writer_async(raw)
+        self._sent(message_id)
 
         if self._api.get(code, False):
             # decoded as we sent it, not as the peer will read it

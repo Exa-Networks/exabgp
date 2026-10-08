@@ -77,3 +77,23 @@ def test_a_short_nlri_running_past_the_attribute_still_resets_the_session() -> N
     with pytest.raises(Notify) as caught:
         list(mp_reach(BGP_AD[:-1]).iter_routed())
     assert not isinstance(caught.value, NLRIDiscard)
+
+
+@pytest.mark.rfc('rfc7606#5.3-mp-attribute-nlri-lengths', polarity='negative')
+@pytest.mark.parametrize('length', [0, 1, 4, 11, 13, 16])
+def test_a_length_neither_bgp_ad_nor_vpls_is_an_incorrect_attribute(length: int) -> None:
+    """Only twelve octets are a BGP-AD NLRI: any other length below the seventeen of RFC 4761
+    is "inconsistent with the given AFI/SAFI", which RFC 7606 5.3 makes the MP_REACH_NLRI
+    incorrect, not an NLRI to step over."""
+    short = pack('!H', length) + bytes(length)
+    with pytest.raises(Notify) as caught:
+        list(mp_reach(short + VPLS_BGP).iter_routed())
+    assert not isinstance(caught.value, NLRIDiscard)
+    assert (caught.value.code, caught.value.subcode) == (3, 10)
+
+
+@pytest.mark.rfc('rfc7606#5.3-mp-attribute-nlri-lengths', polarity='negative')
+def test_a_withdrawal_of_a_length_neither_bgp_ad_nor_vpls_is_an_incorrect_attribute() -> None:
+    with pytest.raises(Notify) as caught:
+        list(mp_unreach(VPLS_BGP + pack('!H', 16) + bytes(16)))
+    assert not isinstance(caught.value, NLRIDiscard)

@@ -220,20 +220,19 @@ class VPLSBase(NLRI):
         return new
 
     @staticmethod
-    def _short_nlri(length: int, path_size: int) -> NLRIDiscard:
-        """An NLRI shorter than RFC 4761's, stepped over rather than a session reset.
+    def _short_nlri(length: int, path_size: int) -> Notify:
+        """An NLRI shorter than RFC 4761's: a BGP-AD one stepped over, any other refused.
 
         RFC 6074 7: BGP-AD and VPLS-BGP share AFI 25 / SAFI 65 and "the NLRI length must be
         used as a demultiplexer".  Twelve octets are a BGP-AD NLRI (RD and VSI-ID), which
         exabgp does not implement, and refusing it with a Notify reset any session to a
-        peer running both.  Its two octet length frames it, as it frames any other short
-        NLRI, so the NLRI after it in the same attribute is still read.
+        peer running both.  Its two octet length frames it, so the NLRI after it in the
+        same attribute is still read.  Any other length is neither: RFC 7606 5.3 makes the
+        attribute incorrect when an NLRI length "is inconsistent with the given AFI/SAFI".
         """
-        if length == BGP_AD_PAYLOAD_SIZE:
-            detail = 'l2vpn vpls NLRI of %d octets is a BGP-AD NLRI (RFC 6074), not decoded' % length
-        else:
-            detail = 'l2vpn vpls length is %d, it needs at least %d' % (length, VPLS_PAYLOAD_SIZE)
-        discard = NLRIDiscard(detail)
+        if length != BGP_AD_PAYLOAD_SIZE:
+            return Notify(3, 10, 'l2vpn vpls length is %d, it needs at least %d' % (length, VPLS_PAYLOAD_SIZE))
+        discard = NLRIDiscard('l2vpn vpls NLRI of %d octets is a BGP-AD NLRI (RFC 6074), not decoded' % length)
         discard.skip = path_size + 2 + length
         assert discard.skip > 0, 'a discarded NLRI is stepped over, not re-read'
         return discard

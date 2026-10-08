@@ -395,6 +395,20 @@ class OutgoingRIB(Cache):
             self._own(route_index, self._owned[self._owner[route_index]][route_index], '')
         self._del_from_rib_impl(nlri, attributes, route_index)
 
+    def drop_unsent(self, route: Route) -> None:
+        """Take out a route the peer was never sent, so no withdrawal of it is queued either."""
+        if not self.enabled:
+            return
+        nlri = self._readvertised(route.nlri, route.attributes, withdraw=True)
+        family = nlri.family().afi_safi()
+        withdrawn = self._pending_withdraws.get(family, {})
+        queued = nlri.index() in withdrawn
+        self._del_from_rib_impl(nlri, route.attributes, Route(nlri, route.attributes, route.nexthop).index())
+        if not queued:
+            withdrawn.pop(nlri.index(), None)
+            if not withdrawn:
+                self._pending_withdraws.pop(family, None)
+
     def _readvertised(self, nlri: NLRI, attributes: AttributeCollection | None, withdraw: bool) -> NLRI:
         """The NLRI a received route is sent as: the same prefix under a Path Identifier of ours.
 
@@ -589,10 +603,33 @@ class OutgoingRIB(Cache):
         assert not (selection.advertised & selection.candidates.keys()), 'a path is sent or held, never both'
         return True
 
-    def _withdraw_path(self, nlri: NLRI, advertised_only: bool = False) -> bool:
+    @staticmethod
+    def _paths_share_the_wire(nlri: NLRI, negotiated: Negotiated | None) -> bool:
+        """The Path Identifier of `nlri` is not on the wire to this peer, its paths are one route.
+
+        RFC 4271 9.2: without ADD-PATH send for the family every path of a prefix is the
+        same route to this peer. Only a route which carries a Path Identifier is concerned;
+        a prefix with none has one route already.
+        """
+        if negotiated is None or not nlri.carries_path_info():
+            return False
+        return not negotiated.addpath.send(nlri.afi, nlri.safi)
+
+    @classmethod
+    def _path_limit(cls, nlri: NLRI, limit: int, negotiated: Negotiated | None) -> int:
+        """How many paths of the prefix of `nlri` the peer may be sent, 0 for no limit.
+
+        Paths which share the wire are sent one, and when that one goes the next takes its
+        place (_promote_paths, _replaced_or_withdrawn). Routes with no Path Identifier are
+        not tracked: it would cost memory for every route of every session, for nothing.
+        """
+        return 1 if cls._paths_share_the_wire(nlri, negotiated) else limit
+
+    def _withdraw_path(self, nlri: NLRI, advertised_only: bool = False, tracked: bool = True) -> bool:
         family = nlri.family().afi_safi()
         prefixes = self._path_selection.get(family)
-        if prefixes is None:
+        # an untracked route was never admitted against a limit, even in a family where others were
+        if prefixes is None or not tracked:
             advertised_indices = self._policy_advertised.get(family)
             if advertised_indices is None:
                 return not advertised_only
@@ -612,6 +649,11 @@ class OutgoingRIB(Cache):
             del prefixes[prefix]
         return advertised
 
+    def _held_paths(self, family: FamilyTuple, prefix: bytes) -> bool:
+        """Some path of this prefix is held back, and could take the place of one withdrawn."""
+        selection = self._path_selection.get(family, {}).get(prefix)
+        return selection is not None and bool(selection.candidates)
+
     def _promote_paths(
         self,
         changed: dict[tuple[FamilyTuple, bytes], None],
@@ -625,11 +667,11 @@ class OutgoingRIB(Cache):
             selection = self._path_selection.get(family, {}).get(prefix)
             if selection is None:
                 continue
-            limit = paths_limit.get(family, 0)
             admitted = len(selection.advertised)
             # Held paths only, in the order they were offered, since ExaBGP has no view of
             # which path is better. list() because a promoted one leaves the collection.
             for index, route in list(selection.candidates.items()):
+                limit = self._path_limit(route.nlri, paths_limit.get(family, 0), negotiated)
                 if limit and admitted >= limit:
                     break
                 if not self._export_allowed(route, negotiated):
@@ -657,6 +699,21 @@ class OutgoingRIB(Cache):
                     selection.candidates.pop(index, None)
                     selection.advertised.add(index)
                 yield update
+
+    def _replaced_or_withdrawn(
+        self, deferred: dict[tuple[FamilyTuple, bytes], tuple[NLRI, AttributeCollection]]
+    ) -> Iterator[UpdateCollection]:
+        """RFC 4271 9.2: the withdrawals held back for a path which could replace them.
+
+        A prefix which was sent another path in this batch has its replacement on the wire,
+        which replaces the withdrawn path: one which was not, because the path left was
+        refused or withdrawn too, is withdrawn now.
+        """
+        for (family, prefix), (nlri, attributes) in deferred.items():
+            selection = self._path_selection.get(family, {}).get(prefix)
+            if selection is not None and selection.advertised:
+                continue
+            yield UpdateCollection([], [nlri], attributes)
 
     def _generate_updates(
         self, grouped: bool, paths_limit: dict[FamilyTuple, int], negotiated: Negotiated | None
@@ -707,8 +764,10 @@ class OutgoingRIB(Cache):
         # A dict rather than a set: which prefixes get backfilled is decided here, and the
         # order they are offered in should be the order they were withdrawn, not the order
         # their hashes happen to fall in.
+        deferred: dict[tuple[FamilyTuple, bytes], tuple[NLRI, AttributeCollection]] = {}
         for family, withdrawals in pending_withdraws.items():
-            yield from self._withdraw_updates(family, withdrawals, grouped, changed)
+            limit = paths_limit.get(family, 0)
+            yield from self._withdraw_updates(family, withdrawals, grouped, changed, (limit, negotiated, deferred))
 
         # The buckets go out in the order they were first created. A route queued A, B, A
         # has A's bucket before B's, so B would be sent last and stay with the peer.
@@ -724,6 +783,7 @@ class OutgoingRIB(Cache):
                     )
         # Only prefixes touched by withdrawals need candidate promotion.
         yield from self._promote_paths(changed, paths_limit, grouped, negotiated)
+        yield from self._replaced_or_withdrawn(deferred)
 
     @staticmethod
     def _still_wanted(
@@ -880,7 +940,8 @@ class OutgoingRIB(Cache):
             if not self._export_allowed(route, negotiated):
                 # Invalidate held candidates as well as advertisements. Otherwise a
                 # later withdrawal could promote a superseded, OTC-free candidate.
-                if self._withdraw_path(route.nlri, advertised_only=True):
+                tracked = bool(self._path_limit(route.nlri, limit, negotiated))
+                if self._withdraw_path(route.nlri, advertised_only=True, tracked=tracked):
                     changed[(family, route.nlri.prefix_index())] = None
                     refused.append(route.nlri)
                 continue
@@ -896,9 +957,10 @@ class OutgoingRIB(Cache):
             (AFI.ipv6, SAFI.mcast_vpn),
         )
         for route in eligible:
-            if not self._admit_path(route, limit, refresh):
+            route_limit = self._path_limit(route.nlri, limit, negotiated)
+            if not self._admit_path(route, route_limit, refresh):
                 continue
-            if not limit and self._policy_may_refuse(family, negotiated):
+            if not route_limit and self._policy_may_refuse(family, negotiated):
                 self._policy_advertised.setdefault(family, set()).add(route.index())
             if grouped:
                 selected.append(route)
@@ -925,6 +987,7 @@ class OutgoingRIB(Cache):
         withdrawals: dict[bytes, tuple[NLRI, AttributeCollection]],
         grouped: bool,
         changed: dict[tuple[FamilyTuple, bytes], None],
+        session: tuple[int, Negotiated | None, dict[tuple[FamilyTuple, bytes], tuple[NLRI, AttributeCollection]]],
     ) -> Iterator[UpdateCollection]:
         """The withdrawals of one family, as few UpdateCollection as they can share.
 
@@ -934,14 +997,23 @@ class OutgoingRIB(Cache):
         two different messages and must not be merged.
 
         Insertion order is kept within a group, and no withdrawal moves past an announcement:
-        the caller emits every withdrawal before the first announce of the batch.
+        the caller emits every withdrawal before the first announce of the batch, except
+        the ones `deferred` takes, which a held path may replace (_replaced_or_withdrawn).
+
+        `session` is the family's paths limit, the session's Negotiated and `deferred`.
         """
+        limit, negotiated, deferred = session
         batched: dict[bytes, tuple[AttributeCollection, list[NLRI]]] = {}
         for nlri, attributes in withdrawals.values():
             if family in self._path_selection:
                 changed[(family, nlri.prefix_index())] = None
+            route_limit = self._path_limit(nlri, limit, negotiated)
             # A path a limited peer was never sent has nothing to withdraw from it.
-            if not self._withdraw_path(nlri):
+            if not self._withdraw_path(nlri, tracked=bool(route_limit)):
+                continue
+            # on the wire the path held replaces this one: it is withdrawn only if none goes out
+            if self._paths_share_the_wire(nlri, negotiated) and self._held_paths(family, nlri.prefix_index()):
+                deferred[(family, nlri.prefix_index())] = (nlri, attributes)
                 continue
             if not grouped:
                 yield UpdateCollection([], [nlri], attributes)

@@ -26,6 +26,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.graceful import Graceful
+from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message import KeepAlive
 from exabgp.bgp.message.update import Update
@@ -127,14 +128,24 @@ def negotiated_session(neighbor: Neighbor) -> Negotiated:
     return negotiated
 
 
-def graceful_session(neighbor: Neighbor, restart_time: int, forwarding: int = Graceful.FORWARDING_STATE) -> Negotiated:
+def graceful_session(
+    neighbor: Neighbor,
+    restart_time: int,
+    forwarding: int = Graceful.FORWARDING_STATE,
+    offered: list[tuple[AFI, SAFI]] | None = None,
+) -> Negotiated:
     """A session whose peer advertised Graceful Restart for both families, with this Restart Time.
 
     The Forwarding State bit is set unless told otherwise: RFC 4724 4.2 has the stale routes
-    of a family removed at once when the new OPEN clears it.
+    of a family removed at once when the new OPEN clears it. `offered` replaces the families
+    of the peer's Multiprotocol capability, the Graceful Restart one still naming both.
     """
     ours = our_capabilities(neighbor, False)
     theirs = their_capabilities(neighbor)
+    if offered is not None:
+        multiprotocol = MultiProtocol()
+        multiprotocol.extend(offered)
+        theirs[Capability.CODE.MULTIPROTOCOL] = multiprotocol
     value = graceful_value(
         0, restart_time, [(AFI.ipv4, SAFI.unicast, forwarding), (AFI.ipv6, SAFI.unicast, forwarding)]
     )
@@ -743,6 +754,24 @@ async def test_a_new_open_clearing_the_forwarding_state_bit_removes_the_stale_ro
     restarted = await session(peer, graceful_session(peer.neighbor, RESTART_TIME, forwarding=0))
 
     assert restarted[0] == [], f'a peer which cleared its Forwarding State bit kept its stale routes: {restarted[0]}'
+
+
+@pytest.mark.rfc('rfc4724#4.2-remove-stale-on-end-of-rib')
+@pytest.mark.asyncio
+async def test_the_stale_routes_of_a_family_the_new_session_did_not_negotiate_are_removed_at_once() -> None:
+    """Its End-of-RIB, the marker which would end them, cannot come: the family is not on
+    the session, and an End-of-RIB for it is ignored. The Graceful Restart capability
+    still naming it with the Forwarding State bit does not change that."""
+    peer, told = real_peer(neighbour(adj_rib_in=True))
+    peer.neighbor.api['receive-update'] = [PROCESS]
+    peer.neighbor.api['receive-parsed'] = [PROCESS]
+    retained = graceful_session(peer.neighbor, RESTART_TIME)
+
+    await session(peer, retained, announce(retained, KEPT))
+    restarted = await session(peer, graceful_session(peer.neighbor, RESTART_TIME, offered=[(AFI.ipv6, SAFI.unicast)]))
+
+    assert restarted[0] == [], f'the stale routes of a family not negotiated were kept: {restarted[0]}'
+    assert withdrawn(told) == [KEPT]
 
 
 @pytest.mark.rfc('rfc4724#4.2-retain-and-mark-stale', polarity='negative')

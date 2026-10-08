@@ -31,7 +31,10 @@ Recorded although its keyword is a lowercase "may": "only if" makes it a prohibi
 in RFC 2918 section 4 for ROUTE-REFRESH. Until 2026-10-08 the Peer sent whatever was
 queued once our own configuration enabled the capability, and neither the API command
 nor the ASM replayed on session establishment asked the session. Now the negotiation
-decides (Negotiated.operational, via Peer.operational): the API answers error for a peer
-whose session did not negotiate it, and a message already queued is dropped with a
-warning.
+decides (Negotiated.operational, via Peer.sends_operational): the API answers error for a
+peer whose session did not negotiate it, and a message already queued is dropped with a
+warning. The capability is the only condition: the draft has no rule tying a message to a
+family, and the ASM replayed on establishment is the one kept for each family the
+neighbour is configured with (Peer._reannounce_asm), not each family the session
+negotiated.
 """

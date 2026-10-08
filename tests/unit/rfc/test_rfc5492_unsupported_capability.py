@@ -54,7 +54,7 @@ def isolated_ribs(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(RIB, '_cache', {})
 
 
-def configuration(capability: str) -> Configuration:
+def configuration(capability: str, extra: str = '') -> Configuration:
     return Configuration(
         [
             f"""neighbor 192.0.2.1 {{
@@ -64,14 +64,15 @@ def configuration(capability: str) -> Configuration:
                 peer-as 65002;
                 family {{ ipv4 unicast; }}
                 capability {{ {capability} }}
+                {extra}
             }}"""
         ],
         text=True,
     )
 
 
-def parsed_neighbor(capability: str) -> Neighbor:
-    config = configuration(capability)
+def parsed_neighbor(capability: str, extra: str = '') -> Neighbor:
+    config = configuration(capability, extra)
     assert config.reload(), str(config.error)
     (neighbor,) = config.neighbors.values()
     return neighbor
@@ -111,7 +112,9 @@ def negotiate(neighbor: Neighbor, withheld: set[int]) -> Negotiated:
     ],
 )
 def test_require_advertises_the_capability_and_records_it(name: str, code: int) -> None:
-    neighbor = parsed_neighbor(f'{name} require;')
+    # RFC 8950 4: the Extended Next Hop Encoding is sent with a family to list, or not at all
+    extra = 'nexthop { ipv4 unicast ipv6; }' if code == Capability.CODE.NEXTHOP else ''
+    neighbor = parsed_neighbor(f'{name} require;', extra)
 
     assert code in neighbor.capability.required
     assert code in Capabilities().new(neighbor, False), f'{name} require did not advertise {name}'

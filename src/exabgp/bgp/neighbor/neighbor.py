@@ -409,9 +409,24 @@ class Neighbor:
         link-local next-hop capability. Configuration validation refused it, the API did
         not: `announce route 2001:db8::/32 next-hop fe80::1` raised when the RIB packed it.
         """
-        if not nexthop.is_link_local() or self.capability.link_local_nexthop.is_enabled():
+        if not nexthop.is_link_local():
             return ''
-        return f'next-hop {nexthop} is link-local but the link-local next-hop capability is not enabled'
+        if not self.capability.link_local_nexthop.is_enabled():
+            return f'next-hop {nexthop} is link-local but the link-local next-hop capability is not enabled'
+        # draft-ietf-idr-linklocal-capability 4: "Link-Local IPv6 next hops MUST NOT be
+        # included" towards a peer more than one hop away. The encoder would withhold it.
+        if self.is_multihop():
+            return f'next-hop {nexthop} is link-local and can not reach the multihop peer {self.session.peer_address}'
+        return ''
+
+    def is_multihop(self) -> bool:
+        """The peer may be more than one hop away: outgoing-ttl was set above one.
+
+        exabgp has no interface table, so a session without outgoing-ttl is taken to be
+        with a peer on the link, as it always has been.
+        """
+        ttl = self.session.outgoing_ttl
+        return ttl is not None and ttl > 1
 
     def next_hop_is_the_peer(self, route: 'Route') -> str:
         """Why the next-hop of this route may not go to this neighbor, '' when it may.
@@ -477,8 +492,7 @@ class Neighbor:
             raise TypeError(
                 'use of "next-hop self": the local-address is link-local but the link-local next-hop capability is not enabled',
             )
-        ttl = self.session.outgoing_ttl
-        if ttl is not None and ttl > 1:
+        if self.is_multihop():
             raise TypeError(
                 'use of "next-hop self": a link-local local-address can not be used on a multihop session',
             )

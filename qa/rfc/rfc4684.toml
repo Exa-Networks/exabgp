@@ -39,8 +39,11 @@ withdrawn and decoded, and the VPN routes are not filtered by it. `route-target-
 true` on a neighbour takes the encouraged option: when RT-Constraint was negotiated, the
 IPv4/IPv6 VPN and EVPN routes it is sent are those carrying a Route Target covered by the
 membership it advertised (held in its adj-rib-in), and a change of membership offers them
-again, sending what is now covered and withdrawing what no longer is. The negative test is
-the filtering, the positive one the default without it.
+again, sending what is now covered and withdrawing what no longer is. The Route Targets of
+a route and the Route Target of a membership are compared by one rule (RouteTarget.TYPE_MASK):
+the T bit cleared, the I bit kept, so a type of 0x80 or 0x82 with sub-type 0x02, which is no
+Route Target, neither counts as one on a route nor admits one in a membership. The negative
+test is the filtering, the positive one the default without it.
 """
 
 # ============================================================ section 6, operation

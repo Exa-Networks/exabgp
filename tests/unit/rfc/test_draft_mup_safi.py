@@ -379,12 +379,12 @@ def test_a_length_octet_past_the_attribute_still_resets_the_session(decode: Call
 # ---------------------------------------------------------- what exabgp is willing to send
 
 
-def configured(line: str) -> str:
+def configured(line: str, afi_keyword: str = 'ipv4') -> str:
     """'' when the API accepts the route, the error otherwise."""
     from exabgp.configuration.configuration import Configuration
 
     configuration = Configuration([''], text=True)
-    if configuration.partial('ipv4', line, 'announce'):
+    if configuration.partial(afi_keyword, line, 'announce'):
         return ''
     return str(configuration.error)
 
@@ -401,3 +401,85 @@ def test_a_t1st_route_with_a_teid_of_zero_is_refused_by_the_configuration() -> N
 def test_a_t2st_route_with_a_teid_of_zero_is_refused_by_the_configuration() -> None:
     assert configured('mup mup-t2st 10.0.0.1 rd 100:100 teid 0/0 next-hop 10.0.0.1') == ''
     assert 'TEID 0/8' in configured('mup mup-t2st 10.0.0.1 rd 100:100 teid 0/8 next-hop 10.0.0.1')
+
+
+# The prefix of an ISD or a T1ST route is a prefix of the AFI's family, at most 32 bits for
+# IPv4 and 128 for IPv6: what a receiver treats as malformed, we refuse to send.  The
+# configuration used to pack `mup-isd 10.0.1.0/255` as given, and refused a T1ST /33 only
+# because the packing hit a negative count.
+
+ISD_LINE = 'mup mup-isd {prefix} rd 100:100 next-hop {nexthop}'
+T1ST_LINE = 'mup mup-t1st {prefix} rd 100:100 teid 1 qfi 9 endpoint {endpoint} next-hop {nexthop}'
+IPV4_ROUTE = {'afi_keyword': 'ipv4', 'nexthop': '10.0.0.1', 'endpoint': '10.0.0.1'}
+IPV6_ROUTE = {'afi_keyword': 'ipv6', 'nexthop': '2001:db8::1', 'endpoint': '2001:db8::1'}
+
+
+def configured_mup(template: str, prefix: str, route: dict[str, str]) -> str:
+    line = template.format(prefix=prefix, nexthop=route['nexthop'], endpoint=route['endpoint'])
+    return configured(line, route['afi_keyword'])
+
+
+@pytest.mark.rfc('draft-mpmz-bess-mup-safi-05#3.1.1-isd-prefix-length-malformed-skip')
+@pytest.mark.parametrize('prefix, route', [('10.0.1.1/32', IPV4_ROUTE), ('2001:db8::1/128', IPV6_ROUTE)])
+def test_an_isd_route_of_the_full_address_is_accepted_by_the_configuration(prefix: str, route: dict[str, str]) -> None:
+    assert configured_mup(ISD_LINE, prefix, route) == ''
+
+
+@pytest.mark.rfc('draft-mpmz-bess-mup-safi-05#3.1.1-isd-prefix-length-malformed-skip', polarity='negative')
+@pytest.mark.parametrize(
+    'prefix, route',
+    [('10.0.1.0/33', IPV4_ROUTE), ('10.0.1.0/255', IPV4_ROUTE), ('2001:db8::/129', IPV6_ROUTE)],
+)
+def test_an_isd_route_with_a_prefix_length_past_the_address_is_refused(prefix: str, route: dict[str, str]) -> None:
+    assert 'prefix length' in configured_mup(ISD_LINE, prefix, route)
+
+
+@pytest.mark.rfc('draft-mpmz-bess-mup-safi-05#3.1.1-isd-prefix-length-malformed-skip', polarity='negative')
+@pytest.mark.parametrize('prefix, route', [('2001:db8::/32', IPV4_ROUTE), ('10.0.1.0/24', IPV6_ROUTE)])
+def test_an_isd_route_with_a_prefix_of_the_other_family_is_refused(prefix: str, route: dict[str, str]) -> None:
+    assert 'not an' in configured_mup(ISD_LINE, prefix, route)
+
+
+@pytest.mark.rfc('draft-mpmz-bess-mup-safi-05#3.1.3-t1st-prefix-length-malformed-skip')
+@pytest.mark.parametrize('prefix, route', [('10.0.1.1/32', IPV4_ROUTE), ('2001:db8::1/128', IPV6_ROUTE)])
+def test_a_t1st_route_of_the_full_address_is_accepted_by_the_configuration(prefix: str, route: dict[str, str]) -> None:
+    assert configured_mup(T1ST_LINE, prefix, route) == ''
+
+
+@pytest.mark.rfc('draft-mpmz-bess-mup-safi-05#3.1.3-t1st-prefix-length-malformed-skip', polarity='negative')
+@pytest.mark.parametrize('prefix, route', [('10.0.1.0/33', IPV4_ROUTE), ('2001:db8::/129', IPV6_ROUTE)])
+def test_a_t1st_route_with_a_prefix_length_past_the_address_is_refused(prefix: str, route: dict[str, str]) -> None:
+    assert 'prefix length' in configured_mup(T1ST_LINE, prefix, route)
+
+
+@pytest.mark.rfc('draft-mpmz-bess-mup-safi-05#3.1.3-t1st-prefix-length-malformed-skip', polarity='negative')
+@pytest.mark.parametrize('prefix, route', [('2001:db8::/32', IPV4_ROUTE), ('10.0.1.0/24', IPV6_ROUTE)])
+def test_a_t1st_route_with_a_prefix_of_the_other_family_is_refused(prefix: str, route: dict[str, str]) -> None:
+    assert 'not an' in configured_mup(T1ST_LINE, prefix, route)
+
+
+@pytest.mark.parametrize('factory', ['isd', 't1st'])
+def test_the_factories_refuse_a_prefix_length_past_the_address(factory: str) -> None:
+    """The configuration is the boundary; the factories hold us to it."""
+    from exabgp.bgp.message.update.nlri.mup import InterworkSegmentDiscoveryRoute, Type1SessionTransformedRoute
+    from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+    from exabgp.protocol.ip import IPv4
+
+    rd = RouteDistinguisher.make_from_elements('100', 100)
+    prefix = IPv4.from_string('10.0.1.0')
+    with pytest.raises(AssertionError):
+        if factory == 'isd':
+            InterworkSegmentDiscoveryRoute.make_isd(rd=rd, prefix_ip_len=33, prefix_ip=prefix, afi=AFI.ipv4)
+        else:
+            Type1SessionTransformedRoute.make_t1st(
+                rd=rd,
+                prefix_ip_len=33,
+                prefix_ip=prefix,
+                teid=1,
+                qfi=9,
+                endpoint_ip_len=32,
+                endpoint_ip=prefix,
+                source_ip_len=0,
+                source_ip=b'',
+                afi=AFI.ipv4,
+            )

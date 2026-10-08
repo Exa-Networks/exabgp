@@ -13,8 +13,6 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-import pytest
-
 from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv6, IP
@@ -35,6 +33,8 @@ def create_mock_negotiated(
 ) -> Negotiated:
     """A negotiated session whose neighbor holds these link-local settings."""
     session = negotiation.neighbor()
+    # RFC 2545 3: our link-local address only follows our own global address
+    session.session.local_address = IPv6.from_string('2001:db8::1')
     session.session.local_link_local = link_local_address
     session.capability.link_local_prefer = link_local_prefer
     session.session.outgoing_ttl = 2 if is_multihop else None
@@ -103,20 +103,17 @@ def test_link_local_nexthop_with_llnh() -> None:
 
 
 def test_link_local_nexthop_without_llnh() -> None:
-    """A link-local nexthop without LLNH is refused.
+    """A link-local nexthop without LLNH negotiated is refused, so the route is withheld.
 
-    RFC 2545 requires a global next-hop. Configuration validation and
-    Neighbor.ip_self() both stop the combination before a route gets here, so
-    reaching the encoder with one is a bug.
+    RFC 2545 requires a global next-hop, and our configuration enabling the capability
+    is not the peer advertising it.
     """
-    collection = create_collection()
     negotiated = create_mock_negotiated(linklocal_nexthop=False)
 
     lla_ip = IPv6.from_string('fe80::1')
     family_key = (AFI.ipv6, SAFI.unicast)
 
-    with pytest.raises(RuntimeError, match='link-local next-hop capability'):
-        collection._encode_nexthop(lla_ip, family_key, negotiated)
+    assert 'link-local next hop capability' in MPNLRICollection._next_hop_refused(lla_ip, family_key, negotiated)
 
 
 # ==============================================================================

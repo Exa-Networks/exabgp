@@ -212,11 +212,31 @@ def test_a_path_from_another_member_starting_with_a_confed_sequence_is_advertise
     assert announced(parsed) == ['10.0.0.0/24']
 
 
-def test_without_a_confederation_configured_confed_segments_are_accepted() -> None:
-    """What exabgp did before, and what a speaker which is not a member has no rule for."""
+@pytest.mark.rfc('rfc5065#5-confed-segments-from-outside-malformed')
+@pytest.mark.parametrize('kind', [CONFED_SEQ, CONFED_SET_ID], ids=['confed-sequence', 'confed-set'])
+def test_without_a_confederation_confed_segments_from_an_external_peer_withdraw(kind: int) -> None:
+    """With no confederation of our own, no external neighbour is in the same one as us.
+
+    These paths used to be accepted from any peer when nothing was configured, which let an
+    EBGP neighbour hand us segments RFC 5065 says only a member may send.
+    """
+    path = as_path(segment(kind, 65003), segment(SEQ, OUTSIDE))
+    negotiated = session(peer_as=OUTSIDE)
+    negotiated.neighbor.as_set = 'accept'  # an AS_CONFED_SET is RFC 9774's too: isolate RFC 5065
+
+    parsed = parse(update(ORIGIN_IGP + path + NEXT_HOP), negotiated)
+
+    assert announced(parsed) == []
+    assert withdrawn_routes(parsed) == ['10.0.0.0/24']
+
+
+@pytest.mark.rfc('rfc5065#5-confed-segments-from-outside-malformed', polarity='negative')
+def test_without_a_confederation_confed_segments_from_an_internal_peer_are_accepted() -> None:
+    """IBGP is left as it was: a peer inside our own AS is not "not located in the same
+    confederation" in any sense we can check without one configured."""
     path = as_path(segment(CONFED_SEQ, 65003), segment(SEQ, OUTSIDE))
 
-    parsed = parse(update(ORIGIN_IGP + path + NEXT_HOP), session(peer_as=OUTSIDE))
+    parsed = parse(update(ORIGIN_IGP + path + NEXT_HOP), internal_session())
 
     assert announced(parsed) == ['10.0.0.0/24']
 

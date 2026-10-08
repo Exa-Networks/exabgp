@@ -1,7 +1,12 @@
 """A NOTIFICATION too short to hold its code must not be answered with a NOTIFICATION.
 
-RFC 4271 6.5: an error detected while processing a NOTIFICATION cannot be reported back to
+RFC 4271 6.4: an error detected while processing a NOTIFICATION cannot be reported back to
 the peer with a NOTIFICATION.  The session closes, and that is all.
+
+From a session the short bodies below never get here: RFC 4271 6.1 makes a NOTIFICATION
+shorter than its minimum length a Bad Message Length, which the header check answers
+before the body is decoded.  These tests decode the body directly, as Message.unpack and
+configuration/check.py do.
 
 Notification.__init__ refused a body under two bytes with a ValueError, which
 reactor/protocol.py's catch-all turned into

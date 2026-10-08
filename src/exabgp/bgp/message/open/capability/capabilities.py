@@ -154,6 +154,11 @@ class Capabilities(dict[CapabilityCode, Capability]):
             if allowed not in nexthops:
                 continue
             nh_pairs.append(allowed)
+        # RFC 8950 4: the value is the triples, one per family. With none to offer (none
+        # configured, none section 4 allows, or the session of a multisession family which
+        # has none) the capability would be zero octets saying nothing, so it is left out.
+        if not nh_pairs:
+            return
         self[Capability.CODE.NEXTHOP] = NextHop(tuple(nh_pairs))
 
     def _addpath(self, neighbor: Neighbor) -> None:
@@ -361,6 +366,14 @@ class Capabilities(dict[CapabilityCode, Capability]):
             rest: Buffer = data[boundary:]
             return key, value, rest
 
+        def _refuse_padding(received: int, expected: int) -> None:
+            # RFC 4271 4.1: '"padding" of extra data after the message is not allowed', and
+            # the Optional Parameters end an OPEN. 6.2 answers every error found processing
+            # an OPEN with OPEN Message Error, none of whose subcodes is about length, and
+            # the 6.1 list Bad Message Length is for has no message which is too long.
+            if received != expected:
+                raise Notify(2, 0, f'OPEN of {received - expected} octets more than its Optional Parameters')
+
         capabilities = Capabilities()
 
         # Empty optional parameters is valid
@@ -384,12 +397,14 @@ class Capabilities(dict[CapabilityCode, Capability]):
             option_len = unpack('!H', data[2:4])[0]
             if len(data) < option_len + 4:
                 raise Notify.short(2, 0, 'OPEN extended parameters', option_len + 4, len(data))
+            _refuse_padding(len(data), option_len + 4)
             data = data[4 : option_len + 4]
             decoder = _extended_type_length
         else:
             # Standard format
             if len(data) < option_len + 1:
                 raise Notify.short(2, 0, 'OPEN parameters', option_len + 1, len(data))
+            _refuse_padding(len(data), option_len + 1)
             data = data[1 : option_len + 1]
             decoder = _key_values
 

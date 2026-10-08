@@ -40,10 +40,14 @@ class IncomingRIB(Cache):
     # RFC 7313 4: per family, the routes a BoRR marked stale and nothing has re-sent since,
     # until the EoRR
     _refresh_stale: dict[FamilyTuple, set[bytes]]
-    # RFC 4486 4: per limited family, the routes the peer holds with us.  Kept apart from
-    # the cache, which adj-rib-in can turn off, and bounded by the limit: the route which
-    # takes a family past it ends the session
-    _prefixes: dict[FamilyTuple, set[bytes]]
+    # RFC 4486 4: per limited family, the routes the peer holds with us, each mapped to its
+    # address prefix.  Kept apart from the cache, which adj-rib-in can turn off.  The section
+    # counts address prefixes, so with ADD-PATH the paths of one prefix count once: the
+    # second record says how many routes hold each prefix.  The prefixes are bounded by the
+    # limit, the prefix which takes a family past it ends the session; the paths of a prefix
+    # are what ADD-PATH lets the peer send, as they are in the adj-rib-in
+    _prefixes: dict[FamilyTuple, dict[bytes, bytes]]
+    _prefix_paths: dict[FamilyTuple, dict[bytes, int]]
     _pending_flows: dict[FamilyTuple, dict[bytes, Route]]
     # RFC 4724 4.2: per family, the routes stale because the peer's Graceful Restart session
     # was lost, until its End-of-RIB, its new OPEN, its Restart Time or its next restart
@@ -57,6 +61,7 @@ class IncomingRIB(Cache):
         self._end_of_rib = set()
         self._refresh_stale = {}
         self._prefixes = {}
+        self._prefix_paths = {}
         self._pending_flows = {}
         self._restart_stale = {}
 
@@ -70,6 +75,7 @@ class IncomingRIB(Cache):
         self._end_of_rib = set()
         self._refresh_stale = {}
         self._prefixes = {}
+        self._prefix_paths = {}
 
     def _fresh(self, family: FamilyTuple, index: bytes) -> None:
         """The peer sent this route again, or withdrew it: it is stale for neither procedure."""
@@ -92,7 +98,7 @@ class IncomingRIB(Cache):
         The count is kept with adj-rib-in off, when the cache is empty, and what ends a
         stale record has to release it too.
         """
-        return set(self._seen.get(family, {})) | self._prefixes.get(family, set())
+        return set(self._seen.get(family, {})) | set(self._prefixes.get(family, {}))
 
     def _remove(self, family: FamilyTuple, stale: set[bytes]) -> list[Route]:
         """Remove these routes of the family, returning those the cache held."""
@@ -100,9 +106,8 @@ class IncomingRIB(Cache):
         removed = [held.pop(index) for index in stale if index in held]
         assert len(removed) <= len(stale)
         # the peer no longer holds these with us, so the prefix-limit stops counting them
-        counted = self._prefixes.get(family)
-        if counted:
-            counted.difference_update(stale)
+        for index in stale:
+            self._uncount(family, index)
         return removed
 
     def mark_stale(self, family: FamilyTuple) -> None:
@@ -188,21 +193,46 @@ class IncomingRIB(Cache):
         return True
 
     def count_prefix(self, nlri: NLRI) -> int:
-        """Record a route the peer announced, and return how many its family now holds."""
-        prefixes = self._prefixes.setdefault(nlri.family().afi_safi(), set())
-        prefixes.add(self._make_index(nlri))
-        return len(prefixes)
+        """Record a route the peer announced, and return how many address prefixes its family now holds."""
+        family = nlri.family().afi_safi()
+        routes = self._prefixes.setdefault(family, {})
+        paths = self._prefix_paths.setdefault(family, {})
+        index = self._make_index(nlri)
+        if index not in routes:
+            prefix = nlri.prefix_index()
+            routes[index] = prefix
+            paths[prefix] = paths.get(prefix, 0) + 1
+        assert len(paths) <= len(routes), 'every counted prefix is held by at least one route'
+        return len(paths)
 
     def uncount_prefix(self, nlri: NLRI) -> None:
-        prefixes = self._prefixes.get(nlri.family().afi_safi())
-        if prefixes:
-            prefixes.discard(self._make_index(nlri))
+        self._uncount(nlri.family().afi_safi(), self._make_index(nlri))
 
-    def hold_pending_flow(self, route: Route) -> bool:
-        """Keep a flow specification which is not feasible yet, False when the cap is reached."""
+    def _uncount(self, family: FamilyTuple, index: bytes) -> None:
+        """The route `index` is gone: its prefix stops being counted once no other path holds it."""
+        prefix = self._prefixes.get(family, {}).pop(index, None)
+        if prefix is None:
+            return
+        paths = self._prefix_paths[family]
+        assert paths[prefix] > 0, 'a counted route holds its prefix'
+        paths[prefix] -= 1
+        if not paths[prefix]:
+            del paths[prefix]
+
+    def cached_route(self, nlri: NLRI) -> Route | None:
+        """The route the adj-rib-in holds for this NLRI, None when it holds none."""
+        return self._seen.get(nlri.family().afi_safi(), {}).get(self._make_index(nlri))
+
+    def hold_pending_flow(self, route: Route, replace: bool = True) -> bool:
+        """Keep a flow specification which is not feasible yet, False when the cap is reached.
+
+        With `replace` false a flow already held for the same NLRI is kept: it is the newer.
+        """
         family = route.nlri.family().afi_safi()
         pending = self._pending_flows.setdefault(family, {})
         index = route.index()
+        if index in pending and not replace:
+            return True
         if index not in pending and len(pending) >= self.PENDING_FLOWS_MAX:
             return False
         pending[index] = route
@@ -260,6 +290,7 @@ class IncomingRIB(Cache):
         assert kept.issubset(self._restart_stale.keys()), 'only a restarting family is kept into a new session'
         self._seen = {family: routes for family, routes in self._seen.items() if family in kept}
         self._prefixes = {family: counted for family, counted in self._prefixes.items() if family in kept}
+        self._prefix_paths = {family: paths for family, paths in self._prefix_paths.items() if family in kept}
         self._restart_stale = {family: stale for family, stale in self._restart_stale.items() if family in kept}
         # a refresh does not outlive its session: a retained family's became restart-stale
         self._refresh_stale = {}
