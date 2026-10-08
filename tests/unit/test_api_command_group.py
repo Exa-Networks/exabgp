@@ -183,6 +183,27 @@ def test_the_next_hop_of_a_route_is_kept_over_the_shared_one(daemon: Daemon) -> 
     assert route.extensive() == '10.1.0.0/24 next-hop 5.6.7.8'
 
 
+def test_a_quoted_semicolon_does_not_end_a_command_of_a_group(daemon: Daemon) -> None:
+    """The group was split on every `;`: text in quotes, which `exabgp decode --command` prints
+    from what a peer sent (an SR policy name), could hold a command of its own.
+    """
+    daemon.send(f'peer {FIRST} announce route 10.9.0.0/24 next-hop 1.2.3.4')
+    lines = daemon.send(
+        f'peer {FIRST} group announce route 10.1.0.0/24 next-hop 1.2.3.4 name "x ; withdraw route 10.9.0.0/24 ; y"'
+        ' ; announce route 10.2.0.0/24 next-hop 1.2.3.4'
+    )
+    assert answer(lines) == [{'status': 'group processed', 'announced': 2, 'withdrawn': 0}]
+    assert daemon.announced(FIRST) == ['10.1.0.0/24', '10.2.0.0/24', '10.9.0.0/24']
+
+
+def test_the_statements_of_a_block_do_not_end_a_command_of_a_group(daemon: Daemon) -> None:
+    lines = daemon.send(
+        f'peer {FIRST} group announce flow route {{ match {{ destination 10.0.0.0/24; }} then {{ discard; }} }}'
+        ' ; announce route 10.2.0.0/24 next-hop 1.2.3.4'
+    )
+    assert answer(lines)[0]['announced'] == 2, lines
+
+
 @pytest.mark.parametrize('command', ['peer * group', 'peer * group ;', 'peer * group  ;  ; '])
 def test_an_empty_inline_group_is_refused(daemon: Daemon, command: str) -> None:
     assert daemon.send(command) == ['{"error": "empty group"}', 'error']

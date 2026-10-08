@@ -138,6 +138,15 @@ as-path, local-preference 100 inside the AS) are left out. The other 52:
   replaced by `tests/unit/test_decode_to_api_command.py`, the SR-Policy `--command` tests check
   the command reads back.
 
+- 2026-10-08, after the push (f0b717c6b): a security review found that a `group` line was
+  split on every `;` (reactor/api/command/group.group_inline): a quoted word holding one,
+  such as an SR policy name a peer chose and `decode --command` printed, became a command of
+  its own (`policy-name "x ; withdraw route 10.0.0.0/8 ; y"`), and a flow route block in a
+  group was cut at its statements. `lexer.split_commands` ends a command where the lexer ends
+  a statement (outside quotes and braces, escapes resolved); group_inline and test_api_encode
+  use it. Tests: `tests/unit/test_group_split_commands.py`, two in
+  `test_api_command_group.py` (red before), one end to end in `test_decode_to_api_command.py`.
+
 ## Failures
 
 (none yet)

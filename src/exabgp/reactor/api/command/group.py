@@ -25,6 +25,7 @@ import asyncio
 import json
 from typing import TYPE_CHECKING
 
+from exabgp.configuration.grammar.lexer import split_commands
 from exabgp.logger import log, lazymsg
 from exabgp.protocol.ip import IP
 
@@ -190,9 +191,8 @@ def group_inline(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
     Commands are separated by semicolons and processed together,
     allowing RIB-level batching to combine them into minimal UPDATEs.
     """
-    # Parse semicolon-separated commands
-    # command is everything after "group " token
-    parts = [p.strip() for p in command.split(';') if p.strip()]
+    # command is everything after "group ": its commands end at a `;` outside quotes and braces
+    parts = split_commands(command)
 
     if not parts:
         error_msg = 'empty group'

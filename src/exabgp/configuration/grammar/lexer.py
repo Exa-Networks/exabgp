@@ -61,6 +61,59 @@ class Statement:
         return self.tokens[:-1]
 
 
+def _characters(text: str) -> Iterator[tuple[int, int, str]]:
+    """Each character of the text as the lexer reads it (escapes resolved), with where it starts and ends."""
+    position = 0
+    while position < len(text):
+        start = position
+        if text[position] != '\\' or position + 1 >= len(text):
+            position += 1
+            yield start, position, text[start]
+            continue
+        escape = text[position + 1]
+        if escape == 'u':
+            digits = text[position + 2 : position + 2 + UNICODE_ESCAPE_DIGITS]
+            position += 2 + len(digits)
+            # a malformed escape is no quote nor terminator: the command which holds it is refused when read
+            valid = len(digits) == UNICODE_ESCAPE_DIGITS and _hexadecimal(digits)
+            yield start, position, chr(int(digits, 16)) if valid else ''
+            continue
+        position += 2
+        yield start, position, _ESCAPES.get(escape, escape)
+
+
+def _hexadecimal(digits: str) -> bool:
+    return all(char in '0123456789abcdefABCDEF' for char in digits)
+
+
+def split_commands(text: str) -> list[str]:
+    """The commands of a `group` line, at each `;` the lexer would end a statement with.
+
+    A `;` inside quotes is part of a word and one inside braces ends a statement of a block:
+    neither ends a command. It was split on every `;`, so a quoted word of a command, a
+    name a peer chose for its SR policy and `exabgp decode --command` printed, could hold
+    a command of its own: `policy-name "x ; withdraw route 10.0.0.0/8 ; y"`.
+    """
+    commands: list[str] = []
+    start = 0
+    quote = ''
+    depth = 0
+    for begin, end, char in _characters(text):
+        if quote:
+            quote = '' if char == quote else quote
+        elif char in QUOTES:
+            quote = char
+        elif char == '{':
+            depth += 1
+        elif char == '}':
+            depth = max(depth - 1, 0)
+        elif char == ';' and not depth:
+            commands.append(text[start:begin])
+            start = end
+    commands.append(text[start:])
+    return [each.strip() for each in commands if each.strip()]
+
+
 @dataclass(frozen=True, slots=True)
 class _Line:
     text: str

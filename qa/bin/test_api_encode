@@ -61,6 +61,7 @@ from exabgp.reactor.api.command.group import _parse_routes
 from exabgp.reactor.loop import Reactor
 from exabgp.rib.route import Route
 from exabgp.configuration.check import _negotiated
+from exabgp.configuration.grammar.lexer import split_commands
 from exabgp.configuration.command import decode_to_api_command
 from exabgp.configuration.configuration import Configuration
 from exabgp.environment import getenv
@@ -185,7 +186,7 @@ def encode_api_command(cmd: str, neighbor: Neighbor) -> str | None:
         return None
     if words[0] == "announce" and words[1] == "eor":
         return _encode_eor(words)
-    commands = cmd[len("group ") :].split(";") if words[0] == "group" else [cmd]
+    commands = split_commands(cmd[len("group ") :]) if words[0] == "group" else [cmd]
 
     api = API(cast(Reactor, None))
     rib = neighbor.rib.outgoing

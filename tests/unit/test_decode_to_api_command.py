@@ -19,6 +19,7 @@ from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.check import _negotiated
 from exabgp.configuration.command import decode_to_api_command
 from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.grammar.lexer import split_commands
 from exabgp.reactor.api import API
 from exabgp.reactor.api.command.group import _parse_routes
 from exabgp.reactor.loop import Reactor
@@ -45,7 +46,7 @@ def neighbor(monkeypatch: pytest.MonkeyPatch) -> Neighbor:
 def _sent(neighbor: Neighbor, command: str) -> str:
     """The UPDATE the reactor sends for a command, in hex, without its header."""
     api = API(cast(Reactor, None))
-    commands = command[len('group ') :].split(' ; ') if command.startswith('group ') else [command]
+    commands = split_commands(command[len('group ') :]) if command.startswith('group ') else [command]
     for each in commands:
         action, _, rest = each.partition(' ')
         routes = _parse_routes(api, rest, action=action)
@@ -109,3 +110,27 @@ def test_routes_an_rd_tells_apart_are_a_group(neighbor: Neighbor) -> None:
     announced = [RoutedNLRI(route.nlri, route.nexthop) for route in routes]
     (message,) = UpdateCollection(announced, [], routes[0].attributes).messages(negotiated)
     assert decode_to_api_command(message[19:].hex(), neighbor) == [f'group announce {first} ; announce {second}']
+
+
+def test_a_name_a_peer_chose_stays_in_its_command(neighbor: Neighbor) -> None:
+    """An SR policy name is the peer's text: printed in a group, it must not end a command."""
+    api = API(cast(Reactor, None))
+    name = '"x ; withdraw route 10.0.0.0/8 next-hop 192.0.2.1 ; y"'
+    routes = []
+    for distinguisher in (0, 1):
+        line = (
+            f'ipv4 sr-policy distinguisher {distinguisher} color 100 endpoint 10.0.0.1 next-hop 192.0.2.1'
+            f' preference 100 binding-sid mpls 24000 segment-list weight 1 segment type-a mpls 16001'
+            f' policy-name {name} extended-community [ target:192.0.2.1:100 ]'
+        )
+        routes.extend(_parse_routes(api, line, action='announce'))
+    _, negotiated = _negotiated(neighbor)
+    announced = [RoutedNLRI(route.nlri, route.nexthop) for route in routes]
+    (message,) = UpdateCollection(announced, [], routes[0].attributes).messages(negotiated)
+    (command,) = decode_to_api_command(message[19:].hex(), neighbor)
+
+    commands = split_commands(command[len('group ') :])
+    assert [each.split()[:3] for each in commands] == [['announce', 'ipv4', 'sr-policy']] * 2
+    for each in commands:
+        (route,) = _parse_routes(api, each.partition(' ')[2], action='announce')
+        assert 'x ; withdraw' in str(route.attributes), route.attributes
