@@ -125,15 +125,75 @@ def test_two_extended_communities_are_equal_only_when_all_eight_octets_are() -> 
 def test_a_registered_type_and_subtype_reaches_its_own_class() -> None:
     """Section 3's "templates": the high-order octet picks the family, the low one the type.
 
-    `ExtendedCommunityBase.unpack_attribute` masks the high-order octet with 0x0F before
-    looking the pair up, so the IANA bit and the T bit do not change which class decodes
-    the community.  A Route Target is therefore the same class transitive or not.
+    `ExtendedCommunityBase.unpack_attribute` clears the T bit of a type below 0x80 before
+    looking the pair up, because Quagga sent Route Targets and Route Origins with it set.
+    A Route Target is therefore the same class transitive or not.
     """
     transitive = ExtendedCommunities.from_packet(ROUTE_TARGET).communities[0]
     non_transitive = ExtendedCommunities.from_packet(ROUTE_TARGET_NON_TRANSITIVE).communities[0]
 
     assert type(transitive) is type(non_transitive)
     assert type(transitive) is not ExtendedCommunity, 'the Route Target fell through to the generic class'
+
+
+# Each of these shares its sub-type, and the low four bits of its type, with a registered
+# class of another family.  The lookup once masked the type with 0x0F, which dropped the I
+# bit and two of the structure bits, so every one of them was decoded as that other class.
+UNREGISTERED_LOOKALIKES = [
+    ('0009000100000001', 'TrafficMark'),  # Source AS, RFC 6514
+    ('0008000100000001', 'TrafficRedirect'),  # BGP Data Collection, RFC 4384
+    ('000A000100000001', 'L2Info'),  # L2VPN Identifier, RFC 6074
+    ('8004000100000001', 'Bandwidth'),  # SecurityGroup, generic transitive
+    ('0208000100000001', 'TrafficRedirectASN4'),  # BGP Data Collection, four-octet AS
+    ('0006000100000001', 'TrafficRate'),  # Route Aggregation Parameter
+    ('C006000100000001', 'TrafficRate'),  # experimental use, not the twin of 0x80
+]
+
+
+@pytest.mark.rfc('rfc7606#7.14-unrecognised-extended-community-type-not-an-error')
+@pytest.mark.parametrize('packed,lookalike', UNREGISTERED_LOOKALIKES)
+def test_an_unregistered_type_is_not_decoded_as_its_lookalike(packed: str, lookalike: str) -> None:
+    community = ExtendedCommunity.unpack_attribute(bytes.fromhex(packed))
+
+    assert type(community).__name__ != lookalike, f'0x{packed} was decoded as {lookalike}'
+    assert type(community) is ExtendedCommunity
+    assert repr(community) == '0x' + packed
+
+
+# A registered class, the type it is registered under, and the T bit variant it also
+# decodes.  Bandwidth is the one registered by its non-transitive form.
+REGISTERED_WITH_T_BIT_TWIN = [
+    ('0002FDE800000001', '4002FDE800000001', 'RouteTargetASN2Number'),
+    ('0003FDE800000001', '4003FDE800000001', 'OriginASN2Number'),
+    ('0102C00002010001', '4102C00002010001', 'RouteTargetIPNumber'),
+    ('4004FDE84479F000', '0004FDE84479F000', 'Bandwidth'),
+]
+
+
+@pytest.mark.parametrize('registered,twin,name', REGISTERED_WITH_T_BIT_TWIN)
+def test_the_t_bit_does_not_change_which_class_decodes_a_community(registered: str, twin: str, name: str) -> None:
+    for packed in (registered, twin):
+        community = ExtendedCommunity.unpack_attribute(bytes.fromhex(packed))
+        assert type(community).__name__ == name, f'0x{packed} was decoded as {type(community).__name__}'
+
+
+@pytest.mark.parametrize(
+    'packed,name',
+    [
+        ('8006FDE800000000', 'TrafficRate'),
+        ('800CFDE800000000', 'TrafficRatePackets'),
+        ('8007000000000003', 'TrafficAction'),
+        ('8008FDE800000001', 'TrafficRedirect'),
+        ('82080000FDE80001', 'TrafficRedirectASN4'),
+        ('81080A0000010001', 'TrafficRedirectIPv4'),
+        ('8009000000000010', 'TrafficMark'),
+        ('800A130005DC0000', 'L2Info'),
+    ],
+)
+def test_a_generic_transitive_community_reaches_its_own_class(packed: str, name: str) -> None:
+    """RFC 8955 section 7 and RFC 4761: the I bit is part of what names these types."""
+    community = ExtendedCommunity.unpack_attribute(bytes.fromhex(packed))
+    assert type(community).__name__ == name
 
 
 # ------------------------------------------------ 6 the T bit at the AS boundary
@@ -216,3 +276,52 @@ def test_a_non_transitive_extended_community_we_originate_goes_to_another_as() -
     sent = extended_communities_sent(rfc7606_wire.session(), received=False)
 
     assert sorted(sent) == sorted([ROUTE_TARGET, ROUTE_TARGET_NON_TRANSITIVE]), [community.hex() for community in sent]
+
+
+# ------------------------------------- 6 the T bit at the AS boundary, the IPv6 attribute
+
+# RFC 5701 section 2: an IPv6 Address Specific Route Target, high-order octet 0x00
+# (transitive) or 0x40 (not), sub-type 0x02, a 16 octet global and a 2 octet local
+# administrator.  The T bit has the meaning RFC 4360 gives it, so the SHOULD of RFC 4360
+# section 6 applies to attribute 25 as it does to attribute 16.
+IPV6_ROUTE_TARGET = bytes([0x00, 0x02]) + bytes.fromhex('20010db8000000000000000000000001') + (7).to_bytes(2, 'big')
+IPV6_ROUTE_TARGET_NON_TRANSITIVE = bytes([0x40, 0x02]) + IPV6_ROUTE_TARGET[2:]
+
+
+def ipv6_extended_communities_sent(negotiated: Negotiated) -> list[bytes]:
+    """The IPv6 extended communities a peer decodes from a route re-advertised to it."""
+    attributes = AttributeCollection()
+    attributes.add(ExtendedCommunitiesIPv6.from_packet(IPV6_ROUTE_TARGET + IPV6_ROUTE_TARGET_NON_TRANSITIVE))
+    source = rfc7606_wire.session()
+    source.neighbor.session.peer_address = IP.from_string(LEARNED_FROM)
+    attributes = AttributeCollection.unpack(attributes.pack_attribute(source), source)
+    assert attributes.learned_from == LEARNED_FROM, 'the decoded route did not record its peer'
+    sent = AttributeCollection.unpack(attributes.pack_attribute(negotiated), rfc7606_wire.session())
+    decoded = sent.get(Attribute.CODE.IPV6_EXTENDED_COMMUNITY)
+    if decoded is None:
+        return []
+    assert isinstance(decoded, ExtendedCommunitiesIPv6)
+    return [bytes(community.pack_attribute(Negotiated.UNSET)) for community in decoded.communities]
+
+
+@pytest.mark.rfc('rfc4360#6-non-transitive-removed-across-as-boundary')
+def test_a_non_transitive_ipv6_extended_community_is_not_sent_to_another_as() -> None:
+    sent = ipv6_extended_communities_sent(rfc7606_wire.session())
+
+    assert sent == [IPV6_ROUTE_TARGET], [community.hex() for community in sent]
+
+
+@pytest.mark.parametrize(
+    'negotiated',
+    [rfc7606_wire.internal_session, confederation_member_session],
+    ids=['ibgp', 'confederation-member'],
+)
+@pytest.mark.rfc('rfc4360#6-non-transitive-removed-across-as-boundary')
+def test_a_non_transitive_ipv6_extended_community_is_kept_inside_the_as_and_the_confederation(
+    negotiated: Callable[[], Negotiated],
+) -> None:
+    sent = ipv6_extended_communities_sent(negotiated())
+
+    assert sorted(sent) == sorted([IPV6_ROUTE_TARGET, IPV6_ROUTE_TARGET_NON_TRANSITIVE]), [
+        community.hex() for community in sent
+    ]

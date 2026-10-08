@@ -27,6 +27,10 @@ import pytest
 
 from exabgp.bgp.message.update.attribute.bgpls.link.adjacencysid import AdjacencySid
 from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAdjacencySid
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.attribute.bgpls.node.sralgo import SrAlgorithm
+from exabgp.bgp.message.update.attribute.bgpls.node.srcap import SrCapabilities
+from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixattributesflags import PrefixAttributesFlags
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixsid import PrefixSid
 
 LABEL = 16001
@@ -139,3 +143,114 @@ def test_an_ospf_lan_adjacency_label_is_reported_with_the_ospf_flags() -> None:
     flags = lan_adjacency(OSPF_V | OSPF_L, OSPF_NEIGHBOR, pack('!I', LABEL)[1:])['flags']
     assert isinstance(flags, dict)
     assert (flags.get('V'), flags.get('L'), flags.get('B')) == (1, 1, 0)
+
+
+@pytest.mark.rfc('rfc9085#2.3.1-prefix-sid-flags-per-protocol')
+@pytest.mark.xfail(strict=True, reason='the attribute decoder cannot see the Protocol-ID, see the ledger note')
+def test_an_ospf_prefix_sid_is_reported_with_the_ospf_flags() -> None:
+    # RFC 8665 5: NP is 0x40 and M 0x20, which the IS-IS layout names N and P
+    flags = PrefixSid.unpack_bgpls(pack('!BBH', 0x40 | 0x20, 0, 0) + pack('!I', INDEX)).flags
+    assert (flags.get('NP'), flags.get('M')) == (1, 1)
+
+
+@pytest.mark.rfc('rfc9085#2.3.2-prefix-attribute-flags-per-protocol')
+@pytest.mark.xfail(strict=True, reason='the attribute decoder cannot see the Protocol-ID, see the ledger note')
+def test_ospfv2_prefix_attribute_flags_are_reported_with_the_ospf_flags() -> None:
+    # RFC 7684 2.1: A is 0x80 and N 0x40, which the IS-IS layout of RFC 7794 names X and R
+    flags = PrefixAttributesFlags.unpack_bgpls(bytes([0x80 | 0x40])).flags
+    assert (flags.get('A'), flags.get('N')) == (1, 1)
+
+
+# ---------------------------------------------------------- the size of each TLV
+
+SID_LABEL = 1161
+SR_CAPABILITIES_HEADER = bytes([0x80, 0])  # the I-Flag, then Reserved
+RANGE = pack('!L', 8000)[1:]
+
+
+def sid_label(sid: bytes) -> bytes:
+    return pack('!HH', SID_LABEL, len(sid)) + sid
+
+
+@pytest.mark.rfc('rfc9085#2.1.1-sid-label-length')
+def test_sr_capabilities_carry_a_label_range() -> None:
+    value = SR_CAPABILITIES_HEADER + RANGE + sid_label(pack('!L', LABEL)[1:])
+    assert SrCapabilities.unpack_bgpls(value).sids == [[8000, LABEL]]
+
+
+@pytest.mark.rfc('rfc9085#2.1.1-sid-label-length')
+def test_a_four_octet_sid_is_a_value_and_does_not_make_the_tlv_malformed() -> None:
+    # 2.1.2 says only a label is valid here, but RFC 9552 8.2.2 forbids calling the
+    # attribute malformed over the contents of a field, and four octets is a SID/Label size
+    value = SR_CAPABILITIES_HEADER + RANGE + sid_label(pack('!L', INDEX))
+    assert SrCapabilities.unpack_bgpls(value).sids == [[8000, INDEX]]
+
+
+@pytest.mark.rfc('rfc9085#2.1.1-sid-label-length', polarity='negative')
+@pytest.mark.parametrize('size', [0, 2, 5], ids=['empty', 'two-octets', 'five-octets'])
+def test_a_sid_label_of_another_size_is_refused_rather_than_stepped_over(size: int) -> None:
+    with pytest.raises(Notify):
+        SrCapabilities.unpack_bgpls(SR_CAPABILITIES_HEADER + RANGE + sid_label(bytes(size)))
+
+
+def test_sr_capabilities_without_a_range_are_read_for_what_they_carry() -> None:
+    # 2.1.2 gives twelve octets as the minimum, and RFC 9552 8.2.2 tells a propagator not
+    # to judge the length of a variable length TLV: the flags are still the peer's
+    decoded = SrCapabilities.unpack_bgpls(SR_CAPABILITIES_HEADER)
+    assert decoded.flags['I'] == 1
+    assert decoded.sids == []
+
+
+def test_an_sr_algorithm_tlv_lists_what_it_carries() -> None:
+    assert SrAlgorithm.unpack_bgpls(bytes([0, 1])).content == [0, 1]
+
+
+def test_an_empty_sr_algorithm_tlv_is_not_read_as_algorithm_zero() -> None:
+    # 2.1.3 gives a minimum of one octet; an empty TLV is kept (see the ledger header), and
+    # it used to be published as [0], an algorithm the peer had not sent
+    assert SrAlgorithm.unpack_bgpls(b'').content == []
+
+
+@pytest.mark.rfc('rfc9085#2.3.1-prefix-sid-length')
+def test_a_prefix_sid_of_seven_or_eight_octets_is_read() -> None:
+    assert PrefixSid.unpack_bgpls(pack('!BBH', 0x0C, 0, 0) + pack('!I', LABEL)[1:]).sids == [LABEL]
+    assert PrefixSid.unpack_bgpls(pack('!BBH', 0x00, 0, 0) + pack('!I', INDEX)).sids == [INDEX]
+
+
+@pytest.mark.rfc('rfc9085#2.3.1-prefix-sid-length')
+def test_a_label_prefix_sid_of_another_size_keeps_what_follows_the_label() -> None:
+    decoded = PrefixSid.unpack_bgpls(pack('!BBH', 0x0C, 0, 0) + pack('!I', LABEL << 8 | 0xAB))
+    assert decoded.sids == [LABEL]
+    assert decoded.undecoded == ('0xAB',), 'the octet after the label used to vanish'
+
+
+@pytest.mark.rfc('rfc9085#2.3.1-prefix-sid-length', polarity='negative')
+@pytest.mark.parametrize(
+    'value',
+    [pack('!BBH', 0x00, 0, 0) + bytes(3), pack('!BBH', 0x00, 0, 0) + bytes(5), pack('!BBH', 0x00, 0, 0)],
+    ids=['index-in-three-octets', 'index-in-five-octets', 'no-sid'],
+)
+def test_an_index_prefix_sid_of_another_size_is_refused(value: bytes) -> None:
+    with pytest.raises(Notify):
+        PrefixSid.unpack_bgpls(value)
+
+
+@pytest.mark.rfc('rfc9085#2.3.2-prefix-attribute-flags-variable-length')
+def test_prefix_attribute_flags_longer_than_one_octet_are_kept() -> None:
+    decoded = PrefixAttributesFlags.unpack_bgpls(bytes([0x80, 0xAB]))
+    assert decoded.flags['X'] == 1
+    rendered = json.loads('{' + decoded.json() + '}')['sr-prefix-attribute-flags']
+    assert rendered['X'] == 1
+    assert rendered['undecoded-flags'] == '0xAB'
+
+
+@pytest.mark.rfc('rfc9085#2.3.2-prefix-attribute-flags-variable-length')
+def test_one_octet_prefix_attribute_flags_render_as_they_always_did() -> None:
+    rendered = json.loads('{' + PrefixAttributesFlags.unpack_bgpls(bytes([0x40])).json() + '}')
+    assert rendered == {'sr-prefix-attribute-flags': {'X': 0, 'R': 1, 'N': 0, 'RSV': 0}}
+
+
+@pytest.mark.rfc('rfc9085#2.3.2-prefix-attribute-flags-variable-length', polarity='negative')
+def test_empty_prefix_attribute_flags_are_refused() -> None:
+    with pytest.raises(Notify):
+        PrefixAttributesFlags.unpack_bgpls(b'')

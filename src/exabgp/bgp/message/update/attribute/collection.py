@@ -74,11 +74,15 @@ from exabgp.logger import lazyattribute, lazymsg, log
 _JSON_INTEGER = re.compile(r'-?(?:0|[1-9][0-9]*)')
 
 
-# RFC 4684 4 compares a Route Target with the IANA and transitive bits of its type cleared
-ROUTE_TARGET_TYPE_MASK = 0x3F
+# The T bit is cleared as the extended community registry clears it (registry_type), for
+# the Route Targets Quagga sent with it set.  The I bit is kept: 0x80 0x02 is no Route Target.
+ROUTE_TARGET_TYPE_MASK = 0xBF
 ROUTE_TARGET_SUBTYPE = 0x02
 # two-octet AS, IPv4 address, four-octet AS
 ROUTE_TARGET_TYPES = (0x00, 0x01, 0x02)
+
+# The attributes made of extended communities, each of which has a T bit (RFC 4360 2, RFC 5701 2).
+EXTENDED_COMMUNITY_CODES = (Attribute.CODE.EXTENDED_COMMUNITY, Attribute.CODE.IPV6_EXTENDED_COMMUNITY)
 
 
 class _NOTHING:
@@ -419,7 +423,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         )
 
     def route_targets(self) -> list[bytes]:
-        """The Route Targets carried, eight octets each, flags reset as RFC 4684 compares them."""
+        """The Route Targets carried, eight octets each, the T bit cleared so either form matches."""
         if Attribute.CODE.EXTENDED_COMMUNITY not in self:
             return []
         # the attribute stored under EXTENDED_COMMUNITY is the EXTENDED_COMMUNITY attribute
@@ -530,8 +534,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
             # RFC 4360 6, for a route we re-advertise only: an extended community the
             # operator configured non-transitive (link bandwidth) is meant for this peer.
-            if code == Attribute.CODE.EXTENDED_COMMUNITY and external and self.learned_from:
-                transitive = cast(ExtendedCommunities, attribute).transitive_only()
+            # RFC 5701 2 gives attribute 25 the same T bit, so it is stripped the same way.
+            if code in EXTENDED_COMMUNITY_CODES and external and self.learned_from:
+                transitive = cast(ExtendedCommunitiesBase, attribute).transitive_only()
                 if transitive is None:
                     continue
                 attribute = transitive

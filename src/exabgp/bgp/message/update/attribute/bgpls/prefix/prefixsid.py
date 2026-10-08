@@ -86,7 +86,13 @@ class PrefixSid(FlagLS):
         raw = []
         while data:
             if flags['V'] and flags['L']:
-                data = data[3:]
+                # RFC 9085 2.3.1 gives a label three octets.  What is left after the last
+                # whole label used to be dropped without a trace; it is reported instead,
+                # and the TLV kept, as RFC 9552 8.2.2 asks a propagator not to judge sizes.
+                if len(data) < SID_LABEL_LENGTH_WITH_FLAGS:
+                    raw.append(hexstring(data))
+                    break
+                data = data[SID_LABEL_LENGTH_WITH_FLAGS:]
             elif (not flags['V']) and (not flags['L']):
                 if len(data) < SID_LABEL_LENGTH_NO_FLAGS:
                     raw.append(hexstring(data))

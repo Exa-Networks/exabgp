@@ -64,6 +64,7 @@ from exabgp.bgp.message.update.attribute.community.extended.traffic import Traff
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectASN4
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectIPv4
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectIPv6
 from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHopIPv4IETF
@@ -99,6 +100,7 @@ __all__ = [
     'TrafficAction',
     'TrafficRedirect',
     'TrafficRedirectASN4',
+    'TrafficRedirectIPv4',
     'TrafficMark',
     'TrafficRedirectIPv6',
     'TrafficNextHopIPv4IETF',

@@ -1,0 +1,196 @@
+# draft-abraitis-bgp-version-capability-18 - Software Version Capability for BGP
+# https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability-18
+#
+# Every `text` below is quoted verbatim from
+# qa/rfc/text/draft-abraitis-bgp-version-capability-18.txt and is checked against it on
+# every run of ./qa/bin/check_rfc_compliance.
+#
+# This is an Internet-Draft, not an RFC.  Revision 18 is the last one published, and the
+# encoding it gives has not changed since revision 15.  It is what the SOFTWARE_VERSION
+# capability (code 75) in src/exabgp/bgp/message/open/capability/software.py implements.
+#
+# The fact the decoder is built on carries no RFC 2119 keyword, so it has no id:
+#
+#   section 3  "The Capability Value field is the software version encoded as a
+#              UTF-8 [RFC3629] string."
+#
+# Revision 00 had a length octet in front of the string.  We sent that layout, and read the
+# first octet of every received value as a length, so the current layout, which FRR sends
+# by default, was refused with 2/0.  We now send the current layout and read both, the
+# old one recognised as FRR recognises it: a first octet equal to the rest of the length.
+# tests/unit/rfc/test_draft_software_version.py tests both regardless.
+
+rfc = "draft-abraitis-bgp-version-capability-18"
+title = "Software Version Capability for BGP"
+url = "https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability-18"
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#3-configuration-option-default-disabled"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If an
+implementation supports the inclusion of the capability, the
+implementation MUST include a configuration option to enable or
+disable its use, and MUST default to disabled.
+"""
+note = """
+`capability { software-version enable; }` in a neighbour.  The positive test is a
+neighbour which does not say so not sending it, the negative one a neighbour which does.
+"""
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#3-not-recommended-outside-an-as"
+section = "3"
+level = "NOT RECOMMENDED"
+status = "not-applicable"
+text = """
+It is NOT
+RECOMMENDED for use outside a single Autonomous System, or a set of
+Autonomous Systems under a common administration.
+"""
+note = """
+Advice to whoever deploys it.  The capability is enabled per neighbour and off unless
+configured, so the operator who enables it on an EBGP session has made that choice; there
+is nothing for exabgp to do or refuse.
+"""
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#3-length-greater-than-zero"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Capability Length for the Software Version Capability MUST be
+greater than zero.  A value of zero SHALL be treated as an
+encoding error and the Capability MUST be ignored.
+"""
+note = """
+The positive side is ours: what we send is never empty.  The negative side is a peer's
+zero length, which is ignored, decoded as the UnknownCapability RFC 5492 ignores a
+capability with, and does not close the session.  It used to be answered with 2/0.
+"""
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#3-length-no-greater-than-64"
+section = "3"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+The Capability Length SHOULD be no greater than 64.
+"""
+note = """
+What we send is cut to 64 octets on a character boundary.  A longer value from a peer is
+accepted: the SHOULD binds its sender, and the Capability Length cannot exceed 255.
+"""
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#3-version-utf-8"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Version field MUST be encoded using UTF-8.  A receiving BGP
+speaker MUST NOT interpret invalid UTF-8 sequences.
+"""
+note = """
+A received value which is not UTF-8 is not shown: it is ignored like a zero length one.
+It used to close the session with 2/0, which the draft does not ask for and which a field
+used only for display does not justify.
+"""
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#3-identifier-limited"
+section = "3"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+A sender SHOULD limit generated product identifiers to what is
+necessary to identify the product;
+"""
+note = """
+A property of what we send, "ExaBGP/<version>", with no peer input which violates it.
+"""
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#3-no-advertising-in-identifier"
+section = "3"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+a sender MUST NOT generate
+advertising or other nonessential information within the product
+identifier.
+"""
+note = """
+A property of what we send, "ExaBGP/<version>", with no peer input which violates it.
+What a peer puts in its own identifier is displayed, not judged.
+"""
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#3-product-version-is-a-version"
+section = "3"
+level = "SHOULD NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+A sender SHOULD NOT generate information in product-
+version that is not a version identifier
+"""
+note = """
+The product version is exabgp.version.version and nothing else.
+"""
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#3.1-extended-optional-parameters"
+section = "3.1"
+level = "REQUIRED"
+status = "required"
+polarity = "positive-only"
+text = """
+Implementations of this specification are REQUIRED Extended Optional
+Parameters Length for BGP OPEN Message support as defined in
+[RFC9072].
+"""
+note = """
+A property of the speaker.  RFC 9072 is implemented and has its own ledger,
+qa/rfc/rfc9072.toml, which tests the decoder both ways; the test here only shows the
+capability arriving through it.
+"""
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#4-only-for-display"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+The Software Version Capability MUST only be used for displaying the
+version of a BGP speaker's router daemon to make troubleshooting
+easier.
+"""
+note = """
+The decoded version is read by str() and json() and by nothing else: no negotiation in
+Negotiated looks at code 75.  There is no peer input which could make us use it otherwise.
+"""
+
+[[requirement]]
+id = "draft-abraitis-bgp-version-capability-18#4-explicitly-configured"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+the feature MUST be explicitly configured
+before an implementation advertizes the Software Version Capability.
+"""
+note = """
+The same switch as section 3's, tested the same way.
+"""

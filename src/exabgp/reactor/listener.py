@@ -23,9 +23,10 @@ from exabgp.protocol.family import AFI
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.network.tcp import md5
 from exabgp.reactor.network.tcp import bind_to_device
-from exabgp.reactor.network.tcp import min_ttl
-from exabgp.reactor.network.tcp import min_ttlv6
+from exabgp.reactor.network.tcp import save_syn
+from exabgp.reactor.network.tcp import saved_syn_ttl
 from exabgp.reactor.network.tcp import sending_ttl
+from exabgp.reactor.network.tcp import set_minimum_ttl
 from exabgp.reactor.network.tcp import set_sending_ttl
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno
@@ -93,10 +94,10 @@ def set_accepted_ttl(connection: Incoming, neighbor: Neighbor) -> None:
     """Give an accepted connection the TTL its neighbour's configuration asks us to send with.
 
     The listening socket is shared by every neighbour on an address and port, so it can
-    carry the minimum TTL checked on arrival but not a per-neighbour sending TTL.  Until the
-    neighbour is known that has to wait, and before this nothing set it at all: outgoing-ttl
-    was ignored for every session the peer opened.  What happened instead was that the
-    listener set IP_TTL to the incoming-ttl minimum, which accepted sockets inherited.
+    carry neither a per-neighbour sending TTL nor a per-neighbour minimum (admit_by_ttl).
+    Until the neighbour is known that has to wait, and before this nothing set it at all:
+    outgoing-ttl was ignored for every session the peer opened.  What happened instead was
+    that the listener set IP_TTL to the incoming-ttl minimum, which accepted sockets inherited.
     """
     value = sending_ttl(neighbor.session.outgoing_ttl, neighbor.session.incoming_ttl)
     if value is None or connection.io is None:
@@ -115,6 +116,57 @@ def set_accepted_ttl(connection: Incoming, neighbor: Neighbor) -> None:
             ),
             'network',
         )
+
+
+def admit_by_ttl(connection: Incoming, neighbor: Neighbor) -> bool:
+    """Apply the neighbour's GTSM minimum to a connection it opened, False if it is dropped.
+
+    RFC 5082 section 3: GTSM MUST NOT drop Trusted or Unknown packets. The listening socket
+    is shared by every neighbour on an address, port and interface, so a minimum installed
+    there was whichever neighbour set it last: a neighbour without GTSM had its SYNs dropped
+    by a minimum it never asked for, and two minimums dropped each other's. And the global
+    listener, which every neighbour without `listen` uses, had none, so incoming-ttl was
+    not enforced on any session such a peer opened.
+
+    Now the minimum is per neighbour, applied once the connection is matched to one. The
+    SYN is checked from the headers the listener asked the kernel to keep (Linux), and the
+    minimum is installed on the accepted socket so the kernel checks every later segment.
+    Where the SYN was not kept (not Linux, or a kernel before 4.2), the handshake itself is
+    not checked: what the peer sends over it, starting with its OPEN, still is wherever the
+    kernel has the minimum option, so a Dangerous peer cannot bring a session up there.
+    Where it has neither (macOS), min_ttl already warns that nothing arriving is checked.
+    """
+    minimum = neighbor.session.incoming_ttl
+    if not minimum or connection.io is None:
+        return True
+    arrived = saved_syn_ttl(connection.io)
+    if arrived is not None and arrived < minimum:
+        log.warning(
+            lazymsg(
+                'connection.ttl.dropped name={name} ttl={ttl} minimum={minimum}',
+                name=connection.name(),
+                ttl=arrived,
+                minimum=minimum,
+            ),
+            'network',
+        )
+        return False
+    try:
+        set_minimum_ttl(connection.io, connection.afi, connection.peer, minimum)
+    except NetworkError as exc:
+        # an outgoing session fails the same way when the kernel refuses the minimum: a
+        # session we were told to protect is not brought up unprotected
+        log.error(
+            lazymsg(
+                'connection.ttl.minimum.unset name={name} minimum={minimum} error={error}',
+                name=connection.name(),
+                minimum=minimum,
+                error=str(exc),
+            ),
+            'network',
+        )
+        return False
+    return True
 
 
 def _matches(neighbor: Neighbor, connection: Incoming) -> bool:
@@ -172,7 +224,6 @@ class Listener:
         local_port: int,
         use_md5: str | None,
         md5_base64: bool,
-        ttl_in: int | None,
         tcp_ao_keyid: int | None = None,
         tcp_ao_algorithm: str = '',
         tcp_ao_password: str = '',
@@ -195,11 +246,6 @@ class Listener:
             # TCP-AO (mutually exclusive with MD5)
             if tcp_ao_password and tcp_ao_keyid is not None:
                 tcp_ao(sock, peer_ip.top(), 0, tcp_ao_password, tcp_ao_keyid, tcp_ao_algorithm, tcp_ao_base64)
-            if ttl_in:
-                if local_ip.ipv6():
-                    min_ttlv6(sock, peer_ip.top(), ttl_in)
-                else:
-                    min_ttl(sock, peer_ip.top(), ttl_in)
             return
 
         try:
@@ -210,11 +256,8 @@ class Listener:
             # TCP-AO (mutually exclusive with MD5)
             if tcp_ao_password and tcp_ao_keyid is not None:
                 tcp_ao(sock, peer_ip.top(), 0, tcp_ao_password, tcp_ao_keyid, tcp_ao_algorithm, tcp_ao_base64)
-            if ttl_in:
-                if local_ip.ipv6():
-                    min_ttlv6(sock, peer_ip.top(), ttl_in)
-                else:
-                    min_ttl(sock, peer_ip.top(), ttl_in)
+            # no minimum TTL here: see admit_by_ttl, which checks the SYN this keeps
+            save_syn(sock)
             set_listener_options(sock, ipv6=local_ip.ipv6())
             sock.setblocking(False)
             # s.settimeout(0.0)
@@ -234,7 +277,6 @@ class Listener:
         port: int,
         md5_password: str | None,
         md5_base64: bool,
-        ttl_in: int | None,
         tcp_ao_keyid: int | None = None,
         tcp_ao_algorithm: str = '',
         tcp_ao_password: str = '',
@@ -250,7 +292,6 @@ class Listener:
                 port,
                 md5_password,
                 md5_base64,
-                ttl_in,
                 tcp_ao_keyid,
                 tcp_ao_algorithm,
                 tcp_ao_password,
@@ -340,6 +381,9 @@ class Listener:
                 ranged.append(neighbor)
                 continue
 
+            if not admit_by_ttl(connection, neighbor):
+                connection.close()
+                return
             set_accepted_ttl(connection, neighbor)
             if not self._refused(connection, reactor.handle_connection(key, connection)):
                 log.debug(lazymsg('accepted connection from {name}', name=connection.name()), 'network')
@@ -401,6 +445,9 @@ class Listener:
         assert neighbor.session is not template.session, 'a ranged peer must not change its range'
         assert neighbor.rib is not template.rib, 'a ranged peer must not share the RIB of its range'
 
+        if not admit_by_ttl(connection, neighbor):
+            connection.close()
+            return
         peer = Peer(neighbor, self._reactor)
         set_accepted_ttl(connection, neighbor)
         if not self._refused(connection, peer.handle_connection(connection)):

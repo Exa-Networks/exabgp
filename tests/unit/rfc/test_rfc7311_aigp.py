@@ -115,6 +115,21 @@ def test_an_aigp_without_the_transitive_bit_is_kept() -> None:
     assert isinstance(aigp, AIGP)
 
 
+@pytest.mark.rfc('rfc7311#3.2-maximum-value-is-malformed')
+def test_an_aigp_at_the_maximum_value_is_discarded() -> None:
+    routes, aigp = decoded(aigp_tlv(0xFFFFFFFFFFFFFFFF))
+    assert routes == ['10.0.0.0/24'], 'an AIGP at its maximum withdrew the route, RFC 7311 3.2 says discard'
+    assert aigp is None, 'an AIGP at 0xffffffffffffffff is malformed, RFC 7311 3.2'
+
+
+@pytest.mark.rfc('rfc7311#3.2-maximum-value-is-malformed', polarity='negative')
+def test_an_aigp_below_the_maximum_is_kept_and_a_later_maximum_carried() -> None:
+    _, aigp = decoded(aigp_tlv(0xFFFFFFFFFFFFFFFE))
+    assert isinstance(aigp, AIGP) and aigp.aigp == 0xFFFFFFFFFFFFFFFE
+    _, aigp = decoded(aigp_tlv(10) + aigp_tlv(0xFFFFFFFFFFFFFFFF))
+    assert isinstance(aigp, AIGP) and aigp.aigp == 10, 'only the first AIGP TLV is read'
+
+
 # ------------------------------------------------------------------ 3.3
 
 # RFC 5065: our Member-AS, another member of the same confederation, and its identifier

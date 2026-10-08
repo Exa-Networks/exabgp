@@ -68,6 +68,9 @@ class Protocol:
         # RFC 4271 6.8: the OPEN read on this connection while a collision was resolved,
         # which read_open returns instead of reading another
         self.open_read: Open | None = None
+        # the OPEN we sent on this connection while it was held for the peer's, which the
+        # session goes on from instead of sending a second one
+        self.open_sent: Open | None = None
 
         # tcp.port as the environment read it, from a variable or the env file, which is
         # the port we listen on: the variables alone were read here, so the env file

@@ -71,6 +71,30 @@ class ExtendedCommunitiesBase(Attribute, ABC):
         """Add a community and return self (builder pattern)."""
         ...
 
+    @abstractmethod
+    def _with_communities(self, communities: Sequence[Any]) -> 'ExtendedCommunitiesBase':
+        """A new attribute of the same code, holding these communities."""
+        ...
+
+    def transitive_only(self) -> 'ExtendedCommunitiesBase | None':
+        """These communities without the ones whose T bit is set, None when nothing is left.
+
+        RFC 4360 6: a non-transitive community is removed before the route crosses into
+        another AS. RFC 5701 2 gives the IPv6 Address Specific class the same T bit, so
+        attribute 25 is stripped like attribute 16. Self when every community is
+        transitive, so the common case allocates nothing.
+        """
+        communities = self.communities
+        kept = [community for community in communities if community.transitive()]
+        if len(kept) == len(communities):
+            return self
+        if not kept:
+            return None
+        stripped = self._with_communities(kept)
+        assert stripped.ID == self.ID, 'a stripped set keeps its attribute code'
+        assert len(stripped.communities) < len(communities), 'a stripped set is smaller than its original'
+        return stripped
+
 
 # ===================================================== ExtendedCommunities (16)
 # https://www.iana.org/assignments/bgp-extended-communities
@@ -135,22 +159,8 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         packed = b''.join(c.pack_attribute(Negotiated.UNSET) for c in sorted_communities)
         return cls(packed)
 
-    def transitive_only(self) -> 'ExtendedCommunities | None':
-        """These communities without the ones whose T bit is set, None when nothing is left.
-
-        RFC 4360 6: a non-transitive community is removed before the route crosses into
-        another AS. Self when every community is transitive, so the common case allocates
-        nothing.
-        """
-        communities = self.communities
-        kept = [community for community in communities if community.transitive()]
-        if len(kept) == len(communities):
-            return self
-        if not kept:
-            return None
-        stripped = ExtendedCommunities.make_extended_communities(kept)
-        assert len(stripped.communities) < len(communities), 'a stripped set is smaller than its original'
-        return stripped
+    def _with_communities(self, communities: Sequence[ExtendedCommunityBase]) -> 'ExtendedCommunities':
+        return ExtendedCommunities.make_extended_communities(communities)
 
     def add(self, data: ExtendedCommunityBase) -> 'ExtendedCommunities':
         """Add an extended community and return self (builder pattern).
@@ -237,6 +247,9 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
         sorted_communities = sorted(communities)
         packed = b''.join(c.pack_attribute(Negotiated.UNSET) for c in sorted_communities)
         return cls(packed)
+
+    def _with_communities(self, communities: Sequence[ExtendedCommunityIPv6]) -> 'ExtendedCommunitiesIPv6':
+        return ExtendedCommunitiesIPv6.make_extended_communities_ipv6(communities)
 
     def add(self, data: ExtendedCommunityIPv6) -> 'ExtendedCommunitiesIPv6':
         """Add an IPv6 extended community and return self (builder pattern)."""

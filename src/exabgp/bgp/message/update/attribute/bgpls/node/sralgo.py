@@ -29,8 +29,9 @@ from exabgp.util.intvalue import json_number
 class SrAlgorithm(BaseLS):
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> SrAlgorithm:
-        # Looks like IOS XR advertises len 0 on this sub TLV
-        # when using default SPF.
+        # RFC 9085 2.1.3 gives a minimum of one octet, and a comment here said IOS XR sends
+        # none for the default SPF.  The empty TLV is kept, as RFC 9552 8.2.2 asks of a
+        # propagator, which is not to judge the length of a variable length TLV.
         return cls(data)
 
     @classmethod
@@ -49,8 +50,9 @@ class SrAlgorithm(BaseLS):
     @property
     def content(self) -> list[int]:
         """List of SR algorithm values."""
-        # Empty data means default SPF algorithm (0)
-        return list(self._packed) or [0]
+        # Every algorithm the peer listed, and none when it listed none.  An empty TLV used
+        # to be published as [0], an algorithm the peer had not sent.
+        return list(self._packed)
 
     def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": {json.dumps(self.content, default=json_number)}'

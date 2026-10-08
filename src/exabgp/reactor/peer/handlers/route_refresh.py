@@ -56,6 +56,21 @@ class RouteRefreshHandler(MessageHandler):
 
     def _refresh(self, ctx: PeerContext, rr: RouteRefresh) -> None:
         family = (rr.afi, rr.safi)
+        # RFC 2918 4: a ROUTE-REFRESH for a family "the speaker didn't advertise to the peer
+        # at the session establishment time" is ignored, whatever its subtype: a BoRR or an
+        # EoRR for any family the peer named marked or purged stale routes, and grew the
+        # stale record with families the session does not have
+        if family not in ctx.negotiated.families:
+            log.warning(
+                lazymsg(
+                    'route-refresh.ignored reason=family-not-negotiated subtype={s} family={a}/{f}',
+                    s=int(rr.reserved),
+                    a=rr.afi,
+                    f=rr.safi,
+                ),
+                ctx.peer_id,
+            )
+            return
         # Without the capability the octet is RFC 2918's Reserved field, which the
         # receiver ignores, so every ROUTE-REFRESH is a plain request
         if not ctx.refresh_enhanced:
@@ -93,6 +108,8 @@ class RouteRefreshHandler(MessageHandler):
         incoming.mark_stale(family)
 
     def _end(self, ctx: PeerContext, family: FamilyTuple) -> None:
+        # Only what the BoRR marked: routes a Graceful Restart retained wait for the
+        # peer's End-of-RIB (RFC 4724 4.2), and are not this EoRR's to remove
         purged = ctx.neighbor.rib.incoming.purge_stale(family)
         if purged is None:
             # RFC 7313 4: an EoRR with no BoRR before it "MAY" be ignored and logged
@@ -105,3 +122,6 @@ class RouteRefreshHandler(MessageHandler):
             lazymsg('route-refresh.eorr family={a}/{f} purged={n}', a=family[0], f=family[1], n=len(purged)),
             ctx.peer_id,
         )
+        # RFC 7313 4: the routes are removed, from the adj-rib-in and from the view of the
+        # API processes, which are told as if the peer had withdrawn them
+        ctx.proto.peer.tell_api_withdrawn(purged, ctx.negotiated)

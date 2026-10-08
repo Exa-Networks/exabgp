@@ -79,7 +79,10 @@ AS, `AttributeCollection.pack_attribute` drops every extended community whose T 
 and a neighbouring Member-AS of our confederation keep them, as the SHOULD NOT asks. A route
 the configuration or the API gives us is originated, not re-advertised, and keeps what the
 operator configured: link bandwidth is non-transitive and made for the EBGP link it is sent
-over. Positive only: this binds what we send, and no input from a peer can violate it.
+over. RFC 5701 section 2 gives the IPv6 Address Specific Extended Community (attribute 25)
+the same T bit, 0x00 transitive and 0x40 not, so attribute 25 is stripped the same way:
+until 2026-10-08 only attribute 16 was. Positive only: this binds what we send, and no
+input from a peer can violate it.
 """
 
 [[requirement]]

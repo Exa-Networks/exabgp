@@ -56,8 +56,36 @@ _MISSING_MULTISESSION_FLAGS = (
     'an empty Session ID is encoded as the one-byte value 0x00'
 )
 
+# draft-mpmz-bess-mup-safi-05 3.1: "Any other Route Types MUST be silently ignored upon a
+# receipt if a BGP speaker supports only 3gpp-5G architecture type". A zero fill makes the
+# architecture the length octet ('b', 3 to 33) or 0 ('h'), never 3gpp-5g's 1, so every one
+# of these is a pair exabgp does not support: it was a GenericMUP of raw octets in the RIB
+# and the API, and is now stepped over (NLRIDiscard), the session and the rest of the UPDATE
+# untouched. Keyed one length at a time so a 0xff or 0x30 fill, or a 3gpp-5g route, which
+# still decodes, stays watched.
+_UNKNOWN_MUP = 'a MUP architecture and route type exabgp does not support; draft-mpmz-bess-mup-safi-05 3.1 ignores it'
+_IGNORED_MUP: dict[str, str] = {
+    f'nlri/{afi}/mup/{length}/00/{shape}': _UNKNOWN_MUP
+    for afi in ('ipv4', 'ipv6')
+    for shape, lengths in (('b', range(3, 34)), ('h', range(2, 34)))
+    for length in lengths
+}
+
+# RFC 6515 2: an Intra-AS I-PMSI A-D (1), S-PMSI A-D (3) or Leaf A-D (4) route whose
+# Originating Router's IP Address is neither 4 nor 16 octets makes the MP_REACH_NLRI
+# "incorrect", handled as RFC 4760 7 says. With a zero length there is no address at all;
+# it was accepted as a GenericMVPN of raw octets.
+_NO_ORIGINATING_ROUTER = "an MCAST-VPN route with no Originating Router's IP Address; RFC 6515 2 makes it incorrect"
+_NO_ORIGINATOR_MVPN: dict[str, str] = {
+    f'nlri/{afi}/mcast-vpn/{route_type}/00/b': _NO_ORIGINATING_ROUTER
+    for afi in ('ipv4', 'ipv6')
+    for route_type in (1, 3, 4)
+}
+
 # deliberate changes, each with the reason it is worth the cost
 ALLOWED: dict[str, str] = {
+    **_IGNORED_MUP,
+    **_NO_ORIGINATOR_MVPN,
     'flow': 'a flow which parsed no component matched everything; RFC 8955 4.3 withdraws it',
     'cap/68/0/': _MISSING_MULTISESSION_FLAGS,
     'cap/131/0/': _MISSING_MULTISESSION_FLAGS,
@@ -466,8 +494,13 @@ def main(argv: list[str]) -> int:
     sys.stderr.write('\n%d inputs compared, %d regressions\n' % (len(before), len(regressions)))
     if ALLOWED:
         sys.stderr.write('allowed, each a deployment which stops working on upgrade:\n')
+        # a reason shared by keys generated one length at a time is printed once
+        keys_by_reason: dict[str, list[str]] = {}
         for name, why in ALLOWED.items():
-            sys.stderr.write('  %-12s %s\n' % (name, why))
+            keys_by_reason.setdefault(why, []).append(name)
+        for why, names in keys_by_reason.items():
+            shown = names[0] if len(names) == 1 else '%s (+%d more)' % (names[0], len(names) - 1)
+            sys.stderr.write('  %-12s %s\n' % (shown, why))
     return 1 if regressions else 0
 
 

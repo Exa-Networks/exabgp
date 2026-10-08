@@ -42,7 +42,7 @@ def neighbor_with_a_route() -> Neighbor:
             local-as 65001;
             peer-as 65002;
             family { ipv4 unicast; }
-            static { route 10.9.9.0/24 next-hop 192.0.2.1; }
+            static { route 10.9.9.0/24 next-hop 192.0.2.9; }
         }"""
         ],
         text=True,

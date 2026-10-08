@@ -29,6 +29,7 @@ from exabgp.util.types import Buffer
 # IGP Metric TLV size constants
 IGP_METRIC_SIZE_OSPF: int = 2  # OSPF link metrics are 2 octets
 IGP_METRIC_SIZE_ISIS_SMALL: int = 1  # IS-IS small metrics are 1 octet
+IGP_METRIC_ISIS_SMALL_MASK: int = 0x3F  # of which only the six low bits are the metric
 IGP_METRIC_SIZE_ISIS_WIDE: int = 3  # IS-IS wide metrics are 3 octets
 
 
@@ -46,8 +47,9 @@ class IgpMetric(BaseLS):
             return value
 
         if len(data) == IGP_METRIC_SIZE_ISIS_SMALL:
-            # ISIS small metrics
-            return data[0]
+            # RFC 9552 5.3.2.4: an IS-IS small metric is six bits in one octet, and "the two
+            # most significant bits of the field ... MUST be ignored by the receiver"
+            return data[0] & IGP_METRIC_ISIS_SMALL_MASK
 
         if len(data) == IGP_METRIC_SIZE_ISIS_WIDE:
             # ISIS wide metrics

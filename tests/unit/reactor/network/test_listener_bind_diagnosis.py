@@ -43,7 +43,7 @@ def test_an_unusable_md5_key_is_not_reported_as_a_privilege_problem() -> None:
 
     with patch('platform.system', return_value='Linux'), patch.object(socket.socket, 'setsockopt', side_effect=refused):
         with patch('exabgp.reactor.listener.log') as log:
-            assert not listener.listen_on(LOCAL, PEER, BGP_PORT, 'secret', False, None)
+            assert not listener.listen_on(LOCAL, PEER, BGP_PORT, 'secret', False)
 
     reported = _critical(log)
     assert any('TCP_MD5SIG' in line for line in reported), reported
@@ -55,7 +55,7 @@ def test_a_privileged_port_says_so_and_names_the_port() -> None:
 
     with patch.object(socket.socket, 'bind', side_effect=OSError(errno.EACCES, 'Permission denied')):
         with patch('exabgp.reactor.listener.log') as log:
-            assert not listener.listen_on(LOCAL, PEER, BGP_PORT, None, False, None)
+            assert not listener.listen_on(LOCAL, PEER, BGP_PORT, None, False)
 
     reported = _critical(log)
     assert any('requires root' in line for line in reported), reported
@@ -75,7 +75,7 @@ def test_every_bind_failure_reports_its_own_reason(failure: OSError, expected: s
 
     with patch.object(socket.socket, 'bind', side_effect=failure):
         with patch('exabgp.reactor.listener.log') as log:
-            assert not listener.listen_on(LOCAL, PEER, BGP_PORT, None, False, None)
+            assert not listener.listen_on(LOCAL, PEER, BGP_PORT, None, False)
 
     reported = _critical(log)
     assert any(expected in line for line in reported), reported

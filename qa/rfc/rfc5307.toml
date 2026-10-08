@@ -1,0 +1,52 @@
+# RFC 5307 - IS-IS Extensions in Support of Generalized Multi-Protocol Label Switching (GMPLS)
+# https://www.rfc-editor.org/rfc/rfc5307
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc5307.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# exabgp speaks no IS-IS.  RFC 9552 section 5.3.2 (Table 8) takes the Link Protection Type
+# TLV of the BGP-LS Attribute (1093) from section 1.2 of this document, so that section
+# is the layout the decoder of that TLV has to follow, and it is the only part recorded
+# here.  The sentence giving the bit values carries no RFC 2119 keyword; it is recorded
+# at SHOULD as the nearest level, as qa/rfc/rfc9085.toml does.
+
+rfc = "rfc5307"
+title = "IS-IS Extensions in Support of Generalized Multi-Protocol Label Switching (GMPLS)"
+url = "https://www.rfc-editor.org/rfc/rfc5307"
+
+[[requirement]]
+id = "rfc5307#1.2-protection-capability-bits"
+section = "1.2"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+The first octet is a bit vector describing the protection capabilities
+of the link (see Section 2.2, "Link Protection Type", of
+[GMPLS-ROUTING]).  They are:
+
+0x01  Extra Traffic
+
+0x02  Unprotected
+
+0x04  Shared
+
+0x08  Dedicated 1:1
+
+0x10  Dedicated 1+1
+
+0x20  Enhanced
+
+0x40  Reserved
+
+0x80  Reserved
+"""
+note = """
+`LinkProtectionType.FLAGS` is the octet from its most significant bit down, as
+`FlagLS.unpack_flags` reads every flag TLV, so Extra Traffic is the last entry.  It was
+the first, which read every capability from the mirror of its bit: a link carrying Extra
+Traffic (0x01) was reported as Enhanced and the two reserved bits as Extra Traffic and
+Unprotected.  The JSON key keeps its historical spelling, `ExtraTrafic`, so a consumer
+reading it does not lose the flag.  The negative side is that the two reserved bits are
+not reported as a capability.
+"""

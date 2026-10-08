@@ -212,7 +212,7 @@ def bound(listener: Listener) -> set:
 def test_a_listener_no_configuration_asks_for_is_closed() -> None:
     """A removed neighbour's port stayed bound and kept accepting connections."""
     listener = Listener(a_reactor())
-    assert listener.listen_on(LOCAL, PEER, NEIGHBOR_PORT, None, False, None)
+    assert listener.listen_on(LOCAL, PEER, NEIGHBOR_PORT, None, False)
     assert bound(listener) == {(LOCAL.top(), NEIGHBOR_PORT)}
 
     listener.close_unwanted(set())
@@ -224,8 +224,8 @@ def test_a_listener_no_configuration_asks_for_is_closed() -> None:
 def test_a_listener_the_configuration_still_asks_for_is_kept() -> None:
     """Neighbours share a socket per address and port, so removing one must not close it."""
     listener = Listener(a_reactor())
-    assert listener.listen_on(LOCAL, PEER, NEIGHBOR_PORT, None, False, None)
-    assert listener.listen_on(LOCAL, PEER, GLOBAL_PORT, None, False, None)
+    assert listener.listen_on(LOCAL, PEER, NEIGHBOR_PORT, None, False)
+    assert listener.listen_on(LOCAL, PEER, GLOBAL_PORT, None, False)
 
     listener.close_unwanted({(LOCAL.top(), GLOBAL_PORT)})
 
@@ -235,7 +235,7 @@ def test_a_listener_the_configuration_still_asks_for_is_kept() -> None:
 def test_closing_the_last_listener_stops_the_service() -> None:
     """serving drives incoming(), so it has to follow the sockets which are left."""
     listener = Listener(a_reactor())
-    assert listener.listen_on(LOCAL, PEER, NEIGHBOR_PORT, None, False, None)
+    assert listener.listen_on(LOCAL, PEER, NEIGHBOR_PORT, None, False)
     assert listener.serving
 
     listener.close_unwanted(set())

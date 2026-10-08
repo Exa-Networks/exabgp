@@ -45,6 +45,16 @@ class OTC(Attribute):
         return ASN(unpack('!L', self._packed)[0])
 
     def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
+        # RFC 9234 5: "on egress from the AS Confederation, an UPDATE MUST NOT contain an
+        # OTC Attribute with a value corresponding to any Member-AS Number other than the
+        # AS Confederation Identifier". The value is swapped for the identifier rather than
+        # the attribute dropped: the route was marked by our AS, which outside the
+        # confederation is the identifier, and without the OTC it would be free to leak.
+        if negotiated is not None and negotiated.confed_outside:
+            confederation = negotiated.confederation
+            asn = self.asn
+            if asn != confederation and negotiated.neighbor.session.in_confederation(asn):
+                return self._attribute(pack('!L', int(confederation)))
         return self._attribute(self._packed)
 
     @classmethod

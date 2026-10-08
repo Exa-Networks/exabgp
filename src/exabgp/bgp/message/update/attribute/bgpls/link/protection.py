@@ -28,15 +28,19 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 
 
 class LinkProtectionType(FlagLS):
+    # FlagLS.unpack_flags reads the octet from its most significant bit down, so the list
+    # is 0x80 first and 0x01 last.  It was written in the order RFC 5307 lists the values,
+    # which read every capability from the mirror of its bit.  'ExtraTrafic' keeps the
+    # spelling exabgp has always published, so a consumer of the key still finds it.
     FLAGS: ClassVar = [
-        'ExtraTrafic',
-        'Unprotected',
-        'Shared',
-        'Dedicated 1:1',
-        'Dedicated 1+1',
+        'RSV',
+        'RSV',
         'Enhanced',
-        'RSV',
-        'RSV',
+        'Dedicated 1+1',
+        'Dedicated 1:1',
+        'Shared',
+        'Unprotected',
+        'ExtraTrafic',
     ]
     LEN: ClassVar[int] = 2
 

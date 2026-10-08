@@ -224,3 +224,28 @@ def test_many_membership_updates_replay_the_vpn_routes_once(monkeypatch: pytest.
     assert len(rib.outgoing._refresh_routes) == 0, 'the VPN routes were queued before the batch was built'
     assert sent_vpn(rib, negotiated) == [wanted.nlri]
     assert not rib.outgoing.pending()
+
+
+@pytest.mark.parametrize(
+    'packed,is_route_target',
+    [
+        ('0002FDE800000001', True),
+        ('4002FDE800000001', True),  # the T bit Quagga set on a Route Target
+        ('0102C00002010001', True),
+        ('0202FDE800000001', True),
+        ('8002FDE800000001', False),  # generic transitive, sub-type 0x02 is unassigned
+        ('8202FDE800000001', False),
+    ],
+)
+def test_only_a_route_target_type_is_read_as_a_route_target(packed: str, is_route_target: bool) -> None:
+    """RFC 4360 section 2: the I bit is part of the type, so 0x80 is not 0x00 with a flag set.
+
+    Masking it away made a generic transitive community with sub-type 0x02 into a Route
+    Target, which the RT-Constraint filter then matched against the peer's memberships.
+    """
+    community = bytes.fromhex(packed)
+    value = rfc7606_wire.attribute(rfc7606_wire.OPTIONAL_TRANSITIVE, 16, community)
+    parsed = rfc7606_wire.parse(rfc7606_wire.update(rfc7606_wire.MANDATORY + value), filtering_session())
+    expected = [bytes([community[0] & 0x3F]) + community[1:]] if is_route_target else []
+
+    assert parsed.attributes.route_targets() == expected

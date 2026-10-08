@@ -254,6 +254,10 @@ async def test_in_opensent_the_incoming_connection_wins_once_its_open_names_a_hi
             await asyncio.sleep(0.001)
         assert not session.done(), 'nothing is decided before the OPEN of the new connection is read'
         assert peer.proto is proto
+        # RFC 4271 8.2.2: the new connection runs its own FSM, which sends our OPEN. A peer
+        # which waits for it before sending its own (DelayOpen) was never sent one
+        held = negotiation.messages(negotiation.received(connecting))
+        assert [kind for kind, _ in held] == [OPEN], 'our OPEN was not sent on the held connection'
 
         connecting.sendall(their_open('192.0.2.2'))
         await until(lambda: session.done())
@@ -263,10 +267,10 @@ async def test_in_opensent_the_incoming_connection_wins_once_its_open_names_a_hi
         assert [kind for kind, _ in sent] == [OPEN, NOTIFICATION]
         assert (sent[-1][1][0], sent[-1][1][1]) == CONNECTION_COLLISION_RESOLUTION
 
-        # the OPEN already read is the one the session goes on with
+        # the OPENs already exchanged are the ones the session goes on with: no second OPEN
         taken = asyncio.create_task(peer._run_session())
         await until(lambda: peer.fsm == FSM.OPENCONFIRM)
-        assert [kind for kind, _ in negotiation.messages(negotiation.received(connecting))] == [OPEN, KEEPALIVE]
+        assert [kind for kind, _ in negotiation.messages(negotiation.received(connecting))] == [KEEPALIVE]
     finally:
         for task in (run, taken):
             if task is not None:

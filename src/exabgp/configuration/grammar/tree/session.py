@@ -203,7 +203,12 @@ CAPABILITY = Block(
             field='route-refresh-enhanced',
             doc='Enhanced Route Refresh, RFC 7313, alone: what route-refresh says of it, overridden',
         ),
-        Leaf('aigp', boolean(True), field='aigp', doc='accept and send the AIGP attribute, RFC 7311'),
+        Leaf(
+            'aigp',
+            boolean(True),
+            field='aigp',
+            doc='accept and send the AIGP attribute, RFC 7311; unset: on for iBGP and confederation members',
+        ),
         Leaf(
             'extended-message',
             requirable(True),

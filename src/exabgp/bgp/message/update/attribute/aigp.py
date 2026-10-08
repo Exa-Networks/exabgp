@@ -56,6 +56,7 @@ class AIGPBase(Attribute):
     _TLV_HEADER: ClassVar[bytes] = b'\x01\x00\x0b'
     _TLV_LENGTH: ClassVar[int] = 11
     _TLV_TYPE_AIGP: ClassVar[int] = 1
+    _METRIC_MAXIMUM: ClassVar[bytes] = b'\xff' * 8
 
     def __init__(self, packed: Buffer, metric_offset: int = 0) -> None:
         """Initialize AIGP from the packed TLVs of the attribute.
@@ -108,6 +109,12 @@ class AIGPBase(Attribute):
 
         if metric_offset is None:
             raise ValueError('AIGP attribute has no AIGP TLV')
+
+        # RFC 7311 3.2: a first AIGP TLV at the maximum "SHOULD be considered to be
+        # malformed", as it can no longer be increased and so cannot select a path.
+        start = metric_offset + 3
+        if bytes(data[start : start + 8]) == cls._METRIC_MAXIMUM:
+            raise ValueError('AIGP metric is 0xffffffffffffffff, which RFC 7311 3.2 calls malformed')
 
         return cls(data, metric_offset)
 

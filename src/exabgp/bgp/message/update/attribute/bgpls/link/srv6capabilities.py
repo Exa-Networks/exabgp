@@ -34,6 +34,9 @@ class HasTLV(Protocol):
 
 # Fixed length: Flags (2) + Reserved (2) = 4 bytes
 SRV6_CAPABILITIES_LEN = 4
+# RFC 9514 3.1 copies the flags from the IGP: RFC 9352 section 2 (and RFC 9513 section 2)
+# put the O-flag on bit 1 of the 16 bit field, and every other bit is ignored on receipt
+SRV6_CAPABILITIES_O_FLAG = 0x4000
 
 
 class Srv6Capabilities(BaseLS):
@@ -44,7 +47,7 @@ class Srv6Capabilities(BaseLS):
     def flags(self) -> dict[str, int]:
         """Unpack and return flags from packed bytes."""
         flags_value = int.from_bytes(self._packed[0:2], byteorder='big')
-        return {'O': flags_value & (1 << 6)}
+        return {'O': 1 if flags_value & SRV6_CAPABILITIES_O_FLAG else 0}
 
     def __repr__(self) -> str:
         return 'flags: {}'.format(self.flags)
@@ -67,13 +70,13 @@ class Srv6Capabilities(BaseLS):
         """Create Srv6Capabilities from semantic values.
 
         Args:
-            flags: Dict with 'O' key (bit 6 of flags field)
+            flags: Dict with 'O' key (bit 1 of the flags field, 0x4000)
 
         Returns:
             Srv6Capabilities instance
         """
         # Build 16-bit flags field
-        flags_value = (flags.get('O', 0) & 1) << 6
+        flags_value = SRV6_CAPABILITIES_O_FLAG if flags.get('O', 0) else 0
         # Pack: Flags (2 bytes) + Reserved (2 bytes)
         packed = flags_value.to_bytes(2, byteorder='big') + b'\x00\x00'
         return cls(packed)

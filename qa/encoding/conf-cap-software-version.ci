@@ -5,4 +5,7 @@ option:open:inspect-open-message
 # SHOULD only be included in the OPEN message once."  The capability TLVs below are the
 # same TLVs in the same order as before, carried by one type 2 parameter instead of one
 # each, so the message is shorter by two octets per capability and says the same thing.
-1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0043:01:04FFFD00B40A00000226022401040001000141040000FFFD06004B14134578614247502F352E302E302D302B74657374
+# Re-recorded when the Software Version capability (code 75) lost the length octet before
+# the string, which revision 00 of draft-abraitis-bgp-version-capability had and revisions
+# 15 to 18 do not: 4B 13 then the 19 octets of "ExaBGP/5.0.0-0+test", one octet shorter.
+1:raw:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:0042:01:04FFFD00B40A00000225022301040001000141040000FFFD06004B134578614247502F352E302E302D302B74657374

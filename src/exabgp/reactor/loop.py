@@ -442,6 +442,20 @@ class Reactor:
             return []
         return peer.refreshable_families()
 
+    def neighbor_eor_families(self, peer_name: str) -> list[FamilyTuple]:
+        """The families the established session of this peer may send an End-of-RIB for."""
+        if not (peer := self._peers.get(peer_name, None)):
+            log.critical(lazymsg('peer.notfound peer={p} operation=eor', p=peer_name), 'reactor')
+            return []
+        return peer.eor_families()
+
+    def neighbor_operational(self, peer_name: str) -> bool:
+        """Whether the established session of this peer may carry an OPERATIONAL message."""
+        if not (peer := self._peers.get(peer_name, None)):
+            log.critical(lazymsg('peer.notfound peer={p} operation=operational', p=peer_name), 'reactor')
+            return False
+        return peer.sends_operational()
+
     def neighbor_rib_out_withdraw(self, peer_name: str) -> None:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=outgoing_withdraw', p=peer_name), 'reactor')
@@ -547,7 +561,7 @@ class Reactor:
 
         # Setup listeners
         for ip in self._ips:
-            if not self.listener.listen_on(ip, None, self._port, None, False, None):
+            if not self.listener.listen_on(ip, None, self._port, None, False):
                 log.critical(
                     lazymsg('startup.failed.listener ip={ip} port={port}', ip=ip, port=self._port),
                     'reactor',
@@ -648,7 +662,6 @@ class Reactor:
                 neighbor.session.listen,
                 neighbor.session.md5_password,
                 neighbor.session.md5_base64,
-                neighbor.session.incoming_ttl,
                 neighbor.session.tcp_ao_keyid,
                 neighbor.session.tcp_ao_algorithm,
                 neighbor.session.tcp_ao_password,
@@ -711,7 +724,6 @@ class Reactor:
                         self._port,
                         neighbor.session.md5_password,
                         neighbor.session.md5_base64,
-                        None,
                         neighbor.session.tcp_ao_keyid,
                         neighbor.session.tcp_ao_algorithm,
                         neighbor.session.tcp_ao_password,

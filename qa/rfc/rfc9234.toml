@@ -276,7 +276,28 @@ and `OTCSelf` for `otc self`.  So the value is the identifier on egress from the
 confederation, and our Member-AS towards another Member-AS, where the route has not left.
 
 The sentence after this one, that no OTC naming another Member-AS may leave the
-confederation, is not in this ledger.
+confederation, is rfc9234#5-no-member-as-otc-on-egress.
+"""
+
+[[requirement]]
+id = "rfc9234#5-no-member-as-otc-on-egress"
+section = "5"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+Also, on egress from the AS
+Confederation, an UPDATE MUST NOT contain an OTC Attribute with a
+value corresponding to any Member-AS Number other than the AS
+Confederation Identifier.
+"""
+note = """
+A literal `otc <asn>`, or an OTC a received route carries, was packed as it was. OTC.pack_attribute
+now swaps a Member-AS value (ours included) for the AS Confederation Identifier when the
+session is outside the confederation (Negotiated.confed_outside). Replaced rather than
+dropped or refused: the OTC is the route-leak protection, and the AS which marked the route
+is, seen from outside, the confederation. Any other value, and every value towards another
+Member-AS, is sent as written.
 """
 
 [[requirement]]

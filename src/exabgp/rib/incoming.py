@@ -30,76 +30,98 @@ class IncomingRIB(Cache):
 
     _path_sets: dict[FamilyTuple, dict[bytes, set[bytes]]]
     _path_warned: set[tuple[FamilyTuple, bytes]]
+    # the families the peer sent an End-of-RIB for, only negotiated ones (UpdateHandler)
     _end_of_rib: set[FamilyTuple]
-    # RFC 7313 4: per family, the routes a BoRR marked stale and nothing has re-sent since.
-    # A subset of what the cache and the prefix-limit count hold, so they bound it
-    _stale: dict[FamilyTuple, set[bytes]]
+    # Two stale records, because two procedures mark routes stale and each must end only
+    # its own: one record for both let an EoRR purge what a restart retained, and a lost
+    # session delete what a refresh had marked. Both are subsets of what the cache and the
+    # prefix-limit count hold, so they bound them.
+    #
+    # RFC 7313 4: per family, the routes a BoRR marked stale and nothing has re-sent since,
+    # until the EoRR
+    _refresh_stale: dict[FamilyTuple, set[bytes]]
     # RFC 4486 4: per limited family, the routes the peer holds with us.  Kept apart from
     # the cache, which adj-rib-in can turn off, and bounded by the limit: the route which
     # takes a family past it ends the session
     _prefixes: dict[FamilyTuple, set[bytes]]
     _pending_flows: dict[FamilyTuple, dict[bytes, Route]]
-    # RFC 4724 4.2: the families whose routes are stale because the peer's Graceful Restart
-    # session was lost, until its End-of-RIB, its new OPEN or its Restart Time ends them
-    _restarting: set[FamilyTuple]
+    # RFC 4724 4.2: per family, the routes stale because the peer's Graceful Restart session
+    # was lost, until its End-of-RIB, its new OPEN, its Restart Time or its next restart
+    # ends them. A family is restarting while it has an entry here
+    _restart_stale: dict[FamilyTuple, set[bytes]]
 
     def __init__(self, cache: bool, families: set[FamilyTuple], enabled: bool = True) -> None:
         Cache.__init__(self, cache, families, enabled)
         self._path_sets = {}
         self._path_warned = set()
         self._end_of_rib = set()
-        self._stale = {}
+        self._refresh_stale = {}
         self._prefixes = {}
         self._pending_flows = {}
-        self._restarting = set()
+        self._restart_stale = {}
 
     # back to square one, all the routes are removed
     def clear(self) -> None:
         self.clear_cache()
         self._pending_flows = {}
-        self._restarting = set()
+        self._restart_stale = {}
         self._path_sets = {}
         self._path_warned = set()
         self._end_of_rib = set()
-        self._stale = {}
+        self._refresh_stale = {}
         self._prefixes = {}
+
+    def _fresh(self, family: FamilyTuple, index: bytes) -> None:
+        """The peer sent this route again, or withdrew it: it is stale for neither procedure."""
+        for record in (self._refresh_stale, self._restart_stale):
+            stale = record.get(family)
+            if stale:
+                stale.discard(index)
 
     def update_cache(self, route: Route) -> None:
         Cache.update_cache(self, route)
-        stale = self._stale.get(route.nlri.family().afi_safi())
-        if stale:
-            stale.discard(route.index())
+        self._fresh(route.nlri.family().afi_safi(), route.index())
 
     def update_cache_withdraw(self, nlri: NLRI) -> None:
         Cache.update_cache_withdraw(self, nlri)
-        stale = self._stale.get(nlri.family().afi_safi())
-        if stale:
-            stale.discard(self._make_index(nlri))
+        self._fresh(nlri.family().afi_safi(), self._make_index(nlri))
 
-    def mark_stale(self, family: FamilyTuple) -> None:
-        """A BoRR: every route of the family held now is stale until the peer sends it again.
+    def _held(self, family: FamilyTuple) -> set[bytes]:
+        """What the peer holds with us: the cache and the prefix-limit count together.
 
-        "Held" is the cache and the prefix-limit count together: the count is kept with
-        adj-rib-in off, when the cache is empty, and the EoRR has to release it too.
+        The count is kept with adj-rib-in off, when the cache is empty, and what ends a
+        stale record has to release it too.
         """
-        self._stale[family] = set(self._seen.get(family, {})) | self._prefixes.get(family, set())
+        return set(self._seen.get(family, {})) | self._prefixes.get(family, set())
 
-    def purge_stale(self, family: FamilyTuple) -> list[Route] | None:
-        """An EoRR: remove what is still stale, or None when no BoRR came before it."""
-        stale = self._stale.pop(family, None)
-        if stale is None:
-            return None
+    def _remove(self, family: FamilyTuple, stale: set[bytes]) -> list[Route]:
+        """Remove these routes of the family, returning those the cache held."""
         held = self._seen.get(family, {})
-        purged = [held.pop(index) for index in stale if index in held]
-        assert len(purged) <= len(stale)
+        removed = [held.pop(index) for index in stale if index in held]
+        assert len(removed) <= len(stale)
         # the peer no longer holds these with us, so the prefix-limit stops counting them
         counted = self._prefixes.get(family)
         if counted:
             counted.difference_update(stale)
-        return purged
+        return removed
+
+    def mark_stale(self, family: FamilyTuple) -> None:
+        """A BoRR: every route of the family held now is stale until the peer sends it again."""
+        self._refresh_stale[family] = self._held(family)
+
+    def purge_stale(self, family: FamilyTuple) -> list[Route] | None:
+        """An EoRR: remove what its BoRR marked and is still stale, None when no BoRR came before it.
+
+        Only the refresh's own record: the routes a restart retained wait for the End-of-RIB
+        (RFC 4724 4.2), and an EoRR with no BoRR is ignored (RFC 7313 4).
+        """
+        stale = self._refresh_stale.pop(family, None)
+        if stale is None:
+            return None
+        return self._remove(family, stale)
 
     def record_end_of_rib(self, family: FamilyTuple) -> None:
-        # bounded by the families negotiated, a peer cannot grow it past those
+        # bounded by the families negotiated: UpdateHandler ignores an End-of-RIB for any other
         self._end_of_rib.add(family)
 
     def has_end_of_rib(self, family: FamilyTuple) -> bool:
@@ -199,43 +221,48 @@ class IncomingRIB(Cache):
     def retain_for_restart(self, families: list[FamilyTuple]) -> list[Route]:
         """RFC 4724 4.2: the peer's session was lost, keep its routes of these families as stale.
 
-        A route still stale from before, the peer restarting again without having sent it,
-        is deleted rather than retained once more ("to deal with possible consecutive
-        restarts"), and returned so the caller can say it is gone.
+        A route still stale from the previous restart, the peer restarting again without
+        having sent it, is deleted rather than retained once more ("to deal with possible
+        consecutive restarts"), and returned so the caller can say it is gone. A route
+        stale only because a refresh was in progress is retained like any other: the
+        refresh ended with the session, and its routes are now the restart's to end.
         """
         deleted: list[Route] = []
         for family in families:
-            deleted.extend(self.purge_stale(family) or [])
-            self.mark_stale(family)
-            self._restarting.add(family)
-        assert self._restarting.issubset(self._stale.keys()), 'a restarting family is a stale one'
+            previous = self._restart_stale.pop(family, None)
+            if previous is not None:
+                deleted.extend(self._remove(family, previous))
+            self._refresh_stale.pop(family, None)
+            self._restart_stale[family] = self._held(family)
+        assert not self._refresh_stale.keys() & set(families), 'a retained family has no refresh in progress'
         return deleted
 
     def restarting_families(self) -> set[FamilyTuple]:
-        return set(self._restarting)
+        return set(self._restart_stale)
 
     def end_restart(self, family: FamilyTuple) -> list[Route]:
         """The stale routes of a restarting family go: its End-of-RIB, or its new OPEN said so."""
-        if family not in self._restarting:
+        stale = self._restart_stale.pop(family, None)
+        if stale is None:
             return []
-        self._restarting.discard(family)
-        return self.purge_stale(family) or []
+        return self._remove(family, stale)
 
     def expire_restart(self) -> list[Route]:
         """RFC 4724 4.2: the Restart Time passed with no new session, every stale route goes."""
         expired: list[Route] = []
-        for family in list(self._restarting):
+        for family in list(self._restart_stale):
             expired.extend(self.end_restart(family))
-        assert not self._restarting, 'every restarting family was ended'
+        assert not self._restart_stale, 'every restarting family was ended'
         return expired
 
     def start_session(self, kept: set[FamilyTuple]) -> None:
         """A new session: forget what the last one held, except the families a restart retains."""
-        assert kept.issubset(self._restarting), 'only a restarting family is kept into a new session'
+        assert kept.issubset(self._restart_stale.keys()), 'only a restarting family is kept into a new session'
         self._seen = {family: routes for family, routes in self._seen.items() if family in kept}
-        self._stale = {family: stale for family, stale in self._stale.items() if family in kept}
         self._prefixes = {family: counted for family, counted in self._prefixes.items() if family in kept}
-        self._restarting = set(kept)
+        self._restart_stale = {family: stale for family, stale in self._restart_stale.items() if family in kept}
+        # a refresh does not outlive its session: a retained family's became restart-stale
+        self._refresh_stale = {}
         self._pending_flows = {}
         self._path_sets = {}
         self._path_warned = set()

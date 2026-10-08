@@ -4,7 +4,16 @@
 # Every `text` below is quoted verbatim from qa/rfc/text/rfc9085.txt.
 #
 # This ledger is narrow: it records how the Adjacency SID and LAN Adjacency SID TLVs of
-# the BGP-LS Attribute are read, which is where exabgp knowingly departs from the RFC.
+# the BGP-LS Attribute are read, which is where exabgp knowingly departs from the RFC,
+# the same departure for the Prefix-SID and Prefix Attribute Flags TLVs (2.3.1, 2.3.2),
+# and the sizes sections 2.1.1, 2.3.1 and 2.3.2 give the TLVs of the attribute, which
+# RFC 9552 8.2.2 makes the grounds for calling the attribute malformed.
+#
+# Only a size the decoder cannot account for is refused.  RFC 9552 8.2.2 also lists "the
+# length of a fixed-length TLV is correct or the length of a variable length TLV is valid
+# or permissible" among the checks a BGP-LS Propagator should not perform, so a minimum
+# such as the twelve octets of 2.1.2 or the one octet of 2.1.3 is not enforced on
+# receipt: a shorter TLV is read for what it carries.
 # The RFC writes "should" in lower case in these sentences, so they carry no RFC 2119
 # keyword; they are recorded at SHOULD as the nearest level, and are not gated either way.
 #
@@ -71,4 +80,104 @@ The same gap as 2.2.1-adjacency-sid-flags-per-protocol.  The Neighbor ID, which 
 section also gives the layout of the IGP, is read from the length: 11 or 12 octets are
 OSPF, with a four octet Router-ID, where it used to be read as a six octet IS-IS System
 ID which took two octets of the SID with it.
+"""
+
+[[requirement]]
+id = "rfc9085#2.1.1-sid-label-length"
+section = "2.1.1"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+Type:  1161
+
+Length:  Variable.  Either 3 or 4 octets depending on whether the
+value is encoded as a label or as an index/SID.
+"""
+note = """
+Held where the SID/Label TLV is a sub-TLV of the SR Capabilities TLV (2.1.2):
+`SrCapabilities.unpack_bgpls` refuses one of any other size, which the `sids` property used
+to step over without a word, so the range it carried left the process with no trace.  A
+four octet SID, which 2.1.2 says is not valid there, is a value and not a size, and RFC
+9552 8.2.2 forbids calling the attribute malformed over a value: it is still decoded.
+"""
+
+[[requirement]]
+id = "rfc9085#2.3.1-prefix-sid-length"
+section = "2.3.1"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+Length:  Variable. 7 or 8 octets depending on the label or index
+encoding of the SID.
+"""
+note = """
+Seven octets with V and L set read as a label, eight with neither as an index, and an
+index of any other size is refused, since nothing can be read from it.  A label TLV of
+another size is kept, as RFC 9552 8.2.2 asks a propagator not to judge the length of a
+TLV (`qa/bin/compat_gate` counts every such size a release accepted): what follows the
+last whole label is reported in `undecoded-sids`.  It used to be dropped without a trace,
+so a four octet value behind V and L lost its last octet.  V and L are the same two bits
+in the IS-IS (RFC 8667 2.1.1) and OSPF (RFC 8665 5) layouts, so none of this needs the
+Protocol-ID.
+"""
+
+[[requirement]]
+id = "rfc9085#2.3.1-prefix-sid-flags-per-protocol"
+section = "2.3.1"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+The Flags and, as an extension, the SID/Index/Label fields of this
+TLV are interpreted according to the respective underlying IS-IS,
+OSPFv2, or OSPFv3 protocol.  The Protocol-ID of the BGP-LS Prefix
+NLRI is used to determine the underlying protocol specification for
+parsing these fields.
+"""
+note = """
+The same gap as 2.2.1-adjacency-sid-flags-per-protocol: the attribute decoder cannot see
+the Protocol-ID, and the flags are named with the IS-IS layout (R, N, P, E, V, L).  An
+OSPF NP-Flag (0x40) is reported as N, and an OSPF M-Flag (0x20) as P.  V and L share
+their bits between the layouts, so the SID itself is read correctly.
+"""
+
+[[requirement]]
+id = "rfc9085#2.3.2-prefix-attribute-flags-variable-length"
+section = "2.3.2"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+Type:  1170
+
+Length:  Variable.
+
+Flags:  a variable-length Flag field (according to the Length field).
+"""
+note = """
+`PrefixAttributesFlags` reads the flags it knows from the first octet and keeps any octet
+after it, rendered in hex as `undecoded-flags`.  It declared a length of exactly one octet,
+so a longer field was a wrong size, and RFC 9552 8.2.2 discarded the whole attribute with
+every other TLV in it.  The negative side: an empty field has no flags to read.
+"""
+
+[[requirement]]
+id = "rfc9085#2.3.2-prefix-attribute-flags-per-protocol"
+section = "2.3.2"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+The Flags field of this TLV is interpreted according to the
+respective underlying IS-IS, OSPFv2, or OSPFv3 protocol.  The
+Protocol-ID of the BGP-LS Prefix NLRI is used to determine the
+underlying protocol specification for parsing this field.
+"""
+note = """
+The same gap as 2.2.1-adjacency-sid-flags-per-protocol: the attribute decoder cannot see
+the Protocol-ID, and the flags are named with the IS-IS layout of RFC 7794 (X, R, N).  The
+OSPFv2 A-Flag and N-Flag of RFC 7684 2.1 (0x80, 0x40) are reported as X and R, and the
+OSPFv3 Prefix Options of RFC 5340 A.4.1.1 under the same three names.
 """

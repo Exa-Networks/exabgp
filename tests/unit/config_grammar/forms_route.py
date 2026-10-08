@@ -45,7 +45,9 @@ ROUTE_VALUE_FORMS: list[tuple[str, bool]] = [
     ('local-preference x', False),
     ('aigp 100', True),
     ('aigp 0x64', True),
-    ('aigp 18446744073709551615', True),
+    # RFC 7311 3.2: the maximum metric is malformed, so the configuration refuses it
+    ('aigp 18446744073709551614', True),
+    ('aigp 18446744073709551615', False),
     ('aigp 18446744073709551616', False),
     ('aigp x', False),
     # as-path

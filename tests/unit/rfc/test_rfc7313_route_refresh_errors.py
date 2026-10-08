@@ -55,6 +55,7 @@ def received(subtype: int) -> RouteRefresh:
 def handled(subtype: int, enhanced: bool) -> Mock:
     resend = Mock()
     ctx, _ = negotiation.context(refresh_enhanced=enhanced)
+    ctx.negotiated.families = [(AFI.ipv4, SAFI.unicast)]
     list(RouteRefreshHandler(resend).handle(ctx, received(subtype)))
     return resend
 

@@ -1118,8 +1118,8 @@ class TestBGPLSLinkAttributes:
         from exabgp.bgp.message.update.attribute.bgpls.link.protection import LinkProtectionType
 
         # Extra Traffic protection (2 bytes: protection cap + reserved)
-        # 0x80 = ExtraTrafic bit set (MSB)
-        data = b'\x80\x00'
+        # 0x01 = Extra Traffic, RFC 5307 1.2
+        data = b'\x01\x00'
         attr = LinkProtectionType.unpack_bgpls(data)
 
         assert attr.TLV == 1093

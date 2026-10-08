@@ -268,7 +268,11 @@ def test_a_mutation_after_a_replayed_update_does_not_change_the_snapshot(rib: Ou
 
 
 def test_a_resend_without_a_cache_invents_no_route(rib: OutgoingRIB, grouped: bool) -> None:
-    """A refresh replays the adj-rib-out. With none, it replays nothing, markers aside."""
+    """A refresh replays the adj-rib-out. With none, it replays nothing, markers included.
+
+    RFC 7313 4: an EoRR straight after a BoRR tells the peer we re-advertised nothing, and
+    it purges every route it holds from us.
+    """
     rib.cache = False
     seed(rib, grouped)
     rib.resend(False)
@@ -277,7 +281,7 @@ def test_a_resend_without_a_cache_invents_no_route(rib: OutgoingRIB, grouped: bo
     assert cached(rib) == []
 
     rib.resend(True)
-    assert events(rib.updates(grouped)) == [(RouteRefresh.BEGIN, *FAMILY), (RouteRefresh.END, *FAMILY)]
+    assert events(rib.updates(grouped)) == []
 
     for med in (10, 20):
         rib.add_to_rib(route(med))

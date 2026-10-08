@@ -617,12 +617,12 @@ class TestPeerReconfigure:
         the RIB should be updated immediately since the main loop isn't
         running to process the _neighbor variable later.
         """
-        before = configured(routes=('10.0.1.0/24 next-hop 192.0.2.1',))
+        before = configured(routes=('10.0.1.0/24 next-hop 192.0.2.9',))
         peer = make_peer(before)
         # Peer starts in IDLE (offline)
         assert peer.fsm == FSM.IDLE
         # the reloaded configuration: the old route replaced by a new one
-        after = configured(routes=('10.0.2.0/24 next-hop 192.0.2.1',))
+        after = configured(routes=('10.0.2.0/24 next-hop 192.0.2.9',))
         after.previous = before
         # loading a configuration queues its routes: start from an empty queue
         after.rib.outgoing.reset()
@@ -645,10 +645,10 @@ class TestPeerReconfigure:
         When a neighbor is online (ESTABLISHED), the RIB update should be
         deferred to the main loop which will process _neighbor.
         """
-        before = configured(routes=('10.0.1.0/24 next-hop 192.0.2.1',))
+        before = configured(routes=('10.0.1.0/24 next-hop 192.0.2.9',))
         peer = make_peer(before)
         peer.fsm.change(FSM.ESTABLISHED)
-        after = configured(routes=('10.0.2.0/24 next-hop 192.0.2.1',))
+        after = configured(routes=('10.0.2.0/24 next-hop 192.0.2.9',))
         after.previous = before
         # loading a configuration queues its routes: start from an empty queue
         after.rib.outgoing.reset()
@@ -671,7 +671,7 @@ class TestPeerReconfigure:
         # a Neighbor the configuration has not finished: its RIB is the disabled placeholder
         new_neighbor = Neighbor()
         assert not new_neighbor.rib.enabled
-        new_neighbor.routes = configured(routes=('10.0.3.0/24 next-hop 192.0.2.1',)).routes
+        new_neighbor.routes = configured(routes=('10.0.3.0/24 next-hop 192.0.2.9',)).routes
 
         # Should not raise
         peer.reconfigure(new_neighbor)

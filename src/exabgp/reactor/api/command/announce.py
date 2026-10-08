@@ -71,7 +71,13 @@ def unsendable(reactor: 'Reactor', peers: list[str], route: 'Route') -> str:
     if not carriers:
         return f'no selected peer carries {family[0].name()} {family[1].name()}'
     neighbors = [reactor.configuration.neighbors[peer] for peer in carriers]
-    return next((why for why in (neighbor.next_hop_refused(route.nexthop) for neighbor in neighbors) if why), '')
+    refused = next((why for why in (neighbor.next_hop_refused(route.nexthop) for neighbor in neighbors) if why), '')
+    if refused:
+        return refused
+    # RFC 4271 5.1.3: not to the peer the next-hop is an address of. Refused when no selected
+    # peer is left; otherwise the route goes to the others (Configuration.announce_route).
+    the_peer = [neighbor.next_hop_is_the_peer(route) for neighbor in neighbors]
+    return the_peer[0] if all(the_peer) else ''
 
 
 async def refused(self: 'API', reactor: 'Reactor', service: str, peers: list[str], routes: list['Route']) -> bool:
@@ -543,6 +549,12 @@ def announce_eor(
             self.log_failure(f'No established peer carries {family.extensive()}')
             await reactor.processes.answer_error(service)
             return
+        # RFC 4760 8: only for a family the peer advertised, which configuring it is not
+        active_peers = [peer for peer in active_peers if family.afi_safi() in reactor.neighbor_eor_families(peer)]
+        if not active_peers:
+            self.log_failure(f'No established peer negotiated {family.extensive()}')
+            await reactor.processes.answer_error(service)
+            return
         reactor.configuration.inject_eor(active_peers, family)
         peer_list = ', '.join(active_peers)
         self.log_message(f'Sent to {peer_list} : {family.extensive()}')
@@ -625,8 +637,14 @@ def announce_operational(
             return
 
         operational: Operational = result
-        reactor.configuration.inject_operational(peers, operational)
-        peer_list = ', '.join(peers) if peers else 'all peers'
+        # draft-ietf-idr-operational-message-00 3.1: only to a peer which advertised the capability
+        operating = [peer for peer in peers if reactor.neighbor_operational(peer)]
+        if not operating:
+            self.log_failure(f'No established peer negotiated the operational capability for : {command}')
+            await reactor.processes.answer_error(service)
+            return
+        reactor.configuration.inject_operational(operating, operational)
+        peer_list = ', '.join(operating)
         self.log_message(f'operational message sent to {peer_list} : {operational.extensive()}')
         await asyncio.sleep(0)
         await reactor.processes.answer_done(service)

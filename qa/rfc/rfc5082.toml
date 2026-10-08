@@ -102,6 +102,13 @@ The drop is the kernel's, through IP_MINTTL or IPV6_MINHOPCOUNT on the one socke
 what exabgp has to get right is the number it installs and the sockets it installs it on.
 Installing a minimum higher than the configured one would drop Trusted packets;
 installing one on a session with no ttl-security configured would drop Unknown ones.
+
+That second case is why no minimum is installed on a listening socket: it is shared by
+every neighbour on the address, port and interface, so it can only carry one minimum, and
+the last neighbour with incoming-ttl used to set it for all of them. A session the peer
+opens is checked once it is matched to its neighbour: the TTL of its SYN from the headers
+the kernel kept (TCP_SAVE_SYN, Linux), and every later segment through the minimum then
+installed on the accepted socket. tests/unit/rfc/test_rfc5082_shared_listener.py.
 """
 
 [[requirement]]

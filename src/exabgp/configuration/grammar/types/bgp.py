@@ -16,6 +16,7 @@ from __future__ import annotations
 from struct import pack
 from typing import Any, cast
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open import ASN, RouterID
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.attribute import (
@@ -26,6 +27,7 @@ from exabgp.bgp.message.update.attribute import (
     SEQUENCE,
     SET,
     Aggregator,
+    Attribute,
     AS2Path,
     AtomicAggregate,
     ClusterID,
@@ -45,6 +47,7 @@ from exabgp.bgp.message.update.attribute.community import (
     LargeCommunities,
     LargeCommunity,
 )
+from exabgp.bgp.message.update.attribute.community.extended.l2info import CONTROL_FLAGS_DEFINED
 from exabgp.bgp.message.update.attribute.internal import InternalNumber, InternalText
 from exabgp.bgp.message.update.attribute.internal import Name as InternalName
 from exabgp.bgp.message.update.attribute.internal import Split as InternalSplit
@@ -68,7 +71,7 @@ from exabgp.configuration.grammar.types.word import (
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.ip import IP, IPRange, IPSelf, IPv4, IPv6
 
-AIGP_MAX = 0xFFFFFFFFFFFFFFFF  # RFC 7311: a 64 bit metric
+AIGP_MAX = 0xFFFFFFFFFFFFFFFE  # RFC 7311 3.2: the 64 bit maximum is malformed on receipt, so never sent
 MAX_SEGMENT_ASNS = 255  # RFC 4271 4.3: a path segment counts its AS numbers in one octet
 MAX_LIST_ITEMS = 1024  # a list of values is written by hand
 COMMUNITY_HALF_MAX = 0xFFFF  # RFC 1997: an AS number and a value of two octets each
@@ -168,6 +171,18 @@ class NextHopType(Type[tuple[IP | IPSelf, NextHop | NextHopSelf]]):
         )
 
 
+# The attributes exabgp makes itself, for the session it packs for: a raw one would be sent
+# as well. RFC 4271 5: an attribute "cannot appear more than once" in an UPDATE; RFC 6793
+# 4.1: AS4_PATH and AS4_AGGREGATOR "MUST NOT be carried in an UPDATE message between NEW
+# BGP speakers", and are made from as-path and aggregator for the others.
+GENERATED_ATTRIBUTES: dict[int, str] = {
+    Attribute.CODE.MP_REACH_NLRI: 'MP_REACH_NLRI, made from the routes',
+    Attribute.CODE.MP_UNREACH_NLRI: 'MP_UNREACH_NLRI, made from the routes',
+    Attribute.CODE.AS4_PATH: 'AS4_PATH, made from as-path for a peer without four-octet AS',
+    Attribute.CODE.AS4_AGGREGATOR: 'AS4_AGGREGATOR, made from aggregator for a peer without four-octet AS',
+}
+
+
 class HexAttribute(Type[GenericAttribute]):
     """`[ 0x<code> 0x<flag> 0x<data> ]`: an attribute given as its wire bytes."""
 
@@ -177,7 +192,12 @@ class HexAttribute(Type[GenericAttribute]):
         where = words.where()
         if words.word() != '[':
             raise ConfigError(where, 'invalid attribute format', expected=[self.hint()])
+        where = words.where()
         code = self._hex(words, 'attribute code')
+        if code in GENERATED_ATTRIBUTES:
+            raise ConfigError(
+                where, f'attribute 0x{code:02x} is {GENERATED_ATTRIBUTES[code]}: it is made by exabgp, not given'
+            )
         flag = self._hex(words, 'attribute flag')
         where = words.where()
         data = words.word().lower()
@@ -699,7 +719,10 @@ _HEADER = {
     'origin': bytes([0x00, 0x03]),
     'origin4': bytes([0x01, 0x03]),
     'origin-as4': bytes([0x02, 0x03]),
+    # RFC 8955 7.4: the three encodings of the Route Target, with the high octet 0x80, 0x81, 0x82
     'redirect': bytes([0x80, 0x08]),
+    'redirect4': bytes([0x81, 0x08]),
+    'redirect-as4': bytes([0x82, 0x08]),
     'l2info': bytes([0x80, 0x0A]),
     'redirect-to-nexthop': bytes([0x08, 0x00]),
     'bandwidth': bytes([0x40, 0x04]),
@@ -713,10 +736,14 @@ _ENCODE = {
     'origin4': 'LH',
     'origin-as4': 'LH',
     'redirect': 'HL',
+    'redirect4': 'LH',
+    'redirect-as4': 'LH',
     'l2info': 'BBHH',
     'bandwidth': 'Hf',
     'mup': 'HL',
 }
+# l2info:<encaps>:<control>:<mtu>:<reserved>
+L2INFO_CONTROL_INDEX = 1
 _SIZE = {'B': 0xFF, 'H': 0xFFFF, 'L': 0xFFFFFFFF, 'f': 0xFFFFFFFF}
 # draft-ietf-idr-flowspec-redirect-ip: a name and an address, the only two word communities
 TAKES_AN_ADDRESS = ('redirect-to-nexthop-ietf', 'copy-to-nexthop-ietf')
@@ -748,7 +775,7 @@ def _ipv4(text: str, value: str) -> int:
 def _encode(command: str, components: list[int], parts: list[str]) -> tuple[bytes, str]:
     if command not in _HEADER:
         raise ValueError(f'invalid extended community type {command}')
-    if command in ('origin', 'target'):
+    if command in ('origin', 'target', 'redirect'):
         if '.' in parts[0]:
             command += '4'
         elif components[0] > _SIZE['H'] or parts[0][-1] == 'L':
@@ -759,7 +786,24 @@ def _encode(command: str, components: list[int], parts: list[str]) -> tuple[byte
     for size, value in zip(encoding, components):
         if value > _SIZE[size]:
             raise ValueError(f'invalid extended community, value is too large {value}')
+    if command == 'l2info' and components[L2INFO_CONTROL_INDEX] & ~CONTROL_FLAGS_DEFINED:
+        raise ValueError(
+            f'invalid extended community l2info, control flags {components[L2INFO_CONTROL_INDEX]} set MBZ bits: '
+            f'RFC 4761 3.2.4 defines only C (2) and S (1)'
+        )
     return _HEADER[command], '!' + encoding
+
+
+def _decoded_extended_community(raw: bytes) -> ExtendedCommunity:
+    """The community these eight bytes make, through the decoder the wire uses.
+
+    The decoder answers a value it cannot use (a NaN rate, say) with Notify, which is
+    addressed to a peer.  Here the bytes are the operator's, so it is their ValueError.
+    """
+    try:
+        return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(raw, None))
+    except Notify as exc:
+        raise ValueError(f'invalid extended community 0x{raw.hex()}: {exc.detail}') from None
 
 
 def extended_community(word: str) -> ExtendedCommunity:
@@ -780,15 +824,15 @@ def extended_community(word: str) -> ExtendedCommunity:
             if len(word) % 2 or not is_hexadecimal(word):
                 raise ValueError(f'invalid extended community {word}')
             raw = bytes.fromhex(word[2:])
-            return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(raw, None))
+            return _decoded_extended_community(raw)
         if word == 'redirect-to-nexthop':
-            return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(_HEADER[word] + pack('!HL', 0, 0), None))
+            return _decoded_extended_community(_HEADER[word] + pack('!HL', 0, 0))
         raise ValueError(f'invalid extended community {word} - lc+gc')
     parts = word.split(':')
     command = 'target' if len(parts) == 2 else parts.pop(0)
     components = [_integer(part) if _digit(part) else _ipv4(part, word) for part in parts]
     header, encoding = _encode(command, components, parts)
-    return cast(ExtendedCommunity, ExtendedCommunity.unpack_attribute(header + pack(encoding, *components), None))
+    return _decoded_extended_community(header + pack(encoding, *components))
 
 
 class ExtendedCommunitiesType(Type[ExtendedCommunities]):

@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from collections import Counter, deque
 from datetime import timedelta
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability import AddPath
@@ -20,6 +20,8 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.operational import Operational
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, ASPath
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.neighbor.capability import GRACEFUL_RESTART_MAX_TIME, GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.message.update.attribute.otc import OTCSelf
 from exabgp.bgp.neighbor.session import Session
@@ -411,6 +413,57 @@ class Neighbor:
             return ''
         return f'next-hop {nexthop} is link-local but the link-local next-hop capability is not enabled'
 
+    def next_hop_is_the_peer(self, route: 'Route') -> str:
+        """Why the next-hop of this route may not go to this neighbor, '' when it may.
+
+        RFC 4271 5.1.3: "A route originated by a BGP speaker SHALL NOT be advertised to a
+        peer using an address of that peer as NEXT_HOP". The next-hop of a route is the one
+        of NEXT_HOP and of MP_REACH_NLRI alike, the RD of a VPN next-hop being added when it
+        is packed. A flow route is left alone: its next-hop is where traffic is redirected.
+
+        The route is the one given, `next-hop self` not resolved yet: self is our address,
+        and so is the local-address written out, even when it is also the peer's (both
+        ends of a session on one host, as the functional tests run).
+        """
+        if route.nlri.safi in FLOW_SAFIS:
+            return ''
+        peer = self.session.peer_address
+        local = self.session.local_address
+        candidates: list[IP] = [route.nexthop]
+        if Attribute.CODE.NEXT_HOP in route.attributes:
+            attribute = cast(NextHop, route.attributes[Attribute.CODE.NEXT_HOP])
+            if not attribute.SELF:
+                candidates.append(IP.create_ip(attribute.pack_ip()))
+        for nexthop in candidates:
+            if nexthop.SELF or not nexthop.resolved:
+                continue
+            if _same_address(nexthop, peer) and not _same_address(nexthop, local):
+                return f'next-hop {nexthop} is an address of the peer {peer} (RFC 4271 5.1.3)'
+        return ''
+
+    def as_path_not_ours(self, route: 'Route') -> str:
+        """Why the AS_PATH of this route is not what RFC 4271 5.1.2 has us send, '' when it is.
+
+        An originated route goes to an external peer with our AS first, in an AS_SEQUENCE.
+        exabgp sends a configured AS_PATH as written, on purpose (route servers, injectors),
+        so this is a warning for the operator and not a refusal. Without an AS_PATH, our AS
+        is added when the route is packed. A Member-AS of our confederation is not external.
+        """
+        session = self.session
+        if not session.local_as or not session.peer_as or session.local_as == session.peer_as:
+            return ''
+        if session.in_confederation(session.peer_as):
+            return ''
+        if Attribute.CODE.AS_PATH not in route.attributes:
+            return ''
+        as_path = cast(ASPath, route.attributes[Attribute.CODE.AS_PATH])
+        ours = session.open_asn()
+        segments = as_path.aspath
+        if segments and segments[0].ID == SEQUENCE.ID and len(segments[0]) and segments[0][0] == ours:
+            return ''
+        shown = as_path.string() or '[ ]'
+        return f'as-path {shown} to external peer {session.peer_address} does not start with our AS {ours}'
+
     def ip_self(self, afi: AFI) -> IP:
         chosen = self.session.ip_self(afi)
         if not chosen.is_link_local():
@@ -485,6 +538,24 @@ class Neighbor:
 
     def __str__(self) -> str:
         return NeighborTemplate.configuration(self, False)
+
+
+# A flow route's next-hop is the redirection target of RFC 7674, not a route to the peer.
+FLOW_SAFIS = frozenset({SAFI.flow_ip, SAFI.flow_vpn})
+
+# RFC 4291 2.5.5.2: an IPv4-mapped IPv6 address is ::ffff:<IPv4>.
+IPV4_MAPPED_PREFIX = bytes(10) + b'\xff\xff'
+
+
+def _same_address(nexthop: IP, peer: IP) -> bool:
+    """Whether the next-hop is the address of the peer, also as an IPv4-mapped IPv6 address."""
+    packed = bytes(nexthop.pack_ip())
+    peer_packed = bytes(peer.pack_ip())
+    if not packed or not peer_packed:
+        return False
+    if len(packed) == 16 and len(peer_packed) == 4 and packed[:12] == IPV4_MAPPED_PREFIX:
+        packed = packed[12:]
+    return packed == peer_packed
 
 
 def _en(value: bool | None) -> str:
@@ -730,7 +801,6 @@ Neighbor {peer-address}
             f'\t\tadd-path {add_path_str};\n'
             f'\t\tmulti-session {"enable" if cap.multi_session.is_enabled() else "disable"};\n'
             f'\t\toperational {state(cap.operational.is_enabled(), CapabilityCode.OPERATIONAL)};\n'
-            f'\t\taigp {"enable" if cap.aigp.is_enabled() else "disable"};\n'
             + cls._configuration_capability_optional(cap)
             + '\t}\n'
         )
@@ -739,6 +809,10 @@ Neighbor {peer-address}
     def _configuration_capability_optional(cap: NeighborCapability) -> str:
         # not otherwise in the dump, so only written when leaving them out would lose something
         lines = ''
+        # Unset is a value of its own, enabled on IBGP and in a confederation and disabled
+        # otherwise: printed as either word it would read back as that word on every session.
+        if not cap.aigp.is_unset():
+            lines += f'\t\taigp {"enable" if cap.aigp.is_enabled() else "disable"};\n'
         if CapabilityCode.EXTENDED_MESSAGE in cap.required:
             lines += '\t\textended-message require;\n'
         if CapabilityCode.LINK_LOCAL_NEXTHOP in cap.required:

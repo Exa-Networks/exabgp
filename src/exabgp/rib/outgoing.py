@@ -249,6 +249,17 @@ class OutgoingRIB(Cache):
     def resend(self, enhanced_refresh: bool, family: FamilyTuple | None = None) -> None:
         if not self.enabled:
             return
+        # RFC 7313 4: the EoRR says "the re-advertisement of the entire Adj-RIB-Out" is
+        # complete. Without one there is nothing to replay, and a BoRR followed at once by
+        # an EoRR has the peer purge every route it holds from us. The configuration turns
+        # the cache on with route refresh, but a reload turning both off swaps the tables
+        # of a session still running until its teardown.
+        if not self.cache:
+            log.warning(
+                lazymsg('rib.resend.skipped reason=no-adj-rib-out enhanced={enhanced}', enhanced=enhanced_refresh),
+                'rib',
+            )
+            return
         requested_families = set(self.families)
 
         if family is not None:

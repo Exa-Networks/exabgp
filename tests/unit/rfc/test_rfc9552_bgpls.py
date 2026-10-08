@@ -781,3 +781,81 @@ def test_a_node_nlri_we_build_has_its_descriptor_sub_tlvs_ascending() -> None:
     built = NODE.make_node(0, PROTOCOL_ID_OSPFV2, list(reversed(by_hand)))
 
     assert bytes(built.pack_nlri(session())) == node_nlri()
+
+
+# ================================================ section 5.3.2.4, the IGP Metric TLV
+
+IGP_METRIC = 1095
+
+
+@pytest.mark.rfc('rfc9552#5.3.2.4-igp-metric-small-metric-top-bits-ignored')
+def test_a_six_bit_igp_metric_is_read_as_sent() -> None:
+    (metric,) = unpack_attribute(tlv(IGP_METRIC, bytes([0x3F]))).ls_attrs
+    assert metric.content == 0x3F
+
+
+@pytest.mark.rfc('rfc9552#5.3.2.4-igp-metric-small-metric-top-bits-ignored', polarity='negative')
+def test_the_two_top_bits_of_a_one_octet_igp_metric_are_ignored() -> None:
+    (metric,) = unpack_attribute(tlv(IGP_METRIC, bytes([0xC0 | 10]))).ls_attrs
+    assert metric.content == 10, 'RFC 9552 5.3.2.4: the two most significant bits are ignored'
+
+
+# ================================================ section 8.2.2, the size of each recognised TLV
+
+# A recognised TLV whose value has a size its decoder cannot account for is malformed: a
+# SID/Label sub-TLV of 1034 which is neither a label nor an index (RFC 9085 2.1.1), a
+# Prefix-SID index of other than four octets (RFC 9085 2.3.1), and a sub-TLV of 1106
+# shorter than what it holds.  A longer fixed field (1250, 1252) is not: see
+# TestALengthCheckIsAMinimumNotAnExactLength in tests/fuzz/test_bgpls_tlv_properties.py.
+SR_CAPABILITIES = 1034
+PREFIX_SID = 1158
+SRV6_END_X_SID = 1106
+SRV6_ENDPOINT_BEHAVIOR = 1250
+SRV6_SID_STRUCTURE = 1252
+SID_LABEL = 1161
+IPV6_ROUTER_ID = bytes(range(16))
+
+
+def sr_capabilities(sid: bytes) -> bytes:
+    """Flags, Reserved, then one range: a three octet Range Size and a SID/Label sub-TLV."""
+    return bytes([0x80, 0]) + pack('!L', 8000)[1:] + tlv(SID_LABEL, sid)
+
+
+def end_x(sub_tlvs: bytes) -> bytes:
+    """An SRv6 End.X SID: behavior, flags, algorithm, weight, reserved, the SID, sub-TLVs."""
+    return pack('!HBBBB', 57, 0, 0, 0, 0) + IPV6_ROUTER_ID + sub_tlvs
+
+
+WELL_SIZED = [
+    pytest.param(SR_CAPABILITIES, sr_capabilities(pack('!L', 16000)[1:]), id='1034-label'),
+    pytest.param(SR_CAPABILITIES, sr_capabilities(pack('!L', 16000)), id='1034-four-octet-sid'),
+    pytest.param(PREFIX_SID, pack('!BBH', 0x0C, 0, 0) + pack('!L', 16000)[1:], id='1158-label'),
+    pytest.param(PREFIX_SID, pack('!BBH', 0x00, 0, 0) + pack('!L', 100), id='1158-index'),
+    pytest.param(SRV6_ENDPOINT_BEHAVIOR, pack('!HBB', 48, 0, 0), id='1250'),
+    pytest.param(SRV6_SID_STRUCTURE, bytes([32, 16, 16, 64]), id='1252'),
+    pytest.param(SRV6_END_X_SID, end_x(tlv(SRV6_SID_STRUCTURE, bytes([32, 16, 16, 64]))), id='1106-with-1252'),
+]
+
+WRONG_SIZE = [
+    pytest.param(SR_CAPABILITIES, sr_capabilities(bytes(5)), id='1034-five-octet-sid'),
+    pytest.param(PREFIX_SID, pack('!BBH', 0x00, 0, 0) + bytes(5), id='1158-index-in-five-octets'),
+    pytest.param(SRV6_END_X_SID, end_x(tlv(SRV6_SID_STRUCTURE, bytes([32, 16, 16]))), id='1106-with-short-1252'),
+]
+
+
+@pytest.mark.rfc('rfc9552#8.2.2-attribute-syntactic-validation')
+@pytest.mark.parametrize(('code', 'value'), WELL_SIZED)
+def test_a_recognised_tlv_of_its_own_size_is_kept(code: int, value: bytes) -> None:
+    attribute = unpack_attribute(tlv(code, value))
+    assert codes(attribute) == [code]
+    json.loads(attribute.json())
+
+
+@pytest.mark.rfc('rfc9552#8.2.2-attribute-syntactic-validation', polarity='negative')
+@pytest.mark.parametrize(('code', 'value'), WRONG_SIZE)
+def test_a_recognised_tlv_of_another_size_discards_the_attribute(code: int, value: bytes) -> None:
+    with pytest.raises(Notify):
+        unpack_attribute(tlv(code, value))
+    collection = parse_attributes(tlv(code, value))
+    assert INTERNAL_DISCARD in collection, 'RFC 9552 8.2.2: a malformed BGP-LS Attribute is discarded'
+    assert int(Attribute.CODE.ORIGIN) in collection

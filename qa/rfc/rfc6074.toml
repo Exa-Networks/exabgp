@@ -1,0 +1,36 @@
+# RFC 6074 - Provisioning, Auto-Discovery, and Signaling in Layer 2 Virtual Private Networks (L2VPNs)
+# https://www.rfc-editor.org/rfc/rfc6074
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc6074.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# exabgp implements the VPLS NLRI of RFC 4761, not BGP-based auto-discovery.  This ledger
+# records the one sentence of RFC 6074 which binds a VPLS-BGP speaker all the same: the two
+# share AFI 25 / SAFI 65, so a VPLS-BGP decoder meets BGP-AD NLRI on the wire.  The RFC
+# writes "must" in lower case there, so the sentence carries no RFC 2119 keyword; it is
+# recorded at SHOULD as the nearest level, as qa/rfc/rfc9085.toml does.
+
+rfc = "rfc6074"
+title = "Provisioning, Auto-Discovery, and Signaling in Layer 2 Virtual Private Networks (L2VPNs)"
+url = "https://www.rfc-editor.org/rfc/rfc6074"
+
+[[requirement]]
+id = "rfc6074#7-length-demultiplexer"
+section = "7"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+Both BGP-AD and VPLS-BGP [RFC4761] use the same AFI/SAFI.  In order
+for both BGP-AD and VPLS-BGP to co-exist, the NLRI length must be
+used as a demultiplexer.
+"""
+note = """
+`VPLSBase.unpack_nlri` reads the two octet length first.  Twelve is a BGP-AD NLRI (an RD and
+a four octet VSI-ID), which exabgp does not implement: it is stepped over with an
+`NLRIDiscard`, logged, and the NLRI after it in the same MP_REACH_NLRI is decoded.  It used
+to be refused with a plain `Notify`, so a peer running BGP-AD alongside VPLS reset the
+session.  Any other length below the seventeen octets of RFC 4761 is framed by the same
+length and goes the same way.  The negative side: a length running past the attribute
+cannot be stepped over, and still resets the session.
+"""

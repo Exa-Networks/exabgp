@@ -1,0 +1,37 @@
+# draft-ietf-idr-operational-message-00 - BGP OPERATIONAL Message
+# https://www.ietf.org/archive/id/draft-ietf-idr-operational-message-00.txt
+#
+# Every `text` below is quoted verbatim from
+# qa/rfc/text/draft-ietf-idr-operational-message-00.txt and is checked against it on every
+# run of ./qa/bin/check_rfc_compliance.
+#
+# This is an Internet-Draft, not an RFC.  It expired in September 2012 and was never
+# published, but it is what the OPERATIONAL capability and message
+# (src/exabgp/bgp/message/operational.py) implement.
+#
+# Only the sending condition of section 3.1 is recorded so far.
+
+rfc = "draft-ietf-idr-operational-message-00"
+title = "BGP OPERATIONAL Message"
+url = "https://www.ietf.org/archive/id/draft-ietf-idr-operational-message-00.txt"
+
+[[requirement]]
+id = "draft-ietf-idr-operational-message-00#3.1-send-only-if-received"
+section = "3.1"
+level = "MAY"
+status = "required"
+polarity = "both"
+text = """
+A BGP speaker may send an OPERATIONAL message to its
+neighbor only if it has received the OPERATIONAL message capability
+from them.
+"""
+note = """
+Recorded although its keyword is a lowercase "may": "only if" makes it a prohibition, as
+in RFC 2918 section 4 for ROUTE-REFRESH. Until 2026-10-08 the Peer sent whatever was
+queued once our own configuration enabled the capability, and neither the API command
+nor the ASM replayed on session establishment asked the session. Now the negotiation
+decides (Negotiated.operational, via Peer.operational): the API answers error for a peer
+whose session did not negotiate it, and a message already queued is dropped with a
+warning.
+"""

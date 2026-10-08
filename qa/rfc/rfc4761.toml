@@ -1,0 +1,33 @@
+# RFC 4761 - Virtual Private LAN Service (VPLS) Using BGP for Auto-Discovery and Signaling
+# https://www.rfc-editor.org/rfc/rfc4761
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc4761.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Only the Layer2 Info Extended Community of section 3.2.4 is recorded so far.  exabgp
+# carries the VPLS NLRI and this community between a peer and the API; the forwarding
+# obligations of the rest of the document belong to a PE's data plane, which exabgp is not.
+
+rfc = "rfc4761"
+title = "Virtual Private LAN Service (VPLS) Using BGP for Auto-Discovery and Signaling"
+url = "https://www.rfc-editor.org/rfc/rfc4761"
+
+[[requirement]]
+id = "rfc4761#3.2.4-l2info-control-flags-mbz"
+section = "3.2.4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+With reference to Figure 4, the following bits in the Control Flags
+are defined; the remaining bits, designated MBZ, MUST be set to zero
+when sending and MUST be ignored when receiving this community.
+"""
+note = """
+C is 0x02 and S is 0x01, the six high-order bits are MBZ.  Sending: the configuration and
+the API refuse `l2info:<encaps>:<control>:<mtu>:<reserved>` with an MBZ bit in the
+control octet; until 2026-10-08 any octet was sent as written.  The raw `0x800A...` form
+stays the operator's escape hatch and is sent as written, as is a community re-advertised
+from a peer: those bytes are not ours.  Receiving: `L2Info.control` is the two defined
+bits, so a community whose peer set MBZ bits is accepted and reported without them.
+"""

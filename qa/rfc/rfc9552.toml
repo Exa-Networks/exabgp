@@ -278,6 +278,25 @@ OSPFv2 are no Router-ID.
 """
 
 [[requirement]]
+id = "rfc9552#5.3.2.4-igp-metric-small-metric-top-bits-ignored"
+section = "5.3.2.4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+IS-IS small metrics are 6 bits in size but are encoded in
+a 1-octet field; therefore, the two most significant bits of the
+field MUST be set to 0 by the originator and MUST be ignored by the
+receiver.
+"""
+note = """
+`IgpMetric.content` masks a one octet metric with 0x3F.  It returned the octet as it came,
+so a peer setting either top bit had its metric reported 64 or 128 higher than the IGP's.
+exabgp has no way to originate this TLV, so the originator half is not reached: the
+positive test is that a six bit metric is read as it was sent.
+"""
+
+[[requirement]]
 id = "rfc9552#8.2.2-nlri-not-malformed-on-semantics"
 section = "8.2.2"
 level = "MUST NOT"
@@ -439,8 +458,14 @@ the BGP-LS Attribute to determine if it is malformed.
 note = """
 All three bullets are performed by `LinkState._parse_tlvs`: a TLV header with fewer than
 four octets left, a TLV whose length runs past the end of the attribute value, and, for a
-recognised TLV, a value of the wrong size for its class through `BaseLS.check_length` and
-the per-class `check` methods.  The sum of the TLV lengths against the attribute length
+recognised TLV, a value of a size its class cannot account for, through
+`BaseLS.check_length` and the per-class `check` and `unpack_bgpls` methods: too short for
+what the class reads, a sub-TLV claiming more than is left, a SID/Label which is neither a
+label nor an index, a Prefix-SID index of other than four octets.  A value longer than
+a fixed field, or shorter than a minimum the class does not need, is read rather than
+refused: the last paragraph of the section lists "the length of a fixed-length TLV is
+correct or the length of a variable length TLV is valid or permissible" among the checks
+a BGP-LS Propagator should not perform.  The sum of the TLV lengths against the attribute length
 falls out of the same walk, since a sequence which does not end exactly on the boundary
 leaves a stub which fails the first check.
 

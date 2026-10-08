@@ -32,6 +32,7 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity, RouteTarget
 from exabgp.bgp.message.update.attribute.community.extended.evpn import ESILabel, ESImportRouteTarget
+from exabgp.bgp.message.update.attribute.community.extended.mac_mobility import MacMobility
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.evpn.ethernetad import EthernetAD
 from exabgp.bgp.message.update.nlri.evpn.mac import MAC
@@ -432,3 +433,24 @@ def test_an_ethernet_segment_route_with_a_type_1_rd_is_built() -> None:
     )
 
     assert bytes(built.rd.pack_rd()) == RD
+
+
+# ------------------------------------------- 7.7 the Sticky/static flag of MAC Mobility
+
+
+@pytest.mark.parametrize('flags', [0x01, 0x03, 0x81, 0xFF], ids=lambda value: f'flags 0x{value:02x}')
+def test_the_sticky_flag_is_the_low_order_bit_whatever_the_others(flags: int) -> None:
+    """Unmarked, 7.7 has no keyword: "The low-order bit of the Flags octet is defined as
+    the "Sticky/static" flag".  The flag was read as the whole octet being 1, so a route
+    whose peer set any other bit beside it was reported as not sticky."""
+    community = MacMobility.unpack_attribute(bytes([0x06, 0x00, flags, 0x00, 0, 0, 0, 9]))
+
+    assert community.sticky
+    assert repr(community).endswith(':sticky')
+
+
+@pytest.mark.parametrize('flags', [0x00, 0x02, 0x80, 0xFE], ids=lambda value: f'flags 0x{value:02x}')
+def test_without_the_low_order_bit_the_mac_is_not_sticky(flags: int) -> None:
+    community = MacMobility.unpack_attribute(bytes([0x06, 0x00, flags, 0x00, 0, 0, 0, 9]))
+
+    assert not community.sticky

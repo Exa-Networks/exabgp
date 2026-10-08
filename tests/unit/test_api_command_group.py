@@ -14,6 +14,8 @@ from collections.abc import Iterator
 
 import pytest
 
+from exabgp.bgp.message.open.capability.refresh import REFRESH
+from exabgp.protocol.family import AFI, SAFI
 from tests.api_daemon import FIRST, SECOND, Daemon, answer
 
 
@@ -86,6 +88,8 @@ def test_what_is_not_a_route_is_not_held_by_a_group(daemon: Daemon) -> None:
     daemon.send('group start')
     assert answer(daemon.send('system version'))[0]['application'] == 'exabgp'
     daemon.establish()
+    # an End-of-RIB is for a family the session negotiated
+    daemon.negotiate(FIRST, REFRESH.ABSENT, [(AFI.ipv4, SAFI.unicast)])
     assert daemon.send(f'peer {FIRST} announce eor') == ['done']
     assert [str(family) for family in daemon.neighbor(FIRST).eor] == ['ipv4 unicast']
 

@@ -4,8 +4,8 @@
 # Every `text` below is quoted verbatim from qa/rfc/text/rfc2918.txt and is checked
 # against it on every run of ./qa/bin/check_rfc_compliance.
 #
-# Only the sending side of section 4 is recorded so far. The receiving side, and the
-# Enhanced Route Refresh which builds on this RFC, are in rfc7313.toml.
+# Section 4, both sides. The Enhanced Route Refresh which builds on this RFC is in
+# rfc7313.toml.
 
 rfc = "rfc2918"
 title = "Route Refresh Capability for BGP-4"
@@ -44,5 +44,28 @@ time via capability advertisement.
 note = """
 The families are the negotiated ones (Negotiated.families), what both sides advertised:
 a family configured on the neighbor which the peer did not advertise is refused by the
-API and dropped by the Peer.
+API and dropped by the Peer. A refresh of our own Adj-RIB-Out (an enhanced refresh, or
+the operator's `flush adj-rib-out`) is limited to them too (Peer._resend_families), so
+no BoRR or EoRR goes out for a configured family the session did not negotiate.
+"""
+
+[[requirement]]
+id = "rfc2918#4-ignore-a-family-not-advertised"
+section = "4"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+If a BGP speaker receives from its peer a ROUTE-REFRESH message with
+the <AFI, SAFI> that the speaker didn't advertise to the peer at the
+session establishment time via capability advertisement, the speaker
+shall ignore such a message.
+"""
+note = """
+Lowercase in the RFC, recorded as the obligation it states. The session's negotiated
+families stand for what we advertised: a family the peer did not advertise back is one
+we send nothing for, so a request for it has nothing to re-advertise either. It applies
+to every subtype: until 2026-10-08 an RFC 7313 BoRR or EoRR for any <AFI, SAFI> marked or
+purged stale routes, and a peer could grow the stale record with families it invented.
+RouteRefreshHandler now logs and ignores them.
 """

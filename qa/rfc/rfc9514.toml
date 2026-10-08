@@ -1,0 +1,49 @@
+# RFC 9514 - Border Gateway Protocol - Link State (BGP-LS) Extensions for Segment Routing over IPv6 (SRv6)
+# https://www.rfc-editor.org/rfc/rfc9514
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc9514.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# This ledger is narrow: it records how the SRv6 Capabilities TLV (1038) of the BGP-LS
+# Attribute is read and written.  The sentence giving its Flags carries no RFC 2119
+# keyword, since it defers to the IGP documents for the layout; it is recorded at SHOULD
+# as the nearest level, as qa/rfc/rfc9085.toml does.  The IS-IS layout it defers to is
+# RFC 9352 section 2: the O-flag is bit 1 of the two octet field, and "The remaining
+# bits, including bit 0, are reserved for future use.  They MUST be set to zero on
+# transmission and MUST be ignored on receipt."  OSPFv3 (RFC 9513 section 2) puts the
+# O-flag on the same bit, so the layout does not depend on the Protocol-ID.
+
+rfc = "rfc9514"
+title = "Border Gateway Protocol - Link State (BGP-LS) Extensions for Segment Routing over IPv6 (SRv6)"
+url = "https://www.rfc-editor.org/rfc/rfc9514"
+
+[[requirement]]
+id = "rfc9514#3.1-capabilities-flags-from-the-igp"
+section = "3.1"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+Flags:  2-octet field.  The flags are copied from the IS-IS SRv6
+Capabilities sub-TLV (Section 2 of [RFC9352]) or from the OSPFv3
+SRv6 Capabilities TLV (Section 2 of [RFC9513]) in the case of IS-
+IS or OSPFv3, respectively.
+"""
+note = """
+`Srv6Capabilities.flags` reads the O-flag from bit 1 of the field (0x4000) and reports it
+as 0 or 1, and `make_srv6_capabilities` writes it there.  Both used bit 9 (0x0040), which
+is reserved, and the decoder reported the masked value, 64, rather than the flag: a peer
+setting the O-flag was shown without it, and one setting a reserved bit was shown with
+it.  The negative side is that every other bit of the field is ignored.
+"""
+
+[[requirement]]
+id = "rfc9514#3.1-capabilities-reserved-zero-and-ignored"
+section = "3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Reserved:  2-octet field that MUST be set to 0 when originated and
+ignored on receipt.
+"""

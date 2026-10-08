@@ -432,6 +432,56 @@ def set_minimum_ttl(io: socket.socket, afi: AFI, ip: str, minimum: int | None) -
     min_ttl(io, ip, minimum)
 
 
+# linux/tcp.h. A listening socket given TCP_SAVE_SYN keeps the network and TCP headers of
+# the SYN which opened each connection it accepts, and TCP_SAVED_SYN hands them over once.
+# That is the only way left to check the TTL of the first segment of a session the peer
+# opened, now the shared listening socket carries no minimum (RFC 5082 section 3).
+TCP_SAVE_SYN = 27
+TCP_SAVED_SYN = 28
+# an IPv6 header with every extension header the kernel will keep, and a TCP header with
+# every option: what TCP_SAVED_SYN returns is far smaller than this
+SAVED_SYN_MAX_BYTES = 512
+IPV4_HEADER_BYTES = 20
+IPV6_HEADER_BYTES = 40
+IPV4_TTL_OFFSET = 8
+IPV6_HOP_LIMIT_OFFSET = 7
+
+
+def save_syn(io: socket.socket) -> None:
+    """Ask the kernel to keep the headers of the SYN of every connection this socket accepts.
+
+    Linux only. Elsewhere, or on a kernel too old for it (before 4.2), the first segment of
+    an accepted session is not checked against the minimum TTL, and every later one still is.
+    """
+    if platform.system() != 'Linux':
+        return
+    try:
+        io.setsockopt(socket.IPPROTO_TCP, TCP_SAVE_SYN, 1)
+    except OSError as exc:
+        log.debug(lazymsg('listener.save_syn.unavailable error={error}', error=errstr(exc)), 'network')
+
+
+def saved_syn_ttl(io: socket.socket) -> int | None:
+    """The TTL (or hop limit) the SYN of this accepted connection arrived with, if it was kept."""
+    if platform.system() != 'Linux':
+        return None
+    try:
+        headers = io.getsockopt(socket.IPPROTO_TCP, TCP_SAVED_SYN, SAVED_SYN_MAX_BYTES)
+    except OSError as exc:
+        # the kernel could not keep the SYN: the caller falls back to the minimum installed
+        # on the accepted socket, which checks every segment after this one
+        log.debug(lazymsg('connection.saved_syn.unavailable error={error}', error=errstr(exc)), 'network')
+        return None
+    if not headers:
+        return None
+    version = headers[0] >> 4
+    if version == 4 and len(headers) >= IPV4_HEADER_BYTES:
+        return headers[IPV4_TTL_OFFSET]
+    if version == 6 and len(headers) >= IPV6_HEADER_BYTES:
+        return headers[IPV6_HOP_LIMIT_OFFSET]
+    return None
+
+
 def ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
     if ttl:

@@ -280,9 +280,11 @@ class TrafficRedirectASN4(ExtendedCommunity):
         value: int = unpack('!H', self._packed[6:8])[0]
         return value
 
-    def __str__(self) -> str:
-        # the AS number showed as ASN4(<number>) when ASN4 was its type: the text is kept
-        return 'redirect:ASN4({}):{}'.format(self.asn, self.target)
+    def __repr__(self) -> str:
+        # The text of the other two encodings, which reads back as configuration. It was
+        # __str__, 'redirect:ASN4(<asn>):<n>', and json() goes through __repr__, so the API
+        # was given the community as hex.
+        return 'redirect:{}:{}'.format(self.asn, self.target)
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRedirectASN4:
@@ -290,6 +292,45 @@ class TrafficRedirectASN4(ExtendedCommunity):
 
 
 ExtendedCommunity.register_subtype(TrafficRedirectASN4)
+
+
+class TrafficRedirectIPv4(ExtendedCommunity):
+    """Redirect to VRF using an IPv4 address specific Route Target (RFC 8955 7.4).
+
+    The encoding of RFC 4360 3.2 (4-byte IPv4 address : 2-byte value), type 0x81. It had
+    no class, so it reached the API as hex and could not be configured.
+    """
+
+    COMMUNITY_TYPE: ClassVar[int] = 0x81
+    COMMUNITY_SUBTYPE: ClassVar[int] = 0x08
+
+    def __init__(self, packed: Buffer) -> None:
+        ExtendedCommunity.__init__(self, packed)
+
+    @classmethod
+    def make_traffic_redirect_ipv4(cls, ip: IPv4, target: int) -> TrafficRedirectIPv4:
+        """Create TrafficRedirectIPv4 from semantic values."""
+        packed = pack('!BB4sH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, ip.pack_ip(), target)
+        return cls(packed)
+
+    @property
+    def ip(self) -> str:
+        return IPv4.ntop(self._packed[2:6])
+
+    @property
+    def target(self) -> int:
+        value: int = unpack('!H', self._packed[6:8])[0]
+        return value
+
+    def __repr__(self) -> str:
+        return 'redirect:{}:{}'.format(self.ip, self.target)
+
+    @classmethod
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRedirectIPv4:
+        return cls(data[:8])
+
+
+ExtendedCommunity.register_subtype(TrafficRedirectIPv4)
 
 
 # ================================================================== TrafficMark
@@ -499,30 +540,3 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
 
 
 ExtendedCommunityIPv6.register_subtype(TrafficRedirectIPv6)
-
-
-# ============================================================ TrafficRedirectIP
-# RFC 5575
-# If we need to provide the <IP>:<ASN> form for the FlowSpec Redirect ...
-
-# import socket
-# Do not use socket, use IPv4.ntop or pton
-
-# TrafficRedirectASN = TrafficRedirect
-
-# class TrafficRedirectIP (ExtendedCommunity):
-# 	COMMUNITY_TYPE = 0x80
-# 	COMMUNITY_SUBTYPE = 0x08
-
-# 	def __init__ (self, ip, target, community=None):
-# 		self.ip = ip
-# 		self.target = target
-# 		ExtendedCommunity.__init__(self,community if community is not None else pack("!BB4sH",0x80,0x08,socket.inet_pton(socket.AF_INET,ip),target))
-
-# 	def __str__ (self):
-# 		return "redirect %s:%d" % (self.ip,self.target)
-
-# 	@staticmethod
-# 	def unpack (data):
-# 		ip,target = unpack('!4sH',data[2:8])
-# 		return TrafficRedirectIP(socket.inet_ntop(socket.AF_INET,ip),target,data[:8])

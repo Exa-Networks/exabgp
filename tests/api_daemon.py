@@ -147,12 +147,13 @@ class Daemon:
         for address in addresses or (FIRST, SECOND):
             self.peer(address).fsm.change(FSM.ESTABLISHED)
 
-    def negotiate(self, address: str, refresh: int, families: list[FamilyTuple]) -> None:
-        """Give the session of this neighbor what its OPEN exchange agreed: refresh and families."""
+    def negotiate(self, address: str, refresh: int, families: list[FamilyTuple], operational: bool = False) -> None:
+        """Give the session of this neighbor what its OPEN exchange agreed: refresh, families, operational."""
         peer = self.peer(address)
         peer.proto = Protocol(peer)
         peer.proto.negotiated.refresh = refresh
         peer.proto.negotiated.families = families
+        peer.proto.negotiated.operational = operational
 
     def send(self, command: str, escape: bool = False) -> list[str]:
         """Write `command` as the helper, run what it scheduled, and return what the helper read.

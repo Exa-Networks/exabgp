@@ -200,7 +200,6 @@ neighbor 192.0.2.1 {
     add-path disable;
     multi-session disable;
     operational enable;
-    aigp disable;
   }
   family {
     ipv4 unicast;
@@ -222,7 +221,6 @@ DEFAULT_CAPABILITIES = """\
     add-path disable;
     multi-session disable;
     operational disable;
-    aigp disable;
   }
 """
 
@@ -324,3 +322,23 @@ def test_a_neighbor_with_an_empty_api_dictionary_has_no_api_block() -> None:
     rendered = NeighborTemplate.configuration(neighbor, False)
     assert 'api {' not in rendered
     assert rendered.endswith('  add-path {\n    ipv4 unicast limit 4;\n    ipv6 unicast;\n  }\n}')
+
+
+@pytest.mark.parametrize('statement', ['', 'capability { aigp disable; }', 'capability { aigp enable; }'])
+def test_the_aigp_setting_survives_being_printed_and_read_back(statement: str) -> None:
+    """Unset is its own value: on by default on IBGP and in a confederation, off otherwise.
+
+    It was printed as `aigp disable`, so a configuration printed and read back turned AIGP
+    off on every IBGP session which had never mentioned it.
+    """
+    body = f'local-address 192.0.2.2; family {{ ipv4 unicast; }} {statement}'
+    original = parsed(body)
+
+    rendered = NeighborTemplate.configuration(original, False)
+    # The capability block as printed, read back on its own: the whole dump is not input.
+    start = rendered.index('  capability {')
+    block = rendered[start : rendered.index('  }\n', start) + len('  }\n')]
+    again = parsed(f'local-address 192.0.2.2; family {{ ipv4 unicast; }} {block}')
+
+    assert again.capability.aigp == original.capability.aigp
+    assert ('aigp' in block) == bool(statement), block

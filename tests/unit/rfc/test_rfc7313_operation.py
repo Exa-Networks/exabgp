@@ -74,8 +74,11 @@ class Session:
     def __init__(self, enhanced: bool = True, graceful: bool = False) -> None:
         self.resend = Mock()
         self.incoming = IncomingRIB(True, {FAMILY, OTHER})
-        self.ctx, _ = negotiation.context(refresh_enhanced=enhanced)
+        configured = negotiation.api_asks(negotiation.neighbor(), 'receive-update', 'receive-parsed')
+        self.ctx, self.told = negotiation.context(configured, refresh_enhanced=enhanced)
         self.ctx.neighbor.rib.incoming = self.incoming
+        # the families the session negotiated: both, so a test about one is not about the other
+        self.ctx.negotiated.families = [FAMILY, OTHER]
         # the OPEN the peer sent, which says whether it does Graceful Restart
         self.ctx.negotiated.received_open = graceful_open(graceful)
         self.handler = RouteRefreshHandler(self.resend)
@@ -132,6 +135,30 @@ def test_a_route_re_sent_after_the_borr_is_no_longer_stale() -> None:
     session.receive(RouteRefresh.END)
 
     assert held(session.incoming) == [KEPT]
+
+
+@pytest.mark.rfc('rfc7313#4-eorr-removes-stale-routes')
+def test_the_api_is_told_the_routes_the_eorr_removed() -> None:
+    """The adj-rib-in dropped them, and the API processes, which keep their own view, kept them."""
+    session = Session()
+    session.announced(KEPT, DROPPED)
+    session.receive(RouteRefresh.BEGIN)
+    session.announced(KEPT)
+    session.receive(RouteRefresh.END)
+
+    told = [str(nlri) for args in session.told.called('update') for nlri in args[2].withdraws]
+    assert told == [DROPPED], f'the API was not told the purged route went: {told}'
+
+
+@pytest.mark.rfc('rfc7313#4-eorr-removes-stale-routes', polarity='negative')
+def test_the_api_is_told_nothing_when_the_peer_repeated_every_route() -> None:
+    session = Session()
+    session.announced(KEPT)
+    session.receive(RouteRefresh.BEGIN)
+    session.announced(KEPT)
+    session.receive(RouteRefresh.END)
+
+    assert session.told.called('update') == []
 
 
 @pytest.mark.rfc('rfc7313#4-eorr-removes-stale-routes', polarity='negative')
@@ -236,6 +263,8 @@ def peer(graceful: bool | None) -> Peer:
     subject, _ = negotiation.peer()
     subject.neighbor.rib = RIB('rfc7313', True, IncomingRIB(True, {FAMILY, OTHER}), OutgoingRIB(True, {FAMILY, OTHER}))
     subject.proto = Protocol(subject)
+    # the session negotiated both families, so what a test leaves out is its own choice
+    subject.proto.negotiated.families = [FAMILY, OTHER]
     if graceful is not None:
         subject.proto.negotiated.sent_open = graceful_open(graceful)
     return subject
@@ -373,3 +402,60 @@ def test_the_prefix_limit_is_released_with_adj_rib_in_off() -> None:
     session.receive(RouteRefresh.END)
 
     assert session.incoming.count_prefix(route(KEPT).nlri) == 1
+
+
+# ------------------------------------------------------------ nothing to replay, no markers
+
+
+def refresh_markers(rib: OutgoingRIB) -> list[int]:
+    """The subtypes of the ROUTE-REFRESH messages the adj-rib-out would send next."""
+    return [int(update.reserved) for update in rib.updates(False) if isinstance(update, RouteRefresh)]
+
+
+@pytest.mark.rfc('rfc7313#4-send-eorr-after-a-refresh', polarity='negative')
+def test_no_borr_nor_eorr_without_an_adj_rib_out_to_replay() -> None:
+    """With no adj-rib-out, a BoRR and an EoRR sent back to back purge all our routes.
+
+    The EoRR says the re-advertisement of the entire Adj-RIB-Out is complete; with the
+    cache off nothing was re-advertised, and the peer removes everything it held from us.
+    The configuration forces the cache on with route refresh, but a reload which turns both
+    off swaps the tables of the running session before it is torn down.
+    """
+    rib = OutgoingRIB(False, {FAMILY})
+    rib.add_to_rib(route(KEPT))
+    list(rib.updates(False))
+    rib.resend(True, FAMILY)
+    assert refresh_markers(rib) == []
+
+
+@pytest.mark.rfc('rfc7313#4-send-eorr-after-a-refresh')
+def test_the_adj_rib_out_is_replayed_between_a_borr_and_an_eorr() -> None:
+    rib = OutgoingRIB(True, {FAMILY})
+    rib.add_to_rib(route(KEPT))
+    list(rib.updates(False))
+    rib.resend(True, FAMILY)
+    assert refresh_markers(rib) == [RouteRefresh.BEGIN, RouteRefresh.END]
+
+
+@pytest.mark.rfc('rfc2918#4-family-advertised-by-the-peer', polarity='negative')
+def test_a_refresh_we_start_is_only_for_the_families_the_session_negotiated() -> None:
+    """Configured for FAMILY and OTHER, negotiated FAMILY alone: OTHER is not refreshed.
+
+    The peer never advertised OTHER, so a BoRR and an EoRR for it are messages for a family
+    it said it does not have.
+    """
+    subject = peer(graceful=None)
+    subject.proto.negotiated.families = [FAMILY]
+    subject.resend(True)
+    assert bracketed(subject) == {FAMILY}
+
+
+@pytest.mark.rfc('rfc2918#4-family-advertised-by-the-peer', polarity='negative')
+def test_the_operator_flush_is_only_for_the_families_the_session_negotiated() -> None:
+    reactor, _ = negotiation.reactor()
+    subject = peer(graceful=None)
+    subject.proto.negotiated.refresh = REFRESH.ENHANCED
+    subject.proto.negotiated.families = [FAMILY]
+    reactor._peers['peer'] = subject
+    reactor.neighbor_rib_resend('peer')
+    assert bracketed(subject) == {FAMILY}

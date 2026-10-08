@@ -27,6 +27,30 @@ if TYPE_CHECKING:
     from exabgp.rib.route import Route
 
 
+def _sendable(name: str, neighbor: 'Neighbor', route: 'Route') -> bool:
+    """Whether an API route goes to this neighbor, saying why not, or why it is unusual.
+
+    RFC 4271 5.1.3: never to the peer whose address is the next-hop. The API refuses the
+    route when that leaves no selected peer, so this is one peer of several: the others,
+    whose traffic the route steers towards it, still get it. RFC 4271 5.1.2 has our AS
+    first in the AS_PATH sent to an external peer; a path written otherwise is sent as
+    written, on purpose, and the operator is told.
+    """
+    refused = neighbor.next_hop_is_the_peer(route)
+    if refused:
+        log.warning(
+            lazymsg('route.skipped route={route} neighbor={n} reason={r}', route=route.nlri, n=name, r=refused),
+            'configuration',
+        )
+        return False
+    not_ours = neighbor.as_path_not_ours(route)
+    if not_ours:
+        log.warning(
+            lazymsg('route.as_path.not_ours route={route} reason={r}', route=route.nlri, r=not_ours), 'configuration'
+        )
+    return True
+
+
 def _withdrawable(neighbor: 'Neighbor', route: 'Route') -> 'Route':
     """The route to withdraw, `next-hop self` resolved when it can be, dropped when not.
 
@@ -116,8 +140,10 @@ class _Configuration:
                 neighbor = self.neighbors[neighbor_name]
                 if route.nlri.family().afi_safi() in neighbor.families():
                     # resolve_self creates a copy with resolved nexthop
-                    neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route), owner=owner)
-                    result = True
+                    resolved = neighbor.resolve_self(route)
+                    if _sendable(neighbor_name, neighbor, route):
+                        neighbor.rib.outgoing.add_to_rib(resolved, owner=owner)
+                        result = True
                 else:
                     log.error(
                         lazymsg(

@@ -30,6 +30,8 @@ class TestRouteRefreshHandler:
     @pytest.fixture
     def mock_context(self) -> PeerContext:
         ctx, _ = negotiation.context(refresh_enhanced=False)
+        # RFC 2918 4: a request for a family the session did not negotiate is ignored
+        ctx.negotiated.families = [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)]
         return ctx
 
     def test_can_handle_route_refresh(self, handler: RouteRefreshHandler) -> None:
@@ -98,6 +100,8 @@ class TestRouteRefreshHandlerAsync:
     @pytest.fixture
     def mock_context(self) -> PeerContext:
         ctx, _ = negotiation.context(refresh_enhanced=False)
+        # RFC 2918 4: a request for a family the session did not negotiate is ignored
+        ctx.negotiated.families = [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)]
         return ctx
 
     @pytest.mark.asyncio

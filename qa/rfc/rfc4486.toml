@@ -90,7 +90,7 @@ SHOULD send a NOTIFICATION message with the Error Code Cease and the
 Error Subcode "Peer De-configured".
 """
 note = """
-A neighbour a reload removes, or `peer delete` deletes, is sent (6, 3) by Peer.remove()
+A neighbour a reload removes, or the API deletes, is sent (6, 3) by Peer.remove()
 on a session which got as far as our OPEN.  It was never sent: the connection was closed
 before the Cease was chosen.  Positive only: it constrains what we send.
 """

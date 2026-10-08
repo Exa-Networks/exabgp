@@ -1241,3 +1241,57 @@ def test_rule_b_is_judged_against_the_longest_covering_route_not_any_covering_ro
     )
 
     assert held(ctx, IPV4_FLOW) == ['flow destination-ipv4 192.0.2.0/24']
+
+
+# --------------------------------------- 7.4 the three encodings of the rt-redirect action
+
+
+@pytest.mark.parametrize(
+    'packed,string',
+    [
+        ('8008FDE800003039', 'redirect:65000:12345'),
+        ('81080A0000013039', 'redirect:10.0.0.1:12345'),
+        ('8208FA56EA003039', 'redirect:4200000000:12345'),
+    ],
+    ids=['0x80 two-octet AS', '0x81 IPv4 address', '0x82 four-octet AS'],
+)
+def test_each_rt_redirect_encoding_is_described_in_both_renderings(packed: str, string: str) -> None:
+    """Unmarked, 7.4 has no keyword: "This Extended Community allows 3 different encodings
+    formats for the route-target (type 0x80, 0x81, 0x82)".
+
+    0x81 had no class and reached the API as hex; 0x82 defined __str__ where its
+    siblings define __repr__, so the JSON, which goes through repr, showed it as hex too.
+    """
+    from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+
+    community = ExtendedCommunity.unpack_attribute(bytes.fromhex(packed))
+
+    assert repr(community) == string
+    assert str(community) == string
+    assert f'"string": "{string}"' in community.json()
+
+
+@pytest.mark.parametrize(
+    'word,packed',
+    [
+        ('redirect:65000:12345', '8008FDE800003039'),
+        ('redirect:10.0.0.1:12345', '81080A0000013039'),
+        ('redirect:4200000000:12345', '8208FA56EA003039'),
+        ('redirect:65000L:12345', '82080000FDE83039'),
+    ],
+)
+def test_each_rt_redirect_encoding_is_configured_by_what_describes_it(word: str, packed: str) -> None:
+    """What the API prints for a redirect reads back as configuration, as target: does."""
+    from exabgp.configuration.grammar.types.bgp import extended_community
+
+    assert bytes(extended_community(word).pack_attribute(Negotiated.UNSET)).hex().upper() == packed
+
+
+@pytest.mark.parametrize(
+    'word', ['redirect:10.0.0.1:65536', 'redirect:4200000000:65536', 'redirect:1.2.3:1', 'redirect:65000:4294967296']
+)
+def test_an_rt_redirect_whose_value_does_not_fit_its_encoding_is_refused(word: str) -> None:
+    from exabgp.configuration.grammar.types.bgp import extended_community
+
+    with pytest.raises(ValueError):
+        extended_community(word)

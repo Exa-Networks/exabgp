@@ -20,6 +20,7 @@ from exabgp.protocol.family import AFI, SAFI
 from tests.api_daemon import Daemon, FIRST, HELPER, SECOND, failed
 
 IPV4_UNICAST = (AFI.ipv4, SAFI.unicast)
+IPV6_UNICAST = (AFI.ipv6, SAFI.unicast)
 
 
 @pytest.fixture
@@ -217,6 +218,7 @@ def test_attributes_refuse_what_can_not_be_sent(daemon: Daemon, command: str) ->
 
 def test_eor_is_queued_for_the_established_peers(daemon: Daemon) -> None:
     daemon.establish(FIRST)
+    daemon.negotiate(FIRST, REFRESH.ABSENT, [IPV4_UNICAST, IPV6_UNICAST])
     assert daemon.send('peer * announce eor ipv6 unicast') == ['done']
     assert [str(family) for family in daemon.neighbor(FIRST).eor] == ['ipv6 unicast']
     # the session of the other is not up, so it is not sent one
@@ -225,12 +227,34 @@ def test_eor_is_queued_for_the_established_peers(daemon: Daemon) -> None:
 
 def test_eor_with_no_family_is_ipv4_unicast(daemon: Daemon) -> None:
     daemon.establish()
+    daemon.negotiate(SECOND, REFRESH.ABSENT, [IPV4_UNICAST])
     assert daemon.send(f'peer {SECOND} announce eor') == ['done']
     assert [str(family) for family in daemon.neighbor(SECOND).eor] == ['ipv4 unicast']
 
 
 def test_eor_with_no_established_peer_is_refused(daemon: Daemon) -> None:
     assert daemon.send('peer * announce eor ipv4 unicast') == ['error']
+
+
+@pytest.mark.rfc('rfc4760#8-should-use-capability-advertisement', polarity='negative')
+def test_eor_for_a_configured_family_the_session_did_not_negotiate_is_refused(daemon: Daemon) -> None:
+    """FIRST is configured for IPv6 unicast, the peer did not advertise it.
+
+    An End-of-RIB is an UPDATE of the family (RFC 4724 2), which the peer said it does not
+    have; it was sent, and the family recorded as having had its End-of-RIB.
+    """
+    daemon.establish(FIRST)
+    daemon.negotiate(FIRST, REFRESH.ABSENT, [IPV4_UNICAST])
+    assert daemon.send(f'peer {FIRST} announce eor ipv6 unicast') == ['error']
+    assert list(daemon.neighbor(FIRST).eor) == []
+
+
+@pytest.mark.rfc('rfc4760#8-should-use-capability-advertisement')
+def test_eor_for_a_negotiated_family_is_queued(daemon: Daemon) -> None:
+    daemon.establish(FIRST)
+    daemon.negotiate(FIRST, REFRESH.ABSENT, [IPV4_UNICAST])
+    assert daemon.send(f'peer {FIRST} announce eor ipv4 unicast') == ['done']
+    assert [str(family) for family in daemon.neighbor(FIRST).eor] == ['ipv4 unicast']
 
 
 @pytest.mark.parametrize('family', ['ipv4', 'ipv4 bogus', 'bogus unicast', 'ipv4 unicast extra'])
@@ -297,7 +321,14 @@ def test_route_refresh_for_no_family_is_refused(daemon: Daemon, family: str) -> 
     assert list(daemon.neighbor(FIRST).refresh) == []
 
 
+def operating(daemon: Daemon, address: str) -> None:
+    """An established session which negotiated the OPERATIONAL capability, as sending one needs."""
+    daemon.establish(address)
+    daemon.negotiate(address, REFRESH.NORMAL, [IPV4_UNICAST], operational=True)
+
+
 def test_an_operational_message_is_queued_for_the_peers(daemon: Daemon) -> None:
+    operating(daemon, FIRST)
     assert daemon.send(f'peer {FIRST} announce operational asm afi ipv4 safi unicast advisory "hello"') == ['done']
     (message,) = daemon.neighbor(FIRST).messages
     assert message.NAME == 'ASM'
@@ -343,7 +374,7 @@ def test_api_4_neighbor_matching_no_peer_is_refused(text_daemon: Daemon) -> None
 
 
 def test_api_4_eor_and_operational(text_daemon: Daemon) -> None:
-    text_daemon.establish(FIRST)
+    operating(text_daemon, FIRST)
     assert text_daemon.send('announce eor ipv4 unicast') == ['done']
     assert [str(family) for family in text_daemon.neighbor(FIRST).eor] == ['ipv4 unicast']
     assert text_daemon.send('announce operational adm afi ipv4 safi unicast advisory "x"') == ['done']
@@ -389,6 +420,7 @@ def test_an_operational_message_which_does_not_parse_is_refused(daemon: Daemon) 
 def test_api_4_neighbor_operational_is_queued_for_the_peer(text_daemon: Daemon) -> None:
     """`neighbor <ip> announce operational` read its kind one word too early: done, and nothing sent."""
     command = f'neighbor {FIRST} announce operational adm afi ipv4 safi unicast advisory "x"'
+    operating(text_daemon, FIRST)
     assert text_daemon.send(command) == ['done']
     assert [message.NAME for message in text_daemon.neighbor(FIRST).messages] == ['ADM']
 

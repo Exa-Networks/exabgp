@@ -479,6 +479,23 @@ def test_an_unrecognised_extended_community_type_is_kept(type_byte: int, sub_typ
     )
 
 
+@pytest.mark.rfc('rfc7606#7.14-unrecognised-extended-community-type-not-an-error')
+@pytest.mark.parametrize('type_byte,sub_type', [(0x00, 0x06), (0x00, 0x0C), (0x40, 0x06), (0x40, 0x0C), (0xC0, 0x06)])
+def test_a_community_which_only_looks_like_a_traffic_rate_is_kept(type_byte: int, sub_type: int) -> None:
+    """A FlowSpec rate is type 0x80 (RFC 8955 section 7), and refuses a NaN as its rate.
+
+    These share its sub-type and the low bits of its type: 0x0006 is the Route Aggregation
+    Parameter, the others are unassigned.  Their value is no float, so all ones is as good
+    a value as any, and decoding them as a rate turned that into a withdrawn route.
+    """
+    value = bytes([type_byte, sub_type, 0x00, 0x01, 0xFF, 0xFF, 0xFF, 0xFF])
+    attributes = MANDATORY + attribute(OPTIONAL_TRANSITIVE, CODE.EXTENDED_COMMUNITY, value)
+
+    assert kept(CODE.EXTENDED_COMMUNITY, attributes), (
+        f'type {type_byte:#x} sub-type {sub_type:#x} was treated as an error'
+    )
+
+
 @pytest.mark.rfc('rfc7606#7.14-unrecognised-extended-community-type-not-an-error', polarity='negative')
 def test_an_unrecognised_extended_community_type_does_not_excuse_a_bad_length() -> None:
     """Accepting the type is not the same as accepting the attribute: the length still binds."""

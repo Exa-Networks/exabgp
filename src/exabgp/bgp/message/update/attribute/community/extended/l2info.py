@@ -22,6 +22,12 @@ from exabgp.util.types import Buffer
 # ============================================================ Layer2Information
 # RFC 4761
 
+# RFC 4761 3.2.4, the Control Flags: C (a control word) and S (sequenced delivery). The
+# other six bits are MBZ, "set to zero when sending and MUST be ignored when receiving".
+CONTROL_WORD_FLAG = 0x02
+SEQUENCED_DELIVERY_FLAG = 0x01
+CONTROL_FLAGS_DEFINED = CONTROL_WORD_FLAG | SEQUENCED_DELIVERY_FLAG
+
 
 class L2Info(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x80
@@ -36,6 +42,7 @@ class L2Info(ExtendedCommunity):
 
         reserved is called preference in draft-ietf-l2vpn-vpls-multihoming-07
         """
+        assert not control & ~CONTROL_FLAGS_DEFINED & 0xFF, 'the configuration refuses MBZ control flags'
         packed = pack('!BBBBHH', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, encaps, control, mtu, reserved)
         return cls(packed)
 
@@ -45,7 +52,8 @@ class L2Info(ExtendedCommunity):
 
     @property
     def control(self) -> int:
-        return self._packed[3]
+        # The MBZ bits are ignored on receipt (RFC 4761 3.2.4): only C and S are reported.
+        return self._packed[3] & CONTROL_FLAGS_DEFINED
 
     @property
     def mtu(self) -> int:

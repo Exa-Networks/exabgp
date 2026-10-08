@@ -752,3 +752,37 @@ def test_an_otc_added_towards_another_member_as_is_not_the_identifier() -> None:
     otc = attributes[0].get(Attribute.CODE.OTC)
     assert isinstance(otc, OTC)
     assert otc.asn == CONFED_MEMBER
+
+
+@pytest.mark.rfc('rfc9234#5-no-member-as-otc-on-egress', polarity='negative')
+@pytest.mark.parametrize('member', [CONFED_MEMBER, CONFED_OTHER_MEMBER])
+def test_an_otc_naming_a_member_as_leaves_the_confederation_as_its_identifier(member: int) -> None:
+    """A literal `otc <member-as>` was packed as written, and left the confederation.
+
+    The route keeps its OTC, which is what stops it leaking, under the only AS a peer
+    outside knows us as: dropping it would lose the protection, refusing it the route.
+    """
+    neighbor = confederation_neighbour(CONFED_OUTSIDE)
+    negotiated = confederation_negotiate(neighbor)
+    assert negotiated.confed_outside
+
+    attributes = announced_attributes(neighbor, negotiated, f'route 10.0.0.0/24 next-hop 192.0.2.2 otc {member}')
+
+    assert len(attributes) == 1
+    otc = attributes[0].get(Attribute.CODE.OTC)
+    assert isinstance(otc, OTC)
+    assert otc.asn == CONFED_IDENTIFIER, f'an OTC naming Member-AS {otc.asn} left the confederation'
+
+
+@pytest.mark.rfc('rfc9234#5-no-member-as-otc-on-egress')
+@pytest.mark.parametrize(('peer_as', 'value'), [(CONFED_OUTSIDE, 64512), (CONFED_OTHER_MEMBER, CONFED_OTHER_MEMBER)])
+def test_an_otc_of_another_as_or_inside_the_confederation_is_sent_as_written(peer_as: int, value: int) -> None:
+    neighbor = confederation_neighbour(peer_as)
+    negotiated = confederation_negotiate(neighbor)
+
+    attributes = announced_attributes(neighbor, negotiated, f'route 10.0.0.0/24 next-hop 192.0.2.2 otc {value}')
+
+    assert len(attributes) == 1
+    otc = attributes[0].get(Attribute.CODE.OTC)
+    assert isinstance(otc, OTC)
+    assert otc.asn == value

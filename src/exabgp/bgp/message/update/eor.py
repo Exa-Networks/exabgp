@@ -76,8 +76,10 @@ class EOR(Update):
     LENGTHS_SIZE: ClassVar[int] = 4
     FAMILY_SIZE: ClassVar[int] = 3
     MP_SHORT_SIZE: ClassVar[int] = LENGTHS_SIZE + 3 + FAMILY_SIZE
-    # the four high bits of an attribute flag: the low four are unused and ignored (RFC 4271 4.3)
-    FLAG_KIND_MASK: ClassVar[int] = 0xF0
+    # Optional, Transitive and Extended Length: the low four bits are unused and ignored
+    # (RFC 4271 4.3), and so is the Partial bit of an optional non-transitive attribute
+    # (RFC 7606 3(c)), which the decoder ignores too, so the marker must not depend on it.
+    FLAG_KIND_MASK: ClassVar[int] = 0xD0
 
     EOR_NLRI: ClassVar[type[EORNLRI]] = EORNLRI
 
@@ -117,7 +119,8 @@ class EOR(Update):
         if len(data) not in (cls.MP_SHORT_SIZE, cls.MP_SIZE) or bytes(data[:2]) != b'\x00\x00':
             return None
         flag, code = data[4], data[5]
-        # optional, not transitive, not partial: any other flag is for the decoder to refuse
+        # optional and not transitive, whatever the Partial bit: an O/T conflict is malformed
+        # (RFC 7606 3(c)), so it is for the decoder to refuse, never an End-of-RIB
         kinds = (Attribute.Flag.OPTIONAL, Attribute.Flag.OPTIONAL | Attribute.Flag.EXTENDED_LENGTH)
         if code != Attribute.CODE.MP_UNREACH_NLRI or flag & cls.FLAG_KIND_MASK not in kinds:
             return None

@@ -872,10 +872,15 @@ async def test_a_new_connection_from_a_restarting_peer_replaces_its_session_quie
     replacement, connecting = accepted_connection()
     try:
         assert peer.handle_connection(replacement) is None, 'the new connection of a restarting peer was refused'
+        await asyncio.sleep(0)
+        assert not session.done(), 'the session ended on the TCP handshake, before any OPEN'
+        assert negotiated.received_open is not None
+        connecting.sendall(negotiated.received_open.pack_message(negotiated))
         await until(lambda: session.done(), 'the old session stopping')
 
         assert session.cancelled()
         assert peer.proto is not None and peer.proto.connection is replacement
+        assert peer.proto.open_read is not None, 'the OPEN read while held was not kept for the new session'
         sent = [kind for kind, _ in negotiation_messages(received(theirs))]
         assert NOTIFICATION not in sent, f'the old session was sent a NOTIFICATION: {sent}'
         assert theirs.recv(1) == b'', 'the old TCP session was not closed'
@@ -945,3 +950,232 @@ def test_a_restart_time_taken_from_the_hold_time_is_capped_at_twelve_bits(hold_t
 
 def test_a_restart_time_too_large_for_the_field_is_capped_not_masked() -> None:
     assert Graceful().set(0, 5000, []).extract_capability_bytes()[0][:2] == pack('!H', 4095)
+
+
+async def a_held_connection_does_not_end_the_session(send: bytes) -> list[tuple[int, int]]:
+    """A Graceful Restart session met by a connection which sends `send` and closes.
+
+    Returns the NOTIFICATIONs that connection was answered with, as (code, subcode), after
+    checking the established session and its connection were left as they were.
+    """
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
+    negotiated = graceful_session(peer.neighbor, RESTART_TIME)
+    theirs = await running_session(peer, negotiated, announce(negotiated, KEPT))
+    old = peer.proto
+    session = peer._session_task
+    assert old is not None and session is not None
+    replacement, connecting = accepted_connection()
+    try:
+        assert peer.handle_connection(replacement) is None
+        contender = peer._contender_task
+        assert contender is not None, 'the new connection was not held for its OPEN'
+        if send:
+            connecting.sendall(send)
+        connecting.shutdown(socket.SHUT_WR)
+        await until(lambda: contender.done(), 'the held connection being dealt with')
+
+        assert not session.done(), 'a connection with no valid OPEN ended the established session'
+        assert peer.proto is old and old.connection is not None
+        assert held(peer) == [KEPT]
+        assert peer.neighbor.rib.incoming.restarting_families() == set()
+        return [(body[0], body[1]) for kind, body in negotiation_messages(received(connecting)) if kind == 3]
+    finally:
+        await ended(peer, theirs, connecting)
+        replacement.close()
+
+
+@pytest.mark.rfc('rfc4724#4.2-new-connection-ends-old-session', polarity='negative')
+@pytest.mark.asyncio
+async def test_a_connection_which_sends_no_open_leaves_the_session_up() -> None:
+    """A TCP handshake from the peer's address is not a restart of the peer."""
+    assert await a_held_connection_does_not_end_the_session(b'') == []
+
+
+@pytest.mark.rfc('rfc4724#4.2-new-connection-ends-old-session', polarity='negative')
+@pytest.mark.asyncio
+async def test_a_connection_whose_open_is_refused_leaves_the_session_up() -> None:
+    """An OPEN the session would refuse, here BGP Identifier 0, is answered and changes nothing."""
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
+    negotiated = graceful_session(peer.neighbor, RESTART_TIME)
+    stranger = Open.make_open(
+        Version(4), ASN(PEER_AS), HoldTime(180), RouterID('0.0.0.0'), their_capabilities(peer.neighbor)
+    )
+    assert await a_held_connection_does_not_end_the_session(stranger.pack_message(negotiated)) == [(2, 3)]
+
+
+@pytest.mark.rfc('rfc4724#4.2-new-connection-ends-old-session', polarity='negative')
+@pytest.mark.rfc('rfc4271#6.8-collision-closes-one-connection')
+@pytest.mark.asyncio
+async def test_a_collision_held_in_opensent_does_not_replace_the_session_established_meanwhile() -> None:
+    """A connection held as an OpenSent collision is not a restart of the peer.
+
+    RFC 4724 4.2 is about a connection arriving while the session is established. One which
+    arrived in OpenSent is an RFC 4271 6.8 collision, and if ours reaches Established before
+    its OPEN is read, "a connection collision with an existing BGP connection that is in the
+    Established state causes closing of the newly created connection". It used to replace
+    the session just established, as though the peer had restarted.
+    """
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
+    negotiated = graceful_session(peer.neighbor, RESTART_TIME)
+    theirs = await running_session(peer, negotiated, announce(negotiated, KEPT))
+    old = peer.proto
+    session = peer._session_task
+    assert old is not None and session is not None and negotiated.received_open is not None
+    replacement, connecting = accepted_connection()
+    try:
+        # the connection arrives while ours is still in OpenSent, with no await in between,
+        # and ours is established by the time the held connection's OPEN is read
+        established = peer.fsm.state
+        peer.fsm.state = FSM.OPENSENT
+        assert peer.handle_connection(replacement) is None
+        contender = peer._contender_task
+        assert contender is not None, 'the connection was not held as a collision'
+        peer.fsm.state = established
+        assert peer._peer_graceful_restart() is not None, 'the peer advertised Graceful Restart'
+
+        connecting.sendall(negotiated.received_open.pack_message(negotiated))
+        await until(lambda: contender.done(), 'the held connection being dealt with')
+
+        assert not session.done(), 'the established session was ended by a collision'
+        assert peer.proto is old and old.connection is not None
+        refused = [(body[0], body[1]) for kind, body in negotiation_messages(received(connecting)) if kind == 3]
+        assert refused == [CONNECTION_COLLISION_RESOLUTION]
+        assert peer.neighbor.rib.incoming.restarting_families() == set()
+    finally:
+        await ended(peer, theirs, connecting)
+        replacement.close()
+
+
+async def until_received(connecting: socket.socket, kinds: int) -> list[tuple[int, bytes]]:
+    """Read the peer's end of a connection until `kinds` whole BGP messages have arrived."""
+    data = b''
+
+    def arrived() -> bool:
+        nonlocal data
+        data += received(connecting)
+        return len(whole_messages(data)) >= kinds
+
+    await until(arrived, f'{kinds} messages arriving')
+    return whole_messages(data)
+
+
+def whole_messages(data: bytes) -> list[tuple[int, bytes]]:
+    """The complete BGP messages at the start of `data`, as (type, body)."""
+    found = []
+    # bounded: each message consumes at least its 19 octet header
+    while len(data) >= HEADER_LENGTH:
+        length = int.from_bytes(data[16:18], 'big')
+        if len(data) < length:
+            break
+        found.append((data[18], data[HEADER_LENGTH:length]))
+        data = data[length:]
+    return found
+
+
+OPEN = 1
+KEEPALIVE = 4
+
+
+@pytest.mark.rfc('rfc4724#4.2-new-connection-ends-old-session')
+@pytest.mark.rfc('rfc4724#4.2-old-session-closed-without-notification')
+@pytest.mark.asyncio
+async def test_a_restarted_peer_waiting_for_our_open_first_replaces_its_session() -> None:
+    """A restarted peer which sends its OPEN only once it has ours (DelayOpen) gets through.
+
+    The connection is held until its OPEN is read, and nothing was sent on it: such a peer
+    waited, and was dropped after bgp.openwait, on every attempt. Our OPEN now goes out on
+    the held connection, and the session it becomes does not send a second one.
+    """
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
+    negotiated = graceful_session(peer.neighbor, RESTART_TIME)
+    theirs = await running_session(peer, negotiated, announce(negotiated, KEPT))
+    session = peer._session_task
+    assert session is not None and negotiated.received_open is not None
+    replacement, connecting = accepted_connection()
+    try:
+        assert peer.handle_connection(replacement) is None
+        first = await until_received(connecting, 1)
+        assert [kind for kind, _ in first] == [OPEN], 'our OPEN was not sent on the held connection'
+        assert not session.done(), 'the session ended before the new connection sent a valid OPEN'
+
+        connecting.sendall(
+            negotiated.received_open.pack_message(negotiated) + KeepAlive.make_keepalive().pack_message(negotiated)
+        )
+        await until(lambda: session.done(), 'the old session stopping')
+        assert peer.proto is not None and peer.proto.connection is replacement
+
+        await peer._establish()
+        assert peer.fsm == FSM.ESTABLISHED
+        after = whole_messages(received(connecting))
+        assert [kind for kind, _ in after] == [KEEPALIVE], f'the new session sent {after}, a second OPEN?'
+        assert held(peer) == [KEPT], 'the routes of the restarting peer were not retained'
+    finally:
+        await ended(peer, theirs, connecting)
+
+
+@pytest.mark.rfc('rfc4724#4.2-new-connection-ends-old-session')
+@pytest.mark.asyncio
+async def test_mirroring_the_peer_as_reads_the_open_of_a_restarted_peer_first() -> None:
+    """With no local-as our AS is the one the peer's OPEN on this connection names.
+
+    So nothing is sent on the held connection before that OPEN is read, as on every session
+    mirroring the AS, and the session sends ours once it has read it.
+    """
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
+    negotiated = graceful_session(peer.neighbor, RESTART_TIME)
+    theirs = await running_session(peer, negotiated, announce(negotiated, KEPT))
+    session = peer._session_task
+    assert session is not None and negotiated.received_open is not None
+    peer.neighbor.session.local_as = ASN(0)
+    replacement, connecting = accepted_connection()
+    try:
+        assert peer.handle_connection(replacement) is None
+        contender = peer._contender_task
+        assert contender is not None
+        for _ in range(10):
+            await asyncio.sleep(POLL_SECONDS)
+        assert received(connecting) == b'', 'an OPEN was sent before the AS it mirrors was known'
+        assert not contender.done(), 'the held connection was dropped instead of read'
+
+        connecting.sendall(negotiated.received_open.pack_message(negotiated))
+        await until(lambda: session.done(), 'the old session stopping')
+        assert peer.proto is not None and peer.proto.connection is replacement
+        assert peer.proto.open_read is not None and peer.proto.open_sent is None
+    finally:
+        await ended(peer, theirs, connecting)
+
+
+PARTIAL = 0x20
+TRANSITIVE = 0x40
+
+
+@pytest.mark.parametrize(
+    'flags', [OPTIONAL | PARTIAL, OPTIONAL_EXTENDED | PARTIAL, OPTIONAL | 0x0F], ids=['0xa0', '0xb0', '0x8f']
+)
+@pytest.mark.rfc('rfc4724#2-other-family-end-of-rib-is-only-mp-unreach')
+def test_a_marker_with_the_partial_bit_or_low_bits_set_is_still_a_marker(flags: int) -> None:
+    """RFC 7606 3(c) has the Partial bit ignored on receipt, and the low four bits are unused.
+
+    The decoder did ignore them, so the UPDATE was read as an empty MP_UNREACH_NLRI while
+    the marker test refused it: the family's restart never ended on that peer's End-of-RIB.
+    """
+    extended = bool(flags & 0x10)
+    length = pack('!H', 3) if extended else bytes([3])
+    body = update_body(bytes([flags, MP_UNREACH_NLRI]) + length + AFI.ipv6.pack_afi() + SAFI.unicast.pack_safi())
+
+    decoded = Update.unpack_message(body, from_the_peer())
+    collection = UpdateCollection.unpack_message(body, from_the_peer())
+
+    assert decoded.IS_EOR, f'the marker with flags 0x{flags:02x} was decoded as {type(decoded).__name__}'
+    assert collection.IS_EOR
+    assert (decoded.nlris[0].afi, decoded.nlris[0].safi) == (AFI.ipv6, SAFI.unicast)
+
+
+@pytest.mark.rfc('rfc4724#2-other-family-end-of-rib-is-only-mp-unreach', polarity='negative')
+def test_an_mp_unreach_marked_transitive_is_not_a_marker() -> None:
+    """RFC 7606 3(c): an O/T flag conflict is malformed, so it is for the decoder, not a marker."""
+    body = update_body(
+        bytes([OPTIONAL | TRANSITIVE, MP_UNREACH_NLRI, 3]) + AFI.ipv6.pack_afi() + SAFI.unicast.pack_safi()
+    )
+
+    assert EOR.from_body(body) is None

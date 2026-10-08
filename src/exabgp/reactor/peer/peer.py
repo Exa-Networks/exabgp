@@ -40,6 +40,7 @@ if TYPE_CHECKING:
 # import traceback
 from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message import Message, NotificationReceived, Notify, Open
+from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability import REFRESH, Capability, Negotiated
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.update import Update, UpdateCollection
@@ -516,13 +517,21 @@ class Peer:
         if self.neighbor.rib:
             outgoing = self.neighbor.rib.outgoing
             held_back = self._borr_held_back(enhanced, family)
-            if not held_back:
-                outgoing.resend(enhanced, family)
-            else:
-                requested = set(outgoing.families) if family is None else {family}
-                for each in requested:
-                    outgoing.resend(each not in held_back, each)
+            for each in self._resend_families(family):
+                outgoing.resend(enhanced and each not in held_back, each)
         self._delay.reset()
+
+    def _resend_families(self, family: FamilyTuple | None) -> set[FamilyTuple]:
+        """The families a refresh of ours replays: configured, and negotiated once established.
+
+        RFC 2918 4: the <AFI, SAFI> of a ROUTE-REFRESH "should be one of the <AFI, SAFI>
+        that the peer has advertised". The configured families alone sent a BoRR and an
+        EoRR for a family the peer said it does not have.
+        """
+        requested = set(self.neighbor.rib.outgoing.families) if family is None else {family}
+        if self.proto is not None:
+            requested &= set(self.proto.negotiated.families)
+        return requested
 
     def _borr_held_back(self, enhanced: bool, family: FamilyTuple | None) -> set[FamilyTuple]:
         """The families a BoRR may not be sent for yet.
@@ -640,9 +649,11 @@ class Peer:
             return connection.notification(6, 5, b'the session is administratively disabled')
 
         # RFC 4724 4.2: a peer which advertised Graceful Restart and connects again while we
-        # still hold its session established has restarted, and the old session is over
+        # still hold its session established has restarted, and the old session is over.
+        # Only once the new connection has sent a valid OPEN: ending the session on the TCP
+        # handshake alone let anyone reaching us from the peer's address reset it
         if self._peer_graceful_restart() is not None:
-            self._replace_restarted_session(connection)
+            self._hold_contender(connection, restart=True)
             return None
 
         # if the other side fails, we go back to idle
@@ -669,7 +680,7 @@ class Peer:
         # RFC 4271 6.8: in OpenSent the peer's BGP Identifier is not known yet. Closing ours
         # at once, whatever it was, closed both connections when both speakers did it
         if self.fsm == FSM.OPENSENT:
-            self._hold_contender(connection)
+            self._hold_contender(connection, restart=False)
             return None
 
         # accept the connection
@@ -728,18 +739,28 @@ class Peer:
         assert self.proto is not None and self.proto.negotiated.received_open is not None
         return self._outgoing_wins_collision(self.proto.negotiated.received_open)
 
-    def _hold_contender(self, connection: 'Incoming') -> None:
-        """RFC 4271 6.8: keep a connection colliding with ours in OpenSent until its OPEN is read.
+    def _hold_contender(self, connection: 'Incoming', restart: bool) -> None:
+        """Keep a connection until its OPEN is read, sending ours on it first.
 
-        Its OPEN says the peer's BGP Identifier, which decides which of the two is closed.
-        One connection is held at a time: a newer one replaces it, as the peer gave up on it.
+        RFC 4271 6.8: one colliding with ours in OpenSent (`restart` False), whose OPEN says
+        the peer's BGP Identifier, which decides which of the two is closed. RFC 4724 4.2:
+        one arriving while the session of a Graceful Restart peer is established (`restart`
+        True), which ends that session only once its OPEN is found valid. Why it was held
+        is fixed now: a collision is never taken for a restart because our session reached
+        Established while its OPEN was awaited. One connection is held at a time: a newer
+        one replaces it, as the peer gave up on it.
         """
         self._drop_contender()
-        log.debug(lazymsg('peer.connection.holding connection={c} reason=collision', c=connection.name()), self.id())
+        reason = 'graceful_restart' if restart else 'collision'
+        log.debug(
+            lazymsg('peer.connection.holding connection={c} reason={r}', c=connection.name(), r=reason), self.id()
+        )
         contender = Protocol(self)
         contender.connection = connection
         self._contender = contender
-        self._contender_task = asyncio.get_running_loop().create_task(self._resolve_collision(contender, connection))
+        self._contender_task = asyncio.get_running_loop().create_task(
+            self._resolve_collision(contender, connection, restart)
+        )
 
     def _drop_contender(self) -> None:
         """Close the connection held for its OPEN, and stop the task reading it."""
@@ -751,12 +772,26 @@ class Peer:
             contender.connection.close()
             contender.connection = None
 
-    async def _resolve_collision(self, contender: Protocol, connection: 'Incoming') -> None:
-        """Read the OPEN of the connection held in a collision, then keep one connection of two."""
+    async def _exchange_opens(self, contender: Protocol) -> tuple[Open | None, Open]:
+        """Send our OPEN on a held connection, then read the peer's: what was sent, and read.
+
+        Our OPEN goes first, as on any connection we accept: a peer which waits for it before
+        sending its own (RFC 4271 DelayOpen, or an exabgp mirroring our AS) otherwise never
+        sends one, and was dropped after bgp.openwait on every attempt. With no local-as we
+        mirror the peer's AS, which only its OPEN on this connection says: then we read
+        first, as every session mirroring the AS does, and None was sent.
+        """
+        assert contender.connection is not None
+        sent = await contender.new_open() if contender.neighbor.session.local_as else None
+        received = await contender.read_open(contender.connection.peer)
+        return sent, received
+
+    async def _resolve_collision(self, contender: Protocol, connection: 'Incoming', restart: bool) -> None:
+        """Exchange OPENs on the held connection, then keep one connection of two."""
         assert contender.connection is not None
         wait = getenv().bgp.openwait
         try:
-            received = await asyncio.wait_for(contender.read_open(contender.connection.peer), timeout=wait)
+            sent, received = await asyncio.wait_for(self._exchange_opens(contender), timeout=wait)
         except Notify as notify:
             self._refuse_contender(contender, notify)
             return
@@ -766,21 +801,29 @@ class Peer:
             self._drop_contender()
             return
         assert self._contender is contender, 'a replaced contender has its task cancelled'
-        cease = self._contender_cease(received)
+        cease = self._contender_cease(received, sent, restart)
         if cease is not None:
             self._refuse_contender(contender, cease)
             return
         self._contender = None
         self._contender_task = None
-        self._take_contender(connection, received)
+        if self.fsm == FSM.ESTABLISHED:
+            assert restart and self._peer_graceful_restart() is not None, 'only a restart replaces a session'
+            self._replace_restarted_session(connection, received, sent)
+            return
+        self._take_contender(connection, received, sent)
 
-    def _contender_cease(self, received: Open) -> Notify | None:
+    def _contender_cease(self, received: Open, sent: Open | None, restart: bool) -> Notify | None:
         """The Cease closing the connection held for its OPEN, None when it is the one kept."""
         if self.stopping():
             return Notify(6, 3, 'no session configured for the peer')
         if self._disable is not None:
             return Notify(6, 5, 'the session is administratively disabled')
         if self.fsm == FSM.ESTABLISHED:
+            # RFC 4271 6.8: a collision with an established connection closes the new one.
+            # RFC 4724 4.2 overrides it for a connection which arrived during that session
+            if restart and self._peer_graceful_restart() is not None:
+                return self._restart_open_error(received, sent)
             return Notify(6, 7, 'could not accept the connection, already established')
         if self.fsm not in (FSM.OPENSENT, FSM.OPENCONFIRM):
             # ours ended before the OPEN came: the peer's is the only connection left
@@ -788,6 +831,21 @@ class Peer:
         if self._outgoing_wins_collision(received):
             return Notify(6, 7, 'connection collision resolution')
         return None
+
+    def _restart_open_error(self, received: Open, sent: Open | None) -> Notify | None:
+        """The Notify refusing the OPEN of a restarted peer's new connection, None when it is valid.
+
+        The established session ends only for an OPEN the new session would accept, as
+        checked against the OPEN we sent on the new connection, or on the session when we
+        mirror the AS and sent none yet: anything less, a stranger reaching us from the
+        peer's address, would reset a working session.
+        """
+        assert self.proto is not None and self.proto.negotiated.sent_open is not None
+        probe = Negotiated.make_negotiated(self.neighbor, Direction.IN)
+        probe.sent(sent if sent is not None else self.proto.negotiated.sent_open)
+        probe.received(received)
+        error = probe.validate(self.neighbor)
+        return None if error is None else Notify(*error)
 
     def _refuse_contender(self, contender: Protocol, notify: Notify) -> None:
         """Send `notify` on the connection held for its OPEN, and close it."""
@@ -802,23 +860,17 @@ class Peer:
             self.stats['send-notification'] += 1
         self._drop_contender()
 
-    def _take_contender(self, connection: 'Incoming', received: Open) -> None:
+    def _take_contender(self, connection: 'Incoming', received: Open, sent: Open | None) -> None:
         """Close ours with a Cease, and go on with the connection whose OPEN was read."""
-        assert connection.io is not None, 'the connection kept is the one whose OPEN was just read'
         log.debug(
             lazymsg('peer.connection.closing connection={c} reason=higher_router_id_incoming', c=connection.name()),
             self.id(),
         )
         if self.proto:
             self._supersede()
-        # made again, so the session is over the neighbour of now, should a reload have run
-        taken = Protocol(self).accept(connection)
-        taken.open_read = received
-        self.proto = taken
-        self.fsm_runner.clear()
-        self._delay.reset()
+        self._adopt(connection, received, sent)
 
-    def _replace_restarted_session(self, connection: 'Incoming') -> None:
+    def _replace_restarted_session(self, connection: 'Incoming', received: Open, sent: Open | None) -> None:
         """RFC 4724 4.2: end the session of a restarted peer as a lost TCP session, and take its new one.
 
         The previous TCP session "is simply closed": no NOTIFICATION, which would end the
@@ -834,7 +886,17 @@ class Peer:
         self._close('the peer restarted, its new connection replaces the session')
         assert self.proto is None, 'the old connection must be closed before the new one is taken'
         self._prepare_next_session()
-        self.proto = Protocol(self).accept(connection)
+        self._adopt(connection, received, sent)
+
+    def _adopt(self, connection: 'Incoming', received: Open, sent: Open | None) -> None:
+        """Make the held connection the session, which goes on from the OPENs exchanged on it."""
+        assert connection.io is not None, 'the connection kept is the one whose OPEN was just read'
+        # made again, so the session is over the neighbour of now, should a reload have run
+        taken = Protocol(self).accept(connection)
+        taken.open_read = received
+        taken.open_sent = sent
+        self.proto = taken
+        self.fsm_runner.clear()
         self._delay.reset()
 
     def established(self) -> bool:
@@ -886,8 +948,11 @@ class Peer:
             raise Interrupted('connection failed') from None
 
     async def _send_open(self) -> Open:
-        """Sends OPEN message using async I/O"""
+        """Sends OPEN message using async I/O, unless it went out while the connection was held"""
         assert self.proto is not None
+        if self.proto.open_sent is not None:
+            already, self.proto.open_sent = self.proto.open_sent, None
+            return already
         return await self.proto.new_open()
 
     async def _read_open(self) -> Open:
@@ -987,14 +1052,25 @@ class Peer:
     async def _send_operational_messages(self) -> None:
         """Send operational messages from the neighbor's message queue."""
         assert self.proto is not None, 'Protocol must be established'
-        if self.neighbor.capability.operational.is_enabled():
-            new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
-            if new_operational:
-                await self.proto.new_operational(new_operational, self.proto.negotiated)
-        # Make sure that if some operational message are received via the API
-        # that we do not eat memory for nothing
-        elif self.neighbor.messages:
-            self.neighbor.messages.popleft()
+        new_operational = self.neighbor.messages.popleft() if self.neighbor.messages else None
+        if new_operational is None:
+            return
+        # A message the session can not carry is dropped, so the queue does not grow
+        if not self.sends_operational():
+            log.warning(lazymsg('operational.dropped message={m}', m=new_operational.extensive()), self.id())
+            return
+        await self.proto.new_operational(new_operational, self.proto.negotiated)
+
+    def sends_operational(self) -> bool:
+        """Whether an OPERATIONAL message may be sent on the established session.
+
+        draft-ietf-idr-operational-message-00 3.1: we may send one "only if it has received
+        the OPERATIONAL message capability" from the peer. Our own configuration only says
+        we offered the capability, so the negotiation decides, as for ROUTE-REFRESH.
+        """
+        if self.proto is None or self.fsm != FSM.ESTABLISHED:
+            return False
+        return self.proto.negotiated.operational
 
     def refreshable_families(self) -> list[FamilyTuple]:
         """The families a ROUTE-REFRESH may be sent for on the established session.
@@ -1006,6 +1082,12 @@ class Peer:
         if self.proto is None or self.fsm != FSM.ESTABLISHED:
             return []
         if self.proto.negotiated.refresh == REFRESH.ABSENT:
+            return []
+        return list(self.proto.negotiated.families)
+
+    def eor_families(self) -> list[FamilyTuple]:
+        """The families an End-of-RIB may be sent for on the established session: the negotiated ones."""
+        if self.proto is None or self.fsm != FSM.ESTABLISHED:
             return []
         return list(self.proto.negotiated.families)
 
@@ -1074,8 +1156,17 @@ class Peer:
         # Manual EOR from API commands
         elif self.neighbor.eor:
             new_eor = self.neighbor.eor.popleft()
+            family = (new_eor.afi, new_eor.safi)
+            # RFC 4724 2: the marker is an UPDATE of the family, which RFC 4760 8 has us send
+            # only for a family the peer advertised. The API checked the session the command
+            # arrived on; this may be a later one, so the queue is checked again here.
+            if family not in self.eor_families():
+                log.warning(
+                    lazymsg('eor.dropped family={a}/{s} reason=not-negotiated', a=family[0], s=family[1]), self.id()
+                )
+                return send_eor
             await self.proto.new_eors(new_eor.afi, new_eor.safi)
-            self._end_of_rib_sent.add((new_eor.afi, new_eor.safi))
+            self._end_of_rib_sent.add(family)
 
         return send_eor
 
@@ -1136,7 +1227,14 @@ class Peer:
         self._announce_up_to_the_api()
 
     def _reannounce_asm(self) -> None:
-        """Re-announce ASM messages on restart, for the families this neighbor has."""
+        """Re-announce ASM messages on restart, for the families this neighbor has.
+
+        Only to a peer which advertised the OPERATIONAL capability on this session
+        (draft-ietf-idr-operational-message-00 3.1): what is kept is replayed on the next
+        session which negotiates it.
+        """
+        if not self.sends_operational():
+            return
         for family in self.neighbor.asm:
             if family in self.neighbor.families():
                 self.neighbor.messages.appendleft(self.neighbor.asm[family])

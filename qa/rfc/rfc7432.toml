@@ -312,7 +312,9 @@ In order to process mobility events correctly, an implementation MUST
 note = """
 exabgp processes no mobility events.  It has no MAC table, so it never compares a
 received sequence number against a stored one and has no state a wraparound could corrupt;
-`MacMobility` decodes the 4-octet number and the sticky bit and passes both to the API,
+`MacMobility` decodes the 4-octet number and the sticky bit (the low-order bit of the
+Flags octet, RFC 7432 7.7; until 2026-10-08 it was the whole octet compared to 1, so a
+flag octet with any other bit set read as not sticky) and passes both to the API,
 where an external process holds whatever mobility state the deployment needs.
 """
 

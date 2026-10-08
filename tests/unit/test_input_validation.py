@@ -215,13 +215,16 @@ def test_software_capability_length_counts_bytes() -> None:
     """A decoded version wider than ASCII used to be sent with its length in characters."""
     decoded = Software.unpack_capability(Software(), b'\x09r\xc3\xa9seau/1', Capability.CODE.SOFTWARE_VERSION)
     assert isinstance(decoded, Software)
+    assert decoded.software_version == 'r\xe9seau/1'
     packed = decoded.extract_capability_bytes()[0]
-    assert packed == b'\x09r\xc3\xa9seau/1'
+    assert packed == b'r\xc3\xa9seau/1'
 
 
-def test_software_capability_rejects_invalid_utf8() -> None:
-    with pytest.raises(Notify):
-        Software.unpack_capability(Software(), b'\x04\xff\xfe\xfd\xfc', Capability.CODE.SOFTWARE_VERSION)
+def test_software_capability_ignores_invalid_utf8() -> None:
+    """The draft forbids interpreting it, and a version is not worth a session."""
+    decoded = Software.unpack_capability(Software(), b'\x04\xff\xfe\xfd\xfc', Capability.CODE.SOFTWARE_VERSION)
+    assert not isinstance(decoded, Software)
+    assert decoded.extract_capability_bytes() == []
 
 
 # ============================================================================
@@ -265,6 +268,19 @@ def test_extended_community_rejects_a_short_ip() -> None:
 def test_extended_community_rejects_malformed_ips(value: str) -> None:
     with pytest.raises(ValueError):
         _extended_community(value)
+
+
+@pytest.mark.parametrize('value', ['0x80060001ffffffff', '0x800c0001ff800000'])
+def test_an_extended_community_which_is_not_a_valid_rate_is_a_configuration_error(value: str) -> None:
+    """The decoder answers a NaN or infinite rate with Notify, which is the peer's error.
+
+    Reached from configuration it escaped the parser as an INTERNAL ISSUE traceback.
+    """
+    configuration = Configuration([''], text=True)
+    line = f'route 10.0.0.0/24 next-hop 192.0.2.1 extended-community {value}'
+
+    assert not configuration.partial('static', line, 'announce')
+    assert 'not a usable rate' in str(configuration.error)
 
 
 @pytest.mark.parametrize('value', ['target:65000:100', 'target:1.2.3.4:100'])

@@ -109,6 +109,12 @@ class SrCapabilities(FlagLS):
             )
             if sub_type != SRCAP_LABEL_SUB_TLV_TYPE:
                 raise Notify(3, 5, f'Invalid sub-TLV type: {sub_type}')
+            # RFC 9085 2.1.1: a SID/Label is "Either 3 or 4 octets"; any other size was
+            # stepped over by the sids property without a word.  Four octets, which 2.1.2
+            # says is not valid here, is a value, and RFC 9552 8.2.2 lets no value make the
+            # attribute malformed, so only the size is refused.
+            if length not in (SRCAP_LABEL_SIZE_3, SRCAP_LABEL_SIZE_4):
+                raise Notify(3, 5, f'SR Capabilities: SID/Label sub-TLV is {length} octets, expected 3 or 4')
             total_entry_size = SRCAP_RANGE_SIZE_BYTES + SRCAP_SUB_TLV_HEADER_SIZE + length
             if len(data) - offset < total_entry_size:
                 raise Notify(3, 5, 'SR Capabilities: SID/Label data too short')

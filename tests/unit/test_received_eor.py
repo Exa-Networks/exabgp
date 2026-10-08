@@ -28,6 +28,7 @@ IPV6_UNICAST = (AFI.ipv6, SAFI.unicast)
 def context() -> PeerContext:
     ctx, _ = negotiation.context()
     ctx.neighbor.rib.incoming = IncomingRIB(True, {IPV4_UNICAST, IPV6_UNICAST})
+    ctx.negotiated.families = [IPV4_UNICAST, IPV6_UNICAST]
     return ctx
 
 
@@ -53,3 +54,12 @@ def test_a_new_session_starts_without_any() -> None:
     incoming.clear()
 
     assert not incoming.has_end_of_rib(IPV4_UNICAST)
+
+
+def test_an_end_of_rib_for_a_family_the_session_did_not_negotiate_is_ignored() -> None:
+    """EOR.from_body accepts any family, so a peer could grow the record without bound."""
+    ctx = context()
+    ctx.negotiated.families = [IPV4_UNICAST]
+    list(UpdateHandler().handle(ctx, EOR.make_eor(*IPV6_UNICAST)))
+
+    assert not ctx.neighbor.rib.incoming.has_end_of_rib(IPV6_UNICAST)

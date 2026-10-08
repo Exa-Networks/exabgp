@@ -294,8 +294,9 @@ def test_a_neighbour_passes_its_authentication_to_its_socket() -> None:
     """The address and the port are not the whole call: an MD5 key which never reaches the
     socket is a session which will not come up, and the reload path had nothing saying so.
 
-    Run as on Linux, where both can be installed, with the socket options recorded rather
-    than set: what is asserted is what the kernel is asked for on the neighbour's socket.
+    Run as on Linux, where the key and a minimum TTL can both be installed, with the socket
+    options recorded rather than set: what is asserted is what the kernel is asked for on
+    the neighbour's socket, the key and no minimum TTL.
     """
     configured = neighbor('127.0.0.2', PORT_A)
     configured.session.md5_password = 'a-secret'
@@ -314,7 +315,9 @@ def test_a_neighbour_passes_its_authentication_to_its_socket() -> None:
     keys = [value for level, option, value in options if (level, option) == (socket.IPPROTO_TCP, TCP_MD5SIG)]
     assert keys and isinstance(keys[0], bytes), 'the md5 password did not reach the socket'
     assert b'a-secret' in keys[0][SOCKADDR_STORAGE_BYTES:], 'the md5 password did not reach the socket'
-    assert (socket.IPPROTO_IP, IP_MINTTL, 254) in options, 'the incoming ttl did not reach the socket'
+    # RFC 5082 3: the listening socket is shared by every neighbour on the address, so the
+    # minimum is installed per neighbour on the accepted socket (Listener admit_by_ttl)
+    assert not [o for o in options if o[:2] == (socket.IPPROTO_IP, IP_MINTTL)], 'a minimum TTL was set on a listener'
 
 
 def test_two_neighbours_on_different_ports_both_listen() -> None:

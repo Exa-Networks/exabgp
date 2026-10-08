@@ -200,10 +200,15 @@ processing of rest of the Update message.
 """
 note = """
 exabgp wrote -02: the octet was left out when there was no source, and a length of 0 was
-refused on receipt.  `make_t1st` now always writes it, 0 without a source.  On receipt 0,
-32 and 128 are kept and any other length is a withdrawal of the route's key (see the
-header).  A route of -02, which ends after its Endpoint Address, is still read, and held
-with a Source Address Length of 0 added, so it compares and is sent again as -05 writes it.
+refused on receipt.  `make_t1st` now always writes it, 0 without a source, so what we send
+conforms.  On receipt 0, 32 and 128 are kept and any other length is a withdrawal of the
+route's key (see the header).
+Not fully conformant on receipt, deliberately: -05 makes the octet part of the encoding,
+so a route which ends after its Endpoint Address is malformed by this text.  exabgp reads
+it as -02's encoding instead, for the peers (exabgp itself until 2026-10) which still send
+it, and holds it with a Source Address Length of 0 added, so it compares and is sent again
+as -05 writes it.  The negative test is a length other than 0, 32 or 128, not a missing
+octet.
 """
 
 [[requirement]]
@@ -223,8 +228,11 @@ message.
 note = """
 `architecture_error` in nlri/mup/t1st.py reads the part after the prefix field by field
 and wants it to end exactly where its lengths say.  A part too short or too long is a
-withdrawal of the route's key (see the header).  The one shorter form kept is -02's,
-without a Source Address Length, described under 3.1.3.1-t1st-source-length.
+withdrawal of the route's key (see the header).  What we send is always -05's encoding.
+One exception on receipt, a deliberate leniency rather than conformance: a part which ends
+right after its Endpoint Address, -02's encoding with no Source Address Length, is read
+rather than treated as withdraw, see 3.1.3.1-t1st-source-length.  By the letter of -05
+that route is malformed.
 """
 
 [[requirement]]

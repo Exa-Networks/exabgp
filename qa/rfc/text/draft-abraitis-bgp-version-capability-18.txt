@@ -1,0 +1,448 @@
+
+
+
+
+Inter-Domain Routing                                         D. Abraitis
+Internet-Draft                                                 Hostinger
+Intended status: Informational                          7 September 2025
+Expires: 11 March 2026
+
+
+                  Software Version Capability for BGP
+                draft-abraitis-bgp-version-capability-18
+
+Abstract
+
+   In this document, we introduce a new BGP capability that allows the
+   advertisement of a BGP speaker's routing software version.
+
+   This BGP capability is an optional advertisement.  Implementations
+   are not required to advertise the version nor to process received
+   advertisements.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 11 March 2026.
+
+Copyright Notice
+
+   Copyright (c) 2025 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.  Code Components
+   extracted from this document must include Revised BSD License text as
+   described in Section 4.e of the Trust Legal Provisions and are
+   provided without warranty as described in the Revised BSD License.
+
+
+
+Abraitis                  Expires 11 March 2026                 [Page 1]
+
+Internet-Draft     Software Version Capability for BGP    September 2025
+
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+   2.  Specification of Requirements . . . . . . . . . . . . . . . .   2
+   3.  Software Version Capability . . . . . . . . . . . . . . . . .   3
+     3.1.  Capabilities Length Overflow  . . . . . . . . . . . . . .   4
+   4.  Operation . . . . . . . . . . . . . . . . . . . . . . . . . .   5
+   5.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   5
+   6.  Security Considerations . . . . . . . . . . . . . . . . . . .   5
+   Acknowledgements  . . . . . . . . . . . . . . . . . . . . . . . .   6
+   References  . . . . . . . . . . . . . . . . . . . . . . . . . . .   6
+     Normative References  . . . . . . . . . . . . . . . . . . . . .   6
+   Appendix A.  Implementation Report  . . . . . . . . . . . . . . .   7
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .   8
+
+1.  Introduction
+
+   In modern data center designs, conventional routers participating in
+   routing.  These routers may have different versions of routing
+   software.  Knowing which versions of the routing software that are
+   running on the various routers in the network can be a crucial factor
+   in quickly identifying the root cause of protocol or network
+   problems.
+
+   This document specifies a BGP capability that carries the routing
+   software version.  This BGP capability is a optional.
+   Implementations are not required to advertise their software version
+   nor to process it on receipt.
+
+   Information about the version of the routing software could also be
+   exchanged in protocols such as LLDP and CDP.  However, in
+   containerized environments, it is difficult and not recommended to
+   exchange this information between background processes.  To assist in
+   minimizing operational costs, it is helpful to exchange the routing
+   software versions between BGP peers directly.
+
+2.  Specification of Requirements
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in BCP
+   14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+
+
+
+
+
+
+
+Abraitis                  Expires 11 March 2026                 [Page 2]
+
+Internet-Draft     Software Version Capability for BGP    September 2025
+
+
+3.  Software Version Capability
+
+   Although this document is not an IETF Standards Track document, it
+   makes use of the terminology from BCP 14 in order to clearly state
+   the implementation behaviors.
+
+   BGP capability advertisement is defined in [RFC5492].  BGP
+   Capabilities contain one or more triples <Capability Code, Capability
+   Length, Capability Value>.  This document defines a new BGP
+   capability, the Software Version Capability, with Capability Code 75
+   and Capability Length and Capability Value as described below.
+
+   The inclusion of the Software Version Capability is OPTIONAL.  If an
+   implementation supports the inclusion of the capability, the
+   implementation MUST include a configuration option to enable or
+   disable its use, and MUST default to disabled.
+
+   The Software Version Capability is intended for environments where
+   more visibility is needed for troubleshooting purposes.  It is NOT
+   RECOMMENDED for use outside a single Autonomous System, or a set of
+   Autonomous Systems under a common administration.
+
+   An implementation that does not recognize or support the Software
+   Version Capability but receives one must ignore it, as described in
+   Section 3 of [RFC5492].
+
+   The triple for the Software Version Capability is as follows:
+
+   Capability Code
+
+      75
+
+   Capability Length
+
+      Capability Length is a one-octet unsigned binary integer that
+      contains the length of the Capability Value field in octets.
+
+      The Capability Length for the Software Version Capability MUST be
+      greater than zero.  A value of zero SHALL be treated as an
+      encoding error and the Capability MUST be ignored.
+
+      The Capability Length SHOULD be no greater than 64.  This length
+      leaves space for other capabilities.
+
+   Capability Value
+
+
+
+
+
+
+Abraitis                  Expires 11 March 2026                 [Page 3]
+
+Internet-Draft     Software Version Capability for BGP    September 2025
+
+
+      The Capability Value field is the software version encoded as a
+      UTF-8 [RFC3629] string.  It is unstructured data and can be
+      formatted in any way that the implementor decides.  The string is
+      not null-terminated.
+
+   Version:
+
+      The Version field MUST be encoded using UTF-8.  A receiving BGP
+      speaker MUST NOT interpret invalid UTF-8 sequences.
+
+      The value consists of one identifier, which identifies the
+      software and its significant version.  Software version identifier
+      consists of a product and optional product version.
+
+      identifier = product ["/" product-version]
+
+      A sender SHOULD limit generated product identifiers to what is
+      necessary to identify the product; a sender MUST NOT generate
+      advertising or other nonessential information within the product
+      identifier.  A sender SHOULD NOT generate information in product-
+      version that is not a version identifier (i.e., successive
+      versions of the same product name ought to differ only in the
+      product-version portion of the product identifier).
+
+      Example:
+
+      frrouting/8.4.2, ios/12.5.1, junos/12.1
+
+3.1.  Capabilities Length Overflow
+
+   As defined in [RFC5492] the total length of capabilities that can be
+   carried by the BGP Capabilities Optional Parameter is 255 bytes.  If
+   an implementation is constructing a BGP Capabilities Optional
+   Parameter and its length exceeds 255 bytes, there is not enough space
+   for other more important capabilities.
+
+   Implementations of this specification are REQUIRED Extended Optional
+   Parameters Length for BGP OPEN Message support as defined in
+   [RFC9072].
+
+   A rogue node can prevent the proper operation of a BGP session, or
+   the advertisement of other Capabilities, by not excluding the
+   Software Version Capability as required in Section 3.1.  This risk is
+   equivalent to a rogue node simply not advertising a specific
+   Capability and is not new to BGP.
+
+
+
+
+
+
+Abraitis                  Expires 11 March 2026                 [Page 4]
+
+Internet-Draft     Software Version Capability for BGP    September 2025
+
+
+4.  Operation
+
+   The Software Version Capability MUST only be used for displaying the
+   version of a BGP speaker's router daemon to make troubleshooting
+   easier.
+
+   Consider a group of routers each with a number of upstream nodes, and
+   suppose that each router has a different operating system and
+   different routing software at a different installed version.
+   Assuming that a specific feature is not working or that there is a
+   bug which has not been fixed in a particular version of the code,
+   knowledge of the routing daemon versions would allow an operator to
+   quickly identify the pattern of which versions are affected.
+
+   Enabling (i.e., turning on) this capability requires bouncing all
+   existing BGP sessions and the feature MUST be explicitly configured
+   before an implementation advertizes the Software Version Capability.
+
+5.  IANA Considerations
+
+   IANA has assigned capability number 75 for the Software Version
+   Capability described in this document.  This registration is in the
+   BGP Capability Codes registry.
+
+                  +=======+=============================+
+                  | Value |         Description         |
+                  +=======+=============================+
+                  |   75  | Software Version Capability |
+                  +-------+-----------------------------+
+
+                    Table 1: Software Version Capability
+
+6.  Security Considerations
+
+   The Software Version Capability should be treated as sensitive
+   information: it could be easier for an attacker to exploit the system
+   if they know the specific software version and manufacturer of a BGP
+   speaker.  This information could be gathered by inspecting BGP OPEN
+   messages that carry the Software Version Capability defined in this
+   document.  Furthermore, this knowledge may facilitate a number of
+   social-engineering attacks.
+
+   Modifying the information advertised by a router might lead to
+   attacks including bogus software upgrades and also might mask the
+   causes of faults in the network.
+
+
+
+
+
+
+Abraitis                  Expires 11 March 2026                 [Page 5]
+
+Internet-Draft     Software Version Capability for BGP    September 2025
+
+
+   Users of this mechanism should be aware that unless a transport that
+   provides integrity is used for the BGP session in question, the
+   Software Version Capability can be forged.  Unless a transport that
+   provides confidentiality is used, the Version Capability could be
+   snooped by an attacker.  These issues are common to any BGP message
+   but may be of greater interest in the context of this extension as
+   explained above.  Refer to the related considerations in [RFC4271]
+   and [RFC4272].
+
+   Users of this mechanism should consider applying data minimization
+   practices as outlined in Section 6.1 of [RFC6973], as appropriate
+   within the deployment context.
+
+   Sensitive information leaks can be minimized by using the Generalized
+   TTL security mechanism [RFC5082] or firewalls to filter out TCP 179
+   port from untrusted networks.  This capability should be enabled per
+   neighbor, thus limiting the disclosure of sensitive information to
+   trusted neighbors.
+
+Acknowledgements
+
+   Thanks to Alvaro Retana, Jakob Heitz, Robert Raszuk, Adrian Farrel,
+   John Scudder, Jeffrey Haas, Enke Chen for the review, discussions and
+   input to the draft.
+
+References
+
+Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC3629]  Yergeau, F., "UTF-8, a transformation format of ISO
+              10646", STD 63, RFC 3629, DOI 10.17487/RFC3629, November
+              2003, <https://www.rfc-editor.org/info/rfc3629>.
+
+   [RFC4271]  Rekhter, Y., Ed., Li, T., Ed., and S. Hares, Ed., "A
+              Border Gateway Protocol 4 (BGP-4)", RFC 4271,
+              DOI 10.17487/RFC4271, January 2006,
+              <https://www.rfc-editor.org/info/rfc4271>.
+
+   [RFC4272]  Murphy, S., "BGP Security Vulnerabilities Analysis",
+              RFC 4272, DOI 10.17487/RFC4272, January 2006,
+              <https://www.rfc-editor.org/info/rfc4272>.
+
+
+
+
+
+Abraitis                  Expires 11 March 2026                 [Page 6]
+
+Internet-Draft     Software Version Capability for BGP    September 2025
+
+
+   [RFC5082]  Gill, V., Heasley, J., Meyer, D., Savola, P., Ed., and C.
+              Pignataro, "The Generalized TTL Security Mechanism
+              (GTSM)", RFC 5082, DOI 10.17487/RFC5082, October 2007,
+              <https://www.rfc-editor.org/info/rfc5082>.
+
+   [RFC5492]  Scudder, J. and R. Chandra, "Capabilities Advertisement
+              with BGP-4", RFC 5492, DOI 10.17487/RFC5492, February
+              2009, <https://www.rfc-editor.org/info/rfc5492>.
+
+   [RFC6973]  Cooper, A., Tschofenig, H., Aboba, B., Peterson, J.,
+              Morris, J., Hansen, M., and R. Smith, "Privacy
+              Considerations for Internet Protocols", RFC 6973,
+              DOI 10.17487/RFC6973, July 2013,
+              <https://www.rfc-editor.org/info/rfc6973>.
+
+   [RFC7942]  Sheffer, Y. and A. Farrel, "Improving Awareness of Running
+              Code: The Implementation Status Section", BCP 205,
+              RFC 7942, DOI 10.17487/RFC7942, July 2016,
+              <https://www.rfc-editor.org/info/rfc7942>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+   [RFC9072]  Chen, E. and J. Scudder, "Extended Optional Parameters
+              Length for BGP OPEN Message", RFC 9072,
+              DOI 10.17487/RFC9072, July 2021,
+              <https://www.rfc-editor.org/info/rfc9072>.
+
+Appendix A.  Implementation Report
+
+   According to [RFC7942], "This will allow reviewers and working groups
+   to assign due consideration to documents that have the benefit of
+   running code, which may serve as evidence of valuable experimentation
+   and feedback that have made the implemented protocols more mature".
+
+   FRRouting (https://github.com/FRRouting/frr/commit/
+   c4257900c4ca320117bcd1f88b7f036e0c8f7fcb) implementation.
+
+   GoBGP (https://github.com/osrg/gobgp/pull/2622/
+   commits/15f9d5c64c98d1db273cc45e95fcc11843fba4b5) implementation.
+
+   freeRouter (https://github.com/mc36/freeRtr/commit/
+   eb5d3490aec220ad8bfcbf1f439669bd27845199) implementation.
+
+   ExaBGP (https://github.com/Exa-Networks/exabgp/pull/1223/commits/
+   d21e432c98ec9cbe1de2e471ecf7326170d7f176) implementation.
+
+
+
+
+Abraitis                  Expires 11 March 2026                 [Page 7]
+
+Internet-Draft     Software Version Capability for BGP    September 2025
+
+
+   Below is an example from the FRRouting and GoBGP implementations
+   showing both the received and advertised Software Version Capability:
+
+     :~# vtysh -c 'show ip bgp summary failed'
+     ...
+     Neighbor EstdCnt DropCnt ResetTime Reason
+     ens192         3       3  00:00:35 Waiting for peer OPEN (n/a)
+     ens224         3       3  00:01:12 Waiting for NHT (frrouting/7.2)
+     eth0           3       3  00:00:14 Neighbor deleted (frrouting/7.3)
+     ...
+
+                                  Figure 1
+
+           software-version:   advertised and received
+             Local:
+                GoBGP/3.10.0
+             Remote:
+                FRRouting/8.5-dev-MyOwnFRRVersion-gdc92f44a4
+
+                                  Figure 2
+
+     :~# vtysh -c 'show ip bgp neighbors 198.51.100.1 json' \
+     > | jq '."198.51.100.1".neighborCapabilities.versions'
+     {
+       "advertisedVersion": "frrouting/7.2",
+       "receivedVersion": "frrouting/7.3"
+     }
+
+                                  Figure 3
+
+Author's Address
+
+   Donatas Abraitis
+   Hostinger
+   Email: donatas.abraitis@gmail.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Abraitis                  Expires 11 March 2026                 [Page 8]

@@ -74,6 +74,23 @@ specified in this section.
 """
 
 [[requirement]]
+id = "rfc7311#3.2-maximum-value-is-malformed"
+section = "3.2"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+If an AIGP attribute is received and its first AIGP TLV contains the
+maximum value 0xffffffffffffffff, the attribute SHOULD be considered
+to be malformed and SHOULD be discarded as specified in this section.
+"""
+note = """
+`AIGP.from_packet` refuses it, and the attribute goes as any other malformed AIGP: the
+route stays.  Only the first AIGP TLV is read, so the maximum in a later one is carried
+along as 3 requires.
+"""
+
+[[requirement]]
 id = "rfc7311#3.3-aigp-session-configurable"
 section = "3.3"
 level = "MUST"

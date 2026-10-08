@@ -68,7 +68,12 @@ completes the re-advertisement of the entire Adj-RIB-Out to the peer,
 it MUST send an EoRR message.
 """
 note = """
-The same bracketing and the same condition as the BoRR entry.
+The same bracketing and the same condition as the BoRR entry. The EoRR says the whole
+Adj-RIB-Out was re-advertised, so with no Adj-RIB-Out (adj-rib-out false) no refresh is
+replayed and neither marker is sent (OutgoingRIB.resend): a BoRR followed at once by an
+EoRR had the peer purge every route it held from us. The configuration turns the cache on
+with route refresh, so this is reached only when a reload turning both off swaps the
+tables of a session still running until its teardown.
 """
 
 [[requirement]]

@@ -252,6 +252,71 @@ Positive only: the requirement is that no order is refused, so there is no input
 violates it by being accepted.  The test sends NEXT_HOP, AS_PATH and ORIGIN in reverse.
 """
 
+[[requirement]]
+id = "rfc4271#5-an-attribute-at-most-once"
+section = "5"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+The same attribute (attribute with the same type) cannot appear more
+than once within the Path Attributes field of a particular UPDATE
+message.
+"""
+note = """
+No RFC 2119 keyword, but a receiver treats a repeated attribute as a malformed attribute
+list (6.3), so it binds what we send. The attributes of a route are kept by type code, so
+one code is one attribute, except where exabgp makes one while packing: MP_REACH_NLRI and
+MP_UNREACH_NLRI from the routes, AS4_PATH and AS4_AGGREGATOR from as-path and aggregator.
+A raw `attribute [ 0x0e|0x0f|0x11|0x12 ... ]` was sent next to them; the configuration and
+the API now refuse those four codes (types/bgp.GENERATED_ATTRIBUTES). The test sends every
+other code next to everything exabgp generates, to a two- and a four-octet peer.
+"""
+
+
+[[requirement]]
+id = "rfc4271#5.1.2-originator-as-first-to-an-external-peer"
+section = "5.1.2"
+level = "MUST"
+status = "gap"
+polarity = "positive-only"
+text = """
+a) the originating speaker includes its own AS number in a path
+segment, of type AS_SEQUENCE, in the AS_PATH attribute of all
+UPDATE messages sent to an external peer.
+"""
+note = """
+A deliberate deviation. The sentence carries no RFC 2119 keyword but describes what an
+originating speaker does, so it is recorded as binding. exabgp adds our AS (the
+confederation identifier outside the confederation) when a route has no AS_PATH, but sends
+a configured AS_PATH as written: route servers, route injectors acting for other ASes, and
+the functional tests depend on it, and the operator owns that choice. It stays a gap
+rather than not-applicable because the obligation does bind a speaker originating a
+route. What exabgp does instead is warn, from the configuration and from the API, when
+the AS_PATH towards an external peer (not a Member-AS of our confederation) does not
+start with our AS in an AS_SEQUENCE, an empty `as-path [ ]` included
+(Neighbor.as_path_not_ours). The xfail test shows what complying would send.
+"""
+
+[[requirement]]
+id = "rfc4271#5.1.3-no-next-hop-of-the-peer"
+section = "5.1.3"
+level = "SHALL NOT"
+status = "required"
+polarity = "both"
+text = """
+A route originated by a BGP speaker SHALL NOT be advertised to a peer
+using an address of that peer as NEXT_HOP.
+"""
+note = """
+Neighbor.next_hop_is_the_peer compares the next-hop of the route (NEXT_HOP, or the address
+of MP_REACH_NLRI, the RD of a VPN next-hop aside, an IPv4-mapped IPv6 address read as the
+IPv4 address) with the peer address. The configuration refuses such a route. The API
+refuses it when no selected peer is left, and otherwise sends it to the others only: a
+route steering one peer's traffic towards another is a legitimate use. Flow routes are
+left alone, their next-hop being a redirection target (RFC 7674).
+"""
+
 
 # ================================================================== 6 BGP Error Handling
 
@@ -896,4 +961,57 @@ note = """
 Positive only: this is an obligation about the configuration surface we offer, so the
 test is that two neighbours in one configuration can carry different hold times and that
 each keeps its own.  There is no peer input which violates it.
+"""
+
+[[requirement]]
+id = "rfc4271#10-jitter-timers"
+section = "10"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+To minimize the likelihood that the distribution of BGP messages by a
+given BGP speaker will contain peaks, jitter SHOULD be applied to the
+timers associated with MinASOriginationIntervalTimer, KeepaliveTimer,
+MinRouteAdvertisementIntervalTimer, and ConnectRetryTimer.
+"""
+note = """
+exabgp runs two of the four: the keepalive interval (SendTimer) and the delay before it
+connects again (Delay).  It has no MinASOriginationIntervalTimer nor
+MinRouteAdvertisementIntervalTimer, an UPDATE leaves when the configuration or the API
+asks for it.  Until 2026-10-08 both timers ran at their base value, every peer of a
+restarted daemon keeping the same phase.  The random source is a parameter of both, so
+the tests pick the factor; the negative test is the factor 1.0 giving the base value.
+A jittered keepalive interval is never under one second, RFC 4271 4.4's floor.
+"""
+
+[[requirement]]
+id = "rfc4271#10-jitter-default-range"
+section = "10"
+level = "SHALL"
+status = "required"
+polarity = "positive-only"
+text = """
+The suggested default amount of jitter SHALL be determined by
+multiplying the base value of the appropriate timer by a random
+factor, which is uniformly distributed in the range from 0.75 to 1.0.
+"""
+note = """
+Positive only: the factor is drawn by us, there is no input of the peer's which could
+violate it.  exabgp.bgp.timer.jitter_factor is random.uniform(0.75, 1.0), and the timers
+assert the factor they are given is in that range.
+"""
+
+[[requirement]]
+id = "rfc4271#10-jitter-new-value-each-time"
+section = "10"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+A new random value SHOULD be picked each time the timer is set.
+"""
+note = """
+Positive only, for the same reason as the range.  SendTimer draws a factor each time a
+keepalive is due, Delay each time a connection attempt fails.
 """

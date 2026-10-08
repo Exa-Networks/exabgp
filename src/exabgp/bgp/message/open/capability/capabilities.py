@@ -165,6 +165,11 @@ class Capabilities(dict[CapabilityCode, Capability]):
         for allowed in self._ADD_PATH:
             if allowed in families:
                 ap_families.append(allowed)
+        # RFC 7911 4: the value "consists of one or more of the following tuples". With no
+        # configured family able to carry a path identifier there is none, and a capability
+        # of length zero would say nothing a peer can use.
+        if not ap_families:
+            return
         self[Capability.CODE.ADD_PATH] = AddPath(ap_families, neighbor.capability.add_path)
 
     def _graceful(self, neighbor: Neighbor, restarted: bool) -> None:

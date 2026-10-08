@@ -25,6 +25,22 @@ from struct import pack
 # Subclasses register by (type, subtype) only - transitivity is a per-instance
 # property determined from wire bits at runtime via transitive(), per RFC 4360.
 
+# RFC 4360 section 2: the high-order octet of the type is the I bit, the T bit and six bits
+# of structure.  Below 0x80 the IANA registries pair each transitive type with the
+# non-transitive one which differs only by T, and Quagga sent its Route Targets and Route
+# Origins with T set (30/02/12), so the T bit is not part of the key there.  The I bit and
+# the structure bits always are: 0x80 is the FlowSpec family, not 0x00 with a flag set, and
+# the 0xC0 range is reserved for experimental use rather than paired with it.
+IANA_AUTHORITY_BIT = 0x80
+TRANSITIVE_BIT = 0x40
+
+
+def registry_type(type_octet: int) -> int:
+    """The high-order type octet as the registry is keyed: T cleared, when I is clear."""
+    if type_octet & IANA_AUTHORITY_BIT:
+        return type_octet
+    return type_octet & ~TRANSITIVE_BIT
+
 
 class ExtendedCommunityBase(Attribute):
     """Base class for Extended Communities.
@@ -47,7 +63,10 @@ class ExtendedCommunityBase(Attribute):
         Note: Named differently from Attribute.register to avoid signature conflict.
         """
         assert cls.registered_extended is not None
-        cls.registered_extended[(klass.COMMUNITY_TYPE & 0x0F, klass.COMMUNITY_SUBTYPE)] = klass
+        key = (registry_type(klass.COMMUNITY_TYPE), klass.COMMUNITY_SUBTYPE)
+        # Two classes on one key would leave the first unreachable, and nothing would say so.
+        assert cls.registered_extended.get(key, klass).__name__ == klass.__name__, f'{klass.__name__} shares a key'
+        cls.registered_extended[key] = klass
         return klass
 
     # size of value for data (boolean: is extended)
@@ -201,8 +220,7 @@ class ExtendedCommunityBase(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> 'ExtendedCommunityBase':
-        # 30/02/12 Quagga communities for soo and rt are not transitive when 4360 says they must be, hence the & 0x0FFF
-        community = (data[0] & 0x0F, data[1])
+        community = (registry_type(data[0]), data[1])
         assert cls.registered_extended is not None
         if community in cls.registered_extended:
             klass = cls.registered_extended[community]

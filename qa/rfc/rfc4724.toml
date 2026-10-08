@@ -101,7 +101,10 @@ withdrawn routes, one attribute, MP_UNREACH_NLRI, holding only the AFI and SAFI,
 or a two octet attribute length. A flow withdrawal whose NLRI the decoder refused used to
 be read as the marker for its family, because nothing was left of it once decoded.
 UpdateCollection.unpack_message knew only the two octet length form, and now shares the
-same recognition.
+same recognition.  The flags must say optional and not transitive; the Partial bit and the
+four unused bits are ignored, as the decoder ignores them (RFC 7606 3(c)).  Until
+2026-10-08 a marker with Partial set (0xA0, 0xB0) decoded as an empty withdrawal and did
+not end the family's restart.
 """
 
 [[requirement]]
@@ -300,11 +303,28 @@ from the peer).
 note = """
 The start of the sentence is on the previous page of the RFC: a Receiving Speaker which
 did not detect the termination of the TCP session, and still holds the BGP session as
-established. Peer.handle_connection accepts a connection arriving in ESTABLISHED when the
-peer's OPEN on that session carried the Graceful Restart capability, and ends the session
-as a lost TCP connection would be ended (Peer._replace_restarted_session): the routes are
-retained as stale (rfc4724#4.2-retain-and-mark-stale). Without the capability RFC 4271
-6.8 applies, and the new connection is refused with Connection Collision Resolution.
+established. Peer.handle_connection holds a connection arriving in ESTABLISHED when the
+peer's OPEN on that session carried the Graceful Restart capability, sends our OPEN on it
+at once, and reads its OPEN. Only an OPEN the session would accept (Negotiated.validate,
+against the OPEN we sent on the new connection) ends the session as a lost TCP connection
+would be ended (Peer._replace_restarted_session): the routes are retained as stale
+(rfc4724#4.2-retain-and-mark-stale), and the new session goes on from the two OPENs
+already exchanged, sending no second one. A connection which sends no OPEN within
+bgp.openwait, or an OPEN failing validation, is closed and the old session is left up.
+
+That is a deliberate deviation. The sentence acts on the connection itself, and section 7
+accepts the denial of service this opens, leaving it to TCP authentication. exabgp waits
+for a valid OPEN on the new connection before ending the old session, because ending it on
+the TCP handshake let anything reaching us from the peer's address reset it. Our OPEN is
+sent first so a peer which waits for it before sending its own (DelayOpen) is not stalled
+by the wait. With no local-as we mirror the AS the peer's OPEN names, so then we read
+first, as every session mirroring the AS does.
+
+Only a connection which arrived during the established session is treated so. One held as
+an RFC 4271 6.8 collision in OpenSent is still a collision when ours reaches ESTABLISHED
+before its OPEN is read, and is closed with Connection Collision Resolution. Without the
+capability RFC 4271 6.8 applies, and the new connection is refused with Connection
+Collision Resolution.
 """
 
 [[requirement]]
@@ -321,7 +341,9 @@ note = """
 Positive only: whether there is anything to act on is the entry above, whose negative test
 is the peer which did not advertise the capability. The task running the old session is
 cancelled, its connection is closed without a NOTIFICATION (the RFC's next sentence), and
-the incoming connection becomes the session.
+the incoming connection becomes the session. Deliberately, only once that connection has
+sent an OPEN which passes validation (see rfc4724#4.2-new-connection-ends-old-session):
+until then, and if it never does, the previous session is kept and the new one is closed.
 """
 
 [[requirement]]

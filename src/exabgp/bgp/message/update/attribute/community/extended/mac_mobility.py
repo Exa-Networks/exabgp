@@ -19,6 +19,8 @@ from exabgp.util.types import Buffer
 # ================================================================== MacMobility
 # RFC 7432 Section 7.7.
 
+STICKY_FLAG = 0x01
+
 
 class MacMobility(ExtendedCommunity):
     COMMUNITY_TYPE: ClassVar[int] = 0x06
@@ -31,7 +33,7 @@ class MacMobility(ExtendedCommunity):
     @classmethod
     def make_mac_mobility(cls, sequence: int, sticky: bool = False) -> MacMobility:
         """Create MacMobility from semantic values."""
-        packed = pack('!BBBxI', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, 1 if sticky else 0, sequence)
+        packed = pack('!BBBxI', cls.COMMUNITY_TYPE, cls.COMMUNITY_SUBTYPE, STICKY_FLAG if sticky else 0, sequence)
         return cls(packed)
 
     @property
@@ -41,7 +43,9 @@ class MacMobility(ExtendedCommunity):
 
     @property
     def sticky(self) -> bool:
-        return self._packed[2] == 1
+        # RFC 7432 7.7: "The low-order bit of the Flags octet is defined as the
+        # "Sticky/static" flag", the other seven are not ours to compare.
+        return bool(self._packed[2] & STICKY_FLAG)
 
     def __hash__(self) -> int:
         return hash((self.sticky, self.sequence))

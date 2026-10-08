@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.nlri.settings import VPLSSettings
 
 from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
@@ -28,6 +28,8 @@ from exabgp.protocol.family import AFI, SAFI, Family
 
 # RD(8) + endpoint(2) + offset(2) + size(2) + base(3), the length the two byte header announces
 VPLS_PAYLOAD_SIZE = 17
+# RD(8) + VSI-ID(4), the BGP-AD NLRI of RFC 6074 3.2.2, which shares the family (section 7)
+BGP_AD_PAYLOAD_SIZE = 12
 
 
 class VPLSBase(NLRI):
@@ -217,6 +219,25 @@ class VPLSBase(NLRI):
         self._deepcopy_nlri_slots(new, memo)
         return new
 
+    @staticmethod
+    def _short_nlri(length: int, path_size: int) -> NLRIDiscard:
+        """An NLRI shorter than RFC 4761's, stepped over rather than a session reset.
+
+        RFC 6074 7: BGP-AD and VPLS-BGP share AFI 25 / SAFI 65 and "the NLRI length must be
+        used as a demultiplexer".  Twelve octets are a BGP-AD NLRI (RD and VSI-ID), which
+        exabgp does not implement, and refusing it with a Notify reset any session to a
+        peer running both.  Its two octet length frames it, as it frames any other short
+        NLRI, so the NLRI after it in the same attribute is still read.
+        """
+        if length == BGP_AD_PAYLOAD_SIZE:
+            detail = 'l2vpn vpls NLRI of %d octets is a BGP-AD NLRI (RFC 6074), not decoded' % length
+        else:
+            detail = 'l2vpn vpls length is %d, it needs at least %d' % (length, VPLS_PAYLOAD_SIZE)
+        discard = NLRIDiscard(detail)
+        discard.skip = path_size + 2 + length
+        assert discard.skip > 0, 'a discarded NLRI is stepped over, not re-read'
+        return discard
+
     @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
@@ -229,21 +250,18 @@ class VPLSBase(NLRI):
         if len(data) < 2:
             raise Notify.short(3, 10, 'VPLS NLRI', 2, len(data))
         (length,) = unpack('!H', bytes(data[0:2]))
+        # what follows this NLRI is the next one: an MP_REACH_NLRI carries as many as fit,
+        # so only a length running past the data is inconsistent, and only that one leaves
+        # nothing to step over: it is checked first, so it stays a session reset.
+        if len(data) < length + 2:
+            raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
         # every accessor reads a fixed offset inside the first VPLS_PAYLOAD_SIZE bytes, so
         # what has to hold is that they are there. Demanding the length be exactly that
         # refused a longer NLRI which this decoder has always read correctly, and which a
         # peer is entitled to send: RFC 4761 gives the layout, not a maximum, and a sender
         # may carry a field we do not know about yet.
         if length < VPLS_PAYLOAD_SIZE:
-            raise Notify(
-                3,
-                10,
-                'l2vpn vpls length is %d, it needs at least %d' % (length, VPLS_PAYLOAD_SIZE),
-            )
-        # what follows this NLRI is the next one: an MP_REACH_NLRI carries as many as fit,
-        # so only a length running past the data is inconsistent
-        if len(data) < length + 2:
-            raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
+            raise cls._short_nlri(length, PathInfo.LENGTH if addpath else 0)
 
         # Only what the accessors read is kept, so what is packed back is what was
         # understood. The length prefix is rewritten rather than copied, because it has to

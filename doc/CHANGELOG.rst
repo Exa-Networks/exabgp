@@ -4,6 +4,97 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Incompatible: an SR Policy route is refused unless it carries the NO_ADVERTISE community
+   or a Route Target in IPv4-address format, and a Tunnel Encapsulation (RFC 9830 4.2.1).
+   The sr-policy statement now takes "community [ ... ]" and "extended-community [ ... ]";
+   it ignored them before. A received SR Policy update missing either is treat-as-withdraw.
+   Over eBGP, the default "tunnel-encapsulation auto" drops the attribute on receipt (RFC
+   9012 11), so set "tunnel-encapsulation accept" to receive SR Policy from an external peer.
+ * Incompatible: a flow route naming a second destination or a second source prefix is
+   refused, in the configuration and from the API, 5.0 commands included (RFC 8955 4.2:
+   each component type at most once). It was sent with the component twice, and a received
+   one is now treat-as-withdraw.
+ * Incompatible: a route whose next hop is an address of the peer it is sent to is refused
+   by the configuration (RFC 4271 5.1.3). From the API, that peer is skipped with a warning
+   and the other peers selected still get the route; the command fails only when no
+   selected peer can take it.
+ * Incompatible: "attribute [ ... ]" refuses codes 14, 15, 17 and 18 (MP_REACH_NLRI,
+   MP_UNREACH_NLRI, AS4_PATH, AS4_AGGREGATOR). exabgp generates them, so a raw copy was
+   sent twice, or sent between four-octet speakers where RFC 6793 4.1 forbids it.
+ * Incompatible: "aigp 18446744073709551615" is refused: RFC 7311 3.2 has a receiver
+   discard the maximum value, and exabgp now discards it on receipt.
+ * Incompatible: an l2info extended community with a control flag other than C or S is
+   refused (RFC 4761 3.2.4, the other bits must be zero).
+ * Incompatible: a MUP Type 1 Session Transformed route with TEID 0, and a Type 2 with a
+   TEID of 0 and a non-zero length, are refused; the draft makes TEID 0 malformed.
+ * Change: AIGP is enabled by default on iBGP sessions and towards members of our
+   confederation, sent and accepted (RFC 7311 3.3). It was sent there but discarded on
+   receipt. "aigp disable" now stops it being sent too, and an AIGP received on a disabled
+   session is logged. An unset aigp is no longer printed as "aigp disable".
+ * Change: a MUP Type 1 Session Transformed route is sent with its Source Address Length
+   octet, 0 when it has no source, as draft-mpmz-bess-mup-safi-05 encodes it. The -02 form
+   without it is still accepted. Route types and architectures the draft does not define are
+   ignored rather than passed to the API, and a malformed MUP route is skipped or withdrawn
+   instead of resetting the session.
+ * Change: the Software Version capability is sent in the current draft format, the
+   version string with no length octet of its own. Both formats are accepted; an empty or
+   undecodable value is ignored instead of refusing the session.
+ * Change: an SR Policy route with an IPv4 next hop under AFI 2 is sent with a 4 octet next
+   hop, and either AFI accepts a 4, 16 or 32 octet next hop (RFC 9830 2.1).
+ * Change: a peer which advertised Graceful Restart and connects again while its session
+   is established replaces that session once the new connection has sent a valid OPEN: the
+   old one is closed without a NOTIFICATION and its routes kept as stale (RFC 4724 4.2). It
+   was refused. A connection which sends no valid OPEN changes nothing. Our OPEN is sent
+   first on such a connection, and on one held in a collision.
+ * Change: a collision in OpenSent is decided once the OPEN of the new connection is read,
+   comparing BGP Identifiers and then AS numbers (RFC 4271 6.8, RFC 6286 2.3). Every new
+   connection used to replace ours.
+ * Change: "teardown" and "disable" send their Cease when Graceful Restart is negotiated.
+   The session was closed silently, and the peer kept our routes as stale.
+ * Change: incoming-ttl (GTSM) is checked on each accepted connection, against the
+   neighbor it belongs to, and is now applied to connections reaching the global listener.
+   It was set on the listening socket, shared by every neighbor using it, so the last one
+   configured decided for all of them (RFC 5082 3).
+ * Change: ROUTE-REFRESH, OPERATIONAL and a manual End-of-RIB are only sent to a peer which
+   negotiated them, for its negotiated families; the API answers error when no selected
+   peer can take one. A ROUTE-REFRESH, BoRR, EoRR or End-of-RIB received for a family we
+   did not negotiate is ignored.
+ * Change: routes an Enhanced Route Refresh EoRR removes are withdrawn to the API. Routes
+   kept for a Graceful Restart and routes marked by a BoRR are tracked apart, so neither
+   end marker removes the other's.
+ * Change: a warning is logged when a route sent to an external peer has an AS_PATH which
+   does not start with our AS, "as-path [ ]" included (RFC 4271 5.1.2). What is sent is
+   unchanged: exabgp sends the AS_PATH it is given.
+ * Change: an OTC naming a member AS of our confederation is sent as the confederation
+   identifier to peers outside it (RFC 9234 5).
+ * Change: non-transitive IPv6 address specific extended communities (attribute 25) are
+   removed towards external peers, as non-transitive extended communities already were.
+ * Change: path attributes are sent in ascending type order, MP_REACH_NLRI and
+   MP_UNREACH_NLRI first. The Partial bit is ignored on receipt (RFC 7606 3(c)): an ORIGIN
+   with it set was treat-as-withdraw.
+ * Change: the keepalive interval and the connection retry delay are jittered, by a factor
+   between 0.75 and 1 (RFC 4271 10).
+ * Change: extended communities are decoded by their whole type, ignoring only the
+   transitive bit. Types which shared a class with an unrelated one (Source AS, BGP Data
+   Collection, L2VPN Identifier, Route Aggregation) are shown as hex instead of as a
+   traffic mark, redirect or rate, and a value one of those classes could not read no
+   longer withdraws the route. Redirect to an IPv4 address (0x8108) is decoded, and
+   "redirect:<ipv4>:<n>" and "redirect:<large asn>:<n>" build the 0x8108 and 0x8208 forms.
+ * Change: BGP-LS Protocol-ID 4 is Direct and 5 Static configuration (RFC 9552); 227, which
+   exabgp used for Static, is kept for freertr. A malformed NLRI inside a correctly framed
+   one is skipped instead of resetting the session, in MP_UNREACH_NLRI as well. Several
+   TLVs show different values: the SRv6 Capabilities O flag (0 or 1, from the right bit),
+   the Link Protection Type flags (bit order), a one octet IGP metric (top two bits
+   ignored), three octet labels (20 bits), an OSPF Adj-SID's SID, and an empty
+   SR-Algorithm ([] where [0] was invented).
+ * Change: more malformed input is handled the way its RFC asks instead of resetting the
+   session or being accepted: a malformed SRv6 Service TLV, a PMSI Tunnel of an undefined
+   type or identifier size, more labels than we announced, and an AIGP at its maximum value
+   withdraw the route or discard the attribute; a 12 octet VPLS NLRI (BGP-AD, RFC 6074) is
+   skipped; an MCAST-VPN route whose Originating Router's IP is neither 4 nor 16 octets is
+   refused (RFC 6515).
+ * Change: End-of-RIB is recognised from the message as sent, so an UPDATE left empty by
+   discarded content no longer ends a Graceful Restart early.
  * Fix: exabgp starts without looking up the host's FQDN. It timed a reverse lookup to warn
    that the resolver was slow, and that lookup was the slow part: where it is not answered
    (mDNS on macOS without a reverse DNS entry) the daemon hung before its first log line.

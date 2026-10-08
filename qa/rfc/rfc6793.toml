@@ -78,15 +78,18 @@ id = "rfc6793#4.1-no-as4-attributes-between-new-speakers"
 section = "4.1"
 level = "MUST NOT"
 status = "required"
-polarity = "positive-only"
+polarity = "both"
 text = """
 The new attributes, AS4_PATH and AS4_AGGREGATOR, MUST NOT be carried
 in an UPDATE message between NEW BGP speakers.
 """
 note = """
-Positive only: this constrains the UPDATE we generate, and exabgp obeys it. What we do
-about one which arrives anyway is the next sentence, recorded separately at
-rfc6793#4.1-discard-as4-from-a-new-speaker, where exabgp does not obey it.
+AS_PATH and AGGREGATOR make AS4_PATH and AS4_AGGREGATOR only for a session without the
+four-octet AS capability. A raw `attribute [ 0x11 ... ]` or `[ 0x12 ... ]` was sent as it
+was, to a NEW speaker too, and next to the generated one to an OLD speaker; the
+configuration and the API now refuse both codes (types/bgp.GENERATED_ATTRIBUTES), which is
+the negative test. What we do about one which arrives anyway is the next sentence,
+rfc6793#4.1-discard-as4-from-a-new-speaker.
 """
 
 [[requirement]]

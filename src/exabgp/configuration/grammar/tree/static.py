@@ -68,7 +68,11 @@ ROUTE_VALUES: dict[str, RouteValue] = {
     'label': RouteValue(bgp.LabelsType(), Target.NLRI, 'labels', 'the MPLS label stack'),
     'bgp-prefix-sid': RouteValue(bgp.PrefixSidType(), Target.ATTRIBUTE),
     'bgp-prefix-sid-srv6': RouteValue(bgp.PrefixSidSrv6Type(), Target.ATTRIBUTE),
-    'attribute': RouteValue(bgp.HexAttribute(), Target.ATTRIBUTE, doc='any attribute, as its wire bytes'),
+    'attribute': RouteValue(
+        bgp.HexAttribute(),
+        Target.ATTRIBUTE,
+        doc='any attribute, as its wire bytes, but 14, 15, 17 and 18, which exabgp makes',
+    ),
     'origin': RouteValue(bgp.ORIGIN, Target.ATTRIBUTE),
     'otc': RouteValue(bgp.OTC_VALUE, Target.ATTRIBUTE, doc='RFC 9234 Only-to-Customer'),
     'med': RouteValue(bgp.MED_VALUE, Target.ATTRIBUTE),

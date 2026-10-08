@@ -19,6 +19,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from exabgp.bgp.fsm import FSM
+
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
@@ -179,3 +181,37 @@ async def test_no_end_of_rib_overtakes_the_commands_being_applied() -> None:
 
     assert list(peer.neighbor.eor) == [manual]
     assert not peer._end_of_rib_sent
+
+
+@pytest.mark.asyncio
+@pytest.mark.rfc('rfc4760#8-should-use-capability-advertisement', polarity='negative')
+async def test_a_queued_end_of_rib_for_a_family_the_session_did_not_negotiate_is_dropped() -> None:
+    """The API checks the session when the command arrives; the session may be another by now."""
+    peer = _peer(applying=False)
+    assert peer.proto is not None
+    peer.fsm.change(FSM.ESTABLISHED)
+    peer.proto.negotiated.families = [(AFI.ipv4, SAFI.unicast)]
+    peer.neighbor.eor.append(SimpleNamespace(afi=AFI.ipv6, safi=SAFI.unicast))
+
+    with patch.object(Protocol, 'new_eors') as sent:
+        await peer._send_eor_messages(False, None)
+
+    sent.assert_not_called()
+    assert not peer._end_of_rib_sent
+    assert list(peer.neighbor.eor) == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.rfc('rfc4760#8-should-use-capability-advertisement')
+async def test_a_queued_end_of_rib_for_a_negotiated_family_is_sent() -> None:
+    peer = _peer(applying=False)
+    assert peer.proto is not None
+    peer.fsm.change(FSM.ESTABLISHED)
+    peer.proto.negotiated.families = [(AFI.ipv4, SAFI.unicast)]
+    peer.neighbor.eor.append(SimpleNamespace(afi=AFI.ipv4, safi=SAFI.unicast))
+
+    with patch.object(Protocol, 'new_eors') as sent:
+        await peer._send_eor_messages(False, None)
+
+    sent.assert_called_once_with(AFI.ipv4, SAFI.unicast)
+    assert peer._end_of_rib_sent == {(AFI.ipv4, SAFI.unicast)}

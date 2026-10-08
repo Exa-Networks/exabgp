@@ -134,9 +134,8 @@ class TestLinkAttributesJson:
 
     def test_link_protection_type_json(self) -> None:
         """LinkProtectionType (TLV 1093) produces valid JSON"""
-        # Use unpack_bgpls with raw bytes: 0x40 = Unprotected bit set (bit 6)
-        # FLAGS order: ExtraTrafic, Unprotected, Shared, Dedicated1:1, Dedicated1+1, Enhanced, RSV, RSV
-        attr = LinkProtectionType.unpack_bgpls(b'\x40\x00')
+        # Use unpack_bgpls with raw bytes: 0x02 = Unprotected, RFC 5307 1.2
+        attr = LinkProtectionType.unpack_bgpls(b'\x02\x00')
         result = validate_json(attr.json(), 'LinkProtectionType')
         assert 'link-protection-flags' in result
 

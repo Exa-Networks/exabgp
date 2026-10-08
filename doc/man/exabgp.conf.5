@@ -108,7 +108,9 @@ neighbor <ip>[/<mask>] {  # a BGP peer
         # Enhanced Route Refresh, RFC 7313, alone: what route-refresh says of
         # it, overridden
         route-refresh-enhanced enable|disable|require;
-        aigp true|false;  # accept and send the AIGP attribute, RFC 7311
+        # accept and send the AIGP attribute, RFC 7311; unset: on for iBGP and
+        # confederation members
+        aigp true|false;
         # Extended Messages, RFC 8654: messages up to 65535 octets
         extended-message enable|disable|require;
         # Software Version, draft-ietf-idr-software-version
@@ -227,7 +229,8 @@ neighbor <ip>[/<mask>] {  # a BGP peer
             # may be repeated
             bgp-prefix-sid-srv6 ( l3-service|l2-service <ipv6> [<behavior> [ [
                     <LBL>, <LNL>, <FL>, <AL>, <len>, <offset> ] ]] );
-            # any attribute, as its wire bytes, may be repeated
+            # any attribute, as its wire bytes, but 14, 15, 17 and 18, which
+            # exabgp makes, may be repeated
             attribute [ 0x<code> 0x<flag> 0x<data> ];
             origin igp|egp|incomplete;  # may be repeated
             # RFC 9234 Only-to-Customer, may be repeated
@@ -604,11 +607,16 @@ IPv4
 .Ic incoming-ttl
 is not enforced.
 .Pp
-The listening socket is shared by every neighbor on one address and port, so
-neighbors behind it configured with different
 .Ic incoming-ttl
-values get whichever was set last.
-Give a neighbor needing its own minimum its own listening address.
+is checked on each accepted connection, once it is matched to its neighbor,
+and never set on the listening socket, which every neighbor on one address
+and port shares.
+On Linux the TTL of the connection's SYN is read back from the kernel and a
+connection below the minimum is closed; elsewhere only the segments after the
+handshake are checked.
+Until 6.0.0 the minimum was set on the listening socket, so the last neighbor
+configured decided for all of them, and a session reaching the global
+listener was not checked at all.
 .Sh CONFEDERATION
 With a
 .Ic confederation

@@ -359,11 +359,20 @@ def _check_routes(neighbor: Neighbor, settings: NeighborSettings) -> None:
             raise ValueError(
                 f'Trying to announce a route of type {family[0]},{family[1]} when we are not announcing the family to our peer'
             )
-        refused = neighbor.next_hop_refused(resolved.nexthop) or _extended_next_hop(
-            neighbor, settings, family, resolved
+        refused = (
+            neighbor.next_hop_refused(resolved.nexthop)
+            or neighbor.next_hop_is_the_peer(route)
+            or _extended_next_hop(neighbor, settings, family, resolved)
         )
         if refused:
             raise ValueError(f'route {route.nlri}: {refused}')
+        not_ours = neighbor.as_path_not_ours(resolved)
+        if not_ours:
+            # RFC 4271 5.1.2 puts our AS first: sent as written, on purpose, but said
+            log.warning(
+                lazymsg('route.as_path.not_ours route={route} reason={reason}', route=route.nlri, reason=not_ours),
+                'configuration',
+            )
 
 
 # the IPv4 families RFC 8950 1 gives an IPv6 next-hop with the Extended Next Hop Encoding

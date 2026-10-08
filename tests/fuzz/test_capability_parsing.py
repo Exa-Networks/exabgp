@@ -562,18 +562,16 @@ def test_software_version_lengths(version_len: int) -> None:
     from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
 
-    # Format: version_len(1) + version
+    # Revision 00 put a length octet before the version, the current draft does not
     version = b'v' * min(version_len, 64)
-    data = bytes([len(version)]) + version
 
-    instance = Software()
-
-    try:
-        result = Software.unpack_capability(instance, data, Capability.CODE.SOFTWARE_VERSION)
-        assert isinstance(result, Software)
-    except Notify:
-        # Expected for invalid lengths
-        pass
+    for data in (bytes([len(version)]) + version, version):
+        try:
+            result = Software.unpack_capability(Software(), data, Capability.CODE.SOFTWARE_VERSION)
+        except Notify:
+            pytest.fail('the Software Version capability is ignored when malformed, never refused')
+        # an empty version is ignored, as section 3 of the draft has a zero length be
+        assert isinstance(result, Software) is bool(version)
 
 
 # =============================================================================

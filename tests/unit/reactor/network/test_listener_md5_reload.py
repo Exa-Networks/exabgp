@@ -73,14 +73,14 @@ def test_reload_clearing_the_password_clears_the_key_on_the_reused_socket() -> N
     try:
         with _kernel() as options:
             # first pass binds a new socket and installs the key
-            listener._listen(LOCAL, PEER, 0, 'secret', False, None)
+            listener._listen(LOCAL, PEER, 0, 'secret', False)
             assert len(listener._sockets) == 1
             sock = next(iter(listener._sockets))
             assert _md5_keys(options) == [(sock, b'secret')]
 
             # a reload without md5-password must reuse that socket and clear the key
             options.clear()
-            listener._listen(LOCAL, PEER, 0, None, False, None)
+            listener._listen(LOCAL, PEER, 0, None, False)
 
             assert len(listener._sockets) == 1, 'the listening socket must be reused'
             # a zero length key is what clears the entry
@@ -94,11 +94,11 @@ def test_reload_keeping_the_password_reinstalls_it_on_the_reused_socket() -> Non
 
     try:
         with _kernel() as options:
-            listener._listen(LOCAL, PEER, 0, 'secret', False, None)
+            listener._listen(LOCAL, PEER, 0, 'secret', False)
             sock = next(iter(listener._sockets))
 
             options.clear()
-            listener._listen(LOCAL, PEER, 0, 'secret', False, None)
+            listener._listen(LOCAL, PEER, 0, 'secret', False)
 
             assert _md5_keys(options) == [(sock, b'secret')]
     finally:

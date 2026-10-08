@@ -439,3 +439,41 @@ def test_a_route_we_originate_keeps_the_path_information_it_was_configured_with(
         target.rib.outgoing.add_to_rib(route)
 
     assert sent_identifiers(target, session) == [pack('!L', 9)]
+
+
+# ------------------------------------------- 4 a capability with no tuple is not advertised
+
+
+def advertised_add_path(addpath_families: list[tuple[AFI, SAFI]]) -> bytes | None:
+    """The value of the ADD-PATH capability our OPEN carries, None when it carries none."""
+    neighbor = Neighbor()
+    neighbor.session.local_as = ASN(65001)
+    neighbor.add_family((AFI.ipv4, SAFI.unicast))
+    neighbor.add_family((AFI.l2vpn, SAFI.vpls))
+    for family in addpath_families:
+        neighbor.add_addpath(family)
+    neighbor.capability.add_path = 3
+
+    packed = Capabilities().new(neighbor, False).pack_capabilities()
+    # one Capabilities optional parameter: its length, type 2, its length, then the TLVs
+    tlvs = packed[3:]
+    offset = 0
+    while offset < len(tlvs):
+        code, length = tlvs[offset], tlvs[offset + 1]
+        if code == Capability.CODE.ADD_PATH:
+            return bytes(tlvs[offset + 2 : offset + 2 + length])
+        offset += 2 + length
+    return None
+
+
+def test_add_path_with_no_family_able_to_carry_it_is_not_advertised() -> None:
+    """Unmarked, 4 has no keyword: "The Capability Value field consists of one or more of
+    the following tuples".  VPLS packs no path identifier, so add-path on it alone left no
+    tuple, and a capability of length zero was sent, which says nothing a peer can use."""
+    assert advertised_add_path([(AFI.l2vpn, SAFI.vpls)]) is None
+
+
+def test_add_path_on_a_family_able_to_carry_it_is_advertised() -> None:
+    value = advertised_add_path([(AFI.ipv4, SAFI.unicast), (AFI.l2vpn, SAFI.vpls)])
+
+    assert value == AFI.ipv4.pack_afi() + SAFI.unicast.pack_safi() + bytes([3])

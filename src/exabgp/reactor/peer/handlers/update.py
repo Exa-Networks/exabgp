@@ -104,6 +104,14 @@ class UpdateHandler(MessageHandler):
         # RFC 7313 section 4 needs to know an End-of-RIB was received, per family, for the
         # Graceful Restart rule on BoRR
         family = (eor.afi, eor.safi)
+        # EOR.from_body accepts an End-of-RIB for any family: one the session did not
+        # negotiate means nothing, and recording it let a peer grow the record without bound
+        if family not in ctx.negotiated.families:
+            log.warning(
+                lazymsg('eor.ignored reason=family-not-negotiated afi={a} safi={s}', a=family[0], s=family[1]),
+                ctx.peer_id,
+            )
+            return
         ctx.neighbor.rib.incoming.record_end_of_rib(family)
         # RFC 4724 4.2: what a restarted peer did not send again goes with its End-of-RIB
         stale = ctx.neighbor.rib.incoming.end_restart(family)
