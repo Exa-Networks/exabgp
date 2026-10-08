@@ -1,7 +1,7 @@
 """Configuration.serialise() prints a configuration which reads back to the same one, routes aside.
 
-str(neighbor) is a display: it does not read back (rate-limit disable, the capabilities, the
-families no statement names). serialise() prints what the configuration was made from, with
+str(neighbor) is a display: it does not read back (the capabilities, the families no statement
+names). serialise() prints what the configuration was made from, with
 the grammar printer, so each process and neighbor reads back equal.
 """
 

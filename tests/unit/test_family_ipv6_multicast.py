@@ -41,7 +41,7 @@ def test_ipv6_multicast_alone_is_read() -> None:
 def test_the_printed_families_of_all_read_back() -> None:
     (neighbor,) = _loaded(NEIGHBOR.format(families='family { all; }')).neighbors.values()
     # only the family block: the rest of a printed neighbor does not all read back yet
-    # (`rate-limit disable`, plan/done-config-grammar.md section 6)
+    # (the capabilities, plan/wip-config-grammar-followup.md)
     printed = str(neighbor)
     start = printed.index('family {')
     block = printed[start : printed.index('}', start) + 1]

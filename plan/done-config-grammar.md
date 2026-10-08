@@ -636,7 +636,7 @@ Each is pinned by a form or document in `tests/unit/config_grammar/forms.py`.
 | an `inherit` of a template which does not exist, or is defined further down, is ignored | `inherit nothing;` | `resolve.inherit` |
 | `family { ipv4 unicast; all; }` is accepted and asks for every family; `add-path { all; }` asks for none | | `family._store_all` |
 | a boolean given no word takes the leaf default, which is not the neighbor default | `adj-rib-in;` is false, no statement is true | `boolean(bare)` |
-| `rate-limit` takes any integer, a negative one or 0 included, and not `disable` (which the printer writes) | `rate-limit -5;` | `integer('rate-limit')` |
+| ~~`rate-limit` takes any integer, a negative one or 0 included, and not `disable` (which the printer writes)~~ a negative is refused; `disable` read as 0 since 2026-10-08 (`plan/wip-config-grammar-followup.md` item 3) | `rate-limit -5;` | `types/network.RATE_LIMIT` |
 | api names are unique across the whole configuration, not per neighbor | two neighbors with `api a { }` | `session._api` |
 | a route line picks VPN or labelled from the word `rd`, `route-distinguisher` or `label` anywhere in the statement, a value included | `route ... name rd;` is built as a VPN route, then made unicast again | `static._mentions`, `static.normalize` |
 | a prefix whose mask is no number is a host route | `route 10.0.0.0/x` is `10.0.0.0/32` | `bgp.Prefix` |

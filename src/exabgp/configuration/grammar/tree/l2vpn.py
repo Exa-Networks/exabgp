@@ -101,7 +101,10 @@ VPLS_ATTRIBUTES = (
 )
 VPLS_VALUES: dict[str, RouteValue] = {
     **VPLS_NLRI,
-    **{keyword: RouteValue(ROUTE_VALUES[keyword].type, Target.ATTRIBUTE) for keyword in VPLS_ATTRIBUTES},
+    **{
+        keyword: RouteValue(ROUTE_VALUES[keyword].type, Target.ATTRIBUTE, adds=ROUTE_VALUES[keyword].adds)
+        for keyword in VPLS_ATTRIBUTES
+    },
 }
 
 
@@ -237,7 +240,7 @@ VPLS_BLOCK = Block(
     key='label',  # the name is read and ignored
     doc='a VPLS route, its values one per statement',
     children=tuple(
-        Leaf(keyword, spec.type, field=f'_{keyword}', store=Pending(spec), doc=spec.doc)
+        Leaf(keyword, spec.type, field=f'_{keyword}', store=Pending(spec), doc=spec.doc, adds=spec.adds)
         for keyword, spec in VPLS_VALUES.items()
     ),
 )
@@ -252,7 +255,13 @@ L2VPN_SECTION = Block(
         VPLS_BLOCK,
         *(Leaf(keyword, _NoSetter(keyword), field=f'_{keyword}') for keyword in VPLS_NLRI),
         *(
-            Leaf(keyword, ROUTE_VALUES[keyword].type, field=f'_{keyword}', store=LastRouteStore())
+            Leaf(
+                keyword,
+                ROUTE_VALUES[keyword].type,
+                field=f'_{keyword}',
+                store=LastRouteStore(),
+                adds=ROUTE_VALUES[keyword].adds,
+            )
             for keyword in VPLS_ATTRIBUTES
         ),
     ),

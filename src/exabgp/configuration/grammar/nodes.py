@@ -81,6 +81,9 @@ class Leaf:
     # given by the neighbor or by a template it inherits: checked once they are merged, when
     # the neighbor is made (tree/resolve.py), so a template may leave it out
     needed: bool = False
+    # given again, the statement adds to what was given (communities, flow rules) where its
+    # value is not a list in the model: the help says "may be repeated" of it, as of a list
+    adds: bool = False
 
     @property
     def repeated(self) -> bool:

@@ -83,7 +83,11 @@ NEIGHBOR_FORMS: list[tuple[tuple[str, ...], str, bool]] = [
     ((), 'hold-time \u0661\u0668\u0660', False),
     ((), 'rate-limit +5', False),
     ((), 'listen 1_79', False),
-    ((), 'rate-limit disable', False),
+    # 5.0 reads both as no limit, and str(neighbor) prints the first
+    ((), 'rate-limit disable', True),
+    ((), 'rate-limit disabled', True),
+    ((), 'rate-limit DISABLE', True),
+    ((), 'rate-limit enable', False),
     ((), 'rate-limit', False),
     ((), 'listen 179', True),
     ((), 'listen 1', True),

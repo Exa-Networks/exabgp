@@ -49,10 +49,11 @@ from exabgp.configuration.grammar.types.network import (
     IP_OR_AUTO,
     IP_RANGE,
     PORT,
+    RATE_LIMIT,
     ROUTER_ID,
     TTL,
 )
-from exabgp.configuration.grammar.types.word import Word, choice, integer, text
+from exabgp.configuration.grammar.types.word import Word, choice, text
 from exabgp.configuration.grammar.words import Words
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
@@ -164,7 +165,7 @@ LEAVES = (
     Leaf('host-name', text('host-name'), field='host-name', doc='sent in the hostname capability'),
     Leaf('domain-name', text('domain-name'), field='domain-name', doc='sent in the hostname capability'),
     Leaf('hold-time', HOLD_TIME, field='hold-time', doc='seconds, 0 disables the hold timer'),
-    Leaf('rate-limit', integer('rate-limit'), field='rate-limit', doc='UPDATE messages per second'),
+    Leaf('rate-limit', RATE_LIMIT, field='rate-limit', doc='UPDATE messages per second, 0 or disable for no limit'),
     Leaf('passive', boolean(True), field='passive', doc='wait for the peer to connect'),
     Leaf('listen', PORT, field='listen', doc='the port to listen on'),
     Leaf('connect', PORT, field='connect', doc='the port to connect to'),

@@ -72,6 +72,7 @@ class FlowValue:
     target: Target
     field: str = ''
     doc: str = ''
+    adds: bool = False  # given again, adds to the first: a rule or an attribute made of a list
 
 
 MATCH: dict[str, FlowValue] = {
@@ -84,56 +85,70 @@ MATCH: dict[str, FlowValue] = {
     'protocol': FlowValue(
         types.condition('protocol', FlowIPProtocol, ['tcp', '[ udp tcp ]', '=6']),
         Target.RULE,
+        adds=True,
         doc='the IP protocol, RFC 8955 type 3',
     ),
     'next-header': FlowValue(
         types.condition('next-header', FlowNextHeader, ['tcp']),
         Target.RULE,
+        adds=True,
         doc='the IPv6 next header, RFC 8956 type 3',
     ),
     'port': FlowValue(
         types.condition('port', FlowAnyPort, ['25', '[ =80 >8080&<8088 ]']),
         Target.RULE,
+        adds=True,
         doc='the source or destination port, RFC 8955 type 4',
     ),
     'destination-port': FlowValue(
         types.condition('destination-port', FlowDestinationPort, ['=80']),
         Target.RULE,
+        adds=True,
         doc='the destination port, RFC 8955 type 5',
     ),
     'source-port': FlowValue(
-        types.condition('source-port', FlowSourcePort, ['>1024']), Target.RULE, doc='the source port, RFC 8955 type 6'
+        types.condition('source-port', FlowSourcePort, ['>1024']),
+        Target.RULE,
+        adds=True,
+        doc='the source port, RFC 8955 type 6',
     ),
     'icmp-type': FlowValue(
-        types.condition('icmp-type', FlowICMPType, ['8']), Target.RULE, doc='the ICMP type, RFC 8955 type 7'
+        types.condition('icmp-type', FlowICMPType, ['8']), Target.RULE, adds=True, doc='the ICMP type, RFC 8955 type 7'
     ),
     'icmp-code': FlowValue(
-        types.condition('icmp-code', FlowICMPCode, ['0']), Target.RULE, doc='the ICMP code, RFC 8955 type 8'
+        types.condition('icmp-code', FlowICMPCode, ['0']), Target.RULE, adds=True, doc='the ICMP code, RFC 8955 type 8'
     ),
     'tcp-flags': FlowValue(
         types.condition('tcp-flags', FlowTCPFlag, ['syn', '[ syn ack ]']),
         Target.RULE,
+        adds=True,
         doc='the TCP flags, RFC 8955 type 9',
     ),
     'packet-length': FlowValue(
         types.condition('packet-length', FlowPacketLength, ['>200&<300']),
         Target.RULE,
+        adds=True,
         doc='the packet length, RFC 8955 type 10',
     ),
-    'dscp': FlowValue(types.condition('dscp', FlowDSCP, ['10']), Target.RULE, doc='the DSCP, RFC 8955 type 11'),
+    'dscp': FlowValue(
+        types.condition('dscp', FlowDSCP, ['10']), Target.RULE, adds=True, doc='the DSCP, RFC 8955 type 11'
+    ),
     'traffic-class': FlowValue(
         types.condition('traffic-class', FlowTrafficClass, ['10']),
         Target.RULE,
+        adds=True,
         doc='the IPv6 traffic class, RFC 8956 type 11',
     ),
     'fragment': FlowValue(
         types.condition('fragment', FlowFragment, ['is-fragment']),
         Target.RULE,
+        adds=True,
         doc='the fragment flags, RFC 8955 type 12',
     ),
     'flow-label': FlowValue(
         types.condition('flow-label', FlowFlowLabel, ['>100&<2000']),
         Target.RULE,
+        adds=True,
         doc='the IPv6 flow label, RFC 8956 type 13',
     ),
 }
@@ -142,14 +157,18 @@ THEN: dict[str, FlowValue] = {
     'accept': FlowValue(types.ACCEPT, Target.NOTHING, doc='no action: the traffic is accepted'),
     'discard': FlowValue(types.DISCARD, Target.ATTRIBUTE, doc='drop the traffic, a traffic-rate of 0'),
     'rate-limit': FlowValue(
-        types.RATE_LIMIT, Target.ATTRIBUTE, doc='traffic-rate, RFC 8955 7.3: bytes or packets per second'
+        types.RATE_LIMIT, Target.ATTRIBUTE, adds=True, doc='traffic-rate, RFC 8955 7.3: bytes or packets per second'
     ),
     'redirect': FlowValue(
-        types.REDIRECT, Target.NEXTHOP_ATTRIBUTE, doc='redirect to the VRF of a route target, or to an address'
+        types.REDIRECT,
+        Target.NEXTHOP_ATTRIBUTE,
+        adds=True,
+        doc='redirect to the VRF of a route target, or to an address',
     ),
     'redirect-to-nexthop': FlowValue(
         types.REDIRECT_TO_NEXTHOP,
         Target.ATTRIBUTE,
+        adds=True,
         doc='redirect to the next-hop of the route, or to the address given',
     ),
     'redirect-to-nexthop-ietf': FlowValue(
@@ -167,15 +186,16 @@ THEN: dict[str, FlowValue] = {
     'redirect-simpson': FlowValue(
         types.REDIRECT_SIMPSON, Target.NEXTHOP_ATTRIBUTE, doc='redirect to an address, the older form'
     ),
-    'mark': FlowValue(types.MARK, Target.ATTRIBUTE, doc='traffic-marking, RFC 8955 7.5: the DSCP to set'),
+    'mark': FlowValue(types.MARK, Target.ATTRIBUTE, adds=True, doc='traffic-marking, RFC 8955 7.5: the DSCP to set'),
     'action': FlowValue(
         types.ACTION,
         Target.ATTRIBUTE,
+        adds=True,
         doc='traffic-action, RFC 8955 7.6: sample the traffic, stop at this rule, or both',
     ),
-    'community': FlowValue(ROUTE_VALUES['community'].type, Target.ATTRIBUTE),
-    'large-community': FlowValue(ROUTE_VALUES['large-community'].type, Target.ATTRIBUTE),
-    'extended-community': FlowValue(ROUTE_VALUES['extended-community'].type, Target.ATTRIBUTE),
+    'community': FlowValue(ROUTE_VALUES['community'].type, Target.ATTRIBUTE, adds=True),
+    'large-community': FlowValue(ROUTE_VALUES['large-community'].type, Target.ATTRIBUTE, adds=True),
+    'extended-community': FlowValue(ROUTE_VALUES['extended-community'].type, Target.ATTRIBUTE, adds=True),
 }
 
 SCOPE: dict[str, FlowValue] = {
@@ -410,7 +430,7 @@ def announce_flow_words(route: Route) -> list[WordOrSyntax]:
 
 def _leaves(values: dict[str, FlowValue]) -> tuple[Leaf, ...]:
     return tuple(
-        Leaf(keyword, spec.type, field=f'_{keyword}', store=Pending(spec), doc=spec.doc)
+        Leaf(keyword, spec.type, field=f'_{keyword}', store=Pending(spec), doc=spec.doc, adds=spec.adds)
         for keyword, spec in values.items()
     )
 

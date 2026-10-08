@@ -56,6 +56,7 @@ class RouteValue:
     target: Target  # NLRI, NEXTHOP_ATTRIBUTE or ATTRIBUTE
     field: str = ''  # the INETSettings field, for an 'nlri' target
     doc: str = ''
+    adds: bool = False  # given again, adds to the first (a list attribute, LIST_ATTRIBUTES)
 
 
 ROUTE_VALUES: dict[str, RouteValue] = {
@@ -82,9 +83,9 @@ ROUTE_VALUES: dict[str, RouteValue] = {
     'aggregator': RouteValue(bgp.AggregatorType(), Target.ATTRIBUTE),
     'originator-id': RouteValue(bgp.ORIGINATOR_ID, Target.ATTRIBUTE),
     'cluster-list': RouteValue(bgp.ClusterListType(), Target.ATTRIBUTE),
-    'community': RouteValue(bgp.COMMUNITIES, Target.ATTRIBUTE),
-    'large-community': RouteValue(bgp.LARGE_COMMUNITIES, Target.ATTRIBUTE),
-    'extended-community': RouteValue(bgp.ExtendedCommunitiesType(), Target.ATTRIBUTE),
+    'community': RouteValue(bgp.COMMUNITIES, Target.ATTRIBUTE, adds=True),
+    'large-community': RouteValue(bgp.LARGE_COMMUNITIES, Target.ATTRIBUTE, adds=True),
+    'extended-community': RouteValue(bgp.ExtendedCommunitiesType(), Target.ATTRIBUTE, adds=True),
     'aigp': RouteValue(bgp.AIGP_VALUE, Target.ATTRIBUTE),
     'name': RouteValue(bgp.NAME, Target.ATTRIBUTE, doc='a name for the route, kept by exabgp'),
     'split': RouteValue(bgp.SPLIT, Target.ATTRIBUTE, doc='announce the prefix as its more specifics of this length'),
@@ -584,7 +585,7 @@ NESTED_ROUTE = Block(
     key='prefix',
     doc='a route, its values one per statement',
     children=tuple(
-        Leaf(keyword, spec.type, field=keyword, store=RouteValueStore(keyword), doc=spec.doc)
+        Leaf(keyword, spec.type, field=keyword, store=RouteValueStore(keyword), doc=spec.doc, adds=spec.adds)
         for keyword, spec in ROUTE_VALUES.items()
     ),
 )

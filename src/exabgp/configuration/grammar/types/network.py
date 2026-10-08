@@ -12,6 +12,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.configuration.grammar import shape
+from exabgp.configuration.grammar.shape import INT64_MAX
 from exabgp.configuration.grammar.types.word import Number, Word, decimal
 from exabgp.protocol.ip import IP, IPRange
 
@@ -86,6 +87,22 @@ def _port(word: str) -> int:
     return port
 
 
+# the spellings of no rate limit, besides 0: 5.0 read them, and str(neighbor) prints `disable`
+RATE_LIMIT_DISABLED = ('disable', 'disabled')
+
+
+def _rate_limit(word: str) -> int:
+    if word.lower() in RATE_LIMIT_DISABLED:
+        return 0
+    try:
+        rate = decimal(word)
+    except ValueError:
+        raise ValueError(f"'{word}' is not a valid rate-limit") from None
+    if rate > INT64_MAX:
+        raise ValueError(f'rate-limit {rate} is invalid, the most is {INT64_MAX}')
+    return rate
+
+
 def _ttl(word: str) -> int | None:
     try:
         ttl = decimal(word)
@@ -137,6 +154,13 @@ HOLD_TIME: Number[HoldTime] = Number(
     ((0, 0), (HOLD_TIME_MIN_NONZERO, HoldTime.MAX)),
     convert=_hold_time,
     examples=['0', '3', '180', '65535'],
+)
+RATE_LIMIT: Number[int] = Number(
+    'rate-limit',
+    ((0, INT64_MAX),),
+    convert=_rate_limit,
+    examples=['0', '1', 'disable', 'disabled'],
+    hint='<number>|disable',
 )
 PORT: Number[int] = Number('port', ((1, PORT_MAX),), convert=_port, examples=['1', '179', '65535'])
 TTL = Word(

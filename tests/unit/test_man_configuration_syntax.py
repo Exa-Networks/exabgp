@@ -44,5 +44,13 @@ def test_a_request_is_never_read_from_the_block() -> None:
 
 def test_the_old_mistakes_are_gone() -> None:
     text = '\n'.join(block())
-    assert 'rate-limit <number>;' in text
+    assert 'rate-limit <number>|disable;' in text
+    assert 'rate-limit <enable' not in text
     assert 'encoder text|json;' in text
+
+
+def test_a_wide_statement_without_a_note_is_carried_on() -> None:
+    statement = 'bgp-prefix-sid [ <label-index> ] | [ <label-index>, [ ( <base>,<range> ) ... ] ];'
+    lines = manual(['\t\t\t' + statement], WIDTH)
+    assert len(lines) > 1
+    assert all(len(line) <= WIDTH for line in lines)

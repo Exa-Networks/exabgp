@@ -61,13 +61,82 @@ def find(root: Block, path: list[str]) -> Block:
     return block
 
 
+def locate(root: Block, path: list[str]) -> Block | Leaf:
+    """The section or the statement reached by the keywords of `path`, ValueError when there is none.
+
+    A keyword both a statement and a section (`route`) is the section: its statements are
+    the values the one-line form takes too.
+    """
+    node: Block | Leaf = root
+    for index, keyword in enumerate(path[:MAX_DEPTH]):
+        if isinstance(node, Leaf):
+            raise ValueError(f"'{path[index - 1]}' is a statement, it has no '{keyword}'")
+        child = node.block(keyword) or node.leaf(keyword)
+        if child is None:
+            known = ', '.join(each.keyword for each in node.children)
+            raise ValueError(f"no keyword '{keyword}' in {node.keyword or 'the configuration'}, only: {known}")
+        node = child
+    return node
+
+
+def _statement(root: Block, path: list[str]) -> Leaf:
+    """The statement at `path`: of a keyword both a statement and a section, the statement."""
+    parent = locate(root, path[:-1])
+    found = parent.leaf(path[-1]) if path and isinstance(parent, Block) else None
+    if found is None:
+        locate(root, path)  # the error naming what is wrong
+        raise ValueError(f"'{path[-1] if path else 'the configuration'}' is a section, not a statement")
+    return found
+
+
+# a help shows a few of the spellings a value takes; the syntax line says what they have in common
+MAX_HELP_EXAMPLES = 3
+
+
+def _given(path: list[str]) -> Any:
+    """What a neighbor holds for the statement at `path` when it is not there, None if nothing."""
+    given: Any = {'neighbor': neighbor_defaults(), 'template': {'neighbor': neighbor_defaults()}}
+    for keyword in path:
+        given = given.get(keyword) if isinstance(given, dict) else None
+    return given
+
+
+def statement_help(root: Block, path: list[str]) -> list[str]:
+    """The help of the statement at `path`: its syntax line, what it is for, its default, examples."""
+    leaf = _statement(root, path)
+    member = _leaf(leaf, _given(path))
+    hint = leaf.type.hint()
+    lines = [' '.join([*path[:-1], f'{leaf.keyword} {hint};' if hint else f'{leaf.keyword};'])]
+    notes = [leaf.doc] if leaf.doc else []
+    if member is None:
+        notes.append('refused here')
+    if leaf.mandatory:
+        notes.append('mandatory')
+    if member is not None and member.default is not None:
+        notes.append(f'default {member.default}')
+    if leaf.many or leaf.adds:
+        notes.append('may be repeated')
+    examples = [example for example in leaf.type.examples() if example][:MAX_HELP_EXAMPLES]
+    notes.extend(f'example: {leaf.keyword} {example};' for example in examples)
+    return lines + [INDENT + note for note in notes]
+
+
+def statement_schema(root: Block, path: list[str]) -> dict[str, Any]:
+    """The JSON Schema of the value of the statement at `path`."""
+    leaf = _statement(root, path)
+    member = _leaf(leaf, _given(path))
+    if member is None:
+        raise ValueError(f"'{path[-1]}' is refused here, it holds no value")
+    return json_schema.schema(member, {})
+
+
 def _leaf_line(leaf: Leaf) -> str:
     notes = [leaf.doc] if leaf.doc else []
     if leaf.mandatory:
         notes.append('mandatory')
     if leaf.default is not MISSING and leaf.default is not None:
         notes.append(f'default {spoken(leaf.type.render(leaf.default)) or leaf.default}')
-    if leaf.repeated:
+    if leaf.many or leaf.adds:
         notes.append('may be repeated')
     hint = leaf.type.hint()
     line = f'{leaf.keyword} {hint};' if hint else f'{leaf.keyword};'
@@ -116,11 +185,12 @@ def manual(lines: list[str], width: int) -> list[str]:
         text = line[depth:]
         indent = MANUAL_INDENT * depth
         statement, marker, note = text.partition('  # ')
-        if not marker or len(indent + text) <= width:
+        if len(indent + text) <= width:
             found.append(indent + text)
             continue
-        found.extend(f'{indent}# {each}' for each in textwrap.wrap(note, width - len(indent) - 2))
-        found.extend(_wrapped(statement, indent, width))
+        if marker:
+            found.extend(f'{indent}# {each}' for each in textwrap.wrap(note, width - len(indent) - 2))
+        found.extend(_wrapped(statement, indent, width) if len(indent + statement) > width else [indent + statement])
     return found
 
 
