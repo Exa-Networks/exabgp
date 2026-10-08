@@ -274,6 +274,11 @@ TEST_ORDER = [
     'documentation',
 ]
 
+# Stages a plain run skips: together they take over an hour, which local development cannot
+# afford on every change.  CI runs both (unit-testing.yml under -O, wheels.yml against the
+# mypyc build); locally they run when named, or with --all.
+OPT_IN = frozenset(('optimised', 'compiled'))
+
 # A stage in TEST_COMMANDS and not in TEST_ORDER never runs, and the suite still prints
 # "All N tests passed" because N counts what ran.  That is how renders-json was added,
 # reported green, and had not executed once.  A gate which does not run is worse than a
@@ -632,6 +637,8 @@ def list_tests(cache: dict[str, list[float]], verbose: bool = False) -> None:
         num = f'{Colors.CYAN}{i}.{Colors.RESET}'
         test_name = f'{Colors.WHITE}{Colors.BOLD}{name:14}{Colors.RESET}'
         time_str = f'{Colors.BLUE}(~{format_time(expected):>5}){Colors.RESET}'
+        if name in OPT_IN:
+            desc += ' [opt-in: name it or use --all]'
         desc_str = f'{Colors.DIM}{desc}{Colors.RESET}'
         print(f'  {num} {test_name} {time_str}  {desc_str}')
         if verbose:
@@ -832,6 +839,7 @@ def main() -> int:
     parser.add_argument('-l', '--list', action='store_true', help='List available tests')
     parser.add_argument('-v', '--verbose', action='store_true', help='Show commands being run')
     parser.add_argument('--skip-mypy', action='store_true', help='Skip mypy type checking')
+    parser.add_argument('--all', action='store_true', help='Also run the opt-in stages: %s' % ', '.join(sorted(OPT_IN)))
     parser.add_argument('tests', nargs='*', help='Tests to run (name or number)')
 
     args = parser.parse_args()
@@ -863,8 +871,8 @@ def main() -> int:
                 return 2
             test_indices.append(idx)
     else:
-        # Run all tests
-        test_indices = list(range(len(TEST_ORDER)))
+        # Run every stage, the opt-in ones only when asked for
+        test_indices = [i for i, name in enumerate(TEST_ORDER) if args.all or name not in OPT_IN]
 
     # Apply --skip-mypy filter
     if args.skip_mypy:

@@ -97,7 +97,7 @@ Question 2 (if plan files exist):
 **NEVER declare code "fixed"/"ready"/"working"/"complete" without running ALL tests:**
 
 ```bash
-./qa/bin/test_everything  # ALL 6 test suites, exits on first failure
+./qa/bin/test_everything  # every stage but the opt-in -O and mypyc ones (--all adds them, CI runs them)
 ```
 
 **DO NOT:**

@@ -191,8 +191,10 @@ Its limits:
 
 ## How far it is tested
 
-`./qa/bin/test_everything` includes the whole test tree and the functional suites
-(decoding, encoding, API, CLI) against the rebuilt compiled tree, as its `compiled` stage.
+`./qa/bin/test_everything compiled` (or `./qa/bin/test_everything --all`) runs the whole
+test tree and the functional suites (decoding, encoding, API, CLI) against the rebuilt
+compiled tree. The stage is opt-in: a plain `./qa/bin/test_everything` skips it, and CI
+covers it through the compiled wheels.
 Wheel and binary verification runs those four functional suites against the installed
 artifact rather than the source checkout.
 

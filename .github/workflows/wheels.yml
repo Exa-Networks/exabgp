@@ -44,3 +44,41 @@ jobs:
         with:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
+
+  # The wheels above run the functional suites against the compiled code, never the unit
+  # tests. mypyc checks every declared type at runtime, so a wrong annotation on a path no
+  # functional test reaches only fails here. The same commands as the `compiled` stage of
+  # qa/bin/test_everything, which is opt-in locally because it takes most of an hour.
+  unit-compiled:
+    name: unit tests against the mypyc build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Build the mypyc tree
+        run: uv run python qa/bin/build_mypyc
+
+      # PYTHONPATH puts build/mypyc ahead of the editable install of src: without this
+      # check, a path mistake would run the whole suite against pure Python and pass
+      - name: Check the compiled tree is the one imported
+        run: |
+          env PYTHONPATH=build/mypyc uv run python -c "from exabgp.application.version import build; b = build(); print(b); raise SystemExit(b != 'mypyc')"
+
+      - name: pytest against the mypyc build
+        run: |
+          env exabgp_log_enable=false PYTHONPATH=build/mypyc uv run pytest ./tests -q -p no:cacheprovider

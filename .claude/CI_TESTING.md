@@ -7,7 +7,8 @@ Run ALL tests before declaring code ready.
 ## Required Test Sequence
 
 ```bash
-./qa/bin/test_everything  # ALL 19 tests, exits on first failure
+./qa/bin/test_everything        # every stage but the opt-in ones, exits on first failure
+./qa/bin/test_everything --all  # also `optimised` (-O) and `compiled` (mypyc), over an hour; CI runs both
 ```
 
 **Individual commands (for debugging only):**
@@ -30,7 +31,7 @@ env exabgp_log_enable=false uv run pytest ./tests/unit/
 
 ## Pre-Commit Checklist
 
-- [ ] `./qa/bin/test_everything` passes all 19 tests (including `exa-style`)
+- [ ] `./qa/bin/test_everything` passes (including `exa-style`)
 - [ ] `git status` reviewed
 - [ ] User approval
 
