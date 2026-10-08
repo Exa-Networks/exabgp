@@ -14,6 +14,7 @@ from exabgp.bgp.neighbor import NeighborTemplate
 
 from exabgp.debug.intercept import trace_interceptor
 from exabgp.logger import log, lazymsg
+from exabgp.logger.option import option
 
 from exabgp.configuration.check import check_generation
 
@@ -49,10 +50,7 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
         log.info(lazymsg('loading {configuration}', configuration=configuration), 'configuration')
         location = getconf(configuration)
         if not location:
-            msg = f'{configuration} is not an exabgp config file (file not found)'
-            log.critical(lazymsg('{msg}', msg=msg), 'configuration')
-            sys.stderr.write(f'error: {msg}\n')
-            sys.exit(1)
+            _fail(f'{configuration} is not an exabgp config file (file not found)')
 
         config = _load(configuration, location)
         log.info(lazymsg('validate.loading status=success'), 'configuration')
@@ -75,7 +73,10 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
 
 
 def _fail(msg: str) -> NoReturn:
-    log.critical(lazymsg('{msg}', msg=msg), 'configuration')
+    # the error line is written whether logging is on or off (#1367); a log printing to the
+    # terminal would only say it a second time, as it did, a log kept elsewhere still has it
+    if not (option.log_enabled('configuration', 'CRITICAL') and option.destination in ('stdout', 'stderr')):
+        log.critical(lazymsg('{msg}', msg=msg), 'configuration')
     sys.stderr.write(f'error: {msg}\n')
     sys.exit(1)
 
@@ -83,7 +84,9 @@ def _fail(msg: str) -> NoReturn:
 def _load(configuration: str, location: str) -> Configuration:
     config = Configuration([location])
     if not config.reload():
-        _fail(f'{configuration} is not a valid config file: {config.error!s}')
+        error = str(config.error)
+        # an error read from the file starts with its path, which is not said twice
+        _fail(error if error.startswith(f'{location}:') else f'{configuration} is not a valid config file: {error}')
     return config
 
 

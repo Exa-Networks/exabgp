@@ -139,7 +139,9 @@ def add_attribute(attributes: AttributeCollection, attribute: Attribute) -> None
         attributes.add(attribute)
         return
     if attribute.ID not in LIST_ATTRIBUTES or attribute.GENERIC or existing.GENERIC:
-        name = ATTRIBUTE_KEYWORDS.get(attribute.ID, f'attribute 0x{attribute.ID:02x}')
+        name = ATTRIBUTE_KEYWORDS.get(attribute.ID) or INTERNAL_KEYWORDS.get(
+            attribute.ID, f'attribute 0x{attribute.ID:02x}'
+        )
         if not READING_COMMAND.get():
             raise ValueError(f'{name} is given twice, it can be given once')
         log.warning(
@@ -315,6 +317,12 @@ ATTRIBUTE_KEYWORDS: dict[int, str] = {
     Attribute.CODE.BGP_PREFIX_SID: 'bgp-prefix-sid',
     Attribute.CODE.INTERNAL_NAME: 'name',
     Attribute.CODE.INTERNAL_WATCHDOG: 'watchdog',
+}
+# the keyword of an internal attribute printed its own way (one_attribute_words), for messages:
+# without it, `split` given twice was said to be `attribute 0xfffd`
+INTERNAL_KEYWORDS: dict[int, str] = {
+    Attribute.CODE.INTERNAL_SPLIT: 'split',
+    Attribute.CODE.INTERNAL_WITHDRAW: 'withdraw',
 }
 _STRUCTURE = frozenset({'[', ']', '(', ')', ','})
 
