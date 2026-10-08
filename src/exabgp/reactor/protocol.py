@@ -65,6 +65,9 @@ class Protocol:
         self.neighbor: 'Neighbor' = peer.neighbor
         self.negotiated: Negotiated = Negotiated.make_negotiated(self.neighbor, Direction.IN)
         self.connection: 'Incoming' | Outgoing | None = None
+        # RFC 4271 6.8: the OPEN read on this connection while a collision was resolved,
+        # which read_open returns instead of reading another
+        self.open_read: Open | None = None
 
         # tcp.port as the environment read it, from a variable or the env file, which is
         # the port we listen on: the variables alone were read here, so the env file
@@ -372,13 +375,18 @@ class Protocol:
 
     async def read_open(self, ip: str) -> Open:
         """Read OPEN message using async I/O."""
+        if self.open_read is not None:
+            already, self.open_read = self.open_read, None
+            return already
+
         while True:
             received_open = await self.read_message()
             if received_open is not None:
                 break
 
         if received_open.ID != Message.CODE.OPEN:
-            raise Notify(5, 1, f'{received_open} where the OPEN was expected')
+            # RFC 6608 4: the Data field is the type of the unexpected message, one octet
+            raise Notify(5, 1, f'{received_open} where the OPEN was expected', data=bytes([received_open.ID.value]))
 
         log.debug(lazymsg('open.received message={m}', m=received_open), self._session())
         return cast(Open, received_open)
@@ -391,7 +399,8 @@ class Protocol:
                 break
 
         if message.ID != Message.CODE.KEEPALIVE:
-            raise Notify(5, 2)
+            # RFC 6608 4: the Data field is the type of the unexpected message, one octet
+            raise Notify(5, 2, f'{message} where the KEEPALIVE was expected', data=bytes([message.ID.value]))
 
         return cast(KeepAlive, message)
 

@@ -287,7 +287,11 @@ def test_a_non_zero_identifier_is_accepted(identifier: str) -> None:
 # ------------------------------------------------------------- 6.2 the optional parameters
 
 
-@pytest.mark.parametrize('kind', [0, 3, 99, 255], ids=lambda value: f'parameter type {value}')
+# Not 255: as the first parameter type it is RFC 9072's Non-Ext OP Type, the marker of the
+# extended encoding, and anywhere else test_rfc9072_extended_optional_parameters refuses it.
+# 1 is Authentication Information, deprecated by Appendix A along with the Authentication
+# Failure subcode it was answered with: a parameter nothing recognises any more.
+@pytest.mark.parametrize('kind', [0, 1, 3, 99], ids=lambda value: f'parameter type {value}')
 @pytest.mark.rfc('rfc4271#6.2-unsupported-optional-parameters')
 def test_an_unrecognised_optional_parameter_is_unsupported(kind: int) -> None:
     with pytest.raises(Notify) as caught:

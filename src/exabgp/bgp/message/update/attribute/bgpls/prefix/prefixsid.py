@@ -34,6 +34,7 @@ from exabgp.util.intvalue import json_number
 # SID/Label data length when flags are not set
 SID_LABEL_LENGTH_WITH_FLAGS = 3  # a label, when the V and L flags are set
 SID_LABEL_LENGTH_NO_FLAGS = 4  # Length of SID/Label when V and L flags are both false
+SID_LABEL_MASK = 0xFFFFF  # a label is the 20 rightmost bits of its three octets
 
 # Minimum data length for SR Prefix SID TLV
 # Flags (1) + Algorithm (1) + Reserved (2) = 4 bytes
@@ -62,7 +63,9 @@ class PrefixSid(FlagLS):
             if flags['V'] and flags['L']:
                 if len(data) < SID_LABEL_LENGTH_WITH_FLAGS:
                     break  # a label needs three bytes, and the peer sent fewer
-                sid = unpack('!L', bytes([0]) + bytes(data[:SID_LABEL_LENGTH_WITH_FLAGS]))[0]
+                # RFC 9085 2.1.1: "the 20 rightmost bits represent a label ... the 4
+                # leftmost bits are set to 0", so they are not part of the label
+                sid = unpack('!L', bytes([0]) + bytes(data[:SID_LABEL_LENGTH_WITH_FLAGS]))[0] & SID_LABEL_MASK
                 data = data[SID_LABEL_LENGTH_WITH_FLAGS:]
                 sids.append(sid)
             elif (not flags['V']) and (not flags['L']):

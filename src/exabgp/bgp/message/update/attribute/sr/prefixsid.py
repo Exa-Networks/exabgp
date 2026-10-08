@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import Notify, TreatAsWithdrawNotify
 
 from exabgp.util import hexstring
 from exabgp.util.types import Buffer
@@ -26,14 +26,22 @@ from exabgp.util.types import Buffer
 # SR TLV type codes
 SR_TLV_LABEL_INDEX: int = 1  # Label-Index TLV type
 SR_TLV_SRGB: int = 3  # Segment Routing Global Block TLV type
+SR_TLV_SRV6_L3_SERVICE: int = 5  # SRv6 L3 Service TLV type (RFC 9252)
+SR_TLV_SRV6_L2_SERVICE: int = 6  # SRv6 L2 Service TLV type (RFC 9252)
+
+# RFC 9252 section 7: "The treat-as-withdraw action [RFC7606] MUST be performed when at
+# least one malformed SRv6 Service TLV is present in the BGP Prefix-SID attribute", where
+# every other TLV keeps the attribute discard of RFC 8669 section 6.
+SRV6_SERVICE_TLVS: frozenset[int] = frozenset((SR_TLV_SRV6_L3_SERVICE, SR_TLV_SRV6_L2_SERVICE))
 
 # RFC 8669 section 6: "if a recognized TLV appears more than once in a BGP Prefix-SID
 # attribute while the specification only allows for a single occurrence, then all the
 # occurrences of the TLV other than the first one SHALL be discarded".  Sections 3.1 and
-# 3.2 give the attribute one Label-Index and one Originator SRGB, and this document
-# defines no TLV which may repeat.  An unknown type is deliberately absent: the same
-# section promises unknown TLVs are "propagated unmodified", so a repeat of one is kept.
-SR_SINGLE_OCCURRENCE_TLVS: frozenset[int] = frozenset((SR_TLV_LABEL_INDEX, SR_TLV_SRGB))
+# 3.2 give the attribute one Label-Index and one Originator SRGB, and RFC 9252 section 7
+# says of each SRv6 Service TLV that "all but the first instance MUST be ignored".  An
+# unknown type is deliberately absent: the same section promises unknown TLVs are
+# "propagated unmodified", so a repeat of one is kept.
+SR_SINGLE_OCCURRENCE_TLVS: frozenset[int] = frozenset((SR_TLV_LABEL_INDEX, SR_TLV_SRGB)) | SRV6_SERVICE_TLVS
 
 T = TypeVar('T', bound='PrefixSid')
 
@@ -48,7 +56,8 @@ class PrefixSid(Attribute):
     # attribute discard of RFC 7606.  Discard rather than treat-as-withdraw: the label
     # information is lost, the reachability the route carries is not.
     # AttributeCollection.parse honours this flag for both a Notify and a ValueError out of
-    # the TLV walk below; without it every malformed TLV reset the session instead.
+    # the TLV walk below; without it every malformed TLV reset the session instead.  The
+    # SRv6 Service TLVs are the exception, see SRV6_SERVICE_TLVS and TreatAsWithdrawNotify.
     DISCARD: ClassVar[bool] = True
     # Not a claim that an empty Prefix-SID is legal: it is the opposite, and the check at
     # the top of unpack_attribute below says so.  This takes the decision away from the
@@ -102,6 +111,10 @@ class PrefixSid(Attribute):
             # L = 2 octet  :|
             length: int = unpack('!H', data[1:3])[0]
             if len(data) < length + 3:
+                if scode in SRV6_SERVICE_TLVS:
+                    # RFC 9252 7: "The TLV Length is inconsistent with the length of the
+                    # BGP Prefix-SID attribute" is one of the malformed service TLV shapes
+                    raise TreatAsWithdrawNotify(f'SRv6 Service TLV {scode} runs past the Prefix-SID attribute')
                 raise Notify.short(3, 1, 'SR Prefix-SID TLV', length + 3, len(data))
             if scode in SR_SINGLE_OCCURRENCE_TLVS:
                 if scode in single_seen:
@@ -113,11 +126,7 @@ class PrefixSid(Attribute):
                     data = data[length + 3 :]
                     continue
                 single_seen.add(scode)
-            if scode in cls.registered_srids:
-                klass: Any = cls.registered_srids[scode].unpack_attribute(data[3 : length + 3], length)
-            else:
-                klass = GenericSRId(scode, data[3 : length + 3])
-            sr_attrs.append(klass)
+            sr_attrs.append(cls._unpack_tlv(scode, data[3 : length + 3]))
             kept.append(data[: length + 3])
             data = data[length + 3 :]
         if not repeat_discarded:
@@ -125,6 +134,20 @@ class PrefixSid(Attribute):
         # Rebuilt from the peer's own framing rather than from the decoded TLVs, so the
         # only difference between what arrived and what leaves is the discarded repeat.
         return cls(sr_attrs=sr_attrs, packed=b''.join(bytes(_) for _ in kept))
+
+    @classmethod
+    def _unpack_tlv(cls, scode: int, value: Buffer) -> Any:
+        """One TLV of the attribute, by its registered class or kept as bytes."""
+        if scode not in cls.registered_srids:
+            return GenericSRId(scode, value)
+        try:
+            return cls.registered_srids[scode].unpack_attribute(value, len(value))
+        except Notify as exc:
+            # RFC 9252 7: "The SRv6 overlay service requires the Service SID for
+            # forwarding", so a route kept without it is withdrawn rather than discarded
+            if scode in SRV6_SERVICE_TLVS:
+                raise TreatAsWithdrawNotify(exc.detail) from exc
+            raise
 
     def json(self, compact: bool = False) -> str:
         content: str = ', '.join(d.json() for d in self.sr_attrs)

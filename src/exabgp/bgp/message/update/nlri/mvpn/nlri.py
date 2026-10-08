@@ -48,17 +48,78 @@ def check_source_and_group(packed: Buffer, cursor: int, name: str) -> None:
     """
     for field in ('Multicast Source', 'Multicast Group'):
         if cursor >= len(packed):
-            raise Notify(3, 5, f'{name} is too short to hold its {field} Length octet.')
+            raise Notify(3, 10, f'{name} is too short to hold its {field} Length octet.')
         bits = packed[cursor]
         if bits not in MVPN_ADDRESS_LENGTH_BITS:
             raise Notify(
                 3,
-                5,
+                10,
                 f'Unsupported {name} {field} IP length ({bits} bits). Expected 32 bits (IPv4) or 128 bits (IPv6).',
             )
         cursor += 1 + bits // 8
     if cursor != len(packed):
-        raise Notify(3, 5, f'{name} length does not match its Multicast Source and Multicast Group addresses.')
+        raise Notify(3, 10, f'{name} length does not match its Multicast Source and Multicast Group addresses.')
+
+
+# RFC 6515 2, items 2 to 4: route types 1 (Intra-AS I-PMSI A-D), 3 (S-PMSI A-D) and 4
+# (Leaf A-D) end with the Originating Router's IP Address, whose length is what the NLRI
+# length leaves behind the fields in front of it, and is 4 for IPv4 or 16 for IPv6.
+ROUTE_TYPE_INTRA_AS_IPMSI = 1
+ROUTE_TYPE_SPMSI = 3
+ROUTE_TYPE_LEAF = 4
+ORIGINATOR_SIZES: tuple[int, int] = (IPv4.BYTES, IPv6.BYTES)
+MVPN_RD_SIZE = 8
+BITS_PER_OCTET = 8
+
+
+def _incorrect(detail: str) -> Notify:
+    # RFC 6515 2 says "handled as specified in Section 7 of [BGP-MP]", which exabgp
+    # answers with 3/9 for every incorrect MP_REACH_NLRI (see MPRNLRI.unpack_attribute)
+    return Notify(3, 9, f'incorrect MP_REACH_NLRI (RFC 6515 2): {detail}')
+
+
+def _after_source_and_group(payload: Buffer) -> int:
+    """Where the Originating Router of an S-PMSI A-D route starts: RD, source, group.
+
+    Each length is read as the bits of the address after it, and a whole number of octets,
+    zero included: RFC 6625 gives a wildcard source or group a length of zero.
+    """
+    cursor = MVPN_RD_SIZE
+    for field in ('Multicast Source', 'Multicast Group'):
+        if cursor >= len(payload):
+            raise _incorrect(f'S-PMSI A-D route too short to hold its {field} Length')
+        bits = payload[cursor]
+        if bits % BITS_PER_OCTET:
+            raise _incorrect(f'S-PMSI A-D route {field} Length of {bits} bits')
+        cursor += 1 + bits // BITS_PER_OCTET
+    return cursor
+
+
+def _after_route_key(payload: Buffer) -> int:
+    """Where the Originating Router of a Leaf A-D route starts: after the Route Key, an
+    MCAST-VPN NLRI with its own type and length octets (RFC 6514 4.4)."""
+    if len(payload) < MVPN.HEADER_SIZE:
+        raise _incorrect('Leaf A-D route too short to hold its Route Key')
+    return MVPN.HEADER_SIZE + payload[1]
+
+
+def check_originating_router(packed: Buffer) -> None:
+    """RFC 6515 2: refuse a route type 1, 3 or 4 whose Originating Router is not 4 or 16."""
+    if len(packed) < MVPN.HEADER_SIZE:
+        raise _incorrect('MCAST-VPN route too short to hold its type and length')
+    route_type = packed[0]
+    payload = packed[MVPN.HEADER_SIZE :]
+    if route_type == ROUTE_TYPE_INTRA_AS_IPMSI:
+        start = MVPN_RD_SIZE
+    elif route_type == ROUTE_TYPE_SPMSI:
+        start = _after_source_and_group(payload)
+    elif route_type == ROUTE_TYPE_LEAF:
+        start = _after_route_key(payload)
+    else:
+        return
+    size = len(payload) - start
+    if size not in ORIGINATOR_SIZES:
+        raise _incorrect(f"route type {route_type} Originating Router's IP Address of {max(size, 0)} octets")
 
 
 # ========================================================================= MVPN
@@ -187,6 +248,9 @@ class MVPN(NLRI):
 
         # Store COMPLETE wire format including type + length header
         packed = bytes(data[0:total_length])
+        # the sentence is about MP_REACH_NLRI: a withdrawn route is kept as it was sent
+        if action == Action.ANNOUNCE:
+            check_originating_router(packed)
 
         if code in cls.registered_mvpn:
             klass = cls.registered_mvpn[code].unpack_mvpn(packed, afi)

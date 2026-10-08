@@ -1,0 +1,145 @@
+# RFC 6515 - IPv4 and IPv6 Infrastructure Addresses in BGP Updates for Multicast VPN
+# https://www.rfc-editor.org/rfc/rfc6515
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc6515.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Section 2 lists four places a PE address occurs in an MCAST-VPN route: the Next Hop of
+# MP_REACH_NLRI, and the Originating Router's IP Address of route types 1, 3 and 4.  All
+# four are recorded below.  exabgp keeps route types 1 to 4 as opaque bytes, but measures
+# the Originating Router of 1, 3 and 4 when it receives one (`check_originating_router` in
+# nlri/mvpn/nlri.py).  Section 3 is about what a PE builds and is not recorded; section
+# 4.2 is, as a gap.
+
+rfc = "rfc6515"
+title = "IPv4 and IPv6 Infrastructure Addresses in BGP Updates for Multicast VPN"
+url = "https://www.rfc-editor.org/rfc/rfc6515"
+
+[[requirement]]
+id = "rfc6515#1.1-pe-address-family-not-from-afi"
+section = "1.1"
+level = "MUST NOT"
+status = "required"
+polarity = "positive-only"
+text = """
+Therefore, the address family of the PE addresses MUST NOT be
+inferred from the AFI field of the associated
+MP_REACH_NLRI/MP_UNREACH_NLRI attribute.
+"""
+note = """
+The one PE address exabgp reads is the Next Hop.  `Family.size` gives both MCAST-VPN AFIs
+the lengths 4 and 16, and the length decides the protocol, received and sent: an IPv4 next
+hop goes out as four octets under AFI 2, never IPv4-mapped.  AFI 1 used to take 4 alone.
+This binds what we do with the address, and there is nothing a peer can send which breaks
+it, so there is no negative side: a wrong length is the next entry's.
+"""
+
+[[requirement]]
+id = "rfc6515#2-next-hop-length-4-or-16"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the length of the next hop
+address is neither 4 nor 16, the MP_REACH_NLRI attribute MUST be
+considered to be "incorrect", and MUST be handled as specified in
+Section 7 of [BGP-MP].
+"""
+note = """
+`MPRNLRI.unpack_attribute` refuses any other length with Notify(3, 9), the session reset
+RFC 4760 7 names for an incorrect MP_REACH_NLRI.  32, the RFC 2545 global and link-local
+pair, is refused too: it is not one of the two lengths this section allows.
+"""
+
+[[requirement]]
+id = "rfc6515#2-intra-as-ipmsi-originator-4-or-16"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+   If
+   the inferred length of the "Originating Router's IP Address" field
+   is neither 4 nor 16, the MP_REACH_NLRI attribute MUST be
+   considered to be "incorrect", and MUST be handled as specified in
+   Section 7 of [BGP-MP].
+"""
+note = """
+Item 2, the Intra-AS I-PMSI A-D route: what the NLRI length leaves behind the 8 octet RD.
+`check_originating_router`, called by `MVPN.unpack_nlri` for an announced route, raises
+Notify(3, 9), the answer exabgp gives every incorrect MP_REACH_NLRI. The route used to be
+kept as opaque bytes whatever its length. A withdrawn route is not measured: the sentence
+is about MP_REACH_NLRI.
+"""
+
+[[requirement]]
+id = "rfc6515#2-spmsi-originator-4-or-16"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+      If the computed length of the "Originating Router's IP Address"
+      field is neither 4 nor 16, the MP_REACH_NLRI attribute MUST be
+      considered to be "incorrect", and MUST be handled as specified in
+      Section 7 of [BGP-MP].
+"""
+note = """
+Item 3, the S-PMSI A-D route: the RD, then the Multicast Source and Multicast Group, each
+behind its length in bits, and the rest is the Originating Router. A length which is not
+a whole number of octets, or fields which run past the route, leave no length to compute
+and are incorrect too. A source or group length of zero is the RFC 6625 wildcard and is
+read as no address. Notify(3, 9), as for item 2.
+"""
+
+[[requirement]]
+id = "rfc6515#2-leaf-originator-4-or-16"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+      If the
+      computed length of the "Originating Router's IP Address" field is neither 4
+      nor 16, the MP_REACH_NLRI attribute MUST be considered to be
+      "incorrect", and MUST be handled as specified in Section 7 of
+      [BGP-MP].
+"""
+note = """
+Item 4, the Leaf A-D route: the Route Key is an MCAST-VPN NLRI with its own type and
+length octets (RFC 6514 4.4), and the rest is the Originating Router. Notify(3, 9), as
+for item 2.
+"""
+
+[[requirement]]
+id = "rfc6515#4.2-tunnel-identifier-follows-next-hop"
+section = "4.2"
+level = "MUST"
+status = "gap"
+polarity = "both"
+text = """
+   If the "Network Address of Next Hop" field in the MP_REACH_NLRI
+   attribute contains an IPv4 address, then any IP addresses appearing
+   in the "Tunnel Identifier" field of the PMSI Tunnel Attribute MUST be
+   IPv4 addresses.
+
+   If the "Network Address of Next Hop" field in the MP_REACH_NLRI
+   attribute contains an IPv6 address, then any IP addresses appearing
+   in the "Tunnel Identifier" field of the PMSI Tunnel Attribute MUST be
+   IPv6 addresses.
+
+   If these conditions are not met, the PMSI Tunnel Attribute MUST be
+   handled as a "malformed" PMSI Tunnel Attribute, as specified in
+   Section 5 of [MVPN-BGP].
+"""
+note = """
+The PMSI Tunnel attribute is decoded on its own, by `PMSI.from_packet`, and the next hop
+is a sibling attribute, MP_REACH_NLRI, read after it; the attribute decoder has no next
+hop to compare the identifier with. `malformed_pmsi` does make the identifier of the
+address types 4 or 16 octets (RFC 6514 5), so the addresses are one family or the other,
+but which family the next hop is goes unchecked. Doing it means comparing the two in
+`UpdateCollection`, for the I-PMSI A-D routes section 4 is about, which exabgp keeps as
+opaque bytes. The xfail test shows an IPv6 Ingress Replication endpoint behind an IPv4
+next hop being accepted.
+"""

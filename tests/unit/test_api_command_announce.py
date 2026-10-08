@@ -15,7 +15,11 @@ from collections.abc import Iterator
 
 import pytest
 
+from exabgp.bgp.message.open.capability.refresh import REFRESH
+from exabgp.protocol.family import AFI, SAFI
 from tests.api_daemon import Daemon, FIRST, HELPER, SECOND, failed
+
+IPV4_UNICAST = (AFI.ipv4, SAFI.unicast)
 
 
 @pytest.fixture
@@ -238,6 +242,7 @@ def test_eor_for_no_family_is_refused(daemon: Daemon, family: str) -> None:
 
 def test_route_refresh_is_queued_for_the_established_peers(daemon: Daemon) -> None:
     daemon.establish(SECOND)
+    daemon.negotiate(SECOND, REFRESH.NORMAL, [IPV4_UNICAST])
     assert daemon.send('peer * announce route-refresh ipv4 unicast') == ['done']
     (refresh,) = daemon.neighbor(SECOND).refresh
     assert (str(refresh.afi), str(refresh.safi)) == ('ipv4', 'unicast')

@@ -1,0 +1,34 @@
+# RFC 6286 - Autonomous-System-Wide Unique BGP Identifier for BGP-4
+# https://www.rfc-editor.org/rfc/rfc6286
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc6286.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Section 2.2, the OPEN error handling, is recorded in rfc4271.toml against the RFC 4271
+# sentence it replaced (rfc4271#6.2-bad-bgp-identifier).  Only the collision rule is here.
+
+rfc = "rfc6286"
+title = "Autonomous-System-Wide Unique BGP Identifier for BGP-4"
+url = "https://www.rfc-editor.org/rfc/rfc6286"
+
+[[requirement]]
+id = "rfc6286#2.3-identical-identifiers-larger-as-wins"
+section = "2.3"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+If the BGP Identifiers of the peers involved in the connection
+collision are identical, then the connection initiated by the BGP
+speaker with the larger AS number is preserved.
+"""
+note = """
+The sentence has no RFC 2119 keyword: it is the rule the procedure of RFC 4271 6.8 follows
+when its comparison of identifiers cannot decide, so it binds as that procedure does.
+Peer._outgoing_wins_collision compares the AS numbers when the identifiers are equal, ours
+as our OPEN says it and the peer's from its OPEN, the four-octet capability's rather than
+AS_TRANS ("This extension covers cases in which the 4-octet AS numbers are involved").
+Until 2026-10-08 equal identifiers always kept the peer's connection.  Positive only: the
+test of each side is a pair of AS numbers, and each outcome is tested, ours kept and
+theirs kept; there is no peer input which violates it.
+"""

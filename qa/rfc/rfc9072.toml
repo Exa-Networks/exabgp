@@ -1,0 +1,142 @@
+# RFC 9072 - Extended Optional Parameters Length for BGP OPEN Message
+# https://www.rfc-editor.org/rfc/rfc9072
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc9072.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Capabilities.pack_capabilities writes the Optional Parameters, Capabilities.unpack reads
+# them from the length octet on.  Both are in
+# src/exabgp/bgp/message/open/capability/capabilities.py.
+
+rfc = "rfc9072"
+title = "Extended Optional Parameters Length for BGP OPEN Message"
+url = "https://www.rfc-editor.org/rfc/rfc9072"
+
+[[requirement]]
+id = "rfc9072#2-accept-extended-encoding-of-short-parameters"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+(In any case, an implementation
+MUST accept an OPEN message that uses the encoding of this
+specification even if the length of the Optional Parameters is 255 or
+less.)
+"""
+note = """
+The negative test is an extended length which runs past the parameters sent: accepting
+the encoding is not accepting a length the bytes do not back.
+"""
+
+[[requirement]]
+id = "rfc9072#2-encode-extended-beyond-255"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+However, if the length of the Optional Parameters in the BGP OPEN
+message does exceed 255, the OPEN message MUST be encoded according
+to the procedure below.
+"""
+note = """
+pack_capabilities keeps the RFC 4271 encoding while the one Capabilities parameter fits in
+255 octets, the SHOULD before this sentence, and uses the extended one past that.  The
+negative test is a short set, which stays in the RFC 4271 encoding.
+"""
+
+[[requirement]]
+id = "rfc9072#2-non-ext-op-len-not-zero"
+section = "2"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+The Non-Extended Optional Parameters Length field (Non-Ext OP Len.)
+SHOULD be set to 255 on transmission and, in any event, MUST NOT be
+set to 0; it MUST be ignored on receipt once the use of the extended
+format is determined positively by inspection of the Non-Extended
+Optional Parameters Type (Non-Ext OP Type) field.
+"""
+note = """
+We send 255.  On receipt the value is ignored once the octet after it is 255, which until
+2026-10-08 was the other way round: only a length octet of 255 was looked at, and any
+other value had the OPEN read as a parameter of type 255 and refused with 2/4.  The
+negative test is a peer which sets it to 0: that is no Optional Parameters at all, as the
+procedure below only inspects the next octet when the length is non-zero.
+"""
+
+[[requirement]]
+id = "rfc9072#2-non-ext-op-type-255-on-transmission"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+The subsequent one-octet field (which would be the first Optional
+Parameter Type field in the non-extended format and is called "Non-
+Ext OP Type" in the figure above) MUST be set to 255 on transmission.
+"""
+note = """
+Positive only: it constrains what we send.  What a received one means is the next entry.
+"""
+
+[[requirement]]
+id = "rfc9072#2-non-ext-op-type-decides-the-encoding"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+In parsing an OPEN message, if the one-octet Optional Parameters
+Length field (labeled "Non-Ext OP Len." in Figure 1) is non-zero, a
+BGP speaker MUST use the value of the octet following the one-octet
+Optional Parameters Length field (labeled "Non-Ext OP Type" in
+Figure 1) to determine both the encoding of the Optional Parameters
+length and the size of the Parameter Length field of individual
+Optional Parameters.
+"""
+note = """
+Capabilities.unpack decodes the extended encoding when that octet is 255, whatever the
+length octet before it; until 2026-10-08 it looked at the length octet only.  The negative
+test is a length octet of 255 followed by an ordinary parameter type, which is the RFC
+4271 encoding.
+"""
+
+[[requirement]]
+id = "rfc9072#3-type-255-elsewhere-is-unrecognised"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If encountered
+other than as the Non-Ext OP Type, it MUST be treated as an
+unrecognized Optional Parameter and handled according to [RFC4271],
+Section 6.2.
+"""
+note = """
+Type 255 as a later parameter, in either encoding, is refused with Unsupported Optional
+Parameters (2/4), as any parameter type we do not know.  The negative test is 255 as the
+Non-Ext OP Type, which is not a parameter.
+"""
+
+[[requirement]]
+id = "rfc9072#3-type-255-after-another-length-is-extended"
+section = "3"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+It is not considered a fatal error to receive an OPEN message
+whose (non-extended) Optional Parameters Length value is not 255 and
+whose first Optional Parameter type code is 255 -- in this case, the
+encoding of this specification MUST be used for decoding the message.
+"""
+note = """
+The finding of rfc9072#2-non-ext-op-type-decides-the-encoding, seen from section 3: until
+2026-10-08 such an OPEN was refused with 2/4.  Positive only: the case is defined by the
+peer's input, and the input outside it, a length of 255 with another first type, is the
+negative test of that entry.
+"""

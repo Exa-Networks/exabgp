@@ -1,0 +1,268 @@
+﻿
+
+
+
+Internet Engineering Task Force (IETF)                           E. Chen
+Request for Comments: 9072                            Palo Alto Networks
+Updates: 4271                                                 J. Scudder
+Category: Standards Track                               Juniper Networks
+ISSN: 2070-1721                                                July 2021
+
+
+        Extended Optional Parameters Length for BGP OPEN Message
+
+Abstract
+
+   The Optional Parameters in the BGP OPEN message as defined in the
+   base BGP specification are limited to 255 octets due to a one-octet
+   length field.  BGP capabilities are carried in this field and may
+   foreseeably exceed 255 octets in the future, leading to concerns
+   about this limitation.
+
+   This document updates RFC 4271 by extending, in a backward-compatible
+   manner, the length of the Optional Parameters in a BGP OPEN message.
+   The Parameter Length field of individual Optional Parameters is also
+   extended.
+
+Status of This Memo
+
+   This is an Internet Standards Track document.
+
+   This document is a product of the Internet Engineering Task Force
+   (IETF).  It represents the consensus of the IETF community.  It has
+   received public review and has been approved for publication by the
+   Internet Engineering Steering Group (IESG).  Further information on
+   Internet Standards is available in Section 2 of RFC 7841.
+
+   Information about the current status of this document, any errata,
+   and how to provide feedback on it may be obtained at
+   https://www.rfc-editor.org/info/rfc9072.
+
+Copyright Notice
+
+   Copyright (c) 2021 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+   (https://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+Table of Contents
+
+   1.  Introduction
+     1.1.  Requirements Language
+   2.  Update to RFC 4271
+   3.  Backward Compatibility
+   4.  IANA Considerations
+   5.  Security Considerations
+   6.  References
+     6.1.  Normative References
+     6.2.  Informative References
+   Acknowledgements
+   Authors' Addresses
+
+1.  Introduction
+
+   The Optional Parameters Length field in the BGP OPEN message is
+   defined in the base BGP specification [RFC4271] as one octet, thus
+   limiting the Optional Parameters field in the OPEN message to 255
+   octets.  Since BGP capabilities [RFC5492] are carried in the Optional
+   Parameters field, and new BGP capabilities continue to be introduced,
+   the limitation is a concern for BGP development.
+
+   This document updates [RFC4271] by extending the length of the
+   Optional Parameters in BGP OPEN in a backward-compatible manner.
+   This is done by using Optional Parameter type code 255 as a
+   distinguished value, which indicates an extended Optional Parameters
+   Length field follows and that the parsing of the BGP OPEN should be
+   modified according to these procedures.  In this case, the Parameter
+   Length field of the individual Optional Parameters in the BGP OPEN
+   message is also extended.
+
+1.1.  Requirements Language
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+2.  Update to RFC 4271
+
+   This document reserves Optional Parameter type code 255 as the
+   "Extended Length".
+
+   In the event that the length of the Optional Parameters in the BGP
+   OPEN message does not exceed 255, the encodings of the base BGP
+   specification [RFC4271] SHOULD be used without alteration.
+   Configuration MAY override this to force the extended format to be
+   used in all cases; this might be used, for example, to test that a
+   peer supports this specification.  (In any case, an implementation
+   MUST accept an OPEN message that uses the encoding of this
+   specification even if the length of the Optional Parameters is 255 or
+   less.)
+
+   However, if the length of the Optional Parameters in the BGP OPEN
+   message does exceed 255, the OPEN message MUST be encoded according
+   to the procedure below.
+
+        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+
+       |    Version    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |     My Autonomous System      |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |           Hold Time           |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                         BGP Identifier                        |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |Non-Ext OP Len.|Non-Ext OP Type|  Extended Opt. Parm. Length   |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                                                               |
+       |             Optional Parameters (variable)                    |
+       |                                                               |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+               Figure 1: Extended Encoding OPEN Format
+
+   The Non-Extended Optional Parameters Length field (Non-Ext OP Len.)
+   SHOULD be set to 255 on transmission and, in any event, MUST NOT be
+   set to 0; it MUST be ignored on receipt once the use of the extended
+   format is determined positively by inspection of the Non-Extended
+   Optional Parameters Type (Non-Ext OP Type) field.
+
+   The subsequent one-octet field (which would be the first Optional
+   Parameter Type field in the non-extended format and is called "Non-
+   Ext OP Type" in the figure above) MUST be set to 255 on transmission.
+   On receipt, a value of 255 for this field is the indication that the
+   extended format is in use.
+
+   In this extended encoding, the subsequent two-octet field, termed the
+   "Extended Optional Parameters Length field", is an unsigned integer
+   indicating the total length of the Optional Parameters field in
+   octets.  If the value of this field is zero, no Optional Parameters
+   are present.
+
+   Likewise, in that situation, the Optional Parameters encoding is
+   modified to be the following:
+
+        0                   1                   2
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |  Parm. Type   |        Parameter Length       |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       ~            Parameter Value (variable)         ~
+       |                                               |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+                    Figure 2: Extended Parameters Format
+
+   The rules for encoding Optional Parameters are unchanged with respect
+   to those given in [RFC4271], except that the Parameter Length field
+   is extended to be a two-octet unsigned integer.
+
+   In parsing an OPEN message, if the one-octet Optional Parameters
+   Length field (labeled "Non-Ext OP Len." in Figure 1) is non-zero, a
+   BGP speaker MUST use the value of the octet following the one-octet
+   Optional Parameters Length field (labeled "Non-Ext OP Type" in
+   Figure 1) to determine both the encoding of the Optional Parameters
+   length and the size of the Parameter Length field of individual
+   Optional Parameters.  If the value of the "Non-Ext OP Type" field is
+   255, then the encoding described above is used for the Optional
+   Parameters length.  Otherwise, the encoding defined in [RFC4271] is
+   used.
+
+3.  Backward Compatibility
+
+   If a BGP speaker supporting this specification (a "new speaker") is
+   peering with one that does not (an "old speaker"), no
+   interoperability issues arise unless the new speaker needs to encode
+   Optional Parameters whose length exceeds 255.  In that case, it will
+   transmit an OPEN message that the old speaker will interpret as
+   containing an Optional Parameter with type code 255.  Since the old
+   speaker will not recognize that type code by definition, the old
+   speaker is expected to close the connection with a NOTIFICATION with
+   an error code of "OPEN Message Error" and an error subcode of
+   "Unsupported Optional Parameters", according to Section 6.2 of
+   [RFC4271].
+
+   Although the Optional Parameter type code 255 is used in this
+   specification as the indication that the extended encoding is in use,
+   it is not a bona fide Optional Parameter type code in the usual sense
+   and MUST NOT be used other than as described above.  If encountered
+   other than as the Non-Ext OP Type, it MUST be treated as an
+   unrecognized Optional Parameter and handled according to [RFC4271],
+   Section 6.2.
+
+   It is not considered an error to receive an OPEN message whose
+   Extended Optional Parameters Length value is less than or equal to
+   255.  It is not considered a fatal error to receive an OPEN message
+   whose (non-extended) Optional Parameters Length value is not 255 and
+   whose first Optional Parameter type code is 255 -- in this case, the
+   encoding of this specification MUST be used for decoding the message.
+
+4.  IANA Considerations
+
+   IANA has assigned value 255 as the Extended Length type code in the
+   "BGP OPEN Optional Parameter Types" registry.
+
+5.  Security Considerations
+
+   This extension to BGP does not change the underlying security or
+   confidentiality issues inherent in the existing BGP [RFC4272].
+
+6.  References
+
+6.1.  Normative References
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/info/rfc2119>.
+
+   [RFC4271]  Rekhter, Y., Ed., Li, T., Ed., and S. Hares, Ed., "A
+              Border Gateway Protocol 4 (BGP-4)", RFC 4271,
+              DOI 10.17487/RFC4271, January 2006,
+              <https://www.rfc-editor.org/info/rfc4271>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/info/rfc8174>.
+
+6.2.  Informative References
+
+   [RFC4272]  Murphy, S., "BGP Security Vulnerabilities Analysis",
+              RFC 4272, DOI 10.17487/RFC4272, January 2006,
+              <https://www.rfc-editor.org/info/rfc4272>.
+
+   [RFC5492]  Scudder, J. and R. Chandra, "Capabilities Advertisement
+              with BGP-4", RFC 5492, DOI 10.17487/RFC5492, February
+              2009, <https://www.rfc-editor.org/info/rfc5492>.
+
+Acknowledgements
+
+   The authors would like to thank Yakov Rekhter and Srihari Sangli for
+   discussing various options to enlarge the Optional Parameters field.
+   We would also like to thank Matthew Bocci, Bruno Decraene, John
+   Heasley, Jakob Heitz, Christer Holmberg, Pradosh Mohapatra, Keyur
+   Patel, and Hannes Gredler for their valuable comments.
+
+Authors' Addresses
+
+   Enke Chen
+   Palo Alto Networks
+
+   Email: enchen@paloaltonetworks.com
+
+
+   John Scudder
+   Juniper Networks
+
+   Email: jgs@juniper.net

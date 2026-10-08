@@ -213,6 +213,11 @@ class LabelBase(INET):
             + bytes(self._packed[start + self._label_size :])
         )
 
+    def label_count(self) -> int:
+        if not self._has_labels:
+            return 0
+        return (self._label_end_offset - self._mask_offset - 1) // LABEL_SIZE_BYTES
+
     @property
     def labels(self) -> Labels:
         """Get Labels from wire bytes by scanning for BOS bit."""
@@ -411,10 +416,11 @@ class LabelBase(INET):
         of what followed as the label, withdrawing a route nobody announced.
         """
         offset = PATH_INFO_SIZE if self._has_addpath else 0
-        if self._has_labels or not packed[offset]:
-            # A length of 0 is kept as it is: with only a label field behind it, a labelled
-            # 0.0.0.0/0 is the same bytes as a stack which ate the prefix, which the decoder
-            # refuses (rfc8277#2.4), and the route would not read back
+        # A length of 0 gets the field too: a /0 without one went out as Length 0, which
+        # the section 2.2 encoding does not allow. On a withdrawal the decoder ends a one
+        # field stack on 0x800000 (_ends_label_stack), so the route reads back as the
+        # default route.
+        if self._has_labels:
             return packed
         mask = packed[offset] + LABEL_SIZE_BYTES * 8
         if mask > MAX_LABELLED_MASK:

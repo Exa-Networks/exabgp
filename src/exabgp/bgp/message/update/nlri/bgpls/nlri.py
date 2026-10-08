@@ -265,6 +265,24 @@ class BGPLS(NLRI):
             data = data[4 + tlv_length :]
 
     @classmethod
+    def iter_ordered_tlvs(cls, data: Buffer) -> 'Iterator[tuple[int, Buffer]]':
+        """iter_tlvs, refusing the NLRI when a TLV is not in the order RFC 9552 5.1 sets.
+
+        Ascending by type, then, for TLVs of one type, by Length, then by Value compared
+        as opaque octets. 8.2.2 lists the rule among the syntactic checks a speaker MUST
+        perform, and the length still frames the NLRI, so only this NLRI is discarded.
+        """
+        previous: tuple[int, int, bytes] = (0, 0, b'')
+        for tlv_type, value in cls.iter_tlvs(data):
+            current = (tlv_type, len(value), bytes(value))
+            if current < previous:
+                raise NLRIDiscard(
+                    f'BGP-LS {cls.__name__} NLRI TLV {tlv_type} follows TLV {previous[0]}, not in ascending order'
+                )
+            previous = current
+            yield tlv_type, value
+
+    @classmethod
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
@@ -289,13 +307,25 @@ class BGPLS(NLRI):
         if len(data) < length + 4:
             raise Notify.short(3, 10, 'BGP-LS NLRI', length + 4, len(data))
 
+        # the length was read and checked above, so the next NLRI starts past this one
+        skip = original_size - len(data) + length + 4
         try:
             klass = cls._decoded(code, length, data, safi)
         except NLRIDiscard as discard:
-            # the length was read and checked above, so the next NLRI starts past this one
-            discard.skip = original_size - len(data) + length + 4
+            discard.skip = skip
             assert discard.skip > 0, 'a discarded NLRI is stepped over, not re-read'
             raise
+        except Notify as error:
+            # RFC 9552 8.2.2: everything below this point is inside a length which frames
+            # the NLRI, so whatever is wrong in there, a sub-TLV of the wrong size, a TLV
+            # running past the Total NLRI Length, a mandatory TLV missing, the error lets
+            # us "skip the malformed NLRI(s) and continue the processing of the rest of the
+            # BGP UPDATE message".  Only a length which does not fit, refused above, leaves
+            # no way to find the next NLRI and resets the session.
+            framed = NLRIDiscard(error.detail)
+            framed.skip = skip
+            assert framed.skip > 0, 'a discarded NLRI is stepped over, not re-read'
+            raise framed from error
         klass.addpath = path_info
         return klass, data[length + 4 :]
 
@@ -330,7 +360,8 @@ class BGPLS(NLRI):
         # the descriptors parse lazily, so a sub-tlv this decoder cannot read used to be
         # accepted here and fail later in the API writer calling json(): a raw exception
         # several layers from the wire, where nothing treats it as a protocol error.
-        # Parse now, so a malformed sub-tlv is the NOTIFICATION it always should have been
+        # Parse now, so a malformed sub-tlv is refused at the boundary, where unpack_nlri
+        # turns it into the NLRI discard of RFC 9552 8.2.2
         klass.check()
         return klass
 
@@ -338,8 +369,9 @@ class BGPLS(NLRI):
         """Parse eagerly whatever this NLRI parses lazily, at the boundary.
 
         A class with no lazy descriptors has nothing to do.  A class with them overrides
-        this and touches its own parse, so the Notify comes out of unpack_nlri and reaches
-        the peer as a NOTIFICATION: EXA_STYLE.md 1.1, validate once, at the boundary.
+        this and touches its own parse, so the Notify comes out of unpack_nlri, as the
+        NLRIDiscard which drops this NLRI alone: EXA_STYLE.md 1.1, validate once, at the
+        boundary.
         """
 
     def _raw(self) -> str:

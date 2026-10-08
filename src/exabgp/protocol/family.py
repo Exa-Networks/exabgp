@@ -373,7 +373,9 @@ class Family:
         (AFI.ipv4, SAFI.nlri_mpls): ((4,), 0),
         (AFI.ipv4, SAFI.mup): ((4, 16), 0),
         (AFI.ipv4, SAFI.mpls_vpn): ((12,), 8),
-        (AFI.ipv4, SAFI.mcast_vpn): ((4,), 0),
+        # RFC 6515 1.1: the PE address family "MUST NOT be inferred from the AFI", and section 2
+        # item 1 lets the length of the next hop, 4 or 16, say which it is, on either AFI
+        (AFI.ipv4, SAFI.mcast_vpn): ((4, 16), 0),
         (AFI.ipv4, SAFI.flow_ip): ((0, 4), 0),
         (AFI.ipv4, SAFI.flow_vpn): ((0, 4), 0),
         (AFI.ipv4, SAFI.rtc): ((4, 16), 0),
@@ -398,8 +400,10 @@ class Family:
         # address with the route distinguisher set to zero, which is the shape the mpls-vpn
         # families use. 12 = RD(8) + IPv4(4), 24 = RD(8) + IPv6(16), and 8 is the RD to skip.
         (AFI.bgpls, SAFI.bgp_ls_vpn): ((12, 24), 8),
-        (AFI.ipv4, SAFI.sr_policy): ((4,), 0),
-        (AFI.ipv6, SAFI.sr_policy): ((16,), 0),
+        # RFC 9830 2.1: the next hop is "either a 4-octet IPv4 address or a 16-octet IPv6
+        # address, independent of the SR Policy AFI", and 32 is a global and link-local pair
+        (AFI.ipv4, SAFI.sr_policy): ((4, 16, 32), 0),
+        (AFI.ipv6, SAFI.sr_policy): ((4, 16, 32), 0),
     }
 
     @property

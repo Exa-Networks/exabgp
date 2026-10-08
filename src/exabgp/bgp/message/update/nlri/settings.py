@@ -205,11 +205,12 @@ class FlowSettings:
             rule: FlowRule object with an ID attribute
 
         Raises:
-            ValueError: If the rule is a prefix of another family than the route or its prefixes
+            ValueError: If the rule is a prefix of another family than the route or its prefixes,
+                or a second destination or source prefix
         """
-        from exabgp.bgp.message.update.nlri.flow import family_conflict
+        from exabgp.bgp.message.update.nlri.flow import rule_conflict
 
-        conflict = family_conflict(self.rules, rule, self.afi)
+        conflict = rule_conflict(self.rules, rule, self.afi)
         if conflict:
             raise ValueError(conflict)
         rule_id = rule.ID

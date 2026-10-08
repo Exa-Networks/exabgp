@@ -47,7 +47,7 @@ class RTCBase(NLRI):
 
     - length: Length in bits (96 for full RTC, 0 for wildcard)
     - origin: Origin ASN (4 bytes, big-endian)
-    - rt: RouteTarget with flags reset (8 bytes)
+    - rt: RouteTarget (8 bytes), its type flags reset when we build it, as received when decoded
 
     RFC 4684 section 4 makes it a prefix: a length from 32 to 95 bits carries the origin AS and
     only the leading ceil(length / 8) - 4 octets of the route target. Such a prefix is decoded
@@ -97,7 +97,7 @@ class RTCBase(NLRI):
 
         if self.prefix_length != RTC_PREFIX_MAX_BITS:
             return None
-        # RT is stored with flags already reset, use unpack_attribute for proper subclass dispatch
+        # unpack_attribute dispatches on the type, whose flags do not change the subclass
         return cast(RouteTarget, RouteTarget.unpack_attribute(self._packed[5:13], None))
 
     @classmethod
@@ -204,13 +204,22 @@ class RTCBase(NLRI):
         if length <= RTC_PREFIX_MIN_BITS:
             return True
         whole, rest = divmod(length - RTC_PREFIX_MIN_BITS, 8)
-        carried = self._packed[RTC_ROUTE_TARGET_OFFSET:]
+        # The targets come with their type flags reset, and so is the membership's here
+        stored = self._packed[RTC_ROUTE_TARGET_OFFSET:]
+        carried = bytes([RTC.resetFlags(stored[0])]) + bytes(stored[1:])
         if bytes(carried[:whole]) != bytes(target[:whole]):
             return False
         if not rest:
             return True
         mask = (0xFF << (8 - rest)) & 0xFF
         return (carried[whole] & mask) == (target[whole] & mask)
+
+    @staticmethod
+    def _last_octet_mask(length: int) -> int:
+        """The bits of the last octet of a prefix of `length` bits which belong to it."""
+        assert 0 < length <= RTC_PREFIX_MAX_BITS, 'only a prefix which has octets has a last one'
+        unused = (8 - length % 8) % 8
+        return (0xFF << unused) & 0xFF
 
     @staticmethod
     def resetFlags(char: int) -> int:
@@ -263,12 +272,12 @@ class RTCBase(NLRI):
         if len(data) < size:
             raise Notify.short(3, 10, 'RTC NLRI', size, len(data))
 
-        # Store the wire format with the flags reset on the first octet of the route target,
-        # when the prefix reaches it: [length(1)][origin(4)][rt(0 to 8)]
-        packed = bytes(data[0:size])
-        if size > RTC_ROUTE_TARGET_OFFSET:
-            offset = RTC_ROUTE_TARGET_OFFSET
-            packed = packed[:offset] + bytes([RTC.resetFlags(packed[offset])]) + packed[offset + 1 :]
+        # Store the wire format as received, [length(1)][origin(4)][rt(0 to 8)], except for
+        # the bits beyond the length, which RFC 4760 4 calls "irrelevant": they are zeroed,
+        # so one prefix sent with two paddings is one route. The type flags of the route
+        # target were reset here, merging prefixes which differ in them; matching resets
+        # them instead (admits), which is where ignoring them is meant.
+        packed = bytes(data[0 : size - 1]) + bytes([data[size - 1] & RTC._last_octet_mask(length)])
 
         nlri = cls(packed)
         nlri.addpath = path_info

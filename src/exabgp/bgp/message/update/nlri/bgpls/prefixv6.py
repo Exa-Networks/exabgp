@@ -151,7 +151,7 @@ class PREFIXv6(BGPLS):
         # Validate TLVs can be parsed (logging unknown TLVs)
         # Offset by 4-byte header: TLVs start at byte 13 (4 + 1 + 8)
         seen = set()
-        for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
+        for tlv_type, value in cls.iter_ordered_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
             seen.add(tlv_type)
             if tlv_type == TLV_LOCAL_NODE_DESC:
                 # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.

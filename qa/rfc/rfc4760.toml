@@ -194,7 +194,13 @@ Error"/"Optional Attribute Error".
 """
 note = """
 Positive only: this says which subcode we pick when we terminate, and a peer cannot make
-us pick a different one. exabgp picks 3/9 for every one of them. mprnlri.py and
+us pick a different one. exabgp picks 3/9 for every error in the attribute itself: a
+truncated attribute, a family not negotiated or not supported, a bad next-hop length, a
+non-zero next-hop route distinguisher, an empty NLRI field.  An NLRI inside the attribute
+which cannot be parsed is not one of them: it is raised by the decoder of its family as
+3/10 Invalid Network Field, the subcode RFC 4271 6.3 gives a syntactically incorrect NLRI
+field (EVPN and MVPN answered 3/5 until 2026-10-08), unless that family can step over it
+(a framed BGP-LS NLRI is discarded alone, RFC 9552 8.2.2).  mprnlri.py and
 mpurnlri.py used to raise Notify(3, 9) only for a truncated attribute and Notify(3, 0),
 Unspecific, for a non-negotiated family, an unsupported family, a bad next-hop length, a
 non-zero next-hop route distinguisher and an empty NLRI field, which told the peer we

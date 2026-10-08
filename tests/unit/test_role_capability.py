@@ -107,16 +107,26 @@ def test_wrong_length_ends_the_session(payload: bytes) -> None:
 
 
 @pytest.mark.parametrize('value', [5, 6, 128, 255])
-def test_unassigned_role_is_a_role_mismatch(value: int) -> None:
-    """An unassigned value names a role no allowed pair can satisfy.
+def test_unassigned_role_is_decoded_and_kept(value: int) -> None:
+    """An unassigned value is well formed, and decoding it is not the place to judge it.
 
-    Notify(2, 11) rather than (2, 0): the capability is well formed, and the
-    honest complaint is that the role it carries cannot be agreed with.
+    RFC 9234 4.2 only asks for a Role Mismatch "If the BGP Role Capability is advertised"
+    by us, which the negotiation knows and the decoder does not. It was refused here,
+    with 2/11, by a speaker which had no role configured and nothing to mismatch.
     """
+    parsed = Role.unpack_capability(Role(), memoryview(bytes([value])), Capability.CODE.ROLE)
+    assert isinstance(parsed, Role)
+    assert parsed.value == RoleValue.UNASSIGNED
+    assert parsed.extract_capability_bytes() == [bytes([value])]
+    assert str(parsed) == f'Role(unassigned {value})'
+
+
+def test_differing_unassigned_duplicates_are_a_role_mismatch() -> None:
+    """Two unassigned values are two different answers, as two assigned ones would be."""
+    first = Role.unpack_capability(Role(), memoryview(b'\x05'), Capability.CODE.ROLE)
     with pytest.raises(Notify) as exc:
-        Role.unpack_capability(Role(), memoryview(bytes([value])), Capability.CODE.ROLE)
-    assert exc.value.code == 2
-    assert exc.value.subcode == 11
+        Role.unpack_capability(first, memoryview(b'\x06'), Capability.CODE.ROLE)
+    assert (exc.value.code, exc.value.subcode) == (2, 11)
 
 
 # ==============================================================================

@@ -114,3 +114,44 @@ def test_the_full_and_default_forms_are_unchanged() -> None:
 def test_a_malformed_prefix_is_refused(data, why) -> None:
     with pytest.raises(Notify, match=why):
         unpack(data)
+
+
+# The first octet of the route target is the extended community type, whose two high bits
+# are what RTC.resetFlags clears. The decoder cleared them whenever the prefix reached that
+# octet, which is right for nothing a peer can send: on a prefix of 33 to 39 bits they are
+# the prefix itself, and on a full route target they are part of the type it names.
+# RFC 4760 4 says the trailing bits beyond the length are "irrelevant", and those it kept.
+
+
+@pytest.mark.parametrize('bits', [33, 34, 39])
+def test_the_significant_high_bits_of_a_short_prefix_are_kept(bits: int) -> None:
+    """0x80 and 0x00 in the first route target octet of a /33 are two different prefixes."""
+    high, _ = unpack(bytes([bits]) + ORIGIN + bytes([0x80]))
+    low, _ = unpack(bytes([bits]) + ORIGIN + bytes([0x00]))
+    assert high.index() != low.index(), 'two distinct prefixes were merged into one route'
+    assert bytes(high.pack_nlri(negotiated())) == bytes([bits]) + ORIGIN + bytes([0x80])
+
+
+def test_a_full_route_target_keeps_the_type_it_was_sent_with() -> None:
+    """A type with 0x40 set is another extended community than the one with it clear."""
+    non_transitive = bytes([96]) + ORIGIN + bytes([0x40]) + TARGET[1:]
+    nlri, _ = unpack(non_transitive)
+    full, _ = unpack(FULL)
+    assert bytes(nlri.pack_nlri(negotiated())) == non_transitive
+    assert nlri.index() != full.index()
+
+
+@pytest.mark.parametrize('bits, sent, kept', [(33, 0x81, 0x80), (36, 0xFF, 0xF0), (95, 0x65, 0x64)])
+def test_the_bits_beyond_the_prefix_length_are_zeroed(bits: int, sent: int, kept: int) -> None:
+    """The same prefix sent with different padding is one route, with one index."""
+    carried = (ORIGIN + TARGET)[: (bits + 7) // 8]
+    padded, _ = unpack(bytes([bits]) + carried[:-1] + bytes([sent]))
+    clean, _ = unpack(bytes([bits]) + carried[:-1] + bytes([kept]))
+    assert padded.index() == clean.index()
+    assert bytes(padded.pack_nlri(negotiated()))[-1] == kept
+
+
+def test_a_membership_with_the_type_flags_set_still_admits_its_route_target() -> None:
+    """Matching compares route targets with their flags reset, as it did before."""
+    nlri, _ = unpack(bytes([96]) + ORIGIN + bytes([0x40]) + TARGET[1:])
+    assert nlri.admits(TARGET)

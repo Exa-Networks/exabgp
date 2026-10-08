@@ -1,0 +1,248 @@
+# draft-mpmz-bess-mup-safi-05 - BGP Extensions for the Mobile User Plane (MUP) SAFI
+# https://datatracker.ietf.org/doc/html/draft-mpmz-bess-mup-safi-05
+#
+# Every `text` below is quoted verbatim from
+# qa/rfc/text/draft-mpmz-bess-mup-safi-05.txt and is checked against it on every run of
+# ./qa/bin/check_rfc_compliance.
+#
+# This is an Internet-Draft, not an RFC.  It is what the MUP SAFI (85) decoders in
+# src/exabgp/bgp/message/update/nlri/mup/ implement, and revision 05 is the latest, so its
+# sentences are held to the same standard as an RFC's.
+#
+# Each route type of section 3.1 ends with the same pair of MUSTs: a malformed NLRI is
+# "Treat-as-withdraw" and the speaker "MUST skip such NLRIs and continue processing of rest
+# of the Update message".  Every such rule of 3.1.1 to 3.1.4.1 has its entry below, as has
+# the rule of 3.1 on the route types exabgp does not know.  Nothing is pending.
+#
+# How the pair is met: MUP.unpack_nlri reads the outer framing, Architecture Type, Route
+# Type and Length, and refuses a Length running past the attribute with a Notify, since
+# nothing would then say where the next NLRI starts.  Inside an honest Length, it depends
+# on which field is malformed.
+#
+# "Treat-as-withdraw" for one NLRI is a withdrawal of its route key.  When the malformed
+# field is part of that key, the prefix length of an ISD or a Type 1 ST route, the address
+# of a DSD route, the Endpoint Length or the TEID of a Type 2 ST route, there is no key
+# left to withdraw: the error becomes an NLRIDiscard carrying the octets to step over,
+# which MPRNLRI and MPURNLRI skip, logging it, before decoding the next NLRI.
+#
+# When it is not, the 3gpp-5g part of a Type 1 ST route (3.1.3.1), whose key is RD,
+# Prefix Length and Prefix alone, the decoder returns a
+# MalformedType1SessionTransformedRoute.  NLRI.withdrawn_on_receipt() names the reason,
+# and UpdateCollection moves the route from the announcements to the withdrawals, so the
+# route the peer announced before under that key is withdrawn rather than left in place.
+# The rest of the UPDATE is processed as it stands.
+
+rfc = "draft-mpmz-bess-mup-safi-05"
+title = "BGP Extensions for the Mobile User Plane (MUP) SAFI"
+url = "https://datatracker.ietf.org/doc/html/draft-mpmz-bess-mup-safi-05"
+
+[[requirement]]
+id = "draft-mpmz-bess-mup-safi-05#3.1.1-isd-prefix-length-malformed-skip"
+section = "3.1.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the AFI is
+IPv4, then the maximum value of the Prefix Length is 32 bits
+otherwise it is considered as a malformed NLRI.  If the AFI is IPv6,
+then the maximum value of of the Prefix length is 128 bits otherwise
+it is considered as a malformed NLRI.  A BGP speaker MUST handle such
+a malformed NLRI as a "Treat-as-withdraw" [RFC7606].  A BGP speaker
+MUST skip such NLRIs and continue processing of rest of the Update
+message.
+"""
+note = """
+`InterworkSegmentDiscoveryRoute.unpack_nlri` refuses a prefix length past the AFI's
+address, and `MUP.unpack_nlri` turns that into the skip of this NLRI alone.  The negative
+test is the maximum itself, a host route, which must be kept.
+"""
+
+[[requirement]]
+id = "draft-mpmz-bess-mup-safi-05#3.1.3-t1st-prefix-length-malformed-skip"
+section = "3.1.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If
+the AFI is IPv4, then the maximum value of the Prefix Length field is
+32.  If the AFI is IPv6, then the maximum value of the Prefix Length
+field is 128.  Any other length field is considered a a malformed
+NLRI.  A BGP speaker MUST handle such a malformed NLRI as a "Treat-
+as-withdraw" [RFC7606].  A BGP speaker MUST skip such NLRIs and
+continue processing of rest of the Update message.
+"""
+note = """
+`Type1SessionTransformedRoute.unpack_nlri` refuses a prefix length past the AFI's address,
+and `MUP.unpack_nlri` turns that into the skip of this NLRI alone.
+"""
+
+[[requirement]]
+id = "draft-mpmz-bess-mup-safi-05#3.1.4-t2st-endpoint-length-malformed-skip"
+section = "3.1.4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the AFI is IPv4, then the maximum Endpoint
+length is 64 otherwise it is considered as a malformed NLRI.  If the
+AFI is IPv6, then the maximum Endpoint length is 160 otherwise it is
+considered as a malformed NLRI.  A BGP speaker MUST handle such a
+malformed NLRI as a "Treat-as-withdraw" [RFC7606].  A BGP speaker
+MUST skip such NLRIs and continue processing of rest of the Update
+message.
+"""
+note = """
+`Type2SessionTransformedRoute.unpack_nlri` refuses an Endpoint Length outside the address
+size and the address plus a 32 bit TEID, and `MUP.unpack_nlri` turns that into the skip of
+this NLRI alone.  The negative test is the maximum, 64 or 160, which must be kept.
+"""
+
+[[requirement]]
+id = "draft-mpmz-bess-mup-safi-05#3.1-other-route-types-ignored"
+section = "3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+Any other Route Types MUST be silently ignored upon a receipt if a
+BGP speaker supports only 3gpp-5G architecture type.
+"""
+note = """
+exabgp supports only the 3gpp-5g architecture, and a route type is defined for an
+architecture, so any pair of the two which is not one of the four registered ones is
+ignored, in MP_REACH_NLRI and in MP_UNREACH_NLRI alike: `MUP.unpack_nlri` raises an
+NLRIDiscard which steps over it.  It used to be decoded as a GenericMUP of raw octets and
+handed to the RIB and the API.  The skip is logged, which the section allows ("MAY log an
+error").
+"""
+
+[[requirement]]
+id = "draft-mpmz-bess-mup-safi-05#3.1.2-dsd-address-length-malformed-skip"
+section = "3.1.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If the AFI is IPv4 then the address length is 4 octets otherwise it
+is considered as a malformed NLRI.  If the AFI is IPv6 then the
+address length is 16 octets otherwise it is considered as a malformed
+NLRI.  A BGP speaker MUST handle such a malformed NLRI as a "Treat-
+as-withdraw" [RFC7606].  A BGP speaker MUST skip such NLRIs and
+continue processing of rest of the Update message.
+"""
+note = """
+`DirectSegmentDiscoveryRoute.unpack_nlri` accepted 4 or 16 octets under either AFI.  It now
+wants the AFI's size, and the address being the route key, the NLRI is skipped.
+"""
+
+[[requirement]]
+id = "draft-mpmz-bess-mup-safi-05#3.1.3.1-t1st-teid-zero-malformed"
+section = "3.1.3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The TEID has a fixed length of 4 octets.  The TEID value of 0 is
+considered as an invalid and a malformed TEID.  A BGP speaker MUST
+handle such a malformed NLRI as a "Treat-as-withdraw" [RFC7606].  A
+BGP speaker MUST skip such NLRIs and continue processing of rest of
+the Update message.
+"""
+note = """
+The TEID is outside the key of a Type 1 ST route, so the route is a withdrawal of its RD
+and prefix (see the header).  The configuration and the API refuse `teid 0`, so exabgp
+never sends one.
+"""
+
+[[requirement]]
+id = "draft-mpmz-bess-mup-safi-05#3.1.3.1-t1st-endpoint-length-malformed"
+section = "3.1.3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Endpoint Address Length has a fixed length of 1 octet.  Endpoint
+Address field contains of an IPv4 address, then the value of the
+Endpoint Address Length field is 32.  If the Endpoint Address field
+contains of an IPv6 Address, then the value of the Endpoint Address
+Length field is 128.  Any other value is considered as an invalid and
+a malformed Endpoint Address.  A BGP speaker MUST handle such a
+malformed NLRI as a "Treat-as-withdraw" [RFC7606].  A BGP speaker
+MUST skip such NLRIs and continue processing of rest of the Update
+message.
+"""
+note = """
+Any other length was refused and the NLRI skipped, leaving the route announced before
+under the same key in place.  It is now a withdrawal of that key (see the header).
+"""
+
+[[requirement]]
+id = "draft-mpmz-bess-mup-safi-05#3.1.3.1-t1st-source-length"
+section = "3.1.3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The Source Address Length has a fixed length of 1 octet.  Source
+Address Length is 0 bytes then the Source address is not carried
+within the NLRI.  A BGP speaker MAY have a local configuration for
+using a Source address.  The exact mechanism of local configuration
+is outside the scope of this document.  Source Address field contains
+of an IPv4 address, then the value of the Source Address Length field
+is 32.  If the Source Address field contains of an IPv6 Address, then
+the value of the Source Address Length field is 128.  Any other value
+is considered as an invalid and a malformed Endpoint Address.  A BGP
+speaker MUST handle such a malformed NLRI as a "Treat-as-withdraw"
+[RFC7606].  A BGP speaker MUST skip such NLRIs and continue
+processing of rest of the Update message.
+"""
+note = """
+exabgp wrote -02: the octet was left out when there was no source, and a length of 0 was
+refused on receipt.  `make_t1st` now always writes it, 0 without a source.  On receipt 0,
+32 and 128 are kept and any other length is a withdrawal of the route's key (see the
+header).  A route of -02, which ends after its Endpoint Address, is still read, and held
+with a Source Address Length of 0 added, so it compares and is sent again as -05 writes it.
+"""
+
+[[requirement]]
+id = "draft-mpmz-bess-mup-safi-05#3.1.3.1-t1st-architecture-encoding"
+section = "3.1.3.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The NLRI architecture field MUST be encoded as shown above if a BGP
+speaker receives 3gpp-5g specific BGP Type 1 ST route.  Otherwise the
+NLRI is considered as a malformed.  A BGP speaker MUST handle such a
+malformed NLRI as a "Treat-as-withdraw" [RFC7606].  A BGP speaker
+MUST skip such NLRIs and continue processing of rest of the Update
+message.
+"""
+note = """
+`architecture_error` in nlri/mup/t1st.py reads the part after the prefix field by field
+and wants it to end exactly where its lengths say.  A part too short or too long is a
+withdrawal of the route's key (see the header).  The one shorter form kept is -02's,
+without a Source Address Length, described under 3.1.3.1-t1st-source-length.
+"""
+
+[[requirement]]
+id = "draft-mpmz-bess-mup-safi-05#3.1.4.1-t2st-teid-zero-malformed"
+section = "3.1.4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The maximum length of TEID is 4 octets.  The TEID value of 0 is
+considered as an invalid and a malformed TEID.  A BGP speaker MUST
+handle such a malformed NLRI as a "Treat-as-withdraw" [RFC7606].  A
+BGP speaker MUST skip such NLRIs and continue processing of rest of
+the Update message.
+"""
+note = """
+3.1.4 counts the TEID in the key of a Type 2 ST route, so there is no other key to
+withdraw and the NLRI is skipped.  An Endpoint Length of the address alone carries no TEID,
+which is not a TEID of 0, and is kept.  The configuration and the API refuse `teid 0/N`
+for any N but 0, so exabgp never sends one.
+"""

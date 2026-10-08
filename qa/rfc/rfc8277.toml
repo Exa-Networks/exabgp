@@ -151,6 +151,29 @@ multiple of four, before reading a triple.
 """
 
 [[requirement]]
+id = "rfc8277#2.1-more-labels-than-announced-treat-as-withdraw"
+section = "2.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+   If a BGP speaker
+   receives an UPDATE that binds more labels to a given prefix than the
+   number of labels the BGP speaker is prepared to receive (as announced
+   in its Multiple Labels Capability), the BGP speaker MUST apply the
+   "treat-as-withdraw" strategy of [RFC7606] to that UPDATE.
+"""
+note = """
+`Negotiated.labels_accepted` is the Count of our own capability for the family once code 8
+went both ways and the family is in both, and one label otherwise, which is the section 2
+encoding a peer must then use. `labels_limit` is the peer's Count and binds what we send
+only. `UpdateCollection._withdrawn_for_its_routes` compares every route of MP_REACH_NLRI
+with it, once the NLRI are built, and a stack too deep makes the whole UPDATE
+treat-as-withdraw. The decoder used to read labels to the S bit and keep however many it
+found, so a peer without the capability could bind a stack of any depth to a prefix.
+"""
+
+[[requirement]]
 id = "rfc8277#2.2-rsrv-ignored-on-reception"
 section = "2.2"
 level = "MUST"
@@ -189,6 +212,13 @@ a prefix the family can hold, which is the section 2.2 reading and the only one 
 on a session with no Multiple Labels Capability.  Beyond one field nothing changed: there
 section 2.3 applies, the S bit is the only delimiter, and a stack without one is still
 refused.
+
+Until 2026-10-08 a length which left no prefix bits behind the field (a labelled /0,
+`18 000640`, and its VPN form `58 000640 <RD>`) was kept out of that reading and refused
+as a stack which never ends.  The bytes have no other reading: the length is the one
+field, with nothing behind it a stack could have eaten.  Without the capability it now
+decodes as the /0 it is; once the capability went both ways it is still refused, as
+section 2.3 asks.
 """
 
 [[requirement]]
@@ -212,11 +242,10 @@ it stops there even if the mask would have allowed another label.
 
 On a session without the Multiple Labels Capability a stack of exactly one label with
 the bit nowhere is a section 2.2 NLRI rather than a malformed section 2.3 one, and is
-accepted: see rfc8277#2.2-s-bit-ignored-on-reception.  Once the capability went both ways
-it is a section 2.3 NLRI whose last label lacks the bit, and is refused.
-The one case the length cannot decide is a length which leaves no prefix bits behind that
-single field, where a labelled 0.0.0.0/0 and a stack which ate the prefix are the same
-bytes; that stays refused, and tests/unit/test_label_stack_end.py says so.
+accepted: see rfc8277#2.2-s-bit-ignored-on-reception.  That includes a length which leaves
+no prefix bits behind the field, a labelled 0.0.0.0/0, which was refused until
+2026-10-08.  Once the capability went both ways it is a section 2.3 NLRI whose last label
+lacks the bit, and is refused, /0 included.
 """
 
 [[requirement]]
@@ -240,11 +269,15 @@ legal because it is of no significance, fell out of the loop unterminated and ra
 field of 0x000010 had its session reset.  Both loops now end a one field stack on the
 length instead: whatever the three octets hold, the bits behind them are the route
 distinguisher and the prefix whenever they can be, and the value is never looked at.
+A withdrawn /0 was the exception until 2026-10-08: with no prefix bits behind the field,
+only 0x800000 and 0x000000 ended it; any value does now.
 
-The SHOULD is unchanged and is a decision rather than a defect: exabgp withdraws by
-packing the NLRI it announced, so the three octets carry the label it advertised rather
-than 0x800000.  Every value is legal to send, and a receiver which cares is the bug this
-entry just stopped being.
+The SHOULD is followed for a route withdrawn without a label: `LabelBase._with_label_field`
+puts 0x800000 in front of the prefix, a 0.0.0.0/0 or ::/0 included, which used to go out
+with a Length of 0 and no field at all.  A route withdrawn with the NLRI it was announced
+with still carries the label it advertised rather than 0x800000, which is a decision
+rather than a defect: every value is legal to send, and a receiver which cares is the bug
+this entry just stopped being.
 """
 
 [[requirement]]

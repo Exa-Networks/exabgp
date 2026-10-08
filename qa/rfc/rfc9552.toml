@@ -98,17 +98,56 @@ id = "rfc9552#5.1-nlri-tlvs-ascending-order"
 section = "5.1"
 level = "MUST"
 status = "required"
-polarity = "positive-only"
+polarity = "both"
 text = """
 To compare NLRIs with unknown TLVs, all TLVs within the NLRI MUST be
 ordered in ascending order by TLV Type.
 """
 note = """
-LINK.unpack_bgpls_nlri compares each NLRI TLV type with the one before and refuses a lower
-one, as NodeDescriptor.unpack_descriptors already did for the sub-TLVs of a Node
-Descriptor. Both raise NLRIDiscard: the length still frames the NLRI, so under 8.2.2 only
-that NLRI is dropped (see rfc9552#8.2.2-nlri-discard). TLVs of one type in a row are
-allowed, as the section permits several of a type.
+Section 8.2.2 lists "The rule regarding the ordering of TLVs has been followed as described
+in Section 5.1" among the syntactic checks "A BGP-LS Speaker MUST perform", so it binds us
+as a receiver as well as the originator.  BGPLS.iter_ordered_tlvs walks the NLRI TLVs and
+refuses one which sorts before the TLV ahead of it: by type, then for TLVs of one type by
+Length, then by Value as opaque octets, the tie-break the next sentence of 5.1 adds.  It
+raises NLRIDiscard, as the length still frames the NLRI (see rfc9552#8.2.2-nlri-discard).
+Until 2026-10-08 only the Link NLRI checked the order, by type alone; Node, both Prefix
+types and SRv6 SID now use the same walk, and NodeDescriptor.unpack_descriptors still
+holds the sub-TLVs of a Node Descriptor to the same order (5.2.1).  The one NLRI exabgp
+builds, NODE.make_node, sorts its sub-TLVs the same way; every other one is relayed as the
+bytes it was received in, which this check has already held to the order.
+"""
+
+[[requirement]]
+id = "rfc9552#5.1-same-type-tlvs-by-length-then-value"
+section = "5.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If there are multiple TLVs
+of the same type within a single NLRI, then the TLVs sharing the same
+type MUST be first in ascending order based on the Length field
+followed by ascending order based on the Value field.
+"""
+note = """
+The tie-break of rfc9552#5.1-nlri-tlvs-ascending-order, checked by the same walk,
+BGPLS.iter_ordered_tlvs.  Until 2026-10-08 TLVs of one type were accepted in any order.
+"""
+
+[[requirement]]
+id = "rfc9552#5.1-unordered-nlri-malformed"
+section = "5.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+NLRIs having TLVs that do not follow the
+above ordering rules MUST be considered as malformed by a BGP-LS
+Propagator.
+"""
+note = """
+Every NLRI type exabgp decodes (Node, Link, Prefix v4 and v6, SRv6 SID) is refused, as an
+NLRI discard, when its TLVs are out of order; the same NLRI in order decodes.
 """
 
 [[requirement]]
@@ -150,6 +189,10 @@ what route an MP_REACH of that family into this decoder.  The difference between
 is real and not cosmetic: `BGPLS.unpack_nlri` reads an eight octet Route Distinguisher
 after the header for SAFI 72 and does not for SAFI 71, so the negative test is that the
 same bytes under the two SAFIs do not decode to the same object.
+
+Every registered NLRI type carries the Route Distinguisher it was read with.  The SRv6 SID
+NLRI of RFC 9514 did not: it was packed back eight octets short and under no VPN, and two
+routes differing only by their Route Distinguisher were one route in the RIB.
 """
 
 [[requirement]]
@@ -208,6 +251,33 @@ is noticing a peer breaking it.
 """
 
 [[requirement]]
+id = "rfc9552#5.2.1.4-direct-static-router-id-address"
+section = "5.2.1.4"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+For 'Direct' or
+'Static configuration', the value SHOULD be taken from an IPv4 or
+IPv6 address (e.g., loopback interface) configured on the node.
+"""
+note = """
+Addressed to the producer, recorded for what it means to the decoder: under Protocol-ID 4
+or 5 the IGP Router-ID may be four or sixteen octets, and is an address.
+
+`tlvs/node.py` had the two Protocol-IDs wrong.  It named 5 Direct and 227 Static, where
+Table 2 has 4 Direct and 5 Static configuration (227 is freertr's own value, and keeps the
+OSPF reading it always had, under the name IGP_FREERTR).  Under 5 it read the Router-ID
+as an OSPF one, so a sixteen octet IPv6 address was a length error and reset the session;
+under 4 it did not read it at all.  `NodeDescriptor._unpack_igp_router_id` reads four or
+sixteen octets under either as an address, and keeps any other size as a
+`GenericNodeDescriptor`, since the next sentence lets an IGP Router-ID of any IGP stand in.
+
+The negative side: the size is still read with the Protocol-ID, so sixteen octets under
+OSPFv2 are no Router-ID.
+"""
+
+[[requirement]]
 id = "rfc9552#8.2.2-nlri-not-malformed-on-semantics"
 section = "8.2.2"
 level = "MUST NOT"
@@ -256,7 +326,8 @@ Performed: the sum of the TLV lengths against the MP_REACH and MP_UNREACH length
 `BGPLS.unpack_nlri` returning the unconsumed remainder to the caller's loop; the sum
 against the Total NLRI Length field, through `BGPLS.iter_tlvs` refusing a TLV which runs
 past the descriptor area and refusing a trailing stub under four octets; the length of a
-recognised sub-TLV, through the per-code length tables in `NodeDescriptor.unpack_node`.
+recognised sub-TLV, through the per-code length tables in `NodeDescriptor.unpack_node`.  The last three are found inside an NLRI whose length is
+honest, so they end as the 'NLRI discard' of rfc9552#8.2.2-nlri-discard, not a reset.
 
 The last two arrived together, in `NodeDescriptor.unpack_descriptors`: "The rule regarding
 the ordering of TLVs has been followed as described in Section 5.1", and "For NLRIs
@@ -281,11 +352,18 @@ processing similar to what is described in Section 5.4 of [RFC7606]).
 """
 note = """
 NLRIDiscard, a Notify subclass, is raised for a rule broken inside an NLRI whose length is
-honest (the ordering and single-occurrence rules of 5.1 and 5.2.1). BGPLS.unpack_nlri,
-which has read and checked that length, records how many octets the NLRI took, and the
-MP_REACH_NLRI loop (MPRNLRI) logs the NLRI as discarded, steps over it and goes on with
-the next one. A length the decoder cannot trust still resets the session, and an
-NLRIDiscard with nothing recording its length is a Notify like any other.
+honest. BGPLS.unpack_nlri, which has read and checked that length, records how many octets
+the NLRI took, and both the MP_REACH_NLRI loop (MPRNLRI) and the MP_UNREACH_NLRI one
+(MPURNLRI) log the NLRI as discarded, step over it and go on with the next one. A length
+the decoder cannot trust still resets the session, and an NLRIDiscard with nothing
+recording its length is a Notify like any other.
+
+It used to be raised for the ordering and single-occurrence rules of 5.1 and 5.2.1 alone,
+and only MP_REACH_NLRI caught it.  A sub-TLV of the wrong size, a TLV running past the
+Total NLRI Length, or a mandatory TLV missing raised a plain Notify from inside that same
+honest length and reset the session, as did any NLRIDiscard in an MP_UNREACH_NLRI.  Every
+Notify out of the NLRI's own decoder is now turned into NLRIDiscard where the length was
+checked, in BGPLS.unpack_nlri, so the rule holds for errors written after this one too.
 """
 
 [[requirement]]
@@ -301,9 +379,11 @@ BGP-LS or if 'AFI/SAFI disable' action is not possible.
 """
 note = """
 This is the branch exabgp takes, and legitimately: it implements no 'AFI/SAFI disable', so
-the alternative the sentence offers is the only one available.  A length error in a
-Link-State NLRI raises `Notify(3, 10, ...)` out of `BGPLS.unpack_nlri`, `check_length` or
-`iter_tlvs`, and the reactor sends a NOTIFICATION and drops the session.
+the alternative the sentence offers is the only one available.  A Total NLRI Length which
+runs past the MP_REACH_NLRI or MP_UNREACH_NLRI raises `Notify(3, 10, ...)` out of
+`BGPLS.unpack_nlri`, and the reactor sends a NOTIFICATION and drops the session.  A length
+error inside an NLRI whose own length is honest (`check_length`, `iter_tlvs`, a sub-TLV)
+does not: the decoder knows where the next NLRI starts, so that is an 'NLRI discard'.
 
 Positive-only: the negative would be a router which failed to reset, and every path out of
 this decoder for a length error is a Notify, so there is no input which reaches the other

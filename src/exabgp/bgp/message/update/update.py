@@ -16,11 +16,9 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.message import Message
-from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, AttributeCollection
 from exabgp.bgp.message.update.collection import UpdateCollection
 from exabgp.bgp.message.update.nlri import MPNLRICollection, NLRICollection
 from exabgp.logger import lazyformat, log
-from exabgp.protocol.family import AFI, SAFI
 
 __all__ = [
     'Update',
@@ -152,31 +150,13 @@ class Update(Message):
         """
         log.debug(lazyformat('parsing UPDATE', data), 'parser')
 
-        # the two RFC 4724 forms of an End-of-RIB, kept as received
-        if EOR.is_eor_body(data):
-            return EOR(data)
+        # RFC 4724 2: the marker is what the peer sent, never what is left once decoded
+        eor = EOR.from_body(data)
+        if eor is not None:
+            return eor
 
         update = cls(data)
-        parsed = update.parse(negotiated)
-
-        # Check if this is actually an EOR after parsing (empty update with MP attributes)
-        if not parsed.attributes and not parsed.announces and not parsed.withdraws:
-            # Need to check what MP attributes were present before they were popped
-            # Re-split to check for MP_REACH/MP_UNREACH
-            _, attr_view, _ = UpdateCollection.split(data)
-            if attr_view:
-                # Parse attributes again to check for MP attributes
-                # (this is inefficient but handles edge cases)
-                temp_attrs = AttributeCollection.unpack(bytes(attr_view), negotiated)
-                unreach = temp_attrs.get(MPURNLRI.ID)
-                reach = temp_attrs.get(MPRNLRI.ID)
-                # an End-of-RIB in a form RFC 4724 does not give, so stored in the one it does
-                if unreach is not None and isinstance(unreach, MPURNLRI):
-                    return EOR.make_eor(unreach.afi, unreach.safi)
-                if reach is not None and isinstance(reach, MPRNLRI):
-                    return EOR.make_eor(reach.afi, reach.safi)
-            # No MP attributes - this is IPv4 unicast EOR
-            return EOR.make_eor(AFI.ipv4, SAFI.unicast)
+        update.parse(negotiated)
 
         def log_parsed(_: object) -> str:
             # we need the import in the function as otherwise we have an cyclic loop

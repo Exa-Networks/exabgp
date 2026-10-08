@@ -25,7 +25,7 @@ import subprocess
 
 import pytest
 
-from exabgp.bgp.message.update.nlri.flow import Flow, Flow4Destination, Flow4Source, Flow6Destination
+from exabgp.bgp.message.update.nlri.flow import Flow, Flow4Destination, Flow4Source, Flow6Destination, family_conflict
 from exabgp.bgp.message.update.nlri.settings import FlowSettings
 from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
@@ -103,7 +103,7 @@ def test_add_refuses_a_second_destination_of_the_other_family() -> None:
 def test_the_refusal_names_both_prefixes() -> None:
     flow = Flow.make_flow()
     flow.add(ipv4_source())
-    reason = flow.family_conflict(ipv6_destination())
+    reason = flow.rule_conflict(ipv6_destination())
     assert '2001:db8::/32' in reason
     assert '10.0.0.0/24' in reason
 
@@ -112,7 +112,8 @@ def test_add_keeps_prefixes_of_one_family() -> None:
     flow = Flow.make_flow()
     assert flow.add(ipv4_source()) is True
     assert flow.add(ipv4_destination()) is True
-    assert flow.family_conflict(ipv4_destination()) == ''
+    # a second destination is refused for being a second one, not for its family
+    assert family_conflict(flow.rules, ipv4_destination()) == ''
 
 
 # -- FlowSettings.add_rule, used by `announce ipv4 flow` -----------------------------------------

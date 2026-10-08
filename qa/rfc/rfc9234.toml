@@ -78,6 +78,13 @@ peer, the Roles MUST correspond to the relationships in Table 2.  If
 the Roles do not correspond, the BGP speaker MUST reject the
 connection using the Role Mismatch Notification (code 2, subcode 11).
 """
+note = """
+A Role value RFC 9234 does not assign (5 to 255) is in no row of Table 2, so it is a
+mismatch when we advertised a role.  Until 2026-10-08 the decoder refused it with 2/11
+whatever our configuration, closing sessions which advertised no role and so had no
+pair to judge; it is now decoded as RoleValue.UNASSIGNED and the negotiation, which
+knows what we sent, decides.  Both sides are tested.
+"""
 
 [[requirement]]
 id = "rfc9234#4.2-conflicting-role-capabilities"
@@ -253,7 +260,7 @@ naming RFC 9234 section 5, rather than parsed and quietly ignored.
 id = "rfc9234#5-confederation-otc-equals-confed-id"
 section = "5"
 level = "MUST"
-status = "not-applicable"
+status = "required"
 polarity = "both"
 text = """
 If an OTC Attribute is
@@ -261,11 +268,15 @@ added on egress from the AS Confederation, its value MUST equal the
 AS Confederation Identifier.
 """
 note = """
-exabgp has no AS Confederation support: there is no confederation identifier, no member-AS
-configuration and nothing in the tree which reads either. The only mention of a
-confederation anywhere in src/ is the AS_CONFED_SEQUENCE and AS_CONFED_SET segment types
-in aspath.py, which are decoded as path segments and never generated. There is therefore
-no egress from a confederation for this to describe.
+Conformant by construction rather than by a rule of its own.  To a peer outside the
+confederation `Session.open_asn()` puts the AS Confederation Identifier in our OPEN (RFC
+5065 4), `Negotiated.local_as` is read back from that OPEN, and both ways exabgp adds an
+OTC pack `negotiated.local_as`: the egress marking in `UpdateCollection._attribute_sets`
+and `OTCSelf` for `otc self`.  So the value is the identifier on egress from the
+confederation, and our Member-AS towards another Member-AS, where the route has not left.
+
+The sentence after this one, that no OTC naming another Member-AS may leave the
+confederation, is not in this ledger.
 """
 
 [[requirement]]

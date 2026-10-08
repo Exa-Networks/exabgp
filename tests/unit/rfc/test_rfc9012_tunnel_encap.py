@@ -34,6 +34,7 @@ from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
+from exabgp.bgp.message.update.collection import UpdateCollection
 from exabgp.configuration.configuration import Configuration
 
 pytestmark = pytest.mark.timeout(10)
@@ -199,6 +200,45 @@ def test_an_optional_transitive_attribute_with_one_tlv_is_not_withdrawn() -> Non
     collection = parse(attribute(tunnel(SR_POLICY_TUNNEL, preference(100))))
     assert TREAT_AS_WITHDRAW not in collection
     assert TUNNEL_ENCAP in collection
+
+
+def received_update(encap: bytes) -> UpdateCollection:
+    """An UPDATE carrying one IPv4 prefix and `encap`, decoded on an IBGP session.
+
+    IBGP because section 11 has an EBGP session filter the attribute on receipt by
+    default, before anything reads its flags: a filtered attribute is "neither processed
+    nor distributed", so it can make no route go.
+    """
+    negotiated = configured_session(peer_as=LOCAL_AS)
+    attributes = ORIGIN_IGP + EMPTY_AS_PATH + NEXT_HOP + encap
+    payload = pack('!H', 0) + pack('!H', len(attributes)) + attributes + PREFIX_10_0_0_0_24
+    message = Update.unpack_message(payload, negotiated)
+    assert isinstance(message, Update)
+    return message.parse(negotiated)
+
+
+@pytest.mark.rfc('rfc9012#13-no-valid-tlv-or-not-transitive')
+def test_a_route_carrying_a_non_transitive_tunnel_encapsulation_is_withdrawn() -> None:
+    # the whole procedure rather than the marker: the prefix moves from announced to
+    # withdrawn, which is what distinguishes treat-as-withdraw from attribute discard
+    collection = received_update(attribute(tunnel(SR_POLICY_TUNNEL, preference(100)), flag=OPTIONAL_ONLY))
+    assert collection.announces == []
+    assert [str(nlri) for nlri in collection.withdraws] == ['10.0.0.0/24']
+
+
+@pytest.mark.rfc('rfc9012#13-no-valid-tlv-or-not-transitive')
+def test_a_route_carrying_an_empty_tunnel_encapsulation_is_withdrawn() -> None:
+    collection = received_update(attribute(b''))
+    assert collection.announces == []
+    assert [str(nlri) for nlri in collection.withdraws] == ['10.0.0.0/24']
+
+
+@pytest.mark.rfc('rfc9012#13-no-valid-tlv-or-not-transitive', polarity='negative')
+def test_a_route_carrying_a_valid_transitive_tunnel_encapsulation_is_announced() -> None:
+    collection = received_update(attribute(tunnel(SR_POLICY_TUNNEL, preference(100))))
+    assert len(collection.announces) == 1
+    assert collection.withdraws == []
+    assert TUNNEL_ENCAP in collection.attributes
 
 
 # --------------------------------------------------------------------------------------

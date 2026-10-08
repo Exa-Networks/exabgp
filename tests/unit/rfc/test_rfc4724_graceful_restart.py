@@ -29,15 +29,19 @@ from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message import KeepAlive
 from exabgp.bgp.message.update import Update
+from exabgp.bgp.message.update.collection import UpdateCollection
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.reactor.network.connection import Connection
 from exabgp.reactor.network.error import NetworkError
+from exabgp.reactor.network.incoming import Incoming
 from exabgp.reactor.peer.peer import Peer
 from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
-from tests.negotiation import PROCESS, Told, connect
+from tests.negotiation import PROCESS, Told, connect, received
+from tests.negotiation import messages as negotiation_messages
 from tests.negotiation import peer as real_peer
 
 
@@ -69,6 +73,10 @@ RESTART_TIME_MARGIN = 0.5
 # RFC 4271 4.1: the marker every message starts with, and the UPDATE type code
 MARKER = bytes([0xFF] * 16)
 UPDATE = 2
+NOTIFICATION = 3
+
+# RFC 4486 4: the Cease subcode a connection refused under RFC 4271 6.8 is sent
+CONNECTION_COLLISION_RESOLUTION = (6, 7)
 
 # The session runs as its own task reading a real socket, so the test polls for it to act
 # on what the peer sent, bounded so that a session which never does fails the test.
@@ -540,6 +548,93 @@ def test_an_update_withdrawing_a_prefix_is_not_a_marker() -> None:
     assert not isinstance(decoded, EOR), 'an UPDATE withdrawing 10.0.0.0/24 was read as an End-of-RIB marker'
 
 
+# ------------------------------------------- 2 a marker is what is on the wire, not what is left
+
+
+def from_the_peer() -> Negotiated:
+    """An EBGP session reading what the peer sent, with Flow Specification negotiated too."""
+    negotiated = Negotiated.make_negotiated(Neighbor(), Direction.IN)
+    negotiated.local_as = ASN(LOCAL_AS)
+    negotiated.peer_as = ASN(PEER_AS)
+    negotiated.asn4 = True
+    negotiated.families = [IPV4_UNICAST, (AFI.ipv6, SAFI.unicast), (AFI.ipv4, SAFI.flow_ip)]
+    return negotiated
+
+
+def update_body(attributes: bytes) -> bytes:
+    """An UPDATE body with no withdrawn routes, these path attributes, and no NLRI."""
+    return pack('!H', 0) + pack('!H', len(attributes)) + attributes
+
+
+# MP_UNREACH_NLRI with a one octet length, as most implementations send the marker
+OPTIONAL = 0x80
+SHORT_MP_UNREACH_EOR = update_body(
+    bytes([OPTIONAL, MP_UNREACH_NLRI, 3]) + AFI.ipv6.pack_afi() + SAFI.unicast.pack_safi()
+)
+
+# what decodes to nothing, each for its own reason, none of them an End-of-RIB
+EMPTIED_UPDATES = {
+    # RFC 7606 7.5: LOCAL_PREF from an external peer is discarded, the UPDATE carried on
+    'local-pref-from-ebgp': update_body(bytes([0x40, 0x05, 0x04, 0, 0, 0, 100])),
+    # RFC 4271 9: an unrecognised optional non-transitive attribute is ignored
+    'unknown-non-transitive': update_body(bytes([OPTIONAL, 0xF0, 0x01, 0x00])),
+    # a flow withdrawal whose single component the flow decoder refuses
+    'invalid-flow-withdrawal': update_body(
+        bytes([OPTIONAL, MP_UNREACH_NLRI, 5]) + AFI.ipv4.pack_afi() + SAFI.flow_ip.pack_safi() + bytes([1, 0xFF])
+    ),
+}
+
+
+@pytest.mark.rfc('rfc4724#2-other-family-end-of-rib-is-only-mp-unreach')
+def test_a_marker_with_a_one_octet_attribute_length_is_a_marker() -> None:
+    """The extended length bit is the sender's choice, so both encodings are the marker."""
+    decoded = Update.unpack_message(SHORT_MP_UNREACH_EOR, from_the_peer())
+
+    assert decoded.IS_EOR, f'the marker was decoded as {type(decoded).__name__}'
+    assert (decoded.nlris[0].afi, decoded.nlris[0].safi) == (AFI.ipv6, SAFI.unicast)
+
+
+@pytest.mark.rfc('rfc4724#2-other-family-end-of-rib-is-only-mp-unreach')
+def test_the_collection_path_reads_a_marker_with_a_one_octet_attribute_length() -> None:
+    """UpdateCollection.unpack_message knew only the extended length encoding of the marker."""
+    collection = UpdateCollection.unpack_message(SHORT_MP_UNREACH_EOR, from_the_peer())
+
+    assert collection.IS_EOR, 'the one octet length marker was read as an UPDATE'
+    assert (collection.eor_afi, collection.eor_safi) == (AFI.ipv6, SAFI.unicast)
+
+
+@pytest.mark.rfc('rfc4724#2-ipv4-unicast-end-of-rib-is-minimum-update', polarity='negative')
+@pytest.mark.rfc('rfc4724#2-other-family-end-of-rib-is-only-mp-unreach', polarity='negative')
+@pytest.mark.parametrize('payload', list(EMPTIED_UPDATES.values()), ids=list(EMPTIED_UPDATES))
+def test_an_update_which_decodes_to_nothing_is_not_a_marker(payload: bytes) -> None:
+    """Deciding from what the decoder kept made every emptied UPDATE an End-of-RIB.
+
+    The handler then ends the restart of the family, so a peer sending any of these to a
+    session holding its stale routes had them removed before it had sent its RIB again.
+    """
+    decoded = Update.unpack_message(payload, from_the_peer())
+
+    assert not decoded.IS_EOR, f'an UPDATE which decoded to nothing was read as {decoded}'
+
+
+@pytest.mark.rfc('rfc4724#2-ipv4-unicast-end-of-rib-is-minimum-update')
+def test_the_minimum_length_update_is_the_ipv4_unicast_marker() -> None:
+    decoded = Update.unpack_message(b'\x00\x00\x00\x00', from_the_peer())
+
+    assert decoded.IS_EOR
+    assert (decoded.nlris[0].afi, decoded.nlris[0].safi) == IPV4_UNICAST
+
+
+@pytest.mark.rfc('rfc4724#2-other-family-end-of-rib-is-only-mp-unreach', polarity='negative')
+def test_an_mp_unreach_beside_another_attribute_is_not_a_marker() -> None:
+    """ "Contains only the MP_UNREACH_NLRI attribute": an ORIGIN beside it makes it an UPDATE."""
+    attributes = bytes([0x40, 0x01, 0x01, 0x00]) + SHORT_MP_UNREACH_EOR[4:]
+
+    decoded = Update.unpack_message(update_body(attributes), from_the_peer())
+
+    assert not decoded.IS_EOR
+
+
 # ============================================================ 4.2 the Receiving Speaker
 
 
@@ -597,6 +692,43 @@ async def test_the_end_of_rib_removes_what_the_restarted_peer_did_not_send_again
     before_eor, after_eor = restarted[1], restarted[2]
     assert before_eor == [KEPT, DROPPED], f'a stale route was removed before the End-of-RIB: {before_eor}'
     assert after_eor == [KEPT], f'the End-of-RIB left a route the peer did not send again: {after_eor}'
+
+
+@pytest.mark.rfc('rfc4724#4.2-delete-stale-on-consecutive-restart')
+@pytest.mark.asyncio
+async def test_a_route_still_stale_when_the_peer_restarts_again_is_deleted() -> None:
+    """A second restart before the End-of-RIB used to mark every held route stale again.
+
+    The route the peer did not send in the session between the two restarts was then kept
+    through a second Restart Time, and a peer restarting in a loop kept it for ever.
+    """
+    peer, told = real_peer(neighbour(adj_rib_in=True))
+    peer.neighbor.api['receive-update'] = [PROCESS]
+    peer.neighbor.api['receive-parsed'] = [PROCESS]
+    negotiated = graceful_session(peer.neighbor, RESTART_TIME)
+
+    await session(peer, negotiated, announce(negotiated, KEPT, DROPPED))
+    await session(peer, negotiated, announce(negotiated, KEPT))
+    # KEPT is sent again, or the loss of this session would rightly delete it too
+    again = await session(peer, negotiated, announce(negotiated, KEPT))
+
+    assert again[0] == [KEPT], f'a route stale since the previous restart was retained again: {again[0]}'
+    assert withdrawn(told) == [DROPPED], f'the API was not told the stale route went: {withdrawn(told)}'
+
+
+@pytest.mark.rfc('rfc4724#4.2-delete-stale-on-consecutive-restart', polarity='negative')
+@pytest.mark.asyncio
+async def test_a_route_sent_again_before_the_next_restart_is_retained_again() -> None:
+    """Only what is still stale goes: a route the peer sent again is fresh, and kept as stale."""
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
+    negotiated = graceful_session(peer.neighbor, RESTART_TIME)
+
+    await session(peer, negotiated, announce(negotiated, KEPT))
+    await session(peer, negotiated, announce(negotiated, KEPT))
+    again = await session(peer, negotiated)
+
+    assert again[0] == [KEPT], f'a route the peer sent again was not retained across its restart: {again[0]}'
+    assert IPV4_UNICAST in peer.neighbor.rib.incoming.restarting_families()
 
 
 @pytest.mark.rfc('rfc4724#4.2-retain-and-mark-stale', polarity='negative')
@@ -670,6 +802,120 @@ async def test_the_api_is_told_when_the_restart_time_removes_stale_routes() -> N
     await asyncio.sleep(PEER_RESTART_TIME + RESTART_TIME_MARGIN)
 
     assert withdrawn(told) == [KEPT]
+
+
+# ------------------------------------------- 4.2 a new connection while the session is established
+
+
+def accepted_connection() -> tuple[Incoming, socket.socket]:
+    """A connection the listener accepted from the peer, over a socket pair, and the peer's end.
+
+    Incoming() sets TCP options a socket pair refuses, so the connection is built around it.
+    """
+    ours, theirs = socket.socketpair()
+    ours.setblocking(False)
+    connection = Incoming.__new__(Incoming)
+    Connection.__init__(connection, AFI.ipv4, '192.0.2.1', '192.0.2.2')
+    connection.io = ours
+    return connection, theirs
+
+
+async def running_session(peer: Peer, negotiated: Negotiated, *messages: bytes) -> socket.socket:
+    """Establish a session in the task Peer.run runs it in, and have the peer send `messages`.
+
+    The task is the one handle_connection has to stop: a session the test drives itself
+    would have no task to cancel. Returns the peer's end of the connection.
+    """
+    assert negotiated.received_open is not None
+    protocol = Protocol(peer)
+    theirs = connect(protocol)
+    theirs.sendall(
+        negotiated.received_open.pack_message(negotiated) + KeepAlive.make_keepalive().pack_message(negotiated)
+    )
+    peer.proto = protocol
+    asyncio.ensure_future(peer._run_session())
+    await until(lambda: peer.stats['up'] > 0, 'the session coming up')
+    for message in messages:
+        count = peer.stats['receive-update']
+        theirs.sendall(message)
+        await until(lambda count=count: peer.stats['receive-update'] > count, 'the message being read')
+    return theirs
+
+
+async def ended(peer: Peer, *sockets: socket.socket) -> None:
+    """Stop whatever session is still running, and close every end the test opened."""
+    if peer._session_task is not None:
+        peer._session_task.cancel()
+        await asyncio.gather(peer._session_task, return_exceptions=True)
+    peer._cancel_restart_timer()
+    if peer.proto is not None:
+        peer.proto.close('test over')
+    for each in sockets:
+        each.close()
+
+
+@pytest.mark.rfc('rfc4724#4.2-new-connection-ends-old-session')
+@pytest.mark.rfc('rfc4724#4.2-old-session-closed-without-notification')
+@pytest.mark.asyncio
+async def test_a_new_connection_from_a_restarting_peer_replaces_its_session_quietly() -> None:
+    """The peer restarted and we never saw its TCP session go: its new connection says so.
+
+    It was refused with a Cease while our hold timer ran down, and that expiry then sent
+    Hold Timer Expired and dropped the routes Graceful Restart is there to keep.
+    """
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
+    negotiated = graceful_session(peer.neighbor, RESTART_TIME)
+    theirs = await running_session(peer, negotiated, announce(negotiated, KEPT))
+    old = peer.proto
+    session = peer._session_task
+    assert old is not None and session is not None
+    replacement, connecting = accepted_connection()
+    try:
+        assert peer.handle_connection(replacement) is None, 'the new connection of a restarting peer was refused'
+        await until(lambda: session.done(), 'the old session stopping')
+
+        assert session.cancelled()
+        assert peer.proto is not None and peer.proto.connection is replacement
+        sent = [kind for kind, _ in negotiation_messages(received(theirs))]
+        assert NOTIFICATION not in sent, f'the old session was sent a NOTIFICATION: {sent}'
+        assert theirs.recv(1) == b'', 'the old TCP session was not closed'
+        assert held(peer) == [KEPT], 'the routes of the restarting peer were not retained'
+        assert IPV4_UNICAST in peer.neighbor.rib.incoming.restarting_families()
+    finally:
+        await ended(peer, theirs, connecting)
+
+
+@pytest.mark.rfc('rfc4724#4.2-new-connection-ends-old-session', polarity='negative')
+@pytest.mark.asyncio
+async def test_a_new_connection_from_a_peer_without_graceful_restart_is_refused() -> None:
+    """RFC 4271 6.8 still holds for a peer which did not advertise the capability."""
+    peer, _ = real_peer(neighbour(adj_rib_in=True))
+    # the OPEN is packed when it is made, so the capability goes before, not after
+    capabilities = their_capabilities(peer.neighbor)
+    capabilities.pop(Capability.CODE.GRACEFUL_RESTART, None)
+    plain = negotiated_session(peer.neighbor)
+    plain.received(Open.make_open(Version(4), ASN(PEER_AS), HoldTime(180), RouterID('192.0.2.1'), capabilities))
+    theirs = await running_session(peer, plain)
+    assert peer.proto is not None and peer.proto.negotiated.received_open is not None
+    assert not peer.proto.negotiated.received_open.capabilities.announced(Capability.CODE.GRACEFUL_RESTART)
+    old = peer.proto
+    session = peer._session_task
+    assert session is not None
+    replacement, connecting = accepted_connection()
+    try:
+        refusal = peer.handle_connection(replacement)
+        assert refusal is not None, 'a new connection replaced a session without Graceful Restart'
+        # bounded: a NOTIFICATION fits in one write to an empty socket buffer
+        for _, _ in zip(range(100), refusal):
+            pass
+
+        refused = [(body[0], body[1]) for kind, body in negotiation_messages(received(connecting)) if kind == 3]
+        assert refused == [CONNECTION_COLLISION_RESOLUTION]
+        assert peer.proto is old and old is not None and old.connection is not None
+        assert not session.done()
+    finally:
+        await ended(peer, theirs, connecting)
+        replacement.close()
 
 
 # ------------------------------------------------- 3 a Restart Time inferred from the hold time

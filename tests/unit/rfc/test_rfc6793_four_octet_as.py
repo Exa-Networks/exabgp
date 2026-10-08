@@ -666,6 +666,8 @@ def test_an_as4_path_without_confederation_segments_is_processed_whole() -> None
 def malformed_as4_paths() -> list[tuple[str, bytes]]:
     """One AS4_PATH value per condition section 6 lists as making it malformed."""
     return [
+        # RFC 7606 4 lets only AS_PATH and ATOMIC_AGGREGATE be empty; AS4_PATH inherited it
+        ('a length of zero, too small for one AS number', b''),
         ('a length below six, too small for one AS number', bytes([int(SEQUENCE.ID), 1]) + b'\x00\x00'),
         ('a length which is not a multiple of two', bytes([int(SEQUENCE.ID), 1]) + b'\x00\x00\x00'),
         ('a path segment length of zero', bytes([int(SEQUENCE.ID), 0])),
@@ -813,3 +815,70 @@ def test_an_as4_path_holding_only_a_set_still_replaces_the_as_trans() -> None:
     assert AS_TRANS not in path_of(read).as_seq, (
         f'the AS_TRANS placeholder survived the reconstruction: {path_of(read).string()}'
     )
+
+
+# =========================================================== 4.2.3, confederation segments
+
+
+def shape(path: ASPath) -> list[tuple[int, list[int]]]:
+    """The segments of a path as (segment type, AS numbers), for a whole-path comparison."""
+    return [(content.ID, [int(asn) for asn in content]) for content in path.aspath]
+
+
+@pytest.mark.rfc('rfc6793#4.2.3-prepend-adjacent-confed-segments')
+def test_a_leading_confederation_segment_is_prepended_when_nothing_else_is() -> None:
+    """An AS_PATH and an AS4_PATH of equal length used to drop the member AS sequence.
+
+    The leading part wanted holds no AS number, and the loop stopped before looking at the
+    first segment. A route from a two octet member of our confederation then lost the
+    AS_CONFED_SEQUENCE which says it came from inside, and was read as one from outside.
+    """
+    read = parse(
+        attribute(
+            Attribute.CODE.AS_PATH,
+            TRANSITIVE,
+            segment(CONFED_SEQUENCE.ID, [MAPPABLE], 2) + segment(SEQUENCE.ID, [AS_TRANS], 2),
+        )
+        + as4_path(segment(SEQUENCE.ID, [NON_MAPPABLE], 4))
+    )
+
+    assert shape(path_of(read)) == [(CONFED_SEQUENCE.ID, [int(MAPPABLE)]), (SEQUENCE.ID, [int(NON_MAPPABLE)])]
+
+
+@pytest.mark.rfc('rfc6793#4.2.3-prepend-adjacent-confed-segments')
+def test_a_confederation_segment_after_the_last_prepended_segment_is_prepended() -> None:
+    read = parse(
+        attribute(
+            Attribute.CODE.AS_PATH,
+            TRANSITIVE,
+            segment(SEQUENCE.ID, [ALSO_MAPPABLE], 2)
+            + segment(CONFED_SEQUENCE.ID, [MAPPABLE], 2)
+            + segment(SEQUENCE.ID, [AS_TRANS], 2),
+        )
+        + as4_path(segment(SEQUENCE.ID, [NON_MAPPABLE], 4))
+    )
+
+    assert shape(path_of(read)) == [
+        (SEQUENCE.ID, [int(ALSO_MAPPABLE)]),
+        (CONFED_SEQUENCE.ID, [int(MAPPABLE)]),
+        (SEQUENCE.ID, [int(NON_MAPPABLE)]),
+    ]
+
+
+@pytest.mark.rfc('rfc6793#4.2.3-prepend-adjacent-confed-segments', polarity='negative')
+def test_a_confederation_segment_beyond_the_leading_part_is_not_prepended() -> None:
+    """Only a segment adjacent to the prepended part comes along, not any confederation segment.
+
+    The sequence is cut after its first AS number, so the AS_TRANS left behind sits between
+    the prepended part and the confederation segment, which is therefore not adjacent.
+    """
+    read = parse(
+        attribute(
+            Attribute.CODE.AS_PATH,
+            TRANSITIVE,
+            segment(SEQUENCE.ID, [ALSO_MAPPABLE, AS_TRANS], 2) + segment(CONFED_SEQUENCE.ID, [MAPPABLE], 2),
+        )
+        + as4_path(segment(SEQUENCE.ID, [NON_MAPPABLE], 4))
+    )
+
+    assert shape(path_of(read)) == [(SEQUENCE.ID, [int(ALSO_MAPPABLE), int(NON_MAPPABLE)])]

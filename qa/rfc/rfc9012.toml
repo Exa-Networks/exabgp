@@ -59,14 +59,20 @@ it does not have the transitive bit set, the "Treat-as-withdraw"
 procedure of [RFC7606] is applied.
 """
 note = """
-Half right.  The empty-attribute half works by accident of the generic rule: `TunnelEncap`
-does not set `VALID_ZERO`, so a zero length attribute becomes `INTERNAL_TREAT_AS_WITHDRAW`
-in `AttributeCollection.parse`.  The transitive half does not.  An attribute sent
-optional but not transitive fails the `Attribute.registered(aid, flag)` lookup, falls
-into the `aid in Attribute.attributes_known` branch, and because `TunnelEncap` sets
-neither behaviour flag it lands in the "should not happen" log and is silently dropped.
-That is attribute-discard, not treat-as-withdraw: the route stays, stripped of the
-attribute, where the RFC says the route must go.
+Both halves give treat-as-withdraw.  `TunnelEncap` declares `TREAT_AS_WITHDRAW` and not
+`VALID_ZERO`, so in `AttributeCollection.parse` an empty attribute (no TLV at all) is
+withdrawn by the zero length rule in `_add_registered`, and an attribute sent optional
+but not transitive fails the `Attribute.registered(aid, flag)` lookup and is withdrawn by
+the `aid in Attribute.attributes_known` branch.  `UpdateCollection` then moves every
+announced prefix of the UPDATE to its withdrawals, which the tests check end to end.
+
+On an EBGP session left at its default, section 11 has the attribute filtered on receipt
+before its flags are read: a filtered attribute is "neither processed nor distributed",
+so it withdraws nothing there.  The tests use an IBGP session for that reason.
+
+An attribute whose only TLVs are of unrecognised tunnel types is not counted as having
+no valid TLV: the next paragraph says such a TLV is not malformed and must be kept for
+propagation, and `rfc9012#13-unknown-tunnel-type-not-malformed` tests that.
 
 This entry carries a "MUST" level because the "Treat-as-withdraw" procedure it invokes is
 normative in RFC 7606; the sentence itself states the consequence rather than a keyword.

@@ -27,6 +27,10 @@ SELECT_FORMS: list[tuple[str, str, str, bool]] = [
     ('ipv4', 'mup', 'mup-t1st 10.0.1.0/24 rd 100:100 teid 12345 qfi 64 endpoint 10.0.0.1', False),
     ('ipv4', 'mup', 'mup-t1st 10.0.1.0/24 rd 100:100 teid x qfi 9 endpoint 10.0.0.1', False),
     ('ipv4', 'mup', 'mup-t1st 10.0.1.0/24 rd 100:100 qfi 9', False),
+    # draft-mpmz-bess-mup-safi-05 3.1.3.1 and 3.1.4.1 make a TEID of 0 malformed: refused since
+    ('ipv4', 'mup', 'mup-t1st 10.0.1.0/24 rd 100:100 teid 0 qfi 9 endpoint 10.0.0.1', False),
+    ('ipv4', 'mup', 'mup-t2st 10.0.0.1 rd 100:100 teid 0/8', False),
+    ('ipv4', 'mup', 'mup-t2st 10.0.0.1 rd 100:100 teid 0/0 next-hop 10.0.0.1', True),
     ('ipv4', 'mup', 'mup-t2st 10.0.0.1 rd 100:100 teid 12345/32 next-hop 10.0.0.1', True),
     ('ipv4', 'mup', 'mup-t2st 10.0.0.1 rd 100:100 teid 12345/8', False),
     ('ipv4', 'mup', 'mup-t2st 10.0.0.1 rd 100:100 teid 12345', False),

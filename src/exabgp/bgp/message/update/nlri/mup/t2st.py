@@ -187,6 +187,13 @@ class Type2SessionTransformedRoute(MUP):
                 'mup t2st is %d bytes, expecting %d for an endpoint of %d bits' % (len(data), expected, endpoint_len),
             )
 
+        # draft-mpmz-bess-mup-safi-05 3.1.4.1: "The TEID value of 0 is considered as an
+        # invalid and a malformed TEID".  An Endpoint Length of the address alone carries no
+        # TEID at all, which is not one of 0.  The TEID is part of this route's key, so no
+        # other key is left to withdraw: MUP.unpack_nlri skips the NLRI.
+        if teid_len and not any(data[13 + afi_byte_size : expected]):
+            raise Notify(3, 10, 'mup t2st TEID is 0, which is malformed')
+
         instance = cls(data, afi)
         return instance, b''
 

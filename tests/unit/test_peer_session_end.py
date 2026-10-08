@@ -26,7 +26,7 @@ import pytest
 from exabgp.bgp.fsm import FSM, FSMState
 from exabgp.bgp.message import KeepAlive, Notify, Open
 from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, RouterID, Version
-from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability import ASN4, Capability
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.environment import getenv
@@ -228,6 +228,163 @@ def test_the_connection_from_the_lower_identifier_is_the_one_closed() -> None:
     finally:
         negotiation.disconnect(proto, theirs)
         connecting.close()
+
+
+@pytest.mark.rfc('rfc4271#6.8-collision-closes-one-connection')
+@pytest.mark.asyncio
+async def test_in_opensent_the_incoming_connection_wins_once_its_open_names_a_higher_identifier() -> None:
+    """In OpenSent the peer's BGP Identifier is not known until its OPEN arrives.
+
+    Ours was closed as soon as a connection arrived, whatever the identifiers: two speakers
+    doing so close both connections. Now nothing is decided before the OPEN of the new
+    connection is read, and the session then goes on with that OPEN, not reading another.
+    """
+    peer = session_peer(router_id='192.0.2.1')
+    proto, theirs = connected(peer)
+    run = asyncio.create_task(peer._run_session())
+    replacement, connecting = incoming()
+    taken: asyncio.Task[None] | None = None
+    try:
+        await until(lambda: peer.fsm == FSM.OPENSENT)
+        session = peer._session_task
+        assert session is not None
+
+        assert peer.handle_connection(replacement) is None
+        for _ in range(10):
+            await asyncio.sleep(0.001)
+        assert not session.done(), 'nothing is decided before the OPEN of the new connection is read'
+        assert peer.proto is proto
+
+        connecting.sendall(their_open('192.0.2.2'))
+        await until(lambda: session.done())
+        assert session.cancelled()
+        assert peer.proto is not None and peer.proto.connection is replacement
+        sent = negotiation.messages(negotiation.received(theirs))
+        assert [kind for kind, _ in sent] == [OPEN, NOTIFICATION]
+        assert (sent[-1][1][0], sent[-1][1][1]) == CONNECTION_COLLISION_RESOLUTION
+
+        # the OPEN already read is the one the session goes on with
+        taken = asyncio.create_task(peer._run_session())
+        await until(lambda: peer.fsm == FSM.OPENCONFIRM)
+        assert [kind for kind, _ in negotiation.messages(negotiation.received(connecting))] == [OPEN, KEEPALIVE]
+    finally:
+        for task in (run, taken):
+            if task is not None:
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+        negotiation.disconnect(proto, theirs)
+        replacement.close()
+        connecting.close()
+
+
+@pytest.mark.rfc('rfc4271#6.8-collision-closes-one-connection', polarity='negative')
+@pytest.mark.asyncio
+async def test_in_opensent_the_incoming_connection_from_a_lower_identifier_is_the_one_closed() -> None:
+    """Our BGP Identifier is the higher: the new connection is told Connection Collision
+    Resolution once its OPEN says so, and ours carries on untouched."""
+    peer = session_peer(router_id='192.0.2.9')
+    proto, theirs = connected(peer)
+    run = asyncio.create_task(peer._run_session())
+    replacement, connecting = incoming()
+    try:
+        await until(lambda: peer.fsm == FSM.OPENSENT)
+        session = peer._session_task
+        assert session is not None
+
+        assert peer.handle_connection(replacement) is None
+        connecting.sendall(their_open('192.0.2.2'))
+        await until(lambda: replacement.io is None)
+
+        assert notifications(connecting) == [CONNECTION_COLLISION_RESOLUTION]
+        assert not session.done()
+        assert peer.proto is proto and proto.connection is not None
+        assert peer.fsm == FSM.OPENSENT
+        assert [kind for kind, _ in negotiation.messages(negotiation.received(theirs))] == [OPEN]
+    finally:
+        run.cancel()
+        await asyncio.gather(run, return_exceptions=True)
+        negotiation.disconnect(proto, theirs)
+        replacement.close()
+        connecting.close()
+
+
+@pytest.mark.asyncio
+async def test_a_connection_held_for_its_open_is_closed_when_the_peer_stops() -> None:
+    """A peer removed while the OPEN of a colliding connection is awaited takes neither."""
+    peer = session_peer(router_id='192.0.2.1')
+    proto, theirs = connected(peer)
+    run = asyncio.create_task(peer._run_session())
+    replacement, connecting = incoming()
+    try:
+        await until(lambda: peer.fsm == FSM.OPENSENT)
+        assert peer.handle_connection(replacement) is None
+        task = peer._contender_task
+        assert task is not None
+        peer.remove()
+        assert replacement.io is None
+        await until(lambda: task.done())
+        assert task.cancelled()
+        assert peer.proto is None and peer._contender is None
+    finally:
+        run.cancel()
+        await asyncio.gather(run, return_exceptions=True)
+        negotiation.disconnect(proto, theirs)
+        replacement.close()
+        connecting.close()
+
+
+# ------------------------------------------------- RFC 6286 2.3, identical BGP Identifiers
+
+
+def in_openconfirm_with(peer: Peer, received: Open) -> tuple[Protocol, socket.socket]:
+    proto, theirs = connected(peer)
+    peer.fsm.change(FSM.OPENCONFIRM)
+    proto.negotiated.received_open = received
+    return proto, theirs
+
+
+def same_identifier_open(asn: int, four_octet_asn: int = 0) -> Open:
+    capabilities = Capabilities()
+    if four_octet_asn:
+        capabilities[Capability.CODE.FOUR_BYTES_ASN] = ASN4(four_octet_asn)
+    return Open.make_open(Version(4), ASN(asn), HoldTime(180), RouterID('192.0.2.1'), capabilities)
+
+
+def collision_outcome(local_as: int, received: Open) -> str:
+    """Which connection a collision with an OpenConfirm session keeps: 'ours' or 'theirs'."""
+    configured = negotiation.neighbor(local_as=local_as, peer_as=0, router_id='192.0.2.1')
+    peer, _ = negotiation.peer(configured)
+    proto, theirs = in_openconfirm_with(peer, received)
+    replacement, connecting = incoming()
+    try:
+        refusal = peer.handle_connection(replacement)
+        if refusal is None:
+            return 'theirs'
+        # bounded: a NOTIFICATION fits in one write to an empty socket buffer
+        for _, _ in zip(range(100), refusal):
+            pass
+        return 'ours'
+    finally:
+        negotiation.disconnect(proto, theirs)
+        replacement.close()
+        connecting.close()
+
+
+@pytest.mark.rfc('rfc6286#2.3-identical-identifiers-larger-as-wins')
+@pytest.mark.parametrize(
+    'local_as,received,kept',
+    [
+        (65001, same_identifier_open(65002), 'theirs'),
+        (65001, same_identifier_open(65000), 'ours'),
+        (65001, same_identifier_open(23456, 4200000000), 'theirs'),
+        (4200000001, same_identifier_open(23456, 4200000000), 'ours'),
+    ],
+    ids=['their-as-larger', 'our-as-larger', 'their-four-octet-as-larger', 'our-four-octet-as-larger'],
+)
+def test_identical_identifiers_keep_the_connection_of_the_larger_as(local_as: int, received: Open, kept: str) -> None:
+    """The comparison of identifiers says nothing when they are equal: the AS numbers decide,
+    the four-octet ones, not the AS_TRANS a speaker beyond two octets puts in its OPEN."""
+    assert collision_outcome(local_as, received) == kept
 
 
 def test_a_connection_which_sent_no_open_is_closed_without_a_cease() -> None:

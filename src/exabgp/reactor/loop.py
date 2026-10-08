@@ -44,6 +44,7 @@ from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.listener import Listener
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.timing import LoopTimer
+from exabgp.protocol.family import FamilyTuple
 from exabgp.rib.route import Route
 from exabgp.version import version
 
@@ -433,6 +434,13 @@ class Reactor:
         # which the negotiation says; our own configuration only says we would offer it
         enhanced = peer.proto is not None and peer.proto.negotiated.refresh == REFRESH.ENHANCED
         peer.resend(enhanced)
+
+    def neighbor_refreshable(self, peer_name: str) -> list[FamilyTuple]:
+        """The families the established session of this peer may send a ROUTE-REFRESH for."""
+        if not (peer := self._peers.get(peer_name, None)):
+            log.critical(lazymsg('peer.notfound peer={p} operation=refreshable', p=peer_name), 'reactor')
+            return []
+        return peer.refreshable_families()
 
     def neighbor_rib_out_withdraw(self, peer_name: str) -> None:
         if not (peer := self._peers.get(peer_name, None)):

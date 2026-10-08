@@ -5,10 +5,11 @@
 # against it on every run of ./qa/bin/check_rfc_compliance.
 #
 # This ledger covers the decoder: what an AIGP attribute is made of and what a receiver
-# does with one it cannot read.  Sections 3.3 to 4 are about originating the attribute
-# and increasing its value as a route is propagated, which a speaker that installs no
-# routes and computes no metric does only as far as the operator tells it to; they are
-# not reached here, and are absent rather than excused.
+# does with one it cannot read, and section 3.3, on which sessions it is sent and
+# accepted.  Sections 3.4 to 4 are about originating the attribute and increasing its
+# value as a route is propagated, which a speaker that installs no routes and computes no
+# metric does only as far as the operator tells it to; they are not reached here, and
+# are absent rather than excused.
 
 rfc = "rfc7311"
 title = "The Accumulated IGP Metric Attribute for BGP"
@@ -70,4 +71,90 @@ If a BGP path attribute is received that has the AIGP attribute
 codepoint but also has the transitive bit set, the attribute MUST be
 considered to be a malformed AIGP attribute and MUST be discarded as
 specified in this section.
+"""
+
+[[requirement]]
+id = "rfc7311#3.3-aigp-session-configurable"
+section = "3.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+An implementation that supports the AIGP attribute MUST support a
+per-session configuration item, AIGP_SESSION, that indicates whether
+the attribute is enabled or disabled for use on that session.
+"""
+note = """
+AIGP_SESSION is `aigp` in the capability block of a neighbor: true or false when the
+operator says so, unset otherwise, and Negotiated.aigp_session answers it for sending and
+receiving alike. Sending used to ignore it on an internal session, where `aigp false`
+still sent the attribute.
+"""
+
+[[requirement]]
+id = "rfc7311#3.3-default-enabled-internal"
+section = "3.3"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+For Internal BGP (IBGP) sessions, and for External BGP (EBGP)
+sessions between members of the same BGP Confederation
+[BGP-CONFED], the default value of AIGP_SESSION SHOULD be
+"enabled".
+"""
+note = """
+Positive only: the other side of a default is the next entry. The default used to be
+enabled for sending on an internal session and disabled for receiving on it, so the
+attribute we sent was thrown away when the same peer sent it back, and a session to
+another Member-AS of our confederation had it disabled both ways.
+"""
+
+[[requirement]]
+id = "rfc7311#3.3-default-disabled-external"
+section = "3.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+For all other External BGP (EBGP) sessions, the default value of
+AIGP_SESSION MUST be "disabled".
+"""
+
+[[requirement]]
+id = "rfc7311#3.3-not-sent-when-disabled"
+section = "3.3"
+level = "MUST NOT"
+status = "required"
+polarity = "both"
+text = """
+The AIGP attribute MUST NOT be sent on any BGP session for which
+AIGP_SESSION is disabled.
+"""
+
+[[requirement]]
+id = "rfc7311#3.3-ignored-when-disabled"
+section = "3.3"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If an AIGP attribute is received on a BGP session for which
+AIGP_SESSION is disabled, the attribute MUST be treated exactly as if
+it were an unrecognized non-transitive attribute.
+"""
+
+[[requirement]]
+id = "rfc7311#3.3-log-when-disabled"
+section = "3.3"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+However, the fact that the attribute was received
+SHOULD be logged (in a rate-limited manner).
+"""
+note = """
+Logged once per session, the first time the attribute is ignored: the rate a peer could
+otherwise set is one line per UPDATE.
 """

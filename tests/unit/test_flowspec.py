@@ -945,19 +945,15 @@ class TestFlowEdgeCases:
         packed = flow.pack_nlri(negotiated)
         assert flow_len == len(packed)
 
-    def test_flow_multiple_destinations_allowed(self) -> None:
-        """Test that multiple destinations are allowed"""
+    def test_flow_second_destination_refused(self) -> None:
+        """RFC 8955 4.2: a component type is present once, a destination prefix included"""
         flow = Flow.make_flow()
 
         dest1 = Flow4Destination.make_prefix4(IPv4.pton('192.0.2.0'), 24)
         dest2 = Flow4Destination.make_prefix4(IPv4.pton('192.0.3.0'), 24)
 
-        result1 = flow.add(dest1)
-        result2 = flow.add(dest2)
-
-        # Both should be allowed (as per code comments)
-        assert result1 is True
-        assert result2 is True
+        assert flow.add(dest1) is True
+        assert flow.add(dest2) is False
 
     def test_flow_rules_str_single_vs_multiple(self) -> None:
         """Test string representation differs for single vs multiple rules"""

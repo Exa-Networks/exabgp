@@ -1,0 +1,93 @@
+# RFC 9252 - BGP Overlay Services Based on Segment Routing over IPv6 (SRv6)
+# https://www.rfc-editor.org/rfc/rfc9252
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc9252.txt.
+#
+# This ledger is deliberately narrow, and starts at section 7.  exabgp decodes the SRv6
+# Service TLVs of the BGP Prefix-SID attribute and hands them to the API; it has no SRv6
+# data plane, no best path selection and no service SID allocation.  Section 7 is what
+# binds the decoder: when a received service TLV is malformed, which ones are read, and
+# what happens to the route.  The origination rules of sections 3 to 6 (which behaviours
+# go with which family, the transposition scheme a sender uses) are not recorded yet.
+
+rfc = "rfc9252"
+title = "BGP Overlay Services Based on Segment Routing over IPv6 (SRv6)"
+url = "https://www.rfc-editor.org/rfc/rfc9252"
+
+[[requirement]]
+id = "rfc9252#7-l3-service-first-instance"
+section = "7"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If multiple instances of the SRv6 L3 Service TLV are encountered, all
+but the first instance MUST be ignored.
+"""
+note = """
+TLV 5 is in `SR_SINGLE_OCCURRENCE_TLVS` in `attribute/sr/prefixsid.py`, beside the two
+RFC 8669 TLVs, so a repeat is stepped over before it is decoded and is not carried onwards
+either.  It was absent, and every copy was decoded and kept.
+
+The negative side is the one which makes "ignored" mean something: a second copy which is
+malformed is not read, so it cannot withdraw the route the first copy is valid for.
+"""
+
+[[requirement]]
+id = "rfc9252#7-l2-service-first-instance"
+section = "7"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If multiple instances of the SRv6 L2 Service TLV are encountered, all
+but the first instance MUST be ignored.
+"""
+note = """
+TLV 6, the same mechanism as rfc9252#7-l3-service-first-instance.
+"""
+
+[[requirement]]
+id = "rfc9252#7-malformed-service-tlv-treat-as-withdraw"
+section = "7"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+The treat-as-withdraw action [RFC7606] MUST be performed when at
+least one malformed SRv6 Service TLV is present in the BGP Prefix-SID
+attribute.
+"""
+note = """
+`PrefixSid` carries DISCARD for RFC 8669 6, and every malformed TLV used to take that path,
+SRv6 Service TLVs included: the attribute was dropped and the route stayed announced with
+no Service SID, which the sentence before this one says it needs for forwarding.
+
+`PrefixSid._unpack_tlv` now turns a Notify out of TLV 5 or 6 into `TreatAsWithdrawNotify`,
+and so does the TLV walk for a service TLV running past the attribute.
+`AttributeCollection._add_registered` answers that exception with treat-as-withdraw before
+it reads the class flags.  Any other TLV, a Label-Index or an SRGB, still discards.
+
+The positive side has two halves: a well formed service TLV keeps its route, and a SID
+Structure sub-sub-TLV whose value is not six octets is not malformed at all.  Section 7
+calls a sub-sub-TLV malformed only for a length inconsistent with its sub-TLV, and "not
+considered malformed because of failing any semantic validation of its Value field", so
+`Srv6SidStructure.unpack_attribute` keeps such a value as a generic sub-sub-TLV, where its
+`__init__` raised ValueError and lost the whole attribute.
+"""
+
+[[requirement]]
+id = "rfc9252#7-invalid-sid-ineligible-for-best-path"
+section = "7"
+level = "MUST"
+status = "not-applicable"
+text = """
+The path having any such
+Prefix-SID attribute without any valid SRv6 SID information MUST be
+considered ineligible during the selection of the best path for the
+corresponding prefix.
+"""
+note = """
+exabgp runs no best path selection: every path a peer sends is handed to the API as it
+arrived, and choosing among them is the job of whatever reads that API.
+"""

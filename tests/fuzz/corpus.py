@@ -82,15 +82,36 @@ NLRI_SEEDS: dict[str, list[bytes]] = {
     # and a generic route the decoder keeps as raw bytes
     'ipv4/mcast-vpn': [
         bytes([5, 18]) + b'\x00' * 8 + bytes([32]) + b'\x0a\x00\x00\x01' + bytes([32]) + b'\xe0\x00\x00\x01',
-        bytes([1, 4]) + b'\x00\x01\x02\x03',
+        # an Intra-AS I-PMSI A-D route: RD and a four octet Originating Router (RFC 6515 2)
+        bytes([1, 12]) + b'\x00' * 8 + b'\x00\x01\x02\x03',
     ],
     'ipv6/mcast-vpn': [
         bytes([5, 18]) + b'\x00' * 8 + bytes([32]) + b'\x0a\x00\x00\x01' + bytes([32]) + b'\xe0\x00\x00\x01',
-        bytes([1, 4]) + b'\x00\x01\x02\x03',
+        # an Intra-AS I-PMSI A-D route: RD and a four octet Originating Router (RFC 6515 2)
+        bytes([1, 12]) + b'\x00' * 8 + b'\x00\x01\x02\x03',
     ],
-    # MUP Direct Segment Discovery (arch 1, type 2): arch(1) + type(2) + length(1) + data
-    'ipv4/mup': [bytes([1]) + (2).to_bytes(2, 'big') + bytes([12]) + b'\x00' * 12],
-    'ipv6/mup': [bytes([1]) + (2).to_bytes(2, 'big') + bytes([12]) + b'\x00' * 12],
+    # MUP Direct Segment Discovery (arch 1, type 2): arch(1) + type(2) + length(1) + data,
+    # the address the size of the AFI's (draft-mpmz-bess-mup-safi-05 3.1.2).  The Type 1 ST
+    # routes are one well formed, and one with a TEID of 0, which keeps its key and is
+    # decoded as the withdrawal of it (3.1.3.1): both must render, pack and decode again.
+    'ipv4/mup': [
+        bytes([1]) + (2).to_bytes(2, 'big') + bytes([12]) + b'\x00' * 12,
+        bytes([1, 0, 3, 23])
+        + b'\x00' * 8
+        + bytes([24, 10, 0, 0])
+        + pack('!IB', 1, 9)
+        + bytes([32])
+        + b'\x00' * 4
+        + b'\x00',
+        bytes([1, 0, 3, 23])
+        + b'\x00' * 8
+        + bytes([24, 10, 0, 0])
+        + pack('!IB', 0, 9)
+        + bytes([32])
+        + b'\x00' * 4
+        + b'\x00',
+    ],
+    'ipv6/mup': [bytes([1]) + (2).to_bytes(2, 'big') + bytes([24]) + b'\x00' * 24],
     'l2vpn/evpn': [bytes([1, 25]) + b'\x00' * 25],
     # RFC 9830 section 3: the length byte counts BITS, 96 for IPv4 and 192 for IPv6, and
     # the decoder refuses anything else.  A fill pattern never writes either value in

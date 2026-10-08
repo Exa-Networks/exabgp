@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message.update.attribute.attribute import Attribute, Discard
+from exabgp.logger import lazymsg, log
 
 # ========================================================================== TLV
 #
@@ -138,10 +139,8 @@ class AIGPBase(Attribute):
         return not self == other
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
-        # AIGP is sent if explicitly enabled OR if this is an IBGP session
-        if negotiated.aigp:
-            return self._attribute(self._packed)
-        if negotiated.is_ibgp:
+        # RFC 7311 3.3: never sent on a session for which AIGP_SESSION is disabled
+        if negotiated.aigp_session:
             return self._attribute(self._packed)
         return b''
 
@@ -150,8 +149,12 @@ class AIGPBase(Attribute):
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
-        if not negotiated.aigp:
-            # AIGP must only be accepted on configured sessions
+        if not negotiated.aigp_session:
+            # RFC 7311 3.3: as an unrecognised non-transitive attribute, ignored, and logged
+            # once per session rather than once per UPDATE the peer decides to send
+            if not negotiated.aigp_ignored_logged:
+                negotiated.aigp_ignored_logged = True
+                log.info(lazymsg('attribute.aigp.ignored reason=aigp-session-disabled'), 'parser')
             return Discard(cls.ID)
         return cls.from_packet(data)
 

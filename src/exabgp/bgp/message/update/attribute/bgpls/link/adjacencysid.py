@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from struct import pack, unpack
+from struct import pack
 from exabgp.util import hexstring
 
 from exabgp.bgp.message.notification import Notify
@@ -20,6 +20,38 @@ from exabgp.util.intvalue import json_number
 # Minimum data length for SR Adjacency SID TLV
 # Flags (1) + Weight (1) + Reserved (2) = 4 bytes
 SRADJ_MIN_LENGTH = 4
+SID_LABEL_SIZE = 3  # a label, the 20 rightmost bits of three octets (RFC 9085 2.1.1)
+SID_INDEX_SIZE = 4  # an index or a SID
+SID_LABEL_MASK = 0xFFFFF
+
+
+def decode_sids(data: Buffer, flags: dict[str, int]) -> tuple[list[int], tuple[str, ...]]:
+    """The SIDs of an Adjacency or LAN Adjacency SID, and what could not be read as one.
+
+    RFC 9085 2.2.1 and 2.2.2 carry one SID, "Either 7 or 8 octets depending on the label
+    or index encoding of the SID", so three octets are a label and four an index.  The
+    flags were asked first, read with the IS-IS layout because the attribute cannot see the
+    Protocol-ID of the NLRI: an OSPF label (V and L are 0x60 in RFC 8665) read as IS-IS B
+    and V, and was reported as undecoded.  The size is the same in every IGP, so it decides.
+    Several SIDs, which the draft this was written from allowed, still follow the flags.
+    """
+    if len(data) == SID_LABEL_SIZE:
+        return [int.from_bytes(data, 'big') & SID_LABEL_MASK], ()
+    if len(data) == SID_INDEX_SIZE:
+        return [int.from_bytes(data, 'big')], ()
+    is_label = flags['V'] and flags['L']
+    is_index = not flags['V'] and not flags['L']
+    size = SID_LABEL_SIZE if is_label else SID_INDEX_SIZE
+    sids: list[int] = []
+    # each pass takes `size` octets or ends the loop, so it is bounded by the TLV
+    while data:
+        if not (is_label or is_index) or len(data) < size:
+            return sids, (hexstring(data),)
+        value = int.from_bytes(data[:size], 'big')
+        sids.append(value & SID_LABEL_MASK if is_label else value)
+        data = data[size:]
+    return sids, ()
+
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3
@@ -58,41 +90,12 @@ class AdjacencySid(FlagLS):
     @property
     def sids(self) -> list[int]:
         """Unpack and return the SIDs from packed bytes."""
-        flags = self.flags
-        data = self._packed[4:]  # Skip Flags(1) + Weight(1) + Reserved(2)
-        sids = []
-        while data:
-            if int(flags['V']) and int(flags['L']):
-                if len(data) < 3:
-                    break  # a label needs three bytes, and the peer sent fewer
-                sid = unpack('!L', bytes([0]) + bytes(data[:3]))[0]
-                data = data[3:]
-                sids.append(sid)
-            elif (not flags['V']) and (not flags['L']):
-                if len(data) < 4:
-                    break  # an index needs four bytes, and the peer sent fewer
-                sid = unpack('!I', bytes(data[:4]))[0]
-                data = data[4:]
-                sids.append(sid)
-            else:
-                break
-        return sids
+        return decode_sids(self._packed[4:], self.flags)[0]  # after Flags, Weight, Reserved
 
     @property
     def undecoded(self) -> tuple[str, ...]:
         """Unpack and return any undecoded SID data from packed bytes."""
-        flags = self.flags
-        data = self._packed[4:]  # Skip Flags(1) + Weight(1) + Reserved(2)
-        raw = []
-        while data:
-            if int(flags['V']) and int(flags['L']):
-                data = data[3:]
-            elif (not flags['V']) and (not flags['L']):
-                data = data[4:]
-            else:
-                raw.append(hexstring(data))
-                break
-        return tuple(raw)
+        return decode_sids(self._packed[4:], self.flags)[1]
 
     def __repr__(self) -> str:
         return 'adj_flags: {}, sids: {}, undecoded_sid {}'.format(self.flags, self.sids, self.undecoded)
@@ -143,8 +146,9 @@ class AdjacencySid(FlagLS):
         l_flag = flags.get('L', 0)
         for sid in sids:
             if v_flag and l_flag:
-                # 3-byte label: 20-bit label value in upper bits
-                packed += pack('!L', sid << 4)[1:]  # Take last 3 bytes
+                # RFC 9085 2.1.1: the label is the 20 rightmost bits of three octets.  It
+                # was shifted four bits left, so it read back sixteen times larger.
+                packed += pack('!L', sid & SID_LABEL_MASK)[1:]
             else:
                 # 4-byte index
                 packed += pack('!I', sid)

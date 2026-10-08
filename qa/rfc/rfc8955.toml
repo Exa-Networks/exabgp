@@ -153,10 +153,12 @@ operations to the first component's list, where the second operator's AND bit is
 the two became "protocol tcp OR udp" and the rule matched both.
 `Flow._check_component_order` now refuses a repeated component type as a treat-as-withdraw.
 
-The exception is a repeated type 1 or type 2 prefix, which exabgp both sends and accepts:
-`Flow.add` has allowed several source or destination prefixes in one flow for years
-because some vendors send them.  That is a knowing deviation from "exactly once", kept
-because a decoder must be able to read back what this encoder writes.
+A repeated type 1 or type 2 prefix used to be exempt on both sides: `Flow.add` let the
+configuration and the API write several destination or source prefixes in one flow, so
+`destination 10.0.0.0/8; destination 11.0.0.0/8;` went out as `01080A 01080B`, and the
+decoder accepted it back.  `rule_conflict` now refuses the second prefix with an error
+naming both, and the decoder treats a repeated prefix as it treats any repeated component.
+The same code serves RFC 8956, which keeps this encoding for IPv6.
 """
 
 [[requirement]]
@@ -304,7 +306,10 @@ bits SHOULD be treated as 0.
 note = """
 `FlowDSCP.decoder` masks the value with 0x3F, so the two high bits of the octet (the ECN
 field of the IP header) are ignored on receipt; the configuration refuses a DSCP above 63,
-so they are always zero on the way out.
+so they are always zero on the way out.  RFC 8956 3 says type 11 applies to IPv6 "as
+defined in [RFC8955]", with no keyword of its own, so the sentence binds `FlowTrafficClass`
+too: until 2026-10-08 it decoded the whole octet, and 030b81c1 was traffic-class =193.  It
+uses the same decoder now, and both families are tested.
 """
 
 [[requirement]]

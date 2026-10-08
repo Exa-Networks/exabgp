@@ -267,8 +267,9 @@ def test_an_nlri_longer_than_255_octets_decodes() -> None:
     the session down rather than invalidating one NLRI.
     """
     built = Flow.make_flow(AFI.ipv4, SAFI.flow_ip)
-    for octet in range(60):
-        built.add(Flow4Destination(bytes([24, 10, octet, 0])))
+    # one component of many operations: a second destination prefix is a second component
+    for port in range(1000, 1100):
+        built.add(FlowDestinationPort(NumericOperator.EQ, NumericValue(port)))
     wire = bytes(built.pack_nlri(Negotiated.UNSET))
 
     assert wire[0] & 0xF0 == 0xF0, 'this test needs the extended length form'
@@ -278,6 +279,27 @@ def test_an_nlri_longer_than_255_octets_decodes() -> None:
 
     assert flow is not NLRI.INVALID
     assert over == b''
+
+
+@pytest.mark.parametrize('length', [0xEF, 0xF0, 0x0FFE, 0x0FFF])
+def test_every_length_the_encoding_can_represent_is_encoded(length: int) -> None:
+    """Section 4.1: "The highest value that can be represented with this encoding is 4095."
+
+    The encoder compared with < 4095, so the highest value was refused as too large.
+    """
+    encoded = bytes(Flow.make_flow(AFI.ipv4, SAFI.flow_ip)._encode_length(bytes(length)))
+
+    if length < 0xF0:
+        assert encoded[0] == length
+        assert len(encoded) == 1 + length
+    else:
+        assert int.from_bytes(encoded[:2], 'big') == 0xF000 | length
+        assert len(encoded) == 2 + length
+
+
+def test_a_length_beyond_4095_is_refused_by_the_encoder() -> None:
+    with pytest.raises(Notify):
+        Flow.make_flow(AFI.ipv4, SAFI.flow_ip)._encode_length(bytes(0x1000))
 
 
 def test_an_nlri_of_zero_length_is_refused() -> None:
@@ -432,6 +454,64 @@ def test_a_component_type_present_twice_is_refused() -> None:
     rule matching nothing became a rule matching both protocols.
     """
     assert decoded(AFI.ipv4, PROTOCOL_TCP + bytes([0x03, 0x81, 0x11])) is None
+
+
+@pytest.mark.rfc('rfc8955#4.2-component-once', polarity='negative')
+@pytest.mark.parametrize(
+    'afi,components',
+    [
+        (AFI.ipv4, DESTINATION + bytes([0x01, 0x08, 0x0A])),
+        (AFI.ipv4, bytes([0x02, 0x08, 0x0A, 0x02, 0x08, 0x0B])),
+        # RFC 8956 keeps the encoding of RFC 8955 section 4.2, a prefix with an offset
+        (AFI.ipv6, bytes([0x01, 0x20, 0x00, 0x20, 0x01, 0x0D, 0xB8, 0x01, 0x20, 0x00, 0x20, 0x01, 0x0D, 0xB9])),
+    ],
+)
+def test_a_repeated_destination_or_source_prefix_is_refused(afi: AFI, components: bytes) -> None:
+    """Types 1 and 2 used to be exempt from "exactly once", because exabgp itself sent them.
+
+    Two destination prefixes are two components whose intersection is a single prefix at
+    most, yet a receiver merging them reads "either prefix": the same inversion as two
+    protocol components, on the field which decides which hosts a rule protects.
+    """
+    assert decoded(afi, components) is None
+
+
+@pytest.mark.rfc('rfc8955#4.2-component-once')
+def test_we_never_encode_a_second_destination_prefix() -> None:
+    built = Flow.make_flow(AFI.ipv4, SAFI.flow_ip)
+    assert built.add(Flow4Destination.make_prefix4(IP.pton('10.0.0.0'), 8)) is True
+    assert built.add(Flow4Destination.make_prefix4(IP.pton('11.0.0.0'), 8)) is False
+    assert 'once' in built.rule_conflict(Flow4Destination.make_prefix4(IP.pton('11.0.0.0'), 8))
+
+    assert bytes(built.pack_nlri(Negotiated.UNSET)) == bytes([0x03, 0x01, 0x08, 0x0A])
+
+
+@pytest.mark.rfc('rfc8955#4.2-component-once')
+@pytest.mark.parametrize(
+    'match',
+    ['destination 10.0.0.0/8; destination 11.0.0.0/8;', 'source 10.0.0.0/8; source 11.0.0.0/8;'],
+)
+def test_the_configuration_refuses_a_second_prefix_of_one_type(match: str) -> None:
+    text = FLOW_NEIGHBOR.replace('destination 192.0.2.0/24;', '') % ('192.0.2.7', 'twice', match)
+    configuration = Configuration([text], text=True)
+
+    assert not configuration.reload()
+    assert 'once' in str(configuration.error), str(configuration.error)
+
+
+@pytest.mark.rfc('rfc8955#4.2-component-once')
+@pytest.mark.parametrize(
+    'section,line',
+    [
+        ('flow', 'route destination 10.0.0.0/8 destination 11.0.0.0/8 discard'),
+        ('ipv4', 'flow source 10.0.0.0/8 source 11.0.0.0/8 discard'),
+    ],
+)
+def test_the_api_refuses_a_second_prefix_of_one_type(section: str, line: str) -> None:
+    configuration = Configuration([''], text=True)
+
+    assert not configuration.partial(section, line, 'announce')
+    assert 'once' in str(configuration.error), str(configuration.error)
 
 
 # ==================================================== section 4.2, combinations which match nothing
@@ -656,6 +736,20 @@ def test_the_two_high_bits_of_a_dscp_octet_are_ignored_on_decoding() -> None:
     assert str(dirty) == str(clean)
 
 
+@pytest.mark.rfc('rfc8955#4.2.2.11-dscp-other-bits-zero', polarity='negative')
+def test_the_two_high_bits_of_an_ipv6_traffic_class_octet_are_ignored_on_decoding() -> None:
+    """RFC 8956 3: type 11 applies to IPv6 "as defined in [RFC8955]", six bits of DSCP.
+
+    030b81c1 decoded as traffic-class =193, a value the grammar refuses to configure.
+    """
+    clean = decoded(AFI.ipv6, bytes([0x0B, EOL | NumericOperator.EQ, 0x01]))
+    dirty = decoded(AFI.ipv6, bytes([0x0B, EOL | NumericOperator.EQ, 0xC1]))
+
+    assert clean is not None and dirty is not None
+    assert 'traffic-class =1' in str(clean), str(clean)
+    assert str(dirty) == str(clean)
+
+
 @pytest.mark.rfc('rfc8955#4.2.2.12-fragment-single-octet')
 @pytest.mark.parametrize('name', sorted(Fragment.codes))
 def test_every_fragment_bitmask_we_encode_uses_a_single_octet(name: str) -> None:
@@ -724,9 +818,11 @@ FIELD_WIDTHS: list[tuple[AFI, int, int]] = [
     (AFI.ipv4, 0x09, 2),  # tcp-flags
     (AFI.ipv4, 0x0A, 2),  # packet-length
     (AFI.ipv6, 0x03, 1),  # next-header
-    (AFI.ipv6, 0x0B, 1),  # traffic-class
     (AFI.ipv6, 0x0D, 4),  # flow-label
 ]
+# Type 11 is in neither family: section 4.2.2.11 has every bit but the six of the DSCP
+# "treated as 0", for IPv4 and, by RFC 8956 3, for IPv6 traffic-class, so no value of it
+# is too large; test_the_two_high_bits_of_* hold what is done with the rest.
 
 
 def widened(what: int, field_octets: int, value: int) -> bytes:

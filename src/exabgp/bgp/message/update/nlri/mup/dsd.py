@@ -105,8 +105,12 @@ class DirectSegmentDiscoveryRoute(MUP):
         # Parent provides complete wire format including 4-byte header
         data_len = len(data)
         ip_size = data_len - 12  # IP is after 4-byte header + 8-byte RD
-        if ip_size not in [4, 16]:
-            raise Notify(3, 5, 'Invalid IP size, expect 4 or 16 octets. got %d' % ip_size)
+        # draft-mpmz-bess-mup-safi-05 3.1.2: the size follows the AFI, 4 octets for IPv4 and
+        # 16 for IPv6.  Either size used to pass under either AFI.  The address is the route
+        # key, so the Notify becomes the skip of this NLRI in MUP.unpack_nlri.
+        expected = 16 if afi == AFI.ipv6 else 4
+        if ip_size != expected:
+            raise Notify(3, 10, 'mup dsd address is %d octets, an %s address is %d' % (ip_size, afi, expected))
         instance = cls(data, afi)
         return instance, b''
 

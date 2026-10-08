@@ -134,7 +134,7 @@ class SourceAD(MVPN):
         # packed includes header, payload starts at offset 2
         datalen = len(packed) - cls.HEADER_SIZE
         if datalen not in (MVPN_SOURCEAD_IPV4_LENGTH, MVPN_SOURCEAD_IPV6_LENGTH):  # IPv4 or IPv6
-            raise Notify(3, 5, f'Unsupported Source Active A-D route length ({datalen} bytes).')
+            raise Notify(3, 10, f'Unsupported Source Active A-D route length ({datalen} bytes).')
 
         # The Multicast Source Length octet sits after the header and the RD, and the two
         # address length octets are what the accessors below trust to slice the addresses.

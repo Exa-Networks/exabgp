@@ -27,14 +27,16 @@ from struct import pack
 import pytest
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, GenericBGPLS
 from exabgp.bgp.message.update.nlri.bgpls.node import NODE
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI, SAFI
 
 from rfc.community_wire import session
@@ -47,6 +49,10 @@ NLRI_TYPE_UNKNOWN = 65000
 
 # Section 5.2.2, the Link NLRI, which is the one carrying a Remote Node Descriptor too
 NLRI_TYPE_LINK = 2
+
+# Section 5.2.3, the IPv4 Topology Prefix NLRI, and its IP Reachability Information TLV
+NLRI_TYPE_PREFIX_V4 = 3
+IP_REACHABILITY_INFORMATION = 265
 
 # Section 5.2.1: the Local Node Descriptors TLV and its sub-TLVs
 LOCAL_NODE_DESCRIPTORS = 256
@@ -62,6 +68,9 @@ SUB_TLV_BGP_ROUTER_ID = 516
 # RFC 9086 after RFC 7752 was written, and is not.
 PROTOCOL_ID_OSPFV2 = 3
 PROTOCOL_ID_BGP = 7
+# Section 5.2, Table 2: the two Protocol-IDs for information BGP-LS sources itself
+PROTOCOL_ID_DIRECT = 4
+PROTOCOL_ID_STATIC = 5
 
 # BGP-LS Attribute TLVs this build registers, used because they are registered: the point
 # of the ordering tests is that a recognised TLV is still found out of order.
@@ -140,6 +149,15 @@ def mp_reach(nlris: bytes) -> MPRNLRI:
     reach = MPRNLRI.unpack_attribute(value, negotiated)
     assert isinstance(reach, MPRNLRI)
     return reach
+
+
+def mp_unreach(nlris: bytes) -> MPURNLRI:
+    """An MP_UNREACH_NLRI value for AFI 16388 / SAFI 71, through the real attribute decoder."""
+    negotiated = session()
+    negotiated.families = [(AFI.bgpls, SAFI.bgp_ls)]
+    unreach = MPURNLRI.unpack_attribute(pack('!HB', int(AFI.bgpls), int(SAFI.bgp_ls)) + nlris, negotiated)
+    assert isinstance(unreach, MPURNLRI)
+    return unreach
 
 
 def unpack_attribute(value: bytes) -> LinkState:
@@ -292,6 +310,36 @@ def test_safi_72_reads_a_route_distinguisher_where_safi_71_reads_descriptors() -
         unpack_nlri(pack('!HH', NLRI_TYPE_NODE, 4) + bytes(4), SAFI.bgp_ls_vpn)
 
 
+NLRI_TYPE_SRV6_SID = 6  # RFC 9514 6
+SRV6_SID_INFORMATION = 518
+
+
+def vpn_srv6_sid_nlri(route_distinguisher: bytes) -> bytes:
+    """An SRv6 SID NLRI of RFC 9514 under SAFI 72, the Route Distinguisher in front."""
+    sid = tlv(SRV6_SID_INFORMATION, bytes([0x20, 0x01, 0x0D, 0xB8]) + bytes(12))
+    inner = pack('!BQ', PROTOCOL_ID_OSPFV2, 0) + tlv(LOCAL_NODE_DESCRIPTORS, descriptors()) + sid
+    return pack('!HH', NLRI_TYPE_SRV6_SID, len(route_distinguisher) + len(inner)) + route_distinguisher + inner
+
+
+@pytest.mark.rfc('rfc9552#5.2-afi-safi-assignment')
+def test_a_vpn_srv6_sid_nlri_keeps_its_route_distinguisher() -> None:
+    """It was decoded without one: packed back eight octets short, and under no VPN.
+
+    Two SRv6 SID NLRI differing by their Route Distinguisher alone compared equal and
+    shared an index, so the second VPN's route replaced the first's in the RIB.
+    """
+    first_rd, second_rd = pack('!HHL', 0, 65000, 1), pack('!HHL', 0, 65000, 2)
+    first, left = unpack_nlri(vpn_srv6_sid_nlri(first_rd), SAFI.bgp_ls_vpn)
+    second, _ = unpack_nlri(vpn_srv6_sid_nlri(second_rd), SAFI.bgp_ls_vpn)
+
+    assert left == b''
+    assert bytes(first.pack_nlri(session())) == vpn_srv6_sid_nlri(first_rd)
+    assert first != second
+    assert first.index() != second.index()
+    assert hash(first) != hash(second)
+    assert json.loads(first.json())['rd'] == '65000:1'
+
+
 @pytest.mark.rfc('rfc9552#5.2-unknown-nlri-type-opaque')
 def test_an_unknown_nlri_type_is_opaque_and_survives_byte_for_byte() -> None:
     opaque = bytes([0x01, 0x02, 0x03, 0x04, 0x05])
@@ -416,6 +464,123 @@ def test_an_nlri_violating_the_ordering_rule_is_discarded_and_the_next_one_kept(
     assert [bytes(routed.nlri.pack_nlri(session())) for routed in announced] == [good]
 
 
+def framed(code: int, payload: bytes) -> bytes:
+    """An NLRI whose Total NLRI Length is honest, whatever the payload holds."""
+    return pack('!HH', code, len(payload)) + payload
+
+
+def prefix_nlri(reachability: bytes) -> bytes:
+    """An IPv4 Topology Prefix NLRI around the given IP Reachability Information value."""
+    payload = pack('!BQ', PROTOCOL_ID_OSPFV2, 0) + tlv(LOCAL_NODE_DESCRIPTORS, descriptors())
+    return framed(NLRI_TYPE_PREFIX_V4, payload + tlv(IP_REACHABILITY_INFORMATION, reachability))
+
+
+# Each of these breaks a rule inside an NLRI whose Total NLRI Length is honest, so the
+# decoder knows where the NLRI ends and can step over it: section 8.2.2's "NLRI discard".
+FRAMED_BUT_MALFORMED = {
+    # "the length of its sub-TLVs in the NLRI are valid": an AS sub-TLV is four octets
+    'short-autonomous-system': node_nlri(tlv(SUB_TLV_AUTONOMOUS_SYSTEM, bytes(3))),
+    # "The sum of all TLV lengths found in a Link-State NLRI corresponds to the Total NLRI
+    # Length field": the descriptor TLV claims more than the NLRI holds
+    'descriptor-past-the-nlri': framed(
+        NLRI_TYPE_NODE, pack('!BQ', PROTOCOL_ID_OSPFV2, 0) + pack('!HH', LOCAL_NODE_DESCRIPTORS, 40) + descriptors()
+    ),
+    # a Node NLRI with no Local Node Descriptors TLV at all
+    'no-local-node-descriptor': framed(NLRI_TYPE_NODE, pack('!BQ', PROTOCOL_ID_OSPFV2, 0)),
+    # a Link Local/Remote Identifiers TLV is eight octets
+    'short-link-identifiers': framed(
+        NLRI_TYPE_LINK,
+        pack('!BQ', PROTOCOL_ID_OSPFV2, 0)
+        + tlv(LOCAL_NODE_DESCRIPTORS, descriptors())
+        + tlv(LINK_LOCAL_REMOTE_IDENTIFIERS, bytes(3)),
+    ),
+    # a /8 carried in four octets of prefix
+    'long-ip-reachability': prefix_nlri(bytes([8, 10, 0, 0, 0])),
+}
+
+
+@pytest.mark.rfc('rfc9552#8.2.2-nlri-discard', polarity='negative')
+@pytest.mark.parametrize('malformed', list(FRAMED_BUT_MALFORMED.values()), ids=list(FRAMED_BUT_MALFORMED))
+def test_a_framed_nlri_with_a_bad_sub_tlv_is_discarded_and_the_next_one_kept(malformed: bytes) -> None:
+    """Any error inside a length the decoder could check, not only the ordering rule.
+
+    A sub-TLV length error, a missing mandatory TLV and a descriptor which overruns the
+    NLRI all reset the session, when the Total NLRI Length told the decoder exactly where
+    the next NLRI started.
+    """
+    good = node_nlri()
+
+    announced = list(mp_reach(malformed + good).iter_routed())
+
+    assert [bytes(routed.nlri.pack_nlri(session())) for routed in announced] == [good]
+
+
+@pytest.mark.rfc('rfc9552#8.2.2-nlri-discard', polarity='negative')
+@pytest.mark.parametrize('malformed', list(FRAMED_BUT_MALFORMED.values()), ids=list(FRAMED_BUT_MALFORMED))
+def test_the_decoder_says_how_far_to_skip_a_framed_malformed_nlri(malformed: bytes) -> None:
+    """The NLRIDiscard carries the octets the NLRI took, or the caller cannot step over it."""
+    with pytest.raises(NLRIDiscard) as raised:
+        unpack_nlri(malformed)
+
+    assert raised.value.skip == len(malformed)
+
+
+@pytest.mark.rfc('rfc9552#8.2.2-nlri-discard', polarity='negative')
+def test_a_malformed_nlri_in_mp_unreach_is_discarded_and_the_next_one_withdrawn() -> None:
+    """The same rule for MP_UNREACH_NLRI, whose loop let NLRIDiscard out as a reset."""
+    descending = tlv(SUB_TLV_IGP_ROUTER_ID, ROUTER_ID) + tlv(SUB_TLV_AUTONOMOUS_SYSTEM, pack('!L', 65000))
+    good = node_nlri()
+
+    withdrawn = list(mp_unreach(node_nlri(descending) + good))
+
+    assert [bytes(nlri.pack_nlri(session())) for nlri in withdrawn] == [good]
+
+
+@pytest.mark.rfc('rfc9552#8.2.2-session-reset-when-unable-to-process')
+def test_an_nlri_overrunning_the_mp_unreach_still_resets_the_session() -> None:
+    """Discard needs a length to trust: one running past the attribute leaves none."""
+    with pytest.raises(Notify) as raised:
+        list(mp_unreach(node_nlri() + pack('!HH', NLRI_TYPE_NODE, 200) + bytes(13)))
+
+    assert not isinstance(raised.value, NLRIDiscard), 'an NLRI with no trustworthy length cannot be skipped'
+
+
+# ======================================== section 5.2.1.4, the IGP Router-ID of Direct and Static
+
+
+def router_id_json(protocol: int, router_id: bytes) -> dict[str, object]:
+    """The Local Node Descriptor of a Node NLRI carrying only this IGP Router-ID, as JSON."""
+    nlri, left = unpack_nlri(node_nlri(tlv(SUB_TLV_IGP_ROUTER_ID, router_id), protocol=protocol))
+    assert left == b''
+    assert isinstance(nlri, NODE)
+    descriptor: dict[str, object] = json.loads(nlri.json())['node-descriptors'][0]
+    return descriptor
+
+
+IPV6_LOOPBACK = bytes.fromhex('20010db8000000000000000000000001')
+
+
+@pytest.mark.rfc('rfc9552#5.2.1.4-direct-static-router-id-address')
+@pytest.mark.parametrize('protocol', [PROTOCOL_ID_DIRECT, PROTOCOL_ID_STATIC])
+@pytest.mark.parametrize(
+    'router_id,expected', [(ROUTER_ID, '10.0.0.1'), (IPV6_LOOPBACK, '2001:db8::1')], ids=['ipv4', 'ipv6']
+)
+def test_a_direct_or_static_router_id_is_read_as_an_address(protocol: int, router_id: bytes, expected: str) -> None:
+    """Table 2 numbers Direct 4 and Static configuration 5, and either takes an IPv6 address.
+
+    The decoder had Direct as 5 and Static as 227, so a 16 octet IGP Router-ID under 5
+    reset the session and any Router-ID under 4 was not read as an address at all.
+    """
+    assert router_id_json(protocol, router_id) == {'router-id': expected}
+
+
+@pytest.mark.rfc('rfc9552#5.2.1.4-direct-static-router-id-address', polarity='negative')
+def test_an_ospf_router_id_is_not_read_as_an_ipv6_address() -> None:
+    """The size is read with the Protocol-ID: sixteen octets are no OSPFv2 Router-ID."""
+    with pytest.raises(NLRIDiscard):
+        unpack_nlri(node_nlri(tlv(SUB_TLV_IGP_ROUTER_ID, IPV6_LOOPBACK), protocol=PROTOCOL_ID_OSPFV2))
+
+
 @pytest.mark.rfc('rfc9552#8.2.2-session-reset-when-unable-to-process')
 def test_a_length_error_the_decoder_cannot_step_over_resets_the_session() -> None:
     # a Total NLRI Length longer than the bytes which follow leaves the decoder with no
@@ -527,3 +692,92 @@ def test_an_attribute_discard_is_not_a_notification_and_spares_the_other_attribu
     good = parse_attributes(tlv(ATTRIBUTE_TLV_LOCAL_ROUTER_ID, ROUTER_ID))
     assert INTERNAL_DISCARD not in good
     assert BGP_LS_ATTRIBUTE in good
+
+
+# ================================================ section 5.1, the order of the NLRI TLVs
+
+NLRI_TYPE_PREFIX_V6 = 4
+IPV4_INTERFACE_ADDRESS = 259
+REACHABILITY_10_0_0_0_24 = bytes([24, 10, 0, 0])
+UNKNOWN_NLRI_TLV = 255  # below the Local Node Descriptors, so it may never follow them
+UNKNOWN_LINK_TLV = 1000
+
+
+def topology_nlri(code: int, after_header: list[bytes]) -> bytes:
+    """An NLRI of type `code` whose TLVs, after Protocol-ID and Identifier, are `after_header`."""
+    return framed(code, pack('!BQ', PROTOCOL_ID_OSPFV2, 0) + b''.join(after_header))
+
+
+def link_tlvs(code: int, *values: bytes) -> bytes:
+    """A Link NLRI with one TLV of type `code` per value, in the order given."""
+    return topology_nlri(
+        NLRI_TYPE_LINK,
+        [tlv(LOCAL_NODE_DESCRIPTORS, descriptors()), tlv(REMOTE_NODE_DESCRIPTORS, descriptors())]
+        + [tlv(code, value) for value in values],
+    )
+
+
+LOCAL = tlv(LOCAL_NODE_DESCRIPTORS, descriptors())
+SRV6_SID = tlv(SRV6_SID_INFORMATION, bytes([0x20, 0x01, 0x0D, 0xB8]) + bytes(12))
+
+# Every NLRI type exabgp decodes, each with its TLVs once ascending and once not.  Only the
+# Link NLRI checked the order, and only by type.
+ORDERED_AND_NOT = {
+    'node': (
+        topology_nlri(NLRI_TYPE_NODE, [LOCAL]),
+        topology_nlri(NLRI_TYPE_NODE, [LOCAL, tlv(UNKNOWN_NLRI_TLV, b'')]),
+    ),
+    'prefix v4': (
+        topology_nlri(NLRI_TYPE_PREFIX_V4, [LOCAL, tlv(IP_REACHABILITY_INFORMATION, REACHABILITY_10_0_0_0_24)]),
+        topology_nlri(NLRI_TYPE_PREFIX_V4, [tlv(IP_REACHABILITY_INFORMATION, REACHABILITY_10_0_0_0_24), LOCAL]),
+    ),
+    'prefix v6': (
+        topology_nlri(NLRI_TYPE_PREFIX_V6, [LOCAL, tlv(IP_REACHABILITY_INFORMATION, bytes([32, 0x20, 1, 0xD, 0xB8]))]),
+        topology_nlri(NLRI_TYPE_PREFIX_V6, [tlv(IP_REACHABILITY_INFORMATION, bytes([32, 0x20, 1, 0xD, 0xB8])), LOCAL]),
+    ),
+    'srv6 sid': (
+        topology_nlri(NLRI_TYPE_SRV6_SID, [LOCAL, SRV6_SID]),
+        topology_nlri(NLRI_TYPE_SRV6_SID, [LOCAL, SRV6_SID, tlv(UNKNOWN_NLRI_TLV + 1, b'')]),
+    ),
+    # 5.1: TLVs of one type are ordered by Length, then by Value
+    'link, one type, by value': (
+        link_tlvs(IPV4_INTERFACE_ADDRESS, bytes([10, 0, 0, 1]), bytes([10, 0, 0, 2])),
+        link_tlvs(IPV4_INTERFACE_ADDRESS, bytes([10, 0, 0, 2]), bytes([10, 0, 0, 1])),
+    ),
+    # a TLV this decoder does not know, whose values may have any length
+    'link, one type, by length': (
+        link_tlvs(UNKNOWN_LINK_TLV, bytes([9]), bytes([1, 0])),
+        link_tlvs(UNKNOWN_LINK_TLV, bytes([1, 0]), bytes([9])),
+    ),
+}
+
+
+@pytest.mark.rfc('rfc9552#5.1-nlri-tlvs-ascending-order')
+@pytest.mark.rfc('rfc9552#5.1-same-type-tlvs-by-length-then-value')
+@pytest.mark.rfc('rfc9552#5.1-unordered-nlri-malformed')
+@pytest.mark.parametrize('name', sorted(ORDERED_AND_NOT))
+def test_an_nlri_whose_tlvs_ascend_decodes(name: str) -> None:
+    nlri, left = unpack_nlri(ORDERED_AND_NOT[name][0])
+
+    assert left == b''
+    assert bytes(nlri.pack_nlri(session())) == ORDERED_AND_NOT[name][0]
+
+
+@pytest.mark.rfc('rfc9552#5.1-nlri-tlvs-ascending-order', polarity='negative')
+@pytest.mark.rfc('rfc9552#5.1-same-type-tlvs-by-length-then-value', polarity='negative')
+@pytest.mark.rfc('rfc9552#5.1-unordered-nlri-malformed', polarity='negative')
+@pytest.mark.rfc('rfc9552#8.2.2-nlri-syntactic-validation', polarity='negative')
+@pytest.mark.parametrize('name', sorted(ORDERED_AND_NOT))
+def test_an_nlri_whose_tlvs_do_not_ascend_is_malformed(name: str) -> None:
+    """8.2.2 lists the 5.1 ordering among the checks "A BGP-LS Speaker MUST perform"."""
+    with pytest.raises(NLRIDiscard):
+        unpack_nlri(ORDERED_AND_NOT[name][1])
+
+
+@pytest.mark.rfc('rfc9552#5.1-nlri-tlvs-ascending-order')
+def test_a_node_nlri_we_build_has_its_descriptor_sub_tlvs_ascending() -> None:
+    """The only BGP-LS NLRI exabgp builds rather than relays: given out of order, sent in order."""
+    by_hand = list(NODE.unpack_bgpls_nlri(node_nlri(), RouteDistinguisher.NORD).node_ids)
+    built = NODE.make_node(0, PROTOCOL_ID_OSPFV2, list(reversed(by_hand)))
+
+    assert bytes(built.pack_nlri(session())) == node_nlri()

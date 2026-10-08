@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.collection import UpdateCollection
 
 from exabgp.bgp.message.update.update import Update
-from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
@@ -71,6 +71,13 @@ class EOR(Update):
     # MP_UNREACH_NLRI (15), a length of 3, then the AFI and SAFI of the family
     MP_PREFIX: ClassVar[bytes] = b'\x00\x00\x00\x07\x90\x0f\x00\x03'
     MP_SIZE: ClassVar[int] = len(MP_PREFIX) + 3
+    # the same marker with a one octet attribute length (flag 0x80), as most peers send it:
+    # the two length fields, the attribute header of three octets, then the AFI and SAFI
+    LENGTHS_SIZE: ClassVar[int] = 4
+    FAMILY_SIZE: ClassVar[int] = 3
+    MP_SHORT_SIZE: ClassVar[int] = LENGTHS_SIZE + 3 + FAMILY_SIZE
+    # the four high bits of an attribute flag: the low four are unused and ignored (RFC 4271 4.3)
+    FLAG_KIND_MASK: ClassVar[int] = 0xF0
 
     EOR_NLRI: ClassVar[type[EORNLRI]] = EORNLRI
 
@@ -86,6 +93,43 @@ class EOR(Update):
         if len(data) == len(cls.IPV4_UNICAST):
             return bytes(data) == cls.IPV4_UNICAST
         return len(data) == cls.MP_SIZE and bytes(data[: len(cls.MP_PREFIX)]) == cls.MP_PREFIX
+
+    @classmethod
+    def from_body(cls, data: Buffer) -> 'EOR | None':
+        """The End-of-RIB this UPDATE body is, read from the wire alone, or None.
+
+        RFC 4724 2 defines the marker by what the peer sent, so it is never decided from
+        what a decode kept: an UPDATE whose only attribute was discarded, or whose only
+        withdrawal was refused, is empty once decoded and is still not a marker. The
+        MP_UNREACH_NLRI form may come with a one or a two octet attribute length, and is
+        kept as received only in the second, the one make_eor builds.
+        """
+        if cls.is_eor_body(data):
+            return cls(data)
+        family = cls._mp_unreach_family(data)
+        if family is None:
+            return None
+        return cls.make_eor(*family)
+
+    @classmethod
+    def _mp_unreach_family(cls, data: Buffer) -> tuple[AFI, SAFI] | None:
+        """The family of a body holding only an MP_UNREACH_NLRI with only an AFI and SAFI."""
+        if len(data) not in (cls.MP_SHORT_SIZE, cls.MP_SIZE) or bytes(data[:2]) != b'\x00\x00':
+            return None
+        flag, code = data[4], data[5]
+        # optional, not transitive, not partial: any other flag is for the decoder to refuse
+        kinds = (Attribute.Flag.OPTIONAL, Attribute.Flag.OPTIONAL | Attribute.Flag.EXTENDED_LENGTH)
+        if code != Attribute.CODE.MP_UNREACH_NLRI or flag & cls.FLAG_KIND_MASK not in kinds:
+            return None
+        extended = bool(flag & Attribute.Flag.EXTENDED_LENGTH)
+        expected = cls.MP_SIZE if extended else cls.MP_SHORT_SIZE
+        if len(data) != expected or int.from_bytes(data[2:4], 'big') != expected - cls.LENGTHS_SIZE:
+            return None
+        length = int.from_bytes(data[6:8], 'big') if extended else data[6]
+        if length != cls.FAMILY_SIZE:
+            return None
+        # the length checks above leave exactly the AFI and the SAFI at the end
+        return AFI.unpack_afi(data[expected - 3 : expected - 1]), SAFI.unpack_safi(data[expected - 1 : expected])
 
     @classmethod
     def make_eor(cls, afi: AFI, safi: SAFI) -> 'EOR':

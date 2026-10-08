@@ -64,6 +64,47 @@ Capability.
 """
 
 [[requirement]]
+id = "rfc4724#2-ipv4-unicast-end-of-rib-is-minimum-update"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+For the IPv4 unicast address family, the End-of-RIB
+marker is an UPDATE message with the minimum length [BGP-4].
+"""
+note = """
+The sentence has no RFC 2119 keyword: it is the definition every rule about the marker in
+section 4 relies on, so it binds as they do. Reading a marker where none was sent ends the
+restart of the family, and removes the stale routes the peer has not sent yet. The marker
+used to be decided from what the decoder kept rather than from the wire, so an UPDATE
+whose only attribute was discarded (LOCAL_PREF from an external peer, an unrecognised
+optional non-transitive attribute) was taken for the IPv4 unicast marker. EOR.from_body
+now reads the four octets of the body and nothing else.
+"""
+
+[[requirement]]
+id = "rfc4724#2-other-family-end-of-rib-is-only-mp-unreach"
+section = "2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+For any
+other address family, it is an UPDATE message that contains only the
+MP_UNREACH_NLRI attribute [BGP-MP] with no withdrawn routes for that
+<AFI, SAFI>.
+"""
+note = """
+No RFC 2119 keyword, as the entry above. EOR.from_body recognises the body on the wire: no
+withdrawn routes, one attribute, MP_UNREACH_NLRI, holding only the AFI and SAFI, with a one
+or a two octet attribute length. A flow withdrawal whose NLRI the decoder refused used to
+be read as the marker for its family, because nothing was left of it once decoded.
+UpdateCollection.unpack_message knew only the two octet length form, and now shares the
+same recognition.
+"""
+
+[[requirement]]
 id = "rfc4724#4-end-of-rib-must-be-sent"
 section = "4"
 level = "MUST"
@@ -220,6 +261,67 @@ the same stale set RFC 7313 uses) and keeps them. The next session keeps them to
 State bit set; for any other family, or with no capability at all, they are removed at
 once, as the same section requires. A NOTIFICATION ends the session without retention.
 Only what the adj-RIB-in holds can be retained: with `adj-rib-in false` there is nothing.
+A new connection from the peer while the session is established ends the old session the
+same way, see rfc4724#4.2-new-connection-ends-old-session.
+"""
+
+[[requirement]]
+id = "rfc4724#4.2-delete-stale-on-consecutive-restart"
+section = "4.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+To deal with possible consecutive restarts, a route (from the peer)
+previously marked as stale MUST be deleted.
+"""
+note = """
+IncomingRIB.retain_for_restart used to mark every route held stale, those still stale from
+the previous restart included, so a peer which restarted again before its End-of-RIB had
+the routes it never sent again retained for one more Restart Time, and for ever if it kept
+restarting. It now deletes what is still stale before marking the rest, and
+Peer._retain_for_restart tells the API processes as a withdrawal, the way an expired
+Restart Time does. A lost TCP session and a new connection replacing an established
+session (Peer._replace_restarted_session) both go through it.
+"""
+
+[[requirement]]
+id = "rfc4724#4.2-new-connection-ends-old-session"
+section = "4.2"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+MUST treat the subsequent open connection from the peer as an
+indication of the termination of the old TCP session and act
+accordingly (when the Graceful Restart Capability has been received
+from the peer).
+"""
+note = """
+The start of the sentence is on the previous page of the RFC: a Receiving Speaker which
+did not detect the termination of the TCP session, and still holds the BGP session as
+established. Peer.handle_connection accepts a connection arriving in ESTABLISHED when the
+peer's OPEN on that session carried the Graceful Restart capability, and ends the session
+as a lost TCP connection would be ended (Peer._replace_restarted_session): the routes are
+retained as stale (rfc4724#4.2-retain-and-mark-stale). Without the capability RFC 4271
+6.8 applies, and the new connection is refused with Connection Collision Resolution.
+"""
+
+[[requirement]]
+id = "rfc4724#4.2-old-session-closed-without-notification"
+section = "4.2"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+"Acting accordingly" in this context means that the previous TCP
+session MUST be closed, and the new one retained.
+"""
+note = """
+Positive only: whether there is anything to act on is the entry above, whose negative test
+is the peer which did not advertise the capability. The task running the old session is
+cancelled, its connection is closed without a NOTIFICATION (the RFC's next sentence), and
+the incoming connection becomes the session.
 """
 
 [[requirement]]

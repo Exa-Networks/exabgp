@@ -6,8 +6,10 @@
 # This ledger is deliberately narrow.  Almost all of RFC 9830 is addressed to an SR
 # Policy headend: it computes candidate paths, runs the SRPM, validates SIDs and
 # instantiates policies.  exabgp does none of that.  What it does is decode the SR Policy
-# NLRI and the tunnel TLV that goes with it, so the entries below are the ones which bind
-# a decoder.
+# NLRI and the tunnel TLV that goes with it, and originate the routes an operator
+# configures, so the entries below are the ones which bind a decoder, the validity rules
+# of section 4.2.1 a received update is held to, and the one rule of section 4.1 on what
+# an originator attaches.
 
 rfc = "rfc9830"
 title = "Advertising Segment Routing Policies in BGP"
@@ -49,6 +51,31 @@ according to `self.afi`, and `self.afi` comes from the MP_REACH, not from the NL
 so the only way to reach the sixteen octet read is to have passed the 192 bit check.  A
 length byte of 96 arriving under AFI 2, which is the shape that would have produced a
 four octet address read as an IPv6 one, is refused.
+"""
+
+[[requirement]]
+id = "rfc9830#2.1-next-hop-independent-of-afi"
+section = "2.1"
+level = "MAY"
+status = "required"
+polarity = "both"
+text = """
+The next-hop network address field in SR Policy SAFI (73) updates may
+be either a 4-octet IPv4 address or a 16-octet IPv6 address,
+independent of the SR Policy AFI.  The Length field of the next-hop
+address specifies the next-hop address family.  If the next-hop
+length is 4, then the next-hop is an IPv4 address.  If the next-hop
+length is 16, then it is a global IPv6 address.  If the next-hop
+length is 32, then it has a global IPv6 address followed by a link-
+local IPv6 address.
+"""
+note = """
+The "may" is lower case, but it is the sender's freedom, so it binds the receiver: a
+speaker refusing what a peer may send resets a valid session.  `Family.size` gave AFI 1
+the length 4 alone and AFI 2 the length 16 alone, so a valid IPv6 next hop on AFI 1 was
+answered with Notify(3, 9).  Both AFIs now take 4, 16 and 32, and nothing else.  The
+encoder sends an IPv4 next hop as four octets under AFI 2, where it used to send the
+IPv4-mapped form.
 """
 
 [[requirement]]
@@ -97,4 +124,89 @@ The positive side is that nothing exabgp originates puts anything in bits 4-7:
 derives 0x20 from whether a SID is present.  The negative side is receipt: a peer which
 sets bits 4-7 anyway must not change how the segment decodes, and does not, because no
 decoder here reads them.
+"""
+
+[[requirement]]
+id = "rfc9830#4.1-no-advertise-without-route-target"
+section = "4.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+   If no route target is attached to the SR Policy NLRI, then it is
+   assumed that the originator sends the SR Policy update directly
+   (e.g., through a BGP session) to the intended receiver.  In such a
+   case, the NO_ADVERTISE community [RFC1997] MUST be attached to the SR
+   Policy update (see further details in Section 4.2.3).
+"""
+note = """
+exabgp originates whatever the operator configures, so the configuration is where this is
+kept: an announced `sr-policy` route takes `community [ ... ]` and `extended-community
+[ ... ]` among its sub-TLVs, and one with neither NO_ADVERTISE nor a route target in
+IPv4-address format is refused with the reason (`SRPolicyNLRI.malformed_with`, the rule
+the receiver applies, called by `sr_policy_route`). The route line used to ignore every
+word after the sub-TLVs, so no SR policy route could carry a community at all. Stricter
+than this sentence by the receiver's rule: a route target in AS format alone does not
+count, as section 4.2.1 does not let it make the update valid. A withdrawal is not
+checked, it carries no attribute.
+"""
+
+[[requirement]]
+id = "rfc9830#4.2.1-no-advertise-or-ipv4-route-target"
+section = "4.2.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+   *  The SR Policy update MUST have either the NO_ADVERTISE community,
+      at least one Route Target extended community in IPv4-address
+      format, or both.  If a router supporting this specification
+      receives an SR Policy update with no Route Target extended
+      communities and no NO_ADVERTISE community, the update MUST be
+      considered to be malformed.
+"""
+note = """
+`SRPolicyNLRI.malformed_with` looks for 0xFFFFFF02 in COMMUNITY and for an extended
+community of type 0x01 subtype 0x02 in EXTENDED_COMMUNITY. `UpdateCollection` asks every
+route of a received MP_REACH_NLRI, and an SR Policy update without either is
+treat-as-withdraw (rfc9830#5-invalid-update-treat-as-withdraw). The configuration refuses
+to announce one (rfc9830#4.1-no-advertise-without-route-target). Neither was checked: an
+SR Policy route with no community was installed and reported to the API as announced.
+"""
+
+[[requirement]]
+id = "rfc9830#4.2.1-tunnel-encapsulation-attached"
+section = "4.2.1"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+   *  The Tunnel Encapsulation Attribute MUST be attached to the BGP
+      UPDATE message and MUST have a Tunnel Type TLV set to SR Policy
+      (code point is 15).
+"""
+note = """
+The same check, `SRPolicyNLRI.malformed_with`: a TunnelEncap holding a TLV of tunnel type
+15. A received update without one is treat-as-withdraw, which includes the case where
+RFC 9012 11 filtered the attribute off an external session, as the route is then not
+usable either. The configuration refuses an announced `sr-policy` route with no sub-TLV,
+which used to go out with no Tunnel Encapsulation attribute at all.
+"""
+
+[[requirement]]
+id = "rfc9830#5-invalid-update-treat-as-withdraw"
+section = "5"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+   An SR Policy update that is determined not to be valid (and,
+   therefore, malformed) based on the rules described in Section 4.2.1
+   MUST be handled by the "treat-as-withdraw" strategy.
+"""
+note = """
+`UpdateCollection._withdrawn_for_its_routes` adds a TreatAsWithdraw marker when a route
+of MP_REACH_NLRI answers `malformed_with`, and `_routes` then moves every route of the
+UPDATE to the withdrawals, as RFC 7606 2 defines the strategy. Decided in the UPDATE, as
+the rule needs the NLRI and its sibling attributes together. The reason is logged.
 """

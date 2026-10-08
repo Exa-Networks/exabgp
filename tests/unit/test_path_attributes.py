@@ -32,6 +32,7 @@ Note: Multiprotocol extensions (MP_REACH/MP_UNREACH) will be in test_multiprotoc
 """
 
 from exabgp.bgp.neighbor import Neighbor
+from exabgp.util.enumeration import TriState
 
 import struct
 from typing import Any
@@ -1251,8 +1252,8 @@ def test_aigp_pack_with_same_as() -> None:
     metric = 1000
     aigp = AIGP.from_int(metric)
 
-    # Same AS but no AIGP negotiation (IBGP)
-    negotiated = negotiation.negotiated((), aigp=False, local_as=ASN(65000), peer_as=ASN(65000))
+    # Same AS (IBGP), AIGP_SESSION left at its default: enabled, RFC 7311 3.3
+    negotiated = negotiation.negotiated((), aigp=TriState.UNSET, local_as=ASN(65000), peer_as=ASN(65000))
 
     # Should still pack for IBGP
     packed = aigp.pack_attribute(negotiated)
@@ -1284,7 +1285,7 @@ def test_pmsi_basic_creation() -> None:
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Create basic PMSI using factory method
-    tunnel_data = b'\x01\x02\x03\x04'
+    tunnel_data = b'\x01\x02\x03\x04' + bytes(8)
     label = 100
     flags = 0
     tunnel_type = 1  # RSVP-TE P2MP LSP
@@ -1302,7 +1303,7 @@ def test_pmsi_pack_basic() -> None:
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Create PMSI using factory method
-    tunnel_data = b'\x01\x02\x03\x04'
+    tunnel_data = b'\x01\x02\x03\x04' + bytes(8)
     label = 100
     flags = 0
     tunnel_type = 1  # RSVP-TE P2MP LSP
@@ -1313,14 +1314,14 @@ def test_pmsi_pack_basic() -> None:
     # Pack
     packed = pmsi.pack_attribute(negotiated)
 
-    # Should have: flag(1) + type(1) + length(1) + flags(1) + tunnel_type(1) + label(3) + tunnel(4)
+    # Should have: flag(1) + type(1) + length(1) + flags(1) + tunnel_type(1) + label(3) + tunnel(12)
     assert len(packed) >= 3  # At minimum flag + type + length
 
     # Extract attribute value (skip flag, type, length)
     attr_value = packed[3:]
 
     # Should have flags + tunnel_type + label + tunnel
-    assert len(attr_value) == 1 + 1 + 3 + 4  # flags + type + label + tunnel
+    assert len(attr_value) == 1 + 1 + 3 + 12  # flags + type + label + tunnel
 
 
 def test_pmsi_pack_unpack_roundtrip() -> None:
@@ -1330,7 +1331,7 @@ def test_pmsi_pack_unpack_roundtrip() -> None:
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Create PMSI
-    tunnel_data = b'\xc0\xa8\x01\x01'  # 192.168.1.1
+    tunnel_data = b'\xc0\xa8\x01\x01' + bytes(8)  # Extended Tunnel ID 192.168.1.1, then 8 octets
     label = 100
     flags = 0
     tunnel_type = 1
@@ -1354,7 +1355,7 @@ def test_pmsi_equality() -> None:
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Create two identical PMSIs using factory method
-    tunnel = b'\x01\x02\x03\x04'
+    tunnel = b'\x01\x02\x03\x04' + bytes(8)
     pmsi1 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=tunnel)
     pmsi2 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=tunnel)
 
@@ -1368,20 +1369,20 @@ def test_pmsi_inequality() -> None:
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Different tunnel data
-    pmsi1 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x01\x02\x03\x04')
-    pmsi2 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x05\x06\x07\x08')
+    pmsi1 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x01\x02\x03\x04' + bytes(8))
+    pmsi2 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x05\x06\x07\x08' + bytes(8))
 
     assert pmsi1 != pmsi2
 
     # Different label
-    pmsi3 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x01\x02\x03\x04')
-    pmsi4 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=200, tunnel=b'\x01\x02\x03\x04')
+    pmsi3 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x01\x02\x03\x04' + bytes(8))
+    pmsi4 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=200, tunnel=b'\x01\x02\x03\x04' + bytes(8))
 
     assert pmsi3 != pmsi4
 
     # Different flags
-    pmsi5 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x01\x02\x03\x04')
-    pmsi6 = PMSI.make_pmsi(tunnel_type=1, flags=1, label=100, tunnel=b'\x01\x02\x03\x04')
+    pmsi5 = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=b'\x01\x02\x03\x04' + bytes(8))
+    pmsi6 = PMSI.make_pmsi(tunnel_type=1, flags=1, label=100, tunnel=b'\x01\x02\x03\x04' + bytes(8))
 
     assert pmsi5 != pmsi6
 
@@ -1391,18 +1392,18 @@ def test_pmsi_length() -> None:
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Create PMSI with known tunnel size using factory method
-    tunnel_data = b'\x01\x02\x03\x04'  # 4 bytes
+    tunnel_data = b'\x01\x02\x03\x04' + bytes(8)  # 12 bytes, RSVP-TE P2MP
     pmsi = PMSI.make_pmsi(tunnel_type=1, flags=0, label=100, tunnel=tunnel_data)
 
-    # Length should be total packed: flags(1) + tunnel_type(1) + label(3) + tunnel(4) = 9
-    assert len(pmsi) == 1 + 1 + 3 + 4
+    # Length should be total packed: flags(1) + tunnel_type(1) + label(3) + tunnel(12) = 17
+    assert len(pmsi) == 1 + 1 + 3 + 12
 
 
 def test_pmsi_repr_format() -> None:
     """Test PMSI string representation."""
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
-    tunnel = b'\x01\x02\x03\x04'
+    tunnel = b'\x01\x02\x03\x04' + bytes(8)
     label = 100
     flags = 0
     tunnel_type = 1  # RSVP-TE P2MP LSP
@@ -1562,7 +1563,7 @@ def test_pmsi_raw_label_handling() -> None:
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
     # Create PMSI with raw_label using factory method
-    tunnel = b'\x01\x02\x03\x04'
+    tunnel = b'\x01\x02\x03\x04' + bytes(8)
     label = 100
     raw_label = 1601  # label << 4 + bottom of stack bit
     pmsi = PMSI.make_pmsi(tunnel_type=1, flags=0, label=label, tunnel=tunnel, raw_label=raw_label)
@@ -1590,25 +1591,15 @@ def test_pmsi_flags_attribute() -> None:
 
 
 def test_pmsi_unknown_tunnel_type() -> None:
-    """Test PMSI with unknown tunnel type."""
+    """An unassigned tunnel type (99) makes the attribute malformed (RFC 6514 5)."""
     import struct
 
+    from exabgp.bgp.message.notification import Notify
     from exabgp.bgp.message.update.attribute.pmsi import PMSI
 
-    # Create data with unknown tunnel type (99)
-    flags = 0
-    tunnel_type = 99
-    label = 100
-    raw_label = label << 4
-    tunnel_data = b'\x01\x02\x03\x04'
+    raw_label = 100 << 4
+    data = struct.pack('!BB', 0, 99) + struct.pack('!L', raw_label)[1:4] + b'\x01\x02\x03\x04'
 
-    data = struct.pack('!BB', flags, tunnel_type) + struct.pack('!L', raw_label)[1:4] + tunnel_data
-
-    # Unpack
     negotiated = negotiation.negotiated(())
-    unpacked = PMSI.unpack_attribute(data, negotiated)
-
-    # Should create base PMSI with unknown tunnel type
-    assert unpacked.tunnel_type == 99  # Via property, not class variable
-    assert unpacked.tunnel == tunnel_data
-    assert unpacked.label == label
+    with pytest.raises(Notify):
+        PMSI.unpack_attribute(data, negotiated)

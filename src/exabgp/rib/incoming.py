@@ -196,12 +196,20 @@ class IncomingRIB(Cache):
         """The flow specifications of the family held back as not feasible, a snapshot."""
         return list(self._pending_flows.get(family, {}).values())
 
-    def retain_for_restart(self, families: list[FamilyTuple]) -> None:
-        """RFC 4724 4.2: the peer's session was lost, keep its routes of these families as stale."""
+    def retain_for_restart(self, families: list[FamilyTuple]) -> list[Route]:
+        """RFC 4724 4.2: the peer's session was lost, keep its routes of these families as stale.
+
+        A route still stale from before, the peer restarting again without having sent it,
+        is deleted rather than retained once more ("to deal with possible consecutive
+        restarts"), and returned so the caller can say it is gone.
+        """
+        deleted: list[Route] = []
         for family in families:
+            deleted.extend(self.purge_stale(family) or [])
             self.mark_stale(family)
             self._restarting.add(family)
         assert self._restarting.issubset(self._stale.keys()), 'a restarting family is a stale one'
+        return deleted
 
     def restarting_families(self) -> set[FamilyTuple]:
         return set(self._restarting)

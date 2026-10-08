@@ -503,6 +503,53 @@ async def test_graceful_restart_closes_without_a_notification() -> None:
     assert 'sent notification' not in session.events
 
 
+def operator_asks(act: Callable[[Session], None]) -> Callable[[Session], Any]:
+    """Wait until the routes are sent, then act as an operator would, and wait for _main to end."""
+
+    async def drive(session: Session) -> None:
+        await session.sent('sent eor')
+        act(session)
+        await session.ended()
+
+    return drive
+
+
+@pytest.mark.rfc('rfc4486#4-administrative-shutdown')
+@pytest.mark.parametrize(
+    'act,cease',
+    [
+        (lambda session: session.peer.teardown(Notify(6, 4, 'reset by the operator')), (6, 4)),
+        (lambda session: session.peer.disable(Notify(6, 2, 'disabled by the operator')), (6, 2)),
+    ],
+    ids=['teardown', 'disable'],
+)
+@pytest.mark.asyncio
+async def test_graceful_restart_does_not_silence_an_operator_teardown(
+    act: Callable[[Session], None], cease: tuple[int, int]
+) -> None:
+    """RFC 4486 4: an operator ending the peering is a Cease, Graceful Restart or not.
+
+    Closed quietly, as for a restart of ours, the peer kept our routes as stale for the
+    whole Restart Time, routes the operator had just asked to take away.
+    """
+    session = Session(neighbor(extra='capability { graceful-restart 120; }'))
+    assert session.peer.neighbor.capability.graceful_restart
+
+    raised = await session.run(operator_asks(act))
+    assert isinstance(raised, Notify)
+    assert (raised.code, raised.subcode) == cease
+
+
+@pytest.mark.asyncio
+async def test_graceful_restart_keeps_a_restart_of_ours_quiet() -> None:
+    """The documented exception: a session re-established for a restart closes without a word."""
+    session = Session(neighbor(extra='capability { graceful-restart 120; }'))
+
+    raised = await session.run(operator_asks(lambda session: session.peer.reestablish()))
+    assert type(raised) is NetworkError
+    assert 'sent notification' not in session.events
+
+
 @pytest.mark.asyncio
 async def test_a_network_error_is_logged_as_debug_and_raised_unchanged() -> None:
     session = Session(neighbor())

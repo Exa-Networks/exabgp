@@ -47,6 +47,16 @@ def carrying(reactor: 'Reactor', peers: list[str], families: list[FamilyTuple]) 
     return [peer for peer in peers if peer in neighbors and all(f in neighbors[peer].families() for f in families)]
 
 
+def refreshing(reactor: 'Reactor', peers: list[str], families: list[FamilyTuple]) -> list[str]:
+    """The peers whose session may carry a ROUTE-REFRESH for every one of the families.
+
+    RFC 2918 4: only a peer which sent the Route Refresh Capability, and only for a
+    family it advertised. Carrying the family in our configuration is not enough.
+    """
+    refreshable = {peer: reactor.neighbor_refreshable(peer) for peer in peers}
+    return [peer for peer in peers if all(family in refreshable[peer] for family in families)]
+
+
 def unsendable(reactor: 'Reactor', peers: list[str], route: 'Route') -> str:
     """Why the route can not be sent to any of `peers`, or '' when it can be.
 
@@ -571,9 +581,9 @@ def announce_refresh(
             await reactor.processes.answer_error(service)
             return
 
-        active_peers = carrying(reactor, active_peers, [(refresh.afi, refresh.safi) for refresh in refreshes])
+        active_peers = refreshing(reactor, active_peers, [(refresh.afi, refresh.safi) for refresh in refreshes])
         if not active_peers:
-            self.log_failure(f'No established peer carries the family of : {command}')
+            self.log_failure(f'No established peer negotiated route-refresh for the family of : {command}')
             await reactor.processes.answer_error(service)
             return
         reactor.configuration.inject_refresh(active_peers, refreshes)

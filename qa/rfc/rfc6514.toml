@@ -22,12 +22,13 @@
 # octet, the eight tunnel types and the three octet MPLS label carry no keyword, and
 # neither does the sentence which defines malformed ("A router that supports the PMSI
 # Tunnel attribute considers this attribute to be malformed if either (a) it contains an
-# undefined tunnel type ...").  That last one is worth knowing about because exabgp does
-# NOT treat an undefined tunnel type as malformed - it keeps the bytes in a generic PMSI
-# and prints the identifier as hex - and since the sentence is not normative, that is a
-# design choice rather than a breach.  The keywords in section 5 are about what the
-# originating node does with the identifier once it starts encapsulating data, which is
-# where exabgp stops.
+# undefined tunnel type ...").  It carries no keyword of its own, but it is what the SHOULD
+# of rfc6514#5-malformed-pmsi-treat-as-withdraw applies to, so `malformed_pmsi` in
+# attribute/pmsi.py follows it: a tunnel type the IANA registry does not define, and an
+# identifier of the wrong shape for its type, are malformed.  exabgp used to keep both in
+# a generic PMSI and print the identifier as hex.  The other keywords in section 5 are
+# about what the originating node does with the identifier once it starts encapsulating
+# data, which is where exabgp stops.
 #
 # exabgp's shape, for the not-applicable notes below: it speaks BGP and reports to a JSON
 # API.  It builds no P-tunnel, sends no multicast data, holds no multicast forwarding
@@ -161,13 +162,26 @@ all the routes contained in this Update had been withdrawn.
 """
 note = """
 `PMSI.TREAT_AS_WITHDRAW` is what expresses this, and `AttributeCollection.parse` turns
-the ValueError out of `PMSI.from_packet` into an INTERNAL_TREAT_AS_WITHDRAW marker rather
-than letting it reach the reactor as a session reset.  exabgp is stricter than the
+the ValueError or Notify out of `PMSI.from_packet` into an INTERNAL_TREAT_AS_WITHDRAW
+marker rather than letting it reach the reactor as a session reset.
+
+Malformed is the definition the sentence before this one gives, read by `malformed_pmsi`:
+(a) a tunnel type which is unassigned or reserved in the IANA PMSI Tunnel Types registry
+(0x09, 0x0E-0x7A, 0x7F, and a composite of one of those), the experimental ranges, the
+wildcard and a composite of a defined type being defined; (b) an identifier which does
+not parse as its type, which exabgp checks for the types whose identifier is addresses
+(no tunnel 0 octets, RSVP-TE P2MP 12 or 24, PIM 8 or 32, Ingress Replication 4 or 16, the
+IPv6 size included because RFC 6515 2 makes the length say the family) and for mLDP,
+whose identifier must be exactly one FEC Element with an IPv4 or IPv6 root.  The
+identifiers of tunnel types 8 and above are not parsed, so they are never called
+malformed.  Both used to be kept as a generic PMSI.  `PMSI.make_pmsi` refuses the same
+values, so nothing exabgp builds is one; the hex `attribute [ ... ]` statement still
+sends whatever bytes the operator writes, which is what it is for.  exabgp is stricter than the
 sentence in one direction, deliberately: it does not condition on the Partial bit, so a
 malformed PMSI is treat-as-withdraw whether or not the previous hop marked it partial,
 which is what RFC 7606 asks of an optional transitive attribute anyway.  The positive
-test feeds a PMSI too short to hold its own fixed header and shows the UPDATE is
-withdrawn; the negative test is the boundary in the other direction, that a well-formed
+tests feed a PMSI too short to hold its own fixed header, an undefined tunnel type and
+identifiers which do not parse, and show the UPDATE is withdrawn; the negative test is the boundary in the other direction, that a well-formed
 PMSI is not withdrawn - a decoder which withdrew everything would pass the positive test
 and destroy every MVPN route on the session.
 """

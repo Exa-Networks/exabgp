@@ -344,6 +344,20 @@ class Notify(Exception):
         return f'{names}: {self.detail}' if self.detail else names
 
 
+class TreatAsWithdrawNotify(Notify):
+    """An error inside an attribute whose RFC answer is treat-as-withdraw, whatever its default.
+
+    An attribute class says how RFC 7606 handles it with one flag, DISCARD or
+    TREAT_AS_WITHDRAW, and some attributes need both.  RFC 8669 6 discards a malformed
+    BGP Prefix-SID, and RFC 9252 7 withdraws the routes when the malformed part is an SRv6
+    Service TLV.  The decoder knows which part was malformed, so it raises this, and
+    AttributeCollection.parse withdraws the routes for it before reading the class flags.
+    """
+
+    def __init__(self, detail: str) -> None:
+        super().__init__(3, 1, detail)
+
+
 class NLRIDiscard(Notify):
     """An error inside one NLRI whose length is honest: that NLRI is dropped, not the session.
 

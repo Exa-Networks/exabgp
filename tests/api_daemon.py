@@ -23,10 +23,12 @@ from typing import Any
 
 from exabgp.bgp.fsm import FSM
 from exabgp.configuration.configuration import Configuration
+from exabgp.protocol.family import FamilyTuple
 from exabgp.reactor.api.command import group
 from exabgp.reactor.api.processes import Processes
 from exabgp.reactor.loop import Reactor
 from exabgp.reactor.peer import Peer
+from exabgp.reactor.protocol import Protocol
 
 HELPER = 'helper'
 # a pipe holds 64 KiB on macOS and Linux; no command of these tests answers more
@@ -144,6 +146,13 @@ class Daemon:
         """Put the sessions of these neighbors, or of all of them, in ESTABLISHED."""
         for address in addresses or (FIRST, SECOND):
             self.peer(address).fsm.change(FSM.ESTABLISHED)
+
+    def negotiate(self, address: str, refresh: int, families: list[FamilyTuple]) -> None:
+        """Give the session of this neighbor what its OPEN exchange agreed: refresh and families."""
+        peer = self.peer(address)
+        peer.proto = Protocol(peer)
+        peer.proto.negotiated.refresh = refresh
+        peer.proto.negotiated.families = families
 
     def send(self, command: str, escape: bool = False) -> list[str]:
         """Write `command` as the helper, run what it scheduled, and return what the helper read.

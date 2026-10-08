@@ -10,6 +10,7 @@ one's length byte, which is the shape that would do it.
 from __future__ import annotations
 
 from struct import pack
+from typing import Any
 
 import pytest
 
@@ -18,10 +19,15 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI, NextHopWithLinkLocal
 from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
+from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
+from exabgp.protocol.ip import IP, IPv6
+from tests import negotiation
 
 pytestmark = pytest.mark.timeout(10)
 
@@ -134,3 +140,219 @@ def test_one_sr_policy_tlv_in_an_attribute_is_accepted() -> None:
     attr = collection[TUNNEL_ENCAP]
     assert isinstance(attr, TunnelEncap)
     assert len(attr.tunnel_tlvs) == 1
+
+
+# ------------------------------------------------------------------ section 2.1, the next hop
+
+SR_POLICY_V4: FamilyTuple = (AFI.ipv4, SAFI.sr_policy)
+SR_POLICY_V6: FamilyTuple = (AFI.ipv6, SAFI.sr_policy)
+
+NEXT_HOP_V4 = bytes([192, 0, 2, 1])
+NEXT_HOP_GLOBAL = IPv6.pton('2001:db8::2')
+NEXT_HOP_LINK_LOCAL = IPv6.pton('fe80::2')
+ENDPOINT = {AFI.ipv4: bytes([10, 0, 0, 1]), AFI.ipv6: IPv6.pton('2001:db8::1')}
+NLRI_BITS = {AFI.ipv4: IPV4_BITS, AFI.ipv6: IPV6_BITS}
+
+
+def sr_policy_session() -> Negotiated:
+    return negotiation.negotiated([SR_POLICY_V4, SR_POLICY_V6])
+
+
+def sr_policy_reach(family: FamilyTuple, next_hop: bytes) -> bytes:
+    afi, safi = family
+    nlri = nlri_bytes(NLRI_BITS[afi], ENDPOINT[afi])
+    return pack('!HB', int(afi), int(safi)) + bytes([len(next_hop)]) + next_hop + bytes([0]) + nlri
+
+
+def received_next_hop(family: FamilyTuple, next_hop: bytes) -> IP:
+    attribute = MPRNLRI.unpack_attribute(sr_policy_reach(family, next_hop), sr_policy_session())
+    assert isinstance(attribute, MPRNLRI)
+    routed = list(attribute.iter_routed())
+    assert len(routed) == 1
+    return routed[0].nexthop
+
+
+@pytest.mark.rfc('rfc9830#2.1-next-hop-independent-of-afi')
+@pytest.mark.parametrize('family', [SR_POLICY_V4, SR_POLICY_V6], ids=['afi-1', 'afi-2'])
+def test_the_next_hop_length_not_the_afi_says_which_protocol_it_is(family: FamilyTuple) -> None:
+    """Each AFI takes 4, 16 and 32: AFI 1 used to take 4 alone and AFI 2 16 alone."""
+    assert str(received_next_hop(family, NEXT_HOP_V4)) == '192.0.2.1'
+    assert str(received_next_hop(family, NEXT_HOP_GLOBAL)) == '2001:db8::2'
+
+    pair = received_next_hop(family, NEXT_HOP_GLOBAL + NEXT_HOP_LINK_LOCAL)
+    assert isinstance(pair, NextHopWithLinkLocal)
+    assert (str(pair), str(pair.link_local)) == ('2001:db8::2', 'fe80::2')
+
+
+@pytest.mark.rfc('rfc9830#2.1-next-hop-independent-of-afi', polarity='negative')
+@pytest.mark.parametrize('family', [SR_POLICY_V4, SR_POLICY_V6], ids=['afi-1', 'afi-2'])
+@pytest.mark.parametrize('size', [0, 8, 12, 20, 24, 48])
+def test_a_next_hop_length_the_section_does_not_name_is_refused(family: FamilyTuple, size: int) -> None:
+    """Four, sixteen and thirty-two are the only lengths 2.1 gives: accepting all fails here."""
+    with pytest.raises(Notify) as raised:
+        MPRNLRI.unpack_attribute(sr_policy_reach(family, bytes(range(1, size + 1))), sr_policy_session())
+    assert (raised.value.code, raised.value.subcode) == (3, 9)
+
+
+def sent_next_hop(afi: AFI, next_hop: str) -> bytes:
+    """The Next Hop field of the MP_REACH_NLRI the encoder produces for one SR Policy route."""
+    nlri = SRPolicyNLRI.create(afi, 1, 2, str(IP.create_ip(ENDPOINT[afi])))
+    collection = MPNLRICollection.from_routed([RoutedNLRI(nlri, IP.from_string(next_hop))], {}, afi, SAFI.sr_policy)
+    (attribute,) = collection.packed_reach_attributes(sr_policy_session())
+    header = 4 if attribute[0] & 0x10 else 3
+    length = attribute[header + 3]
+    return bytes(attribute[header + 4 : header + 4 + length])
+
+
+@pytest.mark.rfc('rfc9830#2.1-next-hop-independent-of-afi')
+def test_an_sr_policy_route_is_sent_with_the_next_hop_of_either_protocol_on_either_afi() -> None:
+    """Four octets for IPv4, sixteen for IPv6, whatever the AFI: no IPv4-mapped address."""
+    assert sent_next_hop(AFI.ipv4, '192.0.2.1') == NEXT_HOP_V4
+    assert sent_next_hop(AFI.ipv4, '2001:db8::2') == NEXT_HOP_GLOBAL
+    assert sent_next_hop(AFI.ipv6, '192.0.2.1') == NEXT_HOP_V4
+    assert sent_next_hop(AFI.ipv6, '2001:db8::2') == NEXT_HOP_GLOBAL
+
+
+# ------------------------------------- sections 4.2.1 and 5, what an SR Policy update must carry
+#
+# NO_ADVERTISE or a Route Target in IPv4-address format, and a Tunnel Encapsulation attribute
+# with an SR Policy TLV, or the update is malformed and handled by treat-as-withdraw.  Read
+# on an iBGP session, where RFC 9012 11 keeps the Tunnel Encapsulation attribute.
+
+NO_ADVERTISE = bytes([0xC0, 8, 4]) + pack('!L', 0xFFFFFF02)
+NO_EXPORT = bytes([0xC0, 8, 4]) + pack('!L', 0xFFFFFF01)
+# type 0x01 subtype 0x02: a Route Target, IPv4-address format, 192.0.2.1:7
+RT_IPV4 = bytes([0xC0, 16, 8, 0x01, 0x02, 192, 0, 2, 1, 0, 7])
+# type 0x00 subtype 0x02: a Route Target, two octet AS format, 65000:7
+RT_AS = bytes([0xC0, 16, 8, 0x00, 0x02]) + pack('!HI', 65000, 7)
+# both in one attribute, the IPv4 one second
+RT_AS_THEN_IPV4 = bytes([0xC0, 16, 16]) + RT_AS[3:] + RT_IPV4[3:]
+SR_POLICY_TLV = pack('!HH', SR_POLICY_TUNNEL, 8) + pack('!BB', 12, 6) + pack('!BBI', 0, 0, 100)
+TUNNEL_SR_POLICY = bytes([0xC0, TUNNEL_ENCAP, len(SR_POLICY_TLV)]) + SR_POLICY_TLV
+OTHER_TLV = pack('!HH', 1, 4) + b'\x01\x02\x03\x04'
+TUNNEL_OTHER = bytes([0xC0, TUNNEL_ENCAP, len(OTHER_TLV)]) + OTHER_TLV
+
+
+def sr_policy_update(*attributes: bytes) -> bytes:
+    """An iBGP UPDATE announcing one IPv4 SR Policy route with these attributes."""
+    reach = sr_policy_reach(SR_POLICY_V4, NEXT_HOP_V4)
+    mp_reach = bytes([0x80, 14, len(reach)]) + reach
+    body = bytes([0x40, 1, 1, 0]) + bytes([0x40, 2, 0]) + mp_reach + b''.join(attributes)
+    return pack('!HH', 0, len(body)) + body
+
+
+def announced(*attributes: bytes) -> bool:
+    from exabgp.bgp.message.update import UpdateCollection
+
+    update = UpdateCollection.unpack_message(sr_policy_update(*attributes), sr_policy_session())
+    assert len(update.announces) + len(update.withdraws) == 1, 'the route is neither announced nor withdrawn'
+    return bool(update.announces)
+
+
+@pytest.mark.rfc('rfc9830#4.2.1-no-advertise-or-ipv4-route-target')
+@pytest.mark.rfc('rfc9830#5-invalid-update-treat-as-withdraw', polarity='negative')
+@pytest.mark.parametrize(
+    'communities',
+    [(NO_ADVERTISE,), (RT_IPV4,), (NO_ADVERTISE, RT_IPV4), (RT_AS_THEN_IPV4,)],
+    ids=['no-advertise', 'ipv4-route-target', 'both', 'ipv4-route-target-second'],
+)
+def test_an_update_with_no_advertise_or_an_ipv4_route_target_is_announced(communities: tuple[bytes, ...]) -> None:
+    assert announced(TUNNEL_SR_POLICY, *communities)
+
+
+@pytest.mark.rfc('rfc9830#4.2.1-no-advertise-or-ipv4-route-target', polarity='negative')
+@pytest.mark.rfc('rfc9830#5-invalid-update-treat-as-withdraw')
+@pytest.mark.parametrize('communities', [(), (NO_EXPORT,), (RT_AS,)], ids=['none', 'no-export', 'as-route-target'])
+def test_an_update_without_no_advertise_or_an_ipv4_route_target_is_withdrawn(communities: tuple[bytes, ...]) -> None:
+    assert not announced(TUNNEL_SR_POLICY, *communities)
+
+
+@pytest.mark.rfc('rfc9830#4.2.1-tunnel-encapsulation-attached')
+def test_an_update_with_an_sr_policy_tunnel_is_announced() -> None:
+    assert announced(NO_ADVERTISE, TUNNEL_SR_POLICY)
+
+
+@pytest.mark.rfc('rfc9830#4.2.1-tunnel-encapsulation-attached', polarity='negative')
+@pytest.mark.rfc('rfc9830#5-invalid-update-treat-as-withdraw')
+@pytest.mark.parametrize('tunnel', [b'', TUNNEL_OTHER], ids=['no-attribute', 'no-sr-policy-tlv'])
+def test_an_update_without_an_sr_policy_tunnel_is_withdrawn(tunnel: bytes) -> None:
+    assert not announced(NO_ADVERTISE, tunnel)
+
+
+# ------------------------------------------ sections 4.1 and 4.2.1, what we refuse to send
+
+SR_POLICY_ROUTE = 'sr-policy distinguisher 0 color 100 endpoint 10.0.0.1 next-hop 192.0.2.1'
+SR_POLICY_TUNNEL_WORDS = 'preference 100 segment-list weight 1 segment type-a mpls 16001'
+
+
+def configured_sr_policy(route: str) -> tuple[bool, str]:
+    """Whether a neighbour announcing this SR Policy route loads, and the error when not."""
+    from exabgp.configuration.configuration import Configuration
+
+    text = f"""
+neighbor 192.0.2.2 {{
+    router-id 192.0.2.1;
+    local-address 192.0.2.1;
+    local-as 65001;
+    peer-as 65001;
+    family {{ ipv4 sr-policy; }}
+    announce {{ ipv4 {{ {route}; }} }}
+}}
+"""
+    configuration = Configuration([text], text=True)
+    loaded = configuration.reload()
+    return bool(loaded), str(configuration.error)
+
+
+@pytest.mark.rfc('rfc9830#4.1-no-advertise-without-route-target')
+@pytest.mark.parametrize(
+    'communities',
+    ['community [ no-advertise ]', 'extended-community [ target:192.0.2.1:7 ]', 'community no-advertise'],
+)
+def test_an_sr_policy_route_with_no_advertise_or_an_ipv4_route_target_is_configured(communities: str) -> None:
+    loaded, error = configured_sr_policy(f'{SR_POLICY_ROUTE} {SR_POLICY_TUNNEL_WORDS} {communities}')
+    assert loaded, error
+
+
+@pytest.mark.rfc('rfc9830#4.1-no-advertise-without-route-target', polarity='negative')
+@pytest.mark.parametrize('communities', ['', 'community [ no-export ]', 'extended-community [ target:65000:7 ]'])
+def test_an_sr_policy_route_without_no_advertise_or_an_ipv4_route_target_is_refused(communities: str) -> None:
+    loaded, error = configured_sr_policy(f'{SR_POLICY_ROUTE} {SR_POLICY_TUNNEL_WORDS} {communities}')
+    assert not loaded
+    assert 'NO_ADVERTISE' in error and 'RFC 9830' in error, error
+
+
+@pytest.mark.rfc('rfc9830#4.2.1-tunnel-encapsulation-attached', polarity='negative')
+def test_an_sr_policy_route_without_a_tunnel_is_refused() -> None:
+    loaded, error = configured_sr_policy(f'{SR_POLICY_ROUTE} community [ no-advertise ]')
+    assert not loaded
+    assert 'Tunnel Encapsulation' in error, error
+
+
+def test_the_communities_of_an_sr_policy_route_are_kept_and_print_back() -> None:
+    """Unmarked: the communities stay with the route, and the route prints as it was read."""
+    from exabgp.configuration.configuration import Configuration
+    from exabgp.configuration.grammar.tree.sr_policy import sr_policy_words
+
+    def read(line: str) -> Any:
+        configuration = Configuration([''], text=True)
+        assert configuration.partial('ipv4', line, 'announce'), str(configuration.error)
+        (route,) = configuration.pop_routes()
+        return route
+
+    communities = 'community [ no-advertise ] extended-community [ target:192.0.2.1:7 ]'
+    route = read(f'{SR_POLICY_ROUTE} {SR_POLICY_TUNNEL_WORDS} {communities}')
+    assert route.nlri.malformed_with(route.attributes) is None
+    assert Attribute.CODE.COMMUNITY in route.attributes
+    assert Attribute.CODE.EXTENDED_COMMUNITY in route.attributes
+    printed = ' '.join(str(word) for word in sr_policy_words(route))
+    again = read(f'sr-policy {printed}')
+    assert again.attributes == route.attributes
+
+
+def test_an_sr_policy_withdrawal_needs_no_community() -> None:
+    """Unmarked: the rule is about an update which announces; a withdrawal carries no attribute."""
+    from exabgp.configuration.configuration import Configuration
+
+    configuration = Configuration([''], text=True)
+    assert configuration.partial('ipv4', SR_POLICY_ROUTE, 'withdraw'), str(configuration.error)

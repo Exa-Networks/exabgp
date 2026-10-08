@@ -194,7 +194,7 @@ class MAC(EVPN):
         if maclength != MAC_ADDRESS_LEN_BITS:
             raise Notify(
                 3,
-                5,
+                10,
                 'MAC Address length is given as %d bits in %s, and RFC 7432 9.2.1 allows only %d'
                 % (maclength, cls.NAME, MAC_ADDRESS_LEN_BITS),
             )
@@ -214,7 +214,7 @@ class MAC(EVPN):
         if expected is None:
             raise Notify(
                 3,
-                5,
+                10,
                 'IP field length is given as %d bits in %s, expecting 0, %d (IPv4) or %d (IPv6)'
                 % (iplen_bits, cls.NAME, IPV4_ADDRESS_LEN_BITS, IPV6_ADDRESS_LEN_BITS),
             )
@@ -222,7 +222,7 @@ class MAC(EVPN):
         if datalen not in expected:
             raise Notify(
                 3,
-                5,
+                10,
                 'Data field length is given as %d, expecting %s for an IP field of %d bits'
                 % (datalen, ' or '.join(str(_) for _ in expected), iplen_bits),
             )

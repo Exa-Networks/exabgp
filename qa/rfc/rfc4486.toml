@@ -69,10 +69,13 @@ Shutdown".
 """
 note = """
 `peer <selector> disable` and `shutdown true` set by a reload close the session with
-Notify(6, 2), and keep it closed until `enable`.  The daemon shutting down sends it to
-every peer, but to one with Graceful Restart negotiated, which RFC 4724 wants left to
-keep our routes while we restart.  Positive only: it constrains what we send, there is
-no peer input which violates it.
+Notify(6, 2), and keep it closed until `enable`; `teardown` sends the subcode it is given.
+Both are sent with Graceful Restart negotiated too: until 2026-10-08 Peer._raise_session_end
+closed such a session without a word, and the peer kept our routes as stale for its
+Restart Time.  The daemon shutting down sends it to every peer, but to one with Graceful
+Restart negotiated, which RFC 4724 wants left to keep our routes while we restart; a
+session re-established for a restart or a changed configuration is the same exception.
+Positive only: it constrains what we send, there is no peer input which violates it.
 """
 
 [[requirement]]

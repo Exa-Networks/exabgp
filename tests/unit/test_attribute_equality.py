@@ -142,6 +142,9 @@ SHAPED: dict[str, tuple[bytes, bytes]] = {
     'ASPath': (bytes([2, 1]) + pack('!H', 65000), bytes([2, 1]) + pack('!H', 65001)),
     'AS4Path': (bytes([2, 1]) + pack('!L', 65000), bytes([2, 1]) + pack('!L', 65001)),
     'TunnelEncap': (pack('!HH', 1, 4) + bytes(4), pack('!HH', 2, 4) + bytes(4)),
+    # a PIM-SSM tunnel (type 3), whose identifier is a root and a group: RFC 6514 5 calls
+    # one of zeroes after a no-tunnel header malformed, so zeroes alone build nothing
+    'PMSI': (bytes([0, 3, 0, 0, 0]) + bytes(8), bytes([0, 3, 0, 0, 0]) + bytes(7) + bytes([1])),
 }
 
 # named rather than silently absent, so "not covered" is a decision and not an oversight

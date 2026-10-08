@@ -25,6 +25,7 @@ from exabgp.bgp.message.update.attribute.otc import OTC
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, SEQUENCE, ASPath
 from exabgp.bgp.message.update.attribute.attribute import Discard, TreatAsWithdraw
+from exabgp.bgp.message.update.attribute.collection import in_type_order
 from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
@@ -91,6 +92,17 @@ def _semantic_error(routed: 'RoutedNLRI') -> str | None:
         if cidr.mask >= MULTICAST_IPV4_MASK_BITS and cidr.pack_ip()[0] >> 4 == MULTICAST_IPV4_FIRST_NIBBLE:
             return f'prefix {nlri} is multicast (RFC 4271 6.3)'
     return None
+
+
+def _withdraw_reason(nlri: 'NLRI', attributes: AttributeCollection, negotiated: Negotiated) -> str | None:
+    """Why an announced route makes its whole UPDATE treat-as-withdraw, or None."""
+    # RFC 8277 2.1: more labels than the Count we announced, or than one label when the
+    # Multiple Labels Capability did not go both ways
+    accepted = negotiated.labels_accepted(nlri.afi, nlri.safi)
+    if nlri.label_count() > accepted:
+        return f'{nlri.label_count()} labels bound to one prefix, more than the {accepted} we take (RFC 8277 2.1)'
+    # RFC 9830 5: an SR Policy update which 4.2.1 does not call valid is treat-as-withdraw
+    return nlri.malformed_with(attributes)
 
 
 @dataclass(frozen=True, slots=True)
@@ -639,7 +651,7 @@ class UpdateCollection:
 
         # Use MPNLRICollection for reach/unreach attribute generation
         attr = (
-            mp_attr + otc
+            in_type_order(mp_attr + otc)
             if announce_routed and family in ((AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast))
             else mp_attr
         )
@@ -736,7 +748,7 @@ class UpdateCollection:
         # Check if we only have withdraws (v4 or mp)
         only_withdraws = not v4_announces and not mp_announces
         base_attr, mp_attr, otc = self._attribute_sets(negotiated, only_withdraws, mp_withdraws)
-        attr = base_attr + otc if v4_announces else base_attr
+        attr = in_type_order(base_attr + otc) if v4_announces else base_attr
 
         # RFC 7606 5.1: "An UPDATE message MUST NOT contain more than one of the following:
         # non-empty Withdrawn Routes field, non-empty Network Layer Reachability Information
@@ -819,6 +831,46 @@ class UpdateCollection:
         for code in (Attribute.CODE.AS_PATH, Attribute.CODE.AS4_PATH):
             path = attributes.get(code, None)
             if isinstance(path, ASPath) and path.has_set():
+                return True
+        return False
+
+    @staticmethod
+    def _withdraw_malformed_routes(mp_reach: list[RoutedNLRI], withdraws: list[NLRI]) -> list[RoutedNLRI]:
+        """The routes of MP_REACH_NLRI still announced, once the malformed ones are withdrawn.
+
+        A route whose decoder kept its key but found the rest malformed (see
+        NLRI.withdrawn_on_receipt) is treat-as-withdraw on its own, the rest of the UPDATE
+        standing: it joins `withdraws`, which is changed in place.
+        """
+        announced: list[RoutedNLRI] = []
+        for routed in mp_reach:
+            reason = routed.nlri.withdrawn_on_receipt()
+            if reason is None:
+                announced.append(routed)
+                continue
+            log.warning(
+                lazymsg('update.treat-as-withdraw nlri={nlri} reason="{reason}"', nlri=routed.nlri, reason=reason),
+                'parser',
+            )
+            withdraws.append(routed.nlri)
+        return announced
+
+    @staticmethod
+    def _withdrawn_for_its_routes(
+        mp_reach: list[RoutedNLRI], attributes: AttributeCollection, negotiated: Negotiated
+    ) -> bool:
+        """Whether a route of MP_REACH_NLRI makes this UPDATE treat-as-withdraw.
+
+        Decided once the NLRI are built, as the rules need both the routes and the
+        attributes, and the action is on the UPDATE: RFC 7606 withdraws all its routes.
+        """
+        for routed in mp_reach:
+            reason = _withdraw_reason(routed.nlri, attributes, negotiated)
+            if reason is not None:
+                log.warning(
+                    lazymsg('update.treat-as-withdraw nlri={nlri} reason="{reason}"', nlri=routed.nlri, reason=reason),
+                    'parser',
+                )
                 return True
         return False
 
@@ -910,6 +962,7 @@ class UpdateCollection:
         # MP_REACH_NLRI carries its own next hop; iter_routed() preserves it while
         # converting each contained NLRI to the semantic routed form.
         mp_reach = list(reach.iter_routed()) if isinstance(reach, MPRNLRI) else []
+        mp_reach = cls._withdraw_malformed_routes(mp_reach, withdraws)
 
         # An UPDATE we sent is told to the API as it went out: the checks below are the
         # ones a receiver makes on its peer's routes, and on our own they withdrew an EBGP
@@ -922,7 +975,10 @@ class UpdateCollection:
         has_reachable_nlri = bool(announced_view) or isinstance(reach, MPRNLRI)
         cls._reset_without_reachable_nlri(attributes, has_reachable_nlri)
 
-        if (legacy or mp_reach) and cls._withdrawn_in_context(attributes, bool(announced_view), negotiated):
+        if (legacy or mp_reach) and (
+            cls._withdrawn_in_context(attributes, bool(announced_view), negotiated)
+            or cls._withdrawn_for_its_routes(mp_reach, attributes, negotiated)
+        ):
             # AttributeCollection.unpack() may have returned the session's cached
             # collection. These reasons are UPDATE context, not an interpretation of
             # the attribute bytes, so adding the marker to that shared object would
@@ -1105,8 +1161,8 @@ class UpdateCollection:
         """
         from exabgp.bgp.message.update.eor import EOR
 
-        if EOR.is_eor_body(data):
-            eor = EOR(data)
+        eor = EOR.from_body(data)
+        if eor is not None:
             return cls.make_eor(eor.afi, eor.safi)
 
         # Parse normally

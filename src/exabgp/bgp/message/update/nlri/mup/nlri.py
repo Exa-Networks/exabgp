@@ -6,19 +6,19 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, Self, TYPE_CHECKING
+from typing import Any, Callable, ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.protocol.ip import IP
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.util.types import Buffer
 
-# https://datatracker.ietf.org/doc/draft-mpmz-bess-mup-safi/02/
+# https://datatracker.ietf.org/doc/html/draft-mpmz-bess-mup-safi-05
 
 # +-----------------------------------+
 # |    Architecture Type (1 octet)    |
@@ -39,7 +39,7 @@ class MUP(NLRI):
     # Values are MUP subclasses that implement unpack_mup_route classmethod
     registered_mup: ClassVar[dict[str, type[MUP]]] = dict()
 
-    # Set by decorator, override in GenericMUP
+    # Set by the decorator
     ARCHTYPE: ClassVar[int] = 0
     CODE: ClassVar[int] = 0
     NAME: ClassVar[str] = 'Unknown'
@@ -157,6 +157,7 @@ class MUP(NLRI):
     def unpack_nlri(
         cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
+        original_size = len(data)
         # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
         # Identifier in front of every NLRI of this family, and it has to come off
         # before the NLRI is read.
@@ -174,18 +175,32 @@ class MUP(NLRI):
             raise Notify.short(3, 10, 'MUP NLRI', end, len(data))
 
         key = '{}:{}'.format(arch, code)
-        if key in cls.registered_mup:
-            registered_cls = cls.registered_mup[key]
-            # Pass complete wire format (including 4-byte header) to subclass
-            # the path identifier is already off, so the subclass must not look for one
+        if key not in cls.registered_mup:
+            # draft-mpmz-bess-mup-safi-05 3.1: "Any other Route Types MUST be silently
+            # ignored upon a receipt if a BGP speaker supports only 3gpp-5G architecture
+            # type".  A route type is defined for an architecture, so an unknown pair of the
+            # two is one exabgp cannot read.  It reached the RIB and the API as raw octets.
+            # The skip logs it, which the section allows: "MAY log an error".
+            ignored = NLRIDiscard(f'MUP architecture {arch} route type {code} is not one exabgp supports')
+            ignored.skip = original_size - len(data) + end
+            raise ignored
+        registered_cls = cls.registered_mup[key]
+        # Pass complete wire format (including 4-byte header) to subclass
+        # the path identifier is already off, so the subclass must not look for one
+        try:
             mup_instance, _ = registered_cls.unpack_nlri(afi, safi, data[0:end], action, False, negotiated)
-            mup_instance.addpath = path_info
-            return mup_instance, data[end:]
-
-        # Generic MUP for unrecognized route types - pass complete wire format
-        mup = GenericMUP(afi, data[0:end])
-        mup.addpath = path_info
-        return mup, data[end:]
+        except Notify as error:
+            # draft-mpmz-bess-mup-safi-05 3.1.1 to 3.1.4: a malformed route type body
+            # is "Treat-as-withdraw", and "A BGP speaker MUST skip such NLRIs and
+            # continue processing of rest of the Update message".  The Length checked
+            # above says where the next NLRI starts, so only this one goes; a Length
+            # which does not fit, refused above, leaves nowhere to continue from.
+            framed = NLRIDiscard(error.detail)
+            framed.skip = original_size - len(data) + end
+            assert framed.skip > 0, 'a discarded NLRI is stepped over, not re-read'
+            raise framed from error
+        mup_instance.addpath = path_info
+        return mup_instance, data[end:]
 
     def _raw(self) -> str:
         # _packed includes 4-byte header
@@ -194,42 +209,3 @@ class MUP(NLRI):
 
 NLRI.register(AFI.ipv6, SAFI.mup)(MUP)
 NLRI.register(AFI.ipv4, SAFI.mup)(MUP)
-
-
-class GenericMUP(MUP):
-    """Generic MUP for unrecognized route types."""
-
-    # No additional slots - arch/code extracted from _packed on demand
-    __slots__ = ()
-
-    def _fresh(self) -> Self:
-        return type(self)(self.afi, self._packed)
-
-    def __init__(self, afi: AFI, packed: Buffer) -> None:
-        """Create GenericMUP with complete wire format.
-
-        Args:
-            afi: Address family
-            packed: Complete wire format including 4-byte header [arch(1)][code(2)][length(1)][payload]
-        """
-        MUP.__init__(self, afi)
-        self._packed = packed
-
-    @property
-    def arch_type(self) -> int:
-        """Architecture type - extracted from packed header.
-
-        Note: Named arch_type to avoid overriding base MUP.ARCHTYPE ClassVar.
-        """
-        return self._packed[0]
-
-    @property
-    def route_code(self) -> int:
-        """Route type code - extracted from packed header.
-
-        Note: Named route_code to avoid overriding base MUP.CODE ClassVar.
-        """
-        return int.from_bytes(self._packed[1:3], 'big')
-
-    def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        return '{ "arch": %d, "code": %d, "raw": "%s" }' % (self.arch_type, self.route_code, self._raw())

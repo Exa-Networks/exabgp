@@ -89,7 +89,7 @@ def test_a_component_of_the_other_family_is_refused_after_the_prefix(shape, pref
     assert flow.add(prefix())
     other = component(parser, text)
     assert flow.add(other) is False
-    assert other.NAME in flow.family_conflict(other)
+    assert other.NAME in flow.rule_conflict(other)
 
 
 @pytest.mark.parametrize('shape,prefix,parser,text', REFUSED, ids=[row[0] for row in REFUSED])

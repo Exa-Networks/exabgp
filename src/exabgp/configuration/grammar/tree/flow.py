@@ -217,7 +217,7 @@ class FlowRoute:
         if spec.target == Target.RULE:
             for rule in value:
                 if not self.nlri.add(rule):
-                    raise ValueError(self.nlri.family_conflict(rule))
+                    raise ValueError(self.nlri.rule_conflict(rule))
         elif spec.target == Target.NLRI:
             try:
                 setattr(self.nlri, spec.field, value)

@@ -123,7 +123,7 @@ class SharedJoin(MVPN):
         # packed includes header, payload starts at offset 2
         datalen = len(packed) - cls.HEADER_SIZE
         if datalen not in (MVPN_SHAREDJOIN_IPV4_LENGTH, MVPN_SHAREDJOIN_IPV6_LENGTH):  # IPv4 or IPv6
-            raise Notify(3, 5, f'Invalid C-Multicast Route length ({datalen} bytes).')
+            raise Notify(3, 10, f'Invalid C-Multicast Route length ({datalen} bytes).')
 
         # The Multicast Source Length octet sits after the header, the RD and the Source
         # AS, and the two address length octets are what the accessors below trust.

@@ -10,6 +10,7 @@ import json
 from struct import pack
 from typing import ClassVar
 
+from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceDataSubSubTlv
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
 from exabgp.util.types import Buffer
 from exabgp.util.intvalue import json_number
@@ -83,9 +84,18 @@ class Srv6SidStructure:
         return self._packed[5]
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, length: int) -> Srv6SidStructure:
-        # Validation happens in __init__
-        return cls(data[: cls.LENGTH])
+    def unpack_attribute(cls, data: Buffer, length: int) -> Srv6SidStructure | GenericSrv6ServiceDataSubSubTlv:
+        # RFC 9252 7: a sub-sub-TLV is malformed only when "The Sub-Sub-TLV Length is
+        # inconsistent with the length of the enclosing SRv6 service Sub-TLV", which the
+        # SID Information decoder checks, and "Any TLV, Sub-TLV, or Sub-Sub-TLV is not
+        # considered malformed because of failing any semantic validation of its Value
+        # field".  Six fields which do not fit the value are the second case, so the
+        # sub-sub-TLV is kept as bytes.  Slicing it to six octets and letting __init__
+        # raise ValueError lost the whole Prefix-SID instead, or re-encoded a longer one
+        # cut short.
+        if len(data) != cls.LENGTH:
+            return GenericSrv6ServiceDataSubSubTlv(data, cls.TLV)
+        return cls(data)
 
     def pack_tlv(self) -> bytes:
         return pack('!B', self.TLV) + pack('!H', self.LENGTH) + self._packed

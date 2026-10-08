@@ -29,6 +29,7 @@ from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
+from exabgp.util.enumeration import TriState
 
 
 # what labels_limit answers where no capability binds the number of labels
@@ -65,10 +66,16 @@ class Negotiated:
         self.asn4: bool = False
         self.addpath: RequirePath = RequirePath()
         self.multisession: bool | tuple[int, int, str] = False
+        # RFC 8654 4: the largest message we send, raised by the peer's capability, and the
+        # largest we receive, raised by ours alone
         self.msg_size: int = ExtendedMessage.INITIAL_SIZE
+        self.receive_msg_size: int = ExtendedMessage.INITIAL_SIZE
         self.operational: bool = False
         self.refresh: int = REFRESH.ABSENT  # pylint: disable=E1101
-        self.aigp: bool = neighbor.capability.aigp.is_enabled() if neighbor is not None else False
+        # RFC 7311 3.3: AIGP_SESSION as configured, UNSET for the default, see aigp_session
+        self.aigp: TriState = neighbor.capability.aigp if neighbor is not None else TriState.UNSET
+        # RFC 7311 3.3: an AIGP ignored on a disabled session is logged, once per session
+        self.aigp_ignored_logged: bool = False
         self.role: RoleValue = RoleValue.NO_ROLE
         self.peer_role: RoleValue = RoleValue.NO_ROLE
         self.role_otc: bool = neighbor.session.role_otc if neighbor is not None else False
@@ -86,6 +93,8 @@ class Negotiated:
         self.advertised_paths_limit: dict[FamilyTuple, int] = {}
         # RFC 8277 2.1: the labels the peer can take on one prefix, when both sent code 8
         self.multiple_labels: dict[FamilyTuple, int] = {}
+        # RFC 8277 2.1: the labels we said we take on one prefix, when both sent code 8
+        self.accepted_labels: dict[FamilyTuple, int] = {}
         self.mismatch: list[tuple[str, FamilyTuple]] = []
 
     @property
@@ -114,9 +123,11 @@ class Negotiated:
         instance.addpath = RequirePath()
         instance.multisession = False
         instance.msg_size = ExtendedMessage.INITIAL_SIZE
+        instance.receive_msg_size = ExtendedMessage.INITIAL_SIZE
         instance.operational = False
         instance.refresh = REFRESH.ABSENT
-        instance.aigp = False
+        instance.aigp = TriState.UNSET
+        instance.aigp_ignored_logged = False
         instance.role = RoleValue.NO_ROLE
         instance.peer_role = RoleValue.NO_ROLE
         instance.role_otc = False
@@ -130,6 +141,7 @@ class Negotiated:
         instance.paths_limit = {}
         instance.advertised_paths_limit = {}
         instance.multiple_labels = {}
+        instance.accepted_labels = {}
         instance.mismatch = []
         instance.sent_open = None
         instance.received_open = None
@@ -137,6 +149,10 @@ class Negotiated:
 
     def sent(self, sent_open: Any) -> None:  # Open message
         self.sent_open = sent_open
+        # RFC 8654 4: advertising the capability is being "capable of receiving a message
+        # with a length up to and including 65,535 octets", whatever the peer advertises
+        if sent_open.capabilities.announced(Capability.CODE.EXTENDED_MESSAGE):
+            self.receive_msg_size = ExtendedMessage.EXTENDED_SIZE
         if self.received_open:
             self._negotiate()
 
@@ -194,6 +210,8 @@ class Negotiated:
         elif recv_capa.announced(Capability.CODE.ROUTE_REFRESH) and sent_capa.announced(Capability.CODE.ROUTE_REFRESH):
             self.refresh = REFRESH.NORMAL  # pylint: disable=E1101
 
+        # RFC 8654 4: we MAY send extended messages "only if the BGP Extended Message
+        # Capability was received from that peer". We also wait for ours to have gone out
         if recv_capa.announced(Capability.CODE.EXTENDED_MESSAGE) and sent_capa.announced(
             Capability.CODE.EXTENDED_MESSAGE,
         ):
@@ -430,13 +448,17 @@ class Negotiated:
         from exabgp.bgp.message.open.capability.labels import MultipleLabels
 
         self.multiple_labels = {}
-        if not sent_capa.announced(Capability.CODE.MULTIPLE_LABELS):
-            return
+        self.accepted_labels = {}
+        sent = sent_capa.get(Capability.CODE.MULTIPLE_LABELS, None)
         received = recv_capa.get(Capability.CODE.MULTIPLE_LABELS, None)
-        if received is None:
+        if sent is None or received is None:
             return
         # the registry decodes code 8 as MultipleLabels
         self.multiple_labels = dict(cast(MultipleLabels, received))
+        # RFC 8277 2.1: a family missing from either capability keeps the section 2.2
+        # encoding, one label, so only the families in both take our Count
+        ours = cast(MultipleLabels, sent)
+        self.accepted_labels = {family: count for family, count in ours.items() if family in self.multiple_labels}
 
     def labels_limit(self, afi: AFI, safi: SAFI) -> int:
         """The most labels we may bind to one prefix of this family on this session.
@@ -448,6 +470,17 @@ class Negotiated:
         if getattr(self, 'neighbor', None) is None or safi not in (SAFI.nlri_mpls, SAFI.mpls_vpn):
             return LABELS_UNLIMITED
         return self.multiple_labels.get((afi, safi), 1)
+
+    def labels_accepted(self, afi: AFI, safi: SAFI) -> int:
+        """The most labels a peer may bind to one prefix of this family it sends us.
+
+        RFC 8277 2.1: the Count of our own Multiple Labels Capability, once it went both
+        ways, and one label otherwise. labels_limit is the peer's Count, which binds what
+        we send. UNSET is no session, and has announced nothing to hold a peer to.
+        """
+        if getattr(self, 'neighbor', None) is None or safi not in (SAFI.nlri_mpls, SAFI.mpls_vpn):
+            return LABELS_UNLIMITED
+        return self.accepted_labels.get((afi, safi), 1)
 
     @property
     def peer_address(self) -> str:
@@ -491,6 +524,20 @@ class Negotiated:
         sends selected by the rules for a peer inside the AS.
         """
         return self.is_ibgp or self.confed_member
+
+    @property
+    def aigp_session(self) -> bool:
+        """RFC 7311 3.3: whether the AIGP attribute is sent and accepted on this session.
+
+        What the operator configured, or by default enabled on an internal session and on
+        one to another Member-AS of our confederation, and disabled on every other one.
+        Sending used to follow `aigp or is_ibgp` and receiving `aigp` alone, so `aigp
+        false` still sent the attribute to an internal peer, and an internal peer left at
+        the default was sent the attribute it then had discarded on the way back.
+        """
+        if self.aigp == TriState.UNSET:
+            return self.is_internal_neighbor
+        return self.aigp == TriState.TRUE
 
     @property
     def accepts_tunnel_encapsulation(self) -> bool:
@@ -538,11 +585,13 @@ class Negotiated:
         sent.holdtime, sent.local_as, sent.peer_as = self.holdtime, self.local_as, self.peer_as
         sent.families, sent.nexthop, sent.asn4 = self.families, self.nexthop, self.asn4
         sent.addpath, sent.multisession, sent.msg_size = self.addpath, self.multisession, self.msg_size
+        sent.receive_msg_size = self.receive_msg_size
         sent.operational, sent.refresh, sent.aigp = self.operational, self.refresh, self.aigp
         sent.role, sent.peer_role, sent.role_otc = self.role, self.peer_role, self.role_otc
         sent.role_error, sent.linklocal_nexthop = self.role_error, self.linklocal_nexthop
         sent.paths_limit, sent.advertised_paths_limit = self.paths_limit, self.advertised_paths_limit
         sent.multiple_labels, sent.mismatch = self.multiple_labels, self.mismatch
+        sent.accepted_labels = self.accepted_labels
         return sent
 
 

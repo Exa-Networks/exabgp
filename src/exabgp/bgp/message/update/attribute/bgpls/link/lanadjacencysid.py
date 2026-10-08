@@ -8,21 +8,26 @@ from __future__ import annotations
 
 
 import json
-from struct import pack, unpack
+from struct import pack
 from typing import Any, ClassVar, TYPE_CHECKING
 
-from exabgp.util import hexstring
 from exabgp.protocol.iso import ISO
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+from exabgp.bgp.message.update.attribute.bgpls.link.adjacencysid import SID_LABEL_MASK, decode_sids
+from exabgp.protocol.ip import IPv4
 from exabgp.util.types import Buffer
 from exabgp.util.intvalue import json_number
 
 # Minimum data length for SR Adjacency LAN SID TLV
 # Flags (1) + Weight (1) + Reserved (2) + System-ID (6) = 10 bytes
 SRADJ_LAN_MIN_LENGTH = 10
+ISIS_NEIGHBOR_SIZE = 6  # an IS-IS System ID
+OSPF_NEIGHBOR_SIZE = 4  # an OSPF Router-ID
+# header (4) + an OSPF Router-ID (4) + a label (3) or an index (4), RFC 9085 2.2.2
+OSPF_LAN_SIZES: tuple[int, int] = (11, 12)
 
 if TYPE_CHECKING:
     pass
@@ -71,47 +76,25 @@ class LanAdjacencySid(FlagLS):
     def unpack_bgpls(cls, data: Buffer) -> LanAdjacencySid:
         if len(data) < SRADJ_LAN_MIN_LENGTH:
             raise Notify.short(3, 5, 'SR Adjacency LAN SID', SRADJ_LAN_MIN_LENGTH, len(data))
-        original_data = data
-        # We only support IS-IS flags for now.
+        # The flags are read with the IS-IS layout: the Protocol-ID of the Link NLRI, which
+        # RFC 9085 2.2.2 says decides, is not visible to the attribute (see the ledger).
         flags = cls.unpack_flags(data[0:1])
-        # Parse adj weight
         weight = data[1]
-        # Move pointer 4 bytes: Flags(1) + Weight(1) + Reserved(2)
-        system_id = ISO.unpack_sysid(data[4:10])
-        data = data[10:]
-        # SID/Index/Label: according to the V and L flags, it contains
-        # either:
-        # *  A 3 octet local label where the 20 rightmost bits are used for
-        # 	 encoding the label value.  In this case the V and L flags MUST
-        # 	 be set.
-        #
-        # *  A 4 octet index defining the offset in the SID/Label space
-        # 	 advertised by this router using the encodings defined in
-        #  	 Section 3.1.  In this case V and L flags MUST be unset.
-        sids = []
-        raw = []
-        sid = 0  # Default value in case no SID is parsed
-        while data:
-            # Range Size: 3 octet value indicating the number of labels in
-            # the range.
-            if int(flags['V']) and int(flags['L']):
-                if len(data) < 3:
-                    break  # a label needs three bytes, and the peer sent fewer
-                sid = unpack('!L', bytes([0]) + bytes(data[:3]))[0]
-                data = data[3:]
-                sids.append(sid)
-            elif (not flags['V']) and (not flags['L']):
-                if len(data) < 4:
-                    break  # an index needs four bytes, and the peer sent fewer
-                sid = unpack('!I', bytes(data[:4]))[0]
-                data = data[4:]
-                sids.append(sid)
-            else:
-                raw.append(hexstring(data))
-                break
-
-        parsed = [{'flags': flags, 'weight': weight, 'system-id': system_id, 'sid': sid, 'undecoded': raw}]
-        return cls(original_data, parsed)
+        parsed: dict[str, Any] = {'flags': flags, 'weight': weight}
+        # RFC 9085 2.2.2: "For IS-IS, it would be 13 or 14 octets ... For OSPF, it would be
+        # 11 or 12 octets": the OSPF Neighbor ID is a four octet Router-ID, where IS-IS has a
+        # six octet System ID.  Read as a System ID it took two octets of the SID with it.
+        if len(data) in OSPF_LAN_SIZES:
+            parsed['neighbor-id'] = str(IPv4.ntop(data[4:8]))
+            sid_data = data[4 + OSPF_NEIGHBOR_SIZE :]
+        else:
+            parsed['system-id'] = ISO.unpack_sysid(data[4:10])
+            sid_data = data[4 + ISIS_NEIGHBOR_SIZE :]
+        sids, raw = decode_sids(sid_data, flags)
+        # one SID per TLV in RFC 9085, so the last of several is the one reported, as before
+        parsed['sid'] = sids[-1] if sids else 0
+        parsed['undecoded'] = list(raw)
+        return cls(data, [parsed])
 
     @classmethod
     def make_adjacencysidlan(
@@ -153,8 +136,9 @@ class LanAdjacencySid(FlagLS):
         v_flag = flags.get('V', 0)
         l_flag = flags.get('L', 0)
         if v_flag and l_flag:
-            # 3-byte label: 20-bit label value in upper bits
-            packed += pack('!L', sid << 4)[1:]  # Take last 3 bytes
+            # RFC 9085 2.1.1: the label is the 20 rightmost bits of three octets.  It was
+            # shifted four bits left, so it read back sixteen times larger.
+            packed += pack('!L', sid & SID_LABEL_MASK)[1:]
         else:
             # 4-byte index
             packed += pack('!I', sid)

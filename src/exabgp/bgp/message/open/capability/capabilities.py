@@ -366,27 +366,21 @@ class Capabilities(dict[CapabilityCode, Capability]):
         if len(data) < 1:
             raise Notify(2, 0, 'OPEN optional parameters too short')
 
-        # Extended optional parameters (RFC 9072)
         option_len: int = data[0]
 
-        # Check for extended format marker
-        if option_len == Capabilities.EXTENDED_LENGTH:
-            # Extended format needs at least 4 bytes: marker + type + 2-byte length
+        # RFC 9072 2: with a non-zero length, the octet after it decides the encoding, and
+        # 255 there is the extended one. The length octet "MUST be ignored on receipt" then,
+        # and section 3 has a length other than 255 decoded the same way. Only a length of
+        # 255 was looked at, so any other was read as a parameter of type 255 and refused.
+        if option_len and len(data) > 1 and data[1] == Capabilities.EXTENDED_LENGTH:
+            # Extended format needs at least 4 bytes: length + type + 2-byte length
             if len(data) < 4:
                 raise Notify.short(2, 0, 'OPEN extended parameters', 4, len(data))
-            option_type: int = data[1]
-            if option_type == Capabilities.EXTENDED_LENGTH:
-                option_len = unpack('!H', data[2:4])[0]
-                if len(data) < option_len + 4:
-                    raise Notify.short(2, 0, 'OPEN extended parameters', option_len + 4, len(data))
-                data = data[4 : option_len + 4]
-                decoder = _extended_type_length
-            else:
-                # Standard format with option_len=255
-                if len(data) < option_len + 1:
-                    raise Notify.short(2, 0, 'OPEN parameters', option_len + 1, len(data))
-                data = data[1 : option_len + 1]
-                decoder = _key_values
+            option_len = unpack('!H', data[2:4])[0]
+            if len(data) < option_len + 4:
+                raise Notify.short(2, 0, 'OPEN extended parameters', option_len + 4, len(data))
+            data = data[4 : option_len + 4]
+            decoder = _extended_type_length
         else:
             # Standard format
             if len(data) < option_len + 1:
@@ -400,10 +394,6 @@ class Capabilities(dict[CapabilityCode, Capability]):
         while data:
             key, value, data = decoder('parameter', data)
 
-            # Parameters must only be sent once.
-            if key == Parameter.AUTHENTIFICATION_INFORMATION:
-                raise Notify(2, 5)
-
             if key == Parameter.CAPABILITIES:
                 while value:
                     octet, capv, value = _key_values('capability', value)
@@ -416,6 +406,7 @@ class Capabilities(dict[CapabilityCode, Capability]):
                 # is malformed, so the peer could not tell "I do not know this parameter"
                 # from "you sent this one wrongly".  This is about the Parameter type only:
                 # an unknown capability code inside parameter type 2 is ignored, as RFC
-                # 5492 requires.
+                # 5492 requires.  Type 1, Authentication Information, is one of them: RFC
+                # 4271 Appendix A deprecated it, with the 2/5 it was answered with.
                 raise Notify(2, 4, f'parameter type {key}')
         return capabilities

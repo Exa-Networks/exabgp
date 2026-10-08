@@ -318,7 +318,7 @@ class Unprintable(ValueError):
     """A route holding a value no statement writes back (an SRv6 prefix SID)."""
 
 
-def _attribute_words(code: int, attribute: Any) -> list[WordOrSyntax]:
+def one_attribute_words(code: int, attribute: Any) -> list[WordOrSyntax]:
     from exabgp.bgp.message.update.attribute import GenericAttribute
 
     if isinstance(attribute, GenericAttribute):
@@ -390,7 +390,7 @@ def attribute_words(route: Route) -> list[WordOrSyntax]:
         words.extend(['next-hop', nexthop])
     for code, attribute in route.attributes.items():
         if code != Attribute.CODE.NEXT_HOP:
-            words.extend(_attribute_words(code, attribute))
+            words.extend(one_attribute_words(code, attribute))
     return words
 
 

@@ -213,19 +213,21 @@ def test_a_stack_which_never_ends_is_refused(name: str, action: Action) -> None:
     ],
     ids=['announce', 'withdraw'],
 )
-def test_a_length_which_leaves_no_prefix_bits_is_refused(name: str, action: Action) -> None:
-    """The residual the length rule deliberately does not close.
+def test_a_length_which_leaves_no_prefix_bits_is_a_labelled_default_route(name: str, action: Action) -> None:
+    """One field with no bottom of stack bit, and a length which leaves nothing behind it.
 
-    One field with no bottom of stack bit, and a length which leaves nothing behind it.
-    Read as section 2.2 that is a labelled 0.0.0.0/0, and read as a stack it is the old
-    bug: the same bytes, and nothing on the wire to choose between them.  A default route
-    is the more expensive of the two to be wrong about, so it is refused.
-
-    A peer which really means a labelled default route sets the S bit, which RFC 8277 2.2
-    says it MUST do on transmission, and then it decodes.
+    This was refused, as the one case where the bytes were thought to read two ways. They
+    do not: the length is the field, there is no byte after it a stack could have eaten,
+    and without the Multiple Labels Capability RFC 8277 2.2 says the S bit "MUST be
+    ignored on reception". So it is a labelled 0.0.0.0/0, and what follows is the next NLRI.
+    With the capability the S bit delimits the stack and the same bytes are refused, which
+    tests/unit/rfc/test_rfc8277_labelled_unicast.py holds.
     """
-    with pytest.raises(Notify, match='never ends'):
-        NLRI.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, bytes([24]) + UNTERMINATED + PREFIX, action, False, Negotiated.UNSET)
+    nlri, rest = NLRI.unpack_nlri(
+        AFI.ipv4, SAFI.nlri_mpls, bytes([24]) + UNTERMINATED + PREFIX, action, False, Negotiated.UNSET
+    )
+    assert str(nlri.cidr) == '0.0.0.0/0'
+    assert bytes(rest) == PREFIX
 
 
 def test_a_label_stack_of_one_field_with_no_bottom_of_stack_bit_decodes() -> None:

@@ -162,6 +162,94 @@ def test_a_well_formed_pmsi_is_not_withdrawn(value: bytes) -> None:
     assert decoded.pack_attribute(session()) == pmsi_attribute(value)
 
 
+# ==================== section 5, what makes the attribute malformed: type and identifier
+#
+# "malformed if either (a) it contains an undefined tunnel type ... or (b) the router
+# cannot parse the Tunnel Identifier field".  Undefined is read against the IANA registry
+# (RFC 7385): unassigned and reserved codes are undefined, experimental ones, the wildcard
+# and a composite of a defined type (RFC 8317) are not.
+
+TUNNEL_TYPE_RSVP_TE = 1
+TUNNEL_TYPE_MLDP_P2MP = 2
+TUNNEL_TYPE_PIM_SM = 4
+TUNNEL_TYPE_MLDP_MP2MP = 7
+TUNNEL_TYPE_TRANSPORT = 8
+
+IPV4_ADDRESS = bytes([10, 0, 0, 1])
+IPV6_ADDRESS = bytes.fromhex('20010db8000000000000000000000001')
+
+
+def mldp_fec(address_family: int, root: bytes, opaque: bytes = b'\x01\x00\x04\x00\x00\x00\x01') -> bytes:
+    """An mLDP P2MP FEC Element (RFC 6388 2.2): type 6, AF, length, root, opaque."""
+    return bytes([6]) + pack('!HB', address_family, len(root)) + root + pack('!H', len(opaque)) + opaque
+
+
+@pytest.mark.rfc('rfc6514#5-malformed-pmsi-treat-as-withdraw')
+@pytest.mark.parametrize('tunnel_type', [0x09, 0x0E, 0x40, 0x7A, 0x7F, 0x89, 0xFA])
+def test_an_undefined_tunnel_type_withdraws_the_update(tunnel_type: int) -> None:
+    collection = parse_pmsi(pmsi_value(tunnel_type, IPV4_ADDRESS))
+    assert withdrawn(collection)
+    assert PMSI_TUNNEL not in collection
+
+
+@pytest.mark.rfc('rfc6514#5-malformed-pmsi-treat-as-withdraw')
+@pytest.mark.parametrize(
+    'tunnel_type, identifier',
+    [
+        (TUNNEL_TYPE_NO_TUNNEL, IPV4_ADDRESS),
+        (TUNNEL_TYPE_RSVP_TE, IPV4_ADDRESS),
+        (TUNNEL_TYPE_PIM_SSM, IPV4_ADDRESS),
+        (TUNNEL_TYPE_PIM_SM, IPV4_ADDRESS + IPV6_ADDRESS),
+        (TUNNEL_TYPE_INGRESS_REPLICATION, b''),
+        (TUNNEL_TYPE_INGRESS_REPLICATION, IPV4_ADDRESS + b'\x05'),
+        (TUNNEL_TYPE_MLDP_P2MP, b''),
+        (TUNNEL_TYPE_MLDP_P2MP, mldp_fec(1, IPV4_ADDRESS)[:-1]),
+        (TUNNEL_TYPE_MLDP_P2MP, mldp_fec(1, IPV6_ADDRESS)),
+        (TUNNEL_TYPE_MLDP_MP2MP, mldp_fec(1, IPV4_ADDRESS) + b'\x00'),
+    ],
+)
+def test_an_identifier_which_does_not_parse_as_its_type_withdraws_the_update(
+    tunnel_type: int, identifier: bytes
+) -> None:
+    collection = parse_pmsi(pmsi_value(tunnel_type, identifier))
+    assert withdrawn(collection)
+    assert PMSI_TUNNEL not in collection
+
+
+@pytest.mark.rfc('rfc6514#5-malformed-pmsi-treat-as-withdraw', polarity='negative')
+@pytest.mark.parametrize(
+    'tunnel_type, identifier',
+    [
+        (TUNNEL_TYPE_RSVP_TE, bytes(12)),
+        (TUNNEL_TYPE_RSVP_TE, bytes(24)),
+        (TUNNEL_TYPE_PIM_SSM, IPV6_ADDRESS + IPV6_ADDRESS),
+        (TUNNEL_TYPE_INGRESS_REPLICATION, IPV6_ADDRESS),
+        (TUNNEL_TYPE_MLDP_P2MP, mldp_fec(1, IPV4_ADDRESS)),
+        (TUNNEL_TYPE_MLDP_MP2MP, mldp_fec(2, IPV6_ADDRESS, b'')),
+        (TUNNEL_TYPE_TRANSPORT, IPV4_ADDRESS + bytes(4)),
+        (0x7B, b'\x01'),
+        (0x86, bytes(3) + IPV4_ADDRESS),
+        (0xFF, b''),
+    ],
+)
+def test_a_defined_type_with_an_identifier_of_its_shape_is_kept(tunnel_type: int, identifier: bytes) -> None:
+    """IPv6 identifiers included: RFC 6515 says the length gives the family, and EVPN
+    (RFC 7432) sends Ingress Replication to an IPv6 originator."""
+    value = pmsi_value(tunnel_type, identifier)
+    collection = parse_pmsi(value)
+    assert not withdrawn(collection)
+    assert collection[PMSI_TUNNEL].pack_attribute(session()) == pmsi_attribute(value)
+
+
+@pytest.mark.parametrize(
+    'tunnel_type, identifier', [(0x09, IPV4_ADDRESS), (TUNNEL_TYPE_INGRESS_REPLICATION, IPV4_ADDRESS + b'\x05')]
+)
+def test_we_cannot_build_a_pmsi_a_receiver_would_call_malformed(tunnel_type: int, identifier: bytes) -> None:
+    """Unmarked: the sending side of the same rule, what we build we would accept."""
+    with pytest.raises(ValueError):
+        PMSI.make_pmsi(tunnel_type, 0, 0, identifier)
+
+
 # =========================== section 4, the NLRI header RFC 6514 never made normative
 #
 # No rfc() marker on anything below: section 4 states the Route Type octet, the Length
@@ -291,14 +379,25 @@ def test_a_well_formed_c_multicast_route_still_decodes(route_type: int) -> None:
     assert str(nlri.group) == '0.0.0.0'
 
 
-@pytest.mark.parametrize('route_type', [1, 2, 3, 4, 8, 127, 255])
-def test_an_unimplemented_or_unknown_route_type_is_kept_as_opaque_bytes(route_type: int) -> None:
+@pytest.mark.parametrize(
+    'route_type, payload',
+    [
+        # RFC 6515 2 has 1, 3 and 4 end with a four or sixteen octet Originating Router
+        (1, bytes(range(12))),
+        (2, bytes(range(8))),
+        (3, bytes(8) + bytes([0, 0]) + bytes(range(4))),
+        (4, bytes([3, 0]) + bytes(range(4))),
+        (8, bytes(range(8))),
+        (127, bytes(range(8))),
+        (255, bytes(range(8))),
+    ],
+)
+def test_an_unimplemented_or_unknown_route_type_is_kept_as_opaque_bytes(route_type: int, payload: bytes) -> None:
     """Types 1 to 4 are real and unimplemented, the rest are not allocated: same handling.
 
     Keeping the bytes is the right answer for both.  A route type exabgp cannot parse is
     not a malformed one, and reporting it as hex lets the operator see what arrived.
     """
-    payload = bytes(range(8))
     nlri, rest = unpack(bytes([route_type, len(payload)]) + payload)
 
     assert rest == b''

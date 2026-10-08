@@ -7,7 +7,9 @@ section 4 assigns five, and a session is only allowed to form when the two roles
 are complementary.
 
 Role 0 is provider. Absence uses the internal NO_ROLE sentinel, never truthiness.
-The sentinel is not a configuration token or a wire role.
+The sentinel is not a configuration token or a wire role. A value RFC 9234 does not
+assign is decoded as UNASSIGNED, the octet kept beside it: whether it matters is
+decided by the negotiation, which knows if we advertised a role.
 
 Created for ExaBGP.
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
@@ -29,8 +31,9 @@ from exabgp.util.types import Buffer
 
 
 class RoleValue(IntEnum):
-    """The five wire roles and an internal marker for an absent role."""
+    """The five wire roles, an internal marker for an absent role, and one for an unassigned one."""
 
+    UNASSIGNED = -2
     NO_ROLE = -1
     PROVIDER = 0
     RS = 1
@@ -41,6 +44,8 @@ class RoleValue(IntEnum):
     def __str__(self) -> str:
         if self == RoleValue.NO_ROLE:
             return 'no-role'
+        if self == RoleValue.UNASSIGNED:
+            return 'unassigned'
         return _NAMES[self]
 
     @classmethod
@@ -72,8 +77,11 @@ class RoleValue(IntEnum):
 
     @staticmethod
     def pair_allowed(local: RoleValue, remote: RoleValue) -> bool:
-        """RFC 9234 section 4: five pairs form a session, everything else is a mismatch."""
-        return local != RoleValue.NO_ROLE and _COMPLEMENT[local] == remote
+        """RFC 9234 section 4: five pairs form a session, everything else is a mismatch.
+
+        No row of Table 2 holds an unassigned role, on either side.
+        """
+        return local in _COMPLEMENT and _COMPLEMENT[local] == remote
 
 
 _NAMES: dict[RoleValue, str] = {
@@ -104,12 +112,17 @@ class Role(Capability):
     ID: ClassVar = Capability.CODE.ROLE
     VALUE_SIZE: ClassVar[int] = 1
 
-    def __init__(self, value: RoleValue = RoleValue.NO_ROLE) -> None:
+    def __init__(self, value: RoleValue = RoleValue.NO_ROLE, octet: int = -1) -> None:
+        assert value != RoleValue.UNASSIGNED or (0 <= octet <= 255 and octet not in _NAMES), 'an unassigned octet'
         self.value: RoleValue = value
+        # The octet on the wire: the role's own value, or the unassigned one a peer sent
+        self.octet: int = int(value) if value != RoleValue.UNASSIGNED else octet
 
     def __str__(self) -> str:
         if self.value == RoleValue.NO_ROLE:
             return 'Role(unset)'
+        if self.value == RoleValue.UNASSIGNED:
+            return 'Role(unassigned {})'.format(self.octet)
         return 'Role({})'.format(self.value)
 
     def json(self) -> str:
@@ -118,7 +131,7 @@ class Role(Capability):
     def extract_capability_bytes(self) -> list[bytes]:
         if self.value == RoleValue.NO_ROLE:
             return []
-        return [bytes([self.value])]
+        return [bytes([self.octet])]
 
     @classmethod
     def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:  # pylint: disable=W0613
@@ -130,25 +143,25 @@ class Role(Capability):
             raise Notify(2, 0, 'role capability is {} bytes, it must be {}'.format(len(view), cls.VALUE_SIZE))
 
         received = view[0]
-        if received not in _NAMES:
-            # Well formed, but naming a role no allowed pair can satisfy. Role
-            # Mismatch is the honest subcode; (2, 0) would say the bytes were bad.
-            raise Notify(2, 11, 'role capability carries unassigned value {}'.format(received))
-        role = RoleValue(received)
+        # An unassigned value is well formed. RFC 9234 4.2 makes it a Role Mismatch only
+        # "If the BGP Role Capability is advertised" by us, which the negotiation decides:
+        # without a role of ours it is a capability we have no use for, as RFC 5492 has it.
+        role = RoleValue(received) if received in _NAMES else RoleValue.UNASSIGNED
 
         if instance.value == RoleValue.NO_ROLE:
             instance.value = role
+            instance.octet = received
             return instance
 
         # RFC 5492 section 5 lets a receiver keep one instance of a capability sent
         # more than once. Two Role capabilities which agree are one answer sent
         # twice. Two which disagree are two answers, and keeping either would be
         # choosing on the peer's behalf what its role is.
-        if instance.value != role:
+        if instance.octet != received:
             raise Notify(
                 2,
                 11,
-                'role capability sent twice with different roles, {} then {}'.format(instance.value, role),
+                'role capability sent twice with different roles, {} then {}'.format(instance.octet, received),
             )
         log.debug(lazymsg('capability.role.duplicate action=ignore role={role}', role=role), 'parser')
         return instance
@@ -156,7 +169,7 @@ class Role(Capability):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Role):
             return False
-        return self.value == other.value
+        return self.value == other.value and self.octet == other.octet
 
     def __ne__(self, other: object) -> bool:
         return not self == other

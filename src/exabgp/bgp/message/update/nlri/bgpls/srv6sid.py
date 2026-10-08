@@ -62,21 +62,24 @@ class SRv6SID(BGPLS):
     TLV_OFFSET: ClassVar[int] = 13  # Bytes 13+: TLVs
 
     def _fresh(self) -> Self:
-        return type(self)(self._packed)
+        return type(self)(self._packed, self.route_d)
 
     def __init__(
         self,
         packed: Buffer,
+        route_d: RouteDistinguisher = RouteDistinguisher.NORD,
         addpath: PathInfo | None = None,
     ) -> None:
         """Create SRv6SID with complete wire format.
 
         Args:
             packed: Complete wire format including 4-byte header [type(2)][length(2)][payload]
+            route_d: Route Distinguisher (for VPN SAFI), NORD if none
             addpath: AddPath path identifier
         """
         BGPLS.__init__(self, addpath)
         self._packed = packed
+        self.route_d: RouteDistinguisher = route_d
 
     def check(self) -> None:
         """Parse the SRv6 SID descriptors now, so a malformed sub-tlv is refused at the boundary."""
@@ -144,12 +147,12 @@ class SRv6SID(BGPLS):
         return self._parse_tlvs()[1]
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher | None) -> SRv6SID:
+    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher) -> SRv6SID:
         """Unpack SRv6SID from complete wire format.
 
         Args:
             data: Complete wire format including 4-byte header [type(2)][length(2)][payload]
-            rd: Route Distinguisher (ignored for SRv6SID - not supported)
+            rd: Route Distinguisher (for VPN SAFI), NORD if none
         """
         # Data includes 4-byte header, payload starts at offset 4
         cls.check_length(data, cls.DESCRIPTOR_OFFSET)
@@ -162,7 +165,7 @@ class SRv6SID(BGPLS):
         # Offset by 4-byte header: TLVs start at byte 13 (4 + 1 + 8)
         # iter_tlvs also checks the SRv6 SID descriptors which follow the node descriptor
         first = True
-        for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
+        for tlv_type, value in cls.iter_ordered_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
             if not first:
                 continue
             first = False
@@ -179,8 +182,10 @@ class SRv6SID(BGPLS):
         if first:
             raise Notify(3, 10, 'BGP-LS SRv6 SID NLRI has no Local Node descriptor')
 
-        # Store complete wire format including header
-        return cls(data)
+        # Store complete wire format including header.  The Route Distinguisher of SAFI 72
+        # (RFC 9552 5.2) was dropped here: the route then packed back eight octets short,
+        # under no VPN, and two VPNs' routes differing only by it shared one index.
+        return cls(data, route_d=rd)
 
     # pack_nlri inherited from BGPLS base class - returns self._packed directly
 
@@ -195,7 +200,7 @@ class SRv6SID(BGPLS):
         if not isinstance(other, SRv6SID):
             return False
         # Direct _packed comparison - CODE, proto_id, domain, TLVs all encoded in wire format
-        return self._packed == other._packed
+        return self._packed == other._packed and self.route_d == other.route_d
 
     # written out: mypyc fails to derive __ne__ from __eq__ for the subclasses. The operator,
     # not a call to __eq__, so NotImplemented is answered the way Python answers it.
@@ -204,7 +209,7 @@ class SRv6SID(BGPLS):
 
     def __hash__(self) -> int:
         # Direct _packed hash - all wire fields encoded in bytes
-        return hash(self._packed)
+        return hash((self._packed, self.route_d))
 
     def json(self, announced: bool = True, compact: bool = False) -> str:
         nodes = ', '.join(d.json() for d in self.local_node_descriptors)
@@ -217,6 +222,8 @@ class SRv6SID(BGPLS):
                 f'"srv6-sid-descriptors": {json.dumps(self.srv6_sid_descriptors, default=json_number)}',
             ],
         )
+        if self.route_d:
+            content += f', {self.route_d.json()}'
 
         return f'{{ {content} }}'
 

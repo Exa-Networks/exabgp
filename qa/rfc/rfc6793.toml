@@ -319,6 +319,26 @@ taken across segment kinds, cutting a sequence which overshoots.
 """
 
 [[requirement]]
+id = "rfc6793#4.2.3-prepend-adjacent-confed-segments"
+section = "4.2.3"
+level = "SHALL"
+status = "required"
+polarity = "both"
+text = """
+Note that a valid
+AS_CONFED_SEQUENCE or AS_CONFED_SET path segment SHALL be prepended
+if it is either the leading path segment or is adjacent to a path
+segment that is prepended.
+"""
+note = """
+The leading part used to stop as soon as it held the AS numbers it needed, before looking
+at the segment in front of it. An AS_PATH and an AS4_PATH of equal length therefore lost a
+leading AS_CONFED_SEQUENCE, and a confederation segment just after the last prepended one
+was lost too: a route from a two octet member of our confederation was then read as one
+from outside it, and withdrawn as a malformed confederation path.
+"""
+
+[[requirement]]
 id = "rfc6793#6-no-confed-segments-in-as4-path"
 section = "6"
 level = "MUST NOT"
@@ -380,12 +400,11 @@ malformed under the following conditions:
       AS_CONFED_SET.
 """
 note = """
-Only the third condition is enforced. A segment length of zero is read as an empty
-segment and the attribute is accepted, which is worse than accepting nothing, because an
-empty AS4_PATH then goes through the reconstruction above and deletes the AS_PATH. The
-first condition, a length below six or not a multiple of two, is caught only when the
-short read happens to fall off the end. The positive test is xfail and names each
-condition.
+Every condition is enforced, and the positive test names each one with a value which
+meets it. The last to go was a length of zero: AS4_PATH inherited VALID_ZERO from
+AS_PATH, the one attribute besides ATOMIC_AGGREGATE which RFC 7606 4 lets be empty, so
+until 2026-10-08 an empty AS4_PATH was accepted and merged rather than discarded.  The
+negative test is a well formed AS4_PATH, which must not be called malformed.
 """
 
 [[requirement]]

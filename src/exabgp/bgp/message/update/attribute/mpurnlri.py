@@ -12,9 +12,10 @@ from struct import unpack
 from typing import ClassVar, Iterator
 
 from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.update.attribute.mprnlri import log_discarded_bytes
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.types import Buffer
@@ -67,9 +68,19 @@ class MPURNLRI(Attribute):
         nlri_data = self._packed[3:]
 
         while nlri_data:
-            nlri_result, data_result = NLRI.unpack_nlri(
-                self.afi, self.safi, nlri_data, Action.WITHDRAW, self._addpath, Negotiated.UNSET
-            )
+            try:
+                nlri_result, data_result = NLRI.unpack_nlri(
+                    self.afi, self.safi, nlri_data, Action.WITHDRAW, self._addpath, Negotiated.UNSET
+                )
+            except NLRIDiscard as discard:
+                # RFC 9552 8.2.2, as in MPRNLRI: framed but broken inside, so only this NLRI
+                # goes. The section names MP_UNREACH_NLRI beside MP_REACH_NLRI, and without
+                # this the same NLRI dropped from an announcement reset the session here.
+                if not discard.skip:
+                    raise
+                log_discarded_bytes(discard)
+                nlri_data = nlri_data[discard.skip :]
+                continue
             if nlri_result is not NLRI.INVALID:
                 yield nlri_result
 

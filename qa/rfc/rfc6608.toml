@@ -1,0 +1,90 @@
+# RFC 6608 - Subcodes for BGP Finite State Machine Error
+# https://www.rfc-editor.org/rfc/rfc6608
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc6608.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# The OpenSent sentence of section 4 runs across a page break, which a quote may not
+# cross, so it is recorded as two entries: the obligation, and the subcode with its Data
+# field.  The OpenConfirm and Established sentences are each on one page.
+
+rfc = "rfc6608"
+title = "Subcodes for BGP Finite State Machine Error"
+url = "https://www.rfc-editor.org/rfc/rfc6608"
+
+[[requirement]]
+id = "rfc6608#4-opensent-unexpected-message"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a BGP speaker receives an unexpected message (e.g., KEEPALIVE/
+UPDATE/ROUTE-REFRESH message) on a session in OpenSent state, it MUST
+send to the neighbor a NOTIFICATION message with the Error Code
+"""
+note = """
+Protocol.read_open raises (5, 1) for any message other than an OPEN; a NOTIFICATION is
+raised as received before it gets there.  The negative test is an OPEN, which is not
+unexpected.  A session mirroring the peer's AS reads the OPEN before sending its own, so
+is in Connect rather than OpenSent then, and answers the same.
+"""
+
+[[requirement]]
+id = "rfc6608#4-opensent-data-is-the-message-type"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+Finite State Machine Error and the Error Subcode "Receive Unexpected
+Message in OpenSent State".  The Data field is a 1-octet, unsigned
+integer that indicates the type of the unexpected message.
+"""
+note = """
+The second half of the OpenSent sentence above, past the page break, so its MUST.  Until
+2026-10-08 the Data field was a sentence describing the message, not its type.  Positive
+only: it constrains what we send.
+"""
+
+[[requirement]]
+id = "rfc6608#4-openconfirm-unexpected-message"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a BGP speaker receives an unexpected message (e.g., OPEN/UPDATE/
+ROUTE-REFRESH message) on a session in OpenConfirm state, it MUST
+send a NOTIFICATION message with the Error Code Finite State Machine
+Error and the Error Subcode "Receive Unexpected Message in
+OpenConfirm State" to the neighbor.  The Data field is a 1-octet,
+unsigned integer that indicates the type of the unexpected message.
+"""
+note = """
+Protocol.read_keepalive raises (5, 2) for any message other than a KEEPALIVE.  Until
+2026-10-08 its Data field was empty.  The negative test is a KEEPALIVE.
+"""
+
+[[requirement]]
+id = "rfc6608#4-established-unexpected-message"
+section = "4"
+level = "MUST"
+status = "required"
+polarity = "both"
+text = """
+If a BGP speaker receives an unexpected message (e.g., OPEN message)
+on a session in Established State, it MUST send to the neighbor a
+NOTIFICATION message with the Error Code Finite State Machine Error
+and the Error Subcode "Receive Unexpected Message in Established
+State".  The Data field is a 1-octet, unsigned integer that indicates
+the type of the unexpected message.
+"""
+note = """
+Of the message types, only OPEN is unexpected in Established: UPDATE, KEEPALIVE,
+ROUTE-REFRESH and NOTIFICATION each have their handling, OPERATIONAL is exabgp's own and
+is read and ignored, and a type nobody assigned is a Bad Message Type (RFC 4271 6.1) before
+any state looks at it.  Peer._handle_inbound raises
+(5, 3) with the octet 1 for an OPEN.  Until 2026-10-08 an OPEN in Established was dropped
+without a word.  The negative test is a KEEPALIVE.
+"""

@@ -228,6 +228,10 @@ class Peer:
         # The task of the session in progress, inside _async_task: a connection which
         # replaces the session, or a stop, cancels it, and _async_task goes on
         self._session_task: asyncio.Task[None] | None = None
+        # RFC 4271 6.8: a connection which collided with ours in OpenSent, held until its
+        # OPEN says which of the two is kept, and the task reading that OPEN
+        self._contender: Protocol | None = None
+        self._contender_task: asyncio.Task[None] | None = None
 
         # The peer should restart after a stop
         self._restart: bool = True
@@ -240,6 +244,9 @@ class Peer:
         # The NOTIFICATION to close the session with, once one is asked for.  It was the
         # Cease subcode as an int, which made a subcode of 0 look like no teardown at all
         self._teardown: Notify | None = None
+        # The teardown was asked for by an operator (API teardown, disable): RFC 4486 4 has
+        # it sent even with Graceful Restart, which only a restart of ours keeps quiet
+        self._teardown_by_operator: bool = False
         # the families our End-of-RIB went out for on this session (RFC 7313 4)
         self._end_of_rib_sent: set[FamilyTuple] = set()
         # The Cease the operator disabled the session with, None while it is enabled.  It is
@@ -314,8 +321,13 @@ class Peer:
             self.fsm_runner.terminate()
             return
 
+        self._prepare_next_session()
+
+    def _prepare_next_session(self) -> None:
+        """Ready the peer for the session after the one which has just ended."""
         self.fsm_runner.clear()
         self._teardown = None
+        self._teardown_by_operator = False
         self.neighbor.reset_rib()
 
         # If we are restarting, and the neighbor definition is different, update the neighbor
@@ -323,21 +335,30 @@ class Peer:
             self.neighbor = self._neighbor
             self._neighbor = None
 
-    def _retain_for_restart(self) -> None:
-        """RFC 4724 4.2: keep a Graceful Restart peer's routes as stale for its Restart Time."""
+    def _peer_graceful_restart(self) -> Graceful | None:
+        """The Graceful Restart capability the peer sent on the established session, if it did."""
         if self.proto is None or self.fsm != FSM.ESTABLISHED:
-            return
-        negotiated = self.proto.negotiated
-        received = negotiated.received_open
+            return None
+        received = self.proto.negotiated.received_open
         if received is None or not received.capabilities.announced(Capability.CODE.GRACEFUL_RESTART):
-            return
+            return None
         graceful = received.capabilities[Capability.CODE.GRACEFUL_RESTART]
         # a mocked session answers every attribute; only the capability says it is the capability
         if graceful.ID != Capability.CODE.GRACEFUL_RESTART:
+            return None
+        return cast(Graceful, graceful)
+
+    def _retain_for_restart(self) -> None:
+        """RFC 4724 4.2: keep a Graceful Restart peer's routes as stale for its Restart Time."""
+        restart = self._peer_graceful_restart()
+        if restart is None:
             return
-        restart = cast(Graceful, graceful)
-        self.neighbor.rib.incoming.retain_for_restart(list(restart.families()))
-        self._restart_negotiated = negotiated
+        assert self.proto is not None, 'the capability was read from the session'
+        deleted = self.neighbor.rib.incoming.retain_for_restart(list(restart.families()))
+        if deleted:
+            log.info(lazymsg('graceful-restart.restarted-again removed={n}', n=len(deleted)), self.id())
+            self.tell_api_withdrawn(deleted, self.proto.negotiated)
+        self._restart_negotiated = self.proto.negotiated
         self._cancel_restart_timer()
         self._restart_timer = asyncio.get_running_loop().call_later(restart.restart_time, self._restart_time_expired)
         log.info(lazymsg('graceful-restart.retained restart-time={t}', t=restart.restart_time), self.id())
@@ -392,6 +413,7 @@ class Peer:
     def _stop(self, message: str, cease: Notify | None) -> None:
         self.fsm_runner.clear()
         self._cancel_session()
+        self._drop_contender()
         if self.proto:
             if cease is not None:
                 self._cease_now(cease)
@@ -451,6 +473,7 @@ class Peer:
 
     def stop(self) -> None:
         self._teardown = Notify(6, 3)
+        self._teardown_by_operator = False
         self._restart = False
         self._restarted = False
         self._delay.reset()
@@ -518,6 +541,7 @@ class Peer:
     def reestablish(self, restart_neighbor: 'Neighbor' | None = None) -> None:
         # we want to tear down the session and re-establish it
         self._teardown = Notify(6, 3)
+        self._teardown_by_operator = False
         self._restart = True
         self._restarted = True
         self._neighbor = restart_neighbor
@@ -554,6 +578,7 @@ class Peer:
     def teardown(self, notify: Notify, restart: bool = True) -> None:
         self._restart = restart
         self._teardown = notify
+        self._teardown_by_operator = True
         self._delay.reset()
 
     def disabled(self) -> bool:
@@ -614,6 +639,12 @@ class Peer:
             )
             return connection.notification(6, 5, b'the session is administratively disabled')
 
+        # RFC 4724 4.2: a peer which advertised Graceful Restart and connects again while we
+        # still hold its session established has restarted, and the old session is over
+        if self._peer_graceful_restart() is not None:
+            self._replace_restarted_session(connection)
+            return None
+
         # if the other side fails, we go back to idle
         if self.fsm == FSM.ESTABLISHED:
             log.debug(
@@ -622,32 +653,24 @@ class Peer:
             )
             return connection.notification(6, 7, b'could not accept the connection, already established')
 
-        # 6.8 The convention is to compare the BGP Identifiers of the peers
-        # involved in the collision and to retain only the connection initiated
-        # by the BGP speaker with the higher-valued BGP Identifier.
-        # FSM.IDLE , FSM.ACTIVE , FSM.CONNECT , FSM.OPENSENT , FSM.OPENCONFIRM , FSM.ESTABLISHED
+        if self.fsm == FSM.OPENCONFIRM and self._openconfirm_wins_collision():
+            log.debug(
+                lazymsg(
+                    'peer.connection.rejected connection={c} reason=higher_router_id_outgoing', c=connection.name()
+                ),
+                self.id(),
+            )
+            return connection.notification(
+                6,
+                7,
+                b'could not accept the connection, as another connection is already in open-confirm and will go through',
+            )
 
-        if self.fsm == FSM.OPENCONFIRM:
-            # We cheat: we are not really reading the OPEN, we use the data we have instead
-            # it does not matter as the open message will be the same anyway
-            assert self.proto is not None  # Must exist in OPENCONFIRM state
-            assert self.proto.negotiated.received_open is not None  # Must exist in OPENCONFIRM
-            assert self.neighbor.session.router_id is not None  # Must exist at this point
-            local_id = self.neighbor.session.router_id.pack_ip()
-            remote_id = self.proto.negotiated.received_open.router_id.pack_ip()
-
-            if bytes(remote_id) < bytes(local_id):
-                log.debug(
-                    lazymsg(
-                        'peer.connection.rejected connection={c} reason=higher_router_id_outgoing', c=connection.name()
-                    ),
-                    self.id(),
-                )
-                return connection.notification(
-                    6,
-                    7,
-                    b'could not accept the connection, as another connection is already in open-confirm and will go through',
-                )
+        # RFC 4271 6.8: in OpenSent the peer's BGP Identifier is not known yet. Closing ours
+        # at once, whatever it was, closed both connections when both speakers did it
+        if self.fsm == FSM.OPENSENT:
+            self._hold_contender(connection)
+            return None
 
         # accept the connection
         if self.proto:
@@ -674,6 +697,145 @@ class Peer:
         self._cancel_session()
         self._cease_now(Notify(6, 7, 'connection collision resolution'))
         self._close('closing outgoing connection as we have another incoming on with higher router-id')
+
+    def _outgoing_wins_collision(self, received: Open) -> bool:
+        """RFC 4271 6.8: whether our connection is kept over the one the peer initiated.
+
+        The convention is to compare the BGP Identifiers of the peers involved in the
+        collision and to retain only the connection initiated by the BGP speaker with the
+        higher-valued BGP Identifier. RFC 6286 2.3: identical identifiers, which only an
+        external peer may have, keep the connection of the speaker with the larger AS
+        number, the four-octet one.
+        """
+        assert self.neighbor.session.router_id is not None  # Must exist at this point
+        local_id = bytes(self.neighbor.session.router_id.pack_ip())
+        remote_id = bytes(received.router_id.pack_ip())
+        if remote_id != local_id:
+            return remote_id < local_id
+        remote_as = received.asn
+        if received.capabilities.announced(Capability.CODE.FOUR_BYTES_ASN):
+            remote_as = received.capabilities.four_octet_asn()
+        # with no local-as we speak with the peer's own AS, and nothing can tell us apart
+        local_as = self.neighbor.session.open_asn() if self.neighbor.session.local_as else remote_as
+        return int(remote_as) < int(local_as)
+
+    def _openconfirm_wins_collision(self) -> bool:
+        """RFC 4271 6.8: whether the session in OpenConfirm is kept over a new connection.
+
+        The OPEN that session received stands for the one the new connection will send: both
+        come from the same speaker, and say the same identifier and AS.
+        """
+        assert self.proto is not None and self.proto.negotiated.received_open is not None
+        return self._outgoing_wins_collision(self.proto.negotiated.received_open)
+
+    def _hold_contender(self, connection: 'Incoming') -> None:
+        """RFC 4271 6.8: keep a connection colliding with ours in OpenSent until its OPEN is read.
+
+        Its OPEN says the peer's BGP Identifier, which decides which of the two is closed.
+        One connection is held at a time: a newer one replaces it, as the peer gave up on it.
+        """
+        self._drop_contender()
+        log.debug(lazymsg('peer.connection.holding connection={c} reason=collision', c=connection.name()), self.id())
+        contender = Protocol(self)
+        contender.connection = connection
+        self._contender = contender
+        self._contender_task = asyncio.get_running_loop().create_task(self._resolve_collision(contender, connection))
+
+    def _drop_contender(self) -> None:
+        """Close the connection held for its OPEN, and stop the task reading it."""
+        task, self._contender_task = self._contender_task, None
+        if task is not None and not task.done() and task is not asyncio.current_task():
+            task.cancel()
+        contender, self._contender = self._contender, None
+        if contender is not None and contender.connection is not None:
+            contender.connection.close()
+            contender.connection = None
+
+    async def _resolve_collision(self, contender: Protocol, connection: 'Incoming') -> None:
+        """Read the OPEN of the connection held in a collision, then keep one connection of two."""
+        assert contender.connection is not None
+        wait = getenv().bgp.openwait
+        try:
+            received = await asyncio.wait_for(contender.read_open(contender.connection.peer), timeout=wait)
+        except Notify as notify:
+            self._refuse_contender(contender, notify)
+            return
+        except (asyncio.TimeoutError, NetworkError, NotificationReceived) as exc:
+            # nothing to tell: the peer closed it, or never sent the OPEN it is held for
+            log.debug(lazymsg('peer.connection.dropped reason=collision error={e}', e=str(exc)), self.id())
+            self._drop_contender()
+            return
+        assert self._contender is contender, 'a replaced contender has its task cancelled'
+        cease = self._contender_cease(received)
+        if cease is not None:
+            self._refuse_contender(contender, cease)
+            return
+        self._contender = None
+        self._contender_task = None
+        self._take_contender(connection, received)
+
+    def _contender_cease(self, received: Open) -> Notify | None:
+        """The Cease closing the connection held for its OPEN, None when it is the one kept."""
+        if self.stopping():
+            return Notify(6, 3, 'no session configured for the peer')
+        if self._disable is not None:
+            return Notify(6, 5, 'the session is administratively disabled')
+        if self.fsm == FSM.ESTABLISHED:
+            return Notify(6, 7, 'could not accept the connection, already established')
+        if self.fsm not in (FSM.OPENSENT, FSM.OPENCONFIRM):
+            # ours ended before the OPEN came: the peer's is the only connection left
+            return None
+        if self._outgoing_wins_collision(received):
+            return Notify(6, 7, 'connection collision resolution')
+        return None
+
+    def _refuse_contender(self, contender: Protocol, notify: Notify) -> None:
+        """Send `notify` on the connection held for its OPEN, and close it."""
+        assert contender.connection is not None
+        log.debug(
+            lazymsg(
+                'peer.connection.rejected code={c} subcode={sc} reason=collision', c=notify.code, sc=notify.subcode
+            ),
+            self.id(),
+        )
+        if contender.connection.send_and_close(notify.notification.pack_message(contender.negotiated)):
+            self.stats['send-notification'] += 1
+        self._drop_contender()
+
+    def _take_contender(self, connection: 'Incoming', received: Open) -> None:
+        """Close ours with a Cease, and go on with the connection whose OPEN was read."""
+        assert connection.io is not None, 'the connection kept is the one whose OPEN was just read'
+        log.debug(
+            lazymsg('peer.connection.closing connection={c} reason=higher_router_id_incoming', c=connection.name()),
+            self.id(),
+        )
+        if self.proto:
+            self._supersede()
+        # made again, so the session is over the neighbour of now, should a reload have run
+        taken = Protocol(self).accept(connection)
+        taken.open_read = received
+        self.proto = taken
+        self.fsm_runner.clear()
+        self._delay.reset()
+
+    def _replace_restarted_session(self, connection: 'Incoming') -> None:
+        """RFC 4724 4.2: end the session of a restarted peer as a lost TCP session, and take its new one.
+
+        The previous TCP session "is simply closed": no NOTIFICATION, which would end the
+        session without Graceful Restart. Refused instead, the peer waited for our hold timer,
+        whose expiry sent Hold Timer Expired and dropped the routes the restart keeps.
+        """
+        log.debug(
+            lazymsg('peer.connection.replacing connection={c} reason=graceful_restart', c=connection.name()),
+            self.id(),
+        )
+        self._cancel_session()
+        self._retain_for_restart()
+        self._close('the peer restarted, its new connection replaces the session')
+        assert self.proto is None, 'the old connection must be closed before the new one is taken'
+        self._prepare_next_session()
+        self.proto = Protocol(self).accept(connection)
+        self._delay.reset()
 
     def established(self) -> bool:
         return self.fsm == FSM.ESTABLISHED
@@ -792,13 +954,15 @@ class Peer:
             received_open = await self._read_open()
             self.proto.negotiated.received(received_open)
 
-            self.proto.connection.msg_size = self.proto.negotiated.msg_size
-
             # if we mirror the ASN, we need to read first and send second
             if not self.neighbor.session.local_as:
                 sent_open = await self._send_open()
                 self.proto.negotiated.sent(sent_open)
                 self.fsm.change(FSM.OPENSENT)
+
+            # RFC 8654 4: what we receive is set by our OPEN alone, so only once it went out.
+            # It was copied before the OPEN of a session mirroring the AS, and stayed 4096
+            self.proto.connection.msg_size = self.proto.negotiated.receive_msg_size
 
             self.proto.validate_open()
             self.fsm.change(FSM.OPENCONFIRM)
@@ -832,13 +996,30 @@ class Peer:
         elif self.neighbor.messages:
             self.neighbor.messages.popleft()
 
+    def refreshable_families(self) -> list[FamilyTuple]:
+        """The families a ROUTE-REFRESH may be sent for on the established session.
+
+        RFC 2918 4: we may send one "only if it has received the Route Refresh Capability
+        from its peer", for a family the peer advertised. Our own configuration only says
+        we offered the capability, so the negotiation decides.
+        """
+        if self.proto is None or self.fsm != FSM.ESTABLISHED:
+            return []
+        if self.proto.negotiated.refresh == REFRESH.ABSENT:
+            return []
+        return list(self.proto.negotiated.families)
+
     async def _send_refresh_messages(self) -> None:
         """Send route refresh messages from the neighbor's refresh queue."""
         assert self.proto is not None, 'Protocol must be established'
-        if self.neighbor.capability.route_refresh.is_enabled():
-            new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
-            if new_refresh:
-                await self.proto.new_refresh(new_refresh)
+        new_refresh = self.neighbor.refresh.popleft() if self.neighbor.refresh else None
+        if new_refresh is None:
+            return
+        # A refresh the session can not carry is dropped, so the queue does not grow
+        if (new_refresh.afi, new_refresh.safi) not in self.refreshable_families():
+            log.warning(lazymsg('refresh.dropped message={m}', m=str(new_refresh)), self.id())
+            return
+        await self.proto.new_refresh(new_refresh)
 
     async def _send_route_updates(
         self,
@@ -1005,9 +1186,17 @@ class Peer:
             await update_handler.handle_async(ctx, message)
         elif route_refresh_handler.can_handle(message):
             await route_refresh_handler.handle_async(ctx, message)
+        elif message.ID == Message.CODE.OPEN:
+            # RFC 6608 4: an OPEN in Established is unexpected, and the Data field is its type.
+            # It was dropped, and the peer left believing a new session had started
+            raise Notify(5, 3, 'OPEN on an established session', data=bytes([Message.CODE.OPEN.value]))
 
     def _raise_session_end(self) -> NoReturn:
-        """Close quietly if Graceful Restart was negotiated, else raise the teardown which ended the loop."""
+        """Raise the teardown which ended the loop, or close quietly for a restart of ours under Graceful Restart.
+
+        RFC 4486 4: an operator's teardown or disable is sent, Graceful Restart or not. It
+        was closed quietly, and the peer kept our routes as stale for its Restart Time.
+        """
         assert self.proto is not None
         assert self.proto.negotiated.sent_open is not None
         # Graceful restart handling
@@ -1015,8 +1204,10 @@ class Peer:
             lazymsg('async.mainloop.ended graceful_restart={gr}', gr=bool(self.neighbor.capability.graceful_restart)),
             self.id(),
         )
-        if self.neighbor.capability.graceful_restart and self.proto.negotiated.sent_open.capabilities.announced(
-            Capability.CODE.GRACEFUL_RESTART,
+        if (
+            not self._teardown_by_operator
+            and self.neighbor.capability.graceful_restart
+            and self.proto.negotiated.sent_open.capabilities.announced(Capability.CODE.GRACEFUL_RESTART)
         ):
             log.error(lazymsg('session.closing reason=graceful_restart'), self.id())
             self._close('graceful restarted negotiated, closing without sending any notification')

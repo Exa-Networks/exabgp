@@ -35,12 +35,13 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import Notify, TreatAsWithdrawNotify
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.aspath import (
     CONFED_SEQUENCE,
+    CONFED_SET,
     SEQUENCE,
     SET,
     AS2Path,
@@ -89,6 +90,39 @@ class _NOTHING:
 
 
 NOTHING: _NOTHING = _NOTHING()
+
+
+def in_type_order(packed: bytes) -> bytes:
+    """A run of attributes we packed, put in ascending order of type code.
+
+    RFC 4271 5: "The sender of an UPDATE message SHOULD order path attributes within the
+    UPDATE message in ascending order of attribute type."  Most attributes are packed in
+    that order already, but some are packed together with another (AS_PATH with AS4_PATH,
+    AGGREGATOR with AS4_AGGREGATOR) and the OTC of RFC 9234 is added once the rest is
+    packed. The sort is stable, so nothing else moves.
+
+    The bytes are ours, never a peer's, so a header or value cut short is our own bug: it
+    raises RuntimeError rather than asserting, so it holds under -O as well.
+    """
+    attributes: list[tuple[int, bytes]] = []
+    offset = 0
+    # bounded: each pass moves past one whole attribute, header and value
+    while offset < len(packed):
+        if offset + 3 > len(packed):
+            raise RuntimeError('an attribute we packed has a truncated header')
+        flag, code = packed[offset], packed[offset + 1]
+        if flag & Attribute.Flag.EXTENDED_LENGTH:
+            end = offset + 4 + int.from_bytes(packed[offset + 2 : offset + 4], 'big')
+        else:
+            end = offset + 3 + packed[offset + 2]
+        if end > len(packed):
+            raise RuntimeError('an attribute we packed runs past the attributes')
+        attributes.append((code, packed[offset:end]))
+        offset = end
+    codes = [code for code, _ in attributes]
+    if codes == sorted(codes):
+        return packed
+    return b''.join(attribute for _, attribute in sorted(attributes, key=lambda pair: pair[0]))
 
 
 # =================================================================== AttributeCollection
@@ -504,7 +538,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
             message += attribute.pack_attribute(negotiated)
 
-        return message
+        return in_type_order(message)
 
     def json(self, include_nexthop: bool = False, generic: bool = False) -> str:
         # Cache only the default case (without nexthop and without generic) since that's most common
@@ -654,6 +688,11 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 self.add(Discard())
                 return
             raise exc
+        except TreatAsWithdrawNotify as exc:
+            # the decoder named the RFC 7606 action itself, see TreatAsWithdrawNotify
+            _log_malformed(aid, 'treat-as-withdraw', exc.detail)
+            self.add(TreatAsWithdraw(aid))
+            return
         except Notify as exc:
             if kls and kls.TREAT_AS_WITHDRAW:
                 _log_malformed(aid, 'treat-as-withdraw', exc.detail)
@@ -716,10 +755,12 @@ class AttributeCollection(MutableMapping[int, Attribute]):
 
             log.debug(lazyattribute(flag, aid, length, attribute), 'parser')
 
-            # remove the PARTIAL bit before comparaison if the attribute is optional
-            if aid in Attribute.attributes_optional:
-                flag = flag & Attribute.Flag.MASK_PARTIAL & 0xFF
-                # flag &= ~Attribute.Flag.PARTIAL & 0xFF  # cleaner than above (python use signed integer for ~)
+            # The Partial bit is removed before the flags are compared, for every attribute.
+            # RFC 4271 4.3 has the sender clear it on well-known and optional non-transitive
+            # attributes, but RFC 7606 3 (c) makes only an Optional or Transitive bit in
+            # conflict a malformation: an ORIGIN with Partial set was treated as withdraw.
+            # What we send carries the bit our classes give it, so it is not repeated.
+            flag = flag & Attribute.Flag.MASK_PARTIAL & 0xFF
 
             if aid in dropped:
                 log.debug(
@@ -789,6 +830,8 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                         'parser',
                     )
                     self.add(TreatAsWithdraw())
+                    # handled: without this the attribute also reached the "should not happen" log below
+                    continue
                 if kls and kls.DISCARD:
                     log.debug(
                         lambda: 'invalid flag for attribute {} (flag 0x{:02X}, aid 0x{:02X}) discard'.format(
@@ -883,9 +926,18 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         RFC 6793 4.2.3 takes "as many AS numbers and path segments as necessary from the
         leading part of the AS_PATH", so a sequence which overshoots is cut rather than
         dropped whole, and a confederation segment comes along without paying for itself.
+
+        It comes along whenever it leads the path or follows a prepended segment, even once
+        no AS number is wanted any more (the same paragraph, "SHALL be prepended"). Stopping
+        at the count dropped the AS_CONFED_SEQUENCE of a route from a two octet member of
+        our confederation, which was then read as having come from outside it.
         """
+        assert wanted >= 0, 'the AS4_PATH is never longer than the AS_PATH here'
         leading: list[PathSegment] = []
         for segment in segments:
+            if segment.ID in (CONFED_SEQUENCE.ID, CONFED_SET.ID):
+                leading.append(segment)
+                continue
             if wanted <= 0:
                 break
             if isinstance(segment, SEQUENCE) and len(segment) > wanted:

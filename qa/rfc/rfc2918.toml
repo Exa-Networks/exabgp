@@ -1,0 +1,48 @@
+# RFC 2918 - Route Refresh Capability for BGP-4
+# https://www.rfc-editor.org/rfc/rfc2918
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc2918.txt and is checked
+# against it on every run of ./qa/bin/check_rfc_compliance.
+#
+# Only the sending side of section 4 is recorded so far. The receiving side, and the
+# Enhanced Route Refresh which builds on this RFC, are in rfc7313.toml.
+
+rfc = "rfc2918"
+title = "Route Refresh Capability for BGP-4"
+url = "https://www.rfc-editor.org/rfc/rfc2918"
+
+[[requirement]]
+id = "rfc2918#4-send-only-if-received"
+section = "4"
+level = "MAY"
+status = "required"
+polarity = "both"
+text = """
+A BGP speaker may send a ROUTE-REFRESH message to its peer only if it
+has received the Route Refresh Capability from its peer.
+"""
+note = """
+Until 2026-10-08 the Peer sent whatever was queued once our own configuration enabled
+route-refresh, and the API command checked only that the peer was configured for the
+family: a peer which never advertised the capability was sent a ROUTE-REFRESH. Both now
+ask the negotiation (Negotiated.refresh, via Peer.refreshable_families); the API answers
+error, and a refresh already queued is dropped with a warning.
+"""
+
+[[requirement]]
+id = "rfc2918#4-family-advertised-by-the-peer"
+section = "4"
+level = "SHOULD"
+status = "required"
+polarity = "both"
+text = """
+The <AFI,
+SAFI> carried in such a message should be one of the <AFI, SAFI> that
+the peer has advertised to the speaker at the session establishment
+time via capability advertisement.
+"""
+note = """
+The families are the negotiated ones (Negotiated.families), what both sides advertised:
+a family configured on the neighbor which the peer did not advertise is refused by the
+API and dropped by the Peer.
+"""

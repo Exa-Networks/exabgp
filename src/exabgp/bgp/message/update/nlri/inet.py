@@ -157,10 +157,11 @@ def _ends_label_stack(label: int, depth: int, bits_left: int, afi: AFI, action: 
     # RFC 8277 2.2 says of the S bit "MUST be ignored on reception", and 2.4 the same of
     # the Compatibility field a withdraw carries. Without the capability the LENGTH says
     # where a one field stack ends: if the bits left are a prefix the family can hold,
-    # they are the prefix. Zero bits left is excluded on purpose, as a /0 and a stack
-    # which ate the prefix are the same bytes, so there only the sentinels end it.
-    if 0 < bits_left <= IP.length(afi) * 8:
+    # they are the prefix. Zero bits left included: that field is all the length holds,
+    # so it is the label of a /0, there being nothing behind it a stack could have eaten.
+    if 0 <= bits_left <= IP.length(afi) * 8:
         return True
+    # 0x800000 is the Compatibility field of RFC 8277 2.4, and ends a withdraw's stack.
     if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
         return True
     return label == LABEL_NEXTHOP_VALUE

@@ -7,50 +7,143 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 # (static, or the address family of the announce block, the route, whether the legacy parser
-# accepts it when the neighbor has the sr-policy families)
+# accepts it when the neighbor has the sr-policy families; RFC 9830 4.2.1 is the exception,
+# see the forms at the end)
 SR_POLICY_FORMS: list[tuple[str, str, bool]] = [
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1', True),
-    ('static', 'distinguisher 0 color 100 endpoint 2001:db8::1 next-hop 2001:db8::ffff', True),
-    ('ipv6', 'distinguisher 0 color 100 endpoint 2001:db8::1 next-hop 2001:db8::ffff', True),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference 100', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference 100', True),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 priority 10', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 priority 10', True),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 enlp push-ipv4', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 enlp push-ipv4', True),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 enlp 3', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 enlp 3', True),
+    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ]', False),
+    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ]', False),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 2001:db8::1 next-hop 2001:db8::ffff community [ no-advertise ]',
+        False,
+    ),
+    (
+        'ipv6',
+        'distinguisher 0 color 100 endpoint 2001:db8::1 next-hop 2001:db8::ffff community [ no-advertise ]',
+        False,
+    ),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] preference 100',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] preference 100',
+        True,
+    ),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] priority 10',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] priority 10',
+        True,
+    ),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] enlp push-ipv4',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] enlp push-ipv4',
+        True,
+    ),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] enlp 3',
+        True,
+    ),
+    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] enlp 3', True),
     ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 enlp 5', False),
     ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 enlp 5', False),
     ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 enlp x', False),
     ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 enlp x', False),
     ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 enlp 1 enlp 2', False),
     ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 enlp 1 enlp 2', False),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 binding-sid mpls 24000', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 binding-sid mpls 24000', True),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 binding-sid null', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 binding-sid null', True),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] binding-sid mpls 24000',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] binding-sid mpls 24000',
+        True,
+    ),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] binding-sid null',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] binding-sid null',
+        True,
+    ),
     ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 binding-sid x', False),
     ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 binding-sid x', False),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 srv6-binding-sid fc00::1', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 srv6-binding-sid fc00::1', True),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 policy-name "p 1"', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 policy-name "p 1"', True),
-    ('static', "distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 policy-name 'p1'", True),
-    ('ipv4', "distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 policy-name 'p1'", True),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 candidate-path-name c1', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 candidate-path-name c1', True),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1', True),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-a mpls 16001 verification',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] srv6-binding-sid fc00::1',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-a mpls 16001 verification',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] srv6-binding-sid fc00::1',
+        True,
+    ),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] policy-name "p 1"',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] policy-name "p 1"',
+        True,
+    ),
+    (
+        'static',
+        "distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] policy-name 'p1'",
+        True,
+    ),
+    (
+        'ipv4',
+        "distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] policy-name 'p1'",
+        True,
+    ),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] candidate-path-name c1',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] candidate-path-name c1',
+        True,
+    ),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1',
+        True,
+    ),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-a mpls 16001 verification',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-a mpls 16001 verification',
         True,
     ),
     (
@@ -65,22 +158,22 @@ SR_POLICY_FORMS: list[tuple[str, str, bool]] = [
     ),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-b srv6 fc00::100 endpoint-behavior 0x41 32 0 16 0',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-b srv6 fc00::100 endpoint-behavior 0x41 32 0 16 0',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-b srv6 fc00::100 endpoint-behavior 0x41 32 0 16 0',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-b srv6 fc00::100 endpoint-behavior 0x41 32 0 16 0',
         True,
     ),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-c ipv4 10.0.0.1 algorithm 5 sid 16001',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-c ipv4 10.0.0.1 algorithm 5 sid 16001',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-c ipv4 10.0.0.1 algorithm 5 sid 16001',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-c ipv4 10.0.0.1 algorithm 5 sid 16001',
         True,
     ),
     (
@@ -95,82 +188,82 @@ SR_POLICY_FORMS: list[tuple[str, str, bool]] = [
     ),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-d ipv6 fc00::1 algorithm 0',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-d ipv6 fc00::1 algorithm 0',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-d ipv6 fc00::1 algorithm 0',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-d ipv6 fc00::1 algorithm 0',
         True,
     ),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-e local-if-id 1 ipv4 10.0.0.1 sid 5',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-e local-if-id 1 ipv4 10.0.0.1 sid 5',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-e local-if-id 1 ipv4 10.0.0.1 sid 5',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-e local-if-id 1 ipv4 10.0.0.1 sid 5',
         True,
     ),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-f local 192.168.1.1 remote 192.168.1.2 sid 16004',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-f local 192.168.1.1 remote 192.168.1.2 sid 16004',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-f local 192.168.1.1 remote 192.168.1.2 sid 16004',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-f local 192.168.1.1 remote 192.168.1.2 sid 16004',
         True,
     ),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-g local-if-id 1 local-ipv6 fc00::1 remote-if-id 2 remote-ipv6 fc00::2 sid 7',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-g local-if-id 1 local-ipv6 fc00::1 remote-if-id 2 remote-ipv6 fc00::2 sid 7',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-g local-if-id 1 local-ipv6 fc00::1 remote-if-id 2 remote-ipv6 fc00::2 sid 7',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-g local-if-id 1 local-ipv6 fc00::1 remote-if-id 2 remote-ipv6 fc00::2 sid 7',
         True,
     ),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-h local fc00::1 remote fc00::2',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-h local fc00::1 remote fc00::2',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-h local fc00::1 remote fc00::2',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-h local fc00::1 remote fc00::2',
         True,
     ),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-i ipv6 fc00::1 algorithm 1 sid fc00::9 endpoint-behavior 65 32 0 16 0 verification',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-i ipv6 fc00::1 algorithm 1 sid fc00::9 endpoint-behavior 65 32 0 16 0 verification',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-i ipv6 fc00::1 algorithm 1 sid fc00::9 endpoint-behavior 65 32 0 16 0 verification',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-i ipv6 fc00::1 algorithm 1 sid fc00::9 endpoint-behavior 65 32 0 16 0 verification',
         True,
     ),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-j local-if-id 1 local-ipv6 fc00::1 remote-if-id 2 remote-ipv6 fc00::2 algorithm 0 sid fc00::3',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-j local-if-id 1 local-ipv6 fc00::1 remote-if-id 2 remote-ipv6 fc00::2 algorithm 0 sid fc00::3',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-j local-if-id 1 local-ipv6 fc00::1 remote-if-id 2 remote-ipv6 fc00::2 algorithm 0 sid fc00::3',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-j local-if-id 1 local-ipv6 fc00::1 remote-if-id 2 remote-ipv6 fc00::2 algorithm 0 sid fc00::3',
         True,
     ),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-k local fc00::1 remote fc00::2 algorithm 0 endpoint-behavior 1 2 3 4 5',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-k local fc00::1 remote fc00::2 algorithm 0 endpoint-behavior 1 2 3 4 5',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-k local fc00::1 remote fc00::2 algorithm 0 endpoint-behavior 1 2 3 4 5',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-k local fc00::1 remote fc00::2 algorithm 0 endpoint-behavior 1 2 3 4 5',
         True,
     ),
     (
@@ -185,8 +278,16 @@ SR_POLICY_FORMS: list[tuple[str, str, bool]] = [
     ),
     ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight x', False),
     ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight x', False),
-    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference 1 garbage words', True),
-    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference 1 garbage words', True),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] preference 1 garbage words',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] preference 1 garbage words',
+        True,
+    ),
     ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference x', False),
     ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference x', False),
     ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1', False),
@@ -206,13 +307,38 @@ SR_POLICY_FORMS: list[tuple[str, str, bool]] = [
     ('ipv6', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop x', False),
     (
         'static',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-a mpls 1 segment-list weight 2 segment type-a mpls 2 preference 5',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-a mpls 1 segment-list weight 2 segment type-a mpls 2 preference 5',
         True,
     ),
     (
         'ipv4',
-        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 segment-list weight 1 segment type-a mpls 1 segment-list weight 2 segment type-a mpls 2 preference 5',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] segment-list weight 1 segment type-a mpls 1 segment-list weight 2 segment type-a mpls 2 preference 5',
         True,
+    ),
+    # RFC 9830 4.2.1: an announced route carries NO_ADVERTISE or a route target in
+    # IPv4-address format, and a tunnel, so the accepted forms above carry no-advertise and
+    # a route with no sub-TLV is refused (a change from the legacy parser, which sent both)
+    ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference 100', False),
+    ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference 100', False),
+    (
+        'static',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference 100 extended-community [ target:192.0.2.1:7 ]',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference 100 extended-community [ target:192.0.2.1:7 ]',
+        True,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference 100 extended-community [ target:65000:7 ]',
+        False,
+    ),
+    (
+        'ipv4',
+        'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference 100 community [ no-export ]',
+        False,
     ),
     # the family of the announce block decides how the endpoint is read
     ('ipv4', 'distinguisher 0 color 100 endpoint 2001:db8::1 next-hop 192.0.2.1', False),

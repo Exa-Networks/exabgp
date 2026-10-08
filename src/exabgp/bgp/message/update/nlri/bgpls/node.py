@@ -88,7 +88,9 @@ class NODE(BGPLS):
 
         Note: nexthop is stored in Route, not NLRI. Pass nexthop to Route constructor.
         """
-        node_tlvs = b''.join(node_id.pack_tlv() for node_id in node_ids)
+        # RFC 9552 5.1 and 5.2.1: the sub-TLVs go out ascending by type, then Length, then
+        # Value. Type and Length lead each TLV at a fixed width, so that is the octet order.
+        node_tlvs = b''.join(sorted(bytes(node_id.pack_tlv()) for node_id in node_ids))
         node_length = len(node_tlvs)
         # Build payload: proto_id(1) + domain(8) + node_descriptor_tlv(4+n)
         payload = pack('!BQ', proto_id, domain) + pack('!HH', NODE_DESCRIPTOR_TYPE, node_length) + node_tlvs
@@ -170,7 +172,7 @@ class NODE(BGPLS):
         proto_id = unpack('!B', bytes(data[4:5]))[0]
 
         # Validate node descriptor TLV type (offset by 4-byte header)
-        tlvs = list(cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]))
+        tlvs = list(cls.iter_ordered_tlvs(data[cls.DESCRIPTOR_OFFSET :]))
         if not tlvs:
             raise Notify(3, 10, 'BGP-LS Node NLRI has no Local Node descriptor')
         node_type, values = tlvs[0]

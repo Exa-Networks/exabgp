@@ -27,10 +27,11 @@ from __future__ import annotations
 
 import socket
 from struct import pack, unpack
-from typing import Any, Self, TYPE_CHECKING
+from typing import Any, Self, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
@@ -42,6 +43,43 @@ from exabgp.util.types import Buffer
 _IPV4_NLRI_SIZE = 12
 # IPv6 NLRI body: distinguisher(4) + color(4) + endpoint(16) = 24
 _IPV6_NLRI_SIZE = 24
+# RFC 9830 4.2.1 and 4.2.2: a Route Target in IPv4-address format, type 0x01 subtype 0x02
+ROUTE_TARGET_IPV4 = bytes([0x01, 0x02])
+
+
+def _has_sr_policy_tunnel(attributes: AttributeCollection) -> bool:
+    from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
+    from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import SRPolicyTunnel
+
+    attribute = attributes.get(Attribute.CODE.TUNNEL_ENCAP, None)
+    if attribute is None or attribute.GENERIC:
+        return False
+    # the attribute stored under TUNNEL_ENCAP is the TunnelEncap class unless it is generic
+    tunnels = cast(TunnelEncap, attribute).tunnel_tlvs
+    return any(tunnel.TUNNEL_TYPE == SRPolicyTunnel.TUNNEL_TYPE for tunnel in tunnels)
+
+
+def _has_no_advertise(attributes: AttributeCollection) -> bool:
+    from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.community.initial.communities import Communities
+    from exabgp.bgp.message.update.attribute.community.initial.community import Community
+
+    attribute = attributes.get(Attribute.CODE.COMMUNITY, None)
+    if attribute is None or attribute.GENERIC:
+        return False
+    return any(bytes(each.community) == Community.NO_ADVERTISE for each in cast(Communities, attribute).communities)
+
+
+def _has_ipv4_route_target(attributes: AttributeCollection) -> bool:
+    from exabgp.bgp.message.update.attribute import Attribute
+    from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
+
+    attribute = attributes.get(Attribute.CODE.EXTENDED_COMMUNITY, None)
+    if attribute is None or attribute.GENERIC:
+        return False
+    communities = cast(ExtendedCommunities, attribute).communities
+    return any(bytes(each.community)[:2] == ROUTE_TARGET_IPV4 for each in communities)
 
 
 class SRPolicyNLRI(NLRI):
@@ -85,6 +123,19 @@ class SRPolicyNLRI(NLRI):
 
     def feedback(self, action: Action) -> str:
         return ''
+
+    def malformed_with(self, attributes: AttributeCollection) -> str | None:
+        """RFC 9830 4.2.1: the attributes an SR Policy update must carry to be valid."""
+        if not _has_sr_policy_tunnel(attributes):
+            return (
+                'an SR Policy update without a Tunnel Encapsulation attribute holding an SR Policy TLV (RFC 9830 4.2.1)'
+            )
+        if not _has_no_advertise(attributes) and not _has_ipv4_route_target(attributes):
+            return (
+                'an SR Policy update with neither the NO_ADVERTISE community nor a Route Target '
+                'in IPv4-address format (RFC 9830 4.2.1)'
+            )
+        return None
 
     def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
         """Pack NLRI with 1-byte length prefix per RFC 9830 Section 3.

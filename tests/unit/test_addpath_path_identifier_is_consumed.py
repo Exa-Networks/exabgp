@@ -56,12 +56,13 @@ PATH_ID = bytes([0, 0, 0, 7])
 # One well formed NLRI per family, without any path identifier in front of it.
 EVPN_NLRI = bytes([1, 25]) + bytes(25)  # ethernet auto-discovery, 25 bytes of payload
 MVPN_NLRI = bytes([1, 12]) + bytes(12)  # intra-AS I-PMSI, 12 bytes of payload
-# Deliberately unregistered type codes for MUP and BGP-LS. This file is about the four
-# bytes in front of the NLRI, not about each family's payload rules, and a registered
-# type would have its contents validated and reject a block of zeros for its own
-# reasons. Both decode to their Generic form, which is enough to see where the reader
-# ended up.
-MUP_NLRI = bytes([99, 0, 99, 12]) + bytes(12)  # unregistered arch/type, 12 byte payload
+# A deliberately unregistered type code for BGP-LS. This file is about the four bytes in
+# front of the NLRI, not about each family's payload rules, and a registered type would
+# have its contents validated and reject a block of zeros for its own reasons. It decodes
+# to its Generic form, which is enough to see where the reader ended up. MUP has no such
+# form: draft-mpmz-bess-mup-safi-05 3.1 ignores an unknown route type, so it is a Direct
+# Segment Discovery route, whose RD and IPv4 address may be zeros.
+MUP_NLRI = bytes([1, 0, 2, 12]) + bytes(12)  # 3gpp-5g DSD, RD and an IPv4 address
 BGPLS_NLRI = pack('!HH', 999, 12) + bytes(12)  # unregistered NLRI type, 12 byte payload
 SR_POLICY_NLRI = bytes([96]) + bytes(12)  # RFC 9830: 96 bits for IPv4
 FLOW_NLRI = bytes([3, 1, 8, 10])  # RFC 8955: one component, destination 10.0.0.0/8

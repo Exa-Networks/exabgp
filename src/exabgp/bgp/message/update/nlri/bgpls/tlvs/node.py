@@ -46,13 +46,17 @@ ISIS_SYSID_PSN_LENGTH = 7  # IS-IS System ID + PSN length
 OSPF_ROUTER_ID_LENGTH = 4  # OSPF Router ID length (IPv4)
 OSPF_ROUTER_DR_LENGTH = 8  # OSPF Router ID + DR ID length
 
-# IGP Protocol Identifiers (RFC 7752 Section 3.2)
+# IGP Protocol Identifiers (RFC 9552 section 5.2, Table 2)
 IGP_ISIS_L1 = 1  # IS-IS Level 1
 IGP_ISIS_L2 = 2  # IS-IS Level 2
 IGP_OSPFV2 = 3  # OSPFv2
+IGP_DIRECT = 4  # Direct
+IGP_STATIC = 5  # Static configuration
 IGP_OSPFV3 = 6  # OSPFv3
-IGP_DIRECT = 5  # Direct
-IGP_STATIC = 227  # Static configuration
+# Not assigned by IANA: freertr's own value, which this decoder has always read with the
+# OSPF Router-ID shapes.  It was named IGP_STATIC, while 5, which is Static configuration,
+# was named IGP_DIRECT and 4, Direct, was not handled at all.
+IGP_FREERTR = 227
 
 
 class NodeDescriptor:
@@ -124,27 +128,10 @@ class NodeDescriptor:
             node_id = IP.create_ip(payload)
             return cls(node_id, node_type, psn, dr_id, packed), remaining
 
-        # IGP Router-ID: The TLV size in combination with the protocol
-        # identifier enables the decoder to determine the node_typee
-        # of the node: sec 3.2.1.4.
         if node_type == NODE_DESC_TLV_IGP_ROUTER:
-            # IS-IS non-pseudonode
-            if igp in (IGP_ISIS_L1, IGP_ISIS_L2):
-                if length not in (ISIS_SYSID_LENGTH, ISIS_SYSID_PSN_LENGTH):
-                    raise Notify(3, 10, cls._error_tlvs[node_type])
-                node_id = (ISO.unpack_sysid(payload),)
-                if length == ISIS_SYSID_PSN_LENGTH:
-                    psn = unpack('!B', payload[6:7])[0]
-                return cls(node_id, node_type, psn, dr_id, packed), remaining
-
-            # OSPFv{2,3} non-pseudonode
-            if igp in (IGP_OSPFV2, IGP_DIRECT, IGP_OSPFV3, IGP_STATIC):
-                if length not in (OSPF_ROUTER_ID_LENGTH, OSPF_ROUTER_DR_LENGTH):
-                    raise Notify(3, 10, cls._error_tlvs[node_type])
-                node_id = (IP.create_ip(payload[:4]),)
-                if length == OSPF_ROUTER_DR_LENGTH:
-                    dr_id = IP.create_ip(payload[4:8])
-                return cls(node_id, node_type, psn, dr_id, packed), remaining
+            descriptor = cls._unpack_igp_router_id(payload, igp, packed)
+            if descriptor is not None:
+                return descriptor, remaining
 
         # RFC 9552 5.1: "Unknown and unsupported types MUST be preserved and propagated
         # within both the NLRI and the BGP-LS Attribute.  The presence of unknown or
@@ -158,6 +145,38 @@ class NodeDescriptor:
         # and for the same reason: its shape is defined by the protocol, so without the
         # protocol there is nothing to read it as but bytes.
         return GenericNodeDescriptor(node_type, payload, packed), remaining
+
+    @classmethod
+    def _unpack_igp_router_id(cls, payload: Buffer, igp: int, packed: Buffer) -> 'NodeDescriptor | None':
+        """The IGP Router-ID, read as the Protocol-ID says, or None for a protocol we cannot read.
+
+        RFC 9552 5.2.1.4: "The TLV size in combination with the protocol identifier enables
+        the decoder to determine the type of the node."
+        """
+        length = len(payload)
+        node_type = NODE_DESC_TLV_IGP_ROUTER
+        # IS-IS, a non-pseudonode or, with its PSN, a pseudonode
+        if igp in (IGP_ISIS_L1, IGP_ISIS_L2):
+            if length not in (ISIS_SYSID_LENGTH, ISIS_SYSID_PSN_LENGTH):
+                raise Notify(3, 10, cls._error_tlvs[node_type])
+            psn = unpack('!B', payload[6:7])[0] if length == ISIS_SYSID_PSN_LENGTH else None
+            return cls((ISO.unpack_sysid(payload),), node_type, psn, None, packed)
+
+        # OSPFv{2,3}, a non-pseudonode or, with the DR's interface, a pseudonode
+        if igp in (IGP_OSPFV2, IGP_OSPFV3, IGP_FREERTR):
+            if length not in (OSPF_ROUTER_ID_LENGTH, OSPF_ROUTER_DR_LENGTH):
+                raise Notify(3, 10, cls._error_tlvs[node_type])
+            dr_id = IP.create_ip(payload[4:8]) if length == OSPF_ROUTER_DR_LENGTH else None
+            return cls((IP.create_ip(payload[:4]),), node_type, None, dr_id, packed)
+
+        # "For 'Direct' or 'Static configuration', the value SHOULD be taken from an IPv4
+        # or IPv6 address (e.g., loopback interface) configured on the node."  It MAY be
+        # an IGP Router-ID instead, of whichever IGP, so any other size is not an error:
+        # it is kept as bytes, by the generic descriptor the caller falls back to.
+        if igp in (IGP_DIRECT, IGP_STATIC) and length in (OSPF_ROUTER_ID_LENGTH, IPv6.BYTES):
+            return cls((IP.create_ip(payload),), node_type, None, None, packed)
+
+        return None
 
     @classmethod
     def unpack_descriptors(cls, data: Buffer, igp: int) -> list['NodeDescriptor']:

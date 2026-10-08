@@ -101,6 +101,9 @@ def mup_t1st(words: Words, afi: AFI) -> Any:
     rd = _rd(words)
     words.expect('teid')
     teid = _number(words, 'teid', TEID_MAX)
+    # draft-mpmz-bess-mup-safi-05 3.1.3.1: a receiver treats a TEID of 0 as malformed
+    if teid == 0:
+        raise ValueError('teid 0 is invalid, a Type 1 ST route carries a TEID of 1 to 4294967295')
     words.expect('qfi')
     qfi = _number(words, 'qfi', QFI_MAX)
     words.expect('endpoint')
@@ -140,6 +143,9 @@ def mup_t2st(words: Words, afi: AFI) -> Any:
         raise ValueError(f'teid length {teid_len} out of range, it is 0 to {TEID_MAX_BITS}')
     if teid >= pow(2, teid_len):
         raise ValueError(f'TEID {teid} cannot be stored in {teid_len} bits')
+    # draft-mpmz-bess-mup-safi-05 3.1.4.1: a TEID of 0 is malformed; 0/0 carries no TEID
+    if teid_len and teid == 0:
+        raise ValueError(f'TEID 0/{teid_len} is invalid, a Type 2 ST route carries no TEID (0/0) or one of 1 or more')
     return Type2SessionTransformedRoute.make_t2st(
         rd=rd, endpoint_len=endpoint.bits + teid_len, endpoint_ip=endpoint, teid=teid, afi=afi
     )
@@ -194,7 +200,7 @@ MVPN_TYPES: dict[str, Callable[[Words, AFI], Any]] = {
 }
 
 _RD = ('rd', ROUTE_VALUES['rd'].type.shape())
-_TEID = ('teid', shape.integer(0, TEID_MAX).described('the GTP tunnel endpoint identifier, 3GPP TS 29.281'))
+_TEID = ('teid', shape.integer(1, TEID_MAX).described('the GTP tunnel endpoint identifier, 3GPP TS 29.281'))
 _PREFIX = ('prefix', shape.IP_PREFIX.described('the prefix of the user equipment'))
 _ENDPOINT = ('endpoint', shape.IP_ADDRESS.described('the tunnel endpoint'))
 _GROUP = ('group', shape.IP_ADDRESS.described('the multicast group'))

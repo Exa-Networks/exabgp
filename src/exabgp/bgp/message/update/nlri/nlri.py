@@ -27,6 +27,7 @@ from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 
 from exabgp.bgp.message import Action
 from exabgp.protocol.ip import IP
@@ -194,9 +195,9 @@ class NLRI(Family):
         """Add data to NLRI. Only implemented by Flow NLRI."""
         raise NotImplementedError('add() only implemented by Flow NLRI')
 
-    def family_conflict(self, data: Any) -> str:
+    def rule_conflict(self, data: Any) -> str:
         """Why add() refuses data, or '' when it would not. Only implemented by Flow NLRI."""
-        raise NotImplementedError('family_conflict() only implemented by Flow NLRI')
+        raise NotImplementedError('rule_conflict() only implemented by Flow NLRI')
 
     def discard_on_receipt(self) -> str | None:
         """Why a received announcement of this route is dropped, or None to keep it.
@@ -209,9 +210,33 @@ class NLRI(Family):
         """
         return None
 
+    def withdrawn_on_receipt(self) -> str | None:
+        """Why a received announcement of this route is a withdrawal of its key, or None.
+
+        RFC 7606 treat-as-withdraw for one NLRI rather than for the UPDATE: the decoder
+        found a field outside the route key malformed, so the key is still known and is
+        withdrawn, where a malformed key can only be skipped (NLRIDiscard). A Type 1 ST
+        route of draft-mpmz-bess-mup-safi-05 3.1.3.1 is the case. UpdateCollection asks
+        every route of MP_REACH_NLRI and moves the ones which answer to the withdrawals.
+        """
+        return None
+
     def carries_path_info(self) -> bool:
         """The route holds an ADD-PATH Path Identifier (RFC 7911) its sender chose."""
         return False
+
+    def malformed_with(self, attributes: AttributeCollection) -> str | None:
+        """Why announcing this route with these attributes is malformed, or None.
+
+        Some families make a rule of the attributes their route travels with (RFC 9830
+        4.2.1). UpdateCollection asks every received route of MP_REACH_NLRI, and an answer
+        makes the UPDATE treat-as-withdraw; the configuration asks too, so we send none.
+        """
+        return None
+
+    def label_count(self) -> int:
+        """How many MPLS labels the route binds to its prefix (RFC 8277), none by default."""
+        return 0
 
     def with_path_info(self, path_info: PathInfo) -> 'NLRI':
         """A copy identified by `path_info`, for a route which carries a Path Identifier."""

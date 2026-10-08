@@ -436,8 +436,10 @@ class AS4Path(ASPath):
     # ASPath, TREAT_AS_WITHDRAW withdrew every prefix in the UPDATE instead.
     TREAT_AS_WITHDRAW: ClassVar[bool] = False
     DISCARD: ClassVar[bool] = True
-
-    Empty: ClassVar[AS4Path | None] = None
+    # RFC 6793 6: an AS4_PATH "too small (i.e., less than 6) for the attribute to carry at
+    # least one AS number" is malformed, and RFC 7606 4 lets only AS_PATH and
+    # ATOMIC_AGGREGATE be empty. Inherited from ASPath, an empty one was accepted and merged.
+    VALID_ZERO: ClassVar[bool] = False
 
     def __init__(self, packed: Buffer, asn4: bool = True) -> None:
         """Initialize from packed wire-format bytes.
@@ -479,13 +481,9 @@ class AS4Path(ASPath):
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
-        if not bytes(data):
-            assert cls.Empty is not None  # Set after class definition
-            return cls.Empty
+        if not len(data):
+            raise Notify(3, 11, 'an AS4_PATH of length zero carries no AS number')
         return cls.from_packet(data)
 
 
 Attribute.register()(AS4Path)
-
-
-AS4Path.Empty = AS4Path(b'')

@@ -165,8 +165,7 @@ def _pmsi(data: bytes) -> Attribute:
     return _decode_attribute(Attribute.CODE.PMSI_TUNNEL, data)
 
 
-@pytest.mark.parametrize('tunnel', [b'', b'\xff', b'\xff\xff', b'\x0a\x00\x00\x01\x05', b'\x00' * 8])
-def test_pmsi_gives_a_mismatched_tunnel_the_generic_class(tunnel: bytes) -> None:
+def test_pmsi_gives_an_ipv6_endpoint_the_generic_class() -> None:
     """A subclass exists to read one shape of tunnel identifier, and its accessors say so.
 
     PMSIIngressReplication.ip hands four bytes to IPv4.ntop(), which raises ValueError on
@@ -174,14 +173,20 @@ def test_pmsi_gives_a_mismatched_tunnel_the_generic_class(tunnel: bytes) -> None
     API, long after the UPDATE was accepted. Selecting the class on the type byte alone
     meant the class and the data disagreed.
 
-    Refusing the attribute would drop a route this release accepts, so the dispatch is what
-    gives way: the identifier has to fit the class, or the generic PMSI holds the same
-    bytes and prints them as hex.
+    Sixteen octets are an IPv6 endpoint (RFC 6515 2), which the type allows and the class
+    does not read, so the generic PMSI holds the same bytes and prints them as hex.
     """
-    attribute = _pmsi(b'\x00\x06\x00\x00\x00' + tunnel)
+    attribute = _pmsi(b'\x00\x06\x00\x00\x00' + bytes(15) + b'\x01')
     assert type(attribute).__name__ == 'PMSI'
     assert str(attribute)
     repr(attribute)
+
+
+@pytest.mark.parametrize('tunnel', [b'', b'\xff', b'\xff\xff', b'\x0a\x00\x00\x01\x05', b'\x00' * 8])
+def test_pmsi_refuses_an_ingress_replication_identifier_which_is_no_address(tunnel: bytes) -> None:
+    """RFC 6514 5: an identifier which does not parse as its tunnel type is malformed."""
+    with pytest.raises(Notify):
+        _pmsi(b'\x00\x06\x00\x00\x00' + tunnel)
 
 
 def test_pmsi_ingress_replication_accepts_an_address() -> None:

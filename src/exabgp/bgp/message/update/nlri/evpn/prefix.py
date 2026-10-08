@@ -202,7 +202,7 @@ class Prefix(EVPN):
         if datalen not in (36, 60):  # 36 for IPv4, 60 for IPv6
             raise Notify(
                 3,
-                5,
+                10,
                 'Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6 (36 or 60)'
                 % datalen,
             )

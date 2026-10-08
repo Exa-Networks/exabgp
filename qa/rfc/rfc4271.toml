@@ -53,7 +53,7 @@ depending on the message type.
 """
 note = """
 The bound we apply on receipt is Connection.msg_size, which starts at 4096 and only rises
-to 65535 once RFC 8654 Extended Message has been negotiated by both sides.
+to 65535 once our OPEN has advertised RFC 8654 Extended Message (see rfc8654.toml).
 """
 
 
@@ -111,6 +111,14 @@ text = """
 For well-known attributes
 and for optional non-transitive attributes, the Partial bit
 MUST be set to 0.
+"""
+note = """
+A sender obligation, so the positive test is that nothing we pack sets the bit.  The
+negative test is a peer which does set it on a well-known attribute: until 2026-10-08
+the flags comparison kept the bit for anything but an optional attribute and treated the
+UPDATE as withdraw.  RFC 7606 3 (c) makes only a conflicting Optional or Transitive bit a
+malformation, so the bit is now ignored on receipt for every attribute, the route is
+taken, and the attribute goes out again with the bit clear.
 """
 
 [[requirement]]
@@ -203,6 +211,45 @@ Positive only: the requirement is that nothing is sent, so the test is that the 
 timer never asks for a keepalive.  There is no second side to it; the same file holds an
 unmarked test showing the timer does fire for a non-zero hold time, so the silence above
 is the rule rather than a dead timer.
+"""
+
+
+# ===================================================================== 5 Path Attributes
+
+[[requirement]]
+id = "rfc4271#5-send-attributes-in-ascending-order"
+section = "5"
+level = "SHOULD"
+status = "required"
+polarity = "positive-only"
+text = """
+The sender of an UPDATE message SHOULD order path attributes within
+the UPDATE message in ascending order of attribute type.
+"""
+note = """
+A sender obligation, with no input of the peer's to violate it: the receiving side is the
+next entry.  AttributeCollection.pack_attribute walks the type codes in order, but AS_PATH
+and AGGREGATOR pack their AS4_PATH and AS4_AGGREGATOR right behind themselves for a
+session without the four-octet AS capability, and the OTC of RFC 9234 was appended after
+everything: until 2026-10-08 such a session was sent [1, 2, 17, 3, 7, 18, 8].  The packed
+attributes are now put in type order once assembled (attribute.collection.in_type_order).
+MP_REACH_NLRI and MP_UNREACH_NLRI stay first, as RFC 7606 5.1 says they SHALL be.
+"""
+
+[[requirement]]
+id = "rfc4271#5-handle-attributes-out-of-order"
+section = "5"
+level = "MUST"
+status = "required"
+polarity = "positive-only"
+text = """
+The
+receiver of an UPDATE message MUST be prepared to handle path
+attributes within UPDATE messages that are out of order.
+"""
+note = """
+Positive only: the requirement is that no order is refused, so there is no input which
+violates it by being accepted.  The test sends NEXT_HOP, AS_PATH and ORIGIN in reverse.
 """
 
 
@@ -451,7 +498,9 @@ Optional Parameters.
 """
 note = """
 Until 2026-09-24 Capabilities.unpack answered 2/0 Unspecific for any parameter type other
-than 1 and 2.  2/0 is what the *next* sentence of 6.2 reserves for a parameter which is
+than 1 and 2, and until 2026-10-08 type 1 (Authentication Information) was answered 2/5
+Authentication Failure.  Appendix A deprecates both the parameter and the subcode, so type
+1 is a parameter we do not recognise and is answered 2/4 like any other.  2/0 is what the *next* sentence of 6.2 reserves for a parameter which is
 recognised but malformed, so the two cases were indistinguishable to the peer.  It now
 answers 2/4, and test_a_recognised_but_malformed_parameter_is_unspecific still gets 2/0,
 which is what makes the pair meaningful.
@@ -819,9 +868,14 @@ event of connection collision, one of the connections MUST be closed.
 note = """
 exabgp holds one connection per peer, so a collision is a connection arriving while one
 is in OpenSent or OpenConfirm.  Peer.handle_connection keeps the connection initiated by
-the higher BGP Identifier: with ours the higher the new one is refused, otherwise ours is
-closed with a Cease and the task which ran it is cancelled.  Both sides are tested, the
-connection closed being the one the comparison picks.
+the higher BGP Identifier: with ours the higher the new one is closed with a Cease,
+otherwise ours is closed with a Cease and the task which ran it is cancelled.  In
+OpenConfirm the identifier is the one the peer's OPEN on our connection gave.  In OpenSent
+it is not known yet, so the new connection is held until its OPEN is read, and the
+session goes on with that OPEN if the new connection is kept.  Until 2026-10-08 OpenSent
+closed ours at once, whatever the identifiers, and two speakers both doing so closed both
+connections.  Identical identifiers are RFC 6286 2.3's, see rfc6286.toml.  Both sides are
+tested in both states, the connection closed being the one the comparison picks.
 """
 
 

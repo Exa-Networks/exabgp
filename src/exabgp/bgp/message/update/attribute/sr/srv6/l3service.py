@@ -10,7 +10,7 @@ from struct import pack, unpack
 from typing import Any, Callable, ClassVar, Protocol, Type, TypeVar
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
+from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid, SR_TLV_SRV6_L3_SERVICE
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceSubTlv
 from exabgp.util.types import Buffer
 
@@ -41,7 +41,7 @@ SubTlvType = TypeVar('SubTlvType', bound=HasTLV)
 
 
 class Srv6L3Service:
-    TLV: ClassVar[int] = 5
+    TLV: ClassVar[int] = SR_TLV_SRV6_L3_SERVICE
 
     # Registry maps TLV codes to Sub-TLV classes (uses HasTLV protocol)
     registered_subtlvs: ClassVar[dict[int, Type[HasTLV]]] = dict()

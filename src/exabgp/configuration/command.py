@@ -659,12 +659,18 @@ def _rtc_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, 
     return commands
 
 
+# the attributes an sr-policy command takes besides its tunnel
+SR_POLICY_COMMUNITIES = ('community', 'extended-community')
+
+
 def _sr_policy_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
     """SR-Policy, its tunnel read from the tunnel-encap attribute."""
     commands: list[str] = []
     afi = 'ipv4' if 'ipv4' in family else 'ipv6'
     tunnel_encap = attributes.get('tunnel-encap', {})
     sr = tunnel_encap.get('sr-policy', {}) if isinstance(tunnel_encap, dict) else {}
+    # RFC 9830 4.2.1: the route is refused without them, so the command carries them
+    communities = {key: attributes[key] for key in SR_POLICY_COMMUNITIES if key in attributes}
     for nexthop, nlris in nexthops.items():
         for nlri_info in nlris:
             distinguisher = nlri_info.get('distinguisher', 0)
@@ -674,6 +680,7 @@ def _sr_policy_announces(family: str, nexthops: dict[str, Any], attributes: dict
                 f'announce {afi} sr-policy distinguisher {distinguisher} color {color} endpoint {endpoint} next-hop {nexthop}'
             ]
             cmd_parts.extend(_format_sr_policy_tunnel(sr))
+            cmd_parts.extend(format_attributes(communities))
             commands.append(' '.join(cmd_parts))
     return commands
 

@@ -83,11 +83,12 @@ def open_message(asn: int, router_id: str, capabilities: Capabilities) -> Open:
     return Open.make_open(Version(4), ASN(asn), HoldTime(180), RouterID(router_id), capabilities)
 
 
-def negotiate(neighbor: Neighbor, peer_role: RoleValue | None) -> Negotiated:
+def negotiate(neighbor: Neighbor, peer_role: RoleValue | int | None) -> Negotiated:
     """Run the real OPEN negotiation with a peer holding the role we nominate.
 
     `peer_role` of None is a peer which sent no Role capability at all, which is the
-    backward compatibility case of section 4.2.
+    backward compatibility case of section 4.2. A role is decoded from its octet, so a
+    value RFC 9234 does not assign arrives the way a peer would send it.
     """
     sent = our_capabilities(neighbor)
     received = Capabilities(sent)
@@ -95,7 +96,8 @@ def negotiate(neighbor: Neighbor, peer_role: RoleValue | None) -> Negotiated:
     received[Capability.CODE.FOUR_BYTES_ASN] = ASN4(PEER_AS)
     received.pop(Capability.CODE.ROLE, None)
     if peer_role is not None:
-        received[Capability.CODE.ROLE] = Role(peer_role)
+        octet = memoryview(bytes([int(peer_role)]))
+        received[Capability.CODE.ROLE] = Role.unpack_capability(Role(), octet, Capability.CODE.ROLE)
 
     negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
     # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
@@ -262,6 +264,35 @@ def test_a_pair_outside_table_2_is_a_role_mismatch(local: RoleValue, remote: Rol
     assert error is not None, f'{local} with {remote} is not in Table 2 and the session was allowed'
     assert error[0] == 2, f'role mismatch must be an OPEN message error, got code {error[0]}'
     assert error[1] == 11, f'role mismatch must be subcode 11, got {error[1]}'
+
+
+# RFC 9234 4.1 assigns 0 to 4; the rest of the octet is "Unassigned"
+UNASSIGNED = [5, 128, 255]
+
+
+@pytest.mark.rfc('rfc9234#4.2-roles-must-correspond', polarity='negative')
+@pytest.mark.parametrize('octet', UNASSIGNED)
+def test_an_unassigned_remote_role_is_a_role_mismatch_when_we_advertise_one(octet: int) -> None:
+    """No row of Table 2 has an unassigned role, so whatever ours is, the roles do not correspond."""
+    neighbor = neighbour('provider')
+    negotiated = negotiate(neighbor, octet)
+
+    error = negotiated.validate(neighbor)
+
+    assert error is not None, f'role {octet} is not in Table 2 and the session was allowed'
+    assert (error[0], error[1]) == (2, 11)
+
+
+@pytest.mark.rfc('rfc9234#4.2-roles-must-correspond')
+@pytest.mark.parametrize('octet', UNASSIGNED)
+def test_an_unassigned_remote_role_is_ignored_when_we_advertise_none(octet: int) -> None:
+    """The check is bound to "If the BGP Role Capability is advertised": with no role of ours
+    there is no pair to judge, and RFC 5492 has an OPEN carry what we do not use."""
+    neighbor = neighbour(None)
+    negotiated = negotiate(neighbor, octet)
+
+    assert negotiated.validate(neighbor) is None, f'role {octet} refused a session which advertised no role'
+    assert negotiated.role == RoleValue.NO_ROLE
 
 
 @pytest.mark.rfc('rfc9234#4.2-conflicting-role-capabilities')
@@ -630,3 +661,94 @@ neighbor 192.0.2.1 {{
     assert not configuration.reload(), 'a removed RFC 9234 suppression option was accepted'
     assert wanted in str(configuration.error), str(configuration.error)
     assert 'RFC 9234 section 5' in str(configuration.error), str(configuration.error)
+
+
+# ============================================================ 5 egress from an AS Confederation
+
+CONFED_IDENTIFIER = 65000
+CONFED_MEMBER = 65001  # ours
+CONFED_OTHER_MEMBER = 65002
+CONFED_OUTSIDE = 64999
+
+
+def confederation_neighbour(peer_as: int, route: str = '') -> Neighbor:
+    """A Provider in Member-AS 65001 of confederation 65000, by the real parser."""
+    text = f"""
+neighbor 192.0.2.1 {{
+    router-id 192.0.2.2;
+    local-address 192.0.2.2;
+    local-as {CONFED_MEMBER};
+    peer-as {peer_as};
+    confederation {{ identifier {CONFED_IDENTIFIER}; members [ {CONFED_OTHER_MEMBER} 65003 ]; }}
+    role {{ local provider; }}
+    family {{ ipv4 unicast; }}
+}}
+"""
+    configuration = Configuration([text], text=True)
+    assert configuration.reload(), str(configuration.error)
+    parsed: Neighbor = next(iter(configuration.neighbors.values()))
+    return parsed
+
+
+def confederation_negotiate(neighbor: Neighbor) -> Negotiated:
+    """The OPEN exchange with the AS Protocol.new_open puts in our OPEN, open_asn().
+
+    negotiated.local_as, which the egress marking packs, is read back from that OPEN, so
+    the test goes through the same AS choice the reactor makes rather than setting it.
+    """
+    local_as = neighbor.session.open_asn()
+    peer_as = int(neighbor.session.peer_as)
+    sent = Capabilities().new(neighbor, False, local_as=local_as)
+    received = Capabilities(sent)
+    received[Capability.CODE.FOUR_BYTES_ASN] = ASN4(peer_as)
+    received.pop(Capability.CODE.ROLE, None)
+    received[Capability.CODE.ROLE] = Role.unpack_capability(
+        Role(), memoryview(bytes([int(RoleValue.CUSTOMER)])), Capability.CODE.ROLE
+    )
+
+    negotiated = Negotiated.make_negotiated(neighbor, Direction.OUT)
+    negotiated.neighbor.enforce_first_as = False
+    negotiated.sent(open_message(int(local_as), '192.0.2.2', sent))
+    negotiated.received(open_message(peer_as, '192.0.2.1', received))
+    return negotiated
+
+
+@pytest.mark.rfc('rfc9234#5-confederation-otc-equals-confed-id')
+@pytest.mark.parametrize(
+    'command', ['route 10.0.0.0/24 next-hop 192.0.2.2', 'route 10.0.0.0/24 next-hop 192.0.2.2 otc self']
+)
+def test_an_otc_added_on_egress_from_the_confederation_is_its_identifier(command: str) -> None:
+    """To a peer outside, the OTC we add names the confederation, not our Member-AS.
+
+    Both ways we add one: the marking of the egress procedure, and `otc self`, which the
+    operator writes and the encoder resolves to our AS when it packs.
+    """
+    neighbor = confederation_neighbour(CONFED_OUTSIDE)
+    negotiated = confederation_negotiate(neighbor)
+    assert negotiated.confed_outside
+
+    attributes = announced_attributes(neighbor, negotiated, command)
+
+    assert len(attributes) == 1
+    otc = attributes[0].get(Attribute.CODE.OTC)
+    assert isinstance(otc, OTC), 'a Provider sent a route to a Customer without an OTC attribute'
+    assert otc.asn == CONFED_IDENTIFIER, f'the OTC leaving the confederation named AS {otc.asn}'
+
+
+@pytest.mark.rfc('rfc9234#5-confederation-otc-equals-confed-id', polarity='negative')
+def test_an_otc_added_towards_another_member_as_is_not_the_identifier() -> None:
+    """Inside the confederation the route has not left it, and our AS is the Member-AS.
+
+    The identifier there would claim the route was marked at the confederation's edge,
+    where it has not been yet. Only the session to a peer outside makes the swap.
+    """
+    neighbor = confederation_neighbour(CONFED_OTHER_MEMBER)
+    negotiated = confederation_negotiate(neighbor)
+    assert negotiated.confed_member
+
+    attributes = announced_attributes(neighbor, negotiated, 'route 10.0.0.0/24 next-hop 192.0.2.2')
+
+    assert len(attributes) == 1
+    otc = attributes[0].get(Attribute.CODE.OTC)
+    assert isinstance(otc, OTC)
+    assert otc.asn == CONFED_MEMBER

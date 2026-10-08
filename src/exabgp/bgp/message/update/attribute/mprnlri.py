@@ -82,7 +82,7 @@ def _log_discarded(nlri: NLRI, reason: str) -> None:
     )
 
 
-def _log_discarded_bytes(discard: NLRIDiscard) -> None:
+def log_discarded_bytes(discard: NLRIDiscard) -> None:
     """An NLRI which could not be built at all, so only its reason can be named."""
     log.warning(
         lazymsg('update.nlri.discarded octets={n} reason="{reason}"', n=discard.skip, reason=discard.detail),
@@ -180,7 +180,7 @@ class MPRNLRI(Attribute):
                     # RFC 9552 8.2.2: framed but broken inside, so only this NLRI goes
                     if not discard.skip:
                         raise
-                    _log_discarded_bytes(discard)
+                    log_discarded_bytes(discard)
                     nlri_data = nlri_data[discard.skip :]
                     continue
 

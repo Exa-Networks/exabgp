@@ -29,17 +29,23 @@ from typing import Any
 
 import pytest
 
-from exabgp.bgp.message import Notify, Update, UpdateCollection
+from exabgp.bgp.message import Action, Notify, Update, UpdateCollection
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
+from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, ASPath
+from exabgp.bgp.message.update.attribute.community.initial.communities import Communities
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
+from exabgp.bgp.message.update.attribute.collection import in_type_order
 from exabgp.bgp.message.update.attribute.med import MED
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
+from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.attribute.origin import Origin
 from exabgp.logger import log
 from exabgp.logger.option import echo, option
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IPv4
 from tests import negotiation
 
 UPDATE_MESSAGE_ERROR = 3
@@ -126,6 +132,56 @@ def what_we_send() -> list[tuple[int, int]]:
     return attribute_flags(bytes(attributes.pack_attribute(Negotiated.UNSET)))
 
 
+# ------------------------------------------------------------------ 5 attribute order
+
+LARGE_ASN = 4200000000
+
+
+def attributes_to_a_two_octet_session() -> AttributeCollection:
+    """A path and an aggregator neither of which fits two octets, with a community after them.
+
+    To a session without the four-octet AS capability AS_PATH (2) brings AS4_PATH (17) and
+    AGGREGATOR (7) brings AS4_AGGREGATOR (18), each packed right behind its partner.
+    """
+    attributes = AttributeCollection()
+    attributes.add(Origin.from_int(0))
+    attributes.add(ASPath.make_aspath((SEQUENCE([ASN(LARGE_ASN)]),), asn4=True))
+    attributes.add(NextHop.from_string('10.0.0.1'))
+    attributes.add(Aggregator.make_aggregator(ASN(LARGE_ASN), IPv4.from_string('10.0.0.2')))
+    attributes.add(Communities(pack('!HH', 65000, 1)))
+    return attributes
+
+
+@pytest.mark.rfc('rfc4271#5-send-attributes-in-ascending-order')
+def test_the_attributes_we_send_are_in_ascending_type_order() -> None:
+    packed = bytes(attributes_to_a_two_octet_session().pack_attribute(negotiated()))
+    codes = [code for _, code in attribute_flags(packed)]
+
+    assert Attribute.CODE.AS4_PATH in codes and Attribute.CODE.AS4_AGGREGATOR in codes, f'nothing to order: {codes}'
+    assert codes == sorted(codes), f'the attributes went out as {codes}'
+
+
+@pytest.mark.rfc('rfc4271#5-send-attributes-in-ascending-order')
+def test_the_otc_added_after_the_rest_is_packed_takes_its_place() -> None:
+    """RFC 9234's OTC (35) is appended once the attributes are packed, which may hold a 40."""
+    prefix_sid = bytes([OPTIONAL | TRANSITIVE, 40, 0])
+    otc = bytes([OPTIONAL | TRANSITIVE, Attribute.CODE.OTC, 4]) + pack('!L', 65000)
+    long_one = bytes([OPTIONAL | TRANSITIVE | EXTENDED_LENGTH, 128, 0, 1, 0])
+
+    ordered = in_type_order(ORIGIN_IGP + prefix_sid + long_one + otc)
+
+    assert [code for _, code in attribute_flags(ordered)] == [Attribute.CODE.ORIGIN, Attribute.CODE.OTC, 40, 128]
+
+
+@pytest.mark.rfc('rfc4271#5-handle-attributes-out-of-order')
+def test_attributes_out_of_order_are_taken() -> None:
+    parsed = parse(body(attributes=NEXT_HOP + EMPTY_AS_PATH + ORIGIN_IGP))
+
+    assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW not in parsed.attributes
+    for code in (Attribute.CODE.ORIGIN, Attribute.CODE.AS_PATH, Attribute.CODE.NEXT_HOP):
+        assert code in parsed.attributes, f'attribute {code} was lost to the order it came in'
+
+
 # ------------------------------------------------------------------ 4.3 the attribute flags
 
 
@@ -174,12 +230,20 @@ def test_the_partial_bit_is_clear_on_everything_we_send() -> None:
 
 
 @pytest.mark.rfc('rfc4271#4.3-partial-bit-is-zero', polarity='negative')
-def test_a_well_known_attribute_with_the_partial_bit_set_is_not_taken() -> None:
+def test_a_well_known_attribute_received_with_the_partial_bit_goes_out_without_it() -> None:
+    """The peer broke the sentence; we neither punish the route nor repeat the mistake.
+
+    RFC 7606 3 (c) makes only the Optional and Transitive bits a malformation, so the
+    Partial bit of what we receive is ignored. This UPDATE was treated as withdraw.
+    """
     parsed = parse(
         body(attributes=bytes([TRANSITIVE | PARTIAL, Attribute.CODE.ORIGIN, 1, 0]) + EMPTY_AS_PATH + NEXT_HOP)
     )
 
-    assert Attribute.CODE.ORIGIN not in parsed.attributes, 'an ORIGIN with the Partial bit set was accepted'
+    assert Attribute.CODE.ORIGIN in parsed.attributes, 'an ORIGIN with the Partial bit set was refused'
+    assert Attribute.CODE.INTERNAL_TREAT_AS_WITHDRAW not in parsed.attributes
+    sent = attribute_flags(bytes(parsed.attributes.pack_attribute(Negotiated.UNSET)))
+    assert (TRANSITIVE, int(Attribute.CODE.ORIGIN)) in sent, f'ORIGIN went out as {sent}'
 
 
 @pytest.mark.rfc('rfc4271#4.3-unused-flag-bits')
@@ -322,6 +386,54 @@ def test_an_invalid_prefix_in_the_withdrawn_routes_is_refused_too(prefix: bytes)
 
     assert notify.code == UPDATE_MESSAGE_ERROR
     assert notify.subcode == INVALID_NETWORK_FIELD
+
+
+# The NLRI of the other families are decoded from MP_REACH_NLRI by their own decoders, and
+# a Notify out of one ends the session as raised.  These answered 3/5, Attribute Length
+# Error, which names an attribute rather than the NLRI field the RFC says is wrong.
+ROUTE_FIELDS = bytes(8 + 10 + 4)  # Route Distinguisher, ESI, Ethernet Tag
+NO_IP_MAC_ROUTE = bytes(6) + bytes([0]) + bytes([0x00, 0x06, 0x41])
+MALFORMED_FAMILY_NLRI: list[tuple[str, AFI, SAFI, bytes]] = [
+    ('evpn mac length 24', AFI.l2vpn, SAFI.evpn, bytes([2, 33]) + ROUTE_FIELDS + bytes([24]) + NO_IP_MAC_ROUTE),
+    (
+        'evpn mac with an ip length of 8',
+        AFI.l2vpn,
+        SAFI.evpn,
+        bytes([2, 33]) + ROUTE_FIELDS + bytes([48]) + bytes(6) + bytes([8, 0x00, 0x06, 0x41]),
+    ),
+    (
+        'evpn mac shorter than its ip length',
+        AFI.l2vpn,
+        SAFI.evpn,
+        bytes([2, 33]) + ROUTE_FIELDS + bytes([48]) + bytes(6) + bytes([32, 0x00, 0x06, 0x41]),
+    ),
+    ('evpn segment with an ip length of 8', AFI.l2vpn, SAFI.evpn, bytes([4, 20]) + bytes(18) + bytes([8, 0])),
+    ('evpn prefix of 35 octets', AFI.l2vpn, SAFI.evpn, bytes([5, 35]) + bytes(35)),
+    ('mvpn source active of 3 octets', AFI.ipv4, SAFI.mcast_vpn, bytes([5, 3]) + bytes(3)),
+    ('mvpn shared join of 3 octets', AFI.ipv4, SAFI.mcast_vpn, bytes([6, 3]) + bytes(3)),
+    ('mvpn source join of 3 octets', AFI.ipv4, SAFI.mcast_vpn, bytes([7, 3]) + bytes(3)),
+    (
+        'mvpn source active with a source length of 8',
+        AFI.ipv4,
+        SAFI.mcast_vpn,
+        bytes([5, 18]) + bytes(8) + bytes([8]) + bytes(4) + bytes([32]) + bytes(4),
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ('afi', 'safi', 'wire'),
+    [entry[1:] for entry in MALFORMED_FAMILY_NLRI],
+    ids=[entry[0] for entry in MALFORMED_FAMILY_NLRI],
+)
+@pytest.mark.rfc('rfc4271#6.3-invalid-network-field')
+def test_a_syntactically_invalid_nlri_of_another_family_is_an_invalid_network_field(
+    afi: AFI, safi: SAFI, wire: bytes
+) -> None:
+    with pytest.raises(Notify) as raised:
+        NLRI.unpack_nlri(afi, safi, wire, Action.ANNOUNCE, False, Negotiated.UNSET)
+
+    assert (raised.value.code, raised.value.subcode) == (UPDATE_MESSAGE_ERROR, INVALID_NETWORK_FIELD), str(raised.value)
 
 
 # ------------------------------------------------------- 6.3 semantically incorrect values

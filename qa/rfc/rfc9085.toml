@@ -1,0 +1,74 @@
+# RFC 9085 - Border Gateway Protocol - Link State (BGP-LS) Extensions for Segment Routing
+# https://www.rfc-editor.org/rfc/rfc9085
+#
+# Every `text` below is quoted verbatim from qa/rfc/text/rfc9085.txt.
+#
+# This ledger is narrow: it records how the Adjacency SID and LAN Adjacency SID TLVs of
+# the BGP-LS Attribute are read, which is where exabgp knowingly departs from the RFC.
+# The RFC writes "should" in lower case in these sentences, so they carry no RFC 2119
+# keyword; they are recorded at SHOULD as the nearest level, and are not gated either way.
+#
+# Sections 2.2.1 and 2.2.2 give the Flags (and the Neighbor ID of a LAN adjacency) the
+# layout of the IGP which advertised them, and name the Protocol-ID of the Link NLRI as
+# what decides it.  The BGP-LS Attribute is decoded on its own, before and apart from the
+# NLRI, is shared by every NLRI of the UPDATE, and is cached per session by its octets, so
+# the decoder cannot see that Protocol-ID and the flags are read with the IS-IS layout.
+#
+# What is not lost: the IS-IS names cover the six top bits one for one, and the OSPF
+# flags of RFC 8665 6.1 and RFC 8666 7.1 are the five top bits, so a consumer which knows
+# the protocol can rename them (IS-IS F, B, V, L, S are OSPF B, V, L, G, P).  The SID is
+# decoded from its size, three octets a label and four an index, the same in every IGP,
+# and an OSPF LAN adjacency is told apart by its length (11 or 12 octets against 13 or
+# 14), its four octet Neighbor ID reported as "neighbor-id".
+
+rfc = "rfc9085"
+title = "Border Gateway Protocol - Link State (BGP-LS) Extensions for Segment Routing"
+url = "https://www.rfc-editor.org/rfc/rfc9085"
+
+[[requirement]]
+id = "rfc9085#2.2.1-adjacency-sid-flags-per-protocol"
+section = "2.2.1"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+Flags:  1-octet value that should be set as:
+
+*  IS-IS Adj-SID flags as defined in Section 2.2.1 of [RFC8667].
+
+*  OSPFv2 Adj-SID flags as defined in Section 6.1 of [RFC8665].
+
+*  OSPFv3 Adj-SID flags as defined in Section 7.1 of [RFC8666].
+"""
+note = """
+Read with the IS-IS layout whatever the Protocol-ID of the Link NLRI, which the attribute
+decoder cannot see (see the header): an OSPF label, V and L set (0x60), is reported as
+B and V.  The SID itself is decoded from its size, so it is no longer lost.  Doing this
+would mean decoding the attribute against the NLRI it arrived with, after both are read,
+and keeping that decision out of the per-session attribute cache.
+"""
+
+[[requirement]]
+id = "rfc9085#2.2.2-lan-adjacency-sid-flags-per-protocol"
+section = "2.2.2"
+level = "SHOULD"
+status = "gap"
+polarity = "both"
+text = """
+Flags:  1-octet value that should be set as:
+
+*  IS-IS LAN Adj-SID flags as defined in Section 2.2.2 of
+[RFC8667].
+
+*  OSPFv2 LAN Adj-SID flags as defined in Section 6.2 of
+[RFC8665].
+
+*  OSPFv3 LAN Adj-SID flags as defined in Section 7.2 of
+[RFC8666].
+"""
+note = """
+The same gap as 2.2.1-adjacency-sid-flags-per-protocol.  The Neighbor ID, which this
+section also gives the layout of the IGP, is read from the length: 11 or 12 octets are
+OSPF, with a four octet Router-ID, where it used to be read as a six octet IS-IS System
+ID which took two octets of the SID with it.
+"""

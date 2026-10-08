@@ -8,8 +8,12 @@ The SR policy route (RFC 9830), on one line:
     <sub-tlv>: preference <n> | priority <n> | enlp <name>|<1-4> | binding-sid mpls <label>|null
              | srv6-binding-sid <ipv6> | policy-name <text> | candidate-path-name <text>
              | segment-list weight <n> [segment <type> <fields> [verification] ...]
+    and, among them: community [ ... ] | extended-community [ ... ]
 
 legacy: the sub-TLVs are read while the next word names one, and what follows them is ignored.
+
+RFC 9830 4.2.1: an announced SR policy route needs its tunnel, at least one sub-TLV, and the
+NO_ADVERTISE community or a route target in IPv4-address format; one without is refused.
 
 Copyright (c) 2009-2026 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
@@ -20,7 +24,7 @@ from __future__ import annotations
 import contextlib
 from typing import Any, Callable
 
-from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import (
     BindingSIDSubTLV,
@@ -52,6 +56,7 @@ from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
 from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ROUTE_ERRORS, ConfigError
 from exabgp.configuration.grammar.shape import Shape
+from exabgp.configuration.grammar.tree.static import ROUTE_VALUES, add_attribute, one_attribute_words
 from exabgp.configuration.grammar.types.base import WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement
 from exabgp.configuration.grammar.words import Words
@@ -272,10 +277,24 @@ SUBTLVS: dict[str, Callable[[Words], Any]] = {
 }
 
 
-def _subtlvs(words: Words) -> list[Any]:
+# RFC 9830 4.2.1: the attributes an SR policy route is given besides its tunnel
+ATTRIBUTE_VALUES = ('community', 'extended-community')
+# what to write when the route lacks them, appended to the reason malformed_with gives
+NEEDED = (
+    'an sr-policy route needs at least one sub-TLV, and community [ no-advertise ] '
+    'or extended-community [ target:<ipv4>:<number> ]'
+)
+
+
+def _values(words: Words, attributes: AttributeCollection) -> list[Any]:
+    """The sub-TLVs of the tunnel, in order, the communities among them added to `attributes`."""
     subtlvs: list[Any] = []
     for _ in range(MAX_SUBTLVS):
         key = words.peek()
+        if key in ATTRIBUTE_VALUES:
+            words.word()
+            add_attribute(attributes, ROUTE_VALUES[key].type.parse(words))
+            continue
         if key not in SUBTLVS:
             return subtlvs
         words.word()
@@ -301,12 +320,16 @@ def sr_policy_route(words: Words, afi: AFI | None) -> Route:
     route_afi = _endpoint_afi(endpoint) if afi is None else afi
     nlri = SRPolicyNLRI.create(afi=route_afi, distinguisher=distinguisher, color=color, endpoint=endpoint)
     nexthop = IP.from_string(_field(words, 'next-hop'))
-    subtlvs = _subtlvs(words)
     attributes = AttributeCollection()
+    subtlvs = _values(words, attributes)
     if subtlvs:
         attributes.add(TunnelEncap(tunnel_tlvs=[SRPolicyTunnel(subtlvs=subtlvs)]))
     # legacy: whatever the sub-TLVs are followed by is not read
     words.rest()
+    # a withdrawal carries no attribute, so only an announcement can be malformed
+    reason = nlri.malformed_with(attributes) if words.context.announce else None
+    if reason is not None:
+        raise ValueError(f'{reason}: {NEEDED}')
     return Route(nlri, attributes, nexthop=nexthop)
 
 
@@ -414,6 +437,7 @@ SR_POLICY = shape.container(
     ('policy-name', shape.TEXT.described('the name of the policy')),
     ('candidate-path-name', shape.TEXT.described('the name of the candidate path')),
     ('segment-list', shape.leaf_list(_SEGMENT_LIST).described('the segment lists of the candidate path')),
+    *((keyword, ROUTE_VALUES[keyword].type.shape()) for keyword in ATTRIBUTE_VALUES),
 ).described('an SR policy, RFC 9830')
 
 
@@ -495,13 +519,22 @@ def _subtlv_words(subtlv: Any) -> list[str]:
     raise ValueError(f'no statement writes a {type(subtlv).__name__} sub-TLV')
 
 
+# the attributes printed after the sub-TLVs: COMMUNITY and EXTENDED_COMMUNITY
+PRINTED_CODES = (Attribute.CODE.COMMUNITY, Attribute.CODE.EXTENDED_COMMUNITY)
+# every attribute an sr-policy route may hold (spelt out: mypyc cannot compile a starred tuple)
+HELD_CODES = (TunnelEncap.ID, Attribute.CODE.COMMUNITY, Attribute.CODE.EXTENDED_COMMUNITY)
+
+
 def _tunnel(route: Route) -> SRPolicyTunnel | None:
-    attributes = list(route.attributes.values())
-    if not attributes:
+    others = [code for code in route.attributes if code not in HELD_CODES]
+    if others:
+        raise ValueError('an sr-policy route holds no attribute but its tunnel encapsulation and communities')
+    attribute = route.attributes.get(TunnelEncap.ID, None)
+    if attribute is None:
         return None
-    if len(attributes) != 1 or not isinstance(attributes[0], TunnelEncap):
-        raise ValueError('an sr-policy route holds no attribute but its tunnel encapsulation')
-    tlvs = attributes[0].tunnel_tlvs
+    if not isinstance(attribute, TunnelEncap):
+        raise ValueError('an sr-policy route holds its tunnel encapsulation as a TunnelEncap')
+    tlvs = attribute.tunnel_tlvs
     if len(tlvs) != 1 or not isinstance(tlvs[0], SRPolicyTunnel) or not tlvs[0].subtlvs:
         raise ValueError('an sr-policy route holds one SR policy tunnel')
     tunnel: SRPolicyTunnel = tlvs[0]
@@ -523,4 +556,8 @@ def sr_policy_words(route: Route) -> list[WordOrSyntax]:
     tunnel = _tunnel(route)
     if tunnel is not None:
         words += [word for subtlv in tunnel.subtlvs for word in _subtlv_words(subtlv)]
+    for code in PRINTED_CODES:
+        attribute = route.attributes.get(code, None)
+        if attribute is not None:
+            words += one_attribute_words(code, attribute)
     return words

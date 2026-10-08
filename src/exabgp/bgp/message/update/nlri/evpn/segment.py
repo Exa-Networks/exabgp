@@ -120,7 +120,7 @@ class EthernetSegment(EVPN):
         if iplen not in (32, 128):
             raise Notify(
                 3,
-                5,
+                10,
                 'IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits' % iplen,
             )
 

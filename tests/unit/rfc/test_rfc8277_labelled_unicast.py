@@ -152,6 +152,33 @@ def test_a_single_label_nlri_with_the_s_bit_clear_still_decodes() -> None:
     assert nlri.labels.labels == [100]
 
 
+@pytest.mark.rfc('rfc8277#2.2-s-bit-ignored-on-reception', polarity='negative')
+def test_a_labelled_default_route_with_the_s_bit_clear_still_decodes() -> None:
+    """18 000640: a /0 behind one label of 100 whose S bit is zero.
+
+    Section 2.2 carries exactly one label, so the length leaves no room for any other
+    reading: there is one field and nothing behind it. It was refused as a stack which
+    never ends, the one length the section 2.2 reading had been kept away from.
+    """
+    nlri, rest = decode(bytes.fromhex('18000640'))
+    assert rest == b''
+    assert str(nlri.cidr) == '0.0.0.0/0'
+    assert nlri.labels is not None
+    assert nlri.labels.labels == [100]
+
+
+@pytest.mark.rfc('rfc8277#2.2-s-bit-ignored-on-reception', polarity='negative')
+def test_a_vpn_default_route_with_the_s_bit_clear_still_decodes() -> None:
+    """58 000640 <RD>: the same on the VPN decoder, where the route distinguisher follows."""
+    nlri, rest = decode(bytes.fromhex('58000640') + RD, safi=SAFI.mpls_vpn)
+    assert rest == b''
+    assert str(nlri.cidr) == '0.0.0.0/0'
+    assert nlri.labels is not None
+    assert nlri.labels.labels == [100]
+    assert nlri.rd is not None
+    assert str(nlri.rd) == ' rd 1:2'
+
+
 @pytest.mark.rfc('rfc8277#2.2-s-bit-ignored-on-reception')
 def test_we_set_the_s_bit_on_the_label_we_transmit() -> None:
     """The transmission half of the same sentence, which exabgp does meet."""
@@ -244,6 +271,14 @@ def test_a_withdraw_with_an_arbitrary_compatibility_value_decodes_to_its_prefix(
 
 
 @pytest.mark.rfc('rfc8277#2.4-compatibility-ignored-on-reception', polarity='negative')
+def test_a_default_route_withdrawn_with_an_arbitrary_compatibility_value_decodes() -> None:
+    """With no prefix bits behind it, the field ended the stack only for 0x800000 and 0x000000."""
+    nlri, rest = decode(bytes([LABEL_BITS]) + raw(COMPATIBILITY_ARBITRARY), action=Action.WITHDRAW)
+    assert rest == b''
+    assert str(nlri.cidr) == '0.0.0.0/0'
+
+
+@pytest.mark.rfc('rfc8277#2.4-compatibility-ignored-on-reception', polarity='negative')
 def test_a_vpn_withdraw_with_an_arbitrary_compatibility_value_decodes_to_its_prefix() -> None:
     """The VPN decoder is a second copy of the loop, so it has to have learnt the same."""
     nlri, rest = decode(vpn(raw(COMPATIBILITY_ARBITRARY)), safi=SAFI.mpls_vpn, action=Action.WITHDRAW)
@@ -318,15 +353,9 @@ def test_two_labelled_routes_with_the_same_path_identifier_share_a_rib_key() -> 
 # Every entry is peer input which cannot be a valid NLRI.  The assertion is that each
 # raises Notify, which is a NOTIFICATION, rather than a Python exception, which is a
 # crash on the receive path.
+# A length which leaves no prefix bits behind an unterminated field was here: it is the
+# labelled /0 of section 2.2, see test_a_labelled_default_route_with_the_s_bit_clear_still_decodes.
 MALFORMED: list[tuple[str, bytes, SAFI]] = [
-    (
-        # The length leaves no prefix bits behind the first field, so the section 2.2
-        # reading of it is a /0.  That is the default route the old bug manufactured and
-        # the one shape the length cannot tell from a stack which ate the prefix.
-        'a length which leaves no prefix bits behind an unterminated field',
-        bytes([PREFIX_BITS]) + label(100, bottom=False) + label(200) + PREFIX,
-        SAFI.nlri_mpls,
-    ),
     ('a prefix shorter than the length claims', bytes([LABEL_BITS + 32]) + label(100) + bytes([10, 0]), SAFI.nlri_mpls),
     ('a mask longer than IPv4 allows', bytes([LABEL_BITS + 200]) + label(100) + PREFIX, SAFI.nlri_mpls),
     ('a label stack cut off mid label', bytes([LABEL_BITS + PREFIX_BITS]) + bytes([0x00, 0x06]), SAFI.nlri_mpls),
@@ -414,11 +443,15 @@ def capabilities(multiple_labels: bytes | None = None) -> Capabilities:
     return Capabilities.unpack(bytes([len(parameter)]) + parameter)
 
 
-def session(ours: bytes | None, theirs: bytes | None) -> Negotiated:
-    """A negotiated outgoing session, each OPEN carrying the given Multiple Labels value."""
+def session(ours: bytes | None, theirs: bytes | None, direction: Direction = Direction.OUT) -> Negotiated:
+    """A negotiated session, each OPEN carrying the given Multiple Labels value.
+
+    Outgoing unless told otherwise: Direction.IN is the session a peer's UPDATE is read
+    with, and gets the receiver's checks.
+    """
     neighbor = Neighbor()
     neighbor.session.local_as = ASN(65001)
-    negotiated = Negotiated(neighbor, Direction.OUT)
+    negotiated = Negotiated(neighbor, direction)
     # decoding what this session sent, or a path written for another rule: RFC 8955 6 has its own tests
     negotiated.neighbor.enforce_first_as = False
     negotiated.sent(Open.make_open(Version(4), ASN(65001), HoldTime(90), RouterID('192.0.2.1'), capabilities(ours)))
@@ -632,6 +665,23 @@ def test_with_the_capability_a_single_label_without_its_s_bit_is_refused() -> No
         decode(labelled(label(100, bottom=False)), negotiated=negotiated)
 
 
+@pytest.mark.rfc('rfc8277#2.3-s-bit-zero-except-in-last-label', polarity='negative')
+def test_with_the_capability_a_default_route_whose_label_lacks_its_s_bit_is_refused() -> None:
+    """18 000640 again, once the capability went both ways: the last label MUST set it."""
+    negotiated = session(triple(2), triple(2))
+    with pytest.raises(Notify) as raised:
+        decode(bytes.fromhex('18000640'), negotiated=negotiated)
+    assert (raised.value.code, raised.value.subcode) == (3, 10)
+
+
+@pytest.mark.rfc('rfc8277#2.2-s-bit-ignored-on-reception', polarity='negative')
+def test_without_the_capability_a_default_route_whose_label_lacks_its_s_bit_decodes() -> None:
+    negotiated = session(triple(2), None)
+    nlri, rest = decode(bytes.fromhex('18000640'), negotiated=negotiated)
+    assert rest == b''
+    assert str(nlri.cidr) == '0.0.0.0/0'
+
+
 @pytest.mark.rfc('rfc8277#2.2-s-bit-ignored-on-reception', polarity='negative')
 def test_without_the_capability_the_same_bytes_are_one_label_and_a_prefix() -> None:
     """What the two tests above change only applies once code 8 went both ways."""
@@ -687,3 +737,86 @@ def test_a_vpn_route_with_no_label_is_sent_with_the_compatibility_field() -> Non
     assert rest == b''
     assert str(withdrawn.cidr) == '10.0.0.0/24'
     assert str(withdrawn.rd) == ' rd 1:2'
+
+
+# ------------------------------------- section 2.1, more labels than we are prepared to receive
+#
+# The limit is the Count WE sent for the family, once code 8 went both ways, and one label
+# otherwise (section 2): labels_limit is the peer's Count, which binds what we send. The
+# UPDATE is built by hand and read the way the reactor reads a peer's UPDATE.
+
+# ORIGIN IGP, and an AS_PATH of one AS_SEQUENCE holding the peer's two octet AS 65002
+ORIGIN_IGP = bytes([0x40, 1, 1, 0])
+AS_PATH_PEER = bytes([0x40, 2, 4, 2, 1]) + pack('!H', 65002)
+
+
+def update_body(nlris: bytes) -> bytes:
+    """An UPDATE body announcing labelled unicast `nlris` in MP_REACH_NLRI, next hop 192.0.2.1."""
+    value = pack('!HBB', int(AFI.ipv4), int(SAFI.nlri_mpls), 4) + bytes([192, 0, 2, 1, 0]) + nlris
+    mp_reach = bytes([0x80, 14, len(value)]) + value
+    attributes = ORIGIN_IGP + AS_PATH_PEER + mp_reach
+    return pack('!H', 0) + pack('!H', len(attributes)) + attributes
+
+
+def read_by_us(nlris: bytes, ours: bytes | None, theirs: bytes | None) -> UpdateCollection:
+    return UpdateCollection.unpack_message(update_body(nlris), session(ours, theirs, Direction.IN))
+
+
+TWO_LABELS = labelled(label(100, bottom=False) + label(200))
+THREE_LABELS = labelled(label(100, bottom=False) + label(200, bottom=False) + label(300))
+OTHER_PREFIX = labelled(label(400), bytes([10, 0, 1]))
+
+
+@pytest.mark.rfc('rfc8277#2.1-more-labels-than-announced-treat-as-withdraw')
+@pytest.mark.parametrize('stack', [labelled(label(100)), TWO_LABELS, THREE_LABELS])
+def test_a_stack_within_the_count_we_sent_is_announced(stack: bytes) -> None:
+    update = read_by_us(stack, triple(3), triple(2))
+    assert [str(routed.nlri.cidr) for routed in update.announces] == ['10.0.0.0/24']
+    assert update.withdraws == []
+
+
+@pytest.mark.rfc('rfc8277#2.1-more-labels-than-announced-treat-as-withdraw', polarity='negative')
+def test_a_stack_beyond_the_count_we_sent_withdraws_every_route_of_the_update() -> None:
+    """Three labels where we said two: the whole UPDATE is treat-as-withdraw, the
+    route with one label behind it included."""
+    update = read_by_us(THREE_LABELS + OTHER_PREFIX, triple(2), triple(3))
+    assert update.announces == []
+    assert sorted(str(nlri.cidr) for nlri in update.withdraws) == ['10.0.0.0/24', '10.0.1.0/24']
+
+
+@pytest.mark.rfc('rfc8277#2.1-more-labels-than-announced-treat-as-withdraw', polarity='negative')
+@pytest.mark.parametrize('ours, theirs', [(None, None), (triple(3), None), (None, triple(3))])
+def test_without_the_capability_both_ways_two_labels_are_more_than_we_receive(
+    ours: bytes | None, theirs: bytes | None
+) -> None:
+    """Section 2: the encoding of section 2.2, one label, unless code 8 went both ways."""
+    update = read_by_us(TWO_LABELS, ours, theirs)
+    assert update.announces == []
+    assert [str(nlri.cidr) for nlri in update.withdraws] == ['10.0.0.0/24']
+
+
+@pytest.mark.rfc('rfc8277#2.1-more-labels-than-announced-treat-as-withdraw', polarity='negative')
+def test_the_peer_count_does_not_raise_what_we_receive() -> None:
+    """labels_limit is the peer's Count, eight here: it binds what we send, not what we take."""
+    update = read_by_us(THREE_LABELS, triple(2), triple(8))
+    assert update.announces == []
+
+
+@pytest.mark.rfc('rfc8277#2.4-compatibility-ignored-on-reception')
+@pytest.mark.parametrize('afi, address', [(AFI.ipv4, '0.0.0.0'), (AFI.ipv6, '::')])
+def test_a_default_route_withdrawn_without_a_label_carries_the_compatibility_field(afi: AFI, address: str) -> None:
+    """A /0 was the one length sent with no field: Length 0, and a receiver reading the
+    section 2.2 encoding took the next NLRI's octets for its label. The field is there,
+    and the route reads back as the default route it is, whichever way it is read: what
+    we pack, we decode (0x800000 ends a one field stack with no prefix bits behind it,
+    as 0x000000 always did)."""
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.label import Label
+
+    nlri = Label.from_cidr(CIDR.create_cidr(b'', 0), afi, SAFI.nlri_mpls)
+    packed = bytes(nlri.pack_nlri(Negotiated.UNSET))
+    assert packed == bytes([LABEL_BITS]) + raw(COMPATIBILITY_RECOMMENDED)
+    for action in (Action.WITHDRAW, Action.ANNOUNCE):
+        read, rest = decode(packed + labelled(label(100)), afi, action=action)
+        assert bytes(rest) == labelled(label(100)), 'the field was not read as part of the default route'
+        assert str(read.cidr) == f'{address}/0'

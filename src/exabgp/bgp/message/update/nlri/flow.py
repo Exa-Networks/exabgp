@@ -846,7 +846,8 @@ class FlowTrafficClass(IOperationByte, NumericString, FlowIPv6):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'traffic-class'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(class_value, NumericValue)
-    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
+    # RFC 8956 3 applies type 11 to IPv6 as RFC 8955 defines it: six bits of DSCP
+    decoder: ClassVar[Callable[[bytes], NumericValue]] = _dscp
 
 
 # RFC 8955 section 4.2.2.12 lays the fragment bitmask out as | 0 0 0 0 | LF FF IsF DF |,
@@ -945,6 +946,25 @@ def family_conflict(rules: dict[int, list[Any]], rule: Any, afi: AFI | None = No
                 f'{rule.NAME} {rule} cannot be combined with {existing.NAME} {existing}, '
                 'a flow route matches one address family'
             )
+    return ''
+
+
+def rule_conflict(rules: dict[int, list[Any]], rule: Any, afi: AFI | None = None) -> str:
+    """Why `rule` cannot join `rules`, or '' when it can: its family, or a second prefix.
+
+    RFC 8955 section 4.2: "A given component type MAY (exactly once) be present".  Every
+    other component type is one component whatever its operations, so only a prefix, which
+    `_pack_from_rules` writes one component per rule, can be repeated by adding a rule.
+    """
+    conflict = family_conflict(rules, rule, afi)
+    if conflict:
+        return conflict
+    if rule.ID in (FlowDestination.ID, FlowSource.ID) and rules.get(rule.ID):
+        (existing,) = rules[rule.ID]
+        return (
+            f'{rule.NAME} {rule} cannot be added to {existing.NAME} {existing}, '
+            'a flow route matches one destination and one source prefix at most, the type is present once'
+        )
     return ''
 
 
@@ -1222,9 +1242,9 @@ class Flow(NLRI):
         Section 10 defers to RFC 7606, so this is a treat-as-withdraw: the Notify raised
         here is caught in `unpack_nlri` and turned into `NLRI.INVALID`.
 
-        The one relaxation is a repeated destination or source prefix, which `Flow.add`
-        has accepted from the configuration for years because some vendors send it.  What
-        exabgp is willing to encode it has to be able to read back.
+        A repeated destination or source prefix used to be exempt, because `Flow.add` let
+        the configuration write one.  It is a repeated component like any other, and
+        `rule_conflict` now stops exabgp from encoding it, so nothing needs the exemption.
         """
         if what < previous:
             raise Notify(
@@ -1233,7 +1253,7 @@ class Flow(NLRI):
                 'flow component %d follows component %d, which is not the increasing type order required'
                 % (what, previous),
             )
-        if what == previous and what not in (FlowDestination.ID, FlowSource.ID):
+        if what == previous:
             raise Notify(3, 10, 'flow component %d is present more than once' % what)
 
     @staticmethod
@@ -1314,9 +1334,9 @@ class Flow(NLRI):
             packed = self._pack_from_rules()
         return len(packed)
 
-    def family_conflict(self, rule: Any) -> str:  # Any is FlowRule
+    def rule_conflict(self, rule: Any) -> str:  # Any is FlowRule
         """Why `rule` cannot be added to this flow route, or '' when it can."""
-        return family_conflict(self.rules, rule)
+        return rule_conflict(self.rules, rule)
 
     def unmatchable(self) -> str:
         """Why no packet can match this flow route, or '' when one can.
@@ -1331,14 +1351,14 @@ class Flow(NLRI):
         return ''
 
     def add(self, rule: Any) -> bool:  # Any is FlowRule
-        """Add a rule to the Flow NLRI, False when it has no family in common with another.
+        """Add a rule to the Flow NLRI, False when rule_conflict() refuses it.
 
-        Several sources or destinations are allowed, as some vendors accept them, but all of one
-        family: family_conflict() says why a refused rule was refused.
+        A rule is refused when it has no family in common with another, or when it would be a
+        second destination or source prefix: RFC 8955 4.2 allows each component type once.
         Adding rules marks _packed as stale, requiring recomputation on next pack.
         """
         ID = rule.ID
-        if self.family_conflict(rule):
+        if self.rule_conflict(rule):
             return False
         # a rule written in a match block learns its family from what it matches: an IPv6 prefix
         # or an IPv6-only component (flow-label, traffic-class) makes it an IPv6 flow route
@@ -1353,7 +1373,8 @@ class Flow(NLRI):
         lc = len(components)
         if lc < FLOW_LENGTH_COMPACT_MAX:
             return bytes([lc]) + components
-        if lc < FLOW_LENGTH_EXTENDED_MAX:
+        # RFC 8955 4.1: "The highest value that can be represented with this encoding is 4095"
+        if lc <= FLOW_LENGTH_EXTENDED_MAX:
             return pack('!H', lc | (FLOW_LENGTH_EXTENDED_VALUE << 8)) + components
         raise Notify(
             3,

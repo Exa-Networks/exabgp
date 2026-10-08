@@ -47,6 +47,69 @@ from exabgp.util.types import Buffer
 #   +-----------------------------------+
 
 
+# draft-mpmz-bess-mup-safi-05 3.1.3.1, the lengths in bits an address field may have
+T1ST_ADDRESS_BITS: tuple[int, int] = (32, 128)
+T1ST_NO_SOURCE_BITS = 0
+T1ST_KEY_OFFSET = 4  # the route key starts after arch(1) + code(2) + length(1)
+T1ST_PREFIX_OFFSET = 13  # header(4) + RD(8) + Prefix Length(1)
+T1ST_TEID_QFI_SIZE = 5  # TEID(4) + QFI(1)
+
+
+def architecture_error(data: Buffer, start: int) -> tuple[str, int]:
+    """What is malformed in the 3gpp-5g part of a Type 1 ST route, and where its source starts.
+
+    `start` is the end of the prefix, which the caller has checked is inside `data`. The
+    reason is '' for a well formed part; the offset is that of the Source Address Length,
+    which is `len(data)` for a route of -02, written without one.
+    """
+    end = len(data)
+    if start > end:
+        raise RuntimeError('the route key is checked before the architecture part is read')
+    if end < start + T1ST_TEID_QFI_SIZE + 1:
+        return 'the 3gpp-5g part is too short for its TEID, QFI and Endpoint Address Length', end
+    if not any(data[start : start + 4]):
+        return 'the TEID is 0, which is malformed', end
+    endpoint_bits = data[start + T1ST_TEID_QFI_SIZE]
+    if endpoint_bits not in T1ST_ADDRESS_BITS:
+        return f'the Endpoint Address Length is {endpoint_bits}, not 32 or 128', end
+    source_at = start + T1ST_TEID_QFI_SIZE + 1 + endpoint_bits // 8
+    if source_at == end:
+        return '', source_at
+    if source_at > end:
+        return 'the Endpoint Address runs past the route', end
+    source_bits = data[source_at]
+    if source_bits != T1ST_NO_SOURCE_BITS and source_bits not in T1ST_ADDRESS_BITS:
+        return f'the Source Address Length is {source_bits}, not 0, 32 or 128', end
+    if end != source_at + 1 + source_bits // 8:
+        return 'the 3gpp-5g part is not encoded as shown, its size does not match its lengths', end
+    return '', source_at
+
+
+def with_source_length(data: Buffer) -> bytes:
+    """A route of -02 with no source, as -05 writes it: a Source Address Length of 0 added.
+
+    Held this way, it compares, hashes and is sent again as the route a -05 peer writes.
+    """
+    length = data[3] + 1
+    # architecture_error passed a route ending at its Endpoint Address: 64 octets at most
+    if length > 0xFF:
+        raise RuntimeError('a Type 1 ST route without a source is far shorter than 255 octets')
+    return bytes(data[:3]) + bytes([length]) + bytes(data[4:]) + bytes([T1ST_NO_SOURCE_BITS])
+
+
+def route_key(packed: Buffer, afi: AFI) -> bytes:
+    """RD, Prefix Length and Prefix, the route key of 3.1.3, behind a header of its own size.
+
+    The prefix is padded to the full address, as the index always was.
+    """
+    prefix_len = packed[12]
+    octets = (prefix_len + 7) // 8
+    size = 16 if afi == AFI.ipv6 else 4
+    prefix = bytes(packed[T1ST_PREFIX_OFFSET : T1ST_PREFIX_OFFSET + octets]) + bytes(size - octets)
+    key = bytes(packed[T1ST_KEY_OFFSET:T1ST_PREFIX_OFFSET]) + prefix
+    return pack('!BHB', packed[0], int.from_bytes(packed[1:3], 'big'), len(key)) + key
+
+
 class Type1SessionTransformedRoute(MUP):
     NAME: ClassVar[str] = 'Type1SessionTransformedRoute'
     SHORT_NAME: ClassVar[str] = 'T1ST'
@@ -99,9 +162,13 @@ class Type1SessionTransformedRoute(MUP):
             + endpoint_ip.pack_ip()
         )
 
+        # draft-mpmz-bess-mup-safi-05 3.1.3.1: the Source Address Length is always sent, 0
+        # when there is no source.  -02 left the octet out, which a -05 peer reads as an
+        # architecture part not "encoded as shown" and withdraws.
+        source_ip_packed = b''
         if source_ip_len != 0:
-            source_ip_packed = source_ip.pack_ip() if isinstance(source_ip, IP) else source_ip
-            payload += pack('!B', source_ip_len) + source_ip_packed
+            source_ip_packed = bytes(source_ip.pack_ip()) if isinstance(source_ip, IP) else source_ip
+        payload += pack('!B', source_ip_len) + source_ip_packed
 
         # Include 4-byte header: arch(1) + code(2) + length(1) + payload
         packed = pack('!BHB', cls.ARCHTYPE, cls.CODE, len(payload)) + payload
@@ -164,22 +231,17 @@ class Type1SessionTransformedRoute(MUP):
 
     @property
     def source_ip_len(self) -> int:
+        # unpack_nlri and make_t1st both write the octet, 0 when there is no source
         offset = self._get_teid_qfi_offset() + 6 + self.endpoint_ip_len // 8
-        datasize = len(self._packed)
-        source_ip_size = datasize - offset
-        if source_ip_size > 0:
-            return self._packed[offset]
-        return 0
+        return self._packed[offset]
 
     @property
     def source_ip(self) -> IP | bytes:
         offset = self._get_teid_qfi_offset() + 6 + self.endpoint_ip_len // 8
-        datasize = len(self._packed)
-        source_ip_size = datasize - offset
-        if source_ip_size > 0:
-            sip_len = self._packed[offset] // 8
-            return IP.create_ip(self._packed[offset + 1 : offset + 1 + sip_len])
-        return b''
+        sip_len = self._packed[offset] // 8
+        if not sip_len:
+            return b''
+        return IP.create_ip(self._packed[offset + 1 : offset + 1 + sip_len])
 
     def __eq__(self, other: object) -> bool:
         return (
@@ -222,9 +284,7 @@ class Type1SessionTransformedRoute(MUP):
 
     def pack_index(self) -> bytes:
         # T1ST index excludes teid, qfi, endpoint for RIB uniqueness
-        # Build index-specific payload (different from full wire format)
-        index_payload = bytes(self.rd.pack_rd()) + pack('!B', self.prefix_ip_len) + self.prefix_ip.pack_ip()
-        return pack('!BHB', self.ARCHTYPE, self.CODE, len(index_payload)) + index_payload
+        return route_key(self._packed, self.afi)
 
     def index(self) -> bytes:
         # T1ST uses custom index (excludes teid, qfi, endpoint)
@@ -240,7 +300,7 @@ class Type1SessionTransformedRoute(MUP):
     ) -> tuple[NLRI, Buffer]:
         # Parent provides complete wire format including 4-byte header
         # Offsets: header(0-3), RD(4-11), prefix_len(12), prefix(13+)
-        cls.check_length(data, 13)
+        cls.check_length(data, T1ST_PREFIX_OFFSET)
         prefix_ip_len = data[12]
         max_bits = 32 if afi != AFI.ipv6 else 128
         if prefix_ip_len > max_bits:
@@ -249,43 +309,19 @@ class Type1SessionTransformedRoute(MUP):
                 10,
                 'mup t1st prefix length is %d bits, more than the %d of an %s address' % (prefix_ip_len, max_bits, afi),
             )
+        key_end = T1ST_PREFIX_OFFSET + (prefix_ip_len + 7) // 8
+        cls.check_length(data, key_end)
 
-        ip_offset = (prefix_ip_len + 7) // 8
-
-        size = 13 + ip_offset  # 4 (header) + 8 (RD) + 1 (prefix_len) + prefix bytes
-        size += 5  # teid (4) + qfi (1)
-        cls.check_length(data, size + 1)
-        endpoint_ip_len = data[size]
-
-        if endpoint_ip_len not in [32, 128]:
-            raise Notify(
-                3, 10, 'mup t1st endpoint ip length is not 32bit or 128bit, unexpect len: %d' % endpoint_ip_len
-            )
-
-        ep_len = endpoint_ip_len // 8
-        size += 1 + ep_len
-        cls.check_length(data, size)
-
-        datasize = len(data)
-        source_ip_size = datasize - size
-
-        if source_ip_size > 0:
-            source_ip_len = data[size]
-            if source_ip_len not in [32, 128]:
-                raise Notify(
-                    3, 10, 'mup t1st source ip length is not 32bit or 128bit, unexpect len: %d' % source_ip_len
-                )
-            expected = size + 1 + source_ip_len // 8
-            if datasize != expected:
-                raise Notify(
-                    3,
-                    10,
-                    'mup t1st is %d bytes, expecting %d for a source ip of %d bits'
-                    % (datasize, expected, source_ip_len),
-                )
-
-        instance = cls(data, afi)
-        return instance, b''
+        # draft-mpmz-bess-mup-safi-05 3.1.3.1: everything after the prefix is the 3gpp-5g
+        # part, and each of its rules is "Treat-as-withdraw".  The key, RD and prefix, is
+        # intact here, so the route the peer announced before is withdrawn by it rather
+        # than left in place, which is what skipping the NLRI did.
+        reason, source_at = architecture_error(data, key_end)
+        if reason:
+            return MalformedType1SessionTransformedRoute(data, afi, reason), b''
+        if source_at == len(data):
+            data = with_source_length(data)
+        return cls(data, afi), b''
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
         content = '"name": "{}", '.format(self.NAME)
@@ -306,3 +342,69 @@ class Type1SessionTransformedRoute(MUP):
 
 
 MUP.register_mup_route(archtype=1, code=3)(Type1SessionTransformedRoute)
+
+
+class MalformedType1SessionTransformedRoute(MUP):
+    """A Type 1 ST route whose key is intact and whose 3gpp-5g part is malformed.
+
+    draft-mpmz-bess-mup-safi-05 3.1.3.1 makes such a route "Treat-as-withdraw", so it
+    is only ever a withdrawal: withdrawn_on_receipt() moves it there from MP_REACH_NLRI.
+    It keeps the octets the peer sent and reads nothing past the prefix, so no accessor
+    can trip on the part which was malformed. Its index is the well formed route's.
+    """
+
+    __slots__ = ('_reason',)
+
+    NAME: ClassVar[str] = Type1SessionTransformedRoute.NAME
+    SHORT_NAME: ClassVar[str] = Type1SessionTransformedRoute.SHORT_NAME
+    ARCHTYPE: ClassVar[int] = Type1SessionTransformedRoute.ARCHTYPE
+    CODE: ClassVar[int] = Type1SessionTransformedRoute.CODE
+
+    def __init__(self, packed: Buffer, afi: AFI, reason: str) -> None:
+        MUP.__init__(self, afi)
+        # unpack_nlri checked the route key, the only part this class reads, before building it
+        self._packed = packed
+        self._reason = reason
+
+    def _fresh(self) -> Self:
+        return type(self)(self._packed, self.afi, self._reason)
+
+    def withdrawn_on_receipt(self) -> str | None:
+        return f'Type 1 ST route: {self._reason} (draft-mpmz-bess-mup-safi-05 3.1.3.1)'
+
+    @property
+    def rd(self) -> RouteDistinguisher:
+        return RouteDistinguisher.unpack_routedistinguisher(self._packed[4:12])
+
+    @property
+    def prefix_ip_len(self) -> int:
+        return self._packed[12]
+
+    @property
+    def prefix_ip(self) -> IP:
+        return IP.create_ip(route_key(self._packed, self.afi)[T1ST_PREFIX_OFFSET:])
+
+    def index(self) -> bytes:
+        return bytes(Family.index(self)) + route_key(self._packed, self.afi)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, MalformedType1SessionTransformedRoute) and self.index() == other.index()
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
+
+    def __hash__(self) -> int:
+        return hash(self.index())
+
+    def __str__(self) -> str:
+        return '{}:{}:{}/{}'.format(self._prefix(), self.rd._str(), self.prefix_ip, self.prefix_ip_len)
+
+    def json(self, announced: bool = True, compact: bool | None = None) -> str:
+        content = '"name": "{}", '.format(self.NAME)
+        content += '"arch": %d, ' % self.ARCHTYPE
+        content += '"code": %d, ' % self.CODE
+        content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
+        content += '"prefix_ip": "{}", '.format(str(self.prefix_ip))
+        content += self.rd.json() + ', '
+        content += '"raw": "{}"'.format(self._raw())
+        return '{{ {} }}'.format(content)

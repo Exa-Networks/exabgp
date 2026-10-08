@@ -22,7 +22,7 @@ from exabgp.bgp.message.update.nlri.mup.t1st import Type1SessionTransformedRoute
 from exabgp.bgp.message.update.nlri.mup.t2st import Type2SessionTransformedRoute
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.bgp.message.update.nlri.nlri import Action
 
 
@@ -544,7 +544,11 @@ class TestType1SessionTransformedRoute:
         assert '"qfi": "8"' in json_str
 
     def test_t1st_invalid_endpoint_length(self) -> None:
-        """Test T1ST with invalid endpoint IP length raises error"""
+        """An endpoint length neither 32 nor 128 makes the route a withdrawal of its key
+
+        draft-mpmz-bess-mup-safi-05 3.1.3.1: the RD and prefix are intact, so the route is
+        treat-as-withdraw rather than refused.
+        """
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         prefix_ip = IP.from_string('10.0.0.0')
 
@@ -557,8 +561,9 @@ class TestType1SessionTransformedRoute:
         invalid_data = packed_rd + packed_prefix + packed_teid_qfi + packed_endpoint
         packed = b'\x01\x00\x03' + bytes([len(invalid_data)]) + invalid_data
 
-        with pytest.raises(Notify):
-            MUP.unpack_nlri(AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated())
+        unpacked, _ = MUP.unpack_nlri(AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated())
+        assert 'Endpoint Address Length is 33' in (unpacked.withdrawn_on_receipt() or '')
+        assert str(unpacked).endswith('10.0.0.0/24')
 
     def test_t1st_variable_prefix_lengths(self) -> None:
         """Test T1ST with various prefix lengths"""
@@ -797,7 +802,7 @@ class TestMUPGeneric:
         assert MUP.registered_mup['1:4'] == Type2SessionTransformedRoute
 
     def test_mup_unpack_unknown_route_type(self) -> None:
-        """Test unpacking unknown MUP route type"""
+        """An unknown route type is ignored: draft-mpmz-bess-mup-safi-05 3.1"""
         # Create a route with unknown code (99)
         rd = RouteDistinguisher.make_from_elements('1.1.1.1', 10)
         packed_rd = rd.pack_rd()
@@ -805,13 +810,10 @@ class TestMUPGeneric:
         # ARCHTYPE=1, CODE=99, length=8 (just RD)
         packed = b'\x01\x00\x63\x08' + packed_rd
 
-        # Should return GenericMUP
-        unpacked, leftover = MUP.unpack_nlri(
-            AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated()
-        )
+        with pytest.raises(NLRIDiscard) as ignored:
+            MUP.unpack_nlri(AFI.ipv4, SAFI.mup, packed, Action.UNSET, False, negotiated=create_negotiated())
 
-        assert unpacked.route_code == 99
-        assert unpacked.arch_type == 1
+        assert ignored.value.skip == len(packed)
 
     def test_mup_safi(self) -> None:
         """Test that MUP routes use correct SAFI"""

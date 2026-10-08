@@ -39,7 +39,7 @@ Family (protocol/family.py)
         │     ├── DirectSegmentDiscoveryRoute (mup/dsd.py)
         │     ├── Type1SessionTransformedRoute (mup/t1st.py)
         │     ├── Type2SessionTransformedRoute (mup/t2st.py)
-        │     └── GenericMUP (mup/nlri.py)
+        │     └── MalformedType1SessionTransformedRoute (mup/t1st.py, a withdrawal only)
         ├── MVPN (mvpn/nlri.py)
         │     ├── SourceAD (mvpn/sourcead.py)
         │     ├── SharedJoin (mvpn/sharedjoin.py)
@@ -399,26 +399,13 @@ class Type1SessionTransformedRoute(MUP):
         self._packed = packed  # Wire format (no header)
 ```
 
-### GenericMUP
+### MalformedType1SessionTransformedRoute
 
-```python
-class GenericMUP(MUP):
-    __slots__ = ('_arch', '_code')  # Instance-level type codes
-
-    def __init__(self, afi: AFI, arch: int, code: int, packed: bytes):
-        MUP.__init__(self, afi)
-        self._arch = arch  # Instance attribute
-        self._code = code  # Instance attribute
-        self._packed = packed
-
-    @property
-    def ARCHTYPE(self) -> int:
-        return self._arch  # Property, not ClassVar
-
-    @property
-    def CODE(self) -> int:
-        return self._code  # Property, not ClassVar
-```
+A Type 1 ST route whose key (RD, prefix) is intact and whose 3gpp-5g part is malformed.
+draft-mpmz-bess-mup-safi-05 3.1.3.1 makes it treat-as-withdraw, so it is only ever a
+withdrawal: `withdrawn_on_receipt()` names the reason and UpdateCollection moves it out of
+the announcements. Its `index()` is the well formed route's. There is no GenericMUP: a route
+type exabgp does not know is ignored on receipt (3.1), as an NLRIDiscard.
 
 ---
 
@@ -623,7 +610,7 @@ def rules(self) -> dict:
 | GenericEVPN | EVPN | (none) - CODE via property |
 | MUP | NLRI | (none) |
 | MUP subtypes | MUP | (none) |
-| GenericMUP | MUP | `_arch`, `_code` |
+| MalformedType1SessionTransformedRoute | MUP | `_reason` |
 | MVPN | NLRI | (none) |
 | MVPN subtypes | MVPN | (none) |
 | GenericMVPN | MVPN | (none) - CODE via property |
