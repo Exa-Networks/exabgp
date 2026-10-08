@@ -135,6 +135,11 @@ def reactor(captured: Captured, peer: str, neighbor: Any) -> MagicMock:
     stand_in.configuration.neighbors = {peer: neighbor}
     stand_in.peers.return_value = [peer]
     stand_in.established_peers.return_value = [peer]
+    # the session negotiated every family of the neighbor, as the release's peer did: a
+    # ROUTE-REFRESH or an End-of-RIB is only sent for a family the session carries
+    stand_in.neighbor_refreshable.side_effect = lambda name: list(neighbor.families())
+    stand_in.neighbor_eor_families.side_effect = lambda name: list(neighbor.families())
+    stand_in.neighbor_operational.return_value = True
     stand_in.processes.answer_error = AsyncMock(side_effect=lambda service, *why: captured.errors.append(str(why)))
     stand_in.processes.answer_done = AsyncMock()
     stand_in.processes.answer_error_sync.side_effect = lambda service, *why: captured.errors.append(str(why))
