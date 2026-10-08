@@ -1,7 +1,14 @@
 """command.py
 
-Decode BGP UPDATE messages to API command strings.
-Used by `exabgp decode --command` for round-trip testing.
+The API commands which send what a BGP UPDATE carries: `exabgp decode --command`.
+
+The UPDATE is decoded into its routes, and each route is printed by the statement of the API
+section which reads it back, with the grammar's own printer: what is printed is what the API
+reads. It used to go through the JSON of the UPDATE, turned into text by hand, and wrote
+commands the API refuses (`extended-community [rate-limit:0]`).
+
+The attributes every UPDATE is sent with when a route gives none (origin igp, the AS_PATH of
+an originated route, LOCAL_PREF 100 inside the AS) are left out: the command sends them anyway.
 
 Created by Thomas Mangin on 2024-12-10.
 Copyright (c) 2024 Exa Networks. All rights reserved.
@@ -10,917 +17,119 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import contextlib
-import json
-from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
 
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.configuration.check import _hexa, _make_update
-from exabgp.reactor.api.response import Response
-from exabgp.version import json as json_version
+from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.bgp.message.update.nlri import RTC, VPLS, Flow
+from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
+from exabgp.configuration.check import _hexa, _make_update, _negotiated
+from exabgp.configuration.grammar.nodes import Block
+from exabgp.configuration.grammar.render import one_line, quote
+from exabgp.configuration.grammar.tree.announce import IPV4, IPV6, L2VPN, STATIC, announce_family
+from exabgp.configuration.grammar.tree.flow import ROUTE_BLOCK, block_printable
+from exabgp.configuration.grammar.tree.static import attribute_words, route_words
+from exabgp.protocol.family import SAFI
+from exabgp.protocol.ip import IP
+from exabgp.rib.route import Route
+
+# the API section an address family names: `announce ipv4 <safi> ...`
+FAMILY_SECTIONS: dict[str, Block] = {'ipv4': IPV4, 'ipv6': IPV6}
 
 
-def has_extra_withdraw_attributes(attributes: dict[str, Any]) -> bool:
-    """Check if attributes include values beyond what withdraw commands normally handle.
+def _place(route: Route) -> tuple[str, Block, str]:
+    """Where the API reads a route: the family it names, its section and the statement.
 
-    Withdraw commands for FlowSpec/MUP/MCAST-VPN include extended-community and community.
-    If there are other attributes (origin, local-preference, as-path, etc.), we need
-    to use 'group attributes ... ; withdraw ...' to reproduce the exact wire format.
+    The choice is the one the configuration printer makes (grammar/tree/unresolve.routes).
     """
-    extra_attrs = {
-        'origin',
-        'as-path',
-        'next-hop',
-        'local-preference',
-        'med',
-        'atomic-aggregate',
-        'aggregator',
-        'originator-id',
-        'cluster-list',
-        'large-community',
-        'bgp-prefix-sid',
-    }
-    return bool(extra_attrs.intersection(attributes.keys()))
+    nlri: Any = route.nlri
+    afi = nlri.afi.name()
+    if isinstance(nlri, Flow):
+        return afi, FAMILY_SECTIONS[afi], 'flow-vpn' if nlri.safi == SAFI.flow_vpn else 'flow'
+    if nlri.safi in (SAFI.mup, SAFI.mcast_vpn):
+        return afi, FAMILY_SECTIONS[afi], nlri.safi.name()
+    if isinstance(nlri, VPLS):
+        return '', L2VPN, 'vpls'
+    if isinstance(nlri, RTC):
+        return afi, FAMILY_SECTIONS[afi], 'rtc'
+    if isinstance(nlri, SRPolicyNLRI):
+        return afi, FAMILY_SECTIONS[afi], 'sr-policy'
+    family = announce_family(route)
+    if family is not None:
+        return family[0], FAMILY_SECTIONS[family[0]], family[1]
+    return '', STATIC, 'route'
 
 
-def format_withdraw_attributes(attributes: dict[str, Any]) -> str:
-    """Format attributes for use in a group attributes command (for withdraws)."""
-    parts = format_attributes(attributes)
-    if parts:
-        return 'attributes ' + ' '.join(parts)
-    return ''
+def _command(action: str, route: Route) -> str:
+    """`<action> [<afi>] <statement> <words>`, the API command for one route."""
+    if isinstance(route.nlri, Flow) and route.nexthop is not IP.NoNextHop and block_printable(route):
+        # the flow line of an address family has no next-hop, the route block of `flow` has
+        return f'{action} flow {one_line(ROUTE_BLOCK, route)}'
+    family, section, keyword = _place(route)
+    leaf = section.leaf(keyword)
+    assert leaf is not None, f'the {section.keyword} section has no {keyword} statement'
+    words = [quote(word) for word in leaf.type.render([route])]
+    return ' '.join([action, *([family] if family else []), keyword, *words])
 
 
-def format_extended_community(ec: dict[str, Any]) -> str | None:
-    """Format a single extended community dict to API command string."""
-    if not isinstance(ec, dict) or 'string' not in ec:
-        return None
-
-    ec_string: str = str(ec['string'])
-
-    # Handle interface-set with transitive field
-    if ec_string.startswith('interface-set:'):
-        if 'transitive' in ec:
-            trans = 'transitive' if ec['transitive'] else 'non-transitive'
-            parts = ec_string.split(':', 1)
-            if len(parts) == 2:
-                return f'interface-set:{trans}:{parts[1]}'
-
-    return ec_string
-
-
-def parse_generic_attribute_name(attr_name: str) -> tuple[int, int] | None:
-    """Parse attribute-0xNN-0xNN format to (type_code, flags)."""
-    if not attr_name.startswith('attribute-0x'):
-        return None
-
-    rest = attr_name[10:]  # len("attribute-") = 10
-    sep_pos = rest.find('-0x', 2)
-    if sep_pos == -1:
-        return None
-
-    type_hex = rest[:sep_pos]
-    flags_hex = rest[sep_pos + 1 :]
-
-    # A name which does not carry two hex numbers is not the attribute-0xNN-0xNN form, and
-    # None is how the two checks above already say 'not one of ours'.
-    with contextlib.suppress(ValueError):
-        return (int(type_hex, 16), int(flags_hex, 16))
-
-    return None
-
-
-def format_generic_attributes(attributes: dict[str, Any]) -> list[str]:
-    """Extract generic attributes as 'attribute [0xNN 0xNN 0xHEX]' syntax."""
-    parts = []
-    for attr_name, attr_value in attributes.items():
-        parsed = parse_generic_attribute_name(attr_name)
-        if parsed is None:
+def _sent_anyway(attributes: AttributeCollection, negotiated: Negotiated) -> AttributeCollection:
+    """The attributes less those a route is sent with when it gives none of its own."""
+    defaults = AttributeCollection._default_attributes(negotiated)
+    kept = AttributeCollection()
+    for code, attribute in attributes.items():
+        default = defaults[code]() if code in defaults else None
+        if getattr(default, 'ID', None) == code and str(default) == str(attribute):
             continue
-        type_code, flags = parsed
-        if isinstance(attr_value, str) and attr_value.startswith('0x'):
-            hex_data = attr_value[2:]
-            parts.append(f'attribute [0x{type_code:02x} 0x{flags:02x} 0x{hex_data}]')
-    return parts
+        kept.add(attribute)
+    return kept
 
 
-def format_attributes(attrs: dict[str, Any]) -> list[str]:
-    """Format attributes for API command."""
-    parts = []
-    if 'origin' in attrs:
-        parts.append(f'origin {attrs["origin"]}')
-    if 'as-path' in attrs:
-        as_path = attrs['as-path']
-        if as_path:
-            as_nums = []
-            if isinstance(as_path, list):
-                as_nums = as_path
-            elif isinstance(as_path, dict):
-                for seg in as_path.values():
-                    if isinstance(seg, dict) and 'value' in seg:
-                        as_nums.extend(seg['value'])
-            if as_nums:
-                parts.append(f'as-path [{" ".join(str(a) for a in as_nums)}]')
-    if 'next-hop' in attrs:
-        parts.append(f'next-hop {attrs["next-hop"]}')
-    if 'local-preference' in attrs:
-        parts.append(f'local-preference {attrs["local-preference"]}')
-    if 'med' in attrs:
-        parts.append(f'med {attrs["med"]}')
-    if 'atomic-aggregate' in attrs:
-        if attrs['atomic-aggregate']:
-            parts.append('atomic-aggregate')
-    if 'aggregator' in attrs:
-        parts.append(f'aggregator {attrs["aggregator"]}')
-    if 'community' in attrs:
-        comms = attrs['community']
-        if comms:
-            comm_strs = []
-            for c in comms:
-                if isinstance(c, list) and len(c) == 2:
-                    comm_strs.append(f'{c[0]}:{c[1]}')
-                else:
-                    comm_strs.append(str(c))
-            parts.append(f'community [{" ".join(comm_strs)}]')
-    if 'large-community' in attrs:
-        lcomms = attrs['large-community']
-        if lcomms:
-            lcomm_strs = []
-            for lc in lcomms:
-                if isinstance(lc, list) and len(lc) == 3:
-                    lcomm_strs.append(f'{lc[0]}:{lc[1]}:{lc[2]}')
-                else:
-                    lcomm_strs.append(str(lc))
-            parts.append(f'large-community [{" ".join(lcomm_strs)}]')
-    if 'extended-community' in attrs:
-        ecomms = attrs['extended-community']
-        if ecomms:
-            ecomm_strs = []
-            for ec in ecomms:
-                if isinstance(ec, dict):
-                    ec_string = ec.get('string', '')
-                    # Check if it's a format the static parser understands
-                    # Supported: target:X:Y, origin:X:Y, redirect-to-nexthop, 0xHEX
-                    if ec_string.startswith(('target:', 'origin:', 'redirect-to-nexthop', 'l2info:')):
-                        ecomm_strs.append(ec_string)
-                    elif 'value' in ec:
-                        # Convert to hex format for FlowSpec etc.
-                        ecomm_strs.append(f'0x{ec["value"]:016x}')
-                    elif ec_string:
-                        ecomm_strs.append(ec_string)
-                else:
-                    ecomm_strs.append(str(ec))
-            if ecomm_strs:
-                parts.append(f'extended-community [{" ".join(ecomm_strs)}]')
-    if 'extended-community-ipv6' in attrs:
-        ecomms_v6 = attrs['extended-community-ipv6']
-        if ecomms_v6:
-            raw_hex = ''
-            for ec in ecomms_v6:
-                if isinstance(ec, dict) and 'value' in ec:
-                    raw_hex += f'{ec["value"]:040x}'
-            if raw_hex:
-                parts.append(f'attribute [0x19 0xc0 0x{raw_hex}]')
-    if 'originator-id' in attrs:
-        parts.append(f'originator-id {attrs["originator-id"]}')
-    if 'cluster-list' in attrs:
-        cluster_list = attrs['cluster-list']
-        if cluster_list:
-            parts.append(f'cluster-list [{" ".join(cluster_list)}]')
-    if 'bgp-prefix-sid' in attrs:
-        prefix_sid = attrs['bgp-prefix-sid']
-        if 'l3-service' in prefix_sid:
-            for service in prefix_sid['l3-service']:
-                sid = service.get('sid', '')
-                behavior = service.get('endpoint_behavior', 0)
-                structure = service.get('structure', {})
-                lbl = structure.get('locator-block-length', 0)
-                lnl = structure.get('locator-node-length', 0)
-                fl = structure.get('function-length', 0)
-                al = structure.get('argument-length', 0)
-                tl = structure.get('transposition-length', 0)
-                to = structure.get('transposition-offset', 0)
-                parts.append(
-                    f'bgp-prefix-sid-srv6 ( l3-service {sid} 0x{behavior:x} [{lbl},{lnl},{fl},{al},{tl},{to}] )'
-                )
-        elif 'sr-label-index' in prefix_sid:
-            # Format: bgp-prefix-sid [ label-index ] or bgp-prefix-sid [ label-index, [ srgb-list ] ]
-            label_index = prefix_sid.get('sr-label-index', 0)
-            sr_srgbs = prefix_sid.get('sr-srgbs', [])
-            if sr_srgbs:
-                srgb_strs = []
-                for srgb in sr_srgbs:
-                    if isinstance(srgb, list) and len(srgb) == 2:
-                        srgb_strs.append(f'( {srgb[0]},{srgb[1]} )')
-                parts.append(f'bgp-prefix-sid [ {label_index}, [ {" ".join(srgb_strs)} ] ]')
-            else:
-                parts.append(f'bgp-prefix-sid [ {label_index} ]')
-
-    # Generic attributes (attribute-0xNN-0xNN format)
-    parts.extend(format_generic_attributes(attrs))
-    return parts
+def _shared(routes: list[Route]) -> str | None:
+    """`announce attributes <values> nlri <prefix> ...`: routes which differ by their prefix only."""
+    first = routes[0]
+    prefixes: list[str] = []
+    for route in routes:
+        if _place(route)[2] != 'route' or route.nexthop != first.nexthop:
+            return None
+        words = route_words(route)
+        if len(words) != 1 + len(attribute_words(route)):
+            return None  # an rd, a label or a path-information: not said by `nlri`
+        prefixes.append(str(words[0]))
+    values = [quote(word) for word in attribute_words(first)]
+    return ' '.join(['announce', 'attributes', *values, 'nlri', *prefixes])
 
 
-def family_to_api_format(family: str) -> str:
-    """Convert JSON family format to API command format."""
-    if 'sr-policy' in family:
-        return family
-    if family.startswith('ipv4'):
-        return 'route'
-    return family
+def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor') -> list[str]:
+    """The API commands which send the UPDATE in `payload_hex` (the message after its header).
 
-
-def _format_segment(seg: dict[str, Any]) -> str:
-    """Format a single segment JSON dict to CLI token string."""
-    t = seg.get('type', '')
-    if t == 'A':
-        return f'segment type-a mpls {seg["label"]}'
-    if t == 'B':
-        cmd = f'segment type-b srv6 {seg["sid"]}'
-        eb = seg.get('endpoint-behavior')
-        if eb:
-            cmd += f' endpoint-behavior {eb["behavior"]} {eb["lb-length"]} {eb["ln-length"]} {eb["fun-length"]} {eb["arg-length"]}'
-        return cmd
-    if t == 'C':
-        cmd = f'segment type-c ipv4 {seg["ipv4_node"]} algorithm {seg["algorithm"]}'
-        if 'sid' in seg:
-            cmd += f' sid {seg["sid"]}'
-        return cmd
-    if t == 'D':
-        cmd = f'segment type-d ipv6 {seg["ipv6_node"]} algorithm {seg["algorithm"]}'
-        if 'sid' in seg:
-            cmd += f' sid {seg["sid"]}'
-        return cmd
-    if t == 'E':
-        cmd = f'segment type-e local-if-id {seg["local_if_id"]} ipv4 {seg["ipv4_node"]}'
-        if 'sid' in seg:
-            cmd += f' sid {seg["sid"]}'
-        return cmd
-    if t == 'F':
-        cmd = f'segment type-f local {seg["local_ipv4"]} remote {seg["remote_ipv4"]}'
-        if 'sid' in seg:
-            cmd += f' sid {seg["sid"]}'
-        return cmd
-    if t == 'G':
-        cmd = f'segment type-g local-if-id {seg["local_if_id"]} local-ipv6 {seg["local_ipv6"]} remote-if-id {seg["remote_if_id"]} remote-ipv6 {seg["remote_ipv6"]}'
-        if 'sid' in seg:
-            cmd += f' sid {seg["sid"]}'
-        return cmd
-    if t == 'H':
-        cmd = f'segment type-h local {seg["local_ipv6"]} remote {seg["remote_ipv6"]}'
-        if 'sid' in seg:
-            cmd += f' sid {seg["sid"]}'
-        return cmd
-    if t == 'I':
-        cmd = f'segment type-i ipv6 {seg["ipv6_node"]} algorithm {seg["algorithm"]}'
-        if 'sid' in seg:
-            cmd += f' sid {seg["sid"]}'
-        eb = seg.get('endpoint-behavior')
-        if eb:
-            cmd += f' endpoint-behavior {eb["behavior"]} {eb["lb-length"]} {eb["ln-length"]} {eb["fun-length"]} {eb["arg-length"]}'
-        return cmd
-    if t == 'J':
-        cmd = f'segment type-j local-if-id {seg["local_if_id"]} local-ipv6 {seg["local_ipv6"]} remote-if-id {seg["remote_if_id"]} remote-ipv6 {seg["remote_ipv6"]} algorithm {seg["algorithm"]}'
-        if 'sid' in seg:
-            cmd += f' sid {seg["sid"]}'
-        eb = seg.get('endpoint-behavior')
-        if eb:
-            cmd += f' endpoint-behavior {eb["behavior"]} {eb["lb-length"]} {eb["ln-length"]} {eb["fun-length"]} {eb["arg-length"]}'
-        return cmd
-    if t == 'K':
-        cmd = f'segment type-k local {seg["local_ipv6"]} remote {seg["remote_ipv6"]} algorithm {seg["algorithm"]}'
-        if 'sid' in seg:
-            cmd += f' sid {seg["sid"]}'
-        eb = seg.get('endpoint-behavior')
-        if eb:
-            cmd += f' endpoint-behavior {eb["behavior"]} {eb["lb-length"]} {eb["ln-length"]} {eb["fun-length"]} {eb["arg-length"]}'
-        return cmd
-    return ''
-
-
-def _format_sr_policy_tunnel(sr: dict[str, Any]) -> list[str]:
-    """Convert SR-Policy tunnel sub-TLV JSON dict to CLI token list."""
-    parts = []
-    if 'preference' in sr:
-        parts.append(f'preference {sr["preference"]}')
-    if 'priority' in sr:
-        parts.append(f'priority {sr["priority"]}')
-    if 'enlp' in sr:
-        parts.append(f'enlp {sr["enlp"]}')
-    if 'binding-sid' in sr:
-        bsid = sr['binding-sid']
-        if bsid is None:
-            parts.append('binding-sid null')
-        elif isinstance(bsid, dict) and bsid.get('type') == 'mpls':
-            parts.append(f'binding-sid mpls {bsid["label"]}')
-    if 'srv6-binding-sid' in sr:
-        sid_val = sr['srv6-binding-sid']
-        if isinstance(sid_val, str):
-            parts.append(f'srv6-binding-sid {sid_val}')
-        elif isinstance(sid_val, dict):
-            parts.append(f'srv6-binding-sid {sid_val.get("sid", "")}')
-    for sl in sr.get('segment-lists', []):
-        weight = sl.get('weight', 1)
-        seg_parts = [f'segment-list weight {weight}']
-        for seg in sl.get('segments', []):
-            seg_cmd = _format_segment(seg)
-            if seg_cmd:
-                if seg.get('verification'):
-                    seg_cmd += ' verification'
-                seg_parts.append(seg_cmd)
-        parts.append(' '.join(seg_parts))
-    if 'policy-name' in sr:
-        parts.append(f'policy-name "{sr["policy-name"]}"')
-    if 'candidate-path-name' in sr:
-        parts.append(f'candidate-path-name "{sr["candidate-path-name"]}"')
-    return parts
-
-
-def format_flow_announce(
-    afi: str,
-    nexthop: str,
-    nlri_info: dict[str, Any],
-    attributes: dict[str, Any],
-    action: str = 'announce',
-    skip_attributes: bool = False,
-) -> str | None:
-    """Format a FlowSpec NLRI as an API announce/withdraw command.
-
-    Args:
-        skip_attributes: If True, don't include attributes (used when attributes are
-                        provided separately via 'group attributes ...')
+    One command for one route, or for routes which differ by their prefix only; a `group` of
+    commands otherwise, which the API sends as one UPDATE where the reactor packs several
+    routes in one, announcements of ipv4 unicast and mcast-vpn (rib/outgoing._select_updates),
+    and as several UPDATEs of the same routes otherwise; `announce eor <afi> <safi>` for
+    an End-of-RIB marker. An empty list for a message
+    which is no UPDATE, or an UPDATE with no route. A route no statement prints raises
+    Unprintable (a ValueError), as a payload which is not hexadecimal raises ValueError.
     """
-    flow_string = nlri_info.get('string', '')
-    if not flow_string:
-        return None
-
-    if flow_string.startswith('flow '):
-        flow_details = flow_string[5:]
-    else:
-        flow_details = flow_string
-
-    rd = nlri_info.get('rd')
-    if rd and f'rd {rd}' not in flow_details:
-        flow_details = f'{flow_details} rd {rd}'
-
-    cmd_parts = [f'{action} {afi} flow {flow_details}']
-
-    # Skip attributes when they're provided via 'group attributes ...'
-    if skip_attributes:
-        return ' '.join(cmd_parts)
-
-    if nexthop and nexthop != 'no-nexthop':
-        cmd_parts.append(f'next-hop {nexthop}')
-
-    if 'extended-community' in attributes:
-        ecomms = attributes['extended-community']
-        if ecomms:
-            ecomm_strs = []
-            for ec in ecomms:
-                formatted = format_extended_community(ec)
-                if formatted:
-                    ecomm_strs.append(formatted)
-            if ecomm_strs:
-                cmd_parts.append(f'extended-community [{" ".join(ecomm_strs)}]')
-
-    if 'extended-community-ipv6' in attributes:
-        ecomms_v6 = attributes['extended-community-ipv6']
-        if ecomms_v6:
-            raw_hex = ''
-            for ec in ecomms_v6:
-                if isinstance(ec, dict) and 'value' in ec:
-                    raw_hex += f'{ec["value"]:040x}'
-            if raw_hex:
-                cmd_parts.append(f'attribute [0x19 0xc0 0x{raw_hex}]')
-
-    if 'community' in attributes:
-        comms = attributes['community']
-        if comms:
-            comm_strs = []
-            for c in comms:
-                if isinstance(c, list) and len(c) == 2:
-                    comm_strs.append(f'{c[0]}:{c[1]}')
-            if comm_strs:
-                cmd_parts.append(f'community [{" ".join(comm_strs)}]')
-
-    cmd_parts.extend(format_generic_attributes(attributes))
-    return ' '.join(cmd_parts)
-
-
-def format_mvpn_announce(
-    afi: str,
-    nexthop: str,
-    nlri_info: dict[str, Any],
-    attributes: dict[str, Any],
-    action: str = 'announce',
-    skip_attributes: bool = False,
-) -> str | None:
-    """Format a MCAST-VPN NLRI as an API announce/withdraw command.
-
-    Args:
-        skip_attributes: If True, don't include attributes (used when attributes are
-                        provided separately via 'group attributes ...')
-    """
-    code = nlri_info.get('code', 0)
-    rd = nlri_info.get('rd', '')
-    source = nlri_info.get('source', '')
-    group = nlri_info.get('group', '')
-    source_as = nlri_info.get('source-as', '')
-
-    nlri_str = ''
-    if code == 5:
-        nlri_str = f'source-ad source {source} group {group} rd {rd}'
-    elif code == 6:
-        nlri_str = f'shared-join rp {source} group {group} rd {rd} source-as {source_as}'
-    elif code == 7:
-        nlri_str = f'source-join source {source} group {group} rd {rd} source-as {source_as}'
-    else:
-        return None
-
-    cmd_parts = [f'{action} {afi} mcast-vpn {nlri_str} next-hop {nexthop}']
-
-    # Skip attributes when they're provided via 'group attributes ...'
-    if skip_attributes:
-        return ' '.join(cmd_parts)
-
-    if 'extended-community' in attributes:
-        ecomms = attributes['extended-community']
-        if ecomms:
-            ecomm_strs = []
-            for ec in ecomms:
-                if isinstance(ec, dict) and 'string' in ec:
-                    ecomm_strs.append(ec['string'])
-            if ecomm_strs:
-                cmd_parts.append(f'extended-community [{" ".join(ecomm_strs)}]')
-
-    cmd_parts.extend(format_generic_attributes(attributes))
-    return ' '.join(cmd_parts)
-
-
-def format_mup_announce(
-    afi: str,
-    nexthop: str,
-    nlri_info: dict[str, Any],
-    attributes: dict[str, Any],
-    action: str = 'announce',
-    skip_attributes: bool = False,
-) -> str | None:
-    """Format a MUP NLRI as an API announce/withdraw command.
-
-    Args:
-        skip_attributes: If True, don't include attributes (used when attributes are
-                        provided separately via 'group attributes ...')
-    """
-    name = nlri_info.get('name', '')
-    rd = nlri_info.get('rd', '')
-
-    mup_type = None
-    nlri_str = ''
-
-    if name == 'InterworkSegmentDiscoveryRoute':
-        mup_type = 'mup-isd'
-        prefix_ip = nlri_info.get('prefix_ip', '')
-        prefix_ip_len = nlri_info.get('prefix_ip_len', 0)
-        nlri_str = f'{prefix_ip}/{prefix_ip_len} rd {rd}'
-
-    elif name == 'DirectSegmentDiscoveryRoute':
-        mup_type = 'mup-dsd'
-        ip = nlri_info.get('ip', '')
-        nlri_str = f'{ip} rd {rd}'
-
-    elif name == 'Type1SessionTransformedRoute':
-        mup_type = 'mup-t1st'
-        prefix_ip = nlri_info.get('prefix_ip', '')
-        prefix_ip_len = nlri_info.get('prefix_ip_len', 0)
-        teid = nlri_info.get('teid', '0')
-        qfi = nlri_info.get('qfi', '0')
-        endpoint_ip = nlri_info.get('endpoint_ip', '')
-        nlri_str = f'{prefix_ip}/{prefix_ip_len} rd {rd} teid {teid} qfi {qfi} endpoint {endpoint_ip}'
-        source_ip = nlri_info.get('source_ip', '')
-        source_ip_len = nlri_info.get('source_ip_len', 0)
-        if source_ip and source_ip_len > 0 and source_ip != "b''":
-            nlri_str += f' source {source_ip}'
-
-    elif name == 'Type2SessionTransformedRoute':
-        mup_type = 'mup-t2st'
-        endpoint_ip = nlri_info.get('endpoint_ip', '')
-        endpoint_len = nlri_info.get('endpoint_len', 0)
-        teid = nlri_info.get('teid', '0')
-        ip_bits = 128 if ':' in endpoint_ip else 32
-        teid_len = endpoint_len - ip_bits
-        nlri_str = f'{endpoint_ip} rd {rd} teid {teid}/{teid_len}'
-
-    if not mup_type:
-        return None
-
-    cmd_parts = [f'{action} {afi} mup {mup_type} {nlri_str} next-hop {nexthop}']
-
-    # Skip attributes when they're provided via 'group attributes ...'
-    if skip_attributes:
-        return ' '.join(cmd_parts)
-
-    if 'extended-community' in attributes:
-        ecomms = attributes['extended-community']
-        if ecomms:
-            ecomm_strs = []
-            for ec in ecomms:
-                if isinstance(ec, dict) and 'string' in ec:
-                    ecomm_strs.append(ec['string'])
-            if ecomm_strs:
-                cmd_parts.append(f'extended-community [{" ".join(ecomm_strs)}]')
-
-    if 'bgp-prefix-sid' in attributes:
-        prefix_sid = attributes['bgp-prefix-sid']
-        if 'l3-service' in prefix_sid:
-            for service in prefix_sid['l3-service']:
-                sid = service.get('sid', '')
-                behavior = service.get('endpoint_behavior', 0)
-                structure = service.get('structure', {})
-                lbl = structure.get('locator-block-length', 0)
-                lnl = structure.get('locator-node-length', 0)
-                fl = structure.get('function-length', 0)
-                al = structure.get('argument-length', 0)
-                tl = structure.get('transposition-length', 0)
-                to = structure.get('transposition-offset', 0)
-                cmd_parts.append(
-                    f'bgp-prefix-sid-srv6 ( l3-service {sid} 0x{behavior:x} [{lbl},{lnl},{fl},{al},{tl},{to}] )'
-                )
-
-    cmd_parts.extend(format_generic_attributes(attributes))
-    return ' '.join(cmd_parts)
-
-
-def format_rtc_nlri(nlri_info: dict[str, Any]) -> str | None:
-    """The RTC fields of an announce: `origin-as .. route-target ..` or `default`.
-
-    None for a prefix shorter than 96 bits (RFC 4684 section 4), which is decoded but cannot
-    be configured, so there is no command to give back.
-    """
-    if 'prefix-length' in nlri_info:
-        return None
-    target = nlri_info.get('route-target')
-    if target is None:
-        return 'default'
-    return f'origin-as {nlri_info.get("origin", 0)} route-target {target}'
-
-
-def _label_argument(nlri_info: dict[str, Any]) -> list[str]:
-    """The `label` argument for the first label of the NLRI, or nothing when it has none.
-
-    The JSON gives a label stack either flat or as a list of lists, depending on the family.
-    """
-    labels = nlri_info.get('label')
-    if not labels:
-        return []
-    first = labels[0][0] if isinstance(labels[0], list) else labels[0]
-    return [f'label {first}']
-
-
-def _flow_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
-    """FlowSpec, through format_flow_announce."""
-    commands: list[str] = []
-    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-    for nexthop, nlris in nexthops.items():
-        for nlri_info in nlris:
-            cmd = format_flow_announce(afi, nexthop, nlri_info, attributes)
-            if cmd:
-                commands.append(cmd)
-    return commands
-
-
-def _mvpn_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
-    """MCAST-VPN: the routes of one next hop go in one `group` when there are several."""
-    commands: list[str] = []
-    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-    for nexthop, nlris in nexthops.items():
-        if len(nlris) > 1:
-            group_cmds = []
-            for nlri_info in nlris:
-                cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
-                if cmd:
-                    group_cmds.append(cmd)
-            if len(group_cmds) > 1:
-                commands.append('group ' + ' ; '.join(group_cmds))
-            elif group_cmds:
-                commands.append(group_cmds[0])
-        else:
-            for nlri_info in nlris:
-                cmd = format_mvpn_announce(afi, nexthop, nlri_info, attributes)
-                if cmd:
-                    commands.append(cmd)
-    return commands
-
-
-def _mup_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
-    """MUP, through format_mup_announce."""
-    commands: list[str] = []
-    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-    for nexthop, nlris in nexthops.items():
-        for nlri_info in nlris:
-            cmd = format_mup_announce(afi, nexthop, nlri_info, attributes)
-            if cmd:
-                commands.append(cmd)
-    return commands
-
-
-def _vpls_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
-    """VPLS, one command per NLRI."""
-    commands: list[str] = []
-    for nexthop, nlris in nexthops.items():
-        for nlri_info in nlris:
-            rd = nlri_info.get('rd', '')
-            endpoint = nlri_info.get('endpoint', 0)
-            base = nlri_info.get('base', 0)
-            offset = nlri_info.get('offset', 0)
-            size = nlri_info.get('size', 0)
-            cmd_parts = [
-                f'announce vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop {nexthop}'
-            ]
-            cmd_parts.extend(format_attributes(attributes))
-            commands.append(' '.join(cmd_parts))
-    return commands
-
-
-def _rtc_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
-    """RTC (RFC 4684); a route the configuration cannot express is left out."""
-    commands: list[str] = []
-    for nexthop, nlris in nexthops.items():
-        for nlri_info in nlris:
-            fields = format_rtc_nlri(nlri_info)
-            if fields is None:
-                continue
-            cmd_parts = [f'announce ipv4 rtc {fields} next-hop {nexthop}']
-            cmd_parts.extend(format_attributes(attributes))
-            commands.append(' '.join(cmd_parts))
-    return commands
-
-
-# the attributes an sr-policy command takes besides its tunnel
-SR_POLICY_COMMUNITIES = ('community', 'extended-community')
-
-
-def _sr_policy_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
-    """SR-Policy, its tunnel read from the tunnel-encap attribute."""
-    commands: list[str] = []
-    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-    tunnel_encap = attributes.get('tunnel-encap', {})
-    sr = tunnel_encap.get('sr-policy', {}) if isinstance(tunnel_encap, dict) else {}
-    # RFC 9830 4.2.1: the route is refused without them, so the command carries them
-    communities = {key: attributes[key] for key in SR_POLICY_COMMUNITIES if key in attributes}
-    for nexthop, nlris in nexthops.items():
-        for nlri_info in nlris:
-            distinguisher = nlri_info.get('distinguisher', 0)
-            color = nlri_info.get('color', 0)
-            endpoint = nlri_info.get('endpoint', '')
-            cmd_parts = [
-                f'announce {afi} sr-policy distinguisher {distinguisher} color {color} endpoint {endpoint} next-hop {nexthop}'
-            ]
-            cmd_parts.extend(_format_sr_policy_tunnel(sr))
-            cmd_parts.extend(format_attributes(communities))
-            commands.append(' '.join(cmd_parts))
-    return commands
-
-
-def _standard_announces(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
-    """Every other family: an End-of-RIB, several NLRI in one `attributes` command, or one each."""
-    commands: list[str] = []
-    for nexthop, nlris in nexthops.items():
-        # Check for EOR
-        if nlris and isinstance(nlris, list) and len(nlris) == 1:
-            nlri_item = nlris[0]
-            if isinstance(nlri_item, str) and nlri_item == 'eor':
-                commands.append(f'announce eor {family}')
-                continue
-            if isinstance(nlri_item, dict) and 'eor' in nlri_item:
-                eor_info = nlri_item['eor']
-                if isinstance(eor_info, dict):
-                    afi = eor_info.get('afi', 'ipv4')
-                    safi = eor_info.get('safi', 'unicast')
-                    commands.append(f'announce eor {afi} {safi}')
-                continue
-
-        # Multi-NLRI: use 'attributes' syntax
-        if len(nlris) > 1:
-            path_info = nlris[0].get('path-information') if nlris else None
-            all_same_path = all(n.get('path-information') == path_info for n in nlris)
-
-            cmd_parts = ['announce attributes']
-            if path_info and all_same_path:
-                cmd_parts.append(f'path-information {path_info}')
-            cmd_parts.append(f'next-hop {nexthop}')
-            cmd_parts.extend(format_attributes(attributes))
-            cmd_parts.append('nlri')
-            for nlri_info in nlris:
-                nlri = nlri_info.get('nlri', '')
-                cmd_parts.append(nlri)
-            commands.append(' '.join(cmd_parts))
-        else:
-            # Single NLRI
-            for nlri_info in nlris:
-                nlri = nlri_info.get('nlri', '')
-                api_family = family_to_api_format(family)
-                cmd_parts = [f'announce {api_family} {nlri} next-hop {nexthop}']
-
-                if 'path-information' in nlri_info:
-                    cmd_parts.append(f'path-information {nlri_info["path-information"]}')
-
-                if 'rd' in nlri_info:
-                    cmd_parts.append(f'rd {nlri_info["rd"]}')
-
-                cmd_parts.extend(_label_argument(nlri_info))
-
-                cmd_parts.extend(format_attributes(attributes))
-                commands.append(' '.join(cmd_parts))
-    return commands
-
-
-def _announce_commands(family: str, nexthops: dict[str, Any], attributes: dict[str, Any]) -> list[str]:
-    """The API commands announcing what one family of the UPDATE carries, in order."""
-    if 'flow' in family:
-        return _flow_announces(family, nexthops, attributes)
-    if 'mcast-vpn' in family:
-        return _mvpn_announces(family, nexthops, attributes)
-    if 'mup' in family:
-        return _mup_announces(family, nexthops, attributes)
-    if 'vpls' in family:
-        return _vpls_announces(family, nexthops, attributes)
-    if family == 'ipv4 rtc':
-        return _rtc_announces(family, nexthops, attributes)
-    if 'sr-policy' in family:
-        return _sr_policy_announces(family, nexthops, attributes)
-    return _standard_announces(family, nexthops, attributes)
-
-
-def _formatted_withdraws(
-    formatter: Callable[..., str | None], family: str, nlris: list[Any], attributes: dict[str, Any], use_group: bool
-) -> list[str]:
-    """FlowSpec, MUP and MCAST-VPN withdrawals, which are written by their announce formatter.
-
-    The next hop comes from the attributes, as a withdrawal carries none of its own.  With
-    `use_group` the attributes go in a `group` in front instead of on the withdrawal.
-    """
-    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-    nexthop = attributes.get('next-hop', '0.0.0.0')
-    commands: list[str] = []
-    for nlri_info in nlris:
-        if not isinstance(nlri_info, dict):
-            continue
-        if use_group:
-            cmd = formatter(afi, nexthop, nlri_info, attributes, action='withdraw', skip_attributes=True)
-            if cmd:
-                commands.append(f'group {format_withdraw_attributes(attributes)} ; {cmd}')
-        else:
-            cmd = formatter(afi, nexthop, nlri_info, attributes, action='withdraw')
-            if cmd:
-                commands.append(cmd)
-    return commands
-
-
-def _rtc_withdraws(family: str, nlris: list[Any]) -> list[str]:
-    """RTC (RFC 4684); a route the configuration cannot express is left out."""
-    commands: list[str] = []
-    for nlri_info in nlris:
-        fields = format_rtc_nlri(nlri_info) if isinstance(nlri_info, dict) else None
-        if fields is not None:
-            commands.append(f'withdraw ipv4 rtc {fields}')
-    return commands
-
-
-def _vpls_withdraws(family: str, nlris: list[Any]) -> list[str]:
-    """VPLS, one command per NLRI."""
-    commands: list[str] = []
-    for nlri_info in nlris:
-        if isinstance(nlri_info, dict):
-            rd = nlri_info.get('rd', '')
-            endpoint = nlri_info.get('endpoint', 0)
-            base = nlri_info.get('base', 0)
-            offset = nlri_info.get('offset', 0)
-            size = nlri_info.get('size', 0)
-            cmd_parts = [
-                f'withdraw vpls rd {rd} endpoint {endpoint} base {base} offset {offset} size {size} next-hop 0.0.0.0'
-            ]
-            commands.append(' '.join(cmd_parts))
-    return commands
-
-
-def _sr_policy_withdraws(family: str, nlris: list[Any]) -> list[str]:
-    """SR-Policy, one command per NLRI."""
-    commands: list[str] = []
-    afi = 'ipv4' if 'ipv4' in family else 'ipv6'
-    for nlri_info in nlris:
-        if isinstance(nlri_info, dict):
-            distinguisher = nlri_info.get('distinguisher', 0)
-            color = nlri_info.get('color', 0)
-            endpoint = nlri_info.get('endpoint', '')
-            commands.append(f'withdraw {afi} sr-policy distinguisher {distinguisher} color {color} endpoint {endpoint}')
-    return commands
-
-
-def _standard_withdraws(family: str, nlris: list[Any], attributes: dict[str, Any], use_group: bool) -> list[str]:
-    """Every other family, one command per NLRI, its attributes in a `group` when asked."""
-    commands: list[str] = []
-    api_family = family_to_api_format(family)
-    for nlri_info in nlris:
-        if isinstance(nlri_info, dict):
-            nlri = nlri_info.get('nlri', '')
-            cmd_parts = [f'withdraw {api_family} {nlri}']
-
-            if 'rd' in nlri_info:
-                cmd_parts.append(f'rd {nlri_info["rd"]}')
-
-            cmd_parts.extend(_label_argument(nlri_info))
-
-            if use_group:
-                attr_cmd = format_withdraw_attributes(attributes)
-                withdraw_cmd = ' '.join(cmd_parts)
-                commands.append(f'group {attr_cmd} ; {withdraw_cmd}')
-            else:
-                cmd_parts.extend(format_attributes(attributes))
-                commands.append(' '.join(cmd_parts))
-        else:
-            commands.append(f'withdraw {api_family} {nlri_info}')
-    return commands
-
-
-def _withdraw_commands(family: str, nlris: list[Any], attributes: dict[str, Any], use_group: bool) -> list[str]:
-    """The API commands withdrawing what one family of the UPDATE carries, in order.
-
-    With `use_group` the attributes a withdrawal carries go in a `group` in front of it.
-    """
-    if family == 'ipv4 rtc':
-        return _rtc_withdraws(family, nlris)
-
-    if 'flow' in family:
-        return _formatted_withdraws(format_flow_announce, family, nlris, attributes, use_group)
-
-    if 'mup' in family:
-        return _formatted_withdraws(format_mup_announce, family, nlris, attributes, use_group)
-
-    if 'mcast-vpn' in family:
-        return _formatted_withdraws(format_mvpn_announce, family, nlris, attributes, use_group)
-
-    if 'vpls' in family:
-        return _vpls_withdraws(family, nlris)
-
-    if 'sr-policy' in family:
-        return _sr_policy_withdraws(family, nlris)
-
-    return _standard_withdraws(family, nlris, attributes, use_group)
-
-
-def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor', generic: bool = False) -> list[str]:
-    """Decode BGP UPDATE hex to API command string(s).
-
-    Args:
-        payload_hex: The BGP UPDATE payload in hex (after 19-byte header)
-        neighbor: Neighbor for negotiation context
-        generic: If True, output generic attributes as hex
-
-    Returns:
-        API command strings. An empty list means the payload contains no
-        representable update; decoding and formatting failures propagate.
-    """
-    raw = _hexa(payload_hex)
-    update = _make_update(neighbor, raw)
+    update = _make_update(neighbor, _hexa(payload_hex))
     if not update:
         return []
+    if update.IS_EOR:
+        marker: Any = update.nlris[0]
+        return [f'announce eor {marker.afi} {marker.safi}']
+    _, negotiated = _negotiated(neighbor)
+    attributes = _sent_anyway(update.attributes, negotiated)
+    announced = [Route(routed.nlri, attributes, routed.nexthop) for routed in update.announces]
+    withdrawn = [Route(nlri, attributes, IP.NoNextHop) for nlri in update.withdraws]
 
-    encoder = Response.JSON(json_version)
-    if generic:
-        encoder.generic_attribute_format = True
-
-    json_str = encoder.update(neighbor, 'in', update, b'', b'', Negotiated.UNSET)
-    data = json.loads(json_str)
-
-    message = data.get('neighbor', {}).get('message', {}).get('update', {})
-    if not message:
-        return []
-
-    announce = message.get('announce', {})
-    withdraw = message.get('withdraw', {})
-    attributes = message.get('attribute', {})
-
-    commands = []
-
-    # Process announces
-    for family, nexthops in announce.items():
-        commands.extend(_announce_commands(family, nexthops, attributes))
-
-    # Process withdraws
-    # Check if we need to use 'group' for extra attributes
-    use_group = has_extra_withdraw_attributes(attributes)
-
-    for family, nlris in withdraw.items():
-        commands.extend(_withdraw_commands(family, nlris, attributes, use_group))
-
-    # Attributes-only UPDATE (no announce, no withdraw, just attributes)
-    if not commands and attributes:
-        attr_parts = format_attributes(attributes)
-        if attr_parts:
-            commands.append('attributes ' + ' '.join(attr_parts))
-
+    if len(announced) > 1 and not withdrawn:
+        shared = _shared(announced)
+        if shared is not None:
+            return [shared]
+    commands = [_command('announce', route) for route in announced]
+    commands.extend(_command('withdraw', route) for route in withdrawn)
+    if len(commands) > 1:
+        return ['group ' + ' ; '.join(commands)]
     return commands

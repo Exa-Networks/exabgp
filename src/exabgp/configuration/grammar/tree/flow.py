@@ -54,6 +54,9 @@ from exabgp.configuration.grammar.tree.static import (
     ROUTES,
     action,
     add_attribute,
+    community_word,
+    read_back,
+    text_words,
     value_fields,
 )
 from exabgp.configuration.grammar.types import flow as types
@@ -349,6 +352,43 @@ def rule_pairs(nlri: Any) -> list[tuple[str, list[str]]]:
     return pairs
 
 
+# the statements of a flow route which are written as their own keyword, not as a community
+_COMMUNITY_KEYWORDS = ('community', 'large-community', 'extended-community')
+
+
+def _spellings(text: str) -> list[list[str]]:
+    """How the text of a traffic community may be written as a statement: `rate-limit:0` is
+    `rate-limit 0`, `rate-limit:9600:packets` is `rate-limit 9600 packets`, `redirect:1:2` is
+    `redirect 1:2`, `mark 10` is itself; the text of an interface-set leaves out whether it is
+    transitive, which the statement says.
+    """
+    if ' ' in text or ':' not in text:
+        return [text.split()]
+    keyword, rest = text.split(':', 1)
+    return [[keyword, *rest.split(':')], [keyword, rest], *([keyword, f'{kind}:{rest}'] for kind in INTERFACE_KINDS)]
+
+
+INTERFACE_KINDS = ('transitive', 'non-transitive')
+
+
+def traffic_action(community: Any) -> tuple[str, list[WordOrSyntax]] | None:
+    """The action statement a flow extended community is, when one reads back to its bytes."""
+    packed = bytes(community.community)
+    for words in _spellings(str(community)):
+        spec = THEN.get(words[0]) or SCOPE.get(words[0])
+        if spec is None or words[0] in _COMMUNITY_KEYWORDS:
+            continue
+        value = read_back(spec.type, ' '.join(words[1:]))
+        if spec.target == Target.NEXTHOP_ATTRIBUTE and value is not None:
+            nexthop, value = value
+            if nexthop is not IP.NoNextHop:
+                continue  # a redirect to an address also sets the next-hop of the route
+        communities = getattr(value, 'communities', None)
+        if communities is not None and [bytes(each.community) for each in communities] == [packed]:
+            return words[0], list(words[1:])
+    return None
+
+
 def action_pairs(route: Route) -> list[tuple[str, list[WordOrSyntax]]]:
     """The actions of a flow route, as keyword and words; ValueError when one has no statement."""
     from exabgp.bgp.message.update.attribute import Attribute, GenericAttribute
@@ -362,11 +402,19 @@ def action_pairs(route: Route) -> list[tuple[str, list[WordOrSyntax]]]:
         if isinstance(attribute, GenericAttribute):
             actions.append(('attribute', HexAttribute().render(attribute)))
         elif code == Attribute.CODE.EXTENDED_COMMUNITY:
-            hexes = ['0x' + bytes(each.community).hex() for each in attribute.communities]
-            actions.append(('extended-community', [Syntax('['), *hexes, Syntax(']')]))
+            others: list[WordOrSyntax] = []
+            for each in attribute.communities:
+                found = traffic_action(each)
+                if found is None:
+                    others.append(community_word(each))
+                else:
+                    actions.append(found)
+            if others:
+                actions.append(('extended-community', [Syntax('['), *others, Syntax(']')]))
         elif code in (Attribute.CODE.COMMUNITY, Attribute.CODE.LARGE_COMMUNITY):
             keyword = 'community' if code == Attribute.CODE.COMMUNITY else 'large-community'
-            actions.append((keyword, [*(str(attribute).split() or ['[', ']'])]))
+            # the brackets of a list are syntax: as words, they were printed quoted, `"["`
+            actions.append((keyword, text_words(str(attribute)) or [Syntax('['), Syntax(']')]))
         elif code == Attribute.CODE.IPV6_EXTENDED_COMMUNITY:
             for each in attribute.communities:
                 if isinstance(each, TrafficRedirectIPv6):
@@ -397,7 +445,9 @@ def route_values(route: Route) -> tuple[Any, dict[str, Any]]:
         else:
             match.setdefault(f'_{keyword}', []).extend(_printed(words))
     for keyword, then in action_pairs(route):
-        values['then'].setdefault(f'_{keyword}', []).extend(_printed(then))
+        # an interface-set is where the route applies, said in its scope block
+        block = values.setdefault('scope', {}) if keyword in SCOPE else values['then']
+        block.setdefault(f'_{keyword}', []).extend(_printed(then))
     if route.nexthop is not IP.NoNextHop:
         values['_next-hop'] = _printed(['self' if route.nexthop.SELF else str(route.nexthop)])
     return '', values

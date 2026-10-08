@@ -634,7 +634,8 @@ class TestSRPolicyDecode(unittest.TestCase):
         self.assertIn('segment-list weight 1', cmd)
         self.assertIn('segment type-a mpls 16001', cmd)
         # RFC 9830 4.2.1: without it the command is refused, so it is not re-injectable
-        self.assertIn('extended-community [target:192.0.2.1:100]', cmd)
+        self.assertIn('extended-community [ target:192.0.2.1:100 ]', cmd)
+        self._assert_reinjectable(cmd)
 
     def test_sr_policy_command_srv6(self):
         """decode --command must produce a re-injectable announce (SRv6 path + names)."""
@@ -647,9 +648,18 @@ class TestSRPolicyDecode(unittest.TestCase):
         self.assertIn('srv6-binding-sid fc00::1', cmd)
         self.assertIn('segment type-b srv6 fc00::1', cmd)
         self.assertIn('endpoint-behavior 65', cmd)
-        self.assertIn('policy-name "my-policy"', cmd)
-        self.assertIn('candidate-path-name "primary"', cmd)
-        self.assertIn('community [65535:65282]', cmd)
+        self.assertIn('policy-name my-policy', cmd)
+        self.assertIn('candidate-path-name primary', cmd)
+        self.assertIn('community no-advertise', cmd)
+        self._assert_reinjectable(cmd)
+
+    def _assert_reinjectable(self, cmd):
+        """The API reads the command back, as the reactor does: one route."""
+        from exabgp.configuration.grammar.read import read_command
+
+        action, afi, line = cmd.split(' ', 2)
+        routes, left = read_command(afi, line, action == 'announce')
+        self.assertEqual((len(routes), left), (1, 0), cmd)
 
 
 class TestIsBgpFunction(unittest.TestCase):

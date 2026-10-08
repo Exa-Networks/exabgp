@@ -30,9 +30,9 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import sys
+from typing import cast
 from pathlib import Path
 
 # Add src to path for library imports
@@ -53,168 +53,24 @@ MISSING_COVERAGE = {NO_CMD}
 # Now import exabgp modules
 from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update.attribute import AttributeCollection
-from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.neighbor import Neighbor
-from exabgp.configuration.check import _hexa, _make_update, _negotiated
+from exabgp.configuration.configuration import _withdrawable
+from exabgp.protocol.ip import IP
+from exabgp.reactor.api import API
+from exabgp.reactor.api.command.group import _parse_routes
+from exabgp.reactor.loop import Reactor
+from exabgp.rib.route import Route
+from exabgp.configuration.check import _negotiated
 from exabgp.configuration.command import decode_to_api_command
 from exabgp.configuration.configuration import Configuration
 from exabgp.environment import getenv
 from exabgp.logger import log
-from exabgp.reactor.api.response import Response
-from exabgp.version import json as json_version
 
 # ANSI color codes
 GREEN = "\033[32m"
 RED = "\033[31m"
 YELLOW = "\033[33m"
 RESET = "\033[0m"
-
-
-def format_extended_community(ec: dict) -> str | None:
-    """Format a single extended community dict to API command string.
-
-    Handles interface-set transitive field specially.
-
-    Args:
-        ec: Extended community dict with 'string' and optionally 'transitive' fields
-
-    Returns:
-        Formatted string for API command, or None if invalid
-    """
-    if not isinstance(ec, dict) or "string" not in ec:
-        return None
-
-    ec_string = ec["string"]
-
-    # Handle interface-set with transitive field
-    if ec_string.startswith("interface-set:"):
-        # Check for explicit transitive field
-        if "transitive" in ec:
-            trans = "transitive" if ec["transitive"] else "non-transitive"
-            # String format: interface-set:direction:asn:group
-            # Output format: interface-set:transitive:direction:asn:group
-            parts = ec_string.split(":", 1)  # Split off "interface-set:"
-            if len(parts) == 2:
-                return f"interface-set:{trans}:{parts[1]}"
-        # No transitive field - keep original (defaults to transitive in encoder)
-
-    return ec_string
-
-
-def parse_generic_attribute_name(attr_name: str) -> tuple[int, int] | None:
-    """Parse attribute-0xNN-0xNN format to (type_code, flags).
-
-    Args:
-        attr_name: Attribute name like 'attribute-0x99-0x60'
-
-    Returns:
-        Tuple of (type_code, flags) as integers, or None if invalid format
-    """
-    # Format: attribute-0xNN-0xNN
-    if not attr_name.startswith("attribute-0x"):
-        return None
-
-    # Remove "attribute-" prefix, leaving "0xNN-0xNN"
-    rest = attr_name[10:]  # len("attribute-") = 10
-
-    # Find the separator "-0x" after the first hex value
-    sep_pos = rest.find("-0x", 2)  # Start at 2 to skip "0x" prefix
-    if sep_pos == -1:
-        return None
-
-    type_hex = rest[:sep_pos]  # "0xNN"
-    flags_hex = rest[sep_pos + 1:]  # "0xNN" (skip the "-")
-
-    try:
-        type_code = int(type_hex, 16)
-        flags = int(flags_hex, 16)
-        return (type_code, flags)
-    except ValueError:
-        return None
-
-
-def format_generic_attributes(attributes: dict) -> list[str]:
-    """Extract generic attributes as 'attribute [0xNN 0xNN 0xHEX]' syntax.
-
-    Args:
-        attributes: Attributes dict from JSON
-
-    Returns:
-        List of attribute strings like 'attribute [0x19 0xc0 0x...]'
-    """
-    parts = []
-    for attr_name, attr_value in attributes.items():
-        parsed = parse_generic_attribute_name(attr_name)
-        if parsed is None:
-            continue
-        type_code, flags = parsed
-        if isinstance(attr_value, str) and attr_value.startswith("0x"):
-            hex_data = attr_value[2:]
-            parts.append(f"attribute [0x{type_code:02x} 0x{flags:02x} 0x{hex_data}]")
-    return parts
-
-
-def extract_nexthop_from_raw(payload: str) -> str | None:
-    """Extract NEXT_HOP attribute from raw UPDATE payload hex string.
-
-    Parses the path attributes section to find NEXT_HOP (type code 3).
-    Returns the IPv4 address as a dotted-decimal string, or None if not found.
-
-    Args:
-        payload: UPDATE payload hex string (after BGP header, starting with withdrawn length)
-
-    Returns:
-        IPv4 address string like "10.10.6.3" or None
-    """
-    try:
-        data = bytes.fromhex(payload)
-        pos = 0
-
-        # Skip withdrawn routes
-        if len(data) < 2:
-            return None
-        withdrawn_len = int.from_bytes(data[0:2], 'big')
-        pos = 2 + withdrawn_len
-
-        # Get path attributes length
-        if len(data) < pos + 2:
-            return None
-        attrs_len = int.from_bytes(data[pos : pos + 2], 'big')
-        pos += 2
-        attrs_end = pos + attrs_len
-
-        # Parse path attributes
-        while pos < attrs_end:
-            if len(data) < pos + 2:
-                break
-            flags = data[pos]
-            type_code = data[pos + 1]
-            pos += 2
-
-            # Extended length?
-            if flags & 0x10:  # Extended length bit
-                if len(data) < pos + 2:
-                    break
-                attr_len = int.from_bytes(data[pos : pos + 2], 'big')
-                pos += 2
-            else:
-                if len(data) < pos + 1:
-                    break
-                attr_len = data[pos]
-                pos += 1
-
-            # Check if this is NEXT_HOP (type 3)
-            if type_code == 3 and attr_len == 4:
-                if len(data) >= pos + 4:
-                    ip_bytes = data[pos : pos + 4]
-                    return '.'.join(str(b) for b in ip_bytes)
-
-            pos += attr_len
-
-        return None
-    except Exception:
-        return None
 
 
 # Cache for initialized neighbors
@@ -270,1453 +126,88 @@ def get_neighbor(config_file: Path | None) -> Neighbor:
         raise RuntimeError(f"Failed to create default neighbor: {e}")
 
 
-_encode_counter = 0
+def _encode_eor(words: list[str]) -> str | None:
+    """`announce eor [<afi> <safi>]`, IPv4 unicast when no family is given."""
+    from exabgp.bgp.message.update.eor import EOR
+    from exabgp.protocol.family import AFI, SAFI
 
-
-def encode_group_command(
-    cmd: str, local_as: int = 65533, peer_as: int = 65533, asn4_disabled: bool = False
-) -> str | None:
-    """Encode group command (multiple announces/withdraws) to single BGP UPDATE.
-
-    Args:
-        cmd: Group command like 'group announce ... ; announce ...'
-             Or 'group attributes ... ; withdraw ...'
-
-    Returns:
-        Hex string of full BGP UPDATE message, or None on error
-    """
-    global _encode_counter
-
-    # Remove 'group ' prefix and split by semicolon
-    if cmd.startswith("group "):
-        cmd = cmd[6:]  # Remove 'group ' prefix
-
-    sub_cmds = [c.strip() for c in cmd.split(";") if c.strip()]
-    if not sub_cmds:
+    if len(words) == 2:
+        afi, safi = AFI.ipv4, SAFI.unicast
+    elif len(words) == 4:
+        afi, safi = AFI.from_string(words[2]), SAFI.from_string(words[3])
+    else:
         return None
-
-    # Parse all sub-commands and collect routes
-    announce_routes = []
-    withdraw_nlris = []
-    first_family = None
-    first_nexthop = None
-    group_attributes = None
-
-    for sub_cmd in sub_cmds:
-        parts = sub_cmd.split()
-        if len(parts) < 2:
-            continue
-
-        action = parts[0]
-
-        # Handle 'attributes' command: attributes origin igp local-preference 100 ...
-        if action == "attributes":
-            attr_str = " ".join(parts[1:])
-
-            # Use unique neighbor address
-            _encode_counter += 1
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    family {{ ipv4 unicast; }}
-    static {{ attributes {attr_str}; }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                continue
-
-            if not configuration.neighbors:
-                continue
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                if not neighbor.rib.enabled:
-                    continue
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-                for route in neighbor.rib.outgoing.cached_routes():
-                    group_attributes = route.attributes
-                    neighbor.rib.uncache()
-                    break
-            continue
-
-        if action not in ("announce", "withdraw"):
-            continue
-
-        is_withdraw = action == "withdraw"
-
-        # Handle FlowSpec syntax: withdraw <afi> flow <flow-details>
-        if len(parts) >= 4 and parts[2] == "flow":
-            afi = parts[1]  # ipv4 or ipv6
-
-            # Transform API format to config format
-            config_parts = []
-            has_rd = False
-            i = 3  # Start after "withdraw <afi> flow"
-            while i < len(parts):
-                token = parts[i]
-                if token == "rd":
-                    has_rd = True
-                    config_parts.append(f"rd {parts[i + 1]}")
-                    i += 2
-                elif token == "path-information":
-                    config_parts.append(f"path-information {parts[i + 1]}")
-                    i += 2
-                elif token in ("next-hop", "extended-community", "community"):
-                    # Skip these for withdraw - attributes come from group
-                    if token == "next-hop":
-                        i += 2
-                    elif i + 1 < len(parts) and parts[i + 1].startswith("["):
-                        j = i + 1
-                        while not parts[j].endswith("]") and j < len(parts) - 1:
-                            j += 1
-                        i = j + 1
-                    else:
-                        i += 1
-                elif token in (
-                    "source-ipv4", "destination-ipv4", "source-ipv6", "destination-ipv6",
-                    "protocol", "next-header", "destination-port", "source-port", "port",
-                    "icmp-type", "icmp-code", "dscp", "traffic-class", "flow-label",
-                    "fragment", "tcp-flags", "packet-length",
-                ):
-                    if i + 1 < len(parts):
-                        j = i + 1
-                        value = parts[j]
-                        if value.startswith("[") and not value.endswith("]"):
-                            while j < len(parts) - 1:
-                                j += 1
-                                value += " " + parts[j]
-                                if parts[j].endswith("]"):
-                                    break
-                        config_parts.append(f"{token} {value}")
-                        i = j + 1
-                    else:
-                        i += 1
-                else:
-                    i += 1
-
-            safi = "flow-vpn" if has_rd else "flow"
-            family = f"{afi} {safi}"
-            flow_config = " ".join(config_parts) if config_parts else "discard"
-
-            _encode_counter += 1
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            capability_parts = []
-            if asn4_disabled:
-                capability_parts.append("asn4 disable;")
-            needs_addpath = "path-information" in flow_config
-            if needs_addpath:
-                capability_parts.append("add-path send/receive;")
-            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
-            addpath_section = f"add-path {{ {family}; }}" if needs_addpath else ""
-
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ {family}; }}
-    {addpath_section}
-    announce {{ {afi} {{ {safi} {flow_config}; }} }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                continue
-
-            if not configuration.neighbors:
-                continue
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                if not neighbor.rib.enabled:
-                    continue
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-                for route in neighbor.rib.outgoing.cached_routes():
-                    if first_family is None:
-                        first_family = family
-                        first_nexthop = route.nexthop
-                    if is_withdraw:
-                        withdraw_nlris.append(route.nlri)
-                    else:
-                        announce_routes.append(route)
-                    neighbor.rib.uncache()
-                    break
-            continue
-
-        # Handle MUP syntax: withdraw <afi> mup <mup-type> ...
-        if len(parts) >= 4 and parts[2] == "mup":
-            afi = parts[1]  # ipv4 or ipv6
-            mup_details = " ".join(parts[3:])
-            family = f"{afi} mup"
-
-            _encode_counter += 1
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            capability_parts = []
-            if asn4_disabled:
-                capability_parts.append("asn4 disable;")
-            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
-
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ {family}; }}
-    announce {{ {afi} {{ mup {mup_details}; }} }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                continue
-
-            if not configuration.neighbors:
-                continue
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                if not neighbor.rib.enabled:
-                    continue
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-                for route in neighbor.rib.outgoing.cached_routes():
-                    if first_family is None:
-                        first_family = family
-                        first_nexthop = route.nexthop
-                    if is_withdraw:
-                        withdraw_nlris.append(route.nlri)
-                    else:
-                        announce_routes.append(route)
-                    neighbor.rib.uncache()
-                    break
-            continue
-
-        # Handle VPN route withdraw: withdraw route X rd Y label Z
-        if len(parts) >= 3 and parts[1] == "route" and is_withdraw:
-            route_details = " ".join(parts[2:])
-            # Determine family from route details
-            has_rd = "rd " in route_details
-            family = "ipv4 mpls-vpn" if has_rd else "ipv4 unicast"
-
-            _encode_counter += 1
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            capability_parts = []
-            if asn4_disabled:
-                capability_parts.append("asn4 disable;")
-            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
-
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ {family}; }}
-    static {{ route {route_details}; }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                continue
-
-            if not configuration.neighbors:
-                continue
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                if not neighbor.rib.enabled:
-                    continue
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-                for route in neighbor.rib.outgoing.cached_routes():
-                    if first_family is None:
-                        first_family = family
-                        first_nexthop = route.nexthop
-                    if is_withdraw:
-                        withdraw_nlris.append(route.nlri)
-                    else:
-                        announce_routes.append(route)
-                    neighbor.rib.uncache()
-                    break
-            continue
-
-        # Handle MCAST-VPN syntax: announce <afi> mcast-vpn <mvpn-type> ...
-        if len(parts) >= 4 and parts[2] == "mcast-vpn":
-            afi = parts[1]
-            mvpn_details = " ".join(parts[3:])
-            family = f"{afi} mcast-vpn"
-
-            _encode_counter += 1
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            capability_parts = []
-            if asn4_disabled:
-                capability_parts.append("asn4 disable;")
-            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
-
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ {family}; }}
-    announce {{ {afi} {{ mcast-vpn {mvpn_details}; }} }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                continue
-
-            if not configuration.neighbors:
-                continue
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                if not neighbor.rib.enabled:
-                    continue
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-                for route in neighbor.rib.outgoing.cached_routes():
-                    if first_family is None:
-                        first_family = family
-                        first_nexthop = route.nexthop
-                    if is_withdraw:
-                        withdraw_nlris.append(route.nlri)
-                    else:
-                        announce_routes.append(route)
-                    neighbor.rib.uncache()
-                    break
-
-    if not announce_routes and not withdraw_nlris:
-        return None
-
-    # Use group_attributes if available, otherwise use first route's attributes
-    if group_attributes is None and announce_routes:
-        group_attributes = announce_routes[0].attributes
-    if group_attributes is None:
-        group_attributes = AttributeCollection()
-
-    # Create single UPDATE with all NLRIs
-    neighbor = get_neighbor(None)  # Default neighbor for negotiation
-    _, negotiated_out = _negotiated(neighbor)
-
-    routed_nlris = [RoutedNLRI(r.nlri, r.nexthop) for r in announce_routes]
-    for packed in UpdateCollection(
-        routed_nlris, withdraw_nlris, group_attributes
-    ).messages(negotiated_out):
-        return packed.hex().upper()
-
-    return None
+    return EOR.make_eor(afi, safi).pack_message(Negotiated.UNSET).hex().upper()
 
 
-def encode_api_command(
-    cmd: str,
-    local_as: int = 65533,
-    peer_as: int = 65533,
-    asn4_disabled: bool = False,
-    source_neighbor: Neighbor | None = None,
-) -> str | None:
-    """Encode API command to hex BGP UPDATE message.
+def _queue(api: API, neighbor: Neighbor, command: str, shared: Route | None) -> Route | None | bool:
+    """Put the routes of one command of a group in the neighbor's RIB, as the reactor does.
 
-    Args:
-        cmd: API command like 'announce route 10.0.0.0/24 next-hop 1.2.3.4'
-        Or group command: 'group announce ... ; announce ...'
-        source_neighbor: Optional neighbor to extract capability settings from (e.g., LLNH)
-
-    Returns:
-        Hex string of full BGP UPDATE message, or None on error
+    Returns the attributes the group shares once an `attributes` command gave them, True for
+    a command applied, False for one the reactor refuses (it reads no route from it).
     """
-    # Extract LLNH settings from source neighbor if available
-    llnh_enabled = False
-    local_link_local = None
-    nexthop_entries: list[str] = []
-    nexthop_families: list[str] = []
-    if source_neighbor:
-        from exabgp.util.enumeration import TriState
+    action, _, rest = command.partition(" ")
+    if action in ("attribute", "attributes"):
+        routes = _parse_routes(api, command, action="announce")
+        return routes[0] if routes else False
+    if action not in ("announce", "withdraw"):
+        return False
+    routes = _parse_routes(api, rest, action=action)
+    if not routes:
+        return False
+    for route in routes:
+        if shared is not None:
+            route = route.with_merged_attributes(shared.attributes)
+            if route.nexthop is IP.NoNextHop and shared.nexthop is not IP.NoNextHop:
+                route = route.with_nexthop(shared.nexthop)
+        if route.nlri.family().afi_safi() not in neighbor.families():
+            return False
+        if action == "announce":
+            neighbor.rib.outgoing.add_to_rib(neighbor.resolve_self(route))
+            continue
+        # the reactor gives a withdrawal without a next-hop one (reactor/api/command/announce.py)
+        if route.nexthop is IP.NoNextHop:
+            route = route.with_nexthop(IP.from_string("0.0.0.0"))
+        neighbor.rib.outgoing.del_from_rib(_withdrawable(neighbor, route))
+    return True
 
-        llnh_enabled = source_neighbor.capability.link_local_nexthop == TriState.TRUE
-        if source_neighbor.session.local_link_local:
-            local_link_local = str(source_neighbor.session.local_link_local)
-        # RFC 8950 4: an IPv4 route with an IPv6 next hop is only sent where the file's
-        # neighbor configured extended next hop for it, so the synthetic neighbor needs it too
-        nexthop_entries = [f"{afi} {safi} {nhafi};" for afi, safi, nhafi in source_neighbor.nexthops()]
-        # the grammar keeps a nexthop entry only when the next hop's own family is configured
-        nexthop_families = sorted({f"{nhafi} {safi};" for _, safi, nhafi in source_neighbor.nexthops()})
-    global _encode_counter
-    _encode_counter += 1
 
+def encode_api_command(cmd: str, neighbor: Neighbor) -> str | None:
+    """The UPDATE the reactor sends `neighbor` for an API command, in hex.
+
+    The command is read by the reactor's own parser (`_parse_routes`, what `group` uses, which
+    takes each command the API takes) and its routes go through the neighbor's outgoing RIB,
+    which makes the UPDATEs. None when the reactor refuses the command, or sends anything
+    other than exactly one UPDATE for it: a raw: line is one message.
+    """
+    words = cmd.split()
+    if len(words) < 2:
+        return None
+    if words[0] == "announce" and words[1] == "eor":
+        return _encode_eor(words)
+    commands = cmd[len("group ") :].split(";") if words[0] == "group" else [cmd]
+
+    api = API(cast(Reactor, None))
+    rib = neighbor.rib.outgoing
+    rib.clear()
+    shared: Route | None = None
     try:
-        parts = cmd.split()
-        if len(parts) < 2:
-            return None
-
-        action = parts[0]  # announce/withdraw/group
-
-        # Handle group command: group announce ... ; announce ...
-        if action == "group":
-            return encode_group_command(cmd, local_as, peer_as, asn4_disabled)
-
-        # Handle EOR (End-of-RIB) syntax: announce eor [afi safi]
-        if len(parts) >= 2 and parts[1] == "eor":
-            from exabgp.bgp.message.update.eor import EOR
-            from exabgp.protocol.family import AFI, SAFI
-
-            # Default to ipv4 unicast if no family specified
-            if len(parts) == 2:
-                afi, safi = AFI.ipv4, SAFI.unicast
-            elif len(parts) == 4:
-                afi_str, safi_str = parts[2], parts[3]
-                afi = AFI.from_string(afi_str)
-                safi = SAFI.from_string(safi_str)
-            else:
+        for command in (each.strip() for each in commands if each.strip()):
+            applied = _queue(api, neighbor, command, shared)
+            if applied is False:
                 return None
-
-            # Create EOR message and pack it
-            eor = EOR.make_eor(afi, safi)
-            # EOR doesn't need negotiated, but pack_message requires it
-            # Create a minimal negotiated context
-            from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
-            packed = eor.pack_message(Negotiated.UNSET)
-            return packed.hex().upper()
-
-        # Handle 'attributes' syntax: announce attributes ... nlri X Y Z
-        # OR attributes-only: attributes origin igp local-preference 100
-        if parts[1] == "attributes" or parts[0] == "attributes":
-            # Parse: announce attributes [path-info X] next-hop Y ... nlri A B C
-            # OR: attributes origin igp local-preference 100 (no nlri keyword - attributes-only UPDATE)
-            if parts[0] == "attributes":
-                # attributes-only command: attributes origin igp local-preference 100
-                attr_parts = parts[1:]
-            else:
-                attr_parts = parts[2:]
-            nlri_idx = None
-            for i, p in enumerate(attr_parts):
-                if p == "nlri":
-                    nlri_idx = i
-                    break
-            if nlri_idx is None:
-                # Attributes-only UPDATE (no NLRI)
-                attr_str = " ".join(attr_parts)
-
-                # Use unique neighbor address to avoid RIB cache collision
-                neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-                conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    family {{ ipv4 unicast; }}
-    static {{ attributes {attr_str}; }}
-}}
-"""
-                configuration = Configuration([conf], text=True)
-                if not configuration.reload():
-                    return None
-
-                if not configuration.neighbors:
-                    return None
-
-                for name in configuration.neighbors.keys():
-                    neighbor = configuration.neighbors[name]
-                    _, negotiated_out = _negotiated(neighbor)
-
-                    if not neighbor.rib.enabled:
-                        continue
-
-                    for _ in neighbor.rib.outgoing.updates(False):
-                        pass
-
-                    for route in neighbor.rib.outgoing.cached_routes():
-                        for packed in UpdateCollection(
-                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-
-                    neighbor.rib.uncache()
-                return None
-
-            attr_str = " ".join(attr_parts[:nlri_idx])
-            nlri_list = attr_parts[nlri_idx + 1 :]
-            if not nlri_list:
-                return None
-
-            # Determine family from first NLRI
-            first_nlri = nlri_list[0]
-            if ":" in first_nlri:
-                family = "ipv6 unicast"
-            else:
-                family = "ipv4 unicast"
-
-            # Build config with multiple route statements (they will be grouped)
-            route_statements = []
-            for nlri in nlri_list:
-                route_statements.append(f"route {nlri} {attr_str}")
-            route_text = "; ".join(route_statements)
-
-            # Use unique neighbor address to avoid RIB cache collision
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            # Check if add-path is needed
-            needs_addpath = "path-information" in attr_str
-            capability_section = ""
-            addpath_section = ""
-            if needs_addpath:
-                capability_section = "capability { add-path send/receive; }"
-                addpath_section = f"add-path {{ {family}; }}"
-
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ {family}; }}
-    {addpath_section}
-    static {{ {route_text}; }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                return None
-
-            if not configuration.neighbors:
-                return None
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                _, negotiated_out = _negotiated(neighbor)
-
-                if not neighbor.rib.enabled:
-                    continue
-
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-
-                # Collect all routes and pack into one UPDATE
-                routes = list(neighbor.rib.outgoing.cached_routes())
-                if not routes:
-                    neighbor.rib.uncache()
-                    return None
-
-                # Debug: check we have expected routes
-                # print(f"DEBUG: Found {len(routes)} routes: {[str(r.nlri) for r in routes]}")
-
-                routed_nlris = [RoutedNLRI(r.nlri, r.nexthop) for r in routes]
-                for packed in UpdateCollection(
-                    routed_nlris, [], routes[0].attributes
-                ).messages(negotiated_out):
-                    neighbor.rib.uncache()
-                    return packed.hex().upper()
-
-                neighbor.rib.uncache()
-            return None
-
-        # Handle VPLS syntax: announce vpls rd X endpoint Y base Z offset A size B next-hop NH ...
-        if parts[1] == "vpls":
-            vpls_details = " ".join(parts[2:])
-
-            # Use unique neighbor address to avoid RIB cache collision
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            # Build capability section if needed
-            capability_parts = []
-            if asn4_disabled:
-                capability_parts.append("asn4 disable;")
-            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
-
-            # Configuration template for VPLS
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ l2vpn vpls; }}
-    l2vpn {{ vpls {vpls_details}; }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                return None
-
-            if not configuration.neighbors:
-                return None
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                _, negotiated_out = _negotiated(neighbor)
-
-                if not neighbor.rib.enabled:
-                    continue
-
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-
-                for route in neighbor.rib.outgoing.cached_routes():
-                    if action == "withdraw":
-                        # Withdraw: put NLRI in withdraw list, empty attributes
-                        for packed in UpdateCollection(
-                            [], [route.nlri], AttributeCollection()
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-                    else:
-                        # Announce: put NLRI in announce list with attributes
-                        for packed in UpdateCollection(
-                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-
-                neighbor.rib.uncache()
-            return None
-
-        # Handle SR-Policy and RTC syntax, both configured in the static section:
-        #   announce <afi> sr-policy distinguisher ...
-        #   announce ipv4 rtc (origin-as .. route-target .. | default) next-hop ...
-        if len(parts) >= 4 and parts[2] in ("sr-policy", "rtc"):
-            afi = parts[1]  # ipv4 or ipv6
-            safi = parts[2]
-            sr_details = " ".join(parts[3:])
-            family = f"{afi} {safi}"
-
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            capability_parts = []
-            if asn4_disabled:
-                capability_parts.append("asn4 disable;")
-            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
-
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ {family}; }}
-    static {{ {safi} {sr_details}; }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                return None
-
-            if not configuration.neighbors:
-                return None
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                _, negotiated_out = _negotiated(neighbor)
-
-                if not neighbor.rib.enabled:
-                    continue
-
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-
-                for route in neighbor.rib.outgoing.cached_routes():
-                    if action == "withdraw":
-                        for packed in UpdateCollection(
-                            [], [route.nlri], AttributeCollection()
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-                    else:
-                        for packed in UpdateCollection(
-                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-
-                neighbor.rib.uncache()
-            return None
-
-        # Handle MUP syntax: announce <afi> mup <mup-type> ...
-        if len(parts) >= 4 and parts[2] == "mup":
-            afi = parts[1]  # ipv4 or ipv6
-            mup_details = " ".join(parts[3:])
-            family = f"{afi} mup"
-
-            # Use unique neighbor address to avoid RIB cache collision
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            # Build capability section if needed
-            capability_parts = []
-            if asn4_disabled:
-                capability_parts.append("asn4 disable;")
-            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
-
-            # Configuration template for MUP
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ {family}; }}
-    announce {{ {afi} {{ mup {mup_details}; }} }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                return None
-
-            if not configuration.neighbors:
-                return None
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                _, negotiated_out = _negotiated(neighbor)
-
-                if not neighbor.rib.enabled:
-                    continue
-
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-
-                for route in neighbor.rib.outgoing.cached_routes():
-                    if action == "withdraw":
-                        # Withdraw: put NLRI in withdraw list, empty attributes
-                        for packed in UpdateCollection(
-                            [], [route.nlri], AttributeCollection()
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-                    else:
-                        # Announce: put NLRI in announce list with attributes
-                        for packed in UpdateCollection(
-                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-
-                neighbor.rib.uncache()
-            return None
-
-        # Handle FlowSpec syntax: announce <afi> flow <flow-details> ...
-        if len(parts) >= 4 and parts[2] == "flow":
-            afi = parts[1]  # ipv4 or ipv6
-            flow_details = " ".join(parts[3:])
-
-            # Transform API format to config format
-            # Parse out extended-community actions and convert to native config
-            config_parts = []
-            has_rd = False
-            next_hop = None
-            skip_nexthop = False  # Set when action (copy/redirect) sets nexthop
-            i = 3  # Start after "announce <afi> flow"
-            while i < len(parts):
-                token = parts[i]
-
-                if token == "rd":
-                    # Route distinguisher - indicates flow-vpn
-                    has_rd = True
-                    config_parts.append(f"rd {parts[i + 1]}")
-                    i += 2
-                elif token == "path-information":
-                    # RFC 7911 path identifier: only packed once add-path is negotiated
-                    config_parts.append(f"path-information {parts[i + 1]}")
-                    i += 2
-                elif token == "next-hop":
-                    next_hop = parts[i + 1]
-                    # Skip placeholder 0.0.0.0 next-hop (used in withdraws)
-                    if next_hop == "0.0.0.0":
-                        next_hop = None
-                    # Don't add to config_parts yet - may be handled by copy/redirect
-                    i += 2
-                elif token == "extended-community":
-                    # Parse extended-community value(s) and convert to native actions
-                    j = i + 1
-                    if j < len(parts) and parts[j].startswith("["):
-                        # Parse bracketed extended-community list
-                        ec_value = parts[j]
-                        # Handle multi-word values like "action sample-terminal"
-                        while not ec_value.endswith("]") and j < len(parts) - 1:
-                            j += 1
-                            ec_value += " " + parts[j]
-
-                        # Remove brackets and parse
-                        ec_inner = ec_value[1:-1]  # Remove [ and ]
-                        # Split on spaces but keep "action X" together
-                        ec_parts = ec_inner.split()
-
-                        other_ec = []  # Collect extended-communities to pass through
-                        k = 0
-                        while k < len(ec_parts):
-                            ec = ec_parts[k]
-                            if ec.startswith("rate-limit:"):
-                                ec_fields = ec.split(":")
-                                rate = ec_fields[1]
-                                if len(ec_fields) > 2 and ec_fields[2] == "packets":
-                                    config_parts.append(f"rate-limit {rate} packets")
-                                else:
-                                    config_parts.append(f"rate-limit {rate}")
-                            elif ec == "copy-to-nexthop":
-                                # copy X sets both nexthop and copy-to-nexthop EC
-                                if next_hop:
-                                    config_parts.append(f"copy {next_hop}")
-                                    skip_nexthop = True
-                            elif ec == "redirect-to-nexthop":
-                                # redirect X sets both nexthop and redirect-to-nexthop EC
-                                if next_hop:
-                                    config_parts.append(f"redirect {next_hop}")
-                                    skip_nexthop = True
-                                else:
-                                    config_parts.append("redirect-to-nexthop")
-                            elif ec == "redirect-to-nexthop-ietf":
-                                # redirect-to-nexthop-ietf takes an IP parameter
-                                if k + 1 < len(ec_parts):
-                                    config_parts.append(f"redirect-to-nexthop-ietf {ec_parts[k + 1]}")
-                                    k += 1
-                            elif ec.startswith("redirect:"):
-                                # redirect:ASN:VALUE or redirect:IP format
-                                redirect_val = ec[9:]  # Remove "redirect:"
-                                config_parts.append(f"redirect {redirect_val}")
-                            elif ec == "action":
-                                # action has a parameter (sample, terminal, sample-terminal)
-                                if k + 1 < len(ec_parts):
-                                    config_parts.append(f"action {ec_parts[k + 1]}")
-                                    k += 1
-                            elif ec.startswith("mark"):
-                                # "mark X" or "mark:X"
-                                if ":" in ec:
-                                    mark_val = ec.split(":")[1]
-                                    config_parts.append(f"mark {mark_val}")
-                                elif k + 1 < len(ec_parts):
-                                    config_parts.append(f"mark {ec_parts[k + 1]}")
-                                    k += 1
-                            elif ec.startswith("interface-set:"):
-                                # interface-set needs special handling:
-                                # New format: interface-set:transitive:direction:asn:group-id
-                                # New format: interface-set:non-transitive:direction:asn:group-id
-                                # Old format: interface-set:direction:asn:group-id (defaults to transitive)
-                                rest = ec.split(":", 1)[1]  # Remove "interface-set:" prefix
-                                if rest.startswith("transitive:") or rest.startswith("non-transitive:"):
-                                    # New format - pass through as-is
-                                    config_parts.append(f"interface-set {rest}")
-                                else:
-                                    # Old format - default to transitive
-                                    config_parts.append(f"interface-set transitive:{rest}")
-                            elif ec.startswith("origin:") or ec.startswith("target:") or ec.startswith("l2info:"):
-                                # Pass through other extended-communities
-                                other_ec.append(ec)
-                            k += 1
-                        # Add other extended-communities if any
-                        if other_ec:
-                            config_parts.append(f"extended-community [{' '.join(other_ec)}]")
-                        i = j + 1
-                    else:
-                        i += 1
-                elif token == "community":
-                    # Pass through community values
-                    j = i + 1
-                    if j < len(parts) and parts[j].startswith("["):
-                        comm_value = parts[j]
-                        while not comm_value.endswith("]") and j < len(parts) - 1:
-                            j += 1
-                            comm_value += " " + parts[j]
-                        config_parts.append(f"community {comm_value}")
-                        i = j + 1
-                    else:
-                        i += 1
-                elif token in (
-                    "source-ipv4",
-                    "destination-ipv4",
-                    "source-ipv6",
-                    "destination-ipv6",
-                    "protocol",
-                    "next-header",
-                    "destination-port",
-                    "source-port",
-                    "port",
-                    "icmp-type",
-                    "icmp-code",
-                    "dscp",
-                    "traffic-class",
-                    "flow-label",
-                    "fragment",
-                    "tcp-flags",
-                    "packet-length",
-                ):
-                    # Match field with a value (may be bracketed list)
-                    if i + 1 < len(parts):
-                        j = i + 1
-                        value = parts[j]
-                        # Handle bracketed lists that span multiple tokens
-                        if value.startswith("[") and not value.endswith("]"):
-                            while j < len(parts) - 1:
-                                j += 1
-                                value += " " + parts[j]
-                                if parts[j].endswith("]"):
-                                    break
-                        config_parts.append(f"{token} {value}")
-                        i = j + 1
-                    else:
-                        i += 1
-                elif token == "attribute":
-                    # Generic attribute: attribute [0xNN 0xNN 0xHEX]
-                    j = i + 1
-                    if j < len(parts) and parts[j].startswith("["):
-                        attr_value = parts[j]
-                        # Handle bracketed values that span multiple tokens
-                        while not attr_value.endswith("]") and j < len(parts) - 1:
-                            j += 1
-                            attr_value += " " + parts[j]
-                        config_parts.append(f"attribute {attr_value}")
-                        i = j + 1
-                    else:
-                        i += 1
-                else:
-                    # Unknown token - skip
-                    i += 1
-
-            # Add next-hop to config if not handled by copy/redirect actions
-            if next_hop and not skip_nexthop:
-                config_parts.append(f"next-hop {next_hop}")
-
-            # Determine family: flow-vpn if has RD, else flow
-            safi = "flow-vpn" if has_rd else "flow"
-            family = f"{afi} {safi}"
-            flow_config = " ".join(config_parts)
-
-            # Use unique neighbor address to avoid RIB cache collision
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            # Build capability section if needed
-            capability_parts = []
-            if asn4_disabled:
-                capability_parts.append("asn4 disable;")
-            needs_addpath = "path-information" in flow_config
-            if needs_addpath:
-                capability_parts.append("add-path send/receive;")
-            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
-            addpath_section = f"add-path {{ {family}; }}" if needs_addpath else ""
-
-            # Configuration template for FlowSpec
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ {family}; }}
-    {addpath_section}
-    announce {{ {afi} {{ {safi} {flow_config}; }} }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                return None
-
-            if not configuration.neighbors:
-                return None
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                _, negotiated_out = _negotiated(neighbor)
-
-                if not neighbor.rib.enabled:
-                    continue
-
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-
-                for route in neighbor.rib.outgoing.cached_routes():
-                    if action == "withdraw":
-                        # Withdraw: put NLRI in withdraw list, empty attributes
-                        for packed in UpdateCollection(
-                            [], [route.nlri], AttributeCollection()
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-                    else:
-                        # Announce: put NLRI in announce list with attributes
-                        for packed in UpdateCollection(
-                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-
-                neighbor.rib.uncache()
-            return None
-
-        # Handle MCAST-VPN syntax: announce <afi> mcast-vpn <mvpn-type> ...
-        if len(parts) >= 4 and parts[2] == "mcast-vpn":
-            afi = parts[1]  # ipv4 or ipv6
-            mvpn_details = " ".join(parts[3:])
-            family = f"{afi} mcast-vpn"
-
-            # Use unique neighbor address to avoid RIB cache collision
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-
-            # Build capability section if needed
-            capability_parts = []
-            if asn4_disabled:
-                capability_parts.append("asn4 disable;")
-            capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
-
-            # Configuration template for MCAST-VPN
-            conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address 127.0.0.1;
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ {family}; }}
-    announce {{ {afi} {{ mcast-vpn {mvpn_details}; }} }}
-}}
-"""
-            configuration = Configuration([conf], text=True)
-            if not configuration.reload():
-                return None
-
-            if not configuration.neighbors:
-                return None
-
-            for name in configuration.neighbors.keys():
-                neighbor = configuration.neighbors[name]
-                _, negotiated_out = _negotiated(neighbor)
-
-                if not neighbor.rib.enabled:
-                    continue
-
-                for _ in neighbor.rib.outgoing.updates(False):
-                    pass
-
-                for route in neighbor.rib.outgoing.cached_routes():
-                    if action == "withdraw":
-                        # Withdraw: put NLRI in withdraw list with attributes
-                        # MCAST-VPN withdraws include path attributes
-                        for packed in UpdateCollection(
-                            [], [route.nlri], route.attributes
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-                    else:
-                        # Announce: put NLRI in announce list with attributes
-                        for packed in UpdateCollection(
-                            [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
-                        ).messages(negotiated_out):
-                            neighbor.rib.uncache()
-                            return packed.hex().upper()
-
-                neighbor.rib.uncache()
-            return None
-
-        # Parse family from command: announce <afi> <safi> <nlri> ...
-        # Or: announce route <nlri> ... (legacy format)
-        if parts[1] == "route":
-            # Legacy "route" format: announce route 10.0.0.0/24 next-hop ...
-            route_details = " ".join(parts[2:])
-            nlri = parts[2]
-            is_ipv6 = ":" in nlri
-            has_rd = " rd " in route_details
-            has_label = " label " in route_details
-
-            if is_ipv6:
-                if has_rd:
-                    family = "ipv6 mpls-vpn"
-                elif has_label:
-                    family = "ipv6 nlri-mpls"
-                else:
-                    family = "ipv6 unicast"
-            else:
-                if has_rd:
-                    family = "ipv4 mpls-vpn"
-                elif has_label:
-                    family = "ipv4 nlri-mpls"
-                else:
-                    family = "ipv4 unicast"
-        else:
-            # Standard format: announce ipv4 unicast 10.0.0.0/24 next-hop ...
-            if len(parts) < 4:
-                return None
-            afi = parts[1]
-            safi = parts[2]
-            route_details = " ".join(parts[3:])
-            family = f"{afi} {safi}"
-
-        # Build route text
-        # Note: The static { route ... } config parser requires next-hop for validation
-        # (it always parses as ANNOUNCE). For withdraw, we add a dummy next-hop to pass
-        # validation, then extract only the NLRI (the next-hop is discarded).
-        # RFC says withdraws don't need next-hop - the wire format reflects this.
-        if action == "withdraw" and "next-hop" not in route_details:
-            route_text = f"route {route_details} next-hop 0.0.0.0"
-        else:
-            route_text = f"route {route_details}"
-
-        # Use unique neighbor address to avoid RIB cache collision
-        # RIB uses a class-level cache keyed by neighbor name
-        is_ipv6_family = family.startswith("ipv6")
-        if is_ipv6_family:
-            neighbor_ip = f"::ffff:127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-            local_addr = "::1"
-        else:
-            neighbor_ip = f"127.0.{(_encode_counter >> 8) & 255}.{_encode_counter & 255}"
-            local_addr = "127.0.0.1"
-
-        # Check if add-path is needed (path-information in command)
-        needs_addpath = "path-information" in route_details
-
-        # Build capability and add-path sections if needed
-        capability_parts = []
-        if needs_addpath:
-            capability_parts.append("add-path send/receive;")
-        if asn4_disabled:
-            capability_parts.append("asn4 disable;")
-        if llnh_enabled and is_ipv6_family:
-            capability_parts.append("link-local-nexthop enable;")
-        if nexthop_entries:
-            capability_parts.append("nexthop true;")
-        capability_section = f"capability {{ {' '.join(capability_parts)} }}" if capability_parts else ""
-        addpath_section = f"add-path {{ {family}; }}" if needs_addpath else ""
-        nexthop_section = f"nexthop {{ {' '.join(nexthop_entries)} }}" if nexthop_entries else ""
-        extra_families = " ".join(entry for entry in nexthop_families if entry != f"{family};")
-
-        # Build local-link-local section if LLNH enabled
-        llnh_section = ""
-        if local_link_local and llnh_enabled and is_ipv6_family:
-            llnh_section = f"local-link-local {local_link_local};"
-
-        # Configuration template
-        conf = f"""
-neighbor {neighbor_ip} {{
-    router-id 10.0.0.2;
-    local-address {local_addr};
-    {llnh_section}
-    local-as {local_as};
-    peer-as {peer_as};
-    {capability_section}
-    family {{ {family}; {extra_families} }}
-    {addpath_section}
-    {nexthop_section}
-    static {{ {route_text}; }}
-}}
-"""
-        configuration = Configuration([conf], text=True)
-        if not configuration.reload():
-            return None
-
-        if not configuration.neighbors:
-            return None
-
-        for name in configuration.neighbors.keys():
-            neighbor = configuration.neighbors[name]
-            _, negotiated_out = _negotiated(neighbor)
-
-            if not neighbor.rib.enabled:
-                continue
-
-            for _ in neighbor.rib.outgoing.updates(False):
-                pass
-
-            for route in neighbor.rib.outgoing.cached_routes():
-                if action == "withdraw":
-                    # Withdraw: put NLRI in withdraw list, empty attributes
-                    for packed in UpdateCollection(
-                        [], [route.nlri], AttributeCollection()
-                    ).messages(negotiated_out):
-                        neighbor.rib.uncache()
-                        return packed.hex().upper()
-                else:
-                    # Announce: put NLRI in announce list with attributes
-                    for packed in UpdateCollection(
-                        [RoutedNLRI(route.nlri, route.nexthop)], [], route.attributes
-                    ).messages(negotiated_out):
-                        # Clean up RIB cache to avoid memory leak
-                        neighbor.rib.uncache()
-                        return packed.hex().upper()
-
-        return None
-    except Exception:
-        return None
-
-
-def family_to_api_format(family: str) -> str:
-    """Convert JSON family format to API command format.
-
-    JSON format: "ipv4 unicast", "ipv6 unicast", "ipv4 mpls-vpn", "ipv4 nlri-mpls"
-    API format:
-    - IPv4 families: use "route" format
-    - IPv6 families: use "ipv6 <safi>" format
-    """
-    # IPv4 families use "route" format
-    if family.startswith("ipv4"):
-        return "route"
-    # IPv6 families use explicit family format
-    return family
-
-
-def format_mvpn_announce(
-    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = "announce"
-) -> str | None:
-    """Format a MCAST-VPN NLRI as an API announce/withdraw command.
-
-    MVPN route types (RFC 6514):
-    - Code 5: Source Active A-D Route -> source-ad source <ip> group <ip> rd <rd>
-    - Code 6: C-Multicast Shared Tree Join -> shared-join rp <ip> group <ip> rd <rd> source-as <as>
-    - Code 7: C-Multicast Source Tree Join -> source-join source <ip> group <ip> rd <rd> source-as <as>
-    """
-    code = nlri_info.get("code", 0)
-    rd = nlri_info.get("rd", "")
-    source = nlri_info.get("source", "")
-    group = nlri_info.get("group", "")
-    source_as = nlri_info.get("source-as", "")
-
-    # Map code to MVPN type keyword
-    nlri_str = ""
-    if code == 5:
-        # Source Active A-D Route
-        nlri_str = f"source-ad source {source} group {group} rd {rd}"
-    elif code == 6:
-        # C-Multicast Shared Tree Join (source field is actually RP)
-        nlri_str = f"shared-join rp {source} group {group} rd {rd} source-as {source_as}"
-    elif code == 7:
-        # C-Multicast Source Tree Join
-        nlri_str = f"source-join source {source} group {group} rd {rd} source-as {source_as}"
-    else:
-        return None
-
-    # Build command parts
-    cmd_parts = [f"{action} {afi} mcast-vpn {nlri_str} next-hop {nexthop}"]
-
-    # Add extended-community attribute
-    if "extended-community" in attributes:
-        ecomms = attributes["extended-community"]
-        if ecomms:
-            ecomm_strs = []
-            for ec in ecomms:
-                if isinstance(ec, dict) and "string" in ec:
-                    ecomm_strs.append(ec["string"])
-            if ecomm_strs:
-                cmd_parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
-
-    # Add generic/unknown attributes
-    cmd_parts.extend(format_generic_attributes(attributes))
-
-    return " ".join(cmd_parts)
-
-
-def format_mup_announce(
-    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = "announce"
-) -> str | None:
-    """Format a MUP NLRI as an API announce/withdraw command.
-
-    MUP route types:
-    - InterworkSegmentDiscoveryRoute (ISD) -> mup-isd <prefix_ip>/<prefix_ip_len> rd <rd>
-    - DirectSegmentDiscoveryRoute (DSD) -> mup-dsd <ip> rd <rd>
-    - Type1SessionTransformedRoute (T1ST) -> mup-t1st <prefix> rd <rd> teid <teid> qfi <qfi> endpoint <ip>
-    - Type2SessionTransformedRoute (T2ST) -> mup-t2st <ip> rd <rd> teid <teid>/<teid_len>
-    """
-    name = nlri_info.get("name", "")
-    rd = nlri_info.get("rd", "")
-
-    # Map JSON names to MUP type keywords
-    mup_type = None
-    nlri_str = ""
-
-    if name == "InterworkSegmentDiscoveryRoute":
-        mup_type = "mup-isd"
-        prefix_ip = nlri_info.get("prefix_ip", "")
-        prefix_ip_len = nlri_info.get("prefix_ip_len", 0)
-        nlri_str = f"{prefix_ip}/{prefix_ip_len} rd {rd}"
-
-    elif name == "DirectSegmentDiscoveryRoute":
-        mup_type = "mup-dsd"
-        ip = nlri_info.get("ip", "")
-        nlri_str = f"{ip} rd {rd}"
-
-    elif name == "Type1SessionTransformedRoute":
-        mup_type = "mup-t1st"
-        prefix_ip = nlri_info.get("prefix_ip", "")
-        prefix_ip_len = nlri_info.get("prefix_ip_len", 0)
-        teid = nlri_info.get("teid", "0")
-        qfi = nlri_info.get("qfi", "0")
-        endpoint_ip = nlri_info.get("endpoint_ip", "")
-        nlri_str = f"{prefix_ip}/{prefix_ip_len} rd {rd} teid {teid} qfi {qfi} endpoint {endpoint_ip}"
-        # Optional source field
-        source_ip = nlri_info.get("source_ip", "")
-        source_ip_len = nlri_info.get("source_ip_len", 0)
-        if source_ip and source_ip_len > 0 and source_ip != "b''":
-            nlri_str += f" source {source_ip}"
-
-    elif name == "Type2SessionTransformedRoute":
-        mup_type = "mup-t2st"
-        endpoint_ip = nlri_info.get("endpoint_ip", "")
-        endpoint_len = nlri_info.get("endpoint_len", 0)
-        teid = nlri_info.get("teid", "0")
-        # Calculate TEID length: endpoint_len - IP bits (32 for IPv4, 128 for IPv6)
-        ip_bits = 128 if ":" in endpoint_ip else 32
-        teid_len = endpoint_len - ip_bits
-        nlri_str = f"{endpoint_ip} rd {rd} teid {teid}/{teid_len}"
-
-    if not mup_type:
-        return None
-
-    # Build command parts
-    cmd_parts = [f"{action} {afi} mup {mup_type} {nlri_str} next-hop {nexthop}"]
-
-    # Add extended-community attribute
-    if "extended-community" in attributes:
-        ecomms = attributes["extended-community"]
-        if ecomms:
-            ecomm_strs = []
-            for ec in ecomms:
-                if isinstance(ec, dict) and "string" in ec:
-                    ecomm_strs.append(ec["string"])
-            if ecomm_strs:
-                cmd_parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
-
-    # Add bgp-prefix-sid-srv6 attribute if present
-    if "bgp-prefix-sid" in attributes:
-        prefix_sid = attributes["bgp-prefix-sid"]
-        # Handle l3-service format
-        if "l3-service" in prefix_sid:
-            for service in prefix_sid["l3-service"]:
-                sid = service.get("sid", "")
-                behavior = service.get("endpoint_behavior", 0)
-                structure = service.get("structure", {})
-                lbl = structure.get("locator-block-length", 0)
-                lnl = structure.get("locator-node-length", 0)
-                fl = structure.get("function-length", 0)
-                al = structure.get("argument-length", 0)
-                tl = structure.get("transposition-length", 0)
-                to = structure.get("transposition-offset", 0)
-                # Format: bgp-prefix-sid-srv6 ( l3-service <SID> <behavior> [<LBL>,<LNL>,<FL>,<AL>,<TL>,<TO>] )
-                cmd_parts.append(
-                    f"bgp-prefix-sid-srv6 ( l3-service {sid} 0x{behavior:x} [{lbl},{lnl},{fl},{al},{tl},{to}] )"
-                )
-        # Handle l2-service format
-        elif "l2-service" in prefix_sid:
-            for service in prefix_sid["l2-service"]:
-                sid = service.get("sid", "")
-                behavior = service.get("endpoint_behavior", 0)
-                structure = service.get("structure", {})
-                lbl = structure.get("locator-block-length", 0)
-                lnl = structure.get("locator-node-length", 0)
-                fl = structure.get("function-length", 0)
-                al = structure.get("argument-length", 0)
-                tl = structure.get("transposition-length", 0)
-                to = structure.get("transposition-offset", 0)
-                cmd_parts.append(
-                    f"bgp-prefix-sid-srv6 ( l2-service {sid} 0x{behavior:x} [{lbl},{lnl},{fl},{al},{tl},{to}] )"
-                )
-
-    # Add generic/unknown attributes
-    cmd_parts.extend(format_generic_attributes(attributes))
-
-    return " ".join(cmd_parts)
-
-
-def format_flow_announce(
-    afi: str, nexthop: str, nlri_info: dict, attributes: dict, action: str = "announce"
-) -> str | None:
-    """Format a FlowSpec NLRI as an API announce/withdraw command.
-
-    Args:
-        afi: Address family ('ipv4' or 'ipv6')
-        nexthop: Next-hop address (may be 'no-nexthop')
-        nlri_info: NLRI dict from JSON with 'string' field
-        attributes: Attributes dict from JSON
-        action: 'announce' or 'withdraw'
-
-    Returns:
-        API command string or None if formatting fails
-    """
-    # FlowSpec NLRI has a 'string' field with the human-readable representation
-    flow_string = nlri_info.get("string", "")
-    if not flow_string:
-        return None
-
-    # The string starts with "flow " - we need to remove that prefix
-    # since the command format is "announce ipv4 flow <rest>"
-    if flow_string.startswith("flow "):
-        flow_details = flow_string[5:]  # Remove "flow " prefix
-    else:
-        flow_details = flow_string
-
-    # Add RD if present and not already in the flow_string
-    rd = nlri_info.get("rd")
-    if rd and f"rd {rd}" not in flow_details:
-        flow_details = f"{flow_details} rd {rd}"
-
-    # Build command parts
-    cmd_parts = [f"{action} {afi} flow {flow_details}"]
-
-    # Add next-hop if present and not 'no-nexthop'
-    if nexthop and nexthop != "no-nexthop":
-        cmd_parts.append(f"next-hop {nexthop}")
-
-    # Add extended-community attribute (flow actions like discard, rate-limit)
-    if "extended-community" in attributes:
-        ecomms = attributes["extended-community"]
-        if ecomms:
-            ecomm_strs = []
-            for ec in ecomms:
-                formatted = format_extended_community(ec)
-                if formatted:
-                    ecomm_strs.append(formatted)
-            if ecomm_strs:
-                cmd_parts.append(f"extended-community [{' '.join(ecomm_strs)}]")
-
-    # Add IPv6 extended-community as generic attribute (type 0x19)
-    if "extended-community-ipv6" in attributes:
-        ecomms_v6 = attributes["extended-community-ipv6"]
-        if ecomms_v6:
-            raw_hex = ""
-            for ec in ecomms_v6:
-                if isinstance(ec, dict) and "value" in ec:
-                    raw_hex += f"{ec['value']:040x}"
-            if raw_hex:
-                cmd_parts.append(f"attribute [0x19 0xc0 0x{raw_hex}]")
-
-    # Add community attribute
-    if "community" in attributes:
-        comms = attributes["community"]
-        if comms:
-            comm_strs = []
-            for c in comms:
-                if isinstance(c, list) and len(c) == 2:
-                    comm_strs.append(f"{c[0]}:{c[1]}")
-            if comm_strs:
-                cmd_parts.append(f"community [{' '.join(comm_strs)}]")
-
-    # Add generic/unknown attributes
-    cmd_parts.extend(format_generic_attributes(attributes))
-
-    return " ".join(cmd_parts)
-
-
-# decode_to_api_command is now imported from exabgp.configuration.command
-# The old local function has been removed.
+            if applied is not True:
+                shared = applied
+        _, negotiated = _negotiated(neighbor)
+        messages = [
+            message
+            for update in rib.updates(neighbor.group_updates, negotiated=negotiated)
+            if isinstance(update, UpdateCollection)
+            for message in update.messages(negotiated)
+        ]
+    finally:
+        rib.clear()
+    return messages[0].hex().upper() if len(messages) == 1 else None
 
 
 def parse_ci_file_for_verify(
@@ -1893,20 +384,13 @@ def self_check_ci_file(
     Returns:
         Tuple of (passed, failed, skipped, non-UPDATE captures, unreadable lines)
     """
-    config_file, peer_as, raw_entries, not_verified, problems = parse_ci_file_for_generate(ci_path, relative)
+    config_file, _peer_as, raw_entries, not_verified, problems = parse_ci_file_for_generate(ci_path, relative)
 
     if not raw_entries:
         return 0, 0, 0, not_verified, problems
 
+    # the session the captures were made on: what the reactor packs the commands for
     neighbor = get_neighbor(config_file)
-
-    # Check if ASN4 capability is disabled in the config
-    asn4_disabled = not neighbor.capability.asn4.is_enabled()
-
-    # Default to iBGP if no peer-as specified
-    local_as = 65533
-    if peer_as is None:
-        peer_as = 65533
 
     passed = 0
     failed = 0
@@ -1922,48 +406,9 @@ def self_check_ci_file(
 
         payload = raw_hex[38:]
 
-        # Handle EOR messages specially - generate cmd directly from wire format
-        is_eor = False
-        eor_cmd = None
-        if payload.upper() == "00000000":
-            # Legacy IPv4 unicast EOR
-            is_eor = True
-            eor_cmd = "announce eor ipv4 unicast"
-        elif payload.upper().startswith("00000007900F0003"):
-            # MP EOR - extract AFI/SAFI from payload
-            # Format: 00000007 (path attrs len) + 900F0003 (MP_UNREACH header) + AFI (2 bytes) + SAFI (1 byte)
-            is_eor = True
-            try:
-                afi_hex = payload[16:20]
-                safi_hex = payload[20:22]
-                afi_int = int(afi_hex, 16)
-                safi_int = int(safi_hex, 16)
-                from exabgp.protocol.family import AFI, SAFI
-                afi_str = str(AFI(afi_int))
-                safi_str = str(SAFI(safi_int))
-                eor_cmd = f"announce eor {afi_str} {safi_str}"
-            except Exception:
-                pass
-
-        if is_eor and eor_cmd:
-            # Round-trip EOR
-            encoded = encode_api_command(eor_cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled, source_neighbor=neighbor)
-            if encoded and encoded.upper() == raw_hex.upper():
-                passed += 1
-                if verbose:
-                    print(f"    {GREEN}PASS{RESET} line {line_num + 1}")
-            else:
-                failed += 1
-                print(f"    {RED}FAIL{RESET} line {line_num + 1}: EOR round-trip mismatch")
-                if verbose:
-                    print(f"      cmd: {eor_cmd}")
-                    print(f"      got:      {encoded}")
-                    print(f"      expected: {raw_hex}")
-            continue
-
-        # Step 1: Decode raw to cmd(s) - use generic=True to include hex for generic attributes
+        # Step 1: Decode raw to cmd(s)
         try:
-            cmds = decode_to_api_command(payload, neighbor, generic=True)
+            cmds = decode_to_api_command(payload, neighbor)
         except Exception as exc:
             failed += 1
             print(f"    {RED}FAIL{RESET} line {line_num + 1}: decode raised {exc}")
@@ -1974,11 +419,15 @@ def self_check_ci_file(
                 print(f"    {YELLOW}SKIP{RESET} line {line_num + 1}: no API command generated")
             continue
 
-        # For round-trip, we use the first command (which may be 'attributes' for multi-NLRI)
+        # one UPDATE is one command: an `attributes ... nlri ...` or a `group`
+        if len(cmds) != 1:
+            failed += 1
+            print(f"    {RED}FAIL{RESET} line {line_num + 1}: decoded to {len(cmds)} commands")
+            continue
         cmd = cmds[0]
 
         # Step 2: Encode cmd back to raw
-        encoded = encode_api_command(cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled, source_neighbor=neighbor)
+        encoded = encode_api_command(cmd, neighbor)
         if not encoded:
             failed += 1
             print(f"    {RED}FAIL{RESET} line {line_num + 1}: encode failed")
@@ -2023,30 +472,19 @@ def verify_ci_file(
     Returns:
         Tuple of (passed, failed, captures nothing was compared for, unreadable lines)
     """
-    config_file, peer_as, pairs, skipped, problems = parse_ci_file_for_verify(ci_path, relative)
+    config_file, _peer_as, pairs, skipped, problems = parse_ci_file_for_verify(ci_path, relative)
 
     if not pairs:
         return 0, 0, skipped, problems
 
-    # Get neighbor context for encoding parameters
-    neighbor = get_neighbor(config_file) if config_file else None
-
-    # Extract encoding parameters from neighbor
-    local_as = 65533
-    asn4_disabled = False
-    if neighbor:
-        local_as = int(neighbor.session.local_as)
-        asn4_disabled = not neighbor.capability.asn4.is_enabled()
-
-    # Default peer_as to local_as (iBGP) if not specified
-    if peer_as is None:
-        peer_as = local_as
+    # the session the captures were made on: what the reactor packs the commands for
+    neighbor = get_neighbor(config_file)
 
     passed = 0
     failed = 0
 
     for line_num, step, cmd, expected_raw in pairs:
-        encoded = encode_api_command(cmd, local_as=local_as, peer_as=peer_as, asn4_disabled=asn4_disabled, source_neighbor=neighbor)
+        encoded = encode_api_command(cmd, neighbor)
 
         if encoded is None:
             failed += 1

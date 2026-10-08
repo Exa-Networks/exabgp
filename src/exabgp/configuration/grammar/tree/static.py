@@ -33,6 +33,7 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.settings import INETSettings
 from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.context import ReadContext
+from exabgp.configuration.grammar.error import ROUTE_ERRORS
 from exabgp.configuration.grammar.lexer import lex_command
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.section import Section, Store, Values
@@ -345,18 +346,49 @@ def one_attribute_words(code: int, attribute: Any) -> list[WordOrSyntax]:
     if code == Attribute.CODE.BGP_PREFIX_SID and _srv6(attribute):
         return ['bgp-prefix-sid-srv6', *_srv6(attribute)]
     if code == Attribute.CODE.EXTENDED_COMMUNITY:
-        # as their bytes: the text of an extended community depends on whether its class was
-        # imported, and one of them (bandwidth) prints a word no parser reads
-        hexes = ['0x' + bytes(each.community).hex() for each in attribute.communities]
-        return ['extended-community', Syntax('['), *hexes, Syntax(']')]
+        return [
+            'extended-community',
+            Syntax('['),
+            *(community_word(each) for each in attribute.communities),
+            Syntax(']'),
+        ]
     text = str(attribute)
     if not text and code != Attribute.CODE.ATOMIC_AGGREGATE:
         # an empty community list or as-path prints as nothing, and reads back from brackets
         text = '[ ]'
-    return [ATTRIBUTE_KEYWORDS[code], *_words(text)]
+    return [ATTRIBUTE_KEYWORDS[code], *text_words(text)]
 
 
-def _words(text: str) -> list[WordOrSyntax]:
+def read_back(value_type: Type[Any], text: str) -> Any:
+    """`text` read as one value of the type, None when it is not exactly one such value."""
+    statement = lex_command(f'value {text};')[0]
+    words = Words(statement.words[1:], statement.tokens[-1], ReadContext())
+    value: Any = None
+    try:
+        value = value_type.parse(words)
+    except ROUTE_ERRORS as exc:  # a ConfigError is a ValueError
+        # the answer asked for: the text is not such a value, and the caller prints another
+        log.debug(lazymsg('grammar.read_back refused={text} reason={exc}', text=text, exc=exc), 'configuration')
+    return value if value is not None and not words.left() else None
+
+
+def community_word(community: Any) -> str:
+    """An extended community as its text where the text reads back to it, as its bytes otherwise.
+
+    The text depends on whether the class of the community was imported, and some texts are
+    no word a parser reads (a traffic rate, `rate-limit:0`), so it is read back to be kept.
+    """
+    packed = bytes(community.community)
+    text = str(community)
+    if not text or any(char.isspace() for char in text):
+        return '0x' + packed.hex()  # printed, it would be quoted as one word: not what was read
+    read = read_back(ROUTE_VALUES['extended-community'].type, f'[ {text} ]')
+    if read is not None and [bytes(each.community) for each in read.communities] == [packed]:
+        return text
+    return '0x' + packed.hex()
+
+
+def text_words(text: str) -> list[WordOrSyntax]:
     """The words the lexer makes of text an attribute prints: `300,` is two words."""
     statement = lex_command(f'{text};')[0]
     return [Syntax(token.word) if token.word in _STRUCTURE else token.word for token in statement.words]

@@ -83,3 +83,8 @@ def _children(block: Block, values: dict[str, Any], depth: int, context: PrintCo
 
 def render(root: Block, settings: Any) -> str:
     return '\n'.join(_block(root, '', settings, 0, PrintContext())) + '\n'
+
+
+def one_line(block: Block, built: Any) -> str:
+    """One block on one line, as an API command gives it: `route { match { ... } ... }`."""
+    return ' '.join(line.strip() for line in _block(block, '', built, 0, PrintContext()))

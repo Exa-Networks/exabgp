@@ -446,9 +446,10 @@ ANNOUNCE_BLOCK = Block('announce', field='announce', doc='routes by address fami
 def rtc_words(route: Route) -> list[WordOrSyntax]:
     """`default|origin-as <asn> route-target <rt> next-hop <ip>|self <attributes>`."""
     nlri: Any = route.nlri
-    words = ['default'] if nlri.rt is None else ['origin-as', str(nlri.origin), 'route-target', str(nlri.rt)]
-    if route.nexthop is not IP.NoNextHop:
-        words.extend(['next-hop', 'self' if route.nexthop.SELF else str(route.nexthop)])
+    # `<asn>:<n>` as the statement documents it, the `target:` of the community's text left out
+    target = str(nlri.rt).removeprefix('target:')
+    words = ['default'] if nlri.rt is None else ['origin-as', str(nlri.origin), 'route-target', target]
+    # the next-hop is the route's, which attribute_words says: said here too, it was given twice
     return words + attribute_words(route)
 
 

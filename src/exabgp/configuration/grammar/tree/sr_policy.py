@@ -353,7 +353,9 @@ def sr_policy_route(words: Words, afi: AFI | None) -> Route:
     endpoint = _field(words, 'endpoint')
     route_afi = _endpoint_afi(endpoint) if afi is None else afi
     nlri = SRPolicyNLRI.create(afi=route_afi, distinguisher=distinguisher, color=color, endpoint=endpoint)
-    nexthop = IP.from_string(_field(words, 'next-hop'))
+    # a withdrawal sends no next-hop, and `exabgp decode --command` has none to print for one
+    withdrawn = not words.context.announce and words.peek() != 'next-hop'
+    nexthop = IP.NoNextHop if withdrawn else IP.from_string(_field(words, 'next-hop'))
     attributes = AttributeCollection()
     subtlvs = _values(words, attributes)
     if subtlvs:
@@ -586,7 +588,8 @@ def sr_policy_words(route: Route) -> list[WordOrSyntax]:
         'endpoint',
         nlri.endpoint,
     ]
-    words += ['next-hop', str(route.nexthop)]
+    if route.nexthop is not IP.NoNextHop:
+        words += ['next-hop', str(route.nexthop)]
     tunnel = _tunnel(route)
     if tunnel is not None:
         words += [word for subtlv in tunnel.subtlvs for word in _subtlv_words(subtlv)]

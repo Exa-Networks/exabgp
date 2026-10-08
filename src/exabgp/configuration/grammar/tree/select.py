@@ -17,7 +17,7 @@ from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Any, Callable
 
 from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.update.attribute import AttributeCollection, NextHop, NextHopSelf
+from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection, NextHop, NextHopSelf
 from exabgp.bgp.message.update.nlri.mup import (
     DirectSegmentDiscoveryRoute,
     InterworkSegmentDiscoveryRoute,
@@ -32,9 +32,11 @@ from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
     ROUTE_VALUES,
     RouteValue,
+    Unprintable,
     action,
     add_attribute,
     attribute_words,
+    one_attribute_words,
     value_fields,
 )
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
@@ -335,6 +337,14 @@ class SelectLine(RouteStatement):
         return route
 
     def printed(self, route: Route) -> list[WordOrSyntax]:
+        # a route read elsewhere (a decoded UPDATE) may hold an attribute this line does not
+        # read, a mup route its origin: printed, the words would not read back
+        for code, attribute in route.attributes.items():
+            if code == Attribute.CODE.NEXT_HOP:
+                continue
+            keyword = one_attribute_words(code, attribute)[0]
+            if keyword not in self.values:
+                raise Unprintable(f'no {self.name} statement writes {keyword}')
         return select_words(route.nlri) + attribute_words(route)
 
     def hint(self) -> str:

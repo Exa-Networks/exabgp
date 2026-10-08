@@ -649,7 +649,7 @@ def display_update(neighbor: Neighbor, raw: bytes, generic: bool = False, comman
 
         payload = raw[19:].hex()  # Skip BGP header
         try:
-            cmds = decode_to_api_command(payload, neighbor, generic=generic)
+            cmds = decode_to_api_command(payload, neighbor)
         except Exception as exc:
             sys.stdout.write(f'# API command generation failed ({exc}), falling back to JSON\n')
         else:
