@@ -44,12 +44,14 @@ default and whether it is mandatory. `a|b` is one of them, `[...]` is optional, 
 value you give. For examples and explanations see [Configuration Syntax](Configuration-Syntax)
 and [Directives A-Z](Directives-Reference).
 
-The same grammar prints a machine-readable model of the configuration:
+The same grammar prints one section, the help of one statement, and a machine-readable model
+of the configuration:
 
 ```bash
-exabgp configuration syntax --json    # JSON Schema (2020-12)
-exabgp configuration syntax --yang    # YANG 1.1 module
-exabgp configuration syntax neighbor family    # one section
+exabgp configuration syntax neighbor family       # one section
+exabgp configuration syntax neighbor hold-time    # one statement: its syntax, default, examples
+exabgp configuration syntax --json                # JSON Schema (2020-12)
+exabgp configuration syntax --yang                # YANG 1.1 module
 ```
 """
 
