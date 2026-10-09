@@ -252,6 +252,11 @@ family (refused with its reason), `next-hop self` of the wrong family (refused),
   `;` feature; From-5.x-to-6.x: three summary rows, three sections with tables, the `;` feature.
   link-local-nexthop and link-local-prefer left out of the 5.x comparisons: new in 6.0.
 
+- 2026-10-09: the wiki pages are wiki commit a82d48b, on GitHub. The local wiki looked
+  without them because `remote.codeberg.fetch` wrote into `refs/remotes/origin/*`: a fetch of
+  codeberg moved origin/master back to codeberg's older head. Refspec fixed to
+  `refs/remotes/codeberg/*`; codeberg is 19 commits behind (fast-forward, not pushed).
+
 ## Failures
 
 (none yet)
