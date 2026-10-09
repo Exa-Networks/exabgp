@@ -20,10 +20,12 @@ CONFIGURATIONS = sorted(glob.glob(os.path.join(ROOT, 'etc', 'exabgp', '*.conf'))
 TRICKY: list[tuple[str, list[list[str]] | str]] = [
     ('a b;', [['a', 'b', ';']]),
     ('a "b c" d;', [['a', 'b c', 'd', ';']]),
-    ("a 'b \"c' d;", 'rejected'),
+    # inside quotes the other quote character is a character
+    ("a 'b \"c' d;", [['a', 'b "c', 'd', ';']]),
     ('a "" b;', [['a', '', 'b', ';']]),
-    ('ab"cd" e;', [['abcd', 'e', ';']]),
-    ('a "b\'c" d;', 'rejected'),
+    # a quote does not open in the middle of a word: `ab"cd"` was `abcd`
+    ('ab"cd" e;', 'rejected'),
+    ('a "b\'c" d;', [['a', "b'c", 'd', ';']]),
     ('a [ 1 2 ];', [['a', '[', '1', '2', ']', ';']]),
     ('a [1,2];', [['a', '[', '1', ',', '2', ']', ';']]),
     ('a(1) b;', [['a(1)', 'b', ';']]),
@@ -38,9 +40,12 @@ TRICKY: list[tuple[str, list[list[str]] | str]] = [
     ('a \\;', [['a', ';']]),
     ('a "b;c" d;', [['a', 'b;c', 'd', ';']]),
     ('\ta\tb ;', [['a', 'b', ';']]),
-    ('a b', 'rejected'),
-    ('a # b;', 'rejected'),
-    ('a b# c;', 'rejected'),
+    # the end of a line ends a statement as `;` does, and so does a comment after it
+    ('a b', [['a', 'b', ';']]),
+    ('a b\nc;', [['a', 'b', ';'], ['c', ';']]),
+    ('a { b\n}', [['a', '{'], ['b', ';'], ['}']]),
+    ('a # b;', [['a', ';']]),
+    ('a b# c;', [['a', 'b', ';']]),
     ('a "b', 'rejected'),
     ('a \\u12;', 'rejected'),
     ('a \\uzzzz;', 'rejected'),
@@ -89,3 +94,12 @@ def test_continuation(tmp_path) -> None:
     assert (encoder.word, encoder.line) == ('encoder', 4), 'a continuation shifted the lines after it'
     flag = statements[1].tokens[2]
     assert (flag.word, flag.line) == ('--flag', 3), 'a word on a continuation line reports its own line'
+
+
+def test_a_file_ending_on_a_continuation_line_reads_it_once(tmp_path) -> None:
+    """The last line was read twice: `process q { run /bin/cat \\` became `process q {`, then
+    `run /bin/cat process q {`, then `run /bin/cat`."""
+    path = tmp_path / 'ends.conf'
+    path.write_text('process p {\n\trun /bin/cat;\n}\nprocess q { run /bin/cat \\')
+    statements = [[token.word for token in statement.tokens] for statement in lex_file(str(path))]
+    assert statements[3:] == [['process', 'q', '{'], ['run', '/bin/cat', ';']]

@@ -161,7 +161,9 @@ def syntax(block: Block, depth: int = 0, seen: dict[tuple[int, ...], str] | None
     for child in block.children:
         indent = INDENT * depth
         if isinstance(child, Leaf):
-            lines.append(indent + _leaf_line(child))
+            # a keyword only there to be refused (`endpoint` in l2vpn) is no statement to show
+            if child.type.shape().kind != Kind.REFUSED:
+                lines.append(indent + _leaf_line(child))
             continue
         key = tuple(id(each) for each in child.children)
         if key in seen:

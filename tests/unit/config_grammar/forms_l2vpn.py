@@ -60,12 +60,13 @@ VPLS_VALUE_FORMS: list[tuple[str, bool]] = [
     ('unknown 1', False),
 ]
 
-# statements of the l2vpn section, after a complete vpls route
+# statements of the l2vpn section, after a complete vpls route: each belongs in a vpls route
+# and is refused (an attribute went to the last route read, a static one included)
 L2VPN_LEVEL_FORMS: list[tuple[str, bool]] = [
-    ('origin egp', True),
-    ('community 1:1', True),
-    ('name x', True),
-    ('split /24', True),
+    ('origin egp', False),
+    ('community 1:1', False),
+    ('name x', False),
+    ('split /24', False),
     ('med x', False),
     ('rd 2:2', False),
     ('endpoint 7', False),
@@ -74,7 +75,7 @@ L2VPN_LEVEL_FORMS: list[tuple[str, bool]] = [
     ('size 1', False),
     ('next-hop 10.0.0.2', False),
     *[
-        (f'{keyword} {value}', True)
+        (f'{keyword} {value}', False)
         for keyword, value in (
             ('as-path', '[ 1 ]'),
             ('local-preference', '5'),
@@ -113,7 +114,7 @@ L2VPN_DOCUMENT_BODIES: list[tuple[str, bool]] = [
     ('l2vpn { vpls endpoint 5 base 10702; }', False),
     ('l2vpn { vpls x { endpoint 5; } }', False),
     ('l2vpn { origin igp; }', False),
-    ('static { route 10.0.0.0/24 next-hop 1.1.1.1; } l2vpn { origin egp; }', True),
+    ('static { route 10.0.0.0/24 next-hop 1.1.1.1; } l2vpn { origin egp; }', False),  # it changed the static route
     (
         f'static {{ route 10.0.0.0/24 next-hop 1.1.1.1; }} l2vpn {{ vpls {VPLS}; }} static {{ route 10.0.1.0/24 next-hop 1.1.1.1; }}',
         True,

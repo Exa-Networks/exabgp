@@ -73,7 +73,8 @@ neighbor <ip>[/<mask>] {  # a BGP peer
     # send the End-of-RIB markers only when the API asks for them
     manual-eor true|false;
     shutdown true|false;  # start with the session administratively down
-    # the templates whose statements the neighbor takes, may be repeated
+    # the templates giving the neighbor its defaults: what the neighbor says
+    # itself wins, may be repeated
     inherit <template>|[ <template> ... ];
     family {  # the address families to negotiate
         # an ipv4 family to negotiate, may be repeated
@@ -136,7 +137,6 @@ neighbor <ip>[/<mask>] {  # a BGP peer
         strict enable|disable;  # refuse a peer which does not send its role
         # give the roles to the API programs with the routes
         add-meta enable|disable;
-        otc;
     }
     confederation {  # RFC 5065 BGP confederation
         # the AS Confederation Identifier, the AS the world outside sees
@@ -156,7 +156,7 @@ neighbor <ip>[/<mask>] {  # a BGP peer
         l2vpn vpls|evpn [limit <n>];
         # an bgp-ls family to negotiate ADD-PATH for, may be repeated
         bgp-ls bgp-ls|bgp-ls-vpn [limit <n>];
-        all;  # no family, ADD-PATH is negotiated for none
+        all;  # every family the neighbor negotiates
     }
     # the families whose next-hop may be of the other address family (RFC
     # 8950)
@@ -280,7 +280,6 @@ neighbor <ip>[/<mask>] {  # a BGP peer
             # an SR policy route, RFC 9830, may be repeated
             sr-policy distinguisher <n> color <n> endpoint <ip> next-hop <ip>
                     [<sub-tlv> ...];
-            labeled-unicast;
         }
         ipv6 {  # the ipv6 routes, by subsequent address family
             # a ipv6 unicast route, may be repeated
@@ -303,7 +302,6 @@ neighbor <ip>[/<mask>] {  # a BGP peer
             # an SR policy route, RFC 9830, may be repeated
             sr-policy distinguisher <n> color <n> endpoint <ip> next-hop <ip>
                     [<sub-tlv> ...];
-            labeled-unicast;
         }
         l2vpn {  # the l2vpn routes
             # a VPLS route, RFC 4761, may be repeated
@@ -432,29 +430,6 @@ neighbor <ip>[/<mask>] {  # a BGP peer
             watchdog <name>;
             withdraw;
         }
-        next-hop;
-        rd;
-        endpoint;
-        offset;
-        size;
-        base;
-        attribute [ 0x<code> 0x<flag> 0x<data> ];
-        origin igp|egp|incomplete;
-        med <0-4294967295>;
-        as-path <asn>|[ <asn> ... ] ( <asn> ... ) confed-sequence [ ... ]
-                confed-set [ ... ];
-        local-preference <0-4294967295>;
-        atomic-aggregate;
-        aggregator ( <asn>:<router-id> );
-        originator-id <ipv4>;
-        cluster-list <ipv4>|[ <ipv4> ... ];
-        community <asn>:<value>|[ <asn>:<value> ... ];  # may be repeated
-        # may be repeated
-        extended-community <type>:<value>|[ <type>:<value> ... ];
-        name <name>;
-        split /<length>;
-        watchdog <name>;
-        withdraw;
     }
     operational {  # the operational messages sent to the peer
         # Advisory State Message, may be repeated
@@ -475,8 +450,8 @@ neighbor <ip>[/<mask>] {  # a BGP peer
         lpcp afi <afi> safi <safi> sequence <sequence> counter <counter>;
     }
 }
-template {  # statements shared by neighbors
-    # a template, the statements of a neighbor which inherits i ... }  # as
+template {  # defaults shared by neighbors, which their own statements change
+    # a template, the defaults of a neighbor which inherits i ... }  # as
     # neighbor
     neighbor <name> {
 }

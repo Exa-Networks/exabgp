@@ -252,7 +252,8 @@ TYPE_DOCS = {
 class MupNextHop(Type[tuple[Any, Any]]):
     """The next-hop of a MUP route: an IPv4 address is mapped into IPv6 for an IPv6 route.
 
-    legacy: `self` is of the family of the last prefix read, not the route's.
+    `self` is of the route's family. It was of the family of the last prefix read, which a MUP
+    route does not set: an IPv6 route's `self` had no family.
     """
 
     name = 'next-hop'
@@ -260,7 +261,7 @@ class MupNextHop(Type[tuple[Any, Any]]):
     def parse(self, words: Words) -> tuple[Any, Any]:
         where = words.where()
         word = words.word()
-        afi = words.context.afi
+        afi = words.context.mup_afi or words.context.afi
         if word.lower() == 'self':
             return IPSelf(afi), NextHopSelf(afi)
         try:

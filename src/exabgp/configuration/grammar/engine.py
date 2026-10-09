@@ -37,10 +37,13 @@ class _Frame:
 
 
 class Engine:
-    def __init__(self, root: Block, context: ReadContext | None = None) -> None:
+    def __init__(self, root: Block, context: ReadContext | None = None, whole: bool = False) -> None:
         self.root = root
         # shared by the builders of one read: templates, names already used, ...
         self.context = context if context is not None else ReadContext()
+        # a whole configuration closes every section it opens, and nothing more; an API
+        # command may leave one open for the next command (read.left_open)
+        self.whole = whole
 
     def read(self, statements: list[Statement]) -> Any:
         if not statements:
@@ -51,13 +54,21 @@ class Engine:
                 self._leaf(stack[-1], statement)
             elif statement.end == '{':
                 stack.append(self._open(stack, statement))
-            elif len(stack) == 1:
-                # legacy: a `}` with nothing open ends the configuration, what follows is ignored
-                break
             else:
-                # legacy: words before a `}` are ignored, `hold-time 30 }` sets nothing
+                # `hold-time 30 }` is `hold-time 30;` then `}`: the words were ignored
+                if statement.words:
+                    self._leaf(stack[-1], statement)
+                if len(stack) == 1:
+                    if self.whole:
+                        # the rest of the configuration was not read, without a word
+                        raise ConfigError(statement.tokens[-1].where(), "this '}' closes no section")
+                    break  # an API command: the section it closes was opened by another
                 self._close(stack)
-        # legacy: sections still open when the text ends are closed as if it said so
+        if self.whole and len(stack) > 1:
+            # the sections were closed as if the configuration said so
+            raise ConfigError(
+                stack[-1].where(), f"the {stack[-1].block.keyword} section is not closed, '}}' is missing"
+            )
         while len(stack) > 1:
             self._close(stack)
         return self._build(stack[0])
@@ -95,7 +106,12 @@ class Engine:
             raise self._unknown(frame.block, keyword, [block.keyword for block in frame.block.blocks()], 'section')
         if len(stack) >= MAX_DEPTH:
             raise ConfigError(keyword.where(), f'sections nested more than {MAX_DEPTH} deep')
-        name = child.name.parse(self._words(statement, 1)) if child.name else ''
+        given = self._words(statement, 1)
+        name = child.name.parse(given) if child.name else ''
+        # `process a b {` was the process `a`, and `capability x {` a capability: the rest was ignored
+        if not given.at_end():
+            follows = f'the name of {keyword.word}' if child.name else keyword.word
+            raise ConfigError(given.where(), f"'{given.peek()}' follows {follows}, which ends before it")
         if child.keep == Keep.NAMED and name in frame.values.get(child.field, {}):
             raise ConfigError(keyword.where(), f'a {child.keyword} section called "{name}" already exists')
         child.section.opened(self.context)

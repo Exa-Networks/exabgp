@@ -37,7 +37,7 @@ MATCH_FORMS: list[tuple[str, bool]] = [
     ('port !=80', True),
     ('port !80', False),
     ('port >', False),
-    ('port 80&', True),
+    ('port 80&', False),  # a condition ending on & was refused in brackets only
     ('port [ 80& ]', False),
     ('port x', False),
     ('destination-port =80', True),
@@ -176,6 +176,17 @@ FLOW_DOCUMENT_BODIES: list[tuple[str, bool]] = [
     ('flow { route r { match { destination 10.0.0.0/24; } rd 1:1; then { redirect 1:1; } } }', True),
     ('flow { route r { match { destination 10.0.0.0/24; } then { redirect-simpson 10.0.0.1; } } }', True),
     ('flow { route r { match { destination 10.0.0.0/24; } then { copy-simpson 10.0.0.1; discard; } } }', True),
+    # two actions to an IPv6 address are one attribute: the second was dropped, or refused
+    (
+        'family { ipv6 flow; } flow { route r { match { destination-ipv6 2001:db8::/32/0; } '
+        'then { copy 2001:db8::1; copy 2001:db8::2; } } }',
+        True,
+    ),
+    (
+        'family { ipv6 flow; } flow { route r { match { destination-ipv6 2001:db8::/32/0; } '
+        'then { copy 2001:db8::1; redirect-to-nexthop-ietf 2001:db8::2; } } }',
+        True,
+    ),
     (
         'flow { route r { match { destination 10.0.0.0/24; } scope { interface-set input:1:1; } then { extended-community target:1:1; } } }',
         True,
@@ -184,7 +195,8 @@ FLOW_DOCUMENT_BODIES: list[tuple[str, bool]] = [
     ('flow { route destination 10.0.0.0/24; }', True),
     ('flow { route discard; }', False),  # no match: it would match every packet
     ('flow { route destination 10.0.0.0/24 rd 1:1 redirect 1:1; }', True),
-    ('flow { route destination 10.0.0.0/24 route-distinguisher 1:1; }', False),  # names no field of a flow route
+    # the rd, as `rd` and as in a route block: it named no field of a flow route, and was refused
+    ('flow { route destination 10.0.0.0/24 route-distinguisher 1:1; }', True),
     ('flow { route destination 10.0.0.0/24 next-hop 10.0.0.1; }', False),
     ('flow { route destination 10.0.0.0/24 copy-simpson 10.0.0.1 redirect 1:1; }', True),
     ('flow { route destination 10.0.0.0/24 nothing 1; }', False),
@@ -196,7 +208,7 @@ FLOW_DOCUMENT_BODIES: list[tuple[str, bool]] = [
     ('flow { route r { match { destination 10.0.0.0/24; } } } static { route 10.1.0.0/24 next-hop 10.0.0.1; }', True),
     (
         'static { route 2001:db8::/48 next-hop 2001:db8::1; } flow { route r { match { destination 10.0.0.0/24; protocol tcp; } } }',
-        False,
+        True,  # an IPv4 flow route: it was refused for the family of the static route before it
     ),
     ('flow { route r { match { destination 10.0.0.0/24; } } unknown { } } }', False),
     ('announce { ipv4 { flow destination 10.0.0.0/24 discard; } }', True),
@@ -205,6 +217,9 @@ FLOW_DOCUMENT_BODIES: list[tuple[str, bool]] = [
     ('announce { ipv4 { flow destination 2001:db8::/32; } }', False),
     ('announce { ipv4 { flow next-hop 10.0.0.1; } }', False),
     ('announce { ipv4 { flow destination 10.0.0.0/24 attribute [ 0x20 0xc0 0x00000001 ]; } }', True),
+    # a route with an rd is flow-vpn: on the flow line it made a flow route carrying an rd
     ('announce { ipv4 { flow destination 10.0.0.0/24 route-distinguisher 1:1; } }', False),
+    ('announce { ipv4 { flow destination 10.0.0.0/24 rd 1:1; } }', False),
+    ('announce { ipv4 { flow-vpn destination 10.0.0.0/24 route-distinguisher 1:1; } }', True),
     ('announce { ipv4 { flow destination 10.0.0.0/24 path-information 1; } }', True),
 ]

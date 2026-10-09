@@ -216,14 +216,13 @@ ROUTE: dict[str, FlowValue] = {
     'next-hop': FlowValue(types.FLOW_NEXTHOP, Target.NEXTHOP, doc='the next-hop of the flow route, or self'),
 }
 
-# legacy: a one-line route reads no next-hop, and sets `route-distinguisher` on a field of that
-# name, which is no field: the value is lost
+# a one-line route reads no next-hop; its `route-distinguisher` is the rd, as in a route block
+# (it set a field of that name, which no flow route has, and the route was refused)
 LINE = {
     **MATCH,
     **THEN,
     **SCOPE,
     **ROUTE,
-    'route-distinguisher': FlowValue(ROUTE_VALUES['rd'].type, Target.NLRI, 'route-distinguisher'),
 }
 del LINE['next-hop']
 
@@ -242,11 +241,7 @@ class FlowRoute:
                 if not self.nlri.add(rule):
                     raise ValueError(self.nlri.rule_conflict(rule))
         elif spec.target == Target.NLRI:
-            try:
-                setattr(self.nlri, spec.field, value)
-            except AttributeError:
-                # legacy: the one-line `route-distinguisher` names no field, and the route fails
-                raise ValueError(f'a flow route has no {spec.field}') from None
+            setattr(self.nlri, spec.field, value)
         elif spec.target == Target.NEXTHOP:
             if value:
                 self.nexthop = value
@@ -255,7 +250,7 @@ class FlowRoute:
             # legacy: a one-line route takes the address even when there is none
             if ip or line:
                 self.nexthop = ip
-            self.attributes.add(attribute)
+            add_attribute(self.attributes, attribute)
         elif spec.target == Target.ATTRIBUTE:
             add_attribute(self.attributes, value)
 
@@ -300,6 +295,7 @@ class FlowLine(RouteStatement):
     too_many = 'a flow route holds at most {count} values'
 
     def parse(self, words: Words) -> list[Route]:
+        words.context.afi = AFI.undefined  # the route's own family, from what it matches
         start = words.where()
         built = FlowRoute()
         for where, spec in self.keywords(words, LINE):
@@ -506,6 +502,11 @@ class _Ignored(Type[str]):
 class FlowRouteSection(Collector[list[Route]]):
     """`route [<name>] { match { } then { } scope { } }`: one flow route."""
 
+    def opened(self, context: ReadContext) -> None:
+        super().opened(context)
+        # the family is the route's own, from what it matches: not that of the last prefix read
+        context.afi = AFI.undefined
+
     def collected(self, name: Any, values: Values, entries: list[tuple[Any, Any]], context: ReadContext) -> list[Route]:
         built = FlowRoute()
         for spec, value in entries:
@@ -550,6 +551,7 @@ FLOW = Block(
 
 ANNOUNCE_FLOW: dict[str, FlowValue] = {
     'rd': FlowValue(ROUTE_VALUES['rd'].type, Target.NLRI, 'rd'),
+    'route-distinguisher': FlowValue(ROUTE_VALUES['rd'].type, Target.NLRI, 'rd'),
     'path-information': FlowValue(ROUTE_VALUES['path-information'].type, Target.NLRI, 'path_info'),
     **MATCH,
     **THEN,
@@ -569,6 +571,7 @@ class AnnounceFlowLine(RouteStatement):
         self.name = f'{afi.name()} {safi.name()} route'
 
     def parse(self, words: Words) -> list[Route]:
+        words.context.afi = self.afi  # the family of the announce block
         start = words.where()
         settings = FlowSettings()
         settings.action = action(words)
@@ -581,6 +584,11 @@ class AnnounceFlowLine(RouteStatement):
                 raise ConfigError(where, str(exc)) from None
         if not settings.rules:
             raise ConfigError(start, NO_MATCH)
+        # it made a flow route carrying an rd, which no statement prints back as it was read
+        if settings.rd is not None and self.safi == SAFI.flow_ip:
+            raise ConfigError(
+                start, f'a flow route with a route distinguisher is announced as {self.afi.name()} flow-vpn'
+            )
         return [Route(Flow.from_settings(settings), attributes, nexthop=settings.nexthop)]
 
     @staticmethod
@@ -595,7 +603,7 @@ class AnnounceFlowLine(RouteStatement):
             if ip:
                 settings.nexthop = ip
             if attribute:
-                attributes.add(attribute)
+                add_attribute(attributes, attribute)
         elif spec.target == Target.ATTRIBUTE:
             add_attribute(attributes, value)
 

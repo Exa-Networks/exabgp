@@ -117,6 +117,10 @@ ALLOWED: dict[tuple[str, str], str] = {
         '`teardown 4` is Cease, Administrative Reset, in both: 5.0 added the name of the subcode '
         'as an RFC 9003 communication, 6.0 sends none unless it is given one'
     ),
+    ('5.0', 'conf-split'): (
+        'the configuration ends with its neighbor section open, a `}` missing after a route block: '
+        '5.0 closed it silently, 6.0 refuses a section left open (plan/wip-config-quirks.md item 6)'
+    ),
 }
 
 

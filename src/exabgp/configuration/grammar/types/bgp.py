@@ -84,6 +84,9 @@ IPV4_OCTETS = 4
 RD_TYPE_1_OCTETS = 4
 
 
+PREFIX_PARTS = 2  # <ip>/<mask>
+
+
 class Prefix(Type[IPRange]):
     """`<ip>/<mask>`, or an address alone for its host route; the host bits must be zero."""
 
@@ -92,14 +95,18 @@ class Prefix(Type[IPRange]):
     def parse(self, words: Words) -> IPRange:
         where = words.where()
         word = words.word()
-        # legacy: a word with no mask, several slashes, or a mask which is no number is taken
-        # as a host route of what precedes the first slash, or of the whole word
+        # an address alone is its host route; a mask which is no number, or a second slash, was
+        # taken as one too: `10.0.0.0/x` was 10.0.0.0/32
         parts = word.split('/')
-        ip = parts[0] if len(parts) == 2 else word
+        ip = parts[0]
+        if len(parts) > PREFIX_PARTS:
+            raise ConfigError(where, f"'{word}' is not a valid prefix", expected=['<ip>/<mask>'])
         try:
-            mask = decimal(parts[1]) if len(parts) == 2 else (128 if ':' in ip else 32)
+            mask = decimal(parts[1]) if len(parts) == PREFIX_PARTS else (128 if ':' in ip else 32)
         except ValueError:
-            mask = 128 if ':' in ip else 32
+            raise ConfigError(
+                where, f"'{word}' is not a valid prefix, its mask is no number", expected=['<ip>/<mask>']
+            ) from None
         try:
             words.context.afi = IP.toafi(ip)
             iprange = IPRange.make_range(ip, mask)
@@ -1089,12 +1096,20 @@ def _srgb_number(word: str) -> int:
         return SRGB_MAX
 
 
+def _expect(words: Words, word: str, hint: str) -> None:
+    """The next word of a bgp-prefix-sid is `word`, or the value is refused where it is not."""
+    where = words.where()
+    found = words.word()
+    if found != word:
+        given = f"'{found}'" if found else 'the end of the value'
+        raise ConfigError(where, f"invalid bgp-prefix-sid, {given} where '{word}' is expected", expected=[hint])
+
+
 class PrefixSidType(Type[Any]):
     """`[ <label-index> ]` or `[ <label-index>, [ ( <base>,<range> ) ... ] ]` (RFC 8669).
 
-    legacy: words the format does not expect are skipped, and a word after the closing
-    bracket is swallowed when an inner `[` was seen. Where the legacy parser looped forever
-    on a list which was never closed, this one stops and refuses it.
+    Words the format does not expect are refused. They were skipped, a word after the closing
+    bracket was swallowed when an inner `[` was seen, and a range kept the last of its numbers.
     """
 
     name = 'bgp-prefix-sid'
@@ -1105,10 +1120,10 @@ class PrefixSidType(Type[Any]):
         from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
 
         where = words.where()
-        if words.word() != '[':
-            raise ConfigError(where, 'invalid bgp-prefix-sid', expected=[self.hint()])
+        _expect(words, '[', self.hint())
         label_sid = words.word()
-        ranges = self._ranges(words, where)
+        ranges = self._ranges(words) if words.peek() == ',' else []
+        _expect(words, ']', self.hint())
         try:
             index = decimal(label_sid)
         except ValueError:
@@ -1124,47 +1139,25 @@ class PrefixSidType(Type[Any]):
             attributes.append(SrGb.make_srgb(srgbs))
         return PrefixSid(attributes)
 
-    @staticmethod
-    def _ranges(words: Words, where: str) -> list[tuple[str, str]]:
+    def _ranges(self, words: Words) -> list[tuple[str, str]]:
+        """`, [ ( <base>,<size> ), ... ]` after the label index."""
+        _expect(words, ',', self.hint())
+        _expect(words, '[', self.hint())
         ranges: list[tuple[str, str]] = []
-        extra = False
-        base = size = None
         for _ in range(MAX_PREFIX_SID_WORDS):
-            if words.at_end():
-                raise ConfigError(where, "could not parse BGP PrefixSid attribute: missing ']'")
-            word = words.word()
-            if word == '[':
-                extra = True
-            elif word == '(':
-                base, size = PrefixSidType._range(words, where)
-            elif word == ')':
-                if base is None or size is None:
-                    raise ConfigError(where, 'could not parse BGP PrefixSid attribute: a range without its values')
-                ranges.append((base, size))
-            elif word == ']':
-                if extra:
-                    words.take()
+            _expect(words, '(', self.hint())
+            base = words.word()
+            _expect(words, ',', self.hint())
+            size = words.word()
+            _expect(words, ')', self.hint())
+            ranges.append((base, size))
+            # the ranges are written with or without a comma between them
+            if words.peek() == ',':
+                words.take()
+            elif words.peek() != '(':
+                _expect(words, ']', self.hint())
                 return ranges
-        raise ConfigError(where, f'a bgp-prefix-sid holds at most {MAX_PREFIX_SID_WORDS} words')
-
-    @staticmethod
-    def _range(words: Words, where: str) -> tuple[str | None, str | None]:
-        base = size = None
-        after_comma = False
-        for _ in range(MAX_PREFIX_SID_WORDS):
-            if words.at_end():
-                raise ConfigError(where, "could not parse BGP PrefixSid attribute: missing ')'")
-            word = words.peek()
-            if word == ')':
-                return base, size
-            words.take()
-            if word == ',':
-                after_comma = True
-            elif after_comma:
-                size, after_comma = word, False
-            else:
-                base = word
-        raise ConfigError(where, f'a bgp-prefix-sid holds at most {MAX_PREFIX_SID_WORDS} words')
+        raise ConfigError(words.where(), f'a bgp-prefix-sid holds at most {MAX_PREFIX_SID_WORDS} words')
 
     def render(self, value: Any) -> list[WordOrSyntax]:
         return list(str(value).split())

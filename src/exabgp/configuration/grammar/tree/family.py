@@ -317,10 +317,11 @@ class AllStore(Store):
     """`all`: every family known."""
 
     def keep(self, values: Values, value: None, context: ReadContext) -> None:
-        # legacy: `all` after a family is reported but not refused, and still asks for every family
-        if not (values.get('_all') or _seen(values)):
-            values['_all'] = True
-            _seen(values).update(NLRI.known_families())
+        # `all` after a family asked for every family, the family before it said for nothing
+        if values.get('_all') or _seen(values):
+            raise ValueError('all is every family, it can not be given with another family')
+        values['_all'] = True
+        _seen(values).update(NLRI.known_families())
         values.setdefault('all', []).append(None)
 
 
@@ -343,8 +344,15 @@ class FamiliesSection(Kept):
     def finish(self, values: Values) -> None:
         limits = values.pop('_limits', {})
         if limits:
-            # legacy: the limits of the last block giving any replace those of the blocks before
-            values['prefix-limit'] = list(limits.items())
+            # the limits of the blocks add up: the last block giving any replaced those before
+            found = dict(values.get('prefix-limit', []))
+            for family, limit in limits.items():
+                if found.get(family, limit) != limit:
+                    raise ValueError(
+                        f'prefix-limit of {family_name(family)} is given twice, {found[family]} and {limit}'
+                    )
+                found[family] = limit
+            values['prefix-limit'] = list(found.items())
         values.pop('_seen', None)
         values.pop('_all', None)
 
@@ -391,7 +399,7 @@ ADD_PATH = Block(
             )
             for afi_keyword in SAFIS
         ),
-        Leaf('all', Nothing(), field='all', store=ALL, doc='no family, ADD-PATH is negotiated for none'),
+        Leaf('all', Nothing(), field='all', store=ALL, doc='every family the neighbor negotiates'),
     ),
 )
 

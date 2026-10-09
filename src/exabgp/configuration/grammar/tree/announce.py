@@ -287,8 +287,11 @@ class AnnounceLine(RouteStatement):
         settings: Any = RTCSettings() if self.announce_safi.nlri is RTC else INETSettings()
         settings.action = action(words)
         if self.announce_safi.prefix:
-            # legacy: a prefix of the other address family is taken, the route is of the block's
+            where = words.where()
             prefix = bgp.Prefix().parse(words)
+            # it was taken, and made a route of the block's family no one could show
+            if IP.toafi(prefix.top()) != self.afi:
+                raise ConfigError(where, f'{prefix.top()}/{prefix.mask.value} is not an {self.afi.name()} prefix')
             settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask.value)
             settings.afi, settings.safi = self.afi, self.safi
         attributes = AttributeCollection()

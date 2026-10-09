@@ -23,9 +23,7 @@ from exabgp.bgp.neighbor.settings import SessionSettings
 from exabgp.configuration.grammar.tree.family import SAFIS, default_families
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
-from exabgp.protocol.ip import IP
 from exabgp.util.enumeration import TriState
-from exabgp.util.intvalue import IntValue
 
 MANDATORY = ('peer-address', 'local-as', 'peer-as')
 TCP_AO_MANDATORY = ('keyid', 'algorithm', 'password')
@@ -63,30 +61,23 @@ MAX_TRANSFER_DEPTH = 16
 
 
 def transfer(source: dict[str, Any], destination: dict[str, Any], depth: int = 0) -> None:
-    """Merge a template into a neighbor, the legacy way (Scope.transfer).
+    """Merge a template into a neighbor: what the neighbor already has wins.
 
-    legacy: a list is extended, a dict merged, and a number, address or string of the
-    template REPLACES the neighbor's own: `inherit` wins over what the neighbor says.
-    Anything else present on both sides (an `auto` AS, a tuple) is refused. A list or a dict
-    is copied, never taken whole: a later template extended the template's own list in
-    place, and every other neighbor inheriting it was given what it added.
+    A template gives defaults the neighbor changes. A list is extended (routes, processes add
+    up) and a section merged by the same rule; a value the neighbor has is kept. The template
+    won before 6.0: `hold-time 30;` in a neighbor whose template said `hold-time 60;` was 60.
+    A list or a dict is copied, never taken whole: a later template extended the template's
+    own list in place, and every other neighbor inheriting it was given what it added.
     """
     if depth > MAX_TRANSFER_DEPTH:
         raise ValueError('templates nest too deep to be merged')
     for key, value in source.items():
         if key not in destination:
             destination[key] = _copied(value, depth)
-        elif isinstance(value, list):
+        elif isinstance(value, list) and isinstance(destination[key], list):
             destination[key].extend(value)
-        elif isinstance(value, dict):
+        elif isinstance(value, dict) and isinstance(destination[key], dict):
             transfer(value, destination[key], depth + 1)
-        # IntValue: HoldTime, ASN and the other numbers which stopped being int for mypyc
-        elif isinstance(value, (int, IntValue, IP, str)):
-            destination[key] = value
-        else:
-            raise ValueError(
-                f'can not copy "{key}" (as it is of type {type(value)}) and it exists in both the source and destination'
-            )
 
 
 def _copied(value: Any, depth: int) -> Any:
@@ -107,9 +98,10 @@ MAX_INHERIT_DEPTH = 8
 def inherit(values: dict[str, Any], templates: dict[str, dict[str, Any]]) -> None:
     """Merge the templates a neighbor inherits, and those they inherit, into its values.
 
-    A template inheriting others takes their values first, so its own win over theirs as a
-    template's win over the neighbor's. Each template is merged once, however often it is
-    inherited; one which inherits itself, through any chain, is refused.
+    What is set first wins: the neighbor's own values, then each template in the order it is
+    listed, a template's own values before those of the templates it inherits. Each template
+    is merged once, however often it is inherited; one which inherits itself, through any
+    chain, is refused.
     """
     merged: set[str] = set()
     for name in values.pop('inherit', []):
@@ -126,11 +118,15 @@ def _inherit(
     if name in merged:
         return
     merged.add(name)
-    # legacy: a template which does not exist, or is only defined further down, is ignored
+    # the templates are read before the neighbors (read.templates_first): this one is nowhere
+    if name not in templates:
+        log.warning(
+            lazymsg('inherit {name}: no template has this name, nothing is inherited', name=name), 'configuration'
+        )
     template = templates.get(name, {})
+    transfer({key: value for key, value in template.items() if key != 'inherit'}, values)
     for parent in template.get('inherit', []):
         _inherit(parent, values, templates, (*chain, name), merged)
-    transfer({key: value for key, value in template.items() if key != 'inherit'}, values)
 
 
 def families(values: dict[str, Any]) -> list[FamilyTuple]:
@@ -209,8 +205,8 @@ def session(values: dict[str, Any]) -> SessionSettings:
         outgoing_ttl=values.get('outgoing-ttl'),
         incoming_ttl=values.get('incoming-ttl'),
         local_link_local=values.get('local-link-local'),
-        # legacy: with an auto-discovered local address, md5-ip is dropped even when given
-        md5_ip=values.get('md5-ip') if values.get('local-address') is not None else None,
+        # kept with an auto-discovered local address: it was dropped, even when given
+        md5_ip=values.get('md5-ip'),
     )
     if role:
         settings.role = role['local']
@@ -284,11 +280,15 @@ def addpaths(
     if not neighbor_capability.add_path:
         return []
     add_path = values.get('add-path', {})
-    if not add_path:
+    # `add-path { all; }` was ADD-PATH for no family: it is every family, as `family { all; }`
+    if not add_path or 'all' in add_path:
         return list(negotiated)
     found: list[FamilyTuple] = []
     for afi_keyword in SAFIS:
         for family, limit in add_path.get(afi_keyword, []):
+            # the neighbor's entries come first, then each template's: the first for a family wins
+            if family in found:
+                continue
             if family not in negotiated:
                 log.debug(
                     lazymsg('skipping add-path family {family} as it is not negotiated', family=family), 'configuration'
@@ -297,6 +297,9 @@ def addpaths(
             found.append(family)
             if limit > 0:
                 neighbor_capability.paths_limit_per_family[family] = limit
+    if not found:
+        # every family named is one the neighbor does not negotiate: ADD-PATH for none is off
+        neighbor_capability.add_path = 0
     return found
 
 

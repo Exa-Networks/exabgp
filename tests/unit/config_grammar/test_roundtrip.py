@@ -71,9 +71,18 @@ def test_a_quoted_word_lexes_back_to_itself(word: str) -> None:
 
 
 @pytest.mark.parametrize('word', ['it"s', "it's"])
-def test_a_word_with_a_quote_can_not_be_printed(word: str) -> None:
+def test_a_word_with_one_kind_of_quote_is_printed_in_the_other(word: str) -> None:
+    """Inside quotes the other quote character used to become the quote to close with, so a
+    word holding a quote could not be written at all."""
+    from exabgp.configuration.grammar.lexer import lex_text
+
+    statement = lex_text(f'keyword {quote(word)};')[0]
+    assert [token.word for token in statement.words] == ['keyword', word]
+
+
+def test_a_word_with_both_kinds_of_quote_can_not_be_printed() -> None:
     with pytest.raises(ValueError):
-        quote(word)
+        quote('both " and \' ')
 
 
 def test_the_round_trip_can_fail() -> None:

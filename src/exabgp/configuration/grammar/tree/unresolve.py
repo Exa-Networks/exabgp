@@ -47,7 +47,7 @@ def session_values(session: SessionSettings) -> dict[str, Any]:
         'local-link-local': session.local_link_local,
         'router-id': session.router_id,
         'md5-password': session.md5_password or None,
-        'md5-ip': session.md5_ip if session.local_address is not None else None,
+        'md5-ip': session.md5_ip,
         'source-interface': session.source_interface or None,
         'outgoing-ttl': session.outgoing_ttl,
         'incoming-ttl': session.incoming_ttl,
@@ -120,9 +120,6 @@ def families(settings: NeighborSettings) -> dict[str, Any] | None:
 def add_path(settings: NeighborSettings) -> dict[str, Any] | None:
     if not settings.capability.add_path:
         return None
-    if not settings.addpaths:
-        # legacy: `add-path { all; }` negotiates ADD-PATH for no family, the one way to say none
-        return {'all': [None]}
     if settings.addpaths == settings.families and not settings.capability.paths_limit_per_family:
         # no add-path block: every negotiated family, some of which no statement can name
         return None

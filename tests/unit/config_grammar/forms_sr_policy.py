@@ -281,12 +281,12 @@ SR_POLICY_FORMS: list[tuple[str, str, bool]] = [
     (
         'static',
         'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] preference 1 garbage words',
-        True,
+        False,  # the words after the sub-TLVs were dropped
     ),
     (
         'ipv4',
         'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 community [ no-advertise ] preference 1 garbage words',
-        True,
+        False,  # the words after the sub-TLVs were dropped
     ),
     ('static', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference x', False),
     ('ipv4', 'distinguisher 0 color 100 endpoint 10.1.1.1 next-hop 192.0.2.1 preference x', False),

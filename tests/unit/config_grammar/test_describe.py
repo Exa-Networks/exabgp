@@ -34,6 +34,8 @@ def test_every_leaf_of_a_neighbor_is_in_the_syntax() -> None:
     for path, leaf in declared_leaves():
         if path[0] == 'template':
             continue  # a template neighbor refers to the neighbor
+        if leaf.type.shape().kind == Kind.REFUSED:
+            continue  # only there to be refused with a reason: shown, it read as a statement to use
         assert f'\t{leaf.keyword}' in text or text.startswith(leaf.keyword), f'{"/".join(path)} {leaf.keyword}'
 
 

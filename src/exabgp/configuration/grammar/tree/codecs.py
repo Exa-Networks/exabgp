@@ -64,7 +64,11 @@ class FamilyCodec(Codec):
     def resolve(self, values: Values, settings: NeighborSettings) -> None:
         settings.families = resolve.families(values)
         limits = values.get('family', {}).get('prefix-limit', [])
-        settings.prefix_limit = {family: limit for family, limit in limits if family in settings.families}
+        settings.prefix_limit = {}
+        # the neighbor's limits come first, then each template's: the first given for a family wins
+        for family, limit in limits:
+            if family in settings.families:
+                settings.prefix_limit.setdefault(family, limit)
 
     def unresolve(self, settings: NeighborSettings, context: PrintContext) -> Values:
         return {'family': unresolve.families(settings)}

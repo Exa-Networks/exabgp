@@ -61,22 +61,35 @@ TEMPLATE = (
 SECTION_OPEN = {'route': 'route 10.0.0.0/24'}
 
 
-def _nested(path: tuple[str, ...]) -> str:
-    """`{form};` inside the sections of the path below neighbor, braces escaped for format."""
-    inner = SECTION_NEEDS.get(path, '') + ' {form};'
+def _nested(path: tuple[str, ...], keyword: str = '') -> str:
+    """`{form};` inside the sections of the path below neighbor, braces escaped for format.
+
+    What the section needs is left out when the form gives it: a route block given a
+    `next-hop` by the form has none of its own, a statement given twice being refused.
+    """
+    needs = SECTION_NEEDS.get(path, '')
+    kept = [each.strip() for each in needs.split(';') if each.strip() and each.split()[0] != keyword]
+    if len(kept) != len([each for each in needs.split(';') if each.strip()]):
+        needs = ''.join(f'{each};' for each in kept)
+    inner = needs + ' {form};'
     for keyword in reversed(path):
         inner = f'{SECTION_OPEN.get(keyword, keyword)} {{{{ {inner} }}}}'
     return inner
+
+
+# the processes the forms of an api name: an api naming one which does not exist is refused
+API_PROCESSES = 'process a {{ run /bin/cat; }} process b {{ run /bin/cat; }} '
 
 
 def wrapper(path: tuple[str, ...], keyword: str) -> str:
     if path in WRAPPERS:
         wrappers = WRAPPERS[path]
         return wrappers.get(keyword, wrappers[''])
+    processes = API_PROCESSES if 'api' in path else ''
     if path[:1] == ('neighbor',):
-        return NEIGHBOR.replace('{inner}', _nested(path[1:]))
+        return processes + NEIGHBOR.replace('{inner}', _nested(path[1:], keyword))
     if path[:2] == ('template', 'neighbor'):
-        return TEMPLATE.replace('{inner}', _nested(path[2:]))
+        return processes + TEMPLATE.replace('{inner}', _nested(path[2:], keyword))
     raise KeyError(f'no wrapper for the section {"/".join(path)}: its forms can not be tested')
 
 
@@ -130,20 +143,22 @@ DOCUMENTS: list[tuple[str, bool]] = [
     ('process p { run /bin/cat; }\nprocess q { run /bin/cat; respawn; }', True),
     ('process p { run /bin/cat; run /bin/echo x; }', True),
     ('process p { run /bin/cat; encoder json; encoder text; }', True),
-    # legacy: the name is the word after the keyword, whatever it is
-    ('process { run /bin/cat; }', True),
-    ('process a b { run /bin/cat; }', True),
-    ('process p$ { run /bin/cat; }', True),
+    # a name is letters, digits, `.`, `-` and `_`, and nothing follows it: `process {` was named `{`
+    ('process { run /bin/cat; }', False),
+    ('process a b { run /bin/cat; }', False),
+    ('process p$ { run /bin/cat; }', False),
     ('process p.1-_x { run /bin/cat; }', True),
-    # legacy: words before a `}` are ignored
-    ('process p { run /bin/cat; hold 1 }', True),
-    ('process p { run /bin/cat }', False),
-    # legacy: a `}` with nothing open ends the configuration
-    ('process p { run /bin/cat; } }', True),
-    ('process p { run /bin/cat; } } process q { run /bin/cat; }', True),
-    ('process p { run /bin/cat; } } this is ignored {', True),
-    # legacy: sections still open at the end are closed
-    ('process p { run /bin/cat;', True),
+    # the words before a `}` are a statement, and the end of a line ends one: `;` is not needed
+    ('process p { run /bin/cat; hold 1 }', False),
+    ('process p { run /bin/cat }', True),
+    ('process p {\n run /bin/cat\n encoder json\n}', True),
+    ('process p {\n run /bin/cat # the program\n}', True),
+    # a `}` with nothing open is refused: it ended the configuration, the rest unread
+    ('process p { run /bin/cat; } }', False),
+    ('process p { run /bin/cat; } } process q { run /bin/cat; }', False),
+    ('process p { run /bin/cat; } } this is ignored {', False),
+    # a section still open at the end is refused: it was closed as if the text said so
+    ('process p { run /bin/cat;', False),
     ('process p { run /bin/cat; } process p { run /bin/cat; }', False),
     ('process p { }', False),
     ('process p { run /bin/cat; respawn { } }', False),
@@ -196,7 +211,9 @@ def route_forms() -> list[Form]:
     """Each route value in a one-line route and in a route block, in a neighbor and a template."""
     forms = []
     for value, valid in ROUTE_VALUE_FORMS:
-        line = f'route 10.0.0.0/24 next-hop 10.0.0.1 {value}'
+        # the form's own next-hop is the route's: a second one is refused
+        nexthop = '' if value.startswith('next-hop') else 'next-hop 10.0.0.1 '
+        line = f'route 10.0.0.0/24 {nexthop}{value}'
         forms.append(Form(('neighbor', 'static'), line, valid))
         forms.append(Form(('template', 'neighbor', 'static'), line, None))
         forms.append(Form(('neighbor', 'static', 'route'), value, valid))
@@ -217,7 +234,9 @@ def announce_forms() -> list[Form]:
     for afi, families in ANNOUNCE_FAMILIES.items():
         for family in families:
             for value, _ in ROUTE_VALUE_FORMS:
-                line = f'{family} {ANNOUNCE_PREFIX[afi]} next-hop {ANNOUNCE_NEXTHOP[afi]} {value}'
+                # the form's own next-hop is the route's: a second one is refused
+                nexthop = '' if value.startswith('next-hop') else f'next-hop {ANNOUNCE_NEXTHOP[afi]} '
+                line = f'{family} {ANNOUNCE_PREFIX[afi]} {nexthop}{value}'
                 forms.append(Form(('neighbor', 'announce', afi), line, None))
     for afi, family, rest, valid in ANNOUNCE_FORMS:
         forms.append(Form(('neighbor', 'announce', afi), f'{family} {rest}', valid))

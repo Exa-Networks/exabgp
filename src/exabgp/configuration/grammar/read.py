@@ -19,19 +19,44 @@ from exabgp.configuration.settings import ConfigurationSettings
 def _engine() -> Engine:
     from exabgp.configuration.grammar.tree.root import ROOT
 
-    return Engine(ROOT)
+    return Engine(ROOT, whole=True)
 
 
 def read_file(path: str) -> ConfigurationSettings:
-    settings = _engine().read(lex_file(path))
+    settings = _engine().read(templates_first(lex_file(path)))
     assert isinstance(settings, ConfigurationSettings)
     return settings
 
 
 def read_text(text: str) -> ConfigurationSettings:
-    settings = _engine().read(lex_text(text))
+    settings = _engine().read(templates_first(lex_text(text)))
     assert isinstance(settings, ConfigurationSettings)
     return settings
+
+
+TEMPLATE = 'template'
+
+
+def templates_first(statements: list[Statement]) -> list[Statement]:
+    """The statements with the `template` sections first, each kept whole and in its order.
+
+    A neighbor is made when its section closes, from the templates read by then: one
+    inheriting a template written further down the file was given nothing from it.
+    """
+    templates: list[Statement] = []
+    others: list[Statement] = []
+    depth = 0
+    taking = others
+    for statement in statements:
+        if not depth:
+            starts_template = statement.end == '{' and bool(statement.words) and statement.words[0].word == TEMPLATE
+            taking = templates if starts_template else others
+        taking.append(statement)
+        if statement.end == '{':
+            depth += 1
+        elif statement.end == '}':
+            depth = max(depth - 1, 0)
+    return templates + others
 
 
 def _command_sections() -> dict[str, Any]:
@@ -73,13 +98,27 @@ def left_open(statements: list[Statement]) -> int:
 
 
 API_SOURCE = 'api'  # where the words of an API command come from, for its errors
+ADVISORY = 'advisory'
+QUOTED = ('"', "'")
+
+
+def _advisory_text(words: list[str]) -> list[str]:
+    """The words with the advisory, everything after its keyword, as one word without its quotes."""
+    if ADVISORY not in words:
+        return words
+    index = words.index(ADVISORY)
+    text = ' '.join(words[index + 1 :])
+    if len(text) > 1 and text[0] in QUOTED and text[-1] == text[0]:
+        text = text[1:-1]
+    return [*words[: index + 1], text]
 
 
 def read_operational(kind: str, words: list[str]) -> Any:
     """The operational message of an API command, None for a kind which is no message.
 
-    The words are the command as the API splits it, on spaces: a quote stays in the word,
-    as it did when the legacy parser read them.
+    The words are the command as the API splits it, on spaces. The advisory is the text after
+    its keyword, a pair of quotes around it removed: `advisory "hello world"` sent `"hello`, the
+    first word with its quote, and dropped the rest.
     """
     from exabgp.configuration.grammar.lexer import Token
     from exabgp.configuration.grammar.tree.operational import KINDS, OperationalLine
@@ -89,5 +128,6 @@ def read_operational(kind: str, words: list[str]) -> Any:
     if found is None:
         return None
     klass, parameters, _ = found
+    words = _advisory_text(words) if ADVISORY in parameters else words
     tokens = tuple(Token(word, API_SOURCE, 1, index + 1) for index, word in enumerate(words))
     return OperationalLine(kind, klass, parameters).parse(Words(tokens, Token('', API_SOURCE, 1, len(words) + 1)))

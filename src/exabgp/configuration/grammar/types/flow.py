@@ -3,9 +3,8 @@
 The values of a FlowSpec route (RFC 8955, RFC 8956): what it matches and what it does.
 
 Each type reads what the legacy function of configuration/flow/parser.py read, and builds
-the same rules and communities. A condition checks its component against the address
-family the read has in its context, as the legacy tokeniser's `afi` did: that family is
-the one of the last prefix read, a static route's included.
+the same rules and communities. The family of a component is checked when the rule joins its
+route (Flow.add): a flow route takes its family from what it matches.
 
 Copyright (c) 2009-2026 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
@@ -38,8 +37,6 @@ from exabgp.bgp.message.update.nlri.flow import (
     Flow4Source,
     Flow6Destination,
     Flow6Source,
-    FlowIPv4,
-    FlowIPv6,
     NumericOperator,
 )
 from exabgp.configuration.grammar import shape
@@ -236,11 +233,9 @@ def _condition(klass: Any) -> Callable[[Words], list[Any]]:
     """`<op><value>[&<op><value>...]`, or several in brackets, of one component type."""
 
     def read(words: Words) -> list[Any]:
-        afi = words.context.afi
-        if afi == AFI.ipv4 and not issubclass(klass, FlowIPv4):
-            raise ValueError(f"'{klass.__name__}' is not valid for IPv4 flow routes (IPv6-only component)")
-        if afi == AFI.ipv6 and not issubclass(klass, FlowIPv6):
-            raise ValueError(f"'{klass.__name__}' is not valid for IPv6 flow routes (IPv4-only component)")
+        # the family of the component is checked against the route's when it is added
+        # (Flow.add, rule_conflict): judged here by its class, against the family of the last
+        # prefix read anywhere, an IPv6 flow-label after an IPv4 static route was refused
         operator = _operator_binary if klass.OPERATION == 'binary' else _operator_numeric
         data = words.word()
         if data == '[':
@@ -250,10 +245,10 @@ def _condition(klass: Any) -> Callable[[Words], list[Any]]:
     return read
 
 
-def _expression(data: str, klass: Any, operator: Any, joined: int, bracketed: bool = False) -> tuple[list[Any], int]:
+def _expression(data: str, klass: Any, operator: Any, joined: int) -> tuple[list[Any], int]:
     """The rules of one word, `>80&<90`: each joined to the one before it by AND after the first.
 
-    legacy: a word ending on `&` is refused in brackets and taken outside them.
+    A word ending on `&` is refused: it was only in brackets, `>80&` outside them being `>80`.
     """
     rules: list[Any] = []
     for _ in range(MAX_CONDITIONS):
@@ -267,8 +262,8 @@ def _expression(data: str, klass: Any, operator: Any, joined: int, bracketed: bo
         if data:
             joined = BinaryOperator.AND
             data = data[1:]
-            if not data and bracketed:
-                raise ValueError('Can not finish an expresion on an &')
+            if not data:
+                raise ValueError('a flow condition can not end on an &')
     raise ValueError(f'a flow expression holds at most {MAX_CONDITIONS} values')
 
 
@@ -278,7 +273,7 @@ def _bracketed(words: Words, klass: Any, operator: Any) -> list[Any]:
         data = words.word()
         if data == ']':
             return rules
-        found, _joined = _expression(data, klass, operator, BinaryOperator.NOP, bracketed=True)
+        found, _joined = _expression(data, klass, operator, BinaryOperator.NOP)
         rules.extend(found)
     raise ValueError(f'a flow condition list holds at most {MAX_CONDITIONS} values')
 

@@ -4,6 +4,95 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Change: a template gives a neighbor its defaults: what the neighbor says itself wins over
+   what a template it inherits says, and a template listed first in `inherit` wins over one
+   listed after it. The template won, so `hold-time 30;` in a neighbor inheriting a template
+   with `hold-time 60;` was 60, and a template's `peer-address`, `local-as` or `router-id`
+   replaced the neighbor's own. Lists, the routes for one, still add up.
+ * Fix: a neighbor inherits a template written further down the configuration. It was given
+   nothing from it.
+ * Change: `inherit` of a template which does not exist logs a warning. It was ignored.
+ * Change: a statement no longer needs its `;` at the end of a line: the end of the line ends it,
+   as does a comment after it, and `hold-time 30 }` is `hold-time 30;` then `}`. A `;` is still
+   accepted, and separates two statements on one line. The words before a `}` were ignored, so
+   `hold-time 30 }` set nothing and an unknown keyword there was not reported; a line without
+   its `;` was refused.
+ * Change: a `}` which closes no section is refused, and so is a section left open at the end
+   of the configuration. The first ended the configuration, what followed it unread; the
+   second was closed as if the configuration said so.
+ * Change: a process needs a name, written with letters, digits, `.`, `-` and `_`, as a template
+   name already was, and a word after the name of a section, or after a section which takes
+   none, is refused. `process {` was a process called `{`, `process a b {` the process `a`, and
+   `neighbor 127.0.0.1 extra {` or `capability x {` ignored the word.
+ * Change: a boolean statement given alone is true, as `passive;` and `respawn;` always were.
+   `adj-rib-in;`, `adj-rib-out;`, `manual-eor;`, `shutdown;`, `software-version;` and
+   `md5-base64;` read as false.
+ * Change: inside quotes, the other quote character is an ordinary character: `"it's"` and
+   `'say "hi"'` are words. It became the quote to close with, so `"it's"` never closed. A quote
+   in the middle of a word is refused: `ab"cd"` read as `abcd`.
+ * Change: an api naming a process which is not defined, a `processes-match` matching no
+   process, or both `processes` and `processes-match` in one api, refuse the configuration, and a
+   reload refused for it keeps what was running. The check was made and its answer ignored: the
+   neighbor loaded and told no program anything.
+ * Change: `add-path { all; }` negotiates ADD-PATH for every family the neighbor negotiates, as
+   `family { all; }` is every family; it negotiated it for none. An add-path block naming only
+   families the neighbor does not negotiate turns the capability off. `all` given with a family,
+   in `family { }` or `add-path { }`, is refused: after a family it was taken as every family.
+ * Change: a prefix whose mask is no number, `10.0.0.0/x`, is refused, in the configuration and
+   on the API. It was taken as the host route 10.0.0.0/32.
+ * Change: a `bgp-prefix-sid` with a word its format does not expect is refused. Such words were
+   skipped, a range of three numbers kept the last two, and the word after the closing bracket
+   was swallowed when the value held ranges.
+ * Change: a prefix of the other address family in `announce { ipv4|ipv6 { ... } }`, or in the
+   API command `announce ipv4|ipv6 ...`, is refused. It was taken, and made a route of the block's
+   family which could not be shown.
+ * Fix: a configuration file ending on a continuation line (`\`) reads its last line once. It was
+   read twice.
+ * Change: a flow condition ending on `&`, `port 80&`, is refused. It was refused in brackets only,
+   and outside them read as `port 80`.
+ * Fix: a flow route takes its address family from what it matches. A condition was checked
+   against the family of the last prefix read anywhere, a static route's included, so an IPv4 flow
+   route after an IPv6 static route was refused, as was an IPv6 flow-label after an IPv4 one.
+ * Fix: `route-distinguisher` on a one-line flow route, `flow { route ... route-distinguisher 1:1; }`,
+   is its rd, as in a route block and on the `announce ipv4|ipv6 flow-vpn` line. It named no field
+   of a flow route and the route was refused.
+ * Change: an rd on the `announce ipv4|ipv6 flow` line is refused, with `flow-vpn` given as the
+   family to announce it in. It made a flow route carrying an rd, which no statement printed back.
+ * Fix: two flow actions to IPv6 addresses are both sent, in one IPv6 Address Specific Extended
+   Community attribute. A second `copy` was dropped without a word, and a `copy` with a
+   `redirect-to-nexthop-ietf` was refused as `attribute 0x19 is given twice`.
+ * Change: an attribute given in the `l2vpn` section, outside a `vpls` route, is refused, as a VPLS
+   field there already was. It was added to the last route read, whichever it was: in
+   `static { route ...; } l2vpn { origin egp; }` it changed the static route.
+ * Fix: the syntax reference and the man page no longer list the keywords which are only there
+   to be refused with their reason (`endpoint;` in `l2vpn`, `labeled-unicast;` in an announce
+   family, `otc;` in a neighbor): written alone, they read as statements to use.
+ * Change: a word after the sub-TLVs of an sr-policy route is refused. What followed them was
+   dropped without a word, a `med 5` included.
+ * Change: an operational message (`rpcq`, `adm`, ...) reads its values by name, each once and in
+   any order, with an optional `router-id <ip>`, and refuses a word it does not name. Two words
+   were read per value in order and the rest dropped, so a `router-id` made the message short of
+   a value and refused it. A counter above 32 bits is refused when read; it failed when packed.
+ * Change: an API advisory is all the text after `advisory`, a pair of quotes around it removed:
+   `advisory "hello world"` sent `"hello`, its first word with the quote, and dropped the rest.
+ * Change: a second `operational` block adds its messages to the first; they replaced them.
+ * Fix: an `md5-ip` given is kept when the local address is discovered (`local-address auto`, or
+   none given). It was dropped, so a listening neighbor set its TCP MD5 key on no address.
+ * Change: `inherit` takes template names, checked as where a template is named, separated by
+   spaces or commas. Any word was taken, and the comma of `[ t, u ]` was looked for as a template.
+ * Change: the MPLS SID of an sr-policy segment of type f, g or h is checked as a 20 bit label, as
+   for the types c, d and e. Any number was taken.
+ * Change: a route given two `next-hop` is refused, as any attribute given twice is; an API command
+   keeps the first and logs which it dropped, as for any attribute. The second was dropped
+   without a word.
+ * Fix: the prefixes of `attributes ... nlri` are of one address family, a prefix of the other is
+   refused. Each was made a prefix of the last one's family: `nlri 10.0.0.0/24 2001:db8::/32`
+   sent a00::/24.
+ * Fix: the prefix limits of two `family` blocks add up, and two different limits for one family
+   are refused. The limits of the last block replaced those before it. The prefix limit and the
+   add-path limit a neighbor gives win over its template's, as its other values do.
+ * Fix: `next-hop self` on a MUP route is of the route's address family. It took the family of the
+   last prefix read, which a MUP route does not set, so on an IPv6 route it had no family.
  * Change: with flow-validation, a flow specification sent again which is not feasible
    replaces the one received before it: that one is withdrawn, the API told, and the new
    one is held until it is feasible (RFC 4271 9). The older one stayed in the adj-rib-in,

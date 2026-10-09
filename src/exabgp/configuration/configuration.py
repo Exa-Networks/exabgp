@@ -281,6 +281,27 @@ class _Configuration:
         return result
 
 
+def api_error(neighbors: dict[str, Any], processes: dict[str, dict[str, Any]]) -> str:
+    """Why the api blocks of the neighbors can not run, or nothing.
+
+    An api naming a process which is not defined was accepted: what this said was ignored,
+    and the neighbor told no program anything.
+    """
+    for neighbor in neighbors.values():
+        peer = neighbor.session.peer_address
+        named = neighbor.api.get('processes', [])
+        matching = neighbor.api.get('processes-match', [])
+        if named and matching:
+            return f'neighbor {peer}: processes and processes-match can not both be given'
+        for name in named:
+            if not processes.get(name, {}).get('run'):
+                return f"neighbor {peer}: the api names the process '{name}', which is not defined"
+        defined = [name for name, process in processes.items() if process.get('run')]
+        if matching and not any(re.match(pattern, name) for pattern in matching for name in defined):
+            return f'neighbor {peer}: no process matches {" or ".join(repr(each) for each in matching)}'
+    return ''
+
+
 class ConfigurationError:
     """The last error of a reload or of an API command, as `str()` gives it."""
 
@@ -373,9 +394,17 @@ class Configuration(_Configuration):
             self._previous_neighbors = {}
             return self.error.set(str(exc))
 
-        self.processes = cli_processes()
-        self.processes.update({name: process.to_dict() for name, process in settings.processes.items()})
-        self.neighbors = install(settings.neighbors)
+        processes = cli_processes()
+        processes.update({name: process.to_dict() for name, process in settings.processes.items()})
+        neighbors = install(settings.neighbors)
+        # checked before anything is replaced: a reload which fails keeps what was running
+        error = api_error(neighbors, processes)
+        if error:
+            self._previous_neighbors = {}
+            return self.error.set(error)
+
+        self.processes = processes
+        self.neighbors = neighbors
         self._settings = settings
         # the neighbor before the reload, for the routes which are gone
         for name, neighbor in self.neighbors.items():
@@ -384,41 +413,6 @@ class Configuration(_Configuration):
         self._previous_neighbors = {}
 
         self._link()
-        # legacy: what validate() reports is ignored, an api naming a missing process is accepted
-        self.validate()
-        return True
-
-    def validate(self) -> bool:
-        for neighbor in self.neighbors.values():
-            has_procs = 'processes' in neighbor.api and neighbor.api['processes']
-            has_match = 'processes-match' in neighbor.api and neighbor.api['processes-match']
-            if has_procs and has_match:
-                return self.error.set(
-                    "\n\nprocesses and processes-match are mutually exclusive, verify neighbor '{}' configuration.\n\n".format(
-                        neighbor.session.peer_address
-                    ),
-                )
-
-            for notification in neighbor.api:
-                errors = []
-                for api in neighbor.api[notification]:
-                    if notification == 'processes':
-                        if not self.processes[api].get('run', False):
-                            return self.error.set(
-                                f"\n\nan api called '{api}' is used by neighbor '{neighbor.session.peer_address}' but not defined\n\n",
-                            )
-                    elif notification == 'processes-match':
-                        if not any(v.get('run', False) for k, v in self.processes.items() if re.match(api, k)):
-                            errors.append(
-                                f"\n\nAny process match regex '{api}' for neighbor '{neighbor.session.peer_address}'.\n\n",
-                            )
-
-                # matching mode is an "or", we test all rules and check
-                # if any of rule had a match
-                if len(errors) > 0 and len(errors) == len(neighbor.api[notification]):
-                    return self.error.set(
-                        ' '.join(errors),
-                    )
         return True
 
     def _link(self) -> None:

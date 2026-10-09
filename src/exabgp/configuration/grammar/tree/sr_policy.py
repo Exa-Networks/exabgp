@@ -10,7 +10,7 @@ The SR policy route (RFC 9830), on one line:
              | segment-list weight <n> [segment <type> <fields> [verification] ...]
     and, among them: community [ ... ] | extended-community [ ... ]
 
-legacy: the sub-TLVs are read while the next word names one, and what follows them is ignored.
+The sub-TLVs are read while the next word names one, and a word after them is refused.
 
 RFC 9830 4.2.1: an announced SR policy route needs its tunnel, at least one sub-TLV, and the
 NO_ADVERTISE community or a route target in IPv4-address format; one without is refused.
@@ -103,13 +103,12 @@ def _label(word: str, name: str) -> int:
     return label
 
 
-def _mpls_sid(words: Words, checked: bool) -> int | None:
-    """legacy: `sid <label>`, optional, its range checked for the types c, d and e only."""
+def _mpls_sid(words: Words) -> int | None:
+    """`sid <label>`, optional, a label of 20 bits: the types f, g and h took any number."""
     if words.peek() != 'sid':
         return None
     words.word()
-    word = words.word()
-    return _label(word, 'MPLS SID') if checked else decimal(word)
+    return _label(words.word(), 'MPLS SID')
 
 
 def _srv6_sid(words: Words) -> str | None:
@@ -163,24 +162,24 @@ def _type_b(words: Words) -> Segment:
 def _type_c(words: Words) -> Segment:
     node = _field(words, 'ipv4')
     algorithm = _field_number(words, 'algorithm')
-    return SegmentTypeC(ipv4_node=node, algorithm=algorithm, flags=_flags(algorithm, None), sid=_mpls_sid(words, True))
+    return SegmentTypeC(ipv4_node=node, algorithm=algorithm, flags=_flags(algorithm, None), sid=_mpls_sid(words))
 
 
 def _type_d(words: Words) -> Segment:
     node = _field(words, 'ipv6')
     algorithm = _field_number(words, 'algorithm')
-    return SegmentTypeD(ipv6_node=node, algorithm=algorithm, flags=_flags(algorithm, None), sid=_mpls_sid(words, True))
+    return SegmentTypeD(ipv6_node=node, algorithm=algorithm, flags=_flags(algorithm, None), sid=_mpls_sid(words))
 
 
 def _type_e(words: Words) -> Segment:
     local_if_id = _field_number(words, 'local-if-id')
     node = _field(words, 'ipv4')
-    return SegmentTypeE(local_if_id=local_if_id, ipv4_node=node, sid=_mpls_sid(words, True))
+    return SegmentTypeE(local_if_id=local_if_id, ipv4_node=node, sid=_mpls_sid(words))
 
 
 def _type_f(words: Words) -> Segment:
     local, remote = _field(words, 'local'), _field(words, 'remote')
-    return SegmentTypeF(local_ipv4=local, remote_ipv4=remote, sid=_mpls_sid(words, False))
+    return SegmentTypeF(local_ipv4=local, remote_ipv4=remote, sid=_mpls_sid(words))
 
 
 def _interfaces(words: Words) -> dict[str, Any]:
@@ -193,12 +192,12 @@ def _interfaces(words: Words) -> dict[str, Any]:
 
 def _type_g(words: Words) -> Segment:
     interfaces = _interfaces(words)
-    return SegmentTypeG(**interfaces, sid=_mpls_sid(words, False))
+    return SegmentTypeG(**interfaces, sid=_mpls_sid(words))
 
 
 def _type_h(words: Words) -> Segment:
     local, remote = _field(words, 'local'), _field(words, 'remote')
-    return SegmentTypeH(local_ipv6=local, remote_ipv6=remote, sid=_mpls_sid(words, False))
+    return SegmentTypeH(local_ipv6=local, remote_ipv6=remote, sid=_mpls_sid(words))
 
 
 def _srv6_tail(words: Words) -> dict[str, Any]:
@@ -360,8 +359,9 @@ def sr_policy_route(words: Words, afi: AFI | None) -> Route:
     subtlvs = _values(words, attributes)
     if subtlvs:
         attributes.add(TunnelEncap(tunnel_tlvs=[SRPolicyTunnel(subtlvs=subtlvs)]))
-    # legacy: whatever the sub-TLVs are followed by is not read
-    words.rest()
+    # what follows the sub-TLVs was dropped without a word, `med 5` included
+    if not words.at_end():
+        raise ConfigError(words.where(), f"'{words.peek()}' is no sr-policy sub-TLV, community or extended-community")
     # a withdrawal carries no attribute, so only an announcement can be malformed
     reason = nlri.malformed_with(attributes) if words.context.announce else None
     if reason is not None:

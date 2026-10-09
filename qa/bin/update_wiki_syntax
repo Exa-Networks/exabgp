@@ -41,8 +41,10 @@ HEAD = """# Configuration Syntax Reference
 This page is what `exabgp configuration syntax` prints, so it cannot say a keyword exists
 which the parser refuses, or miss one it reads. After `#` is what the keyword is for, its
 default and whether it is mandatory. `a|b` is one of them, `[...]` is optional, `<...>` is a
-value you give. For examples and explanations see [Configuration Syntax](Configuration-Syntax)
-and [Directives A-Z](Directives-Reference).
+value you give. The `;` ending each statement may be left out at the end of a line (6.0): the
+line end ends the statement, and a `;` still separates two statements written on one line. For
+examples and explanations see [Configuration Syntax](Configuration-Syntax) and
+[Directives A-Z](Directives-Reference).
 
 The same grammar prints one section, the help of one statement, and a machine-readable model
 of the configuration:

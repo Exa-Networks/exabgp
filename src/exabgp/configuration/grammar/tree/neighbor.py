@@ -36,12 +36,12 @@ from exabgp.configuration.grammar.tree.session import (
     API,
     CAPABILITY,
     CONFEDERATION,
-    NAME_CHARACTERS,
     ROLE,
     TCP_AO,
     boolean,
 )
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
+from exabgp.configuration.grammar.types.basic import NAME_CHARACTERS, NAME_SHAPE, SectionName
 from exabgp.configuration.grammar.types.network import (
     ASN_OR_AUTO,
     HOLD_TIME,
@@ -94,15 +94,14 @@ MD5_BASE64 = Word(
 )
 
 
-# legacy: inherit takes any word, a template is only named with these characters
-TEMPLATE_NAME_SHAPE = shape.string(pattern=r'[a-zA-Z0-9._-]+')
+TEMPLATE_NAME_SHAPE = NAME_SHAPE
 
 
 class Inherit(Type[list[str]]):
-    """`inherit <name>;` or `inherit [ <name> ... ];`.
+    """`inherit <name>;` or `inherit [ <name> ... ];`, the names separated by spaces or commas.
 
-    legacy: the list is every word between the brackets, a comma included, and a name which
-    is no template is ignored.
+    A template name is checked as where the template is named. Any word was taken, a comma of
+    the list included, and a name which could be no template's matched none.
     """
 
     name = 'template names'
@@ -110,11 +109,18 @@ class Inherit(Type[list[str]]):
     def parse(self, words: Words) -> list[str]:
         where = words.where()
         found = [token.word for token in words.rest()]
-        if len(found) == 1:
-            return found
-        if len(found) < 3 or found[0] != '[' or found[-1] != ']':
-            raise ConfigError(where, 'invalid inherit list', expected=['<template>', '[ <template> ... ]'])
-        return found[1:-1]
+        if not found:
+            raise ConfigError(where, 'inherit names a template', expected=['<template>', '[ <template> ... ]'])
+        if len(found) > 1:
+            if len(found) < 3 or found[0] != '[' or found[-1] != ']':
+                raise ConfigError(where, 'invalid inherit list', expected=['<template>', '[ <template> ... ]'])
+            found = [word for word in found[1:-1] if word != ',']
+        for name in found:
+            if not name or any(character not in NAME_CHARACTERS for character in name):
+                raise ConfigError(
+                    where, f"'{name}' is no template name, it is written with letters, digits, '.', '-' and '_'"
+                )
+        return found
 
     def render(self, value: list[str]) -> list[WordOrSyntax]:
         return list(value) if len(value) == 1 else ['[', *value, ']']
@@ -127,31 +133,6 @@ class Inherit(Type[list[str]]):
 
     def shape(self) -> Shape:
         return shape.leaf_list(TEMPLATE_NAME_SHAPE, min_items=1)
-
-
-class TemplateName(Type[str]):
-    """The name of a template: letters, digits and `.-_`; with no name the `{` is the name, and refused."""
-
-    name = 'template name'
-
-    def parse(self, words: Words) -> str:
-        where = words.where()
-        name = '{' if words.at_end() else words.word()
-        if any(character not in NAME_CHARACTERS for character in name):
-            raise ConfigError(where, 'invalid character in name for template-neighbor')
-        return name
-
-    def render(self, value: str) -> list[WordOrSyntax]:
-        return [value]
-
-    def hint(self) -> str:
-        return '<name>'
-
-    def examples(self) -> list[str]:
-        return ['t', 'a.b-c_d']
-
-    def shape(self) -> Shape:
-        return TEMPLATE_NAME_SHAPE
 
 
 LEAVES = (
@@ -226,24 +207,24 @@ LEAVES = (
     ),
     Leaf(
         'adj-rib-out',
-        boolean(False),
+        boolean(True),
         field='adj-rib-out',
         doc='keep the routes sent, to send them again on a route refresh or a new session',
     ),
-    Leaf('adj-rib-in', boolean(False), field='adj-rib-in', doc='keep the routes received'),
+    Leaf('adj-rib-in', boolean(True), field='adj-rib-in', doc='keep the routes received'),
     Leaf(
         'manual-eor',
-        boolean(False),
+        boolean(True),
         field='manual-eor',
         doc='send the End-of-RIB markers only when the API asks for them',
     ),
-    Leaf('shutdown', boolean(False), field='shutdown', doc='start with the session administratively down'),
+    Leaf('shutdown', boolean(True), field='shutdown', doc='start with the session administratively down'),
     Leaf(
         'inherit',
         Inherit(),
         field='inherit',
         collect=Collect.EXTEND,
-        doc='the templates whose statements the neighbor takes',
+        doc='the templates giving the neighbor its defaults: what the neighbor says itself wins',
     ),
 )
 
@@ -452,15 +433,15 @@ NEIGHBOR = Block(
 TEMPLATE = Block(
     'template',
     field='template',
-    doc='statements shared by neighbors',
+    doc='defaults shared by neighbors, which their own statements change',
     children=(
         Block(
             'neighbor',
             field='neighbor',
             section=TemplateSection(),
             keep=Keep.NAMED,
-            name=TemplateName(),
-            doc='a template, the statements of a neighbor which inherits it',
+            name=SectionName('template'),
+            doc='a template, the defaults of a neighbor which inherits it',
             children=LEAVES + SECTIONS,
         ),
     ),

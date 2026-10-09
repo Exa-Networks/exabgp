@@ -24,6 +24,7 @@ from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.section import Kept, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
+from exabgp.configuration.grammar.types.basic import NAME_CHARACTERS
 from exabgp.configuration.grammar.types.lists import OneOrList
 from exabgp.configuration.grammar.types.network import ASN_WORD
 from exabgp.configuration.grammar.types.word import Number, Word, choice, decimal, integer, spelled, text
@@ -46,7 +47,6 @@ ROLE_OTC_REMOVED = (
     'ability to modify the Only-to-Customer procedures. Delete the line; the egress marking is '
     'unconditional for IPv4 and IPv6 unicast.'
 )
-NAME_CHARACTERS = frozenset('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_')
 
 
 def boolean(bare: bool | None) -> Word[bool]:
@@ -217,13 +217,13 @@ CAPABILITY = Block(
         ),
         Leaf(
             'software-version',
-            requirable(False),
+            requirable(True),
             field='software-version',
             doc='Software Version, draft-ietf-idr-software-version',
         ),
         Leaf(
             'link-local-nexthop',
-            requirable(None),
+            requirable(True),
             field='link-local-nexthop',
             doc='Link-Local Next Hop, draft-ietf-idr-linklocal-capability',
         ),
@@ -235,7 +235,7 @@ CAPABILITY = Block(
         ),
         Leaf(
             'link-local-prefer',
-            boolean(False),
+            boolean(True),
             field='link-local-prefer',
             doc='use the link-local IPv6 next-hop when a route has both',
         ),
@@ -356,7 +356,7 @@ TCP_AO = Block(
             needed=True,
         ),
         Leaf('password', text('password'), field='password', doc='the master key', needed=True),
-        Leaf('base64', boolean(False), field='base64', doc='the password is base64 encoded'),
+        Leaf('base64', boolean(True), field='base64', doc='the password is base64 encoded'),
     ),
 )
 

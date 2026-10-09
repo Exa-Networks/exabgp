@@ -26,6 +26,7 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute.internal import Split as InternalSplit
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.community import Communities, ExtendedCommunities, LargeCommunities
+from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesIPv6
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, Label
 from exabgp.bgp.message.update.nlri.empty import Empty
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -33,7 +34,7 @@ from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.update.nlri.settings import INETSettings
 from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.context import ReadContext
-from exabgp.configuration.grammar.error import ROUTE_ERRORS
+from exabgp.configuration.grammar.error import ROUTE_ERRORS, ConfigError
 from exabgp.configuration.grammar.lexer import lex_command
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.section import Section, Store, Values
@@ -120,6 +121,9 @@ LIST_ATTRIBUTES: dict[int, Callable[[list[Any]], Attribute]] = {
     Attribute.CODE.COMMUNITY: Communities.make_communities,
     Attribute.CODE.LARGE_COMMUNITY: LargeCommunities.make_large_communities,
     Attribute.CODE.EXTENDED_COMMUNITY: ExtendedCommunities.make_extended_communities,
+    # flow actions to an IPv6 address (copy, redirect-to-nexthop-ietf): a second was dropped,
+    # or refused as `attribute 0x19 is given twice`
+    Attribute.CODE.IPV6_EXTENDED_COMMUNITY: ExtendedCommunitiesIPv6.make_extended_communities_ipv6,
 }
 
 
@@ -167,32 +171,55 @@ def add_attribute(attributes: AttributeCollection, attribute: Attribute) -> None
 
 
 def first_next_hop(attributes: AttributeCollection, attribute: Attribute) -> bool:
-    """Keep the NEXT_HOP attribute unless one was given before, and say whether it was kept.
+    """Keep the NEXT_HOP attribute, refused when one was given before, as any attribute is.
 
-    The attribute kept the first `next-hop` and the address the last, so `next-hop self
-    next-hop 1.2.3.4` made a route which said self and could not be packed. The first wins
-    for both: 5.0 sent the first for IPv4 unicast, and a repeated attribute keeps the first.
+    A second `next-hop` was dropped without a word. An API command still keeps the first, as
+    4.2 and 5.0 did, and says it dropped the other (add_attribute does the same).
     """
-    if attribute.ID in attributes:
-        return False
-    attributes.add(attribute)
-    return True
+    if attribute.ID not in attributes:
+        attributes.add(attribute)
+        return True
+    if not READING_COMMAND.get():
+        raise ValueError('next-hop is given twice, it can be given once')
+    log.warning(
+        lazymsg(
+            'api.attribute.repeated name=next-hop kept="{kept}" dropped="{dropped}"',
+            kept=attributes[attribute.ID],
+            dropped=attribute,
+        ),
+        'configuration',
+    )
+    return False
 
 
-def _mentions(words: Words, *keywords: str) -> bool:
-    """legacy: whether a word of the statement is one of `keywords`, wherever it is, a value included."""
-    return any(token.word in keywords for token in words.context.statement)
+# the values which make a route line a VPN route, or a labelled one
+VPN_KEYWORDS = ('rd', 'route-distinguisher')
+LABEL_KEYWORDS = ('label',)
 
 
-def _nlri_class(words: Words, settings: INETSettings, prefix: IPRange | None) -> type[INET]:
-    if _mentions(words, 'rd', 'route-distinguisher'):
+def _nlri_class(given: set[str], settings: INETSettings, prefix: IPRange | None) -> type[INET]:
+    """The NLRI the values given make: decided once they are read, from their keywords.
+
+    The words of the line were searched, a value included, so `name rd` made a VPN route.
+    """
+    if given.intersection(VPN_KEYWORDS):
         settings.safi = SAFI.mpls_vpn
         return IPVPN
-    if _mentions(words, 'label'):
+    if given.intersection(LABEL_KEYWORDS):
         settings.safi = SAFI.nlri_mpls
         return Label
     settings.safi = IP.tosafi(prefix.top()) if prefix is not None else SAFI.unicast
     return INET
+
+
+def _read_values(line: RouteStatement, words: Words, collected: Collected, stop: str = '') -> set[str]:
+    """Read the values of a route line into `collected`, and say which keywords were given."""
+    names = {id(spec): name for name, spec in ROUTE_VALUES.items()}
+    given: set[str] = set()
+    for _, spec in line.keywords(words, ROUTE_VALUES, stop=stop):
+        given.add(names[id(spec)])
+        collected.apply(spec, spec.type.parse(words))
+    return given
 
 
 def action(words: Words) -> Action:
@@ -218,10 +245,9 @@ class RouteLine(RouteStatement):
         settings.cidr = CIDR.create_cidr(prefix.pack_ip(), prefix.mask.value)
         settings.afi = IP.toafi(prefix.top())
         settings.action = action(words)
-        klass = _nlri_class(words, settings, prefix)
         collected = Collected(settings)
-        for _, spec in self.keywords(words, ROUTE_VALUES):
-            collected.apply(spec, spec.type.parse(words))
+        given = _read_values(self, words, collected)
+        klass = _nlri_class(given, settings, prefix)
         route = Route(klass.from_settings(settings), collected.attributes, nexthop=settings.nexthop)
         return finish([route])
 
@@ -253,15 +279,18 @@ class AttributesLine(RouteStatement):
         settings = INETSettings()
         settings.afi = IP.toafi(prefix.top()) if prefix is not None else AFI.ipv4
         settings.action = action(words)
-        klass = _nlri_class(words, settings, prefix)
         collected = Collected(settings)
-        for _, spec in self.keywords(words, ROUTE_VALUES, stop='nlri'):
-            collected.apply(spec, spec.type.parse(words))
+        given = _read_values(self, words, collected, stop='nlri')
+        klass = _nlri_class(given, settings, prefix)
         routes = []
         for _ in range(bgp.MAX_LIST_ITEMS):
             if words.at_end():
                 break
+            where = words.where()
             each = bgp.Prefix().parse(words)
+            # each was made a prefix of the last one's family: 10.0.0.0/24 became a00::/24
+            if IP.toafi(each.top()) != settings.afi:
+                raise ConfigError(where, 'the prefixes of nlri are of one address family, give the other its own line')
             settings_copy = INETSettings(**{name: getattr(settings, name) for name in settings.__dataclass_fields__})
             settings_copy.cidr = CIDR.create_cidr(each.pack_ip(), each.mask.value)
             settings_copy.action = Action.UNSET
@@ -286,7 +315,8 @@ class AttributesLine(RouteStatement):
 
 
 def _last_prefix(statement: list[str]) -> list[IPRange]:
-    """legacy: the family of `attributes ... nlri` is the one of its last word, when that is a prefix.
+    """The family of `attributes ... nlri`: its prefixes are of one (AttributesLine refuses two),
+    the last word giving it when that is a prefix.
 
     The prefix, or no prefix when the last word is none: then the route has no address family.
     """

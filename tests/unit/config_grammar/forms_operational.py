@@ -12,11 +12,11 @@ OPERATIONAL_FORMS: list[tuple[str, bool]] = [
     ('adm afi ipv6 safi unicast advisory x', True),
     ('adm afi ipv6 safi unicast', False),
     ('asm AFI ipv4 SAFI unicast ADVISORY x', True),
-    ('asm afi ipv4 safi unicast advisory x trailing words', True),
+    ('asm afi ipv4 safi unicast advisory x trailing words', False),  # the words after it were dropped
     ('asm afi ipv4 safi unicast', False),
     ('asm afi ipv4 safi nothing advisory x', False),
     ('asm afi nothing safi unicast advisory x', False),
-    ('asm safi unicast afi ipv4 advisory x', False),
+    ('asm safi unicast afi ipv4 advisory x', True),  # the values are named: any order
     ('asm afi ipv4 safi unicast router-id 1.2.3.4', False),
     ('asm afi ipv4 safi unicast advisory x router-id 1.2.3.4', True),
     ('rpcq afi ipv4 safi unicast sequence 5', True),
@@ -27,7 +27,7 @@ OPERATIONAL_FORMS: list[tuple[str, bool]] = [
     ('rpcq afi ipv4 safi unicast sequence 4294967295', True),
     ('rpcq afi ipv4 safi unicast sequence 4294967296', False),
     ('rpcq afi ipv4 safi unicast sequence x', False),
-    ('rpcq afi ipv4 safi unicast router-id 1.2.3.4 sequence 5', False),
+    ('rpcq afi ipv4 safi unicast router-id 1.2.3.4 sequence 5', True),  # it took the place of a value
     ('rpcq afi ipv4 safi unicast router-id x sequence 5', False),
     ('apcq afi ipv4 safi mpls-vpn sequence 5', True),
     ('apcq afi ipv4 safi mpls-vpn', False),
@@ -38,7 +38,7 @@ OPERATIONAL_FORMS: list[tuple[str, bool]] = [
     ('rpcp afi ipv4 safi unicast sequence 1 counter 4294967296', False),
     ('rpcp afi ipv4 safi unicast sequence 1 counter -1', False),
     ('apcp afi ipv4 safi unicast sequence 1 counter x', False),
-    ('lpcp afi ipv4 safi unicast counter 1 sequence 1', False),
+    ('lpcp afi ipv4 safi unicast counter 1 sequence 1', True),
     ('lpcp afi ipv4 safi unicast sequence 1', False),
     ('rpcp afi ipv4 safi unicast sequence 1', False),
     ('apcp afi ipv4 safi unicast sequence 1 counter 1', True),
@@ -53,7 +53,7 @@ OPERATIONAL_DOCUMENT_BODIES: list[tuple[str, bool]] = [
         'asm afi ipv4 safi unicast advisory b; }',
         True,
     ),
-    # a second block replaces the first
+    # a second block adds to the first (it replaced it)
     (
         'operational { rpcq afi ipv4 safi unicast sequence 1; } operational { apcq afi ipv4 safi unicast sequence 2; }',
         True,

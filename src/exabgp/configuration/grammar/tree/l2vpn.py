@@ -22,7 +22,7 @@ from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
-from exabgp.configuration.grammar.section import Collector, Kept, Pending, Store, Values
+from exabgp.configuration.grammar.section import Collector, Kept, Pending, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import (
     ROUTE_VALUES,
@@ -37,7 +37,7 @@ from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
 from exabgp.configuration.grammar.types.word import Number, Word, decimal
 from exabgp.configuration.grammar.words import Words
-from exabgp.protocol.family import AFI
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPSelf
 from exabgp.rib.route import Route
 
@@ -191,25 +191,18 @@ class VPLSSection(Collector[list[Route]]):
         return [route]
 
 
-class LastRouteStore(Store):
-    """legacy: an attribute given in the l2vpn section goes to the last route read, a static
-    one included, and fails when there is none."""
+class _InVpls(Type[Any]):
+    """A value of a VPLS route given in the l2vpn section, outside any route: refused.
 
-    def keep(self, values: Values, value: Any, context: ReadContext) -> None:
-        routes = context.routes
-        if not routes:
-            raise ValueError('there is no route for this attribute to be added to')
-        add_attribute(routes[-1].attributes, value)
-
-
-class _NoSetter(Type[Any]):
-    """legacy: a VPLS value given in the l2vpn section is set on an NLRI which takes no change."""
+    An attribute went to the last route read, a static one included, and a VPLS field was
+    refused as a change to a route already made.
+    """
 
     def __init__(self, name: str) -> None:
         self.name = name
 
     def parse(self, words: Words) -> Any:
-        raise ConfigError(words.where(), f'{self.name} can not be changed on a route already made')
+        raise ConfigError(words.where(), f'{self.name} is given in a vpls route, not in the l2vpn section')
 
     def render(self, value: Any) -> list[WordOrSyntax]:
         raise ValueError(f'{self.name} is never read, so never printed')
@@ -224,10 +217,17 @@ class _NoSetter(Type[Any]):
         return shape.REFUSED
 
 
+VPLS_FAMILY = (AFI.l2vpn, SAFI.vpls)
+
+
 class L2VPNSection(Kept):
     def build(self, name: Any, values: Values, context: ReadContext) -> Values:
-        # legacy: the section takes every route not yet taken, those read before it included
-        values.setdefault('routes', []).extend(context.take_routes())
+        # its own routes: it took every route not yet taken, a static route read before it included
+        taken = context.take_routes()
+        values.setdefault('routes', []).extend(
+            route for route in taken if route.nlri.family().afi_safi() == VPLS_FAMILY
+        )
+        context.routes.extend(route for route in taken if route.nlri.family().afi_safi() != VPLS_FAMILY)
         return values
 
 
@@ -253,16 +253,6 @@ L2VPN_SECTION = Block(
     children=(
         Leaf('vpls', VPLSLine(), field='_line', store=ROUTES, doc='a VPLS route, on one line', multiple=True),
         VPLS_BLOCK,
-        *(Leaf(keyword, _NoSetter(keyword), field=f'_{keyword}') for keyword in VPLS_NLRI),
-        *(
-            Leaf(
-                keyword,
-                ROUTE_VALUES[keyword].type,
-                field=f'_{keyword}',
-                store=LastRouteStore(),
-                adds=ROUTE_VALUES[keyword].adds,
-            )
-            for keyword in VPLS_ATTRIBUTES
-        ),
+        *(Leaf(keyword, _InVpls(keyword), field=f'_{keyword}') for keyword in (*VPLS_NLRI, *VPLS_ATTRIBUTES)),
     ),
 )

@@ -12,7 +12,7 @@ from enum import StrEnum
 from typing import Generic, TypeVar
 
 from exabgp.configuration.grammar.error import ConfigError
-from exabgp.configuration.grammar.shape import TEXT, Shape, boolean, enumeration, leaf_list
+from exabgp.configuration.grammar.shape import TEXT, Shape, boolean, enumeration, leaf_list, string
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
 from exabgp.util.program import resolve_program, validate_executable
@@ -100,17 +100,33 @@ class Choice(Type[E], Generic[E]):
         return enumeration(*self._values())
 
 
-class LegacyName(Type[str]):
-    """The name of a section, as the legacy parser takes it: the word after the keyword.
+# what a name given to a section (a process, a template, an api) is written with
+NAME_CHARACTERS = frozenset('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-_')
+NAME_SHAPE = string(pattern=r'[a-zA-Z0-9._-]+')
 
-    legacy: nothing is checked, and with no name the `{` itself is the name: `process {`
-    is a process called `{`. Words after the name are ignored.
+
+class SectionName(Type[str]):
+    """The name of a section: letters, digits, `.`, `-` and `_`.
+
+    No name was taken as `{` itself (`process {` was a process called `{`), and any word as
+    a process name: `process p$ {`.
     """
 
     name = 'name'
 
+    def __init__(self, kind: str) -> None:
+        self.kind = kind
+
     def parse(self, words: Words) -> str:
-        return '{' if words.at_end() else words.word()
+        where = words.where()
+        if words.at_end():
+            raise ConfigError(where, f'a {self.kind} section needs a name', expected=[self.hint()])
+        name = words.word()
+        if any(character not in NAME_CHARACTERS for character in name):
+            raise ConfigError(
+                where, f"'{name}' is no {self.kind} name, it is written with letters, digits, '.', '-' and '_'"
+            )
+        return name
 
     def render(self, value: str) -> list[WordOrSyntax]:
         return [value]
@@ -120,6 +136,9 @@ class LegacyName(Type[str]):
 
     def examples(self) -> list[str]:
         return ['name', 'with.dot-dash_underscore']
+
+    def shape(self) -> Shape:
+        return NAME_SHAPE
 
 
 class Program(Type[list[str]]):

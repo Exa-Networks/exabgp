@@ -162,6 +162,11 @@ ROUTE_VALUE_FORMS: list[tuple[str, bool]] = [
     ('bgp-prefix-sid [ 300, [ ( 800000,100 ) ] ]', True),
     ('bgp-prefix-sid [ 300, [ ( 800000,100 ), ( 1000000,5000 ) ] ]', True),
     ('bgp-prefix-sid [ x ]', False),
+    # words the format does not expect are refused: they were skipped
+    ('bgp-prefix-sid [ 300 junk ]', False),
+    ('bgp-prefix-sid [ 300, [ ( 1 2,100 ) ] ]', False),
+    ('bgp-prefix-sid [ 300, [ ( 800000,100 ) junk ] ]', False),
+    ('bgp-prefix-sid [ 300, [ ( 800000,100 ) ( 1000000,5000 ) ] ]', True),
     ('bgp-prefix-sid 300', False),
     ('bgp-prefix-sid [ 300, [ ( 16777216,1 ) ] ]', False),
     ('bgp-prefix-sid-srv6 ( l3-service 2001:db8::1 )', True),
@@ -191,7 +196,7 @@ ROUTE_DOCUMENTS_BODY: list[tuple[str, bool]] = [
     ('static { route 10.0.0.0/24; }', True),
     ('static { route 10.0.0.1 next-hop 10.0.0.2; }', True),
     ('static { route 10.0.0.1/24 next-hop 10.0.0.2; }', False),  # host bits
-    ('static { route 10.0.0.0/x next-hop 10.0.0.2; }', True),
+    ('static { route 10.0.0.0/x next-hop 10.0.0.2; }', False),  # a mask which is no number was a host route
     ('static { route 10.0.0.0/24/8 next-hop 10.0.0.2; }', False),
     ('static { route nothing next-hop 10.0.0.2; }', False),
     ('static { route 2001:db8::/32 next-hop self; }', False),  # an IPv4 session
@@ -244,7 +249,8 @@ ANNOUNCE_FORMS: list[tuple[str, str, str, bool]] = [
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 name x', True),
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 path-information 1', True),
     ('ipv4', 'unicast', '10.0.0.0/24 next-hop 10.0.0.1 label 5', False),
-    ('ipv4', 'unicast', '2001:db8::/48 next-hop 10.0.0.1', True),
+    # a prefix of the other family is refused: it was taken, as a route of the block's family
+    ('ipv4', 'unicast', '2001:db8::/48 next-hop 10.0.0.1', False),
     ('ipv4', 'unicast', 'nothing next-hop 10.0.0.1', False),
     ('ipv4', 'multicast', '224.0.0.0/24 next-hop 10.0.0.1', True),
     ('ipv4', 'multicast', '224.0.0.0/24 next-hop 10.0.0.1 path-information 1.2.3.4', False),
@@ -257,7 +263,7 @@ ANNOUNCE_FORMS: list[tuple[str, str, str, bool]] = [
     ('ipv4', 'labeled-unicast', '10.0.0.0/24 next-hop 10.0.0.1 label 5', False),
     ('ipv6', 'unicast', '2001:db8::/48 next-hop 2001:db8::1', True),
     ('ipv6', 'unicast', '2001:db8::/48 next-hop self', False),  # IPv4 self, and an IPv4 session
-    ('ipv6', 'unicast', '10.0.0.0/24 next-hop 2001:db8::1', True),
+    ('ipv6', 'unicast', '10.0.0.0/24 next-hop 2001:db8::1', False),  # a prefix of the other family
     ('ipv6', 'multicast', 'nothing next-hop 2001:db8::1', False),
     ('ipv6', 'multicast', 'ff00::/8 next-hop 2001:db8::1', True),
     ('ipv6', 'nlri-mpls', '2001:db8::/48 next-hop 2001:db8::1 label 5', True),

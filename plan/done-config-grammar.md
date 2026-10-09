@@ -623,45 +623,45 @@ Each is pinned by a form or document in `tests/unit/config_grammar/forms.py`.
 | Accident | Example | Where reproduced |
 |---|---|---|
 | ~~words a value does not use are ignored~~ refused since 2026-10-01 (`plan/done-agent-reported-bugs.md` item 2) | `respawn false extra;` is `respawn false;` | engine `_leaf` |
-| words before a `}` are ignored, even an unknown keyword | `process p { run /bin/cat; hold 1 }` | engine `read` |
-| a `}` with nothing open ends the configuration, the rest is never read | `process p { ... } } anything {` | engine `read` |
-| sections still open at the end of the text are closed | `process p { run /bin/cat;` | engine `read` |
-| a section name is the word after the keyword, whatever it is, and more words are ignored | `process { ... }` is named `{`, `process a b {` is `a` | engine `_open` |
-| process names are not checked | `process p$ { ... }` | engine `_open` |
-| a boolean given no word takes the leaf default rather than true | `respawn;` | `Bool(bare=...)` |
-| an opening quote does not end the word before it | `ab"cd"` is `abcd` | lexer `_quote` |
-| inside quotes the other quote character switches which one closes, so a word can not hold a quote | `"it's"` never closes | lexer `_quote`, render `quote` |
-| `validate()` failures are ignored: its result is only returned when true | `api { processes [ undefined ]; }` is accepted | `Configuration._reload_grammar` |
-| templates override the neighbor: a number, address or string of the template replaces the neighbor's own | `inherit t; hold-time 30;` with `hold-time 60` in `t` is 60 | `resolve.transfer` |
-| an `inherit` of a template which does not exist, or is defined further down, is ignored | `inherit nothing;` | `resolve.inherit` |
-| `family { ipv4 unicast; all; }` is accepted and asks for every family; `add-path { all; }` asks for none | | `family._store_all` |
-| a boolean given no word takes the leaf default, which is not the neighbor default | `adj-rib-in;` is false, no statement is true | `boolean(bare)` |
+| ~~words before a `}` are ignored, even an unknown keyword~~ read as a statement, and `;` optional at the end of a line, since 2026-10-09 (`plan/wip-config-quirks.md` item 4) | `process p { run /bin/cat; hold 1 }` | engine `read` |
+| ~~a `}` with nothing open ends the configuration, the rest is never read~~ refused since 2026-10-09 (`plan/wip-config-quirks.md` item 5) | `process p { ... } } anything {` | engine `read` |
+| ~~sections still open at the end of the text are closed~~ refused since 2026-10-09 (item 6) | `process p { run /bin/cat;` | engine `read` |
+| ~~a section name is the word after the keyword, whatever it is, and more words are ignored~~ refused since 2026-10-09 (`plan/wip-config-quirks.md` item 7) | `process { ... }` is named `{`, `process a b {` is `a` | engine `_open` |
+| ~~process names are not checked~~ checked as a template name since 2026-10-09 (item 8) | `process p$ { ... }` | engine `_open` |
+| ~~a boolean given no word takes the leaf default rather than true~~ true since 2026-10-09 (`plan/wip-config-quirks.md` item 9) | `respawn;` | `Bool(bare=...)` |
+| ~~an opening quote does not end the word before it~~ refused since 2026-10-09 (`plan/wip-config-quirks.md` item 10) | `ab"cd"` is `abcd` | lexer `_quote` |
+| ~~inside quotes the other quote character switches which one closes, so a word can not hold a quote~~ a character since 2026-10-09 (item 11) | `"it's"` never closes | lexer `_quote`, render `quote` |
+| ~~`validate()` failures are ignored: its result is only returned when true~~ refused since 2026-10-09 (`plan/wip-config-quirks.md` item 12) | `api { processes [ undefined ]; }` is accepted | `Configuration._reload_grammar` |
+| ~~templates override the neighbor: a number, address or string of the template replaces the neighbor's own~~ the neighbor wins since 2026-10-09 (`plan/wip-config-quirks.md` item 1) | `inherit t; hold-time 30;` with `hold-time 60` in `t` is 60 | `resolve.transfer` |
+| ~~an `inherit` of a template which does not exist, or is defined further down, is ignored~~ one further down is found, a missing one is a warning, since 2026-10-09 (`plan/wip-config-quirks.md` items 2, 3) | `inherit nothing;` | `resolve.inherit` |
+| ~~`family { ipv4 unicast; all; }` is accepted and asks for every family; `add-path { all; }` asks for none~~ refused, and every family, since 2026-10-09 (`plan/wip-config-quirks.md` item 13) | | `family._store_all` |
+| ~~a boolean given no word takes the leaf default, which is not the neighbor default~~ true since 2026-10-09 (`plan/wip-config-quirks.md` item 9) | `adj-rib-in;` is false, no statement is true | `boolean(bare)` |
 | ~~`rate-limit` takes any integer, a negative one or 0 included, and not `disable` (which the printer writes)~~ a negative is refused; `disable` read as 0 since 2026-10-08 (`plan/wip-config-grammar-followup.md` item 3) | `rate-limit -5;` | `types/network.RATE_LIMIT` |
 | api names are unique across the whole configuration, not per neighbor | two neighbors with `api a { }` | `session._api` |
 | a route line picks VPN or labelled from the word `rd`, `route-distinguisher` or `label` anywhere in the statement, a value included | `route ... name rd;` is built as a VPN route, then made unicast again | `static._mentions`, `static.normalize` |
-| a prefix whose mask is no number is a host route | `route 10.0.0.0/x` is `10.0.0.0/32` | `bgp.Prefix` |
-| `bgp-prefix-sid` skips the words it does not expect, and looped forever on a list never closed (the grammar refuses it) | `bgp-prefix-sid [ 300` hung the legacy parser | `bgp.PrefixSidType` |
+| ~~a prefix whose mask is no number is a host route~~ refused since 2026-10-09 (`plan/wip-config-quirks.md` item 15) | `route 10.0.0.0/x` is `10.0.0.0/32` | `bgp.Prefix` |
+| ~~`bgp-prefix-sid` skips the words it does not expect, and looped forever on a list never closed (the grammar refuses it)~~ refused since 2026-10-09 (`plan/wip-config-quirks.md` item 16) | `bgp-prefix-sid [ 300` hung the legacy parser | `bgp.PrefixSidType` |
 | the announce families declare `atomic-aggregate`, `originator-id`, `cluster-list`, `aigp`, `attribute`, `name`, `split`, `watchdog`, `withdraw` and refuse every value of them (the validators return a bool, address, number or string where an attribute is needed; for an API command the exception leaves `partial()`) | `announce { ipv4 { unicast ... name x; } }` | `announce.Refused` |
 | `path-information` is refused in an announce family: a number is no address, an address no path id | `unicast ... path-information 1` | `announce.Refused` |
 | `labeled-unicast` is listed for `announce ipv4`/`ipv6` and refused as an unknown command | | `announce._refused_family` |
 | `next-hop self` in an announce family is IPv4 whatever the family | `announce { ipv6 { unicast ... next-hop self; } }` | `announce.AnnounceNextHop` |
-| a prefix of the other address family is taken, and builds a route no one can show | `announce { ipv4 { unicast 2001:db8::/48 ... } }` | `announce.AnnounceLine` |
-| a file ending on a continuation line repeats its last piece | `run /bin/cat \` at EOF | lexer `_file_lines` |
+| ~~a prefix of the other address family is taken, and builds a route no one can show~~ refused since 2026-10-09 (`plan/wip-config-quirks.md` item 18) | `announce { ipv4 { unicast 2001:db8::/48 ... } }` | `announce.AnnounceLine` |
+| ~~a file ending on a continuation line repeats its last piece~~ read once since 2026-10-09 (`plan/wip-config-quirks.md` item 19) | `run /bin/cat \` at EOF | lexer `_file_lines` |
 | a `flow` section keeps the neighbor's list of routes, which the neighbor adds again: every route counts twice | `flow { route r { ... } }` | `flow._flow`, unresolve `_routes` |
-| a trailing `&` in a flow match is refused inside brackets only | | `types/flow._expression` |
-| IPv6-only flow components are accepted while the family is not set yet | | `types/flow` |
-| a one-line flow `route-distinguisher` sets a field which does not exist and is refused | | `tree/flow.LINE` |
-| an IPv6 `copy` next to another is dropped as a duplicate attribute | | `tree/flow.FlowRoute` |
-| an attribute given in the `l2vpn` section goes to the last route read, a static one included, and fails when there is none | `l2vpn { vpls ...; origin igp; }` | `l2vpn._last_route` |
-| the `l2vpn` section takes every route not yet taken, those read before it included | | `l2vpn._l2vpn` |
+| ~~a trailing `&` in a flow match is refused inside brackets only~~ refused everywhere since 2026-10-09 (`plan/wip-config-quirks.md` item 21) | | `types/flow._expression` |
+| ~~IPv6-only flow components are accepted while the family is not set yet~~ a flow route takes its family from what it matches since 2026-10-09 (`plan/wip-config-quirks.md` item 22) | | `types/flow` |
+| ~~a one-line flow `route-distinguisher` sets a field which does not exist and is refused~~ read as the rd since 2026-10-09 (`plan/wip-config-quirks.md` item 23) | | `tree/flow.LINE` |
+| ~~an IPv6 `copy` next to another is dropped as a duplicate attribute~~ both kept since 2026-10-09 (`plan/wip-config-quirks.md` item 24) | | `tree/flow.FlowRoute` |
+| ~~an attribute given in the `l2vpn` section goes to the last route read, a static one included, and fails when there is none~~ refused since 2026-10-09 (`plan/wip-config-quirks.md` item 25) | `l2vpn { vpls ...; origin igp; }` | `l2vpn._last_route` |
+| ~~the `l2vpn` section takes every route not yet taken, those read before it included~~ its own VPLS routes since 2026-10-09 (item 26) | | `l2vpn._l2vpn` |
 | a VPLS value given at the `l2vpn` level is refused | `l2vpn { endpoint 5; }` | `l2vpn._NoSetter` |
-| the MUP `next-hop self` takes the family of the context; an IPv4 next-hop is mapped into IPv6 for an IPv6 route, which carries no next-hop attribute | | `select.MupNextHop` |
-| an sr-policy route ignores what follows its sub-TLVs | `sr-policy ... preference 1 garbage words;` | `sr_policy.sr_policy_route` |
+| ~~the MUP `next-hop self` takes the family of the context~~ the route's since 2026-10-09 (`plan/wip-config-quirks.md` item 39); an IPv4 next-hop is mapped into IPv6 for an IPv6 route, which carries no next-hop attribute (kept) | | `select.MupNextHop` |
+| ~~an sr-policy route ignores what follows its sub-TLVs~~ refused since 2026-10-09 (`plan/wip-config-quirks.md` item 27) | `sr-policy ... preference 1 garbage words;` | `sr_policy.sr_policy_route` |
 | the static `sr-policy` takes its family from the endpoint, IPv4 when it has none | | `sr_policy._endpoint_afi` |
-| an operational message reads exactly two words per value and ignores the rest; `router-id` takes the place of a value, so it is never accepted | `rpcq afi ipv4 safi unicast router-id 1.2.3.4 sequence 5;` is refused | `operational._values` |
+| ~~an operational message reads exactly two words per value and ignores the rest; `router-id` takes the place of a value, so it is never accepted~~ values by name since 2026-10-09 (`plan/wip-config-quirks.md` item 28) | `rpcq afi ipv4 safi unicast router-id 1.2.3.4 sequence 5;` is refused | `operational._values` |
 | the advisory of an operational message is not checked against its maximum length | | `operational.CONVERT` |
 | a sequence may be negative, and 0 is no sequence | `sequence -1;` | `operational.CONVERT` |
-| a second `operational` block replaces the messages of the first, unless it is empty | | `operational._operational` |
+| ~~a second `operational` block replaces the messages of the first, unless it is empty~~ they add up since 2026-10-09 (item 30) | | `operational._operational` |
 | a template's operational messages are added after the neighbor's own | | `resolve.transfer` |
 
 ---

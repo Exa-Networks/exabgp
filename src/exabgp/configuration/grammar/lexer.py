@@ -20,6 +20,7 @@ from typing import Iterable, Iterator
 from exabgp.configuration.grammar.error import ConfigError
 
 TERMINATORS = (';', '{', '}')
+STATEMENT_END = ';'
 SEPARATORS = (',', '[', ']')
 SPACES = (' ', '\t', '\r', '\n')
 QUOTES = ('"', "'")
@@ -197,8 +198,8 @@ class _Splitter:
                 self._add(char, offset)
                 continue
             if char == COMMENT:
-                if self.word or self.tokens:
-                    raise ConfigError(self._where(offset), f'invalid syntax, unterminated statement before {COMMENT!r}')
+                # a comment ends the line, and so the statement before it
+                yield from self._close(offset)
                 return
             if char in TERMINATORS:
                 self._flush()
@@ -212,30 +213,41 @@ class _Splitter:
                 self._flush()
             else:
                 self._add(char, offset)
-        self._close()
+        yield from self._close(len(self.text))
 
     def _quote(self, char: str, offset: int) -> None:
-        """A quote character, with the legacy rules.
+        """A quote character: it opens a word, or closes the one it opened.
 
-        An opening quote does not end the word before it (`ab"cd"` is `abcd`). A closing quote
-        ends the word even when it is empty (`""` is a word). Inside quotes, the other quote
-        character does not close: it becomes the quote to close with, and is dropped.
+        A closing quote ends the word even when it is empty (`""` is a word), and inside quotes
+        the other quote character is a character: `"it's"`. It used to become the quote to close
+        with, so `"it's"` never closed, and a quote in the middle of a word did not end it,
+        `ab"cd"` being `abcd`: that is refused.
         """
         if self.quoted == char:
             self.tokens.append(self._token(self.word, self.word_at))
             self.word = ''
             self.quoted = ''
             return
-        if not self.quoted and not self.word:
-            self.word_at = offset + 1
+        if self.quoted:
+            self._add(char, offset)
+            return
+        if self.word:
+            raise ConfigError(self._where(offset), f'invalid syntax, a quote in the middle of the word "{self.word}"')
+        self.word_at = offset + 1
         self.quoted = char
 
-    def _close(self) -> None:
-        if self.word:
-            raise ConfigError(self._where(self.word_at), f'invalid syntax, "{self.word}" is not followed by ;')
+    def _close(self, offset: int) -> Iterator[Statement]:
+        """The end of the line ends the statement on it, as a `;` would: `;` is not required.
+
+        A quote still open at the end of the line is refused, there is no word to end.
+        """
+        if self.quoted:
+            raise ConfigError(self._where(self.word_at), f'invalid syntax, the quote {self.quoted} is not closed')
+        self._flush()
         if self.tokens:
-            words = ' '.join(token.word for token in self.tokens)
-            raise ConfigError(self.tokens[0].where(), f'invalid syntax, "{words}" is not followed by ;')
+            self.tokens.append(self._token(STATEMENT_END, offset))
+            yield Statement(tuple(self.tokens))
+            self.tokens = []
 
 
 def _file_lines(lines: Iterable[str], source: str) -> Iterator[_Line]:
@@ -255,9 +267,9 @@ def _file_lines(lines: Iterable[str], source: str) -> Iterator[_Line]:
         pending = ''
         starts = []
     if pending:
-        # the legacy reader repeats the last piece when the file ends on a continuation
-        last = pending[starts[-1][0] :]
-        yield _Line(pending + last, source, tuple(starts))
+        # the file ends on a continuation: what it continues is the last line, read once (the
+        # last piece was read twice)
+        yield _Line(pending, source, tuple(starts))
 
 
 def _statements(lines: Iterable[_Line]) -> Iterator[Statement]:

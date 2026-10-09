@@ -16,7 +16,7 @@ from __future__ import annotations
 from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.section import Section, Values
-from exabgp.configuration.grammar.types.basic import Bool, Choice, LegacyName, Program
+from exabgp.configuration.grammar.types.basic import Bool, Choice, Program, SectionName
 from exabgp.configuration.settings import Encoder, OnExit, ProcessSettings
 
 
@@ -32,7 +32,7 @@ PROCESS = Block(
     field='processes',
     section=ProcessSection(),
     keep=Keep.NAMED,
-    name=LegacyName(),
+    name=SectionName('process'),
     doc='an external program exabgp runs and talks to over the API',
     missing='unset process sections: {names}',
     children=(

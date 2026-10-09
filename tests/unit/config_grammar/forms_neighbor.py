@@ -166,6 +166,9 @@ NEIGHBOR_FORMS: list[tuple[tuple[str, ...], str, bool]] = [
     ((), 'inherit [ t u ]', True),
     ((), 'inherit [ t, u ]', True),
     ((), 'inherit nothing', True),
+    # a name no template can have is refused: any word was taken, and matched nothing
+    ((), 'inherit t$', False),
+    ((), 'inherit [ t u$ ]', False),
     ((), 'inherit t u', False),
     ((), 'inherit [ ]', False),
     ((), 'inherit [ t', False),
@@ -257,7 +260,7 @@ NEIGHBOR_FORMS: list[tuple[tuple[str, ...], str, bool]] = [
     (('capability',), 'link-local-nexthop enable', True),
     (('capability',), 'link-local-nexthop require', True),
     (('capability',), 'link-local-nexthop disable', True),
-    (('capability',), 'link-local-nexthop', False),
+    (('capability',), 'link-local-nexthop', True),  # enable when bare, as every boolean
     *[
         (('capability',), f'{keyword} maybe', False)
         for keyword in (
@@ -373,7 +376,7 @@ NEIGHBOR_FORMS: list[tuple[tuple[str, ...], str, bool]] = [
     (('tcp-ao',), 'password "' + 'x' * 81 + '"', False),
     (('tcp-ao',), 'base64 true', False),  # `secret` is not base64
     (('tcp-ao',), 'base64 false', True),
-    (('tcp-ao',), 'base64', True),
+    (('tcp-ao',), 'base64', False),  # true when bare, as `base64 true`: `secret` is not base64
     (('tcp-ao',), 'base64 maybe', False),
     # role, needing an eBGP session the wrapper has
     *[(('role',), f'local {role}', True) for role in ('provider', 'customer', 'peer', 'rs', 'rs-client')],
@@ -407,7 +410,7 @@ ANY_WORD: frozenset[tuple[tuple[str, ...], str]] = frozenset(
         (('neighbor',), 'description'),
         (('neighbor',), 'host-name'),
         (('neighbor',), 'domain-name'),
-        # `all` reads nothing; it is refused only with a family after it, see NEIGHBOR_DOCUMENTS
+        # `all` reads nothing; it is refused with another family, see NEIGHBOR_DOCUMENTS
         (('neighbor', 'family'), 'all'),
         (('neighbor', 'add-path'), 'all'),
         # in a route block, a value-less keyword ignores what follows it, and a name is any word
@@ -450,12 +453,13 @@ NEIGHBOR_DOCUMENTS: list[tuple[str, bool]] = [
     (f'neighbor 127.0.0.0/8 {{ {_N} passive false; }}', False),
     (f'neighbor nowhere {{ {_N} }}', False),
     (f'neighbor {{ {_N} }}', False),
-    (f'neighbor 127.0.0.1 extra {{ {_N} }}', True),
+    (f'neighbor 127.0.0.1 extra {{ {_N} }}', False),  # the word after the name was ignored
     # family blocks
     (f'neighbor 127.0.0.1 {{ {_N} family {{ }} }}', True),
     (f'neighbor 127.0.0.1 {{ {_N} family {{ all; ipv4 unicast; }} }}', False),
-    (f'neighbor 127.0.0.1 {{ {_N} family {{ ipv4 unicast; all; }} }}', True),
-    (f'neighbor 127.0.0.1 {{ {_N} family {{ all; all; }} }}', True),
+    # `all` is every family: with another, in either order, it is refused (after one, it was taken)
+    (f'neighbor 127.0.0.1 {{ {_N} family {{ ipv4 unicast; all; }} }}', False),
+    (f'neighbor 127.0.0.1 {{ {_N} family {{ all; all; }} }}', False),
     (f'neighbor 127.0.0.1 {{ {_N} family {{ ipv4 unicast; ipv4 unicast; }} }}', False),
     (f'neighbor 127.0.0.1 {{ {_N} family {{ ipv4 nlri-mpls; ipv4 labeled-unicast; }} }}', False),
     (f'neighbor 127.0.0.1 {{ {_N} family {{ ipv4 unicast; }} family {{ ipv4 unicast; }} }}', True),
@@ -522,7 +526,8 @@ NEIGHBOR_DOCUMENTS: list[tuple[str, bool]] = [
     (f'neighbor 127.0.0.1 {{ {_N} confederation {{ }} }}', False),
     # api
     (f'process a {{ run /bin/cat; }} neighbor 127.0.0.1 {{ {_N} api {{ processes [ a ]; }} }}', True),
-    (f'neighbor 127.0.0.1 {{ {_N} api {{ processes [ undefined ]; }} }}', True),
+    # an api naming a process which does not exist is refused: it was accepted, telling no program
+    (f'neighbor 127.0.0.1 {{ {_N} api {{ processes [ undefined ]; }} }}', False),
     (f'neighbor 127.0.0.1 {{ {_N} api x {{ }} api x {{ }} }}', False),
     (f'neighbor 127.0.0.1 {{ {_N} api x {{ }} }} neighbor 127.0.0.2 {{ {_N} api x {{ }} }}', False),
     (f'neighbor 127.0.0.1 {{ {_N} api {{ }} api {{ }} }}', True),
@@ -541,7 +546,8 @@ NEIGHBOR_DOCUMENTS: list[tuple[str, bool]] = [
     (f'template {{ neighbor t {{ hold-time 60; }} }} neighbor 127.0.0.1 {{ inherit t; {_N} }}', True),
     (f'template {{ neighbor t {{ hold-time 60; }} }} neighbor 127.0.0.1 {{ inherit t; {_N} hold-time 30; }}', True),
     (f'neighbor 127.0.0.1 {{ inherit t; {_N} }} template {{ neighbor t {{ hold-time 60; }} }}', True),
-    (f'template {{ neighbor t {{ local-as auto; }} }} neighbor 127.0.0.1 {{ inherit t; {_N} }}', False),
+    # the neighbor's own local-as wins over the template's: both set it, which was refused
+    (f'template {{ neighbor t {{ local-as auto; }} }} neighbor 127.0.0.1 {{ inherit t; {_N} }}', True),
     (
         'template { neighbor t { local-as auto; } } neighbor 127.0.0.1 { inherit t; router-id 10.0.0.1; peer-as 2; }',
         True,
@@ -562,14 +568,14 @@ NEIGHBOR_DOCUMENTS: list[tuple[str, bool]] = [
         True,
     ),
     (
-        'template { neighbor t { capability { route-refresh; } api { processes [ a ]; } } } '
+        'process a { run /bin/cat; } template { neighbor t { capability { route-refresh; } api { processes [ a ]; } } } '
         f'neighbor 127.0.0.1 {{ inherit t; {_N} }} neighbor 127.0.0.2 {{ inherit t; {_N} }}',
         True,  # the api of the template is read once, when the template is
     ),
     (
         'template { neighbor t { confederation { identifier 9; members [ 3 ]; } } } '
         f'neighbor 127.0.0.1 {{ inherit t; {_N} confederation {{ members [ 4 ]; }} }}',
-        False,
+        True,  # the neighbor's members, the template's identifier: both giving members was refused
     ),
     (f'template {{ neighbor t {{ }} neighbor t {{ }} }} neighbor 127.0.0.1 {{ {_N} }}', False),
     (f'template {{ neighbor t {{ }} }} template {{ neighbor t {{ }} }} neighbor 127.0.0.1 {{ {_N} }}', False),

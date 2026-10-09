@@ -31,12 +31,13 @@ def quote(word: WordOrSyntax) -> str:
         return word.word
     if word and not any(char in _PLAIN_BREAKERS for char in word):
         return word
-    # the lexer resolves escapes before it looks for quotes, and inside quotes the other quote
-    # character changes which one closes: a word holding either can not be written at all
-    if any(char in QUOTES for char in word):
-        raise ValueError(f'{word!r} holds a quote character and can not be written in a configuration')
+    # the lexer resolves escapes before it looks for quotes, so a quote character is written
+    # inside the other one: a word holding both can not be written at all
+    usable = [mark for mark in QUOTES if mark not in word]
+    if not usable:
+        raise ValueError(f'{word!r} holds both quote characters and can not be written in a configuration')
     escaped = ''.join(_ESCAPED.get(char, char) for char in word)
-    return f'"{escaped}"'
+    return f'{usable[0]}{escaped}{usable[0]}'
 
 
 def _leaf(leaf: Leaf, value: Any) -> str:
