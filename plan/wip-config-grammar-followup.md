@@ -27,7 +27,7 @@ defaults; 424 leaves typed with range, enum or pattern); errors carry `file:line
 | 2 | ~~`role` and `tcp-ao` sections have no description in the model~~ not an issue: the description is in `$defs/neighbor`, the probe read the neighbor's `required` overlay | ✅ |
 | 3 | `rate-limit disable` refused, which 5.0 read and `str(neighbor)` prints | ✅ |
 | 4 | `exabgp decode --command` builds API text by hand (`configuration/command.py`), not with `render()` | ✅ |
-| 5 | ~~31 leaves are a plain `string`~~ the probe missed `anyOf` formats: addresses are typed; 15 free text strings left (description, passwords, names, run). Possible: `maxLength` on host-name, domain-name, md5-password, advisory | 🟢 optional |
+| 5 | ~~31 leaves are a plain `string`~~ the probe missed `anyOf` formats: addresses are typed; 15 free text strings left (description, passwords, names, run). ~~`maxLength` on host-name, domain-name, md5-password, advisory~~ host-name, domain-name and advisory are cut to length on purpose when sent, so no `maxLength`; md5-password: a non-ASCII key was accepted, then failed when the session connected, fixed | ✅ |
 | 6 | a configuration error is printed twice by `configuration validate` (log and `error:` line) | ✅ |
 | 6b | an error names an internal code: `split` given twice says `attribute 0xfffd is given twice` | ✅ |
 | 7 | decisions: the accidents of `done-config-grammar.md` section 6, `tree/resolve.py` legacy inheritance, JSON output of configuration errors | ⏸️ Thomas |
@@ -147,6 +147,25 @@ as-path, local-preference 100 inside the AS) are left out. The other 52:
   use it. Tests: `tests/unit/test_group_split_commands.py`, two in
   `test_api_command_group.py` (red before), one end to end in `test_decode_to_api_command.py`.
 
+- 2026-10-09, item 5: host-name and domain-name are cut to 255 bytes on a character boundary
+  (`HostName._truncate`), an advisory to 2048 with `...` (`operational.make_advisory`): a
+  schema `maxLength` would say a limit the reader does not have. md5-password was already
+  checked (`SessionSettings.validate_md5`, 80) but by characters: a non-ASCII key passed and
+  raised UnicodeEncodeError in `tcp.md5`. Now refused, ASCII or base64 asked for, the length
+  in bytes (`tests/unit/test_input_validation.py`, red before).
+- 2026-10-09, item 7, facts for Thomas: of section 6 of done-config-grammar.md, still
+  accepted today: words before `}` (an unknown keyword included), a `}` with nothing open
+  ending the configuration, sections left open at the end, a second section name word, any
+  process name, a bare boolean taking the leaf default, `ab"cd"`, an api naming an undefined
+  process, `inherit` of a missing template, `family { ...; all; }`, `add-path { all; }`,
+  `route ... name rd`, a mask which is no number as /32, an IPv6 prefix in `announce ipv4`,
+  flow routes counted twice, an l2vpn attribute going to the last route. Changed since:
+  api names (refused), labeled-unicast (refused with a message), `next-hop self` in announce
+  ipv6 (refused), `name`/`path-information` in an announce family (accepted), sr-policy
+  trailing words (refused), sequence -1 (refused). Template precedence: `inherit t;
+  hold-time 30;` with `hold-time 60` in t gives 60 (`resolve.transfer`); the wiki's template
+  page avoids the case ("the template sets no hold-time").
+
 ## Failures
 
 (none yet)
@@ -157,5 +176,5 @@ as-path, local-preference 100 inside the AS) are left out. The other 52:
 
 ## Resume Point
 
-Items 1, 2, 3 committed (f582eec21); 6, 6b and 4 done, not committed. Running
-`test_everything`. Left: 5 (optional), 7 waits on Thomas.
+Items 1-4, 6, 6b committed and pushed; 5 done (md5-password), not committed. Item 7: facts
+gathered (Progress, 2026-10-09), waiting for Thomas's three decisions.

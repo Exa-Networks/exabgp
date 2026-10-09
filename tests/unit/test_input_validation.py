@@ -156,6 +156,19 @@ def test_session_rejects_a_malformed_base64_md5_password() -> None:
     assert Session(md5_password='YWJj', md5_base64=True).validate_md5() == ''
 
 
+def test_session_rejects_an_md5_password_the_socket_can_not_take() -> None:
+    """The socket takes the key as ASCII, at most 80 bytes: `café`, or 41 `é` (82 bytes, 41
+    characters), were accepted here and raised UnicodeEncodeError when the session connected."""
+    from exabgp.bgp.neighbor.session import Session
+
+    assert 'ASCII' in Session(md5_password='café').validate_md5()
+    assert 'ASCII' in Session(md5_password='é' * 41).validate_md5()
+    assert 'no larger than 80' in Session(md5_password='a' * 81).validate_md5()
+    assert Session(md5_password='a' * 80).validate_md5() == ''
+    # the same key in base64 is accepted: base64 is the way to give one which is not ASCII
+    assert Session(md5_password='Y2Fmw6k=', md5_base64=True).validate_md5() == ''
+
+
 @pytest.mark.skipif(platform.system() != 'Linux', reason='TCP_MD5SIG is only set on Linux')
 def test_tcp_md5_runtime_rejects_a_malformed_base64_key() -> None:
     import socket

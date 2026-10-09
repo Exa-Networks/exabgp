@@ -135,13 +135,17 @@ class Session:
         if self.tcp_ao_password:
             return 'MD5 and TCP-AO are mutually exclusive - cannot use both'
 
+        # the socket takes the key as ASCII (reactor/network/tcp.md5): any other character was
+        # accepted here and raised UnicodeEncodeError when the session connected
         try:
-            password = decode_base64(self.md5_password) if self.md5_base64 else self.md5_password
+            password = decode_base64(self.md5_password) if self.md5_base64 else self.md5_password.encode('ascii')
         except PSKError as e:
             return f'Invalid MD5 password: {e}'
+        except UnicodeEncodeError:
+            return 'MD5 password must be ASCII, or base64 encoded with md5-base64 true'
 
         if len(password) > MAX_MD5_PASSWORD_LENGTH:
-            return f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} characters'
+            return f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} bytes'
 
         return ''
 

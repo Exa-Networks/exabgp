@@ -1,6 +1,6 @@
 # Optional Trailing Semicolons
 
-**Status:** 📋 Planning
+**Status:** 📋 Planning, taken over by `plan/wip-config-quirks.md` item 4 (2026-10-09)
 **Created:** 2025-12-15
 **Updated:** 2025-12-15
 
