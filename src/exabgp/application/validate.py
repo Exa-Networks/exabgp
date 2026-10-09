@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+import os
 import sys
+import json
 import argparse
-from typing import NoReturn
+from typing import Any, NoReturn
 
 from exabgp.environment import getenv
 from exabgp.environment import getconf
 
-from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.configuration import Configuration, ConfigurationError
 from exabgp.bgp.neighbor import NeighborTemplate
 
 from exabgp.debug.intercept import trace_interceptor
@@ -24,6 +26,7 @@ def setargs(sub: argparse.ArgumentParser) -> None:
     sub.add_argument('-n', '--neighbor', help='check the parsing of the neighbors', action='store_true')
     sub.add_argument('-r', '--route', help='check the parsing of the routes', action='store_true')
     sub.add_argument('-v', '--verbose', help='be verbose in the display', action='store_true')
+    sub.add_argument('-j', '--json', help='print one JSON object per file on stdout, an error with its position, message and expected words (turns the log off)', action='store_true')
     sub.add_argument('-p', '--pdb', help='fire the debugger on critical logging, SIGTERM, and exceptions (shortcut for exabgp.pdb.enable=true)', action='store_true')
     sub.add_argument('configuration', help='configuration file(s)', nargs='+', type=str)
     # fmt:on
@@ -40,6 +43,10 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
     if cmdarg.pdb:
         env.debug.pdb = True
 
+    # stdout is the JSON document, a log printing there would break it
+    if cmdarg.json:
+        env.log.enable = False
+
     log.init(env)
     trace_interceptor(env.debug.pdb)
 
@@ -50,9 +57,11 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
         log.info(lazymsg('loading {configuration}', configuration=configuration), 'configuration')
         location = getconf(configuration)
         if not location:
-            _fail(f'{configuration} is not an exabgp config file (file not found)')
+            missing = ConfigurationError()
+            missing.set(f'{configuration} is not an exabgp config file (file not found)')
+            _fail(configuration, missing, cmdarg.json)
 
-        config = _load(configuration, location)
+        config = _load(configuration, location, cmdarg.json)
         log.info(lazymsg('validate.loading status=success'), 'configuration')
 
         if cmdarg.neighbor:
@@ -65,14 +74,25 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
         if cmdarg.route:
             log.warning(lazymsg('validate.checking type=routes'), 'configuration')
             if not check_generation(config.neighbors):
-                log.critical(
-                    lazymsg('{configuration} has an invalid route', configuration=configuration), 'configuration'
-                )
-                sys.exit(1)
+                invalid = ConfigurationError()
+                invalid.set(f'{configuration} has an invalid route')
+                _fail(configuration, invalid, cmdarg.json)
             log.info(lazymsg('validate.routes status=success'), 'configuration')
 
+        if cmdarg.json:
+            _print_json({'configuration': configuration, 'valid': True})
 
-def _fail(msg: str) -> NoReturn:
+
+def _print_json(document: dict[str, Any]) -> None:
+    sys.stdout.write(json.dumps(document) + '\n')
+    sys.stdout.flush()
+
+
+def _fail(configuration: str, error: ConfigurationError, as_json: bool) -> NoReturn:
+    if as_json:
+        _print_json({'configuration': configuration, 'valid': False, 'error': error.as_dict()})
+        sys.exit(1)
+    msg = str(error)
     # the error line is written whether logging is on or off (#1367); a log printing to the
     # terminal would only say it a second time, as it did, a log kept elsewhere still has it
     if not (option.log_enabled('configuration', 'CRITICAL') and option.destination in ('stdout', 'stderr')):
@@ -81,12 +101,15 @@ def _fail(msg: str) -> NoReturn:
     sys.exit(1)
 
 
-def _load(configuration: str, location: str) -> Configuration:
+def _load(configuration: str, location: str, as_json: bool) -> Configuration:
     config = Configuration([location])
     if not config.reload():
         error = str(config.error)
-        # an error read from the file starts with its path, which is not said twice
-        _fail(error if error.startswith(f'{location}:') else f'{configuration} is not a valid config file: {error}')
+        # an error read from the file starts with its real path (Configuration reads that one),
+        # which is not said twice
+        if not as_json and not error.startswith(f'{os.path.realpath(location)}:'):
+            config.error.set(f'{configuration} is not a valid config file: {error}')
+        _fail(configuration, config.error, as_json)
     return config
 
 

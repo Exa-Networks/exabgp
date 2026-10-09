@@ -11,10 +11,16 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import re
+from typing import Any
+
 MAX_EXPECTED_SHOWN = 24  # beyond this the list stops helping and the hint says enough
 MAX_SUGGESTIONS = 3
 MAX_SUGGESTION_DISTANCE = 2
 MAX_SUGGESTION_LENGTH = 64  # a longer word is not a typo of a keyword, and costs length squared to compare
+
+# what Token.where() writes: `<source>:<line>:<column>`, or `line <line>:<column>` with no source
+WHERE = re.compile(r'^(?:line |(?P<source>.+):)(?P<line>[0-9]+):(?P<column>[0-9]+)$')
 
 
 class ConfigError(ValueError):
@@ -40,6 +46,18 @@ class ConfigError(ValueError):
             more = ', ...' if len(self.expected) > MAX_EXPECTED_SHOWN else ''
             lines.append(f'  expected: {", ".join(shown)}{more}')
         return '\n'.join(lines)
+
+    def as_dict(self) -> dict[str, Any]:
+        """The error for a program to read: the position split, every expected word."""
+        found = WHERE.match(self.where)
+        return {
+            'file': found['source'] if found else None,
+            'line': int(found['line']) if found else None,
+            'column': int(found['column']) if found else None,
+            'message': self.message,
+            'expected': list(self.expected),
+            'suggestions': list(self.suggestions),
+        }
 
 
 def distance(first: str, second: str) -> int:

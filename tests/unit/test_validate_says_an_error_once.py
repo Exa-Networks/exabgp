@@ -62,3 +62,17 @@ def test_the_file_is_named_once(tmp_path: pathlib.Path) -> None:
 def test_a_missing_file_is_said_once(tmp_path: pathlib.Path) -> None:
     output = validate(tmp_path / 'absent.conf', 'true')
     assert output.count('is not an exabgp config file') == 1, output
+
+
+def test_the_file_is_named_once_through_a_symlink(tmp_path: pathlib.Path) -> None:
+    # the error names the real path: given another one (macOS /var is /private/var), the
+    # given path was put in front of it, and the file named twice
+    real = tmp_path / 'real'
+    real.mkdir()
+    (real / 'hold.conf').write_text(HOLD_TIME)
+    (tmp_path / 'link').symlink_to(real)
+    error = next(
+        line for line in validate(tmp_path / 'link' / 'hold.conf', 'false').splitlines() if line.startswith('error: ')
+    )
+    assert 'is not a valid config file' not in error, error
+    assert error.count('hold.conf') == 1, error

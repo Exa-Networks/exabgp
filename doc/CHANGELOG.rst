@@ -4,6 +4,11 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Feature: `configuration validate --json` prints one JSON object per file on stdout: `valid`,
+   and for an error its file, line, column, message, the words expected there and the ones which
+   may have been meant, so a program does not have to read the `error:` line.
+ * Change: `configuration validate -r` says an invalid route on its `error:` line, as other errors
+   are said, whatever the log. Only the log said it, so nothing was printed with the log off.
  * Change: a template gives a neighbor its defaults: what the neighbor says itself wins over
    what a template it inherits says, and a template listed first in `inherit` wins over one
    listed after it. The template won, so `hold-time 30;` in a neighbor inheriting a template

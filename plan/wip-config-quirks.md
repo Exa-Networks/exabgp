@@ -260,6 +260,14 @@ family (refused with its reason), `next-hop self` of the wrong family (refused),
 
 (none)
 
+- 2026-10-09, the listener note of item 31, measured: not reachable. `Session.missing()`
+  refuses `listen` with no local address or `auto` (tree/neighbor._check, "session local-address
+  required when listen is set"), the API `neighbor` command takes no `listen` and requires a
+  local address, and `infer()` makes the local address the md5-ip. `_listen_for_neighbors` now
+  asserts md5_ip is set instead of calling `.top()` on what the type allows to be None.
+  `tests/unit/test_listen_needs_an_address.py` pins the refusal (green before: no behaviour
+  changed).
+
 ## Resume Point
 
 Items 1-39 done, wiki written (neither committed). Next: the Syntax-Reference intro on `;` (qa/bin/update_wiki_syntax), full suite, commit when asked.

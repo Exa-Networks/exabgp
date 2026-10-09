@@ -655,9 +655,12 @@ class Reactor:
         for neighbor in self.configuration.neighbors.values():
             if not neighbor.session.listen:
                 continue
-            wanted.add((neighbor.session.md5_ip.top(), neighbor.session.listen))
+            md5_ip = neighbor.session.md5_ip
+            # Session.missing() refuses listen without a local address, infer() makes it the md5-ip
+            assert md5_ip is not None, f'{neighbor.name()} listens with no address to bind'
+            wanted.add((md5_ip.top(), neighbor.session.listen))
             if self.listener.listen_on(
-                neighbor.session.md5_ip,
+                md5_ip,
                 neighbor.session.peer_address,
                 neighbor.session.listen,
                 neighbor.session.md5_password,
@@ -672,7 +675,7 @@ class Reactor:
             log.critical(
                 lazymsg(
                     'startup.failed.listener ip={ip} port={port} neighbor={n}',
-                    ip=neighbor.session.md5_ip,
+                    ip=md5_ip,
                     port=neighbor.session.listen,
                     n=neighbor.name(),
                 ),

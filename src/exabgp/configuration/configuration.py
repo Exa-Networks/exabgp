@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.configuration.cli_process import cli_processes
+from exabgp.configuration.grammar.error import ConfigError
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import Family, FamilyTuple
@@ -307,13 +308,28 @@ class ConfigurationError:
 
     def __init__(self) -> None:
         self.message = ''
+        # the grammar's error, when it was one: it knows its position and the words expected
+        self.grammar: ConfigError | None = None
 
     def set(self, message: str) -> bool:
         self.message = message
+        self.grammar = None
+        return False
+
+    def raised(self, error: ConfigError) -> bool:
+        self.message = str(error)
+        self.grammar = error
         return False
 
     def clear(self) -> None:
         self.message = ''
+        self.grammar = None
+
+    def as_dict(self) -> dict[str, Any]:
+        """The error for a program to read, with no position when it has none."""
+        if self.grammar is not None:
+            return self.grammar.as_dict()
+        return ConfigError('', self.message).as_dict()
 
     def __str__(self) -> str:
         return self.message
@@ -390,6 +406,9 @@ class Configuration(_Configuration):
         self._previous_neighbors = self.neighbors
         try:
             settings = read_text(fname) if self._text else read_file(os.path.realpath(fname))
+        except ConfigError as exc:
+            self._previous_neighbors = {}
+            return self.error.raised(exc)
         except (ValueError, OSError) as exc:
             self._previous_neighbors = {}
             return self.error.set(str(exc))

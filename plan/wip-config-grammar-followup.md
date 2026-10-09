@@ -166,6 +166,19 @@ as-path, local-preference 100 inside the AS) are left out. The other 52:
   hold-time 30;` with `hold-time 60` in t gives 60 (`resolve.transfer`); the wiki's template
   page avoids the case ("the template sets no hold-time").
 
+- 2026-10-09, item 7, JSON errors: Thomas: yes. `configuration validate --json` (`-j`) prints one
+  JSON object per file on stdout (`configuration`, `valid`, `error`), the log turned off so stdout
+  is the document only. `ConfigError.as_dict` splits `where` into file/line/column (None when there
+  is no position) and gives every expected word, not the 24 the text shows. `ConfigurationError`
+  keeps the grammar's error (`grammar`, `raised()`), `_reload` catches `ConfigError` first.
+  `validate -r` failing now goes through `_fail` (said on the `error:` line, not only logged).
+  `tests/unit/test_validate_json.py` (9 red before). Man page and CHANGELOG updated.
+  Still open in item 7: the section 6 accidents and template precedence.
+- 2026-10-09, item 6 follow-up: the file was still named twice when the path given is not the
+  real one (macOS `/var` is `/private/var`, a symlink): `_load` compared the error with the
+  given path, the error starts with the real one. Test with a symlink in
+  test_validate_says_an_error_once.py (red before).
+
 ## Failures
 
 (none yet)

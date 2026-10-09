@@ -50,6 +50,9 @@ Parse a configuration and report what is wrong with it, opening no session.
 also checks the parsing of the neighbors and
 .Fl r
 the parsing of the routes.
+.Fl j
+prints one JSON object per file on stdout instead, an error giving its file, line,
+column, message, the words expected there and the ones which may have been meant.
 This replaces the
 .Fl -test
 and
