@@ -111,7 +111,10 @@ class EOR(Update):
         family = cls._mp_unreach_family(data)
         if family is None:
             return None
-        return cls.make_eor(*family)
+        # never make_eor(*family): mypyc compiles the star call to make_eor(family, family),
+        # the whole tuple as the AFI and again as the SAFI, so every short marker failed
+        afi, safi = family
+        return cls.make_eor(afi, safi)
 
     @classmethod
     def _mp_unreach_family(cls, data: Buffer) -> tuple[AFI, SAFI] | None:

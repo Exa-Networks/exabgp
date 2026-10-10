@@ -415,7 +415,8 @@ class Negotiated:
         # but for an Extended Next Hop Encoding with no triple to offer, which is left out
         # of our OPEN. There is no TLV of ours to put in the Data field, and no family the
         # peer's would be about, so it is not asked for.
-        required = self.neighbor.capability.required & sent.keys()
+        # intersection, not &: frozenset & dict_keys is a set, which compiled code refuses
+        required = self.neighbor.capability.required.intersection(sent.keys())
         unsent = self.neighbor.capability.required - required
         assert unsent <= {Capability.CODE.NEXTHOP}, 'a required capability was not in our OPEN'
         # in the order of our OPEN, so the Data field reads as a cut of what we sent

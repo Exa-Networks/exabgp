@@ -45,6 +45,7 @@ from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunityIPv6
 from exabgp.protocol.family import Family
+from exabgp.util.enumeration import TriState
 
 from tests.fuzz.strategies import payload  # noqa: E402
 from tests import negotiation
@@ -104,7 +105,7 @@ def negotiated(families: list[tuple[int, int]] | None = None) -> Any:
     return negotiation.negotiated(
         [(1, 1)] if families is None else families,
         asn4=True,
-        aigp=False,
+        aigp=TriState.FALSE,
         msg_size=4096,
         session=negotiation.neighbor(local_address=None),
     )

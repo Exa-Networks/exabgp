@@ -35,7 +35,6 @@ from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.reactor.network.connection import Connection
 from exabgp.reactor.network.error import NetworkError
 from exabgp.reactor.network.incoming import Incoming
 from exabgp.reactor.peer.peer import Peer
@@ -837,16 +836,16 @@ async def test_the_api_is_told_when_the_restart_time_removes_stale_routes() -> N
 
 
 def accepted_connection() -> tuple[Incoming, socket.socket]:
-    """A connection the listener accepted from the peer, over a socket pair, and the peer's end.
+    """A connection the listener accepted from the peer, over loopback TCP, and the peer's end.
 
-    Incoming() sets TCP options a socket pair refuses, so the connection is built around it.
+    Incoming() disables Nagle, which a socket pair refuses, so the pair is a TCP one. Building
+    the Incoming around a socket pair, with Incoming.__new__, does not work once compiled:
+    mypyc's __new__ runs __init__, so the connection is made the way the listener makes it.
     """
-    ours, theirs = socket.socketpair()
-    ours.setblocking(False)
-    connection = Incoming.__new__(Incoming)
-    Connection.__init__(connection, AFI.ipv4, '192.0.2.1', '192.0.2.2')
-    connection.io = ours
-    return connection, theirs
+    with socket.create_server(('127.0.0.1', 0)) as listener:
+        theirs = socket.create_connection(listener.getsockname())
+        ours, _ = listener.accept()
+    return Incoming(AFI.ipv4, '192.0.2.1', '192.0.2.2', ours), theirs
 
 
 async def running_session(peer: Peer, negotiated: Negotiated, *messages: bytes) -> socket.socket:
@@ -943,7 +942,7 @@ async def test_a_new_connection_from_a_peer_without_graceful_restart_is_refused(
         for _, _ in zip(range(100), refusal):
             pass
 
-        refused = [(body[0], body[1]) for kind, body in negotiation_messages(received(connecting)) if kind == 3]
+        refused = [(body[0], body[1]) for kind, body in await answered(connecting) if kind == 3]
         assert refused == [CONNECTION_COLLISION_RESOLUTION]
         assert peer.proto is old and old is not None and old.connection is not None
         assert not session.done()
@@ -1007,7 +1006,7 @@ async def a_held_connection_does_not_end_the_session(send: bytes) -> list[tuple[
         assert peer.proto is old and old.connection is not None
         assert held(peer) == [KEPT]
         assert peer.neighbor.rib.incoming.restarting_families() == set()
-        return [(body[0], body[1]) for kind, body in negotiation_messages(received(connecting)) if kind == 3]
+        return [(body[0], body[1]) for kind, body in await answered(connecting) if kind == 3]
     finally:
         await ended(peer, theirs, connecting)
         replacement.close()
@@ -1067,12 +1066,36 @@ async def test_a_collision_held_in_opensent_does_not_replace_the_session_establi
 
         assert not session.done(), 'the established session was ended by a collision'
         assert peer.proto is old and old.connection is not None
-        refused = [(body[0], body[1]) for kind, body in negotiation_messages(received(connecting)) if kind == 3]
+        refused = [(body[0], body[1]) for kind, body in await answered(connecting) if kind == 3]
         assert refused == [CONNECTION_COLLISION_RESOLUTION]
         assert peer.neighbor.rib.incoming.restarting_families() == set()
     finally:
         await ended(peer, theirs, connecting)
         replacement.close()
+
+
+async def answered(connecting: socket.socket) -> list[tuple[int, bytes]]:
+    """Every BGP message sent to the peer's end of a connection, once we have closed it.
+
+    Over TCP what was written may not have arrived yet when the session has dealt with the
+    connection, so the end is read until it sees ours closed, not until it is empty.
+    """
+    connecting.setblocking(False)
+    data = b''
+    closed = False
+
+    def arrived() -> bool:
+        nonlocal data, closed
+        try:
+            chunk = connecting.recv(65536)
+        except BlockingIOError:
+            return False
+        closed = not chunk
+        data += chunk
+        return closed
+
+    await until(arrived, 'our end of the connection being closed')
+    return negotiation_messages(data)
 
 
 async def until_received(connecting: socket.socket, kinds: int) -> list[tuple[int, bytes]]:

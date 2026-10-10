@@ -17,6 +17,7 @@ import os
 import struct
 import sys
 import termios
+from collections.abc import Iterator
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -36,7 +37,9 @@ from exabgp.reactor.api.processes import NETBSD_FIONWRITE, Processes, _is_answer
 from exabgp.reactor.api.response.json import JSON
 from exabgp.reactor.api.response.v4.json import V4JSON
 from exabgp.reactor.api.response.v4.text import V4Text
+from exabgp.reactor.loop import Reactor
 from tests import negotiation
+from tests.api_daemon import Daemon
 
 
 @pytest.fixture(autouse=True)
@@ -62,6 +65,14 @@ def started(version: int, encoder: str, name: str = 'helper') -> Processes:
         processes._select_encoder(name, processes._configuration[name])
     processes._ack[name] = True
     return processes
+
+
+@pytest.fixture
+def reactor() -> Iterator[Reactor]:
+    """A real Reactor with real peers: the compiled dispatch refuses a Mock for its Reactor."""
+    daemon = Daemon()
+    yield daemon.reactor
+    daemon.close()
 
 
 class TestCommandVersion:
@@ -101,24 +112,22 @@ class TestCommandVersion:
 
 
 class TestDispatchFor:
-    def test_a_v4_helper_is_refused_a_v6_command(self) -> None:
+    def test_a_v4_helper_is_refused_a_v6_command(self, reactor: Reactor) -> None:
         with pytest.raises(UnknownCommand):
-            dispatch_for(API_V4, 'peer * announce route 192.0.2.1/32 next-hop self', MagicMock(), 'helper')
+            dispatch_for(API_V4, 'peer * announce route 192.0.2.1/32 next-hop self', reactor, 'helper')
 
-    def test_a_v6_helper_is_refused_a_v4_command(self) -> None:
+    def test_a_v6_helper_is_refused_a_v4_command(self, reactor: Reactor) -> None:
         with pytest.raises(UnknownCommand):
-            dispatch_for(API_V6, 'announce route 192.0.2.1/32 next-hop self', MagicMock(), 'helper')
+            dispatch_for(API_V6, 'announce route 192.0.2.1/32 next-hop self', reactor, 'helper')
 
-    def test_a_v4_helper_keeps_its_commands(self) -> None:
-        reactor = MagicMock()
-        reactor.peers.return_value = ['peer-1']
+    def test_a_v4_helper_keeps_its_commands(self, reactor: Reactor) -> None:
         handler, _, remaining = dispatch_for(API_V4, 'announce route 192.0.2.1/32 next-hop self', reactor, 'helper')
         assert 'route 192.0.2.1/32' in remaining
         assert callable(handler)
 
-    def test_an_undecided_helper_may_group(self) -> None:
+    def test_an_undecided_helper_may_group(self, reactor: Reactor) -> None:
         # group decides nothing
-        handler, _, _ = dispatch_for(API_AUTO, 'group start', MagicMock(), 'helper')
+        handler, _, _ = dispatch_for(API_AUTO, 'group start', reactor, 'helper')
         assert handler.__name__ == 'group_start'
 
     @pytest.mark.parametrize(
@@ -128,10 +137,10 @@ class TestDispatchFor:
             ('group end', 'group_end'),
         ],
     )
-    def test_a_v4_helper_may_group(self, command: str, name: str) -> None:
+    def test_a_v4_helper_may_group(self, reactor: Reactor, command: str, name: str) -> None:
         # The commands inside a group are the v4 `announce ...`, so `group start`,
         # `announce route ...` held the helper to v4, and its `group end` was refused.
-        handler, _, _ = dispatch_for(API_V4, command, MagicMock(), 'helper')
+        handler, _, _ = dispatch_for(API_V4, command, reactor, 'helper')
         assert handler.__name__ == name
 
 
@@ -170,12 +179,12 @@ class TestVersionPerHelper:
         assert type(processes._encoder['helper']) is JSON
         assert processes.detect_api_version('helper', 'announce route 192.0.2.1/32 next-hop self') == API_V6
 
-    def test_a_group_of_v4_commands_can_be_ended(self) -> None:
+    def test_a_group_of_v4_commands_can_be_ended(self, reactor: Reactor) -> None:
         processes = started(API_AUTO, 'json')
         assert processes.detect_api_version('helper', 'group start') == API_AUTO
         assert processes.detect_api_version('helper', 'announce route 192.0.2.1/32 next-hop self') == API_V4
         version = processes.detect_api_version('helper', 'group end')
-        handler, _, _ = dispatch_for(version, 'group end', MagicMock(), 'helper')
+        handler, _, _ = dispatch_for(version, 'group end', reactor, 'helper')
         assert handler.__name__ == 'group_end'
 
     def test_a_command_which_does_not_tell_leaves_it_undecided(self) -> None:

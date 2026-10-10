@@ -8,36 +8,48 @@ route whose label was the first octets of the route distinguisher.
 
 from __future__ import annotations
 
-import asyncio
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
 
-from exabgp.reactor.api import API
-from exabgp.reactor.api.dispatch.version import API_V4, dispatch_for
+from tests.api_daemon import HELPER, Daemon
 
-PEER = 'neighbor 127.0.0.1'
+# the families the VPN commands below are for, so only the missing label refuses them
+VPN = 'ipv4 mpls-vpn; ipv6 mpls-vpn;'
 
 
-def answered(command: str, neighbors: dict[str, Any] | None = None) -> tuple[list[Any], list[Any]]:
-    """The routes the handler announced, and the errors it answered."""
-    announced: list[Any] = []
-    errors: list[Any] = []
-    reactor = MagicMock()
-    reactor.configuration.neighbors = neighbors or {}
-    reactor.peers.return_value = [next(iter(neighbors))] if neighbors else [PEER]
-    reactor.processes.answer_error = AsyncMock(side_effect=lambda service, *why: errors.append(why))
-    reactor.processes.answer_done = AsyncMock()
-    reactor.processes.get_sync.return_value = False
-    reactor.configuration.announce_route.side_effect = lambda peers, route, *_: announced.append(route)
-    scheduled: list[Any] = []
-    reactor.asynchronous.schedule.side_effect = lambda service, name, coroutine: scheduled.append(coroutine)
-    handler, peers, remaining = dispatch_for(API_V4, command, reactor, 'helper')
-    handler(API(reactor), reactor, 'helper', peers, remaining, False)
-    for coroutine in scheduled:
-        asyncio.run(coroutine)
-    return announced, errors
+def configuration(capability: str = '', family: str = 'ipv6 unicast') -> str:
+    """One neighbor carrying `family`, which the API helper of the Daemon announces to."""
+    return f"""
+    process {HELPER} {{
+        run /usr/bin/true;
+        encoder json;
+    }}
+
+    neighbor 127.0.0.1 {{
+        router-id 10.0.0.2;
+        local-address 127.0.0.1;
+        local-as 65533;
+        peer-as 65533;
+        family {{ {family} }}
+        capability {{ {capability} }}
+        api {{
+            processes [ {HELPER} ];
+        }}
+    }}
+    """
+
+
+def answered(command: str, configured: str) -> tuple[list[str], list[str]]:
+    """The routes the API 4 command put in the outgoing RIB, and what the helper was answered.
+
+    The objects are the ones ExaBGP runs (tests/api_daemon.py): the compiled dispatch
+    refuses a Mock where it declares a Reactor.
+    """
+    daemon = Daemon(configured)
+    try:
+        lines = daemon.send(command)
+        return daemon.announced('127.0.0.1'), lines
+    finally:
+        daemon.close()
 
 
 @pytest.mark.parametrize(
@@ -50,52 +62,30 @@ def answered(command: str, neighbors: dict[str, Any] | None = None) -> tuple[lis
     ],
 )
 def test_a_vpn_route_with_no_label_is_refused(command: str) -> None:
-    announced, errors = answered(command)
+    announced, lines = answered(command, configuration(family=VPN))
     assert announced == []
-    assert errors, 'the helper was told done'
+    assert lines[-1:] == ['error'], 'the helper was told done'
 
 
 def test_the_routes_of_attributes_are_announced_when_they_can_be_sent() -> None:
-    announced, errors = answered(
+    announced, lines = answered(
         'announce attributes next-hop 1.2.3.4 rd 100:100 label 10 nlri 10.0.0.0/24 20.0.0.0/24',
-        neighbors('', 'ipv4 mpls-vpn'),
+        configuration(family=VPN),
     )
-    assert errors == []
+    assert lines == ['done']
     assert len(announced) == 2
-
-
-def neighbors(capability: str, family: str = 'ipv6 unicast') -> dict[str, Any]:
-    from exabgp.configuration.configuration import Configuration
-
-    configuration = Configuration(
-        [
-            f"""neighbor 127.0.0.1 {{
-            router-id 10.0.0.2;
-            local-address 127.0.0.1;
-            local-as 65533;
-            peer-as 65533;
-            family {{ {family}; }}
-            capability {{ {capability} }}
-        }}"""
-        ],
-        text=True,
-    )
-    # not an assert: the optimised run of the suite would not load the configuration at all
-    if not configuration.reload():
-        raise AssertionError(str(configuration.error))
-    return dict(configuration.neighbors)
 
 
 def test_a_link_local_next_hop_is_refused_without_the_capability() -> None:
     # it was taken, and raised when the RIB packed it for the peer
-    announced, errors = answered('announce route 2001:db8::/32 next-hop fe80::1', neighbors(''))
+    announced, lines = answered('announce route 2001:db8::/32 next-hop fe80::1', configuration())
     assert announced == []
-    assert errors
+    assert lines[-1:] == ['error']
 
 
 def test_a_link_local_next_hop_is_announced_with_the_capability() -> None:
-    announced, errors = answered(
-        'announce route 2001:db8::/32 next-hop fe80::1', neighbors('link-local-nexthop enable;')
+    announced, lines = answered(
+        'announce route 2001:db8::/32 next-hop fe80::1', configuration('link-local-nexthop enable;')
     )
-    assert errors == []
+    assert lines == ['done']
     assert len(announced) == 1

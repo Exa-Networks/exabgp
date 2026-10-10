@@ -14,7 +14,6 @@ Two things close it, and each has its test here:
 """
 
 import asyncio
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -25,14 +24,20 @@ from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.environment import Environment
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 from exabgp.reactor.asynchronous import ASYNC
 from exabgp.reactor.peer import Peer
+from exabgp.reactor.network.incoming import Incoming
 from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
 from exabgp.rib.route import Route
 from tests import negotiation
+from tests.wire_reader import tcp_socketpair
+
+UPDATE = 2
+# withdrawn routes length and path attributes length, both zero
+IPV4_UNICAST_END_OF_RIB = bytes(4)
 
 
 @pytest.fixture
@@ -173,7 +178,7 @@ async def test_a_peer_does_not_start_a_batch_while_commands_are_applied() -> Non
 @pytest.mark.asyncio
 async def test_no_end_of_rib_overtakes_the_commands_being_applied() -> None:
     peer = _peer(applying=True)
-    manual = SimpleNamespace(afi=AFI.ipv4, safi=SAFI.unicast)
+    manual = Family(AFI.ipv4, SAFI.unicast)
 
     assert await peer._send_eor_messages(True, None) is True
     peer.neighbor.eor.append(manual)
@@ -191,14 +196,16 @@ async def test_a_queued_end_of_rib_for_a_family_the_session_did_not_negotiate_is
     assert peer.proto is not None
     peer.fsm.change(FSM.ESTABLISHED)
     peer.proto.negotiated.families = [(AFI.ipv4, SAFI.unicast)]
-    peer.neighbor.eor.append(SimpleNamespace(afi=AFI.ipv6, safi=SAFI.unicast))
-
-    with patch.object(Protocol, 'new_eors') as sent:
+    peer.neighbor.eor.append(Family(AFI.ipv6, SAFI.unicast))
+    theirs = negotiation.connect(peer.proto)
+    try:
         await peer._send_eor_messages(False, None)
 
-    sent.assert_not_called()
-    assert not peer._end_of_rib_sent
-    assert list(peer.neighbor.eor) == []
+        assert negotiation.received(theirs) == b''
+        assert not peer._end_of_rib_sent
+        assert list(peer.neighbor.eor) == []
+    finally:
+        negotiation.disconnect(peer.proto, theirs)
 
 
 @pytest.mark.asyncio
@@ -208,10 +215,53 @@ async def test_a_queued_end_of_rib_for_a_negotiated_family_is_sent() -> None:
     assert peer.proto is not None
     peer.fsm.change(FSM.ESTABLISHED)
     peer.proto.negotiated.families = [(AFI.ipv4, SAFI.unicast)]
-    peer.neighbor.eor.append(SimpleNamespace(afi=AFI.ipv4, safi=SAFI.unicast))
-
-    with patch.object(Protocol, 'new_eors') as sent:
+    peer.neighbor.eor.append(Family(AFI.ipv4, SAFI.unicast))
+    theirs = negotiation.connect(peer.proto)
+    try:
         await peer._send_eor_messages(False, None)
 
-    sent.assert_called_once_with(AFI.ipv4, SAFI.unicast)
-    assert peer._end_of_rib_sent == {(AFI.ipv4, SAFI.unicast)}
+        # RFC 4724 2: the IPv4 unicast End-of-RIB is an UPDATE with nothing in it
+        assert negotiation.messages(negotiation.received(theirs)) == [(UPDATE, IPV4_UNICAST_END_OF_RIB)]
+        assert peer._end_of_rib_sent == {(AFI.ipv4, SAFI.unicast)}
+    finally:
+        negotiation.disconnect(peer.proto, theirs)
+
+
+# ==============================================================================
+# A peer waiting on its socket looks at the RIB once the commands are applied
+# ==============================================================================
+
+
+@pytest.mark.asyncio
+async def test_a_peer_reading_its_socket_wakes_once_the_commands_are_applied(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A quiet peer read for up to 100ms before it looked at its RIB again.
+
+    A helper which announced a route then withdrew it 0.1s later could have both reach the
+    RIB inside one wait, and the announce was never sent: 5.0's api-broken-flow, on a
+    loaded runner. The wait is long here, so only the wake can end the read in time. The
+    connection is a real one the other end never writes to: the compiled build does not
+    let a test replace the read.
+    """
+    monkeypatch.setattr('exabgp.reactor.peer.peer.MESSAGE_READ_SECONDS', 30.0)
+    peer = _peer(applying=False)
+    scheduler = peer.reactor.asynchronous
+    accepted, theirs = tcp_socketpair()
+    connection = Incoming(AFI.ipv4, '127.0.0.2', '127.0.0.1', accepted)
+
+    async def command() -> None:
+        await asyncio.sleep(0)
+
+    try:
+        assert peer.proto is not None
+        peer.proto.connection = connection
+        reading = asyncio.create_task(peer._read_message_or_none())
+        await asyncio.sleep(0)
+        assert scheduler.readers, 'the peer waits on its socket'
+        scheduler.schedule('helper', 'announce', command())
+        await scheduler._run_async()
+
+        assert await asyncio.wait_for(reading, timeout=1.0) is None
+        assert not scheduler.readers
+    finally:
+        connection.close()
+        theirs.close()

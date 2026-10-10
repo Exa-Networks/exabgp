@@ -12,12 +12,14 @@ Three ways a session ended which the task running it did not choose:
   Administrative Shutdown when the daemon stops. _stop() closed the connection before
   stop() chose the Cease, so neither was ever sent.
 
-The connections are socket pairs: what the peer end reads is what the session wrote.
+The connections are socket pairs, and the incoming ones TCP connections over the loopback:
+what the peer end reads is what the session wrote.
 """
 
 from __future__ import annotations
 
 import asyncio
+import select
 import socket
 from typing import Any
 
@@ -28,15 +30,16 @@ from exabgp.bgp.message import KeepAlive, Notify, Open
 from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, RouterID, Version
 from exabgp.bgp.message.open.capability import ASN4, Capability
 from exabgp.bgp.message.open.capability.graceful import Graceful
+from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.bgp.timer import ReceiveTimer
 from exabgp.environment import getenv
 from exabgp.protocol.family import AFI
-from exabgp.reactor.network.connection import Connection
 from exabgp.reactor.network.incoming import Incoming
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
 from tests import negotiation
+from tests.wire_reader import tcp_socketpair
 
 OPEN = 1
 NOTIFICATION = 3
@@ -48,6 +51,10 @@ CONNECTION_COLLISION_RESOLUTION = (6, 7)
 
 # a test waits for the session task this long at most, polling every millisecond
 POLL_COUNT = 2000
+# how long a message written to an incoming connection may take to cross the loopback
+PATIENCE_SECONDS = 5.0
+# how long the peer end of an incoming connection is watched for a message which must not come
+QUIET_SECONDS = 0.1
 
 
 @pytest.fixture(autouse=True)
@@ -70,16 +77,13 @@ def connected(peer: Peer) -> tuple[Protocol, socket.socket]:
 
 
 def incoming() -> tuple[Incoming, socket.socket]:
-    """An accepted connection over a socket pair, and the end the peer holds.
+    """An accepted connection over loopback TCP, and the end the peer holds.
 
-    Incoming() sets TCP options a socket pair refuses, so the connection is built around it.
+    A real Incoming: the compiled build runs __init__ from __new__, so a connection can not
+    be built around it, and Incoming sets TCP options an AF_UNIX socket pair refuses.
     """
-    ours, theirs = socket.socketpair()
-    ours.setblocking(False)
-    connection = Incoming.__new__(Incoming)
-    Connection.__init__(connection, AFI.ipv4, '192.0.2.2', '192.0.2.1')
-    connection.io = ours
-    return connection, theirs
+    accepted, connecting = tcp_socketpair()
+    return Incoming(AFI.ipv4, '127.0.0.2', '127.0.0.1', accepted), connecting
 
 
 def their_open(router_id: str) -> bytes:
@@ -87,8 +91,24 @@ def their_open(router_id: str) -> bytes:
     return sent.pack_message(negotiation.negotiated())
 
 
-def notifications(theirs: socket.socket) -> list[tuple[int, int]]:
-    return [(body[0], body[1]) for kind, body in negotiation.messages(negotiation.received(theirs)) if kind == 3]
+def arrived(connecting: socket.socket) -> bytes:
+    """What the peer end of an incoming connection received, once it has arrived.
+
+    A socket pair has the bytes written at the other end as soon as the write returns. A TCP
+    connection, even over the loopback, takes time to deliver them.
+    """
+    select.select([connecting], [], [], PATIENCE_SECONDS)
+    return negotiation.received(connecting)
+
+
+def nothing_arrived(connecting: socket.socket) -> bool:
+    """Whether the peer end of an incoming connection is still sent nothing after a while."""
+    select.select([connecting], [], [], QUIET_SECONDS)
+    return negotiation.received(connecting) == b''
+
+
+def notifications(data: bytes) -> list[tuple[int, int]]:
+    return [(body[0], body[1]) for kind, body in negotiation.messages(data) if kind == NOTIFICATION]
 
 
 async def until(condition: Any) -> None:
@@ -197,7 +217,7 @@ async def test_the_connection_a_collision_closes_is_sent_a_cease_and_its_task_st
         assert [kind for kind, _ in sent] == [OPEN, KEEPALIVE, NOTIFICATION]
         assert (sent[-1][1][0], sent[-1][1][1]) == CONNECTION_COLLISION_RESOLUTION
         # nothing reached the connection which replaced it, least of all a Hold Timer Expired
-        assert negotiation.received(connecting) == b''
+        assert nothing_arrived(connecting)
     finally:
         run.cancel()
         await asyncio.gather(run, return_exceptions=True)
@@ -222,7 +242,7 @@ def test_the_connection_from_the_lower_identifier_is_the_one_closed() -> None:
         # bounded: a NOTIFICATION fits in one write to an empty socket buffer
         for _, _ in zip(range(100), refusal):
             pass
-        assert notifications(connecting) == [CONNECTION_COLLISION_RESOLUTION]
+        assert notifications(arrived(connecting)) == [CONNECTION_COLLISION_RESOLUTION]
         assert peer.proto is proto and proto.connection is not None
         assert negotiation.received(theirs) == b''
     finally:
@@ -256,7 +276,7 @@ async def test_in_opensent_the_incoming_connection_wins_once_its_open_names_a_hi
         assert peer.proto is proto
         # RFC 4271 8.2.2: the new connection runs its own FSM, which sends our OPEN. A peer
         # which waits for it before sending its own (DelayOpen) was never sent one
-        held = negotiation.messages(negotiation.received(connecting))
+        held = negotiation.messages(arrived(connecting))
         assert [kind for kind, _ in held] == [OPEN], 'our OPEN was not sent on the held connection'
 
         connecting.sendall(their_open('192.0.2.2'))
@@ -270,7 +290,7 @@ async def test_in_opensent_the_incoming_connection_wins_once_its_open_names_a_hi
         # the OPENs already exchanged are the ones the session goes on with: no second OPEN
         taken = asyncio.create_task(peer._run_session())
         await until(lambda: peer.fsm == FSM.OPENCONFIRM)
-        assert [kind for kind, _ in negotiation.messages(negotiation.received(connecting))] == [KEEPALIVE]
+        assert [kind for kind, _ in negotiation.messages(arrived(connecting))] == [KEEPALIVE]
     finally:
         for task in (run, taken):
             if task is not None:
@@ -299,7 +319,7 @@ async def test_in_opensent_the_incoming_connection_from_a_lower_identifier_is_th
         connecting.sendall(their_open('192.0.2.2'))
         await until(lambda: replacement.io is None)
 
-        assert notifications(connecting) == [CONNECTION_COLLISION_RESOLUTION]
+        assert notifications(arrived(connecting)) == [CONNECTION_COLLISION_RESOLUTION]
         assert not session.done()
         assert peer.proto is proto and proto.connection is not None
         assert peer.fsm == FSM.OPENSENT
@@ -418,7 +438,7 @@ def test_a_removed_peer_is_sent_peer_de_configured(state: FSMState) -> None:
     peer.fsm.change(state)
     try:
         peer.remove()
-        assert notifications(theirs) == [PEER_DE_CONFIGURED]
+        assert notifications(negotiation.received(theirs)) == [PEER_DE_CONFIGURED]
         assert peer.proto is None
     finally:
         theirs.close()
@@ -431,7 +451,7 @@ def test_a_shutdown_sends_administrative_shutdown() -> None:
     peer.fsm.change(FSM.ESTABLISHED)
     try:
         peer.shutdown()
-        assert notifications(theirs) == [ADMINISTRATIVE_SHUTDOWN]
+        assert notifications(negotiation.received(theirs)) == [ADMINISTRATIVE_SHUTDOWN]
     finally:
         theirs.close()
 
@@ -440,13 +460,13 @@ def test_a_shutdown_with_graceful_restart_closes_quietly() -> None:
     """The peer keeps our routes while we restart only if no NOTIFICATION ends the session (RFC 4724)."""
     peer = session_peer()
     proto, theirs = connected(peer)
-    peer.neighbor.capability.graceful_restart = 120
+    peer.neighbor.capability.graceful_restart = GracefulRestartConfig.with_time(120)
     proto.negotiated.sent_open = negotiation.open_message([Graceful().set(Graceful.RESTART_STATE, 120, [])])
     assert proto.negotiated.sent_open.capabilities.announced(Capability.CODE.GRACEFUL_RESTART)
     peer.fsm.change(FSM.ESTABLISHED)
     try:
         peer.shutdown()
-        assert notifications(theirs) == []
+        assert notifications(negotiation.received(theirs)) == []
         assert peer.proto is None
     finally:
         theirs.close()
@@ -477,7 +497,7 @@ async def test_a_removed_peer_stops_the_task_of_its_session() -> None:
         peer.remove()
         await asyncio.wait_for(run, timeout=1)
         assert session.cancelled()
-        assert notifications(theirs) == [PEER_DE_CONFIGURED]
+        assert notifications(negotiation.received(theirs)) == [PEER_DE_CONFIGURED]
     finally:
         run.cancel()
         await asyncio.gather(run, return_exceptions=True)

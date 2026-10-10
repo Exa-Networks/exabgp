@@ -82,12 +82,31 @@ def test_elsewhere_an_address_is_an_ifconfig_alias() -> None:
         ]  # fmt: skip
 
 
+class Listing:
+    """What `ip -o address show` or `ifconfig` prints for the addresses given, as Popen would."""
+
+    def __init__(self, cmd: list[str], addresses: list[Any]) -> None:
+        if cmd[0] == 'ip':
+            self.stdout = [f'1: lo    inet{family(a)} {a} scope global lo\n'.encode() for a in addresses]
+        else:
+            self.stdout = [f'inet{family(a)} {a.network_address} prefixlen {a.prefixlen}\n'.encode() for a in addresses]
+
+
+def family(address: Any) -> str:
+    return '6' if address.version == 6 else ''
+
+
 def _setup(returncode: int, stderr: bytes, present_after: bool) -> None:
-    """Add V4 with `ip`/`ifconfig` answering `returncode`, the address there afterwards or not."""
+    """Add V4 with `ip`/`ifconfig` answering `returncode`, the address there afterwards or not.
+
+    The system is replaced where the checker reaches it, at subprocess: a compiled setup_ips
+    calls system_ips directly, so replacing system_ips in the module would be seen by the
+    interpreter only, and the real loopback would be read.
+    """
     reads = iter([[], [V4] if present_after else []])
     refused = subprocess.CompletedProcess([], returncode, b'', stderr)
     with (
-        patch.object(healthcheck, 'system_ips', lambda *_: next(reads)),
+        patch.object(healthcheck.subprocess, 'Popen', lambda cmd, **_: Listing(cmd, next(reads))),
         patch.object(healthcheck.subprocess, 'run', lambda *_, **__: refused),
     ):
         setup_ips([V4], {}, None, False)

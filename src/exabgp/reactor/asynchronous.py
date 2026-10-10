@@ -10,13 +10,15 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections import deque
-from typing import Any, Callable
+from typing import Any, Callable, ClassVar
 
 from exabgp.logger import log, lazyexc, lazymsg
 
 
 class ASYNC:
-    LIMIT: int = 50
+    # the generator steps taken per turn. A ClassVar: mypyc makes an annotated class attribute
+    # an instance slot, and the class then answers with the slot's descriptor, not the number
+    LIMIT: ClassVar[int] = 50
 
     def __init__(self) -> None:
         self._async: deque[tuple[str, Any]] = deque()
@@ -25,6 +27,19 @@ class ASYNC:
         # peer reading its RIB then would send half of what a helper wrote together,
         # so the peers wait for this to fall (peer.py, _holding_for_commands)
         self.applying_commands: bool = False
+        # the deadlines of the peers waiting on their socket: brought forward once commands
+        # are applied, so a peer looks at its RIB then rather than when its read times out
+        self.readers: set[asyncio.Timeout] = set()
+
+    def _commands_applied(self) -> None:
+        """Release the peers held while commands ran, and wake those waiting on their socket."""
+        self.applying_commands = False
+        if not self.readers:
+            return
+        now = asyncio.get_running_loop().time()
+        for deadline in self.readers:
+            if not deadline.expired():
+                deadline.reschedule(now)
 
     def set_error_handler(self, handler: Callable[[str], None]) -> None:
         """Set a callback to notify services when their async callback fails.
@@ -135,7 +150,7 @@ class ASYNC:
             try:
                 await self._run_coroutines()
             finally:
-                self.applying_commands = False
+                self._commands_applied()
             return False  # All coroutines processed
         else:
             await self._run_generators()
@@ -186,7 +201,7 @@ class ASYNC:
             else:
                 await callback()
         finally:
-            self.applying_commands = False
+            self._commands_applied()
 
     async def _run_coroutines(self) -> None:
         """Run every queued coroutine, including those the ones running schedule."""

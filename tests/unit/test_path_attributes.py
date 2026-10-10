@@ -709,7 +709,7 @@ def test_aigp_basic() -> None:
     assert aigp.aigp == metric
 
     # Create mock negotiated with AIGP support
-    negotiated = negotiation.negotiated((), aigp=True, local_as=ASN(65000), peer_as=ASN(65000))
+    negotiated = negotiation.negotiated((), aigp=TriState.TRUE, local_as=ASN(65000), peer_as=ASN(65000))
 
     # Verify pack (flag + type + length + TLV)
     # Format: flag(1) + type(1) + length(1) + TLV(11) = 14 bytes
@@ -1204,7 +1204,7 @@ def test_aigp_pack_unpack_roundtrip() -> None:
     original = AIGP.from_int(metric)
 
     # Create negotiated mock with AIGP support
-    negotiated = negotiation.negotiated((), aigp=True, local_as=ASN(65000), peer_as=ASN(65000))
+    negotiated = negotiation.negotiated((), aigp=TriState.TRUE, local_as=ASN(65000), peer_as=ASN(65000))
 
     # Pack
     packed = original.pack_attribute(negotiated)
@@ -1238,7 +1238,7 @@ def test_aigp_no_pack_without_negotiation() -> None:
     aigp = AIGP.from_int(metric)
 
     # Without AIGP negotiation and different AS (EBGP)
-    negotiated = negotiation.negotiated((), aigp=False, local_as=ASN(65000), peer_as=ASN(65001))
+    negotiated = negotiation.negotiated((), aigp=TriState.FALSE, local_as=ASN(65000), peer_as=ASN(65001))
 
     # Should return empty bytes
     packed = aigp.pack_attribute(negotiated)

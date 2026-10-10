@@ -28,6 +28,7 @@ from exabgp.bgp.message.update.attribute.community.extended import RouteTargetAS
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
 from exabgp.bgp.message.update.attribute.community.large.communities import LargeCommunities
+from exabgp.util.enumeration import TriState
 
 BGPLS_ADMIN_GROUP = 1088  # a four byte BGP-LS TLV, so two payloads can differ in one bit
 PREFIX_SID_LABEL_INDEX = 1  # RFC 8669 3.1, a seven byte TLV
@@ -165,7 +166,7 @@ def session_with_aigp() -> object:
     from tests import negotiation
 
     # a two byte ASN session, which is what the ASPath probe widths are written for
-    return negotiation.negotiated(aigp=True, asn4=False)
+    return negotiation.negotiated(aigp=TriState.TRUE, asn4=False)
 
 
 def two_decodings(klass: type[Attribute], session: object) -> tuple[Attribute, Attribute] | None:

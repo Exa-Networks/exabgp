@@ -467,7 +467,7 @@ def test_the_factories_refuse_a_prefix_length_past_the_address(factory: str) -> 
 
     rd = RouteDistinguisher.make_from_elements('100', 100)
     prefix = IPv4.from_string('10.0.1.0')
-    with pytest.raises(AssertionError):
+    with pytest.raises(RuntimeError, match='longer than its address'):
         if factory == 'isd':
             InterworkSegmentDiscoveryRoute.make_isd(rd=rd, prefix_ip_len=33, prefix_ip=prefix, afi=AFI.ipv4)
         else:

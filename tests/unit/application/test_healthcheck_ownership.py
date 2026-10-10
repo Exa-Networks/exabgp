@@ -27,16 +27,41 @@ from exabgp.application.healthcheck import loop, setup_ips
 Network = IPv4Network | IPv6Network
 
 
+REAL_POPEN = subprocess.Popen
+
+
+class Listing:
+    """What `ip -o address show` or `ifconfig` prints for the addresses given."""
+
+    def __init__(self, cmd: list[str], addresses: list[Network]) -> None:
+        if cmd[0] == 'ip':
+            self.stdout = [f'1: lo    inet{family(a)} {a} scope global lo\n'.encode() for a in addresses]
+        else:
+            self.stdout = [f'inet{family(a)} {a.network_address} prefixlen {a.prefixlen}\n'.encode() for a in addresses]
+
+
+def family(address: Network) -> str:
+    return '6' if address.version == 6 else ''
+
+
 class FakeSystem:
-    """The addresses on the box, and the commands run against them."""
+    """The addresses on the box, and the commands run against them.
+
+    Replaced where the checker reaches the system, at subprocess: a compiled setup_ips and
+    remove_ips call system_ips directly, so replacing system_ips in the module would be seen
+    by the interpreter only, and the real loopback would be read.
+    """
 
     def __init__(self, present: list[Network]) -> None:
         self.present = set(present)
         self.added: list[str] = []
         self.deleted: list[str] = []
 
-    def system_ips(self, *_: Any) -> list[Network]:
-        return list(self.present)
+    def popen(self, cmd: Any, **kwargs: Any) -> Any:
+        # the addresses are listed by the fake, the health check command itself still runs
+        if cmd[0] in ('ip', 'ifconfig'):
+            return Listing(cmd, sorted(self.present, key=str))
+        return REAL_POPEN(cmd, **kwargs)
 
     def _apply(self, cmd: list[str]) -> None:
         address = ip_network(next(word for word in cmd if '/' in word))
@@ -61,7 +86,7 @@ def system() -> Any:
     def make(present: list[Network]) -> FakeSystem:
         fake = FakeSystem(present)
         patches = [
-            patch.object(healthcheck, 'system_ips', fake.system_ips),
+            patch.object(healthcheck.subprocess, 'Popen', fake.popen),
             patch.object(healthcheck.subprocess, 'run', fake.run),
             patch.object(healthcheck.subprocess, 'check_call', fake.check_call),
         ]

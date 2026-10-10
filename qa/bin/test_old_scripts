@@ -354,9 +354,8 @@ def check(name: str, branch: Branch, only: str) -> int:
                 continue
             missing = judged(built, printed, configurations_of(built, branch, test)[0])
             if missing is not None:
-                # run again, alone: on a loaded machine six at once can miss the timeout, and
-                # a helper's commands 0.1s apart can reach one RIB flush, where a withdrawal
-                # drops the announce not yet sent (api-broken-flow). A real difference fails twice.
+                # run again, alone: on a loaded machine six at once can miss the timeout.
+                # A real difference fails twice.
                 passed, printed = run(built, branch, peer, test, FIRST_PORT + len(selected) + index)
                 if passed:
                     continue

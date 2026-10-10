@@ -25,6 +25,7 @@ from tests import negotiation
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
+from exabgp.util.enumeration import TriState
 
 pytestmark = pytest.mark.fuzz
 
@@ -55,7 +56,7 @@ def create_mock_negotiated() -> Any:
         asn4=True,
         local_as=ASN(65000),
         peer_as=ASN(65001),
-        aigp=False,
+        aigp=TriState.FALSE,
         msg_size=4096,
     )
 

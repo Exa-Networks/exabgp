@@ -23,6 +23,7 @@ from hypothesis import given, strategies as st, settings, HealthCheck, assume
 from exabgp.bgp.message import Action
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message.notification import Notify
+from exabgp.util.enumeration import TriState
 from tests import negotiation
 
 pytestmark = pytest.mark.fuzz
@@ -36,7 +37,7 @@ pytestmark = pytest.mark.fuzz
 def create_mock_negotiated(addpath: bool = False, asn4: bool = True) -> Any:
     """Create a minimal mock Negotiated object for testing."""
     return negotiation.negotiated(
-        [(AFI.ipv4, SAFI.unicast)], asn4=asn4, aigp=False, msg_size=4096, local_as=65000, peer_as=65001
+        [(AFI.ipv4, SAFI.unicast)], asn4=asn4, aigp=TriState.FALSE, msg_size=4096, local_as=65000, peer_as=65001
     )
 
 

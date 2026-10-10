@@ -23,6 +23,7 @@ from exabgp.bgp.neighbor import Neighbor
 from exabgp.reactor import listener as listener_module
 from exabgp.reactor.listener import Listener
 from exabgp.reactor.network import tcp
+from exabgp.reactor.network.incoming import Incoming
 from tests import negotiation
 
 FREEBSD_IP_MINTTL = 66
@@ -37,6 +38,9 @@ class RecordingSocket:
 
     def setsockopt(self, level: int, option: int, value: int) -> None:
         self.options[(level, option)] = value
+
+    def setblocking(self, flag: bool) -> None:
+        pass
 
     def close(self) -> None:
         pass
@@ -127,23 +131,12 @@ def test_where_there_is_no_minimum_option_nothing_is_set(monkeypatch: pytest.Mon
 
 def test_the_accepted_socket_is_still_given_the_neighbour_minimum(freebsd: Any) -> None:
     """The check on the accepted socket stays: it is what covers a listener carrying none."""
-    assert listener_module.admit_by_ttl.__doc__ is not None
-    calls: list[int | None] = []
+    accepted_socket = RecordingSocket()
+    # a real Incoming: a compiled listener takes nothing else, and calls the real
+    # set_minimum_ttl, so the minimum is read back from the socket rather than from a
+    # replaced name in the listener module, which only the interpreter would see
+    accepted = Incoming(tcp.AFI.ipv4, LOCAL, LOCAL, cast(Any, accepted_socket))
 
-    class Accepted:
-        io = object()
-        afi = tcp.AFI.ipv4
-        peer = LOCAL
+    assert listener_module.admit_by_ttl(accepted, gtsm('127.0.0.2', 254))
 
-        @staticmethod
-        def name() -> str:
-            return 'accepted'
-
-    def recorded(io: Any, afi: Any, ip: str, minimum: int | None) -> None:
-        calls.append(minimum)
-
-    with pytest.MonkeyPatch.context() as patch:
-        patch.setattr(listener_module, 'set_minimum_ttl', recorded)
-        assert listener_module.admit_by_ttl(cast(Any, Accepted()), gtsm('127.0.0.2', 254))
-
-    assert calls == [254]
+    assert accepted_socket.minimum() == 254

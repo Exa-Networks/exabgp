@@ -75,6 +75,10 @@ FORCE_GRACEFUL = True
 # RFC 5492 3: the NOTIFICATION a speaker which predates capabilities sends for them
 UNSUPPORTED_OPTIONAL_PARAMETER = (2, 4)
 
+# how long an established peer waits on its socket before it looks at its RIB again, when
+# no API command wakes it first (ASYNC.readers)
+MESSAGE_READ_SECONDS = 0.1
+
 # the statistics counted per session, all zero when a peer is made
 SESSION_COUNTERS = (
     'receive-open',
@@ -1261,12 +1265,24 @@ class Peer:
             self._neighbor = None
 
     async def _read_message_or_none(self) -> Message | None:
-        """Read the next message, or None when none arrived within 100ms."""
+        """Read the next message, or None when none arrived in time or API commands were applied.
+
+        Waiting the whole timeout with a route just queued delayed it by as much: a helper's
+        announce and its withdraw 0.1s later could meet in one flush, and the announce was
+        never sent. The reactor ends the wait once its commands are applied, as the timeout
+        would, so a read cut short loses no bytes (Connection._reader_async).
+        """
         assert self.proto is not None
+        readers = self.reactor.asynchronous.readers
         message: Message | None
         try:
-            message = await asyncio.wait_for(self.proto.read_message(), timeout=0.1)
-        except asyncio.TimeoutError:
+            async with asyncio.timeout(MESSAGE_READ_SECONDS) as deadline:
+                readers.add(deadline)
+                try:
+                    message = await self.proto.read_message()
+                finally:
+                    readers.discard(deadline)
+        except TimeoutError:
             message = None
             await asyncio.sleep(0)
         return message

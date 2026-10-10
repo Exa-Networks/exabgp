@@ -8,41 +8,38 @@ compiled wheel hung before its first log line (sampled in qa/bin/test_wheel).
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import NoReturn
-from unittest.mock import MagicMock
 
 import pytest
 
 from exabgp.application import server
 from exabgp.environment import getenv
+from exabgp.reactor.loop import Reactor
 from exabgp.util import dns
-
-
-class Exited(Exception):
-    pass
 
 
 def _refuse(*_: object) -> NoReturn:
     raise AssertionError('the daemon start asked the resolver for the FQDN')
 
 
-def test_the_daemon_start_does_not_look_up_the_fqdn(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_daemon_start_does_not_look_up_the_fqdn(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """The real start, up to a real reactor which stops on a configuration it can not read.
+
+    Nothing in server is replaced: a compiled server calls Configuration, Reactor and __exit
+    directly, so replacing those names in the module would be seen by the interpreter only.
+    """
     monkeypatch.setattr(dns, '__domain_name', None)
     monkeypatch.setattr(dns.socket, 'getfqdn', _refuse)
     monkeypatch.setattr(dns.socket, 'gethostbyaddr', _refuse)
-    monkeypatch.setattr(server, 'Configuration', MagicMock())
-    reactor = MagicMock()
-    reactor.return_value.run.return_value = 0
-    monkeypatch.setattr(server, 'Reactor', reactor)
-
-    def exited(_memory: bool, code: int) -> NoReturn:
-        raise Exited(code)
-
-    monkeypatch.setattr(server, '__exit', exited)
     environment = getenv()
     monkeypatch.setattr(environment.api, 'cli', False)
     monkeypatch.setattr(environment.profile, 'enable', False)
+    # no listener: the only way out of the reactor is then the configuration it could not load
+    monkeypatch.setattr(environment.tcp, 'bind', [])
+    monkeypatch.setattr(environment.daemon, 'daemonize', False)
 
-    with pytest.raises(Exited):
-        server.run('', ['unused.conf'])
-    reactor.return_value.run.assert_called_once()
+    with pytest.raises(SystemExit) as exited:
+        server.run('', [str(tmp_path / 'missing.conf')])
+    # run exits only after the reactor returned, with the code the reactor returned
+    assert exited.value.code == Reactor.Exit.configuration

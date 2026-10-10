@@ -46,14 +46,22 @@ def test_a_keepalive_with_a_body_is_refused(neighbor: Neighbor) -> None:
     assert check.display_message(neighbor, keepalive) is False
 
 
+class _Recorder:
+    """Stands in for the module's log, keeping what info() was given."""
+
+    def __init__(self) -> None:
+        self.messages: list[str] = []
+
+    def info(self, message: object, source: str = '') -> None:
+        self.messages.append(str(message() if callable(message) else message))
+
+
 def test_check_notification_reads_the_code_after_the_header(monkeypatch: pytest.MonkeyPatch) -> None:
-    seen: list[bytes] = []
-    unpack = Notification.unpack_message
-
-    def record(data: bytes, negotiated: object) -> Notification:
-        seen.append(bytes(data))
-        return unpack(data, negotiated)  # type: ignore[arg-type]
-
-    monkeypatch.setattr(check.Notification, 'unpack_message', record)
+    # what was decoded is seen in what is logged: a patched Notification.unpack_message is
+    # not, as the compiled check.py calls the native method without looking it up
+    recorder = _Recorder()
+    monkeypatch.setattr(check, 'log', recorder)
     assert check.check_notification(bytes.fromhex(MARKER + '0015030602')) is True
-    assert seen == [b'\x06\x02']
+    # read from raw[18], the type octet 3 would have been the code: UPDATE Message Error
+    assert recorder.messages == [f'notification.decoded notification={Notification(b"\x06\x02")}']
+    assert 'Cease / Administrative Shutdown' in recorder.messages[0]
