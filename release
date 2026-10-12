@@ -10,6 +10,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 import os
 import re
 import sys
+import signal
 import fileinput
 
 import glob
@@ -387,8 +388,9 @@ ZIPAPP_IGNORE = shutil.ignore_patterns('.git', '.venv', 'build', 'dist', '*.egg-
 ZIPAPP_CONFIGURATION = os.path.join(Path.root, 'etc', 'exabgp', 'conf-ipself6.conf')
 # the functional suites run against it, as CI runs them for the source tree
 ZIPAPP_SUITES = ('parsing', 'decoding', 'encoding')
-# a stuck exabgp fails the check rather than hang it
-ZIPAPP_TIMEOUT = 60
+# a stuck exabgp fails the check rather than hang it. A GitHub macOS runner took more than
+# 60 seconds to start one `version`, which takes one second elsewhere
+ZIPAPP_TIMEOUT = 300
 
 
 def zipapp_wheel():
@@ -426,11 +428,22 @@ def zipapp_tree(wheel):
 
 
 def zipapp_run(pyz, *arguments, env=None):
-    """The output of the zipapp run with `arguments`, exiting if it fails."""
-    result = subprocess.run([pyz] + list(arguments), capture_output=True, text=True, timeout=ZIPAPP_TIMEOUT, env=env)
-    if result.returncode:
-        sys.exit(f'{pyz} {" ".join(arguments)} failed:\n{result.stdout}{result.stderr}')
-    return result.stdout
+    """The output of the zipapp run with `arguments`, exiting if it fails or does not end."""
+    command = [pyz] + list(arguments)
+    # on SIGABRT, Python prints where each thread is: what a run which does not end is stuck on
+    env = dict(env if env is not None else os.environ, PYTHONFAULTHANDLER='1')
+    process = subprocess.Popen(
+        command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=ZIPAPP_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        process.send_signal(signal.SIGABRT)
+        stdout, stderr = process.communicate()
+        sys.exit(f'{" ".join(command)} did not end within {ZIPAPP_TIMEOUT} seconds:\n{stdout}{stderr}')
+    if process.returncode:
+        sys.exit(f'{" ".join(command)} failed:\n{stdout}{stderr}')
+    return stdout
 
 
 def check_binary(pyz, functional):
