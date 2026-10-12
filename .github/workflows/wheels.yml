@@ -30,7 +30,7 @@ jobs:
       - name: Build, install and test the compiled wheels
         uses: pypa/cibuildwheel@v4.2.1
         env:
-          CIBW_BUILD: "cp312-* cp313-* cp314-*"
+          CIBW_BUILD: "cp312-* cp313-* cp314-* cp315-*"
           CIBW_SKIP: "*-musllinux_*"
           CIBW_ENVIRONMENT: "EXABGP_MYPYC=1"
           # mypyc comes with mypy, which a pure build does not need: installed for this

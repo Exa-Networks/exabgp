@@ -13,10 +13,14 @@ jobs:
   functional-tests:
     # runs-on: ubuntu-latest
     runs-on: ${{ matrix.os }}
+    # uv picks its interpreter from .python-version (3.12), not from setup-python: without
+    # this every leg of the matrix ran on 3.12 and only the job name said otherwise
+    env:
+      UV_PYTHON: ${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.12", "3.13", "3.14"]
+        python-version: ["3.12", "3.13", "3.14", "3.15"]
         os: ["ubuntu-latest"]
 
     steps:
@@ -38,6 +42,10 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --frozen
+
+      - name: Check uv runs the Python of this leg
+        run: |
+          uv run python -c "import sys; v = '%d.%d' % sys.version_info[:2]; print(sys.version); raise SystemExit(v != '${{ matrix.python-version }}')"
 
       - name: Configuration
         run: |

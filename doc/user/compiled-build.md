@@ -117,7 +117,7 @@ exabgp version                                             # Build  : mypyc
 ```
 
 The wheel only installs on the Python version and platform it was built for. The
-`Compiled wheels (mypyc)` workflow builds them for Python 3.12, 3.13 and 3.14 on Linux
+`Compiled wheels (mypyc)` workflow builds them for Python 3.12, 3.13, 3.14 and 3.15 on Linux
 (x86_64 and arm64) and macOS (arm64), installs each one and runs the functional suites
 against it with `qa/bin/test_wheel`. The wheels are kept as build artifacts: none is
 published to PyPI yet.
