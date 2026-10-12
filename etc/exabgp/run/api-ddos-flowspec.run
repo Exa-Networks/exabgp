@@ -341,6 +341,14 @@ class WebhookHandler(BaseHTTPRequestHandler):
 # ExaBGP stdin reader -- watches for session-up and shutdown signals
 # ---------------------------------------------------------------------------
 
+def read_line() -> str:
+    """Read a line from ExaBGP, exiting once it has gone: at EOF readline returns '' forever."""
+    line = sys.stdin.readline()
+    if not line:
+        os._exit(0)
+    return line
+
+
 def stdin_reader() -> None:
     """Read ExaBGP messages from stdin in a background thread.
 
@@ -354,7 +362,7 @@ def stdin_reader() -> None:
     """
     while True:
         try:
-            line = sys.stdin.readline().strip()
+            line = read_line().strip()
         except (IOError, KeyboardInterrupt):
             break
         if not line:

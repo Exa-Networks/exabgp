@@ -17,7 +17,7 @@ def main() -> None:
         flush('ping\n')
 
         # Read response (JSON format by default)
-        response = sys.stdin.readline().strip()
+        response = read_line().strip()
 
         # Try to parse as JSON first (new default format)
         try:
@@ -37,7 +37,7 @@ def main() -> None:
             fail(f'OK: ping returned UUID {uuid}\n')
 
         # Read done
-        done = sys.stdin.readline().strip()
+        done = read_line().strip()
         if done != 'done':
             fail(f'ERROR: expected done, got: {done}\n')
             sys.exit(1)
@@ -53,7 +53,7 @@ def main() -> None:
         # Read multi-line response
         status_lines = []
         while True:
-            line = sys.stdin.readline().strip()
+            line = read_line().strip()
             if line == 'done':
                 break
             status_lines.append(line)
@@ -79,7 +79,7 @@ def main() -> None:
         # Wait for shutdown signal (like other api-* tests)
         now = time.time()
         while os.getppid() != 1 and time.time() < now + 7:
-            line = sys.stdin.readline().strip()
+            line = read_line().strip()
             if not line or 'shutdown' in line:
                 break
             time.sleep(0.1)
@@ -99,7 +99,7 @@ def wait_for_ack(expected_count: int = 1, timeout: int = 2) -> bool:
 
         ready, _, _ = select.select([sys.stdin], [], [], 0.1)
         if ready:
-            line = sys.stdin.readline().strip()
+            line = read_line().strip()
             answer = None
             if line.startswith('{'):
                 try:
@@ -120,6 +120,14 @@ def wait_for_ack(expected_count: int = 1, timeout: int = 2) -> bool:
             time.sleep(0.1)
 
     return True
+
+
+def read_line() -> str:
+    """Read a line from ExaBGP, exiting once it has gone: at EOF readline returns '' forever."""
+    line = sys.stdin.readline()
+    if not line:
+        os._exit(0)
+    return line
 
 
 def flush(msg: str) -> None:

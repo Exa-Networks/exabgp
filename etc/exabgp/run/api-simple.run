@@ -5,6 +5,7 @@ Extends the basic api-no-neighbor test with additional commands.
 """
 
 import json
+import os
 import signal
 import sys
 import time
@@ -19,7 +20,7 @@ def main() -> None:
         fail('TEST: version command\n')
         flush('version\n')
 
-        response = sys.stdin.readline().strip()
+        response = read_line().strip()
         try:
             data = json.loads(response)
             if 'version' in data:
@@ -35,7 +36,7 @@ def main() -> None:
                 sys.exit(1)
 
         # Read done
-        ack = sys.stdin.readline().strip()
+        ack = read_line().strip()
         if ack != 'done':
             fail(f'  WARNING: expected done, got: {ack}\n')
 
@@ -43,7 +44,7 @@ def main() -> None:
         fail('TEST: ping command\n')
         flush('ping\n')
 
-        response = sys.stdin.readline().strip()
+        response = read_line().strip()
         try:
             data = json.loads(response)
             if 'pong' in data:
@@ -59,7 +60,7 @@ def main() -> None:
                 sys.exit(1)
 
         # Read done
-        ack = sys.stdin.readline().strip()
+        ack = read_line().strip()
         if ack != 'done':
             fail(f'  WARNING: expected done, got: {ack}\n')
 
@@ -70,7 +71,7 @@ def main() -> None:
         # Read multi-line status response
         status_lines = []
         while True:
-            line = sys.stdin.readline().strip()
+            line = read_line().strip()
             if line == 'done':
                 break
             if line:
@@ -88,7 +89,7 @@ def main() -> None:
         fail('TEST: shutdown command\n')
         flush('shutdown\n')
 
-        response = sys.stdin.readline().strip()
+        response = read_line().strip()
         try:
             data = json.loads(response)
             if data.get('answer') == 'shutdown':
@@ -112,6 +113,14 @@ def main() -> None:
     except Exception as e:
         fail(f'ERROR: Unexpected exception: {e}\n')
         sys.exit(1)
+
+
+def read_line() -> str:
+    """Read a line from ExaBGP, exiting once it has gone: at EOF readline returns '' forever."""
+    line = sys.stdin.readline()
+    if not line:
+        os._exit(0)
+    return line
 
 
 def flush(msg: str) -> None:

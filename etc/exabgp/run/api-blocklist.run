@@ -152,7 +152,7 @@ class responseThread(object):
     def run(self):
         while True:
             try:
-                line = sys.stdin.readline().strip()
+                line = read_line().strip()
             except KeyboardInterrupt:
                 pass
             except IOError as e:
@@ -172,6 +172,14 @@ class responseThread(object):
 #
 # Start at the start
 #
+
+
+def read_line() -> str:
+    """Read a line from ExaBGP, exiting once it has gone: at EOF readline returns '' forever."""
+    line = sys.stdin.readline()
+    if not line:
+        os._exit(0)
+    return line
 
 
 def flush(msg: str) -> None:
