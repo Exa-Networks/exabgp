@@ -37,3 +37,9 @@
   `.github/workflows/zipapp.yml` attaches it to each 5.0.x release (from 5.0.14). Once a 6.x
   release exists, it keeps the newest 6.x as GitHub's "latest": the latest/download URL must
   never serve 5.0. When editing a 5.0 release in the web UI, leave "Set as latest" unticked
+
+## Release names
+- Each GitHub release is titled `ExaBGP '<Name>' Release`, set by hand (`gh release edit <tag> --title`),
+  the workflow only titles it with the version. Recent names are emoji: 'Hugging Face' (5.0.12),
+  'Waving Hand' (5.0.13), 'Package' (5.0.14)
+- 5.0.15 is chosen (2026-10-12): **ExaBGP 'Bow' Release** 🙇
