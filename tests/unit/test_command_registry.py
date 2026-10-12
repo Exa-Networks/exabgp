@@ -478,21 +478,15 @@ class TestRegistryPerformance:
             assert self.registry.get_all_commands() == first
 
     def test_metadata_caching_improves_performance(self):
-        """Test that metadata caching works"""
-        import time
+        """The metadata of a command is built once, then served from the cache.
 
-        # First call (cache miss)
-        start = time.time()
-        self.registry.get_command_metadata('peer show')
-        first_call = time.time() - start
-
-        # Second call (cache hit)
-        start = time.time()
-        self.registry.get_command_metadata('peer show')
-        second_call = time.time() - start
-
-        # Second call should be faster (or at least not slower)
-        assert second_call <= first_call * 2  # Allow for some variance
+        This compared the time of two calls, of about ten microseconds each, and failed on a
+        shared runner when the second was the slower (Python 3.15, 22us against 9.5us). That
+        the second call returns the object the first built is what the cache has to keep.
+        """
+        first = self.registry.get_command_metadata('peer show')
+        assert first is not None
+        assert self.registry.get_command_metadata('peer show') is first
 
 
 class TestRegistrySingleton:
