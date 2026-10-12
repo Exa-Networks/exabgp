@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# EXABGP_BINARY runs a zipapp instead of the source tree (./release binary --functional)
+if [ -n "$EXABGP_BINARY" ]; then
+    exec "$EXABGP_BINARY" "$@"
+fi
+
 git status 2> /dev/null > /dev/null
 
 # returns 128 if not in a git repo

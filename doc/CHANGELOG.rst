@@ -4,6 +4,10 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 5.0.14:
+ * Feature: every release has a zipapp attached, exabgp.pyz: ExaBGP as
+   one file, run by any Python 3.8 or later, nothing to install.
+   "./release binary" builds it from the wheel and checks it runs, with
+   --functional to also run the functional tests against it.
  * Feature: FlowSpec supports packet-per-second rate limits with
    "rate-limit <n> packets" (RFC 8955). Existing rate limits remain in
    bytes per second; an explicit "bytes" unit is also accepted.

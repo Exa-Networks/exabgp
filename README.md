@@ -89,11 +89,9 @@ The fastest way to get started:
 docker pull ghcr.io/exa-networks/exabgp:latest
 docker run -it --rm ghcr.io/exa-networks/exabgp:latest --help
 
-# Using zipapp (self-contained executable)
-git clone https://github.com/Exa-Networks/exabgp
-cd exabgp
-./release binary /usr/local/sbin/exabgp
-/usr/local/sbin/exabgp version
+# Using zipapp (one file, run by any Python 3.8 or later)
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.13/exabgp.pyz
+python3 exabgp.pyz version
 
 # Using pip
 pip install exabgp
@@ -134,21 +132,32 @@ It is possible to add your configuration file within the docker image and/or use
 
 ### Zipapp
 
-From the source folder, it is possible to create a self-contained executable which only requires an installed python3 interpreter:
+A zipapp is a zip archive of Python code which Python runs without unpacking it. `exabgp.pyz` holds the `exabgp` package, so it is ExaBGP in a single file, which only needs Python 3.8 or later: there is nothing to install. Every release from 5.0.14 onwards has one attached:
 
 ```sh
-git clone https://github.com/Exa-Networks/exabgp exabgp-git
-cd exabgp-git
-./release binary /usr/local/sbin/exabgp
+# download it and check it
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.13/exabgp.pyz
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.13/SHA256SUMS
+sha256sum --ignore-missing -c SHA256SUMS    # shasum -a 256 --ignore-missing -c SHA256SUMS on macOS
+
+# run it with Python
+python3 exabgp.pyz version
+
+# or make it executable, and install it as the exabgp command
+chmod +x exabgp.pyz
+./exabgp.pyz version
+sudo install -m 755 exabgp.pyz /usr/local/sbin/exabgp
 /usr/local/sbin/exabgp version
 ```
 
-which is a helper function and creates a python3 zipapp:
+To upgrade, download the new file and install it over the old one. If the `python3` on your `PATH` is older than 3.8, it stops and says so: run the file with a newer interpreter (`python3.12 exabgp.pyz ...`), and use that interpreter in your service file. Should ExaBGP drop privileges (`exabgp.daemon.user`), that user must be able to read the file.
+
+From the source folder, `./release binary` builds the same file, `dist/exabgp-<version>.pyz`, and checks it runs (`--functional` also runs the functional tests against it):
 
 ```sh
-git clone https://github.com/Exa-Networks/exabgp exabgp-git
+git clone -b 5.0 https://github.com/Exa-Networks/exabgp exabgp-git
 cd exabgp-git
-python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application.main:main -p "/usr/bin/env python3" src
+python3 ./release binary /usr/local/sbin/exabgp
 /usr/local/sbin/exabgp version
 ```
 
