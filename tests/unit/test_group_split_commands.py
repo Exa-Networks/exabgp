@@ -33,7 +33,7 @@ from exabgp.configuration.grammar.lexer import split_commands
         # the lexer resolves escapes first: an escaped quote opens a quote, an escaped `;` ends a command
         ('announce a \\" ; b \\" ; announce c', ['announce a \\" ; b \\"', 'announce c']),
         ('announce a \\u0022 ; b \\u0022 ; announce c', ['announce a \\u0022 ; b \\u0022', 'announce c']),
-        ('announce a \; announce c', ['announce a', 'announce c']),
+        ('announce a \\; announce c', ['announce a', 'announce c']),
     ],
 )
 def test_a_group_is_split_where_the_lexer_ends_a_statement(line: str, commands: list[str]) -> None:

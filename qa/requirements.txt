@@ -28,7 +28,7 @@ idna==3.18 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests
 iniconfig==2.3.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via pytest
-libcst==1.8.6 ; sys_platform == 'darwin' or sys_platform == 'linux'
+libcst==1.9.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via mutmut
 librt==0.9.0 ; (platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_python_implementation != 'PyPy' and sys_platform == 'linux')
     # via mypy
