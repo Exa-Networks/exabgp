@@ -388,6 +388,9 @@ ZIPAPP_IGNORE = shutil.ignore_patterns('.git', '.venv', 'build', 'dist', '*.egg-
 ZIPAPP_CONFIGURATION = os.path.join(Path.root, 'etc', 'exabgp', 'conf-ipself6.conf')
 # the functional suites run against it, as CI runs them for the source tree
 ZIPAPP_SUITES = ('parsing', 'decoding', 'encoding')
+# the suites run a test at a time, as 5.0 CI runs them: all at once, the timing of some
+# encoding tests (api-teardown) fails on a two-core runner
+ZIPAPP_ONE_BY_ONE = ('encoding',)
 # a stuck exabgp fails the check rather than hang it. A GitHub macOS runner took more than
 # 60 seconds to start one `version`, which takes one second elsewhere
 ZIPAPP_TIMEOUT = 300
@@ -463,9 +466,15 @@ def check_binary(pyz, functional):
     env = dict(os.environ, EXABGP_BINARY=pyz)
     program = os.path.join(Path.root, 'qa', 'bin', 'functional')
     for suite in ZIPAPP_SUITES:
-        print('>', program, suite, flush=True)
-        if subprocess.run([sys.executable, program, suite], env=env).returncode:
-            sys.exit(f'the {suite} suite failed against {pyz}')
+        if suite in ZIPAPP_ONE_BY_ONE:
+            listed = subprocess.run([sys.executable, program, suite, '--short-list'], capture_output=True, text=True)
+            commands = [[sys.executable, program, suite, test] for test in listed.stdout.split()]
+        else:
+            commands = [[sys.executable, program, suite]]
+        for command in commands:
+            print('>', ' '.join(command[1:]), flush=True)
+            if subprocess.run(command, env=env).returncode:
+                sys.exit(f'{" ".join(command[2:])} failed against {pyz}')
 
 
 def generate_binary(args):
