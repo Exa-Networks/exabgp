@@ -8,13 +8,16 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 
 import os
+import re
 import sys
 import fileinput
 
 import glob
 import shutil
 import zipapp
+import zipfile
 import argparse
+import subprocess
 
 
 CHANGELOG = 'doc/CHANGELOG.rst'
@@ -357,38 +360,118 @@ def remove_cache():
         os.remove(name)
 
 
+# the zipapp: the pure Python wheel, as one file any Python 3.8 or later runs
+ZIPAPP_WORK = os.path.join(Path.root, 'build', 'zipapp')
+ZIPAPP_DIST = os.path.join(Path.root, 'dist')
+ZIPAPP_INTERPRETER = '/usr/bin/env python3'
+ZIPAPP_DEBUG_INTERPRETER = '/usr/bin/env EXABGP_DEBUG_PDB=1 EXABGP_DEBUG_CONFIGURATION=1 EXABGP_DEBUG_ROUTE=1 python3'
+# what runs first: python3 is whatever the PATH finds, which may be older than 3.8 and would
+# otherwise stop on the SyntaxError of the first module using newer syntax. Written for any
+# Python 3, so no f-string. It exits as the console script pip writes does
+ZIPAPP_MAIN = """import sys
+
+if sys.version_info < (3, 8):
+    sys.exit('exabgp requires Python 3.8 or later, %s is Python %d.%d' % ((sys.executable,) + sys.version_info[:2]))
+
+from exabgp.application.main import main
+
+sys.exit(main())
+"""
+# what of the wheel the zipapp holds: not the example configurations of <name>.data
+ZIPAPP_CONTENT = re.compile(r'^exabgp(-[^/]+\.dist-info)?/')
+# the wheel holds a few hundred files: more is not the wheel this script built
+ZIPAPP_MAX_MEMBERS = 5000
+# what of the checkout the wheel is not built from
+ZIPAPP_IGNORE = shutil.ignore_patterns('.git', '.venv', 'build', 'dist', '*.egg-info', '__pycache__', '*.pyc')
+# the configuration the validation check uses
+ZIPAPP_CONFIGURATION = os.path.join(Path.root, 'etc', 'exabgp', 'conf-ipself6.conf')
+# the functional suites run against it, as CI runs them for the source tree
+ZIPAPP_SUITES = ('parsing', 'decoding', 'encoding')
+# a stuck exabgp fails the check rather than hang it
+ZIPAPP_TIMEOUT = 60
+
+
+def zipapp_wheel():
+    """The pure Python wheel, built from a copy of the checkout, so the checkout is untouched."""
+    source = os.path.join(ZIPAPP_WORK, 'source')
+    wheels = os.path.join(ZIPAPP_WORK, 'wheel')
+    for folder in (source, wheels):
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+    shutil.copytree(Path.root, source, ignore=ZIPAPP_IGNORE)
+    command = [sys.executable, '-m', 'pip', 'wheel', '--no-deps', '--wheel-dir', wheels, source]
+    print('>', ' '.join(command), flush=True)
+    subprocess.run(command, check=True)
+    found = sorted(glob.glob(os.path.join(wheels, 'exabgp-*-py3-none-any.whl')))
+    if len(found) != 1:
+        sys.exit(f'expected one pure Python wheel in {wheels}, found {len(found)}')
+    return found[0]
+
+
+def zipapp_tree(wheel):
+    """The package and its metadata out of the wheel, with the __main__.py checking the Python."""
+    target = os.path.join(ZIPAPP_WORK, 'app')
+    if os.path.exists(target):
+        shutil.rmtree(target)
+    with zipfile.ZipFile(wheel) as archive:
+        names = archive.namelist()
+        if len(names) > ZIPAPP_MAX_MEMBERS:
+            sys.exit(f'{wheel} holds {len(names)} files, more than {ZIPAPP_MAX_MEMBERS}')
+        archive.extractall(target, [name for name in names if ZIPAPP_CONTENT.match(name)])
+    if not os.path.isfile(os.path.join(target, 'exabgp', 'application', 'main.py')):
+        sys.exit(f'{wheel} does not hold the exabgp package')
+    with open(os.path.join(target, '__main__.py'), 'w') as main:
+        main.write(ZIPAPP_MAIN)
+    return target
+
+
+def zipapp_run(pyz, *arguments, env=None):
+    """The output of the zipapp run with `arguments`, exiting if it fails."""
+    result = subprocess.run([pyz] + list(arguments), capture_output=True, text=True, timeout=ZIPAPP_TIMEOUT, env=env)
+    if result.returncode:
+        sys.exit(f'{pyz} {" ".join(arguments)} failed:\n{result.stdout}{result.stderr}')
+    return result.stdout
+
+
+def check_binary(pyz, functional):
+    """version and validate, then the functional suites, which run it through sbin/exabgp."""
+    from exabgp.version import release
+
+    # sbin/exabgp exports exabgp_version from git, which would hide the zipapp's own
+    env = {key: value for key, value in os.environ.items() if key != 'exabgp_version'}
+    report = zipapp_run(pyz, 'version', env=env)
+    print(report, end='')
+    if f'ExaBGP : {release}\n' not in report or f'From   : {pyz}\n' not in report:
+        sys.exit(f'{pyz} does not run the package it holds, version {release}')
+    zipapp_run(pyz, 'validate', '-nrv', ZIPAPP_CONFIGURATION)
+    print(f'{pyz} runs version and validate')
+    if not functional:
+        return
+    env = dict(os.environ, EXABGP_BINARY=pyz)
+    program = os.path.join(Path.root, 'qa', 'bin', 'functional')
+    for suite in ZIPAPP_SUITES:
+        print('>', program, suite, flush=True)
+        if subprocess.run([sys.executable, program, suite], env=env).returncode:
+            sys.exit(f'the {suite} suite failed against {pyz}')
+
+
 def generate_binary(args):
-    target = args.target
-    debug = args.debug
+    """The zipapp, dist/exabgp-<version>.pyz unless a target is named, checked once built."""
+    sys.path.insert(0, os.path.join(Path.root, 'src'))
+    from exabgp.version import release
 
-    if sys.version_info.minor < 5:
-        sys.exit('zipapp is only available with python 3.5+')
-
-    FOLDER = os.path.dirname(os.path.realpath(__file__))
-    IMPORT = os.path.abspath(os.path.join(FOLDER, 'src'))
-
-    if not os.path.exists(IMPORT):
-        sys.exit(f'could not import "{IMPORT}"')
-    sys.path = [IMPORT]
-
-    params = {
-        'source': 'src',
-        'target': target,
-        'interpreter': '/usr/bin/env python3',
-        'main': 'exabgp.application.main:main',
-    }
-
-    if debug:
-        params['interpreter'] = (
-            '/usr/bin/env EXABGP_DEBUG_PDB=1 EXABGP_DEBUG_CONFIGURATION=1 EXABGP_DEBUG_ROUTE=1 python3'
-        )
-    if sys.version_info.minor >= 7:
-        params['compressed'] = not debug
-
-    # here = os.path.dirname(os.path.realpath(__file__))
-    # data = os.path.abspath(os.path.join(here, 'data'))
-
-    zipapp.create_archive(**params)
+    if args.test:
+        check_binary(os.path.abspath(args.test), args.functional)
+        return 0
+    os.makedirs(ZIPAPP_WORK, exist_ok=True)
+    tree = zipapp_tree(zipapp_wheel())
+    os.makedirs(ZIPAPP_DIST, exist_ok=True)
+    target = os.path.abspath(args.target or os.path.join(ZIPAPP_DIST, f'exabgp-{release}.pyz'))
+    interpreter = ZIPAPP_DEBUG_INTERPRETER if args.debug else ZIPAPP_INTERPRETER
+    zipapp.create_archive(tree, target, interpreter=interpreter, compressed=not args.debug)
+    print(f'built {target}')
+    check_binary(target, args.functional)
+    return 0
 
 
 def show_version(args):
@@ -413,9 +496,11 @@ def main():
     parser = argparse.ArgumentParser(description='exabgp release tool')
     root = parser.add_subparsers()
 
-    binary = root.add_parser('binary', help='release an exabgp binary')
-    binary.add_argument('target', help='name of the binary to create', default='./vyos')
+    binary = root.add_parser('binary', help='build the zipapp, one file any Python 3.8 or later runs')
+    binary.add_argument('target', nargs='?', default='', help='the file to create (dist/exabgp-<version>.pyz)')
     binary.add_argument('-d', '--debug', help='run python with pdb', action='store_true')
+    binary.add_argument('--test', metavar='PYZ', help='do not build, check this zipapp')
+    binary.add_argument('--functional', action='store_true', help='also run the functional suites against it')
     binary.set_defaults(func=generate_binary)
 
     pypi = root.add_parser('pypi', help='create egg/wheel')

@@ -150,7 +150,8 @@ def find_exabgp_pid():
         if len(cmdline) < 1:
             continue
 
-        if not any_ends_in_list(cmdline, ['/main.py']):
+        # the source tree runs main.py, a zipapp (./release binary --functional) runs itself
+        if not any_ends_in_list(cmdline, ['/main.py', os.environ.get('EXABGP_BINARY') or '/main.py']):
             continue
 
         if not any_word_in_list(cmdline, [conf_name]):
