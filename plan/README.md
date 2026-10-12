@@ -144,6 +144,7 @@ Superseded (2025), kept for history:
 
 | Plan | Completed | Description |
 |------|-----------|-------------|
+| `done-python-315.md` | 2026-10-12 | Python 3.15 in CI; the matrix had only ever run 3.12 (uv follows `.python-version`); libcst for 3.15; API helpers spun at EOF |
 | `done-flowspec-wide-value.md` | 2026-09-29 | A flow component value too large for its field is refused on decode (`c7b78df37`) |
 | `done-old-commands.md` | 2026-10-03 | Every 4.2 and 5.0 API command and configuration statement checked against main (qa/old) |
 | `done-agent-reported-bugs.md` | 2026-10-01 | Nine agent-reported bugs reproduced and fixed on main (sent UPDATEs as sent, as-path ASN4, env comments, unused words, ipv6 multicast, origin number, GR flags, group under API 4) |

@@ -581,7 +581,8 @@ Phase 8, packaging:
   exabgp-6.0.0-cp312-cp312-macosx_26_0_arm64.whl (5 MB); installed in a fresh venv it
   reports Build mypyc, and qa/bin/test_wheel (functional decoding, encoding, api, cli
   against the installed package) passes
-- .github/workflows/wheels.yml: cibuildwheel 4.2.1, cp312 to cp314, ubuntu x86_64 and
+- .github/workflows/wheels.yml: cibuildwheel 4.2.1, cp312 to cp315 (cp315 added 2026-10-12,
+  green on all three platforms, see done-python-315.md), ubuntu x86_64 and
   arm64, macOS arm64, test_wheel on each wheel, wheels kept as artifacts
 - doc/user/compiled-build.md, the README section and the wiki page describe running with
   EXABGP_COMPILED=1 and building a wheel
