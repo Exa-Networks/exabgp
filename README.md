@@ -90,7 +90,7 @@ docker pull ghcr.io/exa-networks/exabgp:latest
 docker run -it --rm ghcr.io/exa-networks/exabgp:latest --help
 
 # Using zipapp (one file, run by any Python 3.8 or later)
-curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.13/exabgp.pyz
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.14/exabgp.pyz
 python3 exabgp.pyz version
 
 # Using pip
@@ -136,8 +136,8 @@ A zipapp is a zip archive of Python code which Python runs without unpacking it.
 
 ```sh
 # download it and check it
-curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.13/exabgp.pyz
-curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.13/SHA256SUMS
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.14/exabgp.pyz
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.14/SHA256SUMS
 sha256sum --ignore-missing -c SHA256SUMS    # shasum -a 256 --ignore-missing -c SHA256SUMS on macOS
 
 # run it with Python
@@ -180,8 +180,8 @@ python3 -m exabgp healthcheck --help
 It is also possible to download releases from GitHub:
 
 ```sh
-curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.13.tar.gz | tar zx
-cd exabgp-5.0.13
+curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.14.tar.gz | tar zx
+cd exabgp-5.0.14
 ./sbin/exabgp version
 ./sbin/exabgp --help
 
@@ -205,10 +205,10 @@ env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 ./bin/healthcheck --help
 ```
 
-It is then possible to change git to use any release (here 5.0.13):
+It is then possible to change git to use any release (here 5.0.14):
 
 ```sh
-git checkout 5.0.13
+git checkout 5.0.14
 ./sbin/exabgp version
 ```
 
