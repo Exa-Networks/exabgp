@@ -30,3 +30,10 @@
 - Tags are created WITHOUT `v` prefix (e.g. `5.0.3` not `v5.0.3`)
 - The `.github/workflows/release.yml` triggers on `v*` tags (mismatch — PyPI upload is manual via twine)
 - No need to create a new branch from a tag — the `5.0` branch already exists
+- On main, `./release binary` builds the zipapp (dist/exabgp-<version>.pyz, doc/user/zipapp.md);
+  `.github/workflows/zipapp.yml` runs it to attach the zipapp to each 6.x release and to the
+  `nightly` pre-release. All release tooling stays in `./release`, no separate scripts
+- On 5.0, `./release binary` builds the same zipapp (Python 3.8+), and the 5.0 branch's
+  `.github/workflows/zipapp.yml` attaches it to each 5.0.x release (from 5.0.14). Once a 6.x
+  release exists, it keeps the newest 6.x as GitHub's "latest": the latest/download URL must
+  never serve 5.0. When editing a 5.0 release in the web UI, leave "Set as latest" unticked

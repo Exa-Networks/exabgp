@@ -1,0 +1,198 @@
+name: Zipapp
+
+# Builds ExaBGP as a zipapp (./release binary): one file holding the pure Python package,
+# which any Python 3.12 or later runs, on any platform. It is checked on the oldest and the
+# newest Python supported, functional suites included, then published:
+#
+#   - a 6.x tag attaches it to the GitHub release of that tag, made if there is none yet, as
+#     exabgp-<version>.pyz and as exabgp.pyz, the name the latest release always serves:
+#     https://github.com/Exa-Networks/exabgp/releases/latest/download/exabgp.pyz
+#   - every night main changed under src/ since the last nightly, it replaces the zipapp of
+#     the `nightly` pre-release, whose tag is moved to the commit built:
+#     https://github.com/Exa-Networks/exabgp/releases/download/nightly/exabgp.pyz
+#     Run by hand on main, it publishes the nightly whatever changed.
+#
+# A pull request changing how the zipapp is built only builds and checks it.
+#
+# setup-uv, the one action from outside GitHub, is pinned to a commit: the zipapp it helps
+# build is published, and a tag can be moved.
+
+on:
+  push:
+    tags:
+      - "6.*"
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/zipapp.yml
+      - release
+      - qa/bin/build_binary
+      - src/exabgp/version.py
+  schedule:
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zipapp-${{ github.ref }}
+
+jobs:
+  plan:
+    name: What to build and where it goes
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.plan.outputs.release }}
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # release: the tag of the release to publish to, `nightly`, `skip`, or empty to only build
+      # version: the version to build, empty for that of pyproject.toml
+      - id: plan
+        run: |
+          base=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            if [ "$base" != "$GITHUB_REF_NAME" ]; then
+              echo "the tag is $GITHUB_REF_NAME but pyproject.toml says $base"
+              exit 1
+            fi
+            echo "release=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] || [ "$GITHUB_REF_NAME" != main ]; then
+            exit 0
+          fi
+          if [ "$GITHUB_EVENT_NAME" = schedule ] && git rev-parse -q --verify refs/tags/nightly > /dev/null \
+            && git diff --quiet refs/tags/nightly HEAD -- src pyproject.toml setup.py setup.cfg; then
+            echo "main has not changed since the nightly of $(git rev-parse --short refs/tags/nightly)"
+            echo "release=skip" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          day=$(git show -s --format=%cd --date=format:%Y%m%d HEAD)
+          echo "release=nightly" >> "$GITHUB_OUTPUT"
+          echo "version=$base.dev$day+g$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build the zipapp
+    needs: plan
+    if: needs.plan.outputs.release != 'skip'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Install dependencies
+        run: uv sync --frozen --python python3.12
+
+      - name: Build the zipapp
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: uv run ./release binary --version "$VERSION"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: exabgp-zipapp
+          path: dist/exabgp-*.pyz
+          if-no-files-found: error
+
+  test:
+    name: test ${{ matrix.os }} python ${{ matrix.python-version }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.12"
+          - os: ubuntu-latest
+            python-version: "3.14"
+          - os: macos-latest
+            python-version: "3.12"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # the Python the zipapp runs with: its #! line asks for the python3 on the PATH
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+
+      - name: Install dependencies
+        run: uv sync --frozen --python python${{ matrix.python-version }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: exabgp-zipapp
+          path: dist
+
+      - name: Check the zipapp and run the functional suites against it
+        run: |
+          chmod +x dist/exabgp-*.pyz
+          uv run ./release binary --test "$(ls dist/exabgp-*.pyz)" --functional
+
+  publish:
+    name: Publish to ${{ needs.plan.outputs.release }}
+    needs: [plan, test]
+    if: needs.plan.outputs.release != '' && needs.plan.outputs.release != 'skip'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE: ${{ needs.plan.outputs.release }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: exabgp-zipapp
+          path: dist
+
+      - name: Attach the zipapp to the release
+        if: needs.plan.outputs.release != 'nightly'
+        run: |
+          cd dist
+          pyz="exabgp-$RELEASE.pyz"
+          test -f "$pyz"
+          cp "$pyz" exabgp.pyz
+          sha256sum "$pyz" exabgp.pyz > SHA256SUMS
+          if ! gh release view "$RELEASE" > /dev/null 2>&1; then
+            gh release create "$RELEASE" --verify-tag --title "$RELEASE" \
+              --notes "See [the changelog](https://github.com/Exa-Networks/exabgp/blob/$RELEASE/doc/CHANGELOG.rst)."
+          fi
+          gh release upload "$RELEASE" "$pyz" exabgp.pyz SHA256SUMS --clobber
+
+      - name: Move the nightly tag and replace its zipapp
+        if: needs.plan.outputs.release == 'nightly'
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          cd dist
+          cp "exabgp-$VERSION.pyz" exabgp.pyz
+          sha256sum exabgp.pyz > SHA256SUMS
+          git tag -f nightly "$GITHUB_SHA"
+          git push -f origin refs/tags/nightly
+          notes="ExaBGP $VERSION, built from main at $GITHUB_SHA, not a release.
+
+          Run it with any Python 3.12 or later: \`python3 exabgp.pyz version\`, or \`chmod +x exabgp.pyz\` and run it directly."
+          if ! gh release view nightly > /dev/null 2>&1; then
+            gh release create nightly --prerelease --latest=false --title "Nightly" --notes "$notes"
+          fi
+          gh release edit nightly --prerelease --latest=false --notes "$notes"
+          gh release upload nightly exabgp.pyz SHA256SUMS --clobber

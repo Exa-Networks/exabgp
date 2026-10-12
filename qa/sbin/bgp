@@ -716,11 +716,14 @@ def find_binary_pid(binary, conf_name):
 
     It is two processes with the same command line: the launcher, which unpacks the binary
     and passes every signal on, and its child. The launcher is the one to signal.
+
+    A zipapp (./release binary) is one process, run by the interpreter its #! line names,
+    which ps shows first: `python3 /path/exabgp.pyz ...`.
     """
     found = {}
     for line in os.popen('/bin/ps x -o pid= -o ppid= -o command='):
         fields = line.strip().split()
-        if len(fields) < 3 or fields[2] != binary:
+        if binary not in fields[2:4]:
             continue
         if not any_word_in_list(fields[3:], [conf_name]):
             continue

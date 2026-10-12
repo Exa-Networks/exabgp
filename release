@@ -10,12 +10,18 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 import argparse
 import fileinput
 import glob
+import importlib.machinery
+import importlib.util
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tomllib
 import zipapp
+import zipfile
+from pathlib import Path as FilePath
+from types import ModuleType
 
 CHANGELOG = 'doc/CHANGELOG.rst'
 
@@ -285,38 +291,114 @@ def remove_cache():
         os.remove(name)
 
 
-def generate_binary(args):
-    target = args.target
-    debug = args.debug
+# the zipapp: the pure Python wheel, as one file any Python 3.12 or later runs
+ZIPAPP_WORK = os.path.join(Path.root, 'build', 'zipapp')
+ZIPAPP_DIST = os.path.join(Path.root, 'dist')
+ZIPAPP_INTERPRETER = '/usr/bin/env python3'
+ZIPAPP_DEBUG_INTERPRETER = '/usr/bin/env EXABGP_DEBUG_PDB=1 EXABGP_DEBUG_CONFIGURATION=1 EXABGP_DEBUG_ROUTE=1 python3'
+# what runs first: python3 is whatever the PATH finds, often older than 3.12, which would
+# otherwise stop on the SyntaxError of the first module using newer syntax. Written for any
+# Python 3, so no f-string. It exits as the console script pip writes does
+ZIPAPP_MAIN = """import sys
 
-    if sys.version_info.minor < 5:
-        sys.exit('zipapp is only available with python 3.5+')
+if sys.version_info < (3, 12):
+    sys.exit('exabgp requires Python 3.12 or later, %s is Python %d.%d' % ((sys.executable,) + sys.version_info[:2]))
 
-    FOLDER = os.path.dirname(os.path.realpath(__file__))
-    IMPORT = os.path.abspath(os.path.join(FOLDER, 'src'))
+from exabgp.application.main import main
 
-    if not os.path.exists(IMPORT):
-        sys.exit(f'could not import "{IMPORT}"')
-    sys.path = [IMPORT]
+sys.exit(main())
+"""
+# what of the wheel the zipapp holds: not the example configurations of <name>.data
+ZIPAPP_CONTENT = re.compile(r'^exabgp(-[^/]+\.dist-info)?/')
+# the wheel holds a few hundred files: more is not the wheel this script built
+ZIPAPP_MAX_MEMBERS = 5000
 
-    params = {
-        'source': 'src',
-        'target': target,
-        'interpreter': '/usr/bin/env python3',
-        'main': 'exabgp.application.main:main',
-    }
 
-    if debug:
-        params['interpreter'] = (
-            '/usr/bin/env EXABGP_DEBUG_PDB=1 EXABGP_DEBUG_CONFIGURATION=1 EXABGP_DEBUG_ROUTE=1 python3'
+def load_build_binary() -> ModuleType:
+    """qa/bin/build_binary, whose checks run any executable and know nothing of PyInstaller."""
+    path = os.path.join(Path.root, 'qa', 'bin', 'build_binary')
+    loader = importlib.machinery.SourceFileLoader('build_binary', path)
+    spec = importlib.util.spec_from_loader(loader.name, loader)
+    assert spec is not None, f'{path} can not be loaded'
+    module = importlib.util.module_from_spec(spec)
+    loader.exec_module(module)
+    return module
+
+
+def zipapp_wheel(build: ModuleType, version: str) -> FilePath:
+    """The pure Python wheel, built from a copy of the checkout, at `version` if given."""
+    source = FilePath(ZIPAPP_WORK) / 'source'
+    wheels = FilePath(ZIPAPP_WORK) / 'wheel'
+    build.copy_sources(source)
+    if version:
+        pyproject = source / 'pyproject.toml'
+        text, count = re.subn(
+            r"^version = '[^']+'$", f"version = '{version}'", pyproject.read_text(), flags=re.MULTILINE
         )
-    if sys.version_info.minor >= 7:
-        params['compressed'] = not debug
+        if count != 1:
+            sys.exit(f'expected one version line in {pyproject}, found {count}')
+        pyproject.write_text(text)
+    if wheels.exists():
+        shutil.rmtree(wheels)
+    command = [build.uv(), 'build', '--wheel', '--no-build-isolation', '--python', sys.executable]
+    command += ['--out-dir', str(wheels), str(source)]
+    print('>', ' '.join(command), flush=True)
+    subprocess.run(command, check=True, cwd=Path.root, env=build.environment())
+    found = sorted(wheels.glob('exabgp-*-py3-none-any.whl'))
+    if len(found) != 1:
+        sys.exit(f'expected one pure Python wheel in {wheels}, found {len(found)}')
+    return found[0]
 
-    # here = os.path.dirname(os.path.realpath(__file__))
-    # data = os.path.abspath(os.path.join(here, 'data'))
 
-    zipapp.create_archive(**params)
+def zipapp_tree(wheel: FilePath) -> tuple[FilePath, str]:
+    """The package and its metadata out of the wheel, so `version` reports the zipapp's own."""
+    target = FilePath(ZIPAPP_WORK) / 'app'
+    if target.exists():
+        shutil.rmtree(target)
+    with zipfile.ZipFile(wheel) as archive:
+        names = archive.namelist()
+        if len(names) > ZIPAPP_MAX_MEMBERS:
+            sys.exit(f'{wheel} holds {len(names)} files, more than {ZIPAPP_MAX_MEMBERS}')
+        archive.extractall(target, [name for name in names if ZIPAPP_CONTENT.match(name)])
+    metadata = sorted(target.glob('exabgp-*.dist-info'))
+    if len(metadata) != 1 or not (target / 'exabgp' / '__main__.py').is_file():
+        sys.exit(f'{wheel} does not hold the exabgp package and one dist-info')
+    (target / '__main__.py').write_text(ZIPAPP_MAIN)
+    return target, metadata[0].name.removeprefix('exabgp-').removesuffix('.dist-info')
+
+
+def check_binary(build: ModuleType, pyz: FilePath, functional: bool) -> None:
+    """version, encode, decode, configuration validate and server, then the functional suites."""
+    report = build.execute(pyz, 'version')
+    print(report, end='')
+    if 'Build  : python' not in report or f'From   : {pyz}' not in report:
+        sys.exit(f'{pyz} does not run the package it holds')
+    update = build.execute(pyz, 'encode', build.ROUTE).strip()
+    decoded = build.execute(pyz, 'decode', stdin=update + '\n')
+    if '10.0.0.0/24' not in decoded or '65001' not in decoded:
+        sys.exit(f'{update} decodes to {decoded}')
+    build.execute(pyz, 'configuration', 'validate', '-nrv', str(build.CONFIGURATION))
+    build.check_server(pyz)
+    print(f'{pyz} runs version, encode, decode, validate and server')
+    if functional:
+        build.check_functional(pyz)
+
+
+def generate_binary(args):
+    """The zipapp, dist/exabgp-<version>.pyz unless a target is named, checked once built."""
+    build = load_build_binary()
+    if args.test:
+        check_binary(build, FilePath(args.test).resolve(), args.functional)
+        return 0
+    os.makedirs(ZIPAPP_WORK, exist_ok=True)
+    tree, version = zipapp_tree(zipapp_wheel(build, args.version))
+    os.makedirs(ZIPAPP_DIST, exist_ok=True)
+    target = FilePath(args.target or os.path.join(ZIPAPP_DIST, f'exabgp-{version}.pyz')).resolve()
+    interpreter = ZIPAPP_DEBUG_INTERPRETER if args.debug else ZIPAPP_INTERPRETER
+    zipapp.create_archive(tree, target, interpreter=interpreter, compressed=not args.debug)
+    print(f'built {target}')
+    check_binary(build, target, args.functional)
+    return 0
 
 
 def show_version(args):
@@ -341,9 +423,12 @@ def main():
     parser = argparse.ArgumentParser(description='exabgp release tool')
     root = parser.add_subparsers()
 
-    binary = root.add_parser('binary', help='release an exabgp binary')
-    binary.add_argument('target', help='name of the binary to create', default='./vyos')
+    binary = root.add_parser('binary', help='build the zipapp, one file any Python 3.12 or later runs')
+    binary.add_argument('target', nargs='?', default='', help='the file to create (dist/exabgp-<version>.pyz)')
     binary.add_argument('-d', '--debug', help='run python with pdb', action='store_true')
+    binary.add_argument('--version', default='', help='the version to build, rather than that of pyproject.toml')
+    binary.add_argument('--test', metavar='PYZ', help='do not build, check this zipapp')
+    binary.add_argument('--functional', action='store_true', help='also run the functional suites against it')
     binary.set_defaults(func=generate_binary)
 
     pypi = root.add_parser('pypi', help='create egg/wheel')

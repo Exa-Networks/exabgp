@@ -24,12 +24,14 @@ if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
 
 from exabgp.environment import getenv
+from exabgp.version import get_root
 
 from exabgp.logger import log, lazymsg
 
 MAXFD: int = 2048
-# the directory of the exabgp package, which the daemon imports from long after it started
-PACKAGE: str = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# the directory of the exabgp package, which the daemon imports from long after it started,
+# or the zipapp it is imported from, in which a module has no path of its own to check
+PACKAGE: str = get_root()
 
 
 def preload() -> list[str]:
@@ -49,22 +51,39 @@ def preload() -> list[str]:
     return unloaded
 
 
+def permitted(status: os.stat_result, uid: int, gids: set[int], bits: tuple[int, int, int]) -> bool:
+    """Whether a user who is not root has the permission whose owner, group and other bits these are."""
+    owner, group, other = bits
+    if status.st_uid == uid:
+        return bool(status.st_mode & owner)
+    if status.st_gid in gids:
+        return bool(status.st_mode & group)
+    return bool(status.st_mode & other)
+
+
 def can_enter(status: os.stat_result, uid: int, gids: set[int]) -> bool:
     """Whether a user who is not root may enter the directory: the bits the kernel reads."""
-    if status.st_uid == uid:
-        return bool(status.st_mode & stat.S_IXUSR)
-    if status.st_gid in gids:
-        return bool(status.st_mode & stat.S_IXGRP)
-    return bool(status.st_mode & stat.S_IXOTH)
+    return permitted(status, uid, gids, (stat.S_IXUSR, stat.S_IXGRP, stat.S_IXOTH))
+
+
+def can_read(status: os.stat_result, uid: int, gids: set[int]) -> bool:
+    """Whether a user who is not root may read the file."""
+    return permitted(status, uid, gids, (stat.S_IRUSR, stat.S_IRGRP, stat.S_IROTH))
 
 
 def unreachable_by(path: str, uid: int, gids: set[int]) -> str:
-    """The first directory on the way to `path` which the user can not enter, or ''."""
+    """The first directory on the way to `path` which the user can not enter, or ''.
+
+    `path` is the directory of the package, or the zipapp it is imported from: a file, which
+    the user must be able to read, and which needs no execute bit (`python3 exabgp.pyz`).
+    """
     assert os.path.isabs(path), 'the path is checked from the root down'
-    for directory in [*reversed(Path(path).parents), Path(path)]:
+    for directory in reversed(Path(path).parents):
         if not can_enter(os.stat(directory), uid, gids):
             return str(directory)
-    return ''
+    status = os.stat(path)
+    reachable = can_read if stat.S_ISREG(status.st_mode) else can_enter
+    return '' if reachable(status, uid, gids) else path
 
 
 class Daemon:

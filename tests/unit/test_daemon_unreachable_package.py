@@ -72,3 +72,47 @@ def test_every_module_of_the_package_is_loaded_before_the_drop() -> None:
     assert preload() == []
     assert 'exabgp.reactor.peer.handlers' in sys.modules
     assert 'exabgp.configuration.check' in sys.modules
+
+
+def test_a_zipapp_must_be_readable_not_executable(tmp_path: Path) -> None:
+    """Run from a zipapp, the package is the archive: a file the user reads, never enters.
+
+    `python3 exabgp.pyz` runs an archive with no execute bit, which the check took for a
+    directory the user could not enter, and the daemon refused to drop its privileges.
+    """
+    archive = tmp_path / 'exabgp.pyz'
+    archive.write_bytes(b'')
+    me = os.getuid()
+
+    archive.chmod(0o644)
+    assert unreachable_by(str(archive), me, set()) == ''
+
+    archive.chmod(0o300)
+    try:
+        assert unreachable_by(str(archive), me, set()) == str(archive)
+    finally:
+        archive.chmod(0o644)
+
+
+def test_in_a_zipapp_the_package_is_the_archive(tmp_path: Path) -> None:
+    """Imported from a zipapp, the package has no directory: its modules live in the archive.
+
+    PACKAGE named a path inside the archive, which os.stat can not reach, and dropping the
+    privileges raised instead of checking them.
+    """
+    import subprocess
+    import sys
+    import zipfile
+
+    import exabgp
+
+    source = Path(exabgp.__file__).parent
+    archive = tmp_path / 'exabgp.pyz'
+    with zipfile.ZipFile(archive, 'w') as writer:
+        for module in source.rglob('*.py'):
+            writer.write(module, Path('exabgp') / module.relative_to(source))
+
+    code = 'import sys; sys.path.insert(0, sys.argv[1]); from exabgp.reactor.daemon import PACKAGE; print(PACKAGE)'
+    result = subprocess.run([sys.executable, '-I', '-c', code, str(archive)], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == str(archive)

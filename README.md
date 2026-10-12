@@ -87,13 +87,39 @@ pipx install exabgp
 docker pull ghcr.io/exa-networks/exabgp:5.0.13
 docker run -it --rm ghcr.io/exa-networks/exabgp:5.0.13 version
 
+# the zipapp of main, one file run by any Python 3.12 or later, rebuilt each night main changed
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/nightly/exabgp.pyz
+python3 exabgp.pyz version
+
 # git, running from the checkout (main by default, `git checkout 5.0` for stable)
 git clone https://github.com/Exa-Networks/exabgp
 cd exabgp
 ./sbin/exabgp version
 ```
 
-Should you encounter any issues, we will ask you to install the latest version from git. The wiki [Installation Guide](https://github.com/Exa-Networks/exabgp/wiki/Installation-Guide) covers the other ways: a self-contained zipapp, GitHub release archives, OS packages, building your own container image, and running several versions side by side.
+### Setting up the zipapp
+
+The zipapp, `exabgp.pyz`, is ExaBGP in a single file which Python runs as it is: nothing to install, only Python on the machine (3.12 or later for 6.x and the nightly, 3.8 or later for 5.0). Download it, check it, and make it a command:
+
+```sh
+# the latest release, or replace latest/download with download/nightly for main
+curl -LO https://github.com/Exa-Networks/exabgp/releases/latest/download/exabgp.pyz
+curl -LO https://github.com/Exa-Networks/exabgp/releases/latest/download/SHA256SUMS
+sha256sum --ignore-missing -c SHA256SUMS    # shasum -a 256 --ignore-missing -c SHA256SUMS on macOS
+
+# run it with Python
+python3 exabgp.pyz version
+
+# or make it executable, and install it as the exabgp command
+chmod +x exabgp.pyz
+./exabgp.pyz version
+sudo install -m 755 exabgp.pyz /usr/local/bin/exabgp
+exabgp version
+```
+
+To upgrade, download the new file and install it over the old one. If the `python3` on your `PATH` is too old, it stops and says so: run the file with a newer interpreter (`python3.12 exabgp.pyz ...`), and use that interpreter in your service file. Should ExaBGP drop privileges (`exabgp.daemon.user`), that user must be able to read the file.
+
+[doc/user/zipapp.md](doc/user/zipapp.md) explains what the zipapp is and how to use it: configuration, healthcheck, systemd. Should you encounter any issues, we will ask you to install the latest version from git. The wiki [Installation Guide](https://github.com/Exa-Networks/exabgp/wiki/Installation-Guide) covers the other ways: a self-contained zipapp, GitHub release archives, OS packages, building your own container image, and running several versions side by side.
 
 ## Upgrade
 
