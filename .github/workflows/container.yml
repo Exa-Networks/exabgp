@@ -92,6 +92,9 @@ jobs:
           # labels from the commit checked out, not from the default branch of workflow_run
           context: git
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # semver tags add latest by default: latest is main's, never a release's
+          flavor: |
+            latest=false
           tags: |
             type=raw,value=latest,enable=${{ env.BRANCH == 'main' }}
             type=raw,value=5.0,enable=${{ env.BRANCH == '5.0' }}
