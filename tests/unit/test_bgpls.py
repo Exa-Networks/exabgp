@@ -44,7 +44,8 @@ class TestBGPLSBase:
         import exabgp.bgp.message.update.nlri.bgpls.srv6sid as module
 
         root = pathlib.Path(__file__).resolve().parents[2]
-        assert pathlib.Path(module.__file__).resolve().is_relative_to(root), module.__file__
+        # not is_relative_to(), which is 3.9 and later
+        assert root in pathlib.Path(module.__file__).resolve().parents, module.__file__
 
     def test_bgpls_registration(self) -> None:
         """Test that all NLRI types are registered"""
