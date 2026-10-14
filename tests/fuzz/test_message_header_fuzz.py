@@ -47,6 +47,8 @@ Run Instructions:
     PYTHONPATH=src python -m pytest tests/ -v -m "not fuzz"
 """
 
+from __future__ import annotations
+
 import pytest
 from hypothesis import given, strategies as st, settings, HealthCheck
 import struct

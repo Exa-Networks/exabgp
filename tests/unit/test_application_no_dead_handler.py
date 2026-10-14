@@ -23,13 +23,22 @@ APPLICATION = Path(__file__).parent.parent.parent / 'src' / 'exabgp' / 'applicat
 MINIMUM_HANDLERS = 20
 
 
+def dotted(node: ast.expr) -> str:
+    """The source of an exception name, `socket.error` included: ast.unparse is 3.9 and later."""
+    if isinstance(node, ast.Attribute):
+        return f'{dotted(node.value)}.{node.attr}'
+    if isinstance(node, ast.Name):
+        return node.id
+    return ast.dump(node)
+
+
 def caught_names(handler: ast.ExceptHandler) -> list[str]:
     """Every exception name this one clause catches, a bare except included."""
     if handler.type is None:
         return ['<bare>']
     if isinstance(handler.type, ast.Tuple):
-        return [ast.unparse(element) for element in handler.type.elts]
-    return [ast.unparse(handler.type)]
+        return [dotted(element) for element in handler.type.elts]
+    return [dotted(handler.type)]
 
 
 def test_no_handler_is_shadowed_by_an_earlier_one():
