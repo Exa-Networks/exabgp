@@ -113,7 +113,8 @@ except ImportError:
                 out.append((fill * (length // len(fill) + 1))[:length])
         return out
 
-SEEDS = json.loads(sys.argv[1]) if len(sys.argv) > 1 else {}
+# on stdin, not argv: Linux caps one argument at 128 KiB and the seeds are larger
+SEEDS = json.loads(sys.stdin.read() or '{}')
 
 def classify(render):
     # VALID if the fragment parses in ANY of the three shapes json() may return.
@@ -187,7 +188,8 @@ def run(cwd, seeds):
         handle.write(PROBE)
     try:
         finished = subprocess.run(
-            [sys.executable, probe, json.dumps(seeds)],
+            [sys.executable, probe],
+            input=json.dumps(seeds),
             capture_output=True,
             text=True,
             cwd=cwd,
