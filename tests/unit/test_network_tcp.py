@@ -36,6 +36,10 @@ from exabgp.reactor.network.error import (
 # fails when run on its own.
 log.init(getenv())
 
+# bind_to_device() asks the kernel whether the interface exists before it binds, so the tests
+# need a name this machine has: the loopback is 'lo' on Linux and 'lo0' on macOS and the BSDs.
+LOOPBACK = next(name for _, name in socket.if_nameindex() if name in ('lo', 'lo0'))
+
 
 class TestSocketCreation:
     """Test socket creation for IPv4 and IPv6"""
@@ -112,7 +116,7 @@ class TestSocketCreation:
         """CAP_NET_RAW is required, so an unprivileged daemon lands here, not on the name."""
         with patch.object(socket.socket, 'setsockopt', side_effect=OSError(1, 'Operation not permitted')):
             with pytest.raises(NotConnected, match='Operation not permitted'):
-                tcp.create(AFI.ipv4, interface='lo0')
+                tcp.create(AFI.ipv4, interface=LOOPBACK)
 
     def test_no_interface_binds_to_nothing_rather_than_to_a_nul_byte(self) -> None:
         """`if interface is not None` let an empty source-interface reach setsockopt.
@@ -130,12 +134,12 @@ class TestSocketCreation:
     def test_a_real_interface_is_bound_with_a_nul_terminated_name(self) -> None:
         """The wire format of the option value, which the rewrite had to preserve."""
         with patch.object(socket.socket, 'setsockopt') as setsockopt:
-            io = tcp.create(AFI.ipv4, interface='lo0')
+            io = tcp.create(AFI.ipv4, interface=LOOPBACK)
             io.close()
 
         calls = [c for c in setsockopt.call_args_list if c.args[1] == tcp.socket.SO_BINDTODEVICE]
         assert calls, 'SO_BINDTODEVICE was never requested'
-        assert calls[0].args[2] == b'lo0\0'
+        assert calls[0].args[2] == LOOPBACK.encode() + b'\0'
 
     @patch('socket.socket')
     def test_create_socket_failure(self, mock_socket: Any) -> None:
