@@ -89,8 +89,6 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          # labels from the commit checked out, not from the default branch of workflow_run
-          context: git
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           # semver tags add latest by default: latest is main's, never a release's
           flavor: |
