@@ -24,6 +24,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          # compat_gate finds the last release with git describe, which needs the history
+          # between it and HEAD: a shallow clone with the tags fetched still reaches none
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
