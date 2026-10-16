@@ -147,7 +147,7 @@ def test_functional_is_run_even_though_it_is_excluded() -> None:
 TEST_DIRECTORY_FLOOR = 4
 
 
-def test_directories():
+def collected_directories():
     """Directories under tests/ which hold files pytest collects"""
     found = []
     for path in sorted((ROOT / 'tests').iterdir()):
@@ -158,7 +158,7 @@ def test_directories():
     return found
 
 
-TEST_DIRECTORIES = test_directories()
+TEST_DIRECTORIES = collected_directories()
 
 
 def shell_sources():
