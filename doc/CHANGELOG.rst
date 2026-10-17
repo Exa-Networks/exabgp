@@ -3,6 +3,8 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.16:
+
 Version 5.0.15:
  * CI: this release only fixes CI, ExaBGP itself is unchanged from
    5.0.14. The 5.0.14 CI failed on Linux.
