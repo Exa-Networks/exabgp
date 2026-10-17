@@ -4,6 +4,14 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 5.0.15:
+ * CI: this release only fixes CI, ExaBGP itself is unchanged from
+   5.0.14. The 5.0.14 CI failed on Linux.
+ * CI: the zipapp checks pass on GitHub's Linux and macOS runners, and
+   the encoding tests run against it one at a time, as 5.0 CI runs them.
+ * CI: a release container image is built from its tag push and no
+   longer takes the latest tag, which belongs to main.
+ * CI: the unit tests run on every Python CI tests, 3.8 included, and
+   pass on Linux.
 
 Version 5.0.14:
  * Feature: every release has a zipapp attached, exabgp.pyz: ExaBGP as
