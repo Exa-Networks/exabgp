@@ -13,6 +13,10 @@
 DRY=1 ./release github   # dry run (no files written, no git commands)
 ```
 
+A release is not done until every step below is: GitHub tag and release, release
+name and notes, PyPI, the next changelog version, and the issues waiting on it.
+`./release github` does not publish to PyPI, `./release pypi` must be run as well.
+
 ## Step-by-Step Release
 
 ### 1. Update CHANGELOG -- MUST DO BEFORE RELEASE
@@ -90,28 +94,76 @@ This command:
 - Pushes the specific tag and commits to `origin`
 - Pushes to `upstream` if that remote exists, skips otherwise
 
-### 6. Create GitHub Release
+### 6. Wait for the tag's workflows
 
-Ask the user for the release name before proceeding.
+The tag push runs `Zipapp` and `Build container`, and the version commit runs
+`Unit Testing`. `Zipapp` creates the GitHub release, titled with the bare version
+and a changelog link, and attaches `exabgp-X.Y.Z.pyz`, `exabgp.pyz` and `SHA256SUMS`.
 
 ```bash
-gh release create X.Y.Z --repo Exa-Networks/exabgp \
-  --title "ExaBGP '<name>' Release" \
-  --notes "<release notes matching CHANGELOG entries>"
+gh run list --repo Exa-Networks/exabgp -L 5
+gh run watch <id> --repo Exa-Networks/exabgp --exit-status
 ```
 
-Previous release names: 'Easter Rabbit', 'Saint Patrick', 'Alpine', 'Flying Bell'.
+### 7. Name the GitHub release and write its notes
 
-### 7. Publish to PyPI
+Ask the user for the release name before proceeding. Each release is named after
+an emoji, which also heads its notes:
+
+```bash
+gh release edit X.Y.Z --repo Exa-Networks/exabgp \
+  --title "ExaBGP X.Y.Z '<name>'" \
+  --notes-file notes.md
+```
+
+`notes.md` follows the previous release (`gh release view 5.0.14 --json body -q .body`):
+`## Version X.Y.Z <emoji>`, a short summary, the changelog link, then **New:**,
+**Compatibility:** and **Fixes:**, and the zipapp download commands. A release which
+only changes CI or the tests says so, and says ExaBGP itself is unchanged.
+
+The notes go out under Thomas's account: start them with the Claude attribution line,
+and show him the draft before posting.
+
+Previous release names: 'Adhesive Bandage' 🩹 (5.0.15), 'Package' 📦 (5.0.14),
+'Waving Hand' 👋 (5.0.13), 'Hugging Face' (5.0.12), 'Pinocchio' (5.0.11), 'Pi' (5.0.10).
+
+### 8. Publish to PyPI (MANDATORY)
 
 ```bash
 ./release pypi       # production
 ./release pypi -t    # test.pypi.org
 ```
 
-Builds sdist + wheel via `setup.py`, uploads both with `twine`.
+Builds sdist + wheel via `setup.py`, uploads both with `twine` (credentials from the
+keyring). Check it is up:
 
-### 7. Create binary (optional)
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://pypi.org/pypi/exabgp/X.Y.Z/json   # 200
+```
+
+The `info.version` of `https://pypi.org/pypi/exabgp/json` can lag for a while.
+
+The Python versions PyPI lists come from the `Programming Language :: Python :: 3.x`
+classifiers in `pyproject.toml`. When CI starts testing a new Python, add its
+classifier before the release.
+
+### 9. Open the next version in the changelog
+
+```rst
+Version X.Y.Z+1:
+
+Version X.Y.Z:
+```
+
+Commit as `doc: open the changelog of X.Y.Z+1, X.Y.Z is released` and push.
+
+### 10. Update the issues waiting on the release
+
+Comment on each issue the release fixes with the release link, then close it.
+
+### Binary (built by CI)
+
+The `Zipapp` workflow builds and attaches the zipapp. To build one by hand:
 
 ```bash
 ./release binary ./exabgp-5.0.2
