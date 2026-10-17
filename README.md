@@ -90,7 +90,7 @@ docker pull ghcr.io/exa-networks/exabgp:latest
 docker run -it --rm ghcr.io/exa-networks/exabgp:latest --help
 
 # Using zipapp (one file, run by any Python 3.8 or later)
-curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.14/exabgp.pyz
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.15/exabgp.pyz
 python3 exabgp.pyz version
 
 # Using pip
@@ -132,12 +132,12 @@ It is possible to add your configuration file within the docker image and/or use
 
 ### Zipapp
 
-A zipapp is a zip archive of Python code which Python runs without unpacking it. `exabgp.pyz` holds the `exabgp` package, so it is ExaBGP in a single file, which only needs Python 3.8 or later: there is nothing to install. Every release from 5.0.14 onwards has one attached:
+A zipapp is a zip archive of Python code which Python runs without unpacking it. `exabgp.pyz` holds the `exabgp` package, so it is ExaBGP in a single file, which only needs Python 3.8 or later: there is nothing to install. Every release from 5.0.15 onwards has one attached:
 
 ```sh
 # download it and check it
-curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.14/exabgp.pyz
-curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.14/SHA256SUMS
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.15/exabgp.pyz
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.15/SHA256SUMS
 sha256sum --ignore-missing -c SHA256SUMS    # shasum -a 256 --ignore-missing -c SHA256SUMS on macOS
 
 # run it with Python
@@ -180,8 +180,8 @@ python3 -m exabgp healthcheck --help
 It is also possible to download releases from GitHub:
 
 ```sh
-curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.14.tar.gz | tar zx
-cd exabgp-5.0.14
+curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.15.tar.gz | tar zx
+cd exabgp-5.0.15
 ./sbin/exabgp version
 ./sbin/exabgp --help
 
@@ -205,10 +205,10 @@ env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 ./bin/healthcheck --help
 ```
 
-It is then possible to change git to use any release (here 5.0.14):
+It is then possible to change git to use any release (here 5.0.15):
 
 ```sh
-git checkout 5.0.14
+git checkout 5.0.15
 ./sbin/exabgp version
 ```
 
