@@ -4,6 +4,8 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 5.0.16:
+ * Feature: Python 3.15 is supported. CI tests it, the zipapp is checked
+   with it, and PyPI lists it.
 
 Version 5.0.15:
  * CI: this release only fixes CI, ExaBGP itself is unchanged from

@@ -94,7 +94,7 @@ jobs:
           - os: ubuntu-latest
             python-version: "3.8"
           - os: ubuntu-latest
-            python-version: "3.14"
+            python-version: "3.15"
         # no macOS: 5.0 CI never ran there, and each test of the parsing suite timed out on
         # a GitHub macOS runner when run against the zipapp (to be looked at)
 

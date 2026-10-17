@@ -292,7 +292,7 @@ Documentation contributions are genuinely welcomed! Even small improvements help
 
 ### Requirements
 
-- **Python 3.8.1+** required (supports recent versions through 3.12+)
+- **Python 3.8.1+** required (tested with 3.8 to 3.15)
 - **No asyncio**: Uses custom reactor pattern predating asyncio adoption
 - **Compatibility**: Focus on reliability over adopting latest Python features
 
