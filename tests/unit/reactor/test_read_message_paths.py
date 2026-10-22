@@ -99,11 +99,12 @@ def protocol(configuration: str = CONFIGURATION, **api: bool) -> tuple[Protocol,
 
     The process also asks for neighbor-changes, which is where Processes.notification looks
     for who to tell of a NOTIFICATION answering a malformed header: read_message decides
-    whether to tell by `receive-notification`, and does not look at neighbor-changes.
+    whether to tell by `receive-notification`, and does not look at neighbor-changes. It asks
+    for negotiated too, so each message is handed the session (tests/unit/test_api_negotiated_block.py).
     """
     neighbor = neighbour(configuration)
     asked = [key.replace('_', '-') for key, value in api.items() if value]
-    negotiation.api_asks(neighbor, 'neighbor-changes', *asked)
+    negotiation.api_asks(neighbor, 'neighbor-changes', 'negotiated', *asked)
     proto, told = negotiation.protocol(neighbor)
     proto.negotiated, _ = _negotiated(neighbor)
     return proto, told

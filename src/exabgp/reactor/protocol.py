@@ -96,6 +96,13 @@ class Protocol:
         """Return neighbor API config."""
         return self.neighbor.api
 
+    def _api_negotiated(self) -> Negotiated:
+        """The session to write on a message line: UNSET, written as nothing, unless the API asked.
+
+        As up to 5.0, `api { negotiated; }` also adds the session to every message line.
+        """
+        return self.negotiated if self._api.get('negotiated', False) else Negotiated.UNSET
+
     # Note: We use self.peer.neighbor for consistency - both reference the same object
     # but self.peer.neighbor is used throughout to maintain clear ownership semantics.
 
@@ -183,7 +190,7 @@ class Protocol:
         packets = bool(self._api['{}-packets'.format(direction)])
         parsed = bool(self._api['{}-parsed'.format(direction)])
         consolidate = bool(self._api['{}-consolidate'.format(direction)])
-        neg: Negotiated = self.negotiated
+        neg: Negotiated = self._api_negotiated()
 
         if consolidate:
             if packets:
@@ -292,7 +299,7 @@ class Protocol:
         # the raw packets are told before decoding, so a message which fails to decode is seen
         if for_api and self._api['receive-packets'] and not self._api['receive-consolidate']:
             self.peer.reactor.processes.packets(
-                self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self.negotiated
+                self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self._api_negotiated()
             )
         return for_api
 
@@ -335,15 +342,15 @@ class Protocol:
                     notify_msg.notification,
                     bytes(header),
                     bytes(body),
-                    self.negotiated,
+                    self._api_negotiated(),
                 )
             elif parsed:
                 self.peer.reactor.processes.notification(
-                    self.peer.neighbor, 'receive', notify_msg.notification, b'', b'', self.negotiated
+                    self.peer.neighbor, 'receive', notify_msg.notification, b'', b'', self._api_negotiated()
                 )
             elif packets:
                 self.peer.reactor.processes.packets(
-                    self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self.negotiated
+                    self.peer.neighbor, 'receive', msg_id, bytes(header), bytes(body), self._api_negotiated()
                 )
         return notify_msg
 
@@ -353,13 +360,15 @@ class Protocol:
         """Tell the API processes about a message received, the way they asked to hear of it."""
         processes = self.peer.reactor.processes
         if self._api['receive-consolidate']:
-            processes.message(message.ID, self.peer, 'receive', message, bytes(header), bytes(body), self.negotiated)
+            processes.message(
+                message.ID, self.peer, 'receive', message, bytes(header), bytes(body), self._api_negotiated()
+            )
         elif self._api['receive-parsed']:
-            processes.message(message.ID, self.peer, 'receive', message, b'', b'', self.negotiated)
+            processes.message(message.ID, self.peer, 'receive', message, b'', b'', self._api_negotiated())
         # RFC 8955 6: flow specifications the unicast routes of this UPDATE made, or unmade, feasible
         for change in revalidated:
             update = Update.from_collection(change)
-            processes.message(Message.CODE.UPDATE, self.peer, 'receive', update, b'', b'', self.negotiated)
+            processes.message(Message.CODE.UPDATE, self.peer, 'receive', update, b'', b'', self._api_negotiated())
 
     def validate_open(self) -> None:
         error: tuple[int, int, str] | None = self.negotiated.validate(self.neighbor)

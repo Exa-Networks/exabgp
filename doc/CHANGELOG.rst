@@ -4,6 +4,17 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: a message written to a helper carries the "negotiated" block of the session only when
+   its api asks for `negotiated`, as up to 5.0. Every line carried it, and a line written
+   before the OPEN exchange carried an empty session, with no family and a hold time of 0.
+ * Fix: what a helper writes is read as UTF-8, so a teardown can give a Shutdown Communication
+   (RFC 9003) which is not ASCII; an octet which is not UTF-8 reads as U+FFFD. It was read as
+   ASCII: an octet above 127 stopped the helper, every command of the same read was lost with
+   it, and the NOTIFICATION was never sent.
+ * Fix: a route announced through the API with `watchdog <name>` is the watchdog's, as a route
+   of the configuration is: with `withdraw` it waits for `announce watchdog <name>`, and
+   `withdraw watchdog <name>` takes it back. Both words were accepted and ignored, the route
+   sent at once. The route stays the helper's, and goes when the helper exits.
  * Feature: `configuration validate --json` prints one JSON object per file on stdout: `valid`,
    and for an error its file, line, column, message, the words expected there and the ones which
    may have been meant, so a program does not have to read the `error:` line.
