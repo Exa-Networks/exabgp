@@ -13,7 +13,9 @@ the routes announced with their attributes, and the routes withdrawn, must be th
     ./qa/bin/test_old_commands 5.0 -v        # list every failing command
 
 Every entry in ALLOWED is a command a 4.2 or 5.0 helper sees change on upgrade. Keep it
-short and argue each one.
+short and argue each one. Every entry in MALFORMED is a command the release answered with an
+UPDATE no peer should accept: the recording is wrong, so it is not compared, and one which
+no peer can decode and no entry explains fails the check.
 """
 
 from __future__ import annotations
@@ -59,8 +61,10 @@ ALLOWED: dict[tuple[str, str], str] = {
         'a prefix in 224.0.0.0/4 is announced as SAFI 2 multicast since 5.0; 4.2 sent it as unicast'
     ),
     ('4.2', r'\bbgp-prefix-sid-srv6 \( (ipv6|vpn|l3vpn) '): (
-        "4.2's SRv6 SID (`( ipv6|vpn|l3vpn <sid> )`) followed an early draft; 5.0 replaced it "
-        "with RFC 9252's `( l3-service|l2-service ... )`, and refuses it as this tree does"
+        "4.2's SRv6 SID (`( ipv6|vpn|l3vpn <sid> )`) followed an early draft, the SID straight "
+        'after the reserved octet with no SRv6 SID Information Sub-TLV around it: an RFC 9252 '
+        'receiver finds a malformed SRv6 Service TLV and treats the route as withdrawn (RFC 9252 7). '
+        '5.0 replaced it with `( l3-service|l2-service ... )`, and refuses it as this tree does'
     ),
     ('4.2', r'^(announce|withdraw) attributes? .*\bsplit\b'): (
         '4.2 took `split` in `announce attribute(s)` and ignored it, sending each prefix whole; '
@@ -121,6 +125,29 @@ ALLOWED: dict[tuple[str, str], str] = {
     ('4.2 5.0', r'\b(origin|target):(\d+L|\d{6,}|[7-9]\d{4}|6[6-9]\d{3}|65[6-9]\d\d|655[4-9]\d|6553[6-9]):'): (
         'a four octet AS in a route target or origin: 5.0 sent type 0x01, an IPv4 address, '
         'this tree type 0x02 (RFC 5668); CHANGELOG'
+    ),
+}
+
+# (the releases it holds for, regular expression on the command) -> why what the release sent
+# for it is malformed. Name the RFC section it breaks.
+MALFORMED: dict[tuple[str, str], str] = {
+    ('4.2 5.0', r'^announce (route|ipv6 \S+) [0-9a-fA-F]*:[0-9a-fA-F:.]*/\d+ .*\bnext-hop self\b'): (
+        'an IPv6 route with `next-hop self` on an IPv4 session: the release sent the four octet '
+        'local address as the next hop of an AFI 2 MP_REACH_NLRI, which RFC 2545 3 does not '
+        'allow and on which RFC 7606 7.11 resets the session; this tree answers the helper an error'
+    ),
+    ('5.0', r'^announce ipv6 \S+ [0-9a-fA-F:]+/\d+ .*\bnext-hop \d+\.\d+\.\d+\.\d+'): (
+        'an IPv6 route given an IPv4 next hop: 5.0 sent its four octets in an AFI 2 '
+        'MP_REACH_NLRI (RFC 2545 3, RFC 7606 7.11); this tree sends it IPv4-mapped, ::ffff:a.b.c.d'
+    ),
+    ('4.2 5.0', r'^announce route \d+\.\d+\.\d+\.\d+/\d+ .*\bnext-hop [0-9a-fA-F]*:[0-9a-fA-F:]*'): (
+        'an IPv4 route given an IPv6 next hop: the release sent it with no extended next hop '
+        'capability, without which RFC 8950 gives it no encoding'
+    ),
+    ('4.2', r'^(announce|withdraw) flow route .*\b(source|destination) [0-9a-fA-F]*:[0-9a-fA-F:]*/\d+/[1-9]'): (
+        'an IPv6 flow prefix with an offset: 4.2 sent all sixteen octets of the address, where '
+        'RFC 8956 3.1 has only those of the bits from the offset to the length; 5.0 and this '
+        'tree send those'
     ),
 }
 
@@ -268,6 +295,10 @@ def allowed(release: str, command: str) -> bool:
     return any(release in names.split() and re.search(pattern, command) for names, pattern in ALLOWED)
 
 
+def malformed(release: str, command: str) -> bool:
+    return any(release in names.split() and re.search(pattern, command) for names, pattern in MALFORMED)
+
+
 UNREADABLE = 'unreadable'  # what judged() answers when the release sent nothing a peer can decode
 NOTHING_SENT = 'nothing sent'  # and when it took an announce or a withdraw and sent nothing
 
@@ -322,21 +353,26 @@ def check(release: str, verbose: bool) -> int:
     recorded = json.loads((OLD / f'commands-{release}.json').read_text())
     session = Session()
     failures: list[tuple[str, str]] = []
-    skipped = {'allowed': 0, UNREADABLE: 0, NOTHING_SENT: 0}
+    skipped = {'allowed': 0, 'malformed': 0, NOTHING_SENT: 0}
     for command, result in sorted(recorded.items()):
         if allowed(release, command):
             skipped['allowed'] += 1
             continue
+        if malformed(release, command):
+            skipped['malformed'] += 1
+            continue
         why = judged(release, command, result, session)
-        if why in (UNREADABLE, NOTHING_SENT):
+        if why == NOTHING_SENT:
             skipped[why] += 1
+        elif why == UNREADABLE:
+            failures.append((command, f'{release} sent an UPDATE no peer can decode, which MALFORMED does not explain'))
         elif why is not None:
             failures.append((command, why))
     for command, why in failures[: None if verbose else REPORTED]:
         sys.stderr.write(f'{release}: {command}\n    {why[:400]}\n')
     sys.stderr.write(
         f'{release}: {len(recorded) - len(failures)}/{len(recorded)} commands behave as on {release} '
-        f'({skipped["allowed"]} allowed, {skipped[UNREADABLE]} where {release} sent nothing a peer can decode, '
+        f'({skipped["allowed"]} allowed, {skipped["malformed"]} where {release} sent a malformed UPDATE, '
         f'{skipped[NOTHING_SENT]} where it sent nothing at all)\n'
     )
     return len(failures)

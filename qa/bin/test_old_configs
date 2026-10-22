@@ -12,7 +12,9 @@ the routes announced with their attributes, must be the same.
     ./qa/bin/test_old_configs 5.0 -v        # list every failing configuration
 
 Every entry in ALLOWED is a configuration a 4.2 or 5.0 user sees change on upgrade. Keep it
-short and argue each one.
+short and argue each one. Every entry in MALFORMED is a configuration the release answered
+with an UPDATE no peer should accept: the recording is wrong, so it is not compared, and one
+which no peer can decode and no entry explains fails the check.
 """
 
 from __future__ import annotations
@@ -88,8 +90,10 @@ ALLOWED: dict[tuple[str, str], str] = {
         'sent a two octet AS community (type 0x00); this tree sends type 0x01, RFC 4360 3.2'
     ),
     ('4.2', r'\bbgp-prefix-sid-srv6 \( (ipv6|vpn|l3vpn) '): (
-        "4.2's SRv6 SID (`( ipv6|vpn|l3vpn <sid> )`) followed an early draft; 5.0 replaced it "
-        "with RFC 9252's `( l3-service|l2-service ... )`, and refuses it as this tree does"
+        "4.2's SRv6 SID (`( ipv6|vpn|l3vpn <sid> )`) followed an early draft, the SID straight "
+        'after the reserved octet with no SRv6 SID Information Sub-TLV around it: an RFC 9252 '
+        'receiver finds a malformed SRv6 Service TLV and treats the route as withdrawn (RFC 9252 7). '
+        '5.0 replaced it with `( l3-service|l2-service ... )`, and refuses it as this tree does'
     ),
     ('4.2', r'(?s)\bflow \{.*\b(flow-label|traffic-class) '): (
         '4.2 took an IPv6 flow route matching a flow label or a traffic class and sent nothing; '
@@ -122,6 +126,20 @@ ALLOWED: dict[tuple[str, str], str] = {
 
 def allowed(release: str, text: str) -> bool:
     return any(release in names.split() and re.search(pattern, text) for names, pattern in ALLOWED)
+
+
+# (the releases it holds for, regular expression on the configuration) -> why what the release
+# sent for it is malformed. Name the RFC section it breaks.
+MALFORMED: dict[tuple[str, str], str] = {
+    ('4.2 5.0', r'\broute [0-9a-fA-F]*:[0-9a-fA-F:]*(/\d+)? next-hop \d+\.\d+\.\d+\.\d+;'): (
+        'an IPv6 route given an IPv4 next hop: the release sent its four octets in an AFI 2 '
+        'MP_REACH_NLRI, which RFC 2545 3 does not allow and on which RFC 7606 7.11 resets the session'
+    ),
+}
+
+
+def malformed(release: str, text: str) -> bool:
+    return any(release in names.split() and re.search(pattern, text) for names, pattern in MALFORMED)
 
 
 # families left out of the family lists of an OPEN, by release, when the configuration does
@@ -278,13 +296,16 @@ def check(release: str, verbose: bool) -> int:
     recorded = json.loads((OLD / f'configs-{release}.json').read_text())
     encoder = JSON('test')
     encoder.use_v4_json = True
-    failures, permitted, unreadable = [], 0, 0
+    failures, permitted, wrong = [], 0, 0
     for text, result in recorded.items():
+        if malformed(release, text):
+            wrong += 1
+            continue
         why = judged(release, text, result, encoder)
         if why is None:
             continue
         if why == UNREADABLE:
-            unreadable += 1
+            failures.append((text, f'{release} sent an UPDATE no peer can decode, which MALFORMED does not explain'))
             continue
         if allowed(release, text):
             permitted += 1
@@ -294,7 +315,7 @@ def check(release: str, verbose: bool) -> int:
         sys.stdout.write(f'{release}: {" ".join(text.split())[:400]}\n    {why[:600]}\n')
     sys.stdout.write(
         f'{release}: {len(recorded) - len(failures)}/{len(recorded)} configurations behave as on {release} '
-        f'({permitted} allowed, {unreadable} where {release} sent an UPDATE a peer can not decode)\n'
+        f'({permitted} allowed, {wrong} where {release} sent a malformed UPDATE)\n'
     )
     return len(failures)
 
