@@ -143,7 +143,8 @@ class _Configuration:
                     # resolve_self creates a copy with resolved nexthop
                     resolved = neighbor.resolve_self(route)
                     if _sendable(neighbor_name, neighbor, route):
-                        neighbor.rib.outgoing.add_to_rib(resolved, owner=owner)
+                        # a route naming a watchdog is held by it, as a configured one is
+                        neighbor.rib.outgoing.add_to_rib_watchdog(resolved, owner=owner)
                         result = True
                 else:
                     log.error(

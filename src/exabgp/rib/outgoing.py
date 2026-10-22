@@ -83,6 +83,9 @@ class OutgoingRIB(Cache):
         # a route from the configuration, or re-announced by it, has no owner
         self._owned: dict[str, dict[bytes, Route]] = {}
         self._owner: dict[bytes, str] = {}
+        # the helper which gave a route to a watchdog, so the watchdog announces it as that
+        # helper's, and the route goes with the helper rather than coming back on the watchdog
+        self._watchdog_owner: dict[bytes, str] = {}
 
         # RFC 4684 5: the adj-rib-in of the same neighbour, where its membership is held
         self.membership: Cache | None = None
@@ -156,6 +159,7 @@ class OutgoingRIB(Cache):
         self.reset()
         self._owned.clear()
         self._owner.clear()
+        self._watchdog_owner.clear()
         self._path_identifiers.clear()
         self._path_identifiers_free.clear()
         self._path_identifier_next = 1
@@ -186,9 +190,10 @@ class OutgoingRIB(Cache):
         leaving the prefix unannounced, unless a watchdog is holding that one withdrawn.
         Returns how many routes the helper owned.
         """
+        held = self._forget_watchdog_owner(owner)
         routes = self._owned.get(owner, {})
         if not self.enabled or not routes:
-            return 0
+            return held
         restore = {route.index(): route for route in configured}
         count = len(routes)
         for route_index, route in list(routes.items()):
@@ -198,7 +203,21 @@ class OutgoingRIB(Cache):
             else:
                 self.del_from_rib(route)
         assert owner not in self._owned
-        return count
+        return count + held
+
+    def _forget_watchdog_owner(self, owner: str) -> int:
+        """Take the routes `owner` gave a watchdog off it, return how many it held withdrawn."""
+        indexes = {index for index, given_by in self._watchdog_owner.items() if given_by == owner}
+        held = 0
+        for routes in self._watchdog.values():
+            for sign, indexed in routes.items():
+                for index in indexes.intersection(indexed):
+                    del indexed[index]
+                    if sign == '-':
+                        held += 1
+        for index in indexes:
+            del self._watchdog_owner[index]
+        return held
 
     def delete_cached_family(self, families: set[FamilyTuple]) -> None:
         super().delete_cached_family(families)
@@ -328,18 +347,23 @@ class OutgoingRIB(Cache):
         for index in list(indexed):
             self.del_from_rib(indexed.pop(index))
 
-    def add_to_rib_watchdog(self, route: Route) -> bool:
+    def add_to_rib_watchdog(self, route: Route, owner: str = '') -> bool:
+        """Add a route, unless it names a watchdog and asks to start withdrawn: hold it then."""
         if not self.enabled:
             return False
         watchdog = route.attributes.watchdog()
         withdraw = route.attributes.withdraw()
         if watchdog:
             name = watchdog.name
+            if owner:
+                self._watchdog_owner[route.index()] = owner
+            else:
+                self._watchdog_owner.pop(route.index(), None)
             if withdraw:
                 self._watchdog.setdefault(name, {}).setdefault('-', {})[route.index()] = route
                 return True
             self._watchdog.setdefault(name, {}).setdefault('+', {})[route.index()] = route
-        self.add_to_rib(route, owner='')
+        self.add_to_rib(route, owner=owner)
         return True
 
     def announce_watchdog(self, watchdog: str) -> None:
@@ -349,7 +373,7 @@ class OutgoingRIB(Cache):
             for route in list(self._watchdog[watchdog].get('-', {}).values()):
                 old_index = route.index()
                 # add_to_rib handles announces - no need to set action on route
-                self.add_to_rib(route, owner='')
+                self.add_to_rib(route, owner=self._watchdog_owner.get(old_index, ''))
                 self._watchdog[watchdog].setdefault('+', {})[route.index()] = route
                 self._watchdog[watchdog]['-'].pop(old_index)
 
