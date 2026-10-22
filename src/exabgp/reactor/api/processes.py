@@ -22,6 +22,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import asyncio
+import codecs
 import collections
 import errno
 import fcntl
@@ -227,6 +228,9 @@ class Processes:
         self.clean()
         self.silence: bool = False
         self._buffer: dict[str, str] = {}
+        # a helper writes UTF-8 (a teardown carries an RFC 9003 Shutdown Communication), and
+        # a read can end inside a character: each helper's decoder keeps that part for the next
+        self._decoder: dict[str, codecs.IncrementalDecoder] = {}
         self._configuration: dict[str, dict[str, Any]] = {}
         self._restart: dict[str, bool] = {}
 
@@ -375,6 +379,7 @@ class Processes:
         from exabgp.reactor.api.command.group import clear_group
 
         self._buffer.pop(process_name, None)
+        self._decoder.pop(process_name, None)
         clear_group(process_name)
         self._update_fds()
         thread = Thread(target=self._terminate_run, args=(process, process_name))
@@ -760,6 +765,18 @@ class Processes:
         self._handle_problem(process)
         return True
 
+    def _decoded(self, process: str, data: bytes) -> str:
+        """The text of what `process` wrote, a character cut by the read held for the next one.
+
+        An octet which is not UTF-8 reads as U+FFFD. Decoding as ASCII raised on any octet
+        above 127, and the helper was stopped with every command of that read.
+        """
+        decoder = self._decoder.get(process)
+        if decoder is None:
+            decoder = codecs.getincrementaldecoder('utf-8')('replace')
+            self._decoder[process] = decoder
+        return decoder.decode(data)
+
     def _complete_lines(self, process: str, raw: str) -> Generator[str, None, None]:
         """Yield each whole line a helper has sent, and keep the partial tail for later.
 
@@ -807,8 +824,9 @@ class Processes:
                     # returns, and the leftover bytes sit in a user-space buffer
                     # that the poll() above (which watches the kernel fd) can not
                     # see, stranding commands at the tail of a batch.
-                    buf = str(os.read(stdout.fileno(), 16384), 'ascii')
-                    if buf == '' and poll is not None:
+                    raw_data = os.read(stdout.fileno(), 16384)
+                    buf = self._decoded(process, raw_data)
+                    if not raw_data and poll is not None:
                         # if proc.poll() is None then
                         # process is fine, we received an empty line because
                         # we're reading a non-blocking pipe and
@@ -899,9 +917,9 @@ class Processes:
             # every complete command to the same reactor pass
             fd = self._get_stdout(process_name).fileno()
             raw_data = os.read(fd, 16384)
-            buf = str(raw_data, 'ascii')
+            buf = self._decoded(process_name, raw_data)
 
-            if buf == '' and poll is not None:
+            if not raw_data and poll is not None:
                 # Process exited - EOF received
                 # CRITICAL: Remove reader BEFORE calling _handle_problem to avoid race
                 self._remove_reader(fd, process_name, 'exited')
@@ -939,7 +957,7 @@ class Processes:
                 self._handle_problem(process_name)
             elif exc.errno not in error.block:
                 log.debug(lazymsg('process.error.unexpected errno={errstr}', errstr=errstr(exc)), 'processes')
-        except (KeyError, AttributeError, UnicodeDecodeError) as exc:
+        except (KeyError, AttributeError) as exc:
             # as above: stop the event loop calling us back into the same exception
             self._drop_reader(process_name, 'exception')
 
@@ -1127,7 +1145,7 @@ class Processes:
 
         self._log_response(process, string)
 
-        data = bytes(f'{string}\n', 'ascii')
+        data = f'{string}\n'.encode()
 
         # In async mode, queue the write instead of blocking
         if self._async_mode:
@@ -1178,7 +1196,7 @@ class Processes:
             # the visibility of 'debug' commands from external processes
             log.warning(lazymsg('api.response.content process={p} response={r}', p=process, r=string), 'api')
 
-        data = bytes(f'{string}\n', 'ascii')
+        data = f'{string}\n'.encode()
 
         # Get stdin file descriptor (non-blocking, set in _start())
         stdin_fd = self._get_stdin(process).fileno()

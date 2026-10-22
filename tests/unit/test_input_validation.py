@@ -544,11 +544,11 @@ def test_processes_caps_a_command_without_a_newline() -> None:
         os.close(write_fd)
 
 
-def test_processes_survives_a_helper_writing_bytes_which_are_not_ascii() -> None:
-    """The reader decodes as ascii, and a helper is free to emit any byte it likes.
+def test_processes_survives_a_helper_writing_bytes_which_are_not_utf8() -> None:
+    """The reader decodes as UTF-8, and a helper is free to emit any byte it likes.
 
     An exception escaping here does not close a session, it kills the callback the reactor
-    depends on to read that helper at all.
+    depends on to read that helper at all. An octet which is not UTF-8 reads as U+FFFD.
     """
     import os
 
@@ -559,8 +559,8 @@ def test_processes_survives_a_helper_writing_bytes_which_are_not_ascii() -> None
 
         processes._async_reader_callback('helper')
 
-        assert problems(processes) == ['helper'], 'a helper writing a non-ascii byte was not reported'
-        assert list(processes._command_queue) == [], 'undecodable bytes were queued as a command'
+        assert problems(processes) == [], 'a helper writing a byte which is not UTF-8 was stopped'
+        assert [command for _, command in processes._command_queue] == ['\ufffd']
     finally:
         os.close(read_fd)
         os.close(write_fd)
