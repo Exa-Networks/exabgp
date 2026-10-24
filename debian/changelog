@@ -1,3 +1,9 @@
+exabgp (5.0.15-1) unstable; urgency=medium
+
+  * New upstream version.
+
+ -- Vincent Bernat <bernat@debian.org>  Sat, 24 Oct 2026 22:00:32 +0200
+
 exabgp (5.0.8-1) unstable; urgency=medium
 
   * New upstream version.
