@@ -7,11 +7,12 @@ Subject: fix: check git repository a bit later
  1 file changed, 1 insertion(+), 5 deletions(-)
 
 diff --git a/sbin/exabgp b/sbin/exabgp
-index ba10671..bb5b12f 100755
+index bcec02f..1d85ebc 100755
 --- a/sbin/exabgp
 +++ b/sbin/exabgp
-@@ -1,11 +1,7 @@
- #!/bin/sh
+@@ -5,12 +5,8 @@ if [ -n "$EXABGP_BINARY" ]; then
+     exec "$EXABGP_BINARY" "$@"
+ fi
  
 -git status 2> /dev/null > /dev/null
 -
