@@ -5,9 +5,9 @@ name: Unit Testing
 
 on:
   push:
-    branches: [main, 4.2, 3.4]
+    branches: [main, 5.0, 4.2, 3.4]
   pull_request:
-    branches: [main]
+    branches: [main, 5.0]
 
 permissions:
   contents: read
@@ -19,11 +19,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
         os: ["ubuntu-latest"]
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          # compat_gate finds the last release with git describe, which needs the history
+          # between it and HEAD: a shallow clone with the tags fetched still reaches none
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -36,4 +40,47 @@ jobs:
 
       - name: pytest
         run: |
-          env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests/unit/test_*.py ./tests/fuzz/test_*.py
+          env PYTHONPATH=src exabgp_log_enable=false pytest --cov --cov-reset ./tests
+
+      - name: tiger style
+        run: |
+          ./qa/bin/check_tiger_style
+
+      - name: every test file is collected
+        run: |
+          env PYTHONPATH=src exabgp_log_enable=false ./qa/bin/check_tests_run
+
+      - name: every registry sweep notices a short registry
+        run: |
+          env PYTHONPATH=src exabgp_log_enable=false ./qa/bin/check_sweep_floors
+
+      - name: pytest under python -O
+        run: |
+          env PYTHONPATH=src PYTHONOPTIMIZE=1 exabgp_log_enable=false pytest -q ./tests
+
+      - name: compatibility against the last release
+        run: |
+          git fetch --tags --force
+          ./qa/bin/compat_gate
+
+  non-fuzz-dependency-boundary:
+    # The full job installs qa/requirements.txt, including Hypothesis. That masks a
+    # non-fuzz test which accidentally collects the fuzz suite in a nested pytest process.
+    # Run the complete tree except the fuzz suite, so a new test directory remains covered
+    # while Hypothesis leaking across the suite boundary fails this job.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install non-fuzz test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install psutil pytest pytest-asyncio pytest-benchmark pytest-cov pytest-timeout
+
+      - name: pytest without Hypothesis
+        run: |
+          env PYTHONPATH=src exabgp_log_enable=false pytest --ignore=tests/fuzz --cov --cov-reset ./tests

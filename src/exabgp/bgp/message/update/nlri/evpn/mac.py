@@ -121,46 +121,60 @@ class MAC(EVPN):
     @classmethod
     def unpack(cls, data):
         datalen = len(data)
+        # The known total lengths are checked below, but MAClen and IPlen are read
+        # first, so the size must be established before indexing into the payload.
+        cls.check_length(data, 30)
         rd = RouteDistinguisher.unpack(data[:8])
         esi = ESI.unpack(data[8:18])
         etag = EthernetTag.unpack(data[18:22])
         maclength = data[22]
 
-        if maclength > MAC_ADDRESS_LEN_BITS or maclength < 0:
-            raise Notify(3, 5, 'invalid MAC Address length in {}'.format(cls.NAME))
+        # RFC 7432 section 9.2.1: "The encoding of a MAC address MUST be the 6-octet MAC
+        # address specified by [802.1Q] and [802.1D-REV]".  Only a length above 48 used to
+        # be refused, and the six octets are read from a fixed offset whatever the field
+        # says, so a peer sending 24 was accepted and then rendered as
+        # 00:11:22:33:44:55/24 by __str__ and json(): a MAC prefix length nobody sent,
+        # published to every API client.  The `< 0` arm it replaces could not fire, since
+        # the value comes from indexing bytes.
+        if maclength != MAC_ADDRESS_LEN_BITS:
+            raise Notify(
+                3,
+                5,
+                'MAC Address length is given as {} bits in {}, and RFC 7432 9.2.1 allows only {}'.format(
+                    maclength, cls.NAME, MAC_ADDRESS_LEN_BITS
+                ),
+            )
         end = 23 + 6  # MAC length MUST be 6
 
         mac = MACQUAL.unpack(data[23:end])
 
-        length = data[end]
-        iplen = length / 8
+        iplen = data[end]
 
-        if datalen in [33, 36]:  # No IP information (1 or 2 labels)
-            iplenUnpack = 0
-            if iplen != 0:
-                raise Notify(3, 5, 'IP length is given as %d, but current MAC route has no IP information' % iplen)
-        elif datalen in [37, 40]:  # Using IPv4 addresses (1 or 2 labels)
-            iplenUnpack = 4
-            if iplen > IPV4_ADDRESS_LEN_BITS or iplen < 0:
-                raise Notify(
-                    3,
-                    5,
-                    'IP field length is given as %d, but current MAC route is IPv4 and valus is out of range' % iplen,
-                )
-        elif datalen in [49, 52]:  # Using IPv6 addresses (1 or 2 labels)
-            iplenUnpack = 16
-            if iplen > IPV6_ADDRESS_LEN_BITS or iplen < 0:
-                raise Notify(
-                    3,
-                    5,
-                    'IP field length is given as %d, but current MAC route is IPv6 and valus is out of range' % iplen,
-                )
-        else:
+        # The IP is read as iplen // 8 bytes, so the announced length must be one of
+        # the sizes an IP can have and must agree with the size of the whole route.
+        expected = {
+            0: (33, 36),  # No IP information (1 or 2 labels)
+            IPV4_ADDRESS_LEN_BITS: (37, 40),  # Using IPv4 addresses (1 or 2 labels)
+            IPV6_ADDRESS_LEN_BITS: (49, 52),  # Using IPv6 addresses (1 or 2 labels)
+        }.get(iplen)
+
+        if expected is None:
             raise Notify(
                 3,
                 5,
-                'Data field length is given as %d, but does not match one of the expected lengths' % datalen,
+                'IP field length is given as %d bits in %s, expecting 0, %d (IPv4) or %d (IPv6)'
+                % (iplen, cls.NAME, IPV4_ADDRESS_LEN_BITS, IPV6_ADDRESS_LEN_BITS),
             )
+
+        if datalen not in expected:
+            raise Notify(
+                3,
+                5,
+                'Data field length is given as %d, expecting %s for an IP field of %d bits'
+                % (datalen, ' or '.join(str(_) for _ in expected), iplen),
+            )
+
+        iplenUnpack = iplen // 8
 
         payload = data[end + 1 : end + 1 + iplenUnpack]
         if payload:
@@ -171,16 +185,36 @@ class MAC(EVPN):
 
         return cls(rd, esi, etag, mac, maclength, label, ip, data)
 
+    def as_dict(self):
+        nlri = EVPN.as_dict(self)
+        nlri['parsed'] = True
+        nlri['nexthop'] = None if self.nexthop is None else str(self.nexthop)
+        nlri['rd'] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri['esi'] = str(self.esi)
+        nlri['ethernet-tag'] = self.etag.tag
+        nlri['mac'] = str(self.mac)
+        nlri['maclen'] = self.maclen
+        label = []
+        for value, raw in zip(self.label.labels, self.label.raw_labels):
+            label.append([value] if raw is None else [value, raw])
+        nlri['label'] = label
+        nlri['ip'] = None if self.ip is None else str(self.ip)
+        return nlri
+
     def json(self, compact=None):
-        content = ' "code": %d, ' % self.CODE
-        content += '"parsed": true, '
-        content += '"raw": "{}", '.format(self._raw())
-        content += '"name": "{}", '.format(self.NAME)
-        content += '{}, '.format(self.rd.json())
-        content += '{}, '.format(self.esi.json())
-        content += '{}, '.format(self.etag.json())
-        content += '{}, '.format(self.mac.json())
-        content += self.label.json()
-        if self.ip:
-            content += ', "ip": "{}"'.format(str(self.ip))
-        return '{{{} }}'.format(content)
+        # members are collected and joined: a member which renders empty (an
+        # absent label stack, an absent route distinguisher) used to leave a
+        # doubled or trailing comma and the line stopped being JSON
+        members = [
+            '"code": %d' % self.CODE,
+            '"parsed": true',
+            '"raw": "{}"'.format(self._raw()),
+            '"name": "{}"'.format(self.NAME),
+            self.rd.json(),
+            self.esi.json(),
+            self.etag.json(),
+            self.mac.json(),
+            self.label.json(),
+            '"ip": "{}"'.format(str(self.ip)) if self.ip else '',
+        ]
+        return '{{ {} }}'.format(', '.join(_ for _ in members if _))

@@ -86,6 +86,17 @@ class Update(Message):
     def split(data):
         length = len(data)
 
+        # RFC 4271 4.3: the body opens with two 2 byte length fields. length was
+        # computed and never consulted, so a body shorter than the first of them
+        # left struct.error here rather than a NOTIFICATION: one stray byte on
+        # the wire was enough
+        if length < UPDATE_ATTR_LENGTH_HEADER_SIZE:
+            # RFC 4271 6.1: a Length field below the minimum length of an UPDATE
+            # is Bad Message Length, with the erroneous Length field as the data.
+            # 6.3 Malformed Attribute List is for the lengths INSIDE a message
+            # which is itself long enough, which is the check further down
+            raise Notify(1, 2, pack('!H', Message.HEADER_LEN + length))
+
         len_withdrawn = unpack('!H', data[0:UPDATE_WITHDRAWN_LENGTH_OFFSET])[0]
         withdrawn = data[UPDATE_WITHDRAWN_LENGTH_OFFSET : len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET]
 
@@ -93,6 +104,10 @@ class Update(Message):
             raise Notify(3, 1, 'invalid withdrawn routes length, not enough data available')
 
         start_attributes = len_withdrawn + UPDATE_ATTR_LENGTH_HEADER_SIZE
+        # the withdrawn routes are accounted for, but the total path attribute
+        # length which follows them still has to be present
+        if length < start_attributes:
+            raise Notify(3, 1, 'invalid UPDATE, no room for the total path attribute length')
         len_attributes = unpack('!H', data[len_withdrawn + UPDATE_WITHDRAWN_LENGTH_OFFSET : start_attributes])[0]
         start_announced = len_withdrawn + len_attributes + UPDATE_ATTR_LENGTH_HEADER_SIZE
         attributes = data[start_attributes:start_announced]
@@ -113,153 +128,152 @@ class Update(Message):
 
         return withdrawn, attributes, announced
 
-    # The routes MUST have the same attributes ...
-    # XXX: FIXME: calculate size progressively to not have to do it every time
-    # XXX: FIXME: we could as well track when packed_del, packed_mp_del, etc
-    # XXX: FIXME: are emptied and therefore when we can save calculations
-    def messages(self, negotiated, include_withdraw=True):
-        # sort the nlris
-
+    def _split_nlris(self, negotiated):
         nlris = []
         mp_nlris = {}
-
         for nlri in sorted(self.nlris):
             if nlri.family().afi_safi() not in negotiated.families:
                 continue
 
-            add_v4 = nlri.afi == AFI.ipv4
-            add_v4 = add_v4 and nlri.safi in [SAFI.unicast, SAFI.multicast]
-
-            del_v4 = add_v4 and nlri.action == Action.WITHDRAW
-
-            if del_v4:
+            native = nlri.afi == AFI.ipv4 and nlri.safi == SAFI.unicast
+            if native and nlri.action == Action.WITHDRAW:
+                nlris.append(nlri)
+                continue
+            if native and nlri.action == Action.ANNOUNCE and nlri.nexthop.afi == AFI.ipv4:
                 nlris.append(nlri)
                 continue
 
-            add_v4 = add_v4 and nlri.action == Action.ANNOUNCE
-            add_v4 = add_v4 and nlri.nexthop.afi == AFI.ipv4
-
-            if add_v4:
-                nlris.append(nlri)
-                continue
-
-            if nlri.nexthop.afi != AFI.undefined:
+            # MP_UNREACH carries no next hop, including bare multicast withdrawals.
+            if (
+                nlri.action == Action.WITHDRAW
+                or nlri.nexthop.afi != AFI.undefined
+                or nlri.safi in (SAFI.flow_ip, SAFI.flow_vpn)
+            ):
                 mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
                 continue
-
-            if nlri.safi in (SAFI.flow_ip, SAFI.flow_vpn):
-                mp_nlris.setdefault(nlri.family().afi_safi(), {}).setdefault(nlri.action, []).append(nlri)
-                continue
-
             raise ValueError('unexpected nlri definition ({})'.format(nlri))
+        return nlris, mp_nlris
 
+    @staticmethod
+    def _carries_attributes(nlris, mp_nlris):
+        # RFC 4760 permits MP_UNREACH-only UPDATEs without other path attributes, and one
+        # built here carries none at all.
+        #
+        # This used to be called _include_defaults and its answer was handed to
+        # Attributes.pack as with_default.  False got no attributes only because of a
+        # precedence bug in pack(): `set(keys + list(default) if with_default else [])` made
+        # the whole concatenation the true branch, so with_default=False encoded nothing
+        # whatever the collection held.  With the brackets corrected it would encode the
+        # withdrawn route's own attributes and size the withdrawal against them, which is how
+        # a withdrawal came to be dropped for the weight of an announcement it was not
+        # carrying.  So what this pass wants is said outright: no attribute field.
+        if not mp_nlris or nlris:
+            return True
+        for family, actions in mp_nlris.items():
+            afi, safi = family
+            if safi not in (SAFI.unicast, SAFI.multicast):
+                return True
+            if set(actions.keys()) != {Action.WITHDRAW}:
+                return True
+        return False
+
+    # The routes MUST have the same attributes.
+    def messages(self, negotiated, include_withdraw=True):
+        nlris, mp_nlris = self._split_nlris(negotiated)
         if not nlris and not mp_nlris:
             return
 
-        # If all we have is MP_UNREACH_NLRI, we do not need the default
-        # attributes. See RFC4760 that states the following:
+        attr = self.attributes.pack(negotiated) if self._carries_attributes(nlris, mp_nlris) else b''
+
+        # What is left of an UPDATE once the path attributes of an ANNOUNCEMENT are in it,
+        # and what is left of one which carries none.
         #
-        #   An UPDATE message that contains the MP_UNREACH_NLRI is not required
-        #   to carry any other path attributes.
-        #
-        include_defaults = True
+        # There used to be one number here, the first, and the method returned outright when
+        # it reached zero.  RFC 4271 4.3 makes the Path Attributes field optional and RFC
+        # 4760 3 says an UPDATE carrying MP_UNREACH_NLRI "is not required to carry any other
+        # path attributes", so the announcement's budget has nothing to say about a
+        # withdrawal: since the carriers were split below, a withdraw-only UPDATE carries no
+        # attribute at all.  Roughly 4060 octets of path attributes therefore made a 27 octet
+        # withdraw-only UPDATE disappear, with nothing on the wire, no log an operator would
+        # connect to it, and a stale route left on the peer.  The announcement refusal is
+        # kept, in front of the announcement pass rather than in front of everything.
+        announce_size = negotiated.msg_size - Message.HEADER_LEN - UPDATE_ATTR_LENGTH_HEADER_SIZE - len(attr)
+        withdraw_size = negotiated.msg_size - Message.HEADER_LEN - UPDATE_ATTR_LENGTH_HEADER_SIZE
 
-        if mp_nlris and not nlris:
-            for family, actions in mp_nlris.items():
-                afi, safi = family
-                if safi not in (SAFI.unicast, SAFI.multicast):
-                    break
-                if set(actions.keys()) != {Action.WITHDRAW}:
-                    break
-            # no break
-            else:
-                include_defaults = False
+        yield from self._native_messages(nlris, attr, negotiated, announce_size, withdraw_size, include_withdraw)
+        yield from self._mp_messages(mp_nlris, attr, negotiated, announce_size, include_withdraw)
 
-        attr = self.attributes.pack(negotiated, include_defaults)
+    @staticmethod
+    def _packed_nlris(nlris, negotiated, budget, reason):
+        """The NLRI of one pass, in blobs which each fit `budget`.
 
-        # Withdraws/NLRIS (IPv4 unicast and multicast)
-        msg_size = negotiated.msg_size - 19 - 2 - 2 - len(attr)  # 2 bytes for each of the two prefix() header
-
-        if msg_size < 0:
-            # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-            log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
-            return
-
-        if msg_size == 0 and (nlris or mp_nlris):
-            # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-            log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
-            return
-
-        withdraws = b''
-        announced = b''
+        Yields nothing more once a single NLRI is wider than a whole message, since there is
+        no way to send it and the blobs after it would arrive without it.
+        """
+        blob = b''
         for nlri in nlris:
             packed = nlri.pack(negotiated)
-            if len(announced + withdraws + packed) <= msg_size:
-                if nlri.action == Action.ANNOUNCE:
-                    announced += packed
-                elif include_withdraw:
-                    withdraws += packed
+            if len(blob) + len(packed) > budget:
+                if not blob:
+                    log.critical(
+                        lambda reason=reason: 'can not pack one NLRI in an UPDATE ({})'.format(reason), 'parser'
+                    )
+                    return
+                yield blob
+                blob = b''
+            blob += packed
+        if blob:
+            yield blob
+
+    def _native_messages(self, nlris, attr, negotiated, announce_size, withdraw_size, include_withdraw):
+        # RFC 7606 5.1: an UPDATE "MUST NOT contain more than one of the following: non-empty
+        # Withdrawn Routes field, non-empty Network Layer Reachability Information field,
+        # MP_REACH_NLRI attribute, and MP_UNREACH_NLRI attribute".  The two IPv4 unicast
+        # fields used to be filled by one loop and shared a message; they are two passes now.
+        # The withdrawals go first, because a prefix in both sets has to be withdrawn before
+        # it is re-announced, which is the order the shared message gave for free.  Each pass
+        # still fills its field to the negotiated message size, so a table load is still one
+        # message per few hundred prefixes.
+        withdraws = [nlri for nlri in nlris if nlri.action == Action.WITHDRAW] if include_withdraw else []
+        announces = [nlri for nlri in nlris if nlri.action == Action.ANNOUNCE]
+
+        # A withdraw-only UPDATE carries no path attribute, so it has the whole message.
+        for withdrawn in self._packed_nlris(withdraws, negotiated, withdraw_size, 'withdrawal_too_large'):
+            yield self._message(Update.prefix(withdrawn) + Update.prefix(b''))
+
+        if not announces:
+            return
+        if announce_size <= 0:
+            # The attributes leave no room for a single NLRI, so these routes cannot be
+            # announced.  This is the refusal the guard in messages() used to make, now made
+            # where it applies: the withdrawals above have already gone out.
+            log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
+            return
+        for announced in self._packed_nlris(announces, negotiated, announce_size, 'attributes_too_large'):
+            yield self._message(Update.prefix(b'') + Update.prefix(attr) + announced)
+
+    def _mp_messages(self, mp_nlris, attr, negotiated, msg_size, include_withdraw):
+        for family, actions in mp_nlris.items():
+            afi, safi = family
+            announces = actions.get(Action.ANNOUNCE, [])
+            withdraws = actions.get(Action.WITHDRAW, []) if include_withdraw else []
+
+            if msg_size <= 0:
+                # Only this family is impossible.  Returning would also drop every family
+                # after it.  A budget which is positive but still too narrow for one NLRI is
+                # not caught here: packed_attributes logs and leaves that NLRI out.
+                log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
                 continue
 
-            if not withdraws and not announced:
-                # raise Notify(6,0,'attributes size is so large we can not even pack one NLRI')
-                log.critical(lambda: 'attributes size is so large we can not even pack one NLRI', 'parser')
-                return
+            # RFC 7606 5.1 again: an MP_UNREACH_NLRI never shares a message with an
+            # MP_REACH_NLRI.  The last withdrawal chunk used to be held back and packed with
+            # the first announcement.  Emitting them all first keeps the ordering that gave,
+            # so a prefix is withdrawn before it is re-announced across message boundaries.
+            for mpurnlri in MPURNLRI(afi, safi, withdraws).packed_attributes(negotiated, msg_size):
+                yield self._message(Update.prefix(b'') + Update.prefix(attr + mpurnlri))
 
-            if announced:
-                yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
-            else:
-                yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
-
-            if nlri.action == Action.ANNOUNCE:
-                announced = packed
-                withdraws = b''
-            elif include_withdraw:
-                withdraws = packed
-                announced = b''
-            else:
-                withdraws = b''
-                announced = b''
-
-        if announced or withdraws:
-            if announced:
-                yield self._message(Update.prefix(withdraws) + Update.prefix(attr) + announced)
-            else:
-                yield self._message(Update.prefix(withdraws) + Update.prefix(b'') + announced)
-
-        for family in mp_nlris.keys():
-            afi, safi = family
-            mp_reach = b''
-            mp_unreach = b''
-            mp_announce = MPRNLRI(afi, safi, mp_nlris[family].get(Action.ANNOUNCE, []))
-            mp_withdraw = MPURNLRI(afi, safi, mp_nlris[family].get(Action.WITHDRAW, []))
-
-            for mprnlri in mp_announce.packed_attributes(negotiated, msg_size - len(withdraws + announced)):
-                if mp_reach:
-                    yield self._message(Update.prefix(withdraws) + Update.prefix(attr + mp_reach) + announced)
-                    announced = b''
-                    withdraws = b''
-                mp_reach = mprnlri
-
-            if include_withdraw:
-                for mpurnlri in mp_withdraw.packed_attributes(
-                    negotiated,
-                    msg_size - len(withdraws + announced + mp_reach),
-                ):
-                    if mp_unreach:
-                        yield self._message(
-                            Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced,
-                        )
-                        mp_reach = b''
-                        announced = b''
-                        withdraws = b''
-                    mp_unreach = mpurnlri
-
-            yield self._message(
-                Update.prefix(withdraws) + Update.prefix(attr + mp_unreach + mp_reach) + announced,
-            )  # yield mpr/mpur per family
-            withdraws = b''
-            announced = b''
+            for mprnlri in MPRNLRI(afi, safi, announces).packed_attributes(negotiated, msg_size):
+                yield self._message(Update.prefix(b'') + Update.prefix(attr + mprnlri))
 
     # XXX: FIXME: this can raise ValueError. IndexError,TypeError, struct.error (unpack) = check it is well intercepted
     @classmethod

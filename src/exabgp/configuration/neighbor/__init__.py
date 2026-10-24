@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # import sys
 from __future__ import annotations
 
-import base64
 from copy import deepcopy
 
 from exabgp.protocol.family import AFI
@@ -48,6 +47,7 @@ from exabgp.configuration.neighbor.parser import rate_limit
 from exabgp.environment import getenv
 
 from exabgp.logger import log
+from exabgp.util.psk import PSKError, decode_base64
 
 # MD5 password length constraint (RFC 2385)
 MAX_MD5_PASSWORD_LENGTH = 80  # Maximum length for TCP MD5 signature password
@@ -222,13 +222,13 @@ class ParseNeighbor(Section):
         for afi, safi, nhafi in nexthops:
             if (afi, safi) not in neighbor.families():
                 log.debug(
-                    'skipping nexthop afi,safi ' + str(afi) + '/' + str(safi) + ' as it is not negotiated',
+                    lambda afi=afi, safi=safi: f'skipping nexthop afi,safi {afi}/{safi} as it is not negotiated',
                     'configuration',
                 )
                 continue
             if (nhafi, safi) not in neighbor.families():
                 log.debug(
-                    'skipping nexthop afi ' + str(nhafi) + '/' + str(safi) + ' as it is not negotiated',
+                    lambda nhafi=nhafi, safi=safi: f'skipping nexthop afi {nhafi}/{safi} as it is not negotiated',
                     'configuration',
                 )
                 continue
@@ -238,7 +238,9 @@ class ParseNeighbor(Section):
         if neighbor['capability']['route-refresh']:
             if not neighbor['adj-rib-out']:
                 log.warning(
-                    lambda: f'route-refresh enabled but adj-rib-out disabled for {neighbor["peer-address"]}, auto-enabling adj-rib-out',
+                    lambda: (
+                        f'route-refresh enabled but adj-rib-out disabled for {neighbor["peer-address"]}, auto-enabling adj-rib-out'
+                    ),
                     'configuration',
                 )
                 neighbor['adj-rib-out'] = True
@@ -274,16 +276,32 @@ class ParseNeighbor(Section):
                 # This add the family to neighbor.families()
                 neighbor.rib.outgoing.add_to_rib_watchdog(change)
 
+        # OperationalFamily.family() already returns an (AFI, SAFI) tuple, which is what
+        # families() holds.  Asking it for afi_safi() raised AttributeError and made every
+        # configuration carrying an operational section unloadable: the daemon refused to
+        # start with "'tuple' object has no attribute 'afi_safi'".  The line above is
+        # correct as it stands, because NLRI.family() answers with a Family object.
         for message in local.get('operational', {}).get('routes', []):
-            if message.family().afi_safi() in families:
+            family = message.family()
+            if family in families:
                 if message.name == 'ASM':
-                    neighbor.asm[message.family().afi_safi()] = message
+                    neighbor.asm[family] = message
                 else:
                     neighbor.messages.append(message)
         self.neighbors[neighbor.name()] = neighbor
 
+    # a neighbor is not usable without them, and "auto" must be asked for explicitly
+    MANDATORY = ('local-as', 'peer-as')
+
     def post(self):
         local = self._post_get_scope()
+
+        # the value of local-as and peer-as is None when the configuration says "auto",
+        # so only the presence of the key tells a missing setting from an explicit auto
+        missing_mandatory = [option for option in self.MANDATORY if option not in local]
+        if missing_mandatory:
+            return self.error.set('incomplete neighbor, missing {}'.format(', '.join(missing_mandatory)))
+
         families = self._post_families(local)
         neighbor = self._post_neighbor(local, families)
 
@@ -313,9 +331,9 @@ class ParseNeighbor(Section):
 
         if neighbor['md5-password']:
             try:
-                md5 = base64.b64decode(neighbor['md5-password']) if neighbor['md5-base64'] else neighbor['md5-password']
-            except TypeError as e:
-                return self.error.set(f'Invalid base64 encoding of MD5 password ({e})')
+                md5 = decode_base64(neighbor['md5-password']) if neighbor['md5-base64'] else neighbor['md5-password']
+            except PSKError as e:
+                return self.error.set(f'Invalid MD5 password: {e}')
             else:
                 if len(md5) > MAX_MD5_PASSWORD_LENGTH:
                     return self.error.set(f'MD5 password must be no larger than {MAX_MD5_PASSWORD_LENGTH} characters')

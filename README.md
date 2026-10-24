@@ -89,11 +89,9 @@ The fastest way to get started:
 docker pull ghcr.io/exa-networks/exabgp:latest
 docker run -it --rm ghcr.io/exa-networks/exabgp:latest --help
 
-# Using zipapp (self-contained executable)
-git clone https://github.com/Exa-Networks/exabgp
-cd exabgp
-./release binary /usr/local/sbin/exabgp
-/usr/local/sbin/exabgp --version
+# Using zipapp (one file, run by any Python 3.8 or later)
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.15/exabgp.pyz
+python3 exabgp.pyz version
 
 # Using pip
 pip install exabgp
@@ -134,32 +132,43 @@ It is possible to add your configuration file within the docker image and/or use
 
 ### Zipapp
 
-From the source folder, it is possible to create a self-contained executable which only requires an installed python3 interpreter:
+A zipapp is a zip archive of Python code which Python runs without unpacking it. `exabgp.pyz` holds the `exabgp` package, so it is ExaBGP in a single file, which only needs Python 3.8 or later: there is nothing to install. Every release from 5.0.15 onwards has one attached:
 
 ```sh
-git clone https://github.com/Exa-Networks/exabgp exabgp-git
-cd exabgp-git
-./release binary /usr/local/sbin/exabgp
-/usr/local/sbin/exabgp --version
+# download it and check it
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.15/exabgp.pyz
+curl -LO https://github.com/Exa-Networks/exabgp/releases/download/5.0.15/SHA256SUMS
+sha256sum --ignore-missing -c SHA256SUMS    # shasum -a 256 --ignore-missing -c SHA256SUMS on macOS
+
+# run it with Python
+python3 exabgp.pyz version
+
+# or make it executable, and install it as the exabgp command
+chmod +x exabgp.pyz
+./exabgp.pyz version
+sudo install -m 755 exabgp.pyz /usr/local/sbin/exabgp
+/usr/local/sbin/exabgp version
 ```
 
-which is a helper function and creates a python3 zipapp:
+To upgrade, download the new file and install it over the old one. If the `python3` on your `PATH` is older than 3.8, it stops and says so: run the file with a newer interpreter (`python3.12 exabgp.pyz ...`), and use that interpreter in your service file. Should ExaBGP drop privileges (`exabgp.daemon.user`), that user must be able to read the file.
+
+From the source folder, `./release binary` builds the same file, `dist/exabgp-<version>.pyz`, and checks it runs (`--functional` also runs the functional tests against it):
 
 ```sh
-git clone https://github.com/Exa-Networks/exabgp exabgp-git
+git clone -b 5.0 https://github.com/Exa-Networks/exabgp exabgp-git
 cd exabgp-git
-python3 -m zipapp -o /usr/local/sbin/exabgp -m exabgp.application:main -p "/usr/bin/env python3" src
-/usr/local/sbin/exabgp --version
+python3 ./release binary /usr/local/sbin/exabgp
+/usr/local/sbin/exabgp version
 ```
 
 ### pip releases
 
-The latest version is available on [`pypi`](https://pypi.python.org/pypi), the Python Package Index:
+The latest version is available on [`pypi`](https://pypi.org/project/exabgp/), the Python Package Index:
 
 ```sh
 pip install exabgp
 
-exabgp --version
+exabgp version
 exabgp --help
 
 exabgp --run healthcheck --help
@@ -171,9 +180,9 @@ python3 -m exabgp healthcheck --help
 It is also possible to download releases from GitHub:
 
 ```sh
-curl -L https://github.com/Exa-Networks/exabgp/archive/4.2.22.tar.gz | tar zx
-cd exabgp-4.2.22
-./sbin/exabgp --version
+curl -L https://github.com/Exa-Networks/exabgp/archive/5.0.15.tar.gz | tar zx
+cd exabgp-5.0.15
+./sbin/exabgp version
 ./sbin/exabgp --help
 
 ./sbin/exabgp --run healthcheck --help
@@ -188,7 +197,7 @@ In case of issues, we are asking users to run the latest code directly from a lo
 ```sh
 git clone https://github.com/Exa-Networks/exabgp exabgp-git
 cd exabgp-git
-./sbin/exabgp --version
+./sbin/exabgp version
 ./sbin/exabgp --help
 
 ./sbin/exabgp --run healthcheck --help
@@ -196,11 +205,11 @@ env PYTHONPATH=./src python3 -m exabgp healthcheck --help
 ./bin/healthcheck --help
 ```
 
-It is then possible to change git to use any release (here 4.2.22):
+It is then possible to change git to use any release (here 5.0.15):
 
 ```sh
-git checkout 4.2.22
-./sbin/exabgp --version
+git checkout 5.0.15
+./sbin/exabgp version
 ```
 
 ### OS packages
@@ -228,7 +237,7 @@ ExaBGP is self-contained and easy to upgrade/downgrade by:
 
 **If you are migrating your application from ExaBGP 3.4 to 4.x please read this [wiki](https://github.com/Exa-Networks/exabgp/wiki/Migration-from-3.4-to-4.0) entry**.
 
-The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://raw.githubusercontent.com/Exa-Networks/exabgp/main/CHANGELOG) and check their setup after any upgrade.
+The configuration file and API format may change occasionally, but every effort is made to ensure backward compatibility is kept. However, users are encouraged to read the [release note/CHANGELOG](https://github.com/Exa-Networks/exabgp/blob/5.0/doc/CHANGELOG.rst) and check their setup after any upgrade.
 
 ## Documentation
 

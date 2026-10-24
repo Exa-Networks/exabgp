@@ -43,10 +43,15 @@ class ACTION:
     ALL = [CLOSE, LATER, NOW]
 
 
-# As we can not know if this is our first start or not, this flag is used to
-# always make the program act like it was recovering from a failure
-# If set to FALSE, no EOR and OPEN Flags set for Restart will be set in the
-# OPEN Graceful Restart Capability
+# RFC 4724 4.1 and 4.2 pull in opposite directions on the very first OPEN a process sends.
+# If this run follows an earlier one we are the Restarting Speaker and MUST set the Restart
+# State bit; if it is a genuine first start we are the Receiving Speaker and MUST NOT.
+# Nothing on this box can tell the two apart: exabgp keeps no state between runs, and the
+# pid file is optional, is not per neighbor, and says nothing about the session. So the
+# first OPEN claims the restart. The bit only asks the peer not to wait for our End-of-RIB
+# before advertising to us, so that is the cheap way to be wrong, and it is right in the
+# case which costs something. Every later OPEN of this process is a reconnection rather
+# than a restart, and _establish() clears the flag so that it says so.
 FORCE_GRACEFUL = True
 
 
@@ -118,6 +123,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-operational': 0,
+                'send-operational': 0,
             },
         )
 
@@ -125,7 +132,9 @@ class Peer:
 
         # The peer should restart after a stop
         self._restart = True
-        # The peer was restarted (to know what kind of open to send for graceful restart)
+        # Whether the next OPEN we send claims the RFC 4724 Restart State bit. True until
+        # this process has held a session with this neighbor, and again after an operator
+        # asked for the session to be re-established.
         self._restarted = FORCE_GRACEFUL
 
         # We have been asked to teardown the session with this code
@@ -164,6 +173,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-operational': 0,
+                'send-operational': 0,
             },
         )
 
@@ -211,6 +222,14 @@ class Peer:
             return True
         return self.connection_attempts < self.max_connection_attempts
 
+    def stopping(self):
+        """The peer has been told to go away and is not coming back.
+
+        reestablish() sets a teardown too, and that peer is returning, so the teardown
+        alone does not say this. Only a peer which will not restart is on its way out.
+        """
+        return self._teardown is not None and not self._restart
+
     def stop(self):
         self._teardown = 3
         self._restart = False
@@ -232,6 +251,8 @@ class Peer:
                 'send-refresh': 0,
                 'receive-keepalive': 0,
                 'send-keepalive': 0,
+                'receive-operational': 0,
+                'send-operational': 0,
             },
         )
         self.neighbor.rib.uncache()
@@ -268,8 +289,8 @@ class Peer:
             # isn't running to process the _neighbor variable later.
             # GitHub issue #1126: stale adj-rib when neighbor offline during reload
             if self.fsm != FSM.ESTABLISHED and self.neighbor.rib:
-                previous = restart_neighbor.previous.routes if restart_neighbor.previous else []
-                current = restart_neighbor.routes
+                previous = restart_neighbor.previous.changes if restart_neighbor.previous else []
+                current = restart_neighbor.changes
                 self.neighbor.rib.outgoing.replace_reload(previous, current)
                 restart_neighbor.previous = None
                 self._neighbor = None  # Prevent double-processing when peer connects
@@ -286,6 +307,16 @@ class Peer:
 
     def handle_connection(self, connection):
         log.debug(lambda: 'state machine for the peer is {}'.format(self.fsm.name()), self.id())
+
+        # a peer whose neighbour has been removed from the configuration cannot serve this
+        # connection: its next turn drops it from the reactor. Accepting one anyway left
+        # the socket owned by an object nobody held any more, stuck in CLOSE_WAIT.
+        if self.stopping():
+            log.debug(
+                lambda: 'we are removing this peer, not accepting {}'.format(connection.name()),
+                self.id(),
+            )
+            return connection.notification(6, 3, 'no session configured for the peer')
 
         # if the other side fails, we go back to idle
         if self.fsm == FSM.ESTABLISHED:
@@ -308,8 +339,10 @@ class Peer:
 
             if remote_id < local_id:
                 log.debug(
-                    lambda: 'closing incoming connection as we have an outgoing connection with higher router-id for {}'.format(
-                        connection.name()
+                    lambda: (
+                        'closing incoming connection as we have an outgoing connection with higher router-id for {}'.format(
+                            connection.name()
+                        )
                     ),
                     self.id(),
                 )
@@ -322,8 +355,10 @@ class Peer:
         # accept the connection
         if self.proto:
             log.debug(
-                lambda: 'closing outgoing connection as we have another incoming on with higher router-id for {}'.format(
-                    connection.name()
+                lambda: (
+                    'closing outgoing connection as we have another incoming on with higher router-id for {}'.format(
+                        connection.name()
+                    )
                 ),
                 self.id(),
             )
@@ -467,6 +502,11 @@ class Peer:
             yield action
         self.fsm.change(FSM.ESTABLISHED)
         self.stats['complete'] = time.time()
+        # RFC 4724 4.2: whatever this process may have been a restart of, it has now
+        # peered. A session we re-establish from here is a reconnection and not a restart
+        # of this speaker, so the next OPEN must not claim the Restart State bit. Only
+        # reestablish(), where an operator asked for one, sets it again.
+        self._restarted = False
 
         # let the caller know that we were sucesfull
         yield ACTION.NOW
@@ -672,13 +712,12 @@ class Peer:
         except Notify as notify:
             if self.proto:
                 try:
-                    generator = self.proto.new_notification(notify)
-                    try:
-                        while True:
-                            next(generator)
-                            yield ACTION.NOW
-                    except StopIteration:
-                        pass
+                    # new_notification yields once per write attempt and then returns, so its
+                    # StopIteration only ever said "the NOTIFICATION is fully out". Since PEP
+                    # 479 nothing deeper can reach us as StopIteration either, so there was no
+                    # error here to swallow. A write which really fails raises below.
+                    for _ in self.proto.new_notification(notify):
+                        yield ACTION.NOW
                 except (NetworkError, ProcessError):
                     log.error(lambda: 'Notification not sent', self.id())
                 self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)

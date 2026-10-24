@@ -15,6 +15,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import Action
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 
@@ -62,9 +63,21 @@ from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 #            |      4      | Direct                           |
 #            |      5      | Static configuration             |
 #            |      6      | OSPFv3                           |
+#            |      7      | BGP                              |
+#            |      8      | RSVP-TE                          |
+#            |      9      | Segment Routing                  |
 #            +-------------+----------------------------------+
 # ===================================================================== PROTO_ID
 
+# The IANA "BGP-LS Protocol-IDs" registry, which has grown since RFC 7752 listed six
+# codes: 7 is BGP (RFC 9086), 8 is RSVP-TE and 9 is Segment Routing.
+#
+# This names the codes; it does not gate them.  RFC 9552 8.2.2 says a Link-State NLRI
+# "MUST NOT be considered malformed or invalid based on the inclusion/exclusion of TLVs
+# or contents of the TLV fields", and the Protocol-ID is the contents of a field.  A
+# decoder which refused what it had not heard of took the session down the day a peer
+# started advertising Segment Routing topology, which is the failure this registry used
+# to cause when it was read as a whitelist.
 PROTO_CODES = {
     1: 'isis_l1',
     2: 'isis_l2',
@@ -72,6 +85,9 @@ PROTO_CODES = {
     4: 'direct',
     5: 'static',
     6: 'ospfv3',
+    7: 'bgp',
+    8: 'rsvp_te',
+    9: 'segment_routing',
     # not RFC/draft defined
     227: 'freertr',
 }
@@ -80,6 +96,44 @@ PROTO_CODES = {
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls)
 @NLRI.register(AFI.bgpls, SAFI.bgp_ls_vpn)
 class BGPLS(NLRI):
+    # [protocol-id(1)][identifier(8)] before the first TLV, the header is stripped already
+    DESCRIPTOR_OFFSET = 9
+
+    @classmethod
+    def check_length(cls, data, minimum):
+        """Reject wire data too short for this NLRI type."""
+        if len(data) < minimum:
+            raise Notify(
+                3,
+                10,
+                'BGP-LS {} NLRI is too short: need at least {} bytes, got {}'.format(cls.__name__, minimum, len(data)),
+            )
+
+    @classmethod
+    def iter_tlvs(cls, data):
+        """Walk a sequence of TLVs, checking every boundary as it goes.
+
+        Yields:
+            (type, value) for each TLV
+
+        Raises:
+            Notify: If a TLV header is truncated or a TLV runs past the data
+        """
+        while data:
+            if len(data) < 4:
+                raise Notify(3, 10, 'BGP-LS {} NLRI ends with a truncated TLV header'.format(cls.__name__))
+            tlv_type, tlv_length = unpack('!HH', data[:4])
+            if len(data) < 4 + tlv_length:
+                raise Notify(
+                    3,
+                    10,
+                    'BGP-LS {} NLRI TLV {} claims {} bytes but only {} remain'.format(
+                        cls.__name__, tlv_type, tlv_length, len(data) - 4
+                    ),
+                )
+            yield tlv_type, data[4 : 4 + tlv_length]
+            data = data[4 + tlv_length :]
+
     registered_bgpls = dict()
 
     CODE = -1
@@ -91,7 +145,10 @@ class BGPLS(NLRI):
         self._packed = b''
 
     def pack_nlri(self, negotiated=None):
-        return pack('!BB', self.CODE, len(self._packed)) + self._packed
+        # RFC 7752: NLRI Type (2 octets) then Total NLRI Length (2 octets), which is
+        # what unpack_nlri reads.  A one byte header could not hold a code above 255
+        # and struct raised on it, from json() rather than from the decoder.
+        return pack('!HH', self.CODE, len(self._packed)) + self._packed
 
     def __len__(self):
         return len(self._packed) + 2
@@ -105,6 +162,16 @@ class BGPLS(NLRI):
             '0x' + ''.join('{:02x}'.format(_) for _ in self._packed),
         )
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        return {
+            'code': self.CODE,
+            'parsed': False,
+            'raw': self._raw(),
+            'name': self.NAME,
+            'family': {'afi': str(family[0]), 'safi': str(family[1])},
+        }
+
     @classmethod
     def register(cls, klass):
         if klass.CODE in cls.registered_bgpls:
@@ -114,10 +181,23 @@ class BGPLS(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # RFC 7911 section 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
+        # BGP-LS NLRI header: type(2) + length(2) = 4 bytes minimum
+        if len(bgp) < 4:
+            raise Notify(3, 10, 'BGP-LS NLRI too short: need at least 4 bytes, got {}'.format(len(bgp)))
         code, length = unpack('!HH', bgp[:4])
+
+        if len(bgp) < length + 4:
+            raise Notify(3, 10, 'BGP-LS NLRI truncated: need {} bytes, got {}'.format(length + 4, len(bgp)))
+
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:
                 # Extract Route Distinguisher
+                if len(bgp) < 12:
+                    raise Notify(3, 10, 'BGP-LS VPN NLRI too short: need at least 12 bytes, got {}'.format(len(bgp)))
                 rd = RouteDistinguisher.unpack(bgp[4:12])
                 klass = cls.registered_bgpls[code].unpack_nlri(bgp[12 : length + 4], rd)
             else:
@@ -127,7 +207,7 @@ class BGPLS(NLRI):
             klass = GenericBGPLS(code, bgp[4 : length + 4])
         klass.CODE = code
         klass.action = action
-        klass.addpath = addpath
+        klass.addpath = path_info
 
         return klass, bgp[length + 4 :]
 

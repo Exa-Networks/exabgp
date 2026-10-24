@@ -8,6 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
+from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
@@ -19,6 +20,7 @@ from exabgp.bgp.message.open.capability.capability import Capability
 
 @Capability.register()
 class NextHop(Capability, list):
+    ENTRY_SIZE = 6  # AFI(2) + reserved(1) + SAFI(1) + next-hop AFI(2)
     ID = Capability.CODE.NEXTHOP
 
     def __init__(self, data=()):
@@ -52,6 +54,8 @@ class NextHop(Capability, list):
         # XXX: FIXME: we should complain if we have twice the same AFI/SAFI
         # XXX: FIXME: should check that we have not yet seen the capability
         while data:
+            if len(data) < NextHop.ENTRY_SIZE:
+                raise Notify(2, 0, 'invalid extended next-hop capability, trailing data')
             afi = AFI.unpack(data[:2])
             safi = SAFI.unpack(data[3])
             nexthop = AFI.unpack(data[4:6])

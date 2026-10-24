@@ -9,15 +9,37 @@ from __future__ import annotations
 
 import socket
 
+from math import isfinite
 from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IPv4
 from exabgp.protocol.ip import IPv6
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunityIPv6
+
+TRAFFIC_RATE_SIZE_BYTES = 8
+
+
+def checked_wire_rate(data, name='traffic-rate'):
+    """The asn and rate of a rate community, once the rate can be rendered.
+
+    RFC 8955 section 7.1 gives the rate as an IEEE-754 single, and the wire carries NaN and
+    the two infinities as readily as it carries 1000.0.  None of them is a rate, and every
+    rendering of the community puts the float through '%d', which raises ValueError for a
+    NaN and OverflowError for an infinity.  That used to happen in the API writer, well
+    outside the decode boundary, so the peer's bad float closed the session with no
+    NOTIFICATION at all.  Refuse it here, where the peer can still be told why.
+    """
+    if len(data) < TRAFFIC_RATE_SIZE_BYTES:
+        raise Notify(3, 9, f'not enough data to extract the {name} extended community')
+    asn, rate = unpack('!Hf', data[2:TRAFFIC_RATE_SIZE_BYTES])
+    if not isfinite(rate):
+        raise Notify(3, 9, f'{name} carries {rate}, which is not a usable rate')
+    return asn, rate
 
 
 # ================================================================== TrafficRate
@@ -30,6 +52,16 @@ class TrafficRate(ExtendedCommunity):
     COMMUNITY_SUBTYPE = 0x06
 
     def __init__(self, asn, rate, community=None):
+        # Configuration is not the wire, so this is a ValueError, but a community whose
+        # __repr__ raises must not exist however it was made.
+        if not isfinite(rate):
+            raise ValueError(f'traffic-rate must be a finite number: {rate}')
+        # RFC 8955 section 7.1: "On encoding, the traffic-rate MUST NOT be negative."  Zero
+        # already means discard everything, so a negative asks for nothing this community
+        # can express.  TrafficRatePackets has carried both halves of this rule since it
+        # was written and its older sibling carried neither, which is the whole of the bug.
+        if rate < 0:
+            raise ValueError(f'traffic-rate must not be negative: {rate}')
         self.asn = asn
         self.rate = rate
         ExtendedCommunity.__init__(
@@ -42,8 +74,48 @@ class TrafficRate(ExtendedCommunity):
 
     @staticmethod
     def unpack(data):
-        asn, rate = unpack('!Hf', data[2:8])
-        return TrafficRate(ASN(asn), rate, data[:8])
+        asn, rate = checked_wire_rate(data)
+        # RFC 8955 section 7.1: "On decoding, negative values MUST be treated as zero
+        # (discard all traffic)."  Passed on as it arrived, a peer asking for a flow to be
+        # discarded was reported as `rate-limit:-100`, which no API consumer can program.
+        return TrafficRate(ASN(asn), max(rate, 0.0), data[:TRAFFIC_RATE_SIZE_BYTES])
+
+
+# ============================================================ TrafficRatePackets
+# RFC 8955
+
+
+@ExtendedCommunity.register
+class TrafficRatePackets(ExtendedCommunity):
+    """Rate limit matching traffic in packets per second, rather than bytes."""
+
+    COMMUNITY_TYPE = 0x80
+    COMMUNITY_SUBTYPE = 0x0C
+
+    def __init__(self, asn, rate, community=None):
+        # Same two refusals as TrafficRate, and one more: RFC 8955 has no meaning for a
+        # negative packet rate, and zero is already the value which drops everything.
+        if not isfinite(rate):
+            raise ValueError(f'traffic-rate-packets must be a finite number: {rate}')
+        if rate < 0:
+            raise ValueError(f'traffic-rate-packets must not be negative: {rate}')
+        self.asn = asn
+        self.rate = rate
+        ExtendedCommunity.__init__(
+            self,
+            community if community is not None else pack('!2sHf', self._subtype(), asn, rate),
+        )
+
+    def __repr__(self):
+        return 'rate-limit:%d:packets' % self.rate
+
+    @staticmethod
+    def unpack(data):
+        asn, rate = checked_wire_rate(data, 'traffic-rate-packets')
+        # A rate the peer sent below zero is read as the drop-everything value rather than
+        # refused, which is what a router does with it. The constructor is stricter because
+        # nothing here should be building one.
+        return TrafficRatePackets(ASN(asn), max(rate, 0.0), data[:TRAFFIC_RATE_SIZE_BYTES])
 
 
 # ================================================================ TrafficAction
@@ -146,6 +218,7 @@ class TrafficRedirectASN4(ExtendedCommunity):
 class TrafficMark(ExtendedCommunity):
     COMMUNITY_TYPE = 0x80
     COMMUNITY_SUBTYPE = 0x09
+    DSCP_MASK = 0x3F
 
     def __init__(self, dscp, community=None):
         self.dscp = dscp
@@ -160,7 +233,11 @@ class TrafficMark(ExtendedCommunity):
     @staticmethod
     def unpack(data):
         (dscp,) = unpack('!B', data[7:8])
-        return TrafficMark(dscp, data[:8])
+        # RFC 8955 section 7.5: the two high bits of the octet are reserved and MUST be
+        # ignored on decoding.  Read whole, 0xC1 was reported as `mark 193`, which is not a
+        # DSCP: a DSCP is the six low bits and the rest is ECN in the same header field.
+        # The wire is kept as it arrived, so only what exabgp reports changes.
+        return TrafficMark(dscp & TrafficMark.DSCP_MASK, data[:8])
 
 
 # =============================================================== TrafficNextHopIPv4IETF
@@ -252,6 +329,9 @@ class TrafficNextHopSimpson(ExtendedCommunity):
         return TrafficNextHopSimpson(bool(bit & 0x01), data[:8])
 
 
+IPV6_COMMUNITY_SIZE = 20  # RFC 5701
+
+
 # ============================================================ TrafficRedirectIPv6
 # https://tools.ietf.org/html/rfc5701
 
@@ -278,8 +358,12 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
 
     @staticmethod
     def unpack(data):
-        ip, asn = unpack('!16sH', data[2:11])
-        return TrafficRedirectIPv6(socket.inet_ntop(socket.AF_INET6, ip), asn, data[:11])
+        # an RFC 5701 community is 20 bytes: type(1) subtype(1) IPv6(16) asn(2).
+        # this sliced 9 bytes for a format needing 18, so it never decoded at all
+        if len(data) < IPV6_COMMUNITY_SIZE:
+            raise Notify(3, 5, 'invalid IPv6 extended community, too short for a redirect')
+        ip, asn = unpack('!16sH', data[2:IPV6_COMMUNITY_SIZE])
+        return TrafficRedirectIPv6(socket.inet_ntop(socket.AF_INET6, ip), asn, data[:IPV6_COMMUNITY_SIZE])
 
 
 # ============================================================ TrafficRedirectIP

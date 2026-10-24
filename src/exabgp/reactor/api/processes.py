@@ -50,6 +50,9 @@ def preexec_helper():
 class Processes:
     # how many time can a process can respawn in the time interval
     respawn_timemask = 0xFFFFFF - 0b111111
+    # A single API command must fit on one line: without a cap a helper process which
+    # never sends a newline would grow _buffer until the daemon runs out of memory.
+    MAX_COMMAND_SIZE = 1024 * 1024
     # '0b111111111111111111000000' (around a minute, 63 seconds)
 
     _dispatch = {}
@@ -77,12 +80,40 @@ class Processes:
         self._broken = []
         self._respawning = {}
 
+    def _record_respawn(self, process):
+        """Count this respawn against the limit, and give up on a helper which keeps dying.
+
+        Only a start which replaces a helper that died belongs here. The count used to be
+        kept inside _start, where an ordinary configuration reload looked like a respawn.
+        respawn_number is zero when respawning is switched off, so the second start of a
+        helper inside one window then raised ProcessError out of start() and the reactor
+        answered that by shutting the daemon down.
+
+        The window is int(time.time()) & respawn_timemask, which is 64 seconds aligned to
+        the wall clock rather than 64 seconds since the last respawn.
+        """
+        around_now = int(time.time()) & self.respawn_timemask
+        if process not in self._respawning or around_now not in self._respawning[process]:
+            self._respawning[process] = {around_now: 1}
+            return
+        self._respawning[process][around_now] += 1
+        # we are respawning too fast
+        if self._respawning[process][around_now] > self.respawn_number:
+            log.critical(
+                lambda: f'Too many death for {process} ({self.respawn_number}) terminating program',
+                'process',
+            )
+            raise ProcessError
+
     def _handle_problem(self, process):
         if process not in self._process:
             return
         if self.respawn_number and self._restart[process]:
             log.debug(lambda: f'process {process} ended, restarting it', 'process')
             self._terminate(process)
+            # the only path which counts against the respawn limit, and so the only one
+            # which may raise: once the budget is spent there is nothing left to start
+            self._record_respawn(process)
             self._start(process)
         else:
             log.debug(lambda: f'process {process} ended', 'process')
@@ -92,6 +123,8 @@ class Processes:
         log.debug(lambda: f'terminating process {process_name}', 'process')
         process = self._process[process_name]
         del self._process[process_name]
+        # nothing will ever complete the partial line this process left behind
+        self._buffer.pop(process_name, None)
         self._update_fds()
         thread = Thread(target=self._terminate_run, args=(process, process_name))
         thread.start()
@@ -106,9 +139,21 @@ class Processes:
                 log.debug(lambda: f'force kill unresponsive {process_name}', 'process')
                 process.kill()
                 process.wait(timeout=1)
-        except (OSError, KeyError, subprocess.TimeoutExpired):
-            # the process is most likely already dead
-            pass
+        except subprocess.TimeoutExpired:
+            # kill() did not take either, so the child outlived SIGKILL and is still there
+            # while we are on our way out. Rare, and it leaves the operator an orphan holding
+            # whatever the helper held, so this one is not a detail.
+            log.warning(
+                lambda: f'process {process_name} is still running after kill, it is left behind',
+                'process',
+            )
+        except (OSError, KeyError) as exc:
+            # the child is almost always already dead, which is the outcome we wanted, but name
+            # the errno: a permission or bookkeeping failure must not read as a clean exit
+            log.debug(
+                lambda exc=exc: f'could not terminate process {process_name} ({errstr(exc)})',
+                'process',
+            )
 
     def terminate(self):
         for process in list(self._process):
@@ -116,7 +161,13 @@ class Processes:
                 try:
                     self.write(process, self._encoder[process].shutdown())
                 except ProcessError:
-                    pass
+                    # the pipe to a helper which has already gone is not writable, and we are
+                    # shutting down anyway, so this is not worth stopping for. It is worth a
+                    # line: this helper never saw the shutdown and never flushed its own state.
+                    log.debug(
+                        lambda process=process: f'could not tell {process} that we are shutting down',
+                        'process',
+                    )
         self.silence = True
         # waiting a little to make sure IO is flushed to the pipes
         # we are using unbuffered IO but still ..
@@ -176,23 +227,6 @@ class Processes:
                 log.debug(lambda: 'forked process {}'.format(process), 'process')
 
                 self._restart[process] = self._configuration[process]['respawn']
-                around_now = int(time.time()) & self.respawn_timemask
-                if process in self._respawning:
-                    if around_now in self._respawning[process]:
-                        self._respawning[process][around_now] += 1
-                        # we are respawning too fast
-                        if self._respawning[process][around_now] > self.respawn_number:
-                            log.critical(
-                                lambda: f'Too many death for {process} ({self.respawn_number}) terminating program',
-                                'process',
-                            )
-                            raise ProcessError
-                    else:
-                        # reset long time since last respawn
-                        self._respawning[process] = {around_now: 1}
-                else:
-                    # record respawing
-                    self._respawning[process] = {around_now: 1}
 
         except (subprocess.CalledProcessError, OSError, ValueError) as exc:
             self._broken.append(process)
@@ -250,16 +284,31 @@ class Processes:
                     # Calling next() on Linux and OSX works perfectly well
                     # but not on OpenBSD where it always raise StopIteration
                     # and only read() works (not even readline)
-                    buf = str(proc.stdout.read(16384), 'ascii')
+                    # os.read() on the raw fd is deliberate: proc.stdout is a
+                    # BufferedReader which can consume more from the pipe than it
+                    # returns, and the leftover bytes sit in a user-space buffer
+                    # that the poll() above (which watches the kernel fd) can not
+                    # see, stranding commands at the tail of a batch.
+                    buf = str(os.read(proc.stdout.fileno(), 16384), 'ascii')
                     if buf == '' and poll is not None:
                         # if proc.poll() is None then
                         # process is fine, we received an empty line because
-                        # we're doing .read() on a non-blocking pipe and
+                        # we're reading a non-blocking pipe and
                         # the process maybe has nothing to send yet
                         self._handle_problem(process)
                         continue
 
                     raw = self._buffer.get(process, '') + buf
+                    if '\n' not in raw and len(raw) > self.MAX_COMMAND_SIZE:
+                        log.error(
+                            lambda process=process, size=len(raw): (
+                                f'oversized command from process {process} : {size} bytes'
+                            ),
+                            'process',
+                        )
+                        self._buffer.pop(process, None)
+                        self._handle_problem(process)
+                        continue
 
                     while '\n' in raw:
                         line, raw = raw.split('\n', 1)
@@ -303,7 +352,13 @@ class Processes:
                     return
 
             except KeyError:
-                pass
+                # the helper was taken off self._process while we were reading from it.
+                # _handle_problem does that, and so does a shutdown or a reload run by the
+                # reactor while this generator sits suspended on one of its yields.
+                log.debug(
+                    lambda process=process: f'process {process} went away while it was being read',
+                    'process',
+                )
             except (subprocess.CalledProcessError, OSError, ValueError):
                 self._handle_problem(process)
 
@@ -324,7 +379,9 @@ class Processes:
                 else:
                     # Could it have been caused by a signal ? What to do.
                     log.debug(
-                        lambda exc=exc: f'error received while sending data to helper program, retrying ({errstr(exc)})',
+                        lambda exc=exc: (
+                            f'error received while sending data to helper program, retrying ({errstr(exc)})'
+                        ),
                         'process',
                     )
                     continue

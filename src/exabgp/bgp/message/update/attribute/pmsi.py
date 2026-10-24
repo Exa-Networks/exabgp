@@ -12,6 +12,7 @@ from struct import pack
 from struct import unpack
 
 from exabgp.protocol.ip import IPv4
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 # https://tools.ietf.org/html/rfc6514#section-5
@@ -37,6 +38,9 @@ class PMSI(Attribute):
     FLAG = Attribute.Flag.OPTIONAL | Attribute.Flag.TRANSITIVE
     CACHING = True
     TUNNEL_TYPE = -1
+    TUNNEL_SIZE = -1  # -1 means the tunnel is of variable size
+
+    HEADER_SIZE = 5  # Flags(1) + Tunnel Type(1) + MPLS Label(3)
 
     # TUNNEL_TYPE MUST NOT BE DEFINED HERE ( it allows to set it up as a self. value)
 
@@ -59,6 +63,8 @@ class PMSI(Attribute):
         self.tunnel = tunnel  # tunnel id, packed data
 
     def __eq__(self, other):
+        if not isinstance(other, PMSI):
+            return NotImplemented
         return (
             self.ID == other.ID
             and self.FLAG == other.FLAG
@@ -68,7 +74,10 @@ class PMSI(Attribute):
         )
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     @staticmethod
     def name(tunnel_type):
@@ -115,13 +124,22 @@ class PMSI(Attribute):
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
+        if len(data) < cls.HEADER_SIZE:
+            raise Notify(3, 5, 'could not decode PMSI tunnel, not enough data for the header')
+
         flags, subtype = unpack('!BB', data[:2])
         raw_label = unpack('!L', b'\0' + data[2:5])[0]
         label = raw_label >> 4
+        tunnel = data[cls.HEADER_SIZE :]
         # should we check for bottom of stack before the shift ?
-        if subtype in cls._pmsi_known:
-            return cls._pmsi_known[subtype].unpack(data[5:], label, flags, raw_label)
-        return cls.pmsi_unknown(subtype, data[5:], label, flags, raw_label)
+        # the width decides WHICH CLASS can represent these bytes, not whether to
+        # accept them. A tunnel which does not fit its subclass falls through to
+        # the generic form, which prints hex, so the class and the data agree and
+        # nothing which decodes today is refused.
+        klass = cls._pmsi_known.get(subtype)
+        if klass is not None and (klass.TUNNEL_SIZE < 0 or len(tunnel) == klass.TUNNEL_SIZE):
+            return klass.unpack(tunnel, label, flags, raw_label)
+        return cls.pmsi_unknown(subtype, tunnel, label, flags, raw_label)
 
 
 # ================================================================= PMSINoTunnel
@@ -131,6 +149,7 @@ class PMSI(Attribute):
 @PMSI.register
 class PMSINoTunnel(PMSI):
     TUNNEL_TYPE = 0
+    TUNNEL_SIZE = 0
 
     def __init__(self, label=0, flags=0, raw_label=None):
         PMSI.__init__(self, b'', label, flags, raw_label=None)
@@ -150,6 +169,7 @@ class PMSINoTunnel(PMSI):
 @PMSI.register
 class PMSIIngressReplication(PMSI):
     TUNNEL_TYPE = 6
+    TUNNEL_SIZE = 4  # prettytunnel() needs an IPv4 address
 
     def __init__(self, ip, label=0, flags=0, tunnel=None, raw_label=None):
         self.ip = ip  # looks like a bad name

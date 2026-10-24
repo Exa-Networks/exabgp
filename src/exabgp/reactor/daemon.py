@@ -12,6 +12,7 @@ import sys
 import pwd
 import errno
 import socket
+import contextlib
 
 from exabgp.environment import getenv
 
@@ -199,10 +200,13 @@ class Daemon:
         maxfd = 3
 
         for fd in range(maxfd):
-            try:
+            # stdin, stdout and stderr are being detached from the terminal. One of the three
+            # already being closed by whoever started us is the ordinary case, and there is
+            # nothing to do about a descriptor which is already gone. Deliberately not logged:
+            # the log may still be on the very descriptor being closed, so a line written here
+            # would go nowhere, or worse, into the file the next open() is about to take.
+            with contextlib.suppress(OSError):
                 os.close(fd)
-            except OSError:
-                pass
         os.open('/dev/null', os.O_RDWR)
         os.dup2(0, 1)
         os.dup2(0, 2)

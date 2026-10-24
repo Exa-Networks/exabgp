@@ -10,7 +10,6 @@ from __future__ import annotations
 from struct import unpack
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
-from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.linkid import LinkIdentifier
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.neighaddr import NeighAddr
@@ -101,6 +100,10 @@ class LINK(BGPLS):
 
     @classmethod
     def unpack_nlri(cls, data, rd):
+        cls.check_length(data, cls.DESCRIPTOR_OFFSET)
+        # RFC 9552 8.2.2: the NLRI may not be called malformed over the contents of a
+        # field, so an unrecognised Protocol-ID is carried rather than refused.  It is
+        # still read, because the IGP Router-ID sub-TLV is typed by it.
         proto_id = unpack('!B', data[0:1])[0]
         # FIXME: all these list should probably be defined in the objects
         iface_addrs = []
@@ -109,43 +112,22 @@ class LINK(BGPLS):
         topology_ids = []
         remote_node = []
         local_node = []
-        if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
-        tlvs = data[9:]
-
-        while tlvs:
-            tlv_type, tlv_length = unpack('!HH', tlvs[:4])
-            value = tlvs[4 : 4 + tlv_length]
-            tlvs = tlvs[4 + tlv_length :]
-
+        for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
             if tlv_type == TLV_LOCAL_NODE_DESC:
-                local_node = []
-                while value:
-                    # Unpack Local Node Descriptor Sub-TLVs
-                    # We pass proto_id as TLV interpretation
-                    # follows IGP type
-                    node, left = NodeDescriptor.unpack(value, proto_id)
-                    local_node.append(node)
-                    if left == value:
-                        raise RuntimeError('sub-calls should consume data')
-                    value = left
+                # proto_id goes in because a sub-TLV's shape follows the IGP type.
+                # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
+                local_node = NodeDescriptor.unpack_descriptors(value, proto_id)
                 continue
 
             if tlv_type == TLV_REMOTE_NODE_DESC:
-                # Remote Node Descriptor
-                remote_node = []
-                while value:
-                    node, left = NodeDescriptor.unpack(value, proto_id)
-                    remote_node.append(node)
-                    if left == value:
-                        raise RuntimeError('sub-calls should consume data')
-                    value = left
+                # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
+                remote_node = NodeDescriptor.unpack_descriptors(value, proto_id)
                 continue
 
             if tlv_type == TLV_LINK_ID:
                 # Link Local/Remote identifiers
-                link_identifiers = LinkIdentifier.unpack(value)
+                link_identifiers = [LinkIdentifier.unpack(value)]
                 continue
 
             if tlv_type in [TLV_IPV4_IFACE_ADDR, TLV_IPV6_IFACE_ADDR]:
@@ -201,6 +183,20 @@ class LINK(BGPLS):
             return self._packed
         raise RuntimeError('Not implemented')
 
+    def as_dict(self):
+        nlri = BGPLS.as_dict(self)
+        nlri['parsed'] = True
+        nlri['l3-routing-topology'] = int(self.domain)
+        nlri['protocol-id'] = int(self.proto_id)
+        nlri['local-node-descriptors'] = [n.as_dict() for n in self.local_node]
+        nlri['remote-node-descriptors'] = [n.as_dict() for n in self.remote_node]
+        nlri['interface-addresses'] = [a.as_dict() for a in self.iface_addrs]
+        nlri['neighbor-addresses'] = [a.as_dict() for a in self.neigh_addrs]
+        nlri['multi-topology-ids'] = [t.as_dict() for t in self.topology_ids]
+        nlri['link-identifiers'] = [identifier.as_dict() for identifier in self.link_ids]
+        nlri['rd'] = None if self.route_d is None else self.route_d._str()
+        return nlri
+
     def json(self, compact=None):
         content = f'"ls-nlri-type": "{self.NAME}", '
         content += f'"l3-routing-topology": {int(self.domain)}, '
@@ -226,6 +222,12 @@ class LINK(BGPLS):
         # # content is ending without a , here in purpose
 
         if self.route_d:
-            content += f', {{ {self.route_d.json()} }}'
+            # RouteDistinguisher.json() returns a MEMBER, '"rd": "10.0.0.1:7"',
+            # so wrapping it in braces spliced a nameless object into the middle
+            # of this one and every BGP-LS VPN link NLRI rendered unparseable
+            # JSON. node.py, prefixv4.py and prefixv6.py never had the braces;
+            # this was the only one, and the family had no corpus seed, so
+            # nothing decoded a route which reached the line.
+            content += f', {self.route_d.json()}'
 
         return f'{{ {content} }}'

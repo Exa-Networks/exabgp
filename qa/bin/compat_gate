@@ -1,0 +1,387 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
+"""Refuse to ship a release which stops accepting what the last one accepted
+
+Hardening a decoder is easy to overdo. A check written to stop a crash can end
+up stricter than the decoder needs, and then a route a router sends today
+becomes a closed session on upgrade. That is a worse outcome than the crash,
+and no unit test sees it, because unit tests assert the NEW behaviour.
+
+This decodes the same corpus in this tree and in a previous release, classifies
+every result, and fails on any of:
+
+    ACCEPTED -> refused     input the release decodes and this one rejects
+    handled  -> crash       a Python exception where there was none
+
+It passes anything going the other way: a crash becoming a protocol error, or
+an unparseable line becoming a parseable one, is the work landing.
+
+    qa/bin/compat_gate            compare against the newest tag
+    qa/bin/compat_gate 5.0.12     compare against a specific one
+
+The corpus is hand built and RFC legal, from tests/fuzz/corpus.py. That matters:
+random bytes never construct a valid-but-non-canonical message, and that is
+exactly the class these checks break.
+"""
+
+import json
+from pathlib import Path
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+
+# qa/bin/compat_gate -> qa/bin -> qa -> the repository root
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Deliberate behaviour changes, with the reason. A family here is exempt from
+# the accepted-to-refused rule. Keep it short and keep every entry justified:
+# each one is a deployment which stops working on upgrade.
+ALLOWED = {
+    # 5.0.12 accepted an MVPN NLRI announcing more data than it carried, and
+    # stored the truncated body as an un-parsed route it could not re-encode.
+    # A conforming speaker never sends one.
+    # a flow component whose operator declares a value the NLRI does not carry
+    # used to be decoded with an invented value of zero, so the filter carried a
+    # match the peer never sent. On a mitigation box that is a filter doing
+    # something nobody asked for. RFC 8955 4.3 makes a malformed FlowSpec NLRI a
+    # withdraw, so it is dropped.
+    # 5.0.13 also accepted a flow NLRI with no component at all, and a flow-vpn
+    # NLRI with a route distinguisher and nothing after it. A rule with no
+    # component is the intersection of nothing and matches every packet, so a
+    # controller acting on it discarded or rate limited all traffic. RFC 8955 4.2
+    # encodes the value as <[component]+>, one or more, and 4.3 makes anything
+    # else malformed: it is a withdraw now (2114ec208, decided for 5.0).
+    'ipv4/flow': 'component announces a value it does not carry; a rule with no component',
+    'ipv6/flow': 'component announces a value it does not carry; a rule with no component',
+    'ipv4/flow-vpn': 'component announces a value it does not carry; a rule with no component',
+    'ipv6/flow-vpn': 'component announces a value it does not carry; a rule with no component',
+    # an empty BGP_PREFIX_SID is malformed (RFC 8669 6: below the minimum length).
+    # Its decoder raises, and in an UPDATE the attribute collection turns that into
+    # a discard: the route is kept, the attribute dropped. Only this probe, which
+    # calls the decoder on its own, sees the raise; no session is reset.
+    'attr (40, 208)': 'an empty BGP_PREFIX_SID is discarded, not accepted',
+    'ipv4/mcast-vpn': 'announces more data than it carries',
+    'ipv6/mcast-vpn': 'announces more data than it carries',
+    # 5.0.12 trusted the mask byte, so an IPv4 prefix could announce /255 and be
+    # stored as 0.0.0.0/255: a prefix which cannot exist, cannot be re-encoded,
+    # and poisons the RIB. RFC 4271 4.3 bounds the length by the address family.
+    # A mask one past the family also reached CIDR with a negative pad count and
+    # raised ValueError, so the same check turns a crash into a protocol error.
+    'ipv4/unicast': 'mask larger than the address family holds',
+    'ipv6/unicast': 'mask larger than the address family holds',
+    'ipv4/multicast': 'mask larger than the address family holds',
+    'ipv6/multicast': 'mask larger than the address family holds',
+    'ipv4/mpls-vpn': 'mask larger than the address family holds',
+    'ipv6/mpls-vpn': 'mask larger than the address family holds',
+    'ipv4/nlri-mpls': 'mask larger than the address family holds',
+    'ipv6/nlri-mpls': 'mask larger than the address family holds',
+}
+
+
+PROBE = r"""
+import json, sys, importlib, pkgutil
+sys.path.insert(0, 'src')
+sys.path.insert(0, 'tests/fuzz')
+for name in ('exabgp.bgp.message.update.attribute', 'exabgp.bgp.message.update.nlri',
+             'exabgp.bgp.message.open.capability'):
+    try:
+        package = importlib.import_module(name)
+    except ImportError:
+        continue
+    for _finder, module, _ispkg in pkgutil.walk_packages(package.__path__, package.__name__ + '.'):
+        try:
+            importlib.import_module(module)
+        except Exception:
+            pass
+
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.attribute.attribute import Attribute
+from exabgp.bgp.message.action import Action
+from exabgp.protocol.family import AFI, SAFI
+
+try:
+    from corpus import seeds_for
+except ImportError:
+    def seeds_for(_family):
+        out = []
+        for length in range(0, 33):
+            for fill in (b'A', b'\x00', b'\xff', b'\x80', b'\x01\x02\x03'):
+                out.append((fill * (length // len(fill) + 1))[:length])
+        return out
+
+# on stdin, not argv: Linux caps one argument at 128 KiB and the seeds are larger
+SEEDS = json.loads(sys.stdin.read() or '{}')
+
+def classify(render):
+    # VALID if the fragment parses in ANY of the three shapes json() may return.
+    #
+    # A json() may return a complete object, a bare value the caller assigns to a
+    # key, or a MEMBER the caller splices into an object it is building. Wrapping
+    # only as a value covers the first two and calls every member unparseable.
+    #
+    # No NLRI level json() on this branch returns a member today, so all three
+    # agree and this is a no-op: 4622 renders, zero INVALID-JSON either way. It is
+    # written now BECAUSE it is a no-op. The moment a renderer splices a member
+    # the way link.py did, nlri.json() returns one and a value-only wrap fails a
+    # clean tree, which is the same edit that produced the bug this gate catches.
+    #
+    # Comments rather than a docstring: this function lives inside PROBE, a
+    # triple quoted string, and a docstring closes it. That mistake made the
+    # whole gate a SyntaxError while still exiting 1 on the test I was using to
+    # prove it worked.
+    for shape in ('{"x": %s}', '%s', '{%s}'):
+        try:
+            json.loads(shape % render)
+            return 'VALID'
+        except Exception:
+            continue
+    return 'INVALID-JSON'
+
+results = {}
+inputs = {}
+
+for family, klass in sorted(NLRI.registered_nlri.items()):
+    afi_name, safi_name = family.split('/')
+    afi, safi = AFI.value(afi_name), SAFI.value(safi_name)
+    payloads = [bytes.fromhex(h) for h in SEEDS.get(family, [])] or seeds_for(family)
+    for index, payload in enumerate(payloads):
+        key = 'nlri:%s:%d' % (family, index)
+        try:
+            outcome = klass.unpack_nlri(afi, safi, payload, Action.ANNOUNCE, False)
+            nlri = outcome[0] if isinstance(outcome, tuple) else outcome
+            if nlri is None:
+                results[key] = 'DROPPED'
+                continue
+            results[key] = classify(nlri.json())
+        except Notify:
+            results[key] = 'NOTIFY'
+        except Exception as exc:
+            results[key] = 'PYERROR:' + type(exc).__name__
+        inputs[key] = payload.hex()
+
+for aid, entry in sorted(getattr(Attribute, 'registered_attributes', {}).items(), key=lambda i: str(i[0])):
+    klass = entry[1] if isinstance(entry, tuple) else entry
+    for length in range(0, 26):
+        key = 'attr:%s:%d' % (aid, length)
+        data = bytes(range(1, length + 1))
+        inputs[key] = data.hex()
+        try:
+            decoded = klass.unpack(data, None, None)
+            results[key] = classify(decoded.json()) if hasattr(decoded, 'json') else 'VALID'
+        except Notify:
+            results[key] = 'NOTIFY'
+        except Exception as exc:
+            results[key] = 'PYERROR:' + type(exc).__name__
+
+print(json.dumps({'results': results, 'inputs': inputs}, sort_keys=True))
+"""
+
+
+def run(cwd, seeds):
+    """Run the probe in a tree and return its verdicts"""
+    probe = os.path.join(cwd, '.compat_probe.py')
+    with open(probe, 'w') as handle:
+        handle.write(PROBE)
+    try:
+        finished = subprocess.run(
+            [sys.executable, probe],
+            input=json.dumps(seeds),
+            capture_output=True,
+            text=True,
+            cwd=cwd,
+            env={**os.environ, 'exabgp_log_enable': 'false'},
+        )
+    finally:
+        os.unlink(probe)
+    if not finished.stdout.strip():
+        sys.stderr.write(finished.stderr[-2000:])
+        cannot_run('the probe produced nothing in %s' % cwd)
+    return json.loads(finished.stdout)
+
+
+CANNOT_RUN = 2  # distinct from 1, which means the gate ran and found something
+
+
+def cannot_run(message):
+    """Exit 2, never 1
+
+    A gate which cannot execute must not use the exit code that means it found
+    something. SystemExit('text') exits 1, and so does SystemExit(2, 'text'),
+    whose .code is a TUPLE: both of those were in this file, so a dead probe was
+    indistinguishable from a real regression.
+
+    That matters because the test which proves this gate works is "reinstate the
+    bug, expect exit 1", and a gate broken while making it would pass that test.
+    It happened: a docstring added to a function inside the PROBE string closed
+    the string, and the resulting SyntaxError exited 1 on the very run being used
+    as proof.
+
+    Confirming the tool still runs is the discipline. A different exit code is
+    the part which does not depend on remembering.
+    """
+    sys.stderr.write('cannot run: %s\n' % message)
+    raise SystemExit(CANNOT_RUN)
+
+
+def collect_seeds():
+    """Build the corpus once, here, so both trees decode exactly the same bytes
+
+    Every registered family must be listed. A family missing from this map makes
+    the probe fall back to whatever it can generate itself, and the older tree
+    has no corpus module at all, so the two sides would compare different inputs
+    and every verdict for that family would be meaningless.
+    """
+    sys.path.insert(0, os.path.join(ROOT, 'tests', 'fuzz'))
+    sys.path.insert(0, os.path.join(ROOT, 'src'))
+    import corpus
+    from exabgp.bgp.message.update.nlri.nlri import NLRI
+
+    return {family: [bytes(payload).hex() for payload in corpus.seeds_for(family)] for family in NLRI.registered_nlri}
+
+
+ALLOWED_FILE = Path(__file__).resolve().parent.parent / 'compat_allowed.json'
+
+
+def load_allowed():
+    """The individual inputs whose change against the last release is intended
+
+    One key per input rather than one per family. ALLOWED above holds the REASONS,
+    by family, which is the right granularity for prose; this holds what is
+    actually excused, which has to be the granularity of the thing that changed.
+    """
+    if not ALLOWED_FILE.exists():
+        return set()
+    return set(json.loads(ALLOWED_FILE.read_text())['allowed'])
+
+
+def record_allowed(keys):
+    ALLOWED_FILE.write_text(json.dumps({'allowed': sorted(keys)}, indent=2) + '\n')
+
+
+def main():
+    argv = [_ for _ in sys.argv[1:] if _ != '--record']
+    recording = '--record' in sys.argv
+    tag = argv[0] if argv else None
+    if tag is None:
+        tag = subprocess.run(
+            ['git', 'describe', '--tags', '--abbrev=0'], capture_output=True, text=True, cwd=ROOT
+        ).stdout.strip()
+    if not tag:
+        cannot_run('no tag to compare against, pass one explicitly')
+
+    seeds = collect_seeds()
+    if not seeds:
+        cannot_run('no corpus: both trees would decode different bytes, which proves nothing')
+    print('comparing this tree against %s over %d NLRI families' % (tag, len(seeds)))
+
+    worktree = tempfile.mkdtemp(prefix='compat-gate-')
+    try:
+        subprocess.run(['git', 'worktree', 'add', '--detach', '-q', worktree, tag], cwd=ROOT, check=True)
+        before = run(worktree, seeds)
+    finally:
+        subprocess.run(['git', 'worktree', 'remove', '--force', worktree], cwd=ROOT)
+        shutil.rmtree(worktree, ignore_errors=True)
+
+    after = run(ROOT, seeds)
+
+    # "the two trees decode the same bytes" is a claim, not a fact. This gate
+    # already got that wrong once: the corpus was built per tree, the older one
+    # had no generator and fell back to something else, and every verdict for
+    # those families compared different inputs while reporting a number.
+    shared = set(before['inputs']) & set(after['inputs'])
+    if not shared:
+        cannot_run('the two runs share no input at all, nothing here is comparable')
+    differing = sorted(key for key in shared if before['inputs'][key] != after['inputs'][key])
+    if differing:
+        print('the two trees were handed DIFFERENT bytes for %d inputs, refusing to compare' % len(differing))
+        for key in differing[:5]:
+            print('  %-34s %s vs %s' % (key, before['inputs'][key][:24], after['inputs'][key][:24]))
+        return 2
+
+    before, after = before['results'], after['results']
+    allowed = load_allowed()
+    counts = {}
+    regressions = []
+    unparseable = []
+    for key in sorted(set(before) | set(after)):
+        old, new = before.get(key, 'ABSENT'), after.get(key, 'ABSENT')
+        # ABSOLUTE, and checked BEFORE the comparison. A gate which only compares
+        # against the last release cannot see a defect both trees share: with the
+        # BGP-LS VPN brace bug reinstated this printed "no regression" and exited
+        # 0, because 5.0.12 renders the same unparseable line and the two trees
+        # agreed. A line no JSON parser accepts is wrong whatever the previous
+        # release did with it.
+        #
+        # Two mistakes cancelling is what a pure comparison rewards, which is the
+        # whole class this gate exists to catch.
+        if new == 'INVALID-JSON' or new.startswith('RENDER-ERROR'):
+            unparseable.append((key, old, new))
+            continue
+        if old == new:
+            counts['identical'] = counts.get('identical', 0) + 1
+            continue
+        kind = '%s -> %s' % (old.split(':')[0], new.split(':')[0])
+        # Keyed on the INPUT, not the family. Keying on the family meant one
+        # entry excused every future change in it: 14 of the 21 families carried
+        # a blanket allowance, so this gate reported "no regression" while being
+        # structurally unable to see one in two thirds of the tree. It waved
+        # through 80 newly refused label stacks under a reason about prefix
+        # masks, which is how it was noticed.
+        if key in allowed:
+            counts['allowed (see qa/compat_allowed.json)'] = counts.get('allowed (see qa/compat_allowed.json)', 0) + 1
+            continue
+        counts[kind] = counts.get(kind, 0) + 1
+        # a line the consumer cannot parse is not a service worth keeping,
+        # so INVALID-JSON becoming a protocol error is the work landing
+        accepted = old == 'VALID'
+        refused = new in ('NOTIFY', 'DROPPED')
+        if (accepted and refused) or new.startswith('PYERROR'):
+            regressions.append((key, old, new))
+
+    for kind, count in sorted(counts.items(), key=lambda i: -i[1]):
+        print('  %-28s %d' % (kind, count))
+
+    if unparseable:
+        print('\n%d inputs render JSON no consumer can parse:' % len(unparseable))
+        for key, old_state, new_state in unparseable[:20]:
+            print('  %-34s was %s, is %s' % (key, old_state, new_state))
+        if len(unparseable) > 20:
+            print('  ... and %d more' % (len(unparseable) - 20))
+        print('\nthis is absolute: the last release rendering the same line does not make it valid')
+        return 1
+
+    if not regressions:
+        print('\nno regression: nothing %s accepts is refused here, and no new crash' % tag)
+        return 0
+
+    if recording:
+        # bless the current change set as the baseline. Every key is written
+        # individually, so the NEXT change against the last release is a
+        # regression rather than something a family wide entry absorbed.
+        # merged with what is already blessed, never replacing it: writing only
+        # the CURRENT regressions silently drops every key which is passing, so
+        # one --record from a half fixed tree would erase the baseline and the
+        # next run would call the erased entries clean
+        record_allowed(allowed | {key for key, _old, _new in regressions})
+        print('\nrecorded %d intended changes to %s' % (len(regressions), ALLOWED_FILE.name))
+        by_family = {}
+        for key, old_state, new_state in regressions:
+            family = key.split(':')[1]
+            transition = '%s -> %s' % (old_state.split(':')[0], new_state.split(':')[0])
+            by_family[(family, transition)] = by_family.get((family, transition), 0) + 1
+        for (family, transition), count in sorted(by_family.items(), key=lambda kv: -kv[1]):
+            print('  %-22s %-22s %d' % (family, transition, count))
+        return 0
+
+    print('\n%d REGRESSIONS against %s:' % (len(regressions), tag))
+    for key, old, new in regressions[:40]:
+        print('  %-34s %s -> %s' % (key, old, new))
+    return 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

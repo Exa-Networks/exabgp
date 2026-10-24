@@ -14,6 +14,7 @@ from exabgp.protocol.family import SAFI
 
 from exabgp.bgp.message import Action
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri import NLRI
 
 # https://tools.ietf.org/html/rfc7432
@@ -32,6 +33,21 @@ from exabgp.bgp.message.update.nlri import NLRI
 @NLRI.register(AFI.l2vpn, SAFI.evpn)
 class EVPN(NLRI):
     registered_evpn = dict()
+
+    @classmethod
+    def check_length(cls, data, minimum):
+        """Reject wire data too short for this route type.
+
+        The per route type unpack methods index into the payload, so the length
+        must be checked before any field is read, otherwise a truncated NLRI
+        surfaces as an IndexError instead of a NOTIFICATION.
+        """
+        if len(data) < minimum:
+            raise Notify(
+                3,
+                10,
+                '{} EVPN NLRI is too short: need at least {} bytes, got {}'.format(cls.NAME, minimum, len(data)),
+            )
 
     # NEED to be defined in the subclasses
     CODE = -1
@@ -68,6 +84,16 @@ class EVPN(NLRI):
     def _prefix(self):
         return 'evpn:{}:'.format(self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower())
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        return {
+            'code': self.CODE,
+            'parsed': False,
+            'raw': self._raw(),
+            'name': self.NAME,
+            'family': {'afi': str(family[0]), 'safi': str(family[1])},
+        }
+
     def pack_nlri(self, negotiated=None):
         # XXX: addpath not supported yet
         return pack('!BB', self.CODE, len(self._packed)) + self._packed
@@ -81,8 +107,18 @@ class EVPN(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # RFC 7911 section 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
+        # EVPN NLRI: route_type(1) + length(1) + route_data(length)
+        if len(bgp) < 2:
+            raise Notify(3, 10, 'EVPN NLRI too short: need at least 2 bytes, got {}'.format(len(bgp)))
         code = bgp[0]
         length = bgp[1]
+
+        if len(bgp) < length + 2:
+            raise Notify(3, 10, 'EVPN NLRI truncated: need {} bytes, got {}'.format(length + 2, len(bgp)))
 
         if code in cls.registered_evpn:
             klass = cls.registered_evpn[code].unpack(bgp[2 : length + 2])
@@ -90,7 +126,7 @@ class EVPN(NLRI):
             klass = GenericEVPN(code, bgp[2 : length + 2])
         klass.CODE = code
         klass.action = action
-        klass.addpath = addpath
+        klass.addpath = path_info
 
         return klass, bgp[length + 2 :]
 

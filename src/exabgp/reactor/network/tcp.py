@@ -8,14 +8,16 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import re
-import base64
 import socket
 import select
 import platform
+import contextlib
 
 from struct import pack, calcsize
 
+from exabgp.logger import log
 from exabgp.util.errstr import errstr
+from exabgp.util.psk import PSKError, decode_base64
 
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
@@ -30,29 +32,83 @@ from exabgp.reactor.network.error import TTLError
 from exabgp.reactor.network.error import AsyncError
 
 
+def set_reuse_options(io):
+    """Let the local port of a closed session be used again straight away.
+
+    Neither option has to succeed for the connection to work, and SO_REUSEPORT does not
+    exist on every platform, so a failure is not fatal. It is worth saying out loud
+    though: without SO_REUSEADDR a session which drops cannot rebind its local port
+    until the old socket leaves TIME_WAIT, and what the operator sees is a peer which
+    will not come back, with nothing pointing at a socket option.
+    """
+    for name in ('SO_REUSEADDR', 'SO_REUSEPORT'):
+        option = getattr(socket, name, None)
+        if option is None:
+            log.debug(
+                lambda name=name: f'{name} does not exist on {platform.system()}, not setting it',
+                'network',
+            )
+            continue
+        try:
+            io.setsockopt(socket.SOL_SOCKET, option, 1)
+        except OSError as exc:
+            log.warning(
+                lambda name=name, exc=exc: (
+                    f'could not set {name} ({errstr(exc)}): a session which drops may be unable to reuse '
+                    f'its local port until the old socket leaves TIME_WAIT'
+                ),
+                'network',
+            )
+
+
+def bind_to_device(io, interface):
+    """Restrict a socket to one interface, saying which of three things went wrong.
+
+    This is what lets a link-local address be used at all: the kernel refuses to bind or
+    connect one until the socket names a link, and SO_BINDTODEVICE is one of the two ways
+    to say which.
+
+    It used to answer all three failures with 'Could not bind to device <name>', which
+    blames the name for two faults that have nothing to do with it, and before that it did
+
+        if not hasattr(socket, 'SO_BINDTODEVICE'):
+            socket.SO_BINDTODEVICE = 25
+
+    on a platform without the option: 25 is the Linux constant, so elsewhere it is either
+    meaningless or a different option entirely, and the assignment mutated the stdlib socket
+    module for the life of the process rather than for the one call. Python has had the
+    constant on Linux and macOS for a while (4404 on macOS), so that branch was reached only
+    on a platform which genuinely cannot do this, where inventing a number cannot help.
+
+    The caller tests `if interface` rather than `if interface is not None`, because an empty
+    `source-interface` used to reach here and bind to '\0' without complaint.
+    """
+    if not hasattr(socket, 'SO_BINDTODEVICE'):
+        raise NotConnected(f'can not bind to device {interface}, this platform has no SO_BINDTODEVICE')
+
+    try:
+        socket.if_nametoindex(interface)
+    except OSError:
+        raise NotConnected(f'can not bind to device {interface}, no interface of that name exists') from None
+
+    try:
+        io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, interface.encode('utf-8') + b'\0')
+    except OSError as exc:
+        # SO_BINDTODEVICE needs CAP_NET_RAW, so an unprivileged daemon lands here rather than
+        # on the name check above
+        raise NotConnected(f'can not bind to device {interface} - {exc}') from None
+
+
 def create(afi, interface=None):
     try:
         if afi == AFI.ipv4:
             io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         if afi == AFI.ipv6:
             io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-        try:
-            io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        except (OSError, AttributeError):
-            pass
-        try:
-            io.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)  # pylint: disable=E1101
-        except (OSError, AttributeError):
-            pass
+        set_reuse_options(io)
 
-        if interface is not None:
-            try:
-                if not hasattr(socket, 'SO_BINDTODEVICE'):
-                    socket.SO_BINDTODEVICE = 25
-
-                io.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, str(interface + '\0').encode('utf-8'))
-            except OSError:
-                raise NotConnected(f'Could not bind to device {interface}') from None
+        if interface:
+            bind_to_device(io, interface)
     except OSError:
         raise NotConnected('Could not create socket') from None
     return io
@@ -112,6 +168,19 @@ def connect(io, ip, port, afi, md5):
 # } __attribute__ ((aligned(_K_SS_ALIGNSIZE)));   /* force desired alignment */
 
 
+def decode_unpadded_base64(key):
+    """The bytes of a base64 key whose padding may have been left out, or None if it is not base64.
+
+    'auto' mode has to guess, because a key written in hex is also valid base64, so the
+    only way to tell is to try. A PSKError here is not an error to report: it is the
+    answer for one candidate padding, and the caller is told which reading won.
+    """
+    for candidate in (key + '==', key + '=', key):
+        with contextlib.suppress(PSKError):
+            return decode_base64(candidate)
+    return None
+
+
 def md5(io, ip, port, md5, md5_base64):
     platform_os = platform.system()
     if platform_os == 'FreeBSD':
@@ -139,17 +208,14 @@ def md5(io, ip, port, md5, md5_base64):
             if md5:
                 if md5_base64 is True:
                     try:
-                        md5_bytes = base64.b64decode(md5)
-                    except TypeError:
-                        raise MD5Error('Failed to decode base 64 encoded PSK') from None
+                        md5_bytes = decode_base64(md5)
+                    except PSKError as exc:
+                        raise MD5Error('Failed to decode base 64 encoded PSK: {}'.format(exc)) from None
                 elif md5_base64 is None and not re.match('.*[^a-f0-9].*', md5):  # auto
-                    options = [md5 + '==', md5 + '=', md5]
-                    for md5 in options:
-                        try:
-                            md5_bytes = base64.b64decode(md5)
-                            break
-                        except TypeError:
-                            pass
+                    # the key looks like hex, so it may be base64 with the padding left out
+                    md5_bytes = decode_unpadded_base64(md5)
+                    reading = 'base64' if md5_bytes else 'the password as it was written'
+                    log.debug(lambda reading=reading: f'md5 key for {ip} is being read as {reading}', 'network')
 
             # __kernel_sockaddr_storage
             n_af = IP.toaf(ip)
@@ -180,9 +246,15 @@ def md5(io, ip, port, md5, md5_base64):
                 md5_bytes = bytes(md5, 'ascii')
                 key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
                 io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
-            # else:
-            # 	key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
-            # 	io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+            else:
+                key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
+                try:
+                    io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
+                except OSError as exc:
+                    # no md5 is configured, so there is no key to clear on a
+                    # kernel which does not implement the option at all
+                    if exc.errno != errno.ENOPROTOOPT:
+                        raise
 
         except OSError as exc:
             if exc.errno != errno.ENOENT:
@@ -220,24 +292,113 @@ def ttlv6(io, ip, ttl):
             ) from None
 
 
+# CPython does not export IP_MINTTL from socket on any platform, so looking the option up
+# by name alone never finds it, Linux included. These are the values from the kernel
+# headers of the platforms which have it.
+IP_MINTTL_BY_PLATFORM = {
+    'Linux': 21,  # linux/in.h
+    'FreeBSD': 66,  # netinet/in.h
+}
+
+# IPV6_MINHOPCOUNT is Linux specific and socket does not always carry it either.
+IPV6_MINHOPCOUNT = getattr(socket, 'IPV6_MINHOPCOUNT', 73)
+
+
+def ip_minttl():
+    """The IP_MINTTL option number on this platform, or None where it does not exist."""
+    exported = getattr(socket, 'IP_MINTTL', None)
+    if exported is not None:
+        return exported
+    return IP_MINTTL_BY_PLATFORM.get(platform.system())
+
+
 def min_ttl(io, ip, ttl):
     # None (ttl-security unset) or zero (maximum TTL) is the same thing
-    if ttl:
-        try:
-            io.setsockopt(socket.IPPROTO_IP, socket.IP_MINTTL, ttl)
-        except OSError as exc:
-            raise TTLError(
-                'This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))
-            ) from None
-        except AttributeError:
-            pass
+    if not ttl:
+        return
 
-        try:
-            io.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, ttl)
-        except OSError as exc:
-            raise TTLError(
-                'This OS does not support IP_MINTTL or IP_TTL (ttl-security) for {} ({})'.format(ip, errstr(exc)),
-            ) from None
+    # IP_MINTTL is what enforces GTSM (RFC 5082) on the receive side: it is the option
+    # which makes the kernel drop a packet arriving with too low a TTL. macOS has no such
+    # option at all.
+    #
+    # This used to read socket.IP_MINTTL and swallow the AttributeError. CPython exports
+    # the constant on no platform, so the inbound check was installed nowhere, Linux
+    # included, and the operator was not told.
+    #
+    # It sets the minimum and nothing else. It also used to set IP_TTL to the same value,
+    # which is the TTL we send with: that is outgoing-ttl's job, and RFC 5082 has a GTSM
+    # sender use 255 rather than the lowest value it accepts. See sending_ttl.
+    #
+    # Warn rather than raise where the platform has no option: those hosts run sessions
+    # today and refusing to bring them up is a larger change than the defect. An option
+    # which is present but refused by the kernel stays a TTLError, because that is a
+    # request which was understood and rejected rather than one which cannot be made.
+    minttl = ip_minttl()
+    if minttl is None:
+        log.warning(
+            lambda ip=ip: (
+                f'ttl-security for {ip} has no inbound check: this platform has no IP_MINTTL, '
+                f'so arriving packets are not checked against the TTL'
+            ),
+            'network',
+        )
+        return
+
+    try:
+        io.setsockopt(socket.IPPROTO_IP, minttl, ttl)
+    except OSError as exc:
+        raise TTLError(
+            'This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))
+        ) from None
+
+
+def min_ttlv6(io, ip, ttl):
+    # None (ttl-security unset) or zero (maximum TTL) is the same thing
+    if not ttl:
+        return
+
+    try:
+        io.setsockopt(socket.IPPROTO_IPV6, IPV6_MINHOPCOUNT, ttl)
+    except OSError as exc:
+        raise TTLError(
+            'This OS does not support IPV6_MINHOPCOUNT (ttl-security) for {} ({})'.format(ip, errstr(exc))
+        ) from None
+    # the hop limit we send with is set by set_sending_ttl, for the reason given in min_ttl
+
+
+# RFC 5082 section 3: a GTSM speaker sends with the maximum TTL, so that the receiver can
+# tell from what arrives how many hops the packet crossed.
+GTSM_SENDING_TTL = 255
+
+
+def sending_ttl(outgoing, incoming):
+    """The TTL to put on what we send to a neighbour, or None to leave the kernel default.
+
+    outgoing-ttl says so explicitly. Without it, an incoming-ttl means the neighbour runs
+    GTSM, and GTSM wants 255 on the wire: the default of 64 is below any minimum the far
+    end is likely to check against, so the session would never come up.
+    """
+    if outgoing:
+        return outgoing
+    if incoming:
+        return GTSM_SENDING_TTL
+    return None
+
+
+def set_sending_ttl(io, afi, ip, value):
+    """Set the TTL (IPv4) or hop limit (IPv6) this socket sends with."""
+    if afi == AFI.ipv6:
+        ttlv6(io, ip, value)
+        return
+    ttl(io, ip, value)
+
+
+def set_minimum_ttl(io, afi, ip, minimum):
+    """Have the kernel drop what arrives on this socket with a TTL below the minimum."""
+    if afi == AFI.ipv6:
+        min_ttlv6(io, ip, minimum)
+        return
+    min_ttl(io, ip, minimum)
 
 
 def asynchronous(io, ip):

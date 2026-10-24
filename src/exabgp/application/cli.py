@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import errno
 import os
 import select
@@ -91,18 +92,21 @@ def open_writer(send):
         writer = os.open(send, os.O_WRONLY)
     except OSError as exc:
         if exc.errno == errno.ENXIO:
-            sys.stdout.write('ExaBGP is not running / using the configured named pipe')
-            sys.stdout.flush()
+            sys.stderr.write('ExaBGP is not running / using the configured named pipe\n')
+            sys.stderr.flush()
             sys.exit(1)
-        sys.stdout.write('could not communicate with ExaBGP')
-        sys.stdout.flush()
+        # the reason used to sit in a second `except OSError` below this one, which Python
+        # could never reach; without it a fifo we may not open reads the same as one which
+        # went away
+        sys.stderr.write(f'could not communicate with ExaBGP ({exc})\n')
+        sys.stderr.flush()
         sys.exit(1)
-    except OSError as exc:
-        sys.stdout.write(f'could not communicate with ExaBGP ({exc})')
-        sys.stdout.flush()
-        sys.exit(1)
+    finally:
+        # Every path, not only the one which succeeded. The cancel used to sit after the try,
+        # so a failed os.open left the alarm armed and it fired minutes later in whatever was
+        # running by then. `finally` also runs before the SystemExit above leaves this frame.
+        signal.alarm(0)
 
-    signal.alarm(0)
     return writer
 
 
@@ -140,14 +144,16 @@ def cmdline(cmdarg):
     send = pipes[0] + pipename + '.in'
     recv = pipes[0] + pipename + '.out'
 
+    # stderr, like the check_fifo report just above it: this is a diagnostic and not part of
+    # the answer a caller is reading off stdout. Both lines also lacked their newline.
     if not check_fifo(send):
-        sys.stdout.write('could not find write named pipe to connect to ExaBGP')
-        sys.stdout.flush()
+        sys.stderr.write('could not find write named pipe to connect to ExaBGP\n')
+        sys.stderr.flush()
         sys.exit(1)
 
     if not check_fifo(recv):
-        sys.stdout.write('could not find read named pipe to connect to ExaBGP')
-        sys.stdout.flush()
+        sys.stderr.write('could not find read named pipe to connect to ExaBGP\n')
+        sys.stderr.flush()
         sys.exit(1)
 
     reader = open_reader(recv)
@@ -163,13 +169,6 @@ def cmdline(cmdarg):
             if exc.errno in error.block:
                 continue
             sys.stdout.write(f'could not clear named pipe from potential previous command data ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not clear named pipe from potential previous command data ({exc!s})')
-            sys.stdout.write(str(exc))
             sys.stdout.flush()
             sys.exit(1)
 
@@ -236,20 +235,30 @@ def cmdline(cmdarg):
 
     sending = ' '.join(renamed).strip()
 
+    # `command` is the argparse list, so both comparisons below have to be made against
+    # the joined string. Against the list the first was always true and printed the echo
+    # for every command, and the second was never true.
+    typed = ' '.join(command).strip()
+
     # This does not change the behaviour for well formed command
-    if sending != command:
+    if sending != typed:
         sys.stdout.write(f'command: {sending}\n')
 
     writer = open_writer(send)
     try:
         os.write(writer, sending.encode('utf-8') + b'\n')
-        os.close(writer)
     except OSError as exc:
         sys.stdout.write(f'could not send command to ExaBGP ({exc!s})')
         sys.stdout.flush()
         sys.exit(1)
+    finally:
+        # in a finally because the write failure path used to skip the close and leak
+        # the descriptor
+        os.close(writer)
 
-    if command == 'reset':
+    # reset is the one command the daemon does not answer, so waiting for an answer only
+    # ever ends in the five second timeout below telling the user the reactor may block
+    if sending == 'reset':
         sys.exit(0)
 
     waited = 0.0
@@ -259,12 +268,6 @@ def cmdline(cmdarg):
     while not done:
         try:
             r, _, _ = select.select([reader], [], [], SELECT_TIMEOUT)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not get answer from ExaBGP ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
         except OSError as exc:
             if exc.errno in error.block:
                 continue
@@ -288,12 +291,6 @@ def cmdline(cmdarg):
 
         try:
             raw = os.read(reader, 4096)
-        except OSError as exc:
-            if exc.errno in error.block:
-                continue
-            sys.stdout.write(f'could not read answer from ExaBGP ({exc!s})')
-            sys.stdout.flush()
-            sys.exit(1)
         except OSError as exc:
             if exc.errno in error.block:
                 continue
@@ -329,16 +326,16 @@ def cmdline(cmdarg):
             if time_diff >= done_time_diff:
                 done = True
 
-    try:
+    # The answer is printed and the process exits on the next line, so a descriptor which
+    # refuses to close has nothing left to tell anyone: exiting closes it either way.
+    with contextlib.suppress(Exception):
         os.close(reader)
-    except Exception:
-        pass
 
     sys.exit(0)
 
 
 if __name__ == '__main__':
-    try:
+    # Ctrl-C is how a user leaves the cli while it waits for the daemon's answer, so it is
+    # the user's decision and not a fault: a traceback would only repeat what they typed.
+    with contextlib.suppress(KeyboardInterrupt):
         main()
-    except KeyboardInterrupt:
-        pass

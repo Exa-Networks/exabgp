@@ -60,7 +60,6 @@ EXTENDED_COMMUNITY_TARGET_PARTS = 2  # Target extended community has 2 parts (AS
 
 
 def prefix(tokeniser):
-    # XXX: could raise
     ip = tokeniser()
     try:
         ip, mask = ip.split('/')
@@ -69,8 +68,17 @@ def prefix(tokeniser):
         if ':' in ip:
             mask = '128'
 
-    tokeniser.afi = IP.toafi(ip)
-    iprange = IPRange.create(ip, mask)
+    # IPRange.create reaches socket.inet_pton, which answers a malformed address with a bare
+    # OSError.  Nothing caught it, so `route 999.999.999.999/24` reported "illegal IP address
+    # string passed to inet_pton" and named neither the token nor what was wrong with it.
+    # IP.toafi runs first and raises ValueError of its own, which was equally uncaught here.
+    try:
+        tokeniser.afi = IP.toafi(ip)
+        iprange = IPRange.create(ip, mask)
+    except (OSError, ValueError):
+        raise ValueError(
+            "'%s/%s' is not a valid prefix\n  Format: <ip>/<length> (e.g. 192.0.2.0/24)" % (ip, mask)
+        ) from None
 
     if iprange.address() & iprange.mask.hostmask() != 0:
         raise ValueError('invalid network {} for netmask {}'.format(ip, mask))
@@ -465,6 +473,7 @@ _ENCODE = {
 _SIZE_B = 0xFF
 _SIZE_H = 0xFFFF
 _SIZE_L = 0xFFFFFFFF
+_IPV4_PARTS = 4  # an IPv4 address written in dotted decimal has four parts
 
 
 def _digit(string):
@@ -485,11 +494,23 @@ def _integer(string):
 
 
 def _ip(string, error):
-    if '.' not in string:
-        raise ValueError('invalid extended community: {}'.format(error))
-    v = [int(_) for _ in string.split('.')]
+    parts = string.split('.')
+    if len(parts) != _IPV4_PARTS:
+        raise ValueError(
+            'invalid extended community: {}\n  Expecting {} dotted decimal parts, got {}'.format(
+                error, _IPV4_PARTS, len(parts)
+            )
+        )
+    values = []
+    for part in parts:
+        if not part.isascii() or not part.isdigit():
+            raise ValueError('invalid extended community: {}\n  "{}" is not a decimal number'.format(error, part))
+        number = int(part)
+        if number > _SIZE_B:
+            raise ValueError('invalid extended community: {}\n  "{}" is larger than 255'.format(error, part))
+        values.append(number)
     # could use b''.join() - for speed?
-    return (v[0] << 24) + (v[1] << 16) + (v[2] << 8) + v[3]
+    return (values[0] << 24) + (values[1] << 16) + (values[2] << 8) + values[3]
 
 
 def _encode(command, components, parts):

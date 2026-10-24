@@ -5,10 +5,10 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 """
 
 import json
-from struct import pack, unpack
+from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
-from exabgp.bgp.message.update.nlri.bgpls.nlri import PROTO_CODES
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.multitopology import MTID
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
@@ -46,68 +46,88 @@ class SRv6SID(BGPLS):
     NAME = 'bgpls-srv6sid'
     SHORT_NAME = 'SRv6_SID'
 
-    def __init__(self, protocol_id, domain, local_node_descriptors, srv6_sid_descriptors, action=None, addpath=None):
+    def __init__(
+        self,
+        protocol_id,
+        domain,
+        local_node_descriptors,
+        srv6_sid_descriptors,
+        action=None,
+        addpath=None,
+        packed=None,
+    ):
         BGPLS.__init__(self, action, addpath)
         self.proto_id = protocol_id
         self.domain = domain
         self.local_node_descriptors = local_node_descriptors
         self.srv6_sid_descriptors = srv6_sid_descriptors
+        # The wire NLRI, kept because the parsed form cannot be re-encoded: the descriptors
+        # become a list of objects and a dict of rendered strings.  Every sibling NLRI in
+        # this package keeps it, and the base class reads it for pack_nlri, index and hash.
+        if packed is not None:
+            self._packed = packed
 
     @classmethod
-    def unpack_nlri(cls, data, length):
+    def unpack_nlri(cls, data, rd):
+        cls.check_length(data, cls.DESCRIPTOR_OFFSET)
+        # RFC 9552 8.2.2: the NLRI may not be called malformed over the contents of a
+        # field, so an unrecognised Protocol-ID is carried rather than refused.  It is
+        # still read, because the IGP Router-ID sub-TLV is typed by it.
         proto_id = unpack('!B', data[0:1])[0]
-        if proto_id not in PROTO_CODES.keys():
-            raise Exception(f'Protocol-ID {proto_id} is not valid')
         domain = unpack('!Q', data[1:9])[0]
 
-        tlvs = data[9:length]
-        node_type, node_length = unpack('!HH', tlvs[0:4])
-        if node_type != TLV_LOCAL_NODE_DESC:
-            raise Exception(
-                f'Unknown type: {node_type}. Only Local Node descriptors are allowed inNode type msg',
-            )
-        tlvs = tlvs[4:]
-        local_node_descriptors = tlvs[:node_length]
-        node_ids = []
-        while local_node_descriptors:
-            node_id, left = NodeDescriptor.unpack(local_node_descriptors, proto_id)
-            node_ids.append(node_id)
-            if left == local_node_descriptors:
-                raise RuntimeError('sub-calls should consume data')
-            local_node_descriptors = left
-
-        tlvs = tlvs[node_length:]
         srv6_sid_descriptors = {}
         srv6_sid_descriptors['multi-topology-ids'] = []
+        node_ids = []
+        first = True
 
-        while tlvs:
-            if len(tlvs) < MIN_TLV_HEADER_SIZE:
-                raise RuntimeError('SRv6 SID Descriptors are too short')
-            sid_type, sid_length = unpack('!HH', tlvs[:4])
-            if sid_type == TLV_MULTI_TOPO_ID:
-                srv6_sid_descriptors['multi-topology-ids'].append(MTID.unpack(tlvs[4 : sid_length + 4]).json())
-            elif sid_type == TLV_SRV6_SID_INFO:
-                srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack(tlvs[4 : sid_length + 4]))
+        for tlv_type, value in cls.iter_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
+            if first:
+                first = False
+                if tlv_type != TLV_LOCAL_NODE_DESC:
+                    raise Notify(
+                        3,
+                        10,
+                        f'Unknown type: {tlv_type}. Only Local Node descriptors are allowed in a Node type msg',
+                    )
+                # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
+                node_ids = NodeDescriptor.unpack_descriptors(value, proto_id)
+                continue
+
+            if tlv_type == TLV_MULTI_TOPO_ID:
+                srv6_sid_descriptors['multi-topology-ids'].append(MTID.unpack(value).json())
+            elif tlv_type == TLV_SRV6_SID_INFO:
+                srv6_sid_descriptors['srv6-sid'] = str(Srv6SIDInformation.unpack(value))
             else:
-                if f'generic-tlv-{sid_type}' not in srv6_sid_descriptors:
-                    srv6_sid_descriptors[f'generic-tlv-{sid_type}'] = []
-                srv6_sid_descriptors[f'generic-tlv-{sid_type}'].append(hexstring(tlvs[4 : sid_length + 4]))
+                if f'generic-tlv-{tlv_type}' not in srv6_sid_descriptors:
+                    srv6_sid_descriptors[f'generic-tlv-{tlv_type}'] = []
+                srv6_sid_descriptors[f'generic-tlv-{tlv_type}'].append(hexstring(value))
 
-            tlvs = tlvs[sid_length + 4 :]
-        return cls(proto_id, domain, node_ids, srv6_sid_descriptors)
+        if first:
+            raise Notify(3, 10, 'BGP-LS SRv6 SID NLRI has no Local Node descriptor')
 
-    def pack(self, packed=None):
-        nlri = pack('!B', self.proto_id)
-        nlri += pack('!Q', self.domain)
-        nlri += self.local_node_descriptors
-        nlri += self.srv6_sid_descriptors
-        return nlri
+        return cls(proto_id, domain, node_ids, srv6_sid_descriptors, packed=data)
+
+    # pack() is not overridden: NLRI.pack calls BGPLS.pack_nlri, which writes RFC 7752's
+    # NLRI Type and Total NLRI Length in front of self._packed.  The override used to build
+    # the body by hand and raised `TypeError: can't concat list to bytes` on the first
+    # descriptor, from _raw() and so from the `show adj-rib` JSON of any received SRv6 SID.
 
     def __len__(self):
-        return 1 + 8 + len(self.local_node_descriptors) + len(self.srv6_sid_descriptors)
+        # what pack_nlri() writes: the four octet BGP-LS NLRI header, then the body
+        return 4 + len(self._packed)
 
     def __repr__(self):
         return f'{self.NAME}(protocol_id={self.proto_id}, domain={self.domain})'
+
+    def as_dict(self):
+        nlri = BGPLS.as_dict(self)
+        nlri['parsed'] = True
+        nlri['l3-routing-topology'] = int(self.domain)
+        nlri['protocol-id'] = int(self.proto_id)
+        nlri['node-descriptors'] = [d.as_dict() for d in self.local_node_descriptors]
+        nlri['srv6-sid-descriptors'] = self.srv6_sid_descriptors
+        return nlri
 
     def json(self, compact=None):
         nodes = ', '.join(d.json() for d in self.local_node_descriptors)

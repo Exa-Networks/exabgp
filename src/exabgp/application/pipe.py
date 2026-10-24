@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import contextlib
 import os
 import sys
 import fcntl
@@ -15,12 +16,16 @@ import time
 import signal
 import select
 import traceback
-from collections import deque
+from exabgp.util.backlog import Backlog
 
 from exabgp.reactor.network.error import error
 
 kb = 1024
 mb = kb * 1024
+
+# a single API command must fit in one line, and the backlog is what we could not forward yet
+MAX_COMMAND_SIZE = mb
+MAX_BACKLOG_SIZE = 100 * mb
 
 
 def named_pipe(root, pipename='exabgp'):
@@ -64,26 +69,51 @@ def env(app, section, name, default):
 
 
 def check_fifo(name):
-    try:
-        if not stat.S_ISFIFO(os.stat(name).st_mode):
-            sys.stdout.write(f'error: a file exist which is not a named pipe ({os.path.abspath(name)})\n')
-            return False
+    """Report whether name is a named pipe this process can use, saying why when it is not.
 
-        if not os.access(name, os.R_OK):
-            sys.stdout.write(
-                f'error: a named pipe exists and we can not read/write to it ({os.path.abspath(name)})\n',
-            )
-            return False
-        return True
-    except OSError:
-        sys.stdout.write(f'error: could not create the named pipe {os.path.abspath(name)}\n')
+    os.stat is the only call here which can fail. The three messages which used to follow
+    it, 'could not create', 'could not access/delete' and 'could not write on', came with
+    3482b2c93, which lifted them from the code which did call os.mkfifo, os.remove and
+    sendall into a body which only stats. They were written as OSError, IOError and
+    socket.error, one type since Python 3.3, so only the first ever ran: the other two
+    described work this function does not do and returned None while doing it.
+
+    What an operator needs told apart is not which call failed but which errno came back:
+    nothing there at all, a directory on the way we may not search, or anything else.
+
+    The report goes to stderr, not stdout, and that is not only convention here. One of the
+    two callers is Control, where stdout IS the pipe to the daemon, so every one of these
+    lines was written down that pipe and read by the daemon as a command line rather than by
+    an operator as an error. The rest of this file already says so twice, at the two places
+    which do use stderr; this function was the one which did not.
+    """
+    path = os.path.abspath(name)
+    try:
+        mode = os.stat(name).st_mode
+    except FileNotFoundError:
+        sys.stderr.write(f'error: could not find the named pipe {path}\n')
+        sys.stderr.flush()
         return False
-    except OSError:
-        sys.stdout.write(f'error: could not access/delete the named pipe {os.path.abspath(name)}\n')
-        sys.stdout.flush()
-    except OSError:
-        sys.stdout.write(f'error: could not write on the named pipe {os.path.abspath(name)}\n')
-        sys.stdout.flush()
+    except PermissionError:
+        sys.stderr.write(f'error: not allowed to reach the named pipe {path}\n')
+        sys.stderr.flush()
+        return False
+    except OSError as exc:
+        sys.stderr.write(f'error: could not check the named pipe {path} ({exc.strerror})\n')
+        sys.stderr.flush()
+        return False
+
+    if not stat.S_ISFIFO(mode):
+        sys.stderr.write(f'error: a file exist which is not a named pipe ({path})\n')
+        sys.stderr.flush()
+        return False
+
+    if not os.access(name, os.R_OK):
+        sys.stderr.write(f'error: a named pipe exists and we can not read/write to it ({path})\n')
+        sys.stderr.flush()
+        return False
+
+    return True
 
 
 class Control:
@@ -112,10 +142,10 @@ class Control:
     def cleanup(self):
         def _close(pipe):
             if pipe:
-                try:
+                # We are tearing the process down, so a descriptor which refuses to close is
+                # already as closed as we need it to be.
+                with contextlib.suppress(OSError, TypeError):
                     os.close(pipe)
-                except (OSError, TypeError):
-                    pass
 
         _close(self.r_pipe)
 
@@ -149,11 +179,25 @@ class Control:
         mfl |= os.O_SYNC
         fcntl.fcntl(fd, fcntl.F_SETFL, mfl)
 
-    def loop(self):
+    def open_recv(self):
+        """Open the fifo the daemon answers on, or end the process saying why.
+
+        terminate() sets a flag and cleans up, it only exits when called a second time, so
+        answering a failed open with it left loop() running with r_pipe None: read_on skips
+        a None descriptor, so it polled stdin for ever, forwarded commands into the write
+        fifo and read an answer from nowhere. There is no loop to run without this one.
+        """
         try:
             self.r_pipe = os.open(self.recv, os.O_RDWR | os.O_NONBLOCK | os.O_EXCL)
-        except OSError:
+        except OSError as exc:
+            # stdout is the pipe to the daemon, so the report has to go to stderr.
+            sys.stderr.write(f'could not open the named pipe {self.recv} ({exc})\n')
+            sys.stderr.flush()
             self.terminate()
+            sys.exit(1)
+
+    def loop(self):
+        self.open_recv()
 
         standard_in = sys.stdin.fileno()
         standard_out = sys.stdout.fileno()
@@ -173,9 +217,13 @@ class Control:
                     if not chunk:
                         break
                     response += chunk
-        except OSError:
-            # If we can't send the command or read the response, continue anyway
-            pass
+        except OSError as exc:
+            # Without ack the daemon stops confirming the end of a command, so every cli
+            # invocation from here on waits out its five second timeout and prints "no end of
+            # command message received". That warning is the symptom; this line is the cause.
+            # stdout is the pipe to the daemon, so the report has to go to stderr.
+            sys.stderr.write(f'could not enable ack on the control pipe ({exc}), replies may not be seen\n')
+            sys.stderr.flush()
 
         def monitor(function):
             def wrapper(*args):
@@ -223,12 +271,15 @@ class Control:
             if pipe is not None:
                 try:
                     nb = os.write(pipe, line)
-                except OSError:
-                    pass
-                try:
+                except OSError as exc:
+                    # The pipe had a reader when we opened it and lost it before the write.
+                    # Returning 0 makes the caller retry the same line, so silence here is a
+                    # command which never arrives and a loop which never says why.
+                    sys.stderr.write(f'cannot write {len(line)} bytes to {self.send}: {exc}\n')
+                    sys.stderr.flush()
+                # The bytes are written or lost by now, and the descriptor goes either way.
+                with contextlib.suppress(OSError):
                     os.close(pipe)
-                except OSError:
-                    pass
             return nb
 
         read = {
@@ -242,8 +293,8 @@ class Control:
         }
 
         backlog = {
-            standard_in: deque(),
-            self.r_pipe: deque(),
+            standard_in: Backlog(),
+            self.r_pipe: Backlog(),
         }
 
         store = {
@@ -254,12 +305,16 @@ class Control:
         def consume(source):
             if not backlog[source] and b'\n' not in store[source]:
                 store[source] += read[source](1024)
+                # a source which never sends a newline would otherwise grow store forever
+                if len(store[source]) > MAX_COMMAND_SIZE and b'\n' not in store[source]:
+                    sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
+                    sys.exit(1)
             else:
                 backlog[source].append(read[source](1024))
                 # assuming a route takes 80 chars, 100 Mb is over 1Millions routes
                 # something is really wrong if it was not consummed
-                if len(backlog) > 100 * mb:
-                    sys.stderr.write('using too much memory - exiting')
+                if backlog[source].nbytes + len(store[source]) > MAX_BACKLOG_SIZE:
+                    sys.stderr.write('using too much memory - exiting\n')
                     sys.exit(1)
 
         reading = [standard_in, self.r_pipe]

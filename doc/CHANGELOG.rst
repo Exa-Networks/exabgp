@@ -3,6 +3,410 @@ Version explained:
  - minor : increase on risk of code breakage during a major release
  - bug   : increase on bug or incremental changes
 
+Version 5.0.15:
+ * CI: this release only fixes CI, ExaBGP itself is unchanged from
+   5.0.14. The 5.0.14 CI failed on Linux.
+ * CI: the zipapp checks pass on GitHub's Linux and macOS runners, and
+   the encoding tests run against it one at a time, as 5.0 CI runs them.
+ * CI: a release container image is built from its tag push and no
+   longer takes the latest tag, which belongs to main.
+ * CI: the unit tests run on every Python CI tests, 3.8 included, and
+   pass on Linux.
+
+Version 5.0.14:
+ * Feature: every release has a zipapp attached, exabgp.pyz: ExaBGP as
+   one file, run by any Python 3.8 or later, nothing to install.
+   "./release binary" builds it from the wheel and checks it runs, with
+   --functional to also run the functional tests against it.
+ * Feature: FlowSpec supports packet-per-second rate limits with
+   "rate-limit <n> packets" (RFC 8955). Existing rate limits remain in
+   bytes per second; an explicit "bytes" unit is also accepted.
+ * Fix: automatic local-AS sessions advertise the resolved local ASN and
+   matching ASN4 capability. Unresolved identities, AS_TRANS as a local
+   identity, and four-octet identities with ASN4 disabled are refused.
+ * Fix: RouterID.create() constructs a RouterID and enforces its IPv4-only
+   check. It returned a plain IPv4 or IPv6 object. The configuration
+   already refuses a neighbour which could reach it with an IPv6 address,
+   so no OPEN was affected.
+ * Fix: MULTISESSION Session Ids are decoded and checked against the
+   grouping capabilities. Conflicting or missing grouping capabilities
+   are refused rather than accepted or raising KeyError. The first
+   repeated MULTISESSION capability is retained.
+ * Fix: with multi-session enabled, ExaBGP also offers the Cisco
+   capability code (131), with a flags octet and no Session Id. Offering
+   only the draft code (68) caused a Cisco peer offering 131 alone to be
+   refused with NOTIFICATION 2/9.
+ * Fix: route-refresh and multisession capability variants belong to
+   each decoded OPEN. Another peer's OPEN no longer changes an existing
+   session's capability descriptions in logs and JSON.
+ * Fix: after a session has been established, ordinary reconnections no
+   longer advertise the Graceful Restart Restart State flag. Initial
+   establishment and explicit re-establishment still claim a restart.
+ * Fix: unsupported OPEN optional parameters are reported as
+   NOTIFICATION 2/4. Bad Message Length notifications include the two
+   erroneous length octets instead of an English error message.
+ * Fix: sending or receiving an OPERATIONAL message no longer raises
+   KeyError on missing peer counters. Both counters reset when the
+   session closes or the peer stops.
+ * Fix: IPv4 multicast announcements and withdrawals use MP attributes
+   rather than the IPv4 unicast encoding. MP withdrawals do not require
+   a next hop.
+ * Fix: UPDATE generation separates native announcements, native
+   withdrawals, MP_REACH and MP_UNREACH, preserving withdrawal-before-
+   reannouncement ordering within each family. Native prefixes are not
+   repeated in later MP packets, and native withdrawals are not blocked
+   by oversized announcement attributes.
+ * Fix: suppressing initial MP withdrawals no longer emits an empty
+   UPDATE mistaken for IPv4 end-of-RIB.
+ * Fix: MP attribute fragments respect the available message budget.
+   An individual MP NLRI which cannot fit is logged and omitted, rather
+   than causing a Cease notification and repeated session resets;
+   subsequent NLRI are still considered.
+ * Fix: repeated route refreshes replay each route once, with its latest
+   queued replacement. Pending withdrawals exclude stale refresh
+   announcements.
+ * Fix: decoded attribute caches are isolated by session. One peer's
+   ASN4 or AIGP negotiation no longer changes how another peer's UPDATE
+   is interpreted.
+ * Fix: attribute parsing is iterative and checks value lengths against
+   the UPDATE's attribute section, avoiding recursion-triggered resets
+   and acceptance of truncated attributes.
+ * Fix: malformed standard, extended and IPv6 extended communities use
+   treat-as-withdraw. Malformed Prefix-SID attributes are discarded
+   without resetting the session; SRGB lengths are checked, and only
+   the first duplicate Label-Index or Originator SRGB TLV is retained.
+ * Fix: invalid MP attribute flags and truncated MP_REACH headers or
+   next hops produce Optional Attribute Error rather than losing routes
+   silently or escaping as Python exceptions. Unused attribute-flag bits
+   and the MP_REACH reserved octet are ignored on receipt.
+ * Fix: AS_PATH/AS4_PATH reconstruction counts AS_SET and confederation
+   segments correctly. AS4_AGGREGATOR is decoded on two-octet sessions
+   and reconciled with AGGREGATOR; confederation segments are excluded
+   from AS4_PATH. Direct AS4_PATH re-encoding also works.
+ * Fix: disabling synthesized default attributes no longer suppresses
+   explicitly supplied attributes.
+ * Fix: EVPN, BGP-LS, MVPN, MUP, FlowSpec, VPLS and RTC decoders consume
+   the path identifier when decoding with ADD-PATH enabled. This does
+   not advertise ADD-PATH support for additional families.
+ * COMPATIBILITY: ADD-PATH is no longer offered for "ipv4 mup" and
+   "ipv6 mup": their encoder does not emit a path identifier, so offering
+   it caused a peer accepting the capability to misread the NLRI.
+ * Fix: EVPN MAC/IP routes require a 48-bit MAC address. MVPN source and
+   group address lengths are checked exactly before reading addresses.
+ * Fix: a single-label MPLS or VPN NLRI with a clear bottom-of-stack bit
+   is accepted when its remaining length identifies a nonempty valid
+   prefix. Ambiguous cases and deeper label stacks retain their checks.
+ * Fix: invalid FlowSpec addresses, prefix lengths and IPv6 offsets are
+   refused by configuration and API parsing instead of dropping match
+   components. Routes with no match components are refused, preventing
+   accidental all-traffic filters; empty received FlowSpec NLRI are
+   also refused.
+ * Fix: FlowSpec extended lengths and IPv6 prefix offsets encode and
+   decode correctly, including pattern sizing, padding and offset bounds.
+ * Fix: FlowSpec ignores reserved operator and fragment bits and the
+   first operator's AND bit, distinguishes IPv4 and IPv6 fragment flags,
+   and refuses repeated non-prefix components rather than merging them.
+   Duplicate source and destination prefixes remain accepted.
+ * Fix: FlowSpec protocol and IPv6 next-header values can use any legal
+   operator width. Values too large for their component's encoder are
+   refused before reaching the RIB, instead of failing when re-encoded.
+ * Fix: non-finite FlowSpec traffic rates are refused. Negative locally
+   constructed rates are refused; received negative rates are interpreted
+   as zero. Reserved bits in received traffic-marking DSCP values are
+   ignored.
+ * Fix: BGP-LS accepts unknown Protocol-IDs and preserves unknown Node
+   Descriptor sub-TLVs. Duplicate or out-of-order Node Descriptor
+   sub-TLV types are refused.
+ * Fix: BGP-LS Node, IPv4/IPv6 Prefix and SRv6 SID NLRI retain their
+   received bytes for RIB indexing and re-encoding. Distinct routes no
+   longer collapse into one RIB key or re-encode with an empty body.
+   SRv6 SID routes can also be rendered and repacked.
+ * Fix: BGP-LS SRv6 LAN End.X OSPFv3 SID offsets and minimum lengths are
+   corrected. Overlong End.X sub-TLV payloads and invalid IP reachability
+   lengths are refused before rendering; the existing IOS XR short-
+   prefix workaround is retained.
+ * Fix: for compatibility, BGP-LS prefix NLRI without Local Node
+   Descriptors remain accepted. Missing IP Reachability Information is
+   still refused.
+ * Fix: end-of-RIB NLRI JSON is a complete object, including when used
+   in a list. The API response builder no longer double-wraps that
+   object. The public end-of-RIB API layout remains
+   '"message": { "eor": {...} }'.
+ * Fix: Aggregator.json() and Aggregator4.json() work for direct Python
+   callers instead of raising a formatting error. Normal daemon UPDATE
+   JSON did not use these methods.
+ * Fix: configured operational message blocks load correctly. Route
+   distinguishers require valid syntax, numeric bounds and a four-octet
+   IPv4 administrator where applicable, rather than reaching the wire
+   with the wrong length. Malformed static prefixes and Prefix-SID
+   syntax produce contextual configuration errors.
+ * Fix: offline validation resolves automatic ASNs, rejects failed or
+   empty serialization and decode results, and compares complete encoded
+   message lists rather than only their first message.
+ * Fix: batched API commands no longer leave their final commands
+   stranded in a Python input buffer. Helper output is read from the
+   same raw file descriptor that the reactor polls.
+ * Fix: restarting API helpers during configuration reload no longer
+   counts toward the crash-respawn limit or stops ExaBGP when respawning
+   is disabled. Repeated genuine helper crashes still enforce the limit.
+ * Fix: reload removes idle passive peers and unused listening sockets,
+   opens newly configured listen ports, and refuses connections to peers
+   being removed. Sockets still needed by other neighbours are retained.
+   Shutdown no longer waits indefinitely for an idle passive peer.
+ * Fix: unauthenticated BGP sessions work on Linux kernels without
+   TCP_MD5SIG support. Configured authentication still fails if the
+   kernel cannot provide it; authentication is not silently disabled.
+ * Fix: incoming-ttl applies the receive-side TTL/hop-limit minimum to
+   outgoing as well as incoming sessions. Connections send with
+   outgoing-ttl when set, or 255 when incoming-ttl requests TTL security.
+   Unsupported IPv4 minimum-TTL protection is reported with a warning
+   rather than silently omitted.
+ * Fix: IPv6 listeners still request IPv6-only operation when
+   SO_REUSEADDR fails. Socket-option and listener setup failures report
+   their actual causes, including refused IPv6-only operation.
+ * Fix: an empty source-interface no longer requests device binding.
+   Invalid interface names, unsupported binding and kernel refusal are
+   diagnosed separately.
+ * Fix: "exabgp cli reset" returns after sending the command instead of
+   waiting for an acknowledgement it will not receive. Command echoes
+   are printed only when abbreviations are expanded.
+ * Fix: the FIFO control process exits with an error if its receive pipe
+   cannot be opened instead of forwarding commands and waiting forever
+   for unreadable responses. FIFO validation failures, control
+   receive-pipe open failures and CLI command-pipe open failures are
+   reported on stderr. Failed CLI command-pipe opens cancel their
+   timeout alarm; failed writes close the writer descriptor.
+ * Fix: withdrawing a FlowSpec rule reloads Cumulus switch ACLs rather
+   than only deleting the rule file. The helper reports rule-file
+   deletion failures, exceptions reloading ACLs, and messages it could
+   not process.
+ * Fix: diagnostics identify failed API callback error notifications,
+   helper shutdown notifications and helper processes that cannot be
+   stopped, as well as failed control-pipe writes.
+ * QA: the RIB, route-refresh, MVPN and teardown API examples use buffered
+   input and wait for sent-route and neighbour-state events, not just
+   command acknowledgements or sleeps. Their processes do not respawn.
+ * QA: 5.0 unit CI includes a non-fuzz run without Hypothesis. Decoder
+   renderability checks and regressions cover the protocol fixes, and
+   the compatibility gate records intentional differences from 5.0.13.
+ * Cleanup: remove the unused VyOS CLI prototype, Python-2-only JSON
+   converter and experimental exabgp.conf.yang package. The supported
+   exabgp-cli entry point remains.
+
+Version 5.0.13:
+ * Fix: automatic local-AS sessions advertise the resolved peer identity,
+   including the correct ASN4 capability. An unresolved ASN,
+   AS_TRANS as a local identity, or a four-octet identity with ASN4
+   disabled is refused rather than advertised incorrectly.
+ * Fix: offline negotiation resolves automatic local-AS from a known
+   peer-AS, and route validation preserves a known local-AS when
+   peer-AS is automatic.
+ * Fix: IPv4 multicast announcements and withdrawals use MP attributes
+   instead of being sent as IPv4 unicast. MP withdrawals do not require
+   a next hop.
+ * Fix: an UPDATE containing native and MP routes no longer repeats its
+   native prefixes in subsequent MP packets.
+ * Fix: suppressing MP withdrawals during initial session output no
+   longer emits an empty UPDATE mistaken for IPv4 end-of-RIB.
+ * Fix: MP announcement and withdrawal fragments have independent size
+   budgets. Withdrawals precede announcements across packets, so a
+   reannounced prefix is not left withdrawn after fragmentation.
+ * Fix: repeated route refreshes replay each route once, with its latest
+   queued replacement. Pending withdrawals exclude stale refresh
+   announcements.
+ * Fix: route validation rejects failed or empty serialization and
+   compares every emitted message, not only the first.
+ * SECURITY: a peer could write data of its own into the API streams:
+   fields into the JSON stream through a BGP-LS attribute, and whole
+   events into the text stream through its hostname, its software
+   version or a shutdown message. The output stayed parseable, so a
+   program reading the API acted on data no peer had sent. BGP-LS did
+   not need to be negotiated. 5.0.11 closed the JSON hostname, software
+   version and NOTIFICATION cases only. Upgrade if any process reads the
+   API.
+ * COMPATIBILITY: three BGP-LS fields of the JSON API change.
+   "link-identifiers" and "sr-adj-lan-sids" were always empty and now
+   carry what the peer sent. "local-te-router-ids" was published twice
+   for a router announcing an IPv4 and an IPv6 TE Router ID, and a JSON
+   parser keeps only the second, so the IPv4 address was lost; it is
+   published once now, holding both. "remote-te-router-id" and "sr-adj"
+   have the same fault and are left alone, since fixing them changes
+   their type. 6.0 renames and fixes those two.
+ * COMPATIBILITY: a message of an unknown type is refused with
+   NOTIFICATION 1/3 Bad Message Type, where 5.0.12 sent 1/0 Unspecific
+   (RFC 4271 section 6.1).
+ * COMPATIBILITY: five kinds of malformed message which 5.0.12 accepted
+   are now refused, because it invented the missing data and produced a
+   route or a filter the peer had not sent: a FlowSpec rule whose
+   operator announces a value it does not carry, a prefix whose mask is
+   longer than its address family allows, a labelled route with no
+   bottom of stack bit, an MCAST-VPN route announcing more than it
+   carries, and a VPN next hop whose route distinguisher is not zero.
+ * Fix: ADD-PATH is no longer offered for "ipv4 mup" and "ipv6 mup".
+   MUP NLRI carry no path identifier on the wire, so a peer which
+   accepted ADD-PATH for MUP was told to expect four octets ahead of
+   every MUP NLRI which ExaBGP never sent, and mis-framed the rest of
+   the NLRI field (RFC 7911 section 3). MUP returns to the ADD-PATH
+   families when its encoder writes a path identifier.
+ * Fix: comparing two attributes ignored their content, so any two
+   BGP-LS attributes, prefix SIDs, or large or extended community sets
+   compared as equal. ExaBGP does not use that comparison itself, so
+   this only affects code using it as a library.
+ * Fix: a peer could stop ExaBGP with a truncated message, attribute,
+   capability, route, BGP-LS TLV or operational message. These are now
+   refused with a NOTIFICATION.
+ * Fix: a peer could stop ExaBGP as it wrote the API stream, dropping
+   every session on the machine, with a FlowSpec redirect community, a
+   BGP-LS route of an unknown type, an undefined ADD-PATH value or a
+   valid SRv6 TLV.
+ * Fix: FlowSpec, EVPN, BGP-LS VPN and AIGP routes could produce API
+   output which is not valid JSON, so a consumer lost the whole line.
+ * Fix: a BGP-LS attribute was refused when a reserved flag bit was set,
+   and a Multi-Topology identifier with reserved bits set was read as a
+   different topology. The RFCs ask for those bits to be ignored. A
+   malformed BGP-LS attribute now costs the attribute and not the
+   session (RFC 7752 section 5.3).
+ * Fix: an IPv6 multicast route could be configured and sent, but a
+   route received in that family was refused and the session dropped. A
+   BGP-LS VPN route was refused on receipt whatever the peer sent.
+ * Fix: a twenty byte IPv6 extended community lost its leading zeros
+   when printed.
+ * Fix: a PMSI tunnel attribute whose tunnel identifier is not the
+   expected width was refused or silently truncated. It is printed in
+   hexadecimal now.
+ * Fix: a BGP prefix SID attribute holding a TLV we do not know stopped
+   the parser.
+ * Fix: withdrawing a route could file it in the RIB under a second key,
+   so one prefix was held twice.
+ * Fix: two prefixes with the same address and a different mask had no
+   defined order, so the order they were packed into an UPDATE was
+   arbitrary.
+ * Fix: a backslash at the end of a text, and any \uXXXX escape, stopped
+   the configuration parser instead of being reported.
+ * Fix: the package metadata uses the SPDX license expression of PEP 639
+   and ships LICENCE.txt (#1413). The wheel still installs on Python
+   3.8; building the source distribution now needs 3.9.
+ * QA: CI runs every test in the tree, and every change is compared
+   against 5.0.12 before it is committed.
+
+Version 5.0.12:
+ * Fix: the OPEN capabilities a peer sends are validated. HostName and
+   Software Version decoded peer supplied bytes without checking the
+   announced length fitted inside the capability, and invalid UTF-8 left
+   the parser as a UnicodeDecodeError instead of ending the session with
+   a NOTIFICATION. The AS4 capability accepted a 2 octet value, which
+   RFC 6793 section 3 does not allow.
+ * Fix: the AIGP attribute is parsed as the sequence of TLV it is
+   (RFC 7311 section 3). AIGP.unpack() applied a bitmask to a bytes
+   object, so every AIGP attribute received raised a TypeError, and it
+   kept only the value, so anything which had decoded would have been
+   re-advertised malformed.
+ * Fix: an EVPN NLRI is length checked before it is decoded. A truncated
+   route left the parser as an IndexError, a ValueError or a bare
+   Exception, and a short payload was often accepted in silence because
+   nothing compared it to the announced length. Each route type now
+   checks its own length fields against the size of the route.
+ * Fix: a BGP-LS NLRI is length checked and its TLV boundaries are
+   verified. Malformed input came back as a bare Exception, a
+   RuntimeError, a struct.error or an AttributeError depending on where
+   it fell over, and never as a NOTIFICATION. The prefix routes now
+   require the Local Node Descriptors and IP Reachability TLV which
+   RFC 7752 section 3.2 makes mandatory.
+ * Fix: a MUP NLRI is length checked before it is decoded. The route
+   type decoders read their own length fields without knowing the
+   payload held them, and the announced lengths were never compared to
+   the size of the route.
+ * Fix: the IP part of an extended community is validated.
+   "target:1.2.3:100" raised an IndexError out of the route parser
+   instead of reporting a configuration error, and "1.2.3.256" was
+   accepted.
+ * Fix: the API and CLI command buffers are bounded by bytes. The memory
+   guard in the pipe helper measured the number of sources rather than
+   what those sources had queued, so it could never fire, and a source
+   which never sends a newline grew the pending line without bound.
+ * Fix: an ASN given in the configuration is range checked and its
+   format validated. A negative value, a value above 4294967295, an
+   underscore separator, a leading sign, and dotted forms such as
+   "1.2.3" or "1.65536" all loaded.
+ * Fix: a base64 encoded MD5 password is validated. b64decode() was
+   called without validate=True, so a character outside the base64
+   alphabet was discarded rather than rejected and a mistyped password
+   became a different key than the one intended. A password decoding to
+   nothing was accepted as well.
+ * Fix: a neighbor must be given both local-as and peer-as. Leaving
+   peer-as out was indistinguishable from asking for "peer-as auto" and
+   quietly turned off the check that the peer announces the ASN
+   expected.
+ * Fix: the cumulus flow helper validates the flow fields it writes into
+   an ACL. The components were concatenated into an iptables rule as
+   they came, so whatever reached those fields ended up in a file handed
+   to cl-acltool. Each component is now parsed and the rule rendered
+   from the parsed value.
+ * Fix: the cumulus flow helper exits instead of spinning when it can
+   not read stdin. The read sat inside the handler which exists so that
+   one malformed message does not kill the helper, but a read error does
+   not recover, so every iteration failed alike and the loop spun at
+   100% CPU without making progress.
+ * Fix: the cumulus flow helper removes the ACL it installed when it is
+   asked to stop. ACL.end was installed as the SIGTERM handler without
+   accepting the arguments python passes one, so every SIGTERM raised a
+   TypeError which the broad handler swallowed, and ACL.clear() deleted
+   a single rule before raising RuntimeError for a dictionary changed
+   during iteration.
+ * Fix: the healthcheck refuses control characters in the community,
+   extended community, large community and as-path options. A newline in
+   any of them split a single announce into several API commands.
+ * QA: the functional test runner collects the output of a test without
+   blocking the loop which drives it, so the parsing and decoding suites
+   report progress as they run rather than failing every test. Parsing
+   gains the --timeout its two sibling suites already had.
+
+Version 5.0.11:
+ * Fix: peer-controlled HostName, Software Version, and NOTIFICATION
+   strings are escaped before they are written to JSON API streams.
+ * Fix: package metadata and PyPI page content. Project metadata now has
+   one source of truth in pyproject.toml, declares the BSD license,
+   restores keywords, fixes project URLs, and removes the stale
+   exabgpcli entry point.
+ * Fix: README install, zipapp, version command, GitHub release archive,
+   PyPI, and changelog links now point at working commands and URLs.
+ * QA: avoid functional test deadlocks when child stdout or stderr fills
+   a pipe before process exit.
+
+Version 5.0.10:
+ * Fix: the package can be installed on Python 3.13 and 3.14. The
+   requires-python upper bound is removed, the PyPI classifiers list
+   both versions, and the CI matrix tests them. (#1392)
+ * Fix: reload crashed on a neighbor that was not established. The code
+   read Neighbor.routes, which does not exist, in place of
+   Neighbor.changes. (#1404)
+ * Fix: every named log source stayed silent whatever the configuration
+   asked for. option.load() wrote the flags to option.option while
+   log_enabled() reads option.enabled, so the all-False class default
+   was never replaced. (#1396)
+ * Fix: a NOTIFICATION carrying non-ASCII data raised UnicodeDecodeError
+   when the message was formatted. Data that does not decode as ASCII is
+   now shown as a hex string. (#1397)
+ * Fix: the TCP MD5 socket option is now cleared when the password is
+   removed. The setsockopt call that clears the key was commented out,
+   so the socket kept the key set earlier. (#1388)
+ * Fix: the "Non-callable log message detected" warning was written to
+   stderr and bypassed the configured log destination. It now goes
+   through the log handler. Seven log calls that passed a string instead
+   of a lambda are also fixed. (#1378)
+ * Fix: show adj-rib json output. extensive raised an exception, route
+   listing only worked for inet NLRI, and the routes array never held
+   more than one entry when api.chunk was above 1. (#1385)
+ * Feature: api show-routes-format selects the show adj-rib json shape.
+   v1 is the default and keeps the output of 5.0.9 and earlier. v2 is
+   the reworked shape, which reports non-inet NLRI. (#1390)
+
+Version 5.0.9:
+ * Fix: --env-file was ignored, it is now honoured. (#1378)
+ * Fix: logging to a file was silently dropped. Bare absolute paths,
+   ~-expanded paths, file:<path> and host:<addr> destinations now
+   work, with a warning on invalid destinations. (#1378)
+
 Version 5.0.8:
  * Fix: handle OPEN message with zero capabilities without crashing
    Capabilities.unpack() read the parameter type byte before checking

@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import json
+
 from struct import pack
 
 from exabgp.protocol.ip import NoNextHop
@@ -63,15 +65,17 @@ class CommonOperator:
     LEN = 0x30  # 0b00110000
     NOP = 0x00
 
+    # The AND bit and the comparison bits, with the reserved bits left out. Each flavour of
+    # operator reserves a different part of the low nibble, so the subclasses narrow this.
     OPERATOR = 0xFF ^ (EOL | LEN)
 
     @staticmethod
     def eol(data):
         return data & CommonOperator.EOL
 
-    @staticmethod
-    def operator(data):
-        return data & CommonOperator.OPERATOR
+    @classmethod
+    def operator(cls, data):
+        return data & cls.OPERATOR
 
     @staticmethod
     def length(data):
@@ -86,6 +90,11 @@ class NumericOperator(CommonOperator):
     NEQ = LT | GT
     TRUE = LT | GT | EQ
     FALSE = 0x00
+    # RFC 8955 section 4.2.1.1 lays the octet out as | e | a | len | 0 | lt | gt | eq |, so
+    # bit 0x08 is reserved and MUST be ignored on decoding. Keeping it left NumericString
+    # unable to find 0x09 in its table, and a match on TCP reached the API as
+    # `protocol 09tcp`.
+    OPERATOR = CommonOperator.AND | TRUE
 
 
 class BinaryOperator(CommonOperator):
@@ -94,6 +103,10 @@ class BinaryOperator(CommonOperator):
     NOT = 0x02  # 0b00000010
     MATCH = 0x01  # 0b00000001
     DIFF = NOT | MATCH
+    # RFC 8955 section 4.2.1.2 lays the octet out as | e | a | len | 0 | 0 | not | m |, so
+    # the two bits 0x0C are reserved and MUST be ignored on decoding, one more than the
+    # numeric operator reserves.
+    OPERATOR = CommonOperator.AND | DIFF
 
 
 def _len_to_bit(value):
@@ -157,6 +170,43 @@ class IPrefix4(IPrefix, IComponent, IPv4):
         return cls(prefix, mask), bgp[CIDR.size(mask) + 1 :]
 
 
+IPV6_ADDRESS_BITS = 128
+IPV6_ADDRESS_BYTES = IPV6_ADDRESS_BITS // 8
+
+
+def _pattern_size_bytes(length, offset):
+    """How many octets the pattern of an IPv6 FlowSpec prefix takes.
+
+    RFC 8956 section 3.1: "The encoded pattern contains enough octets for the bits used in
+    matching (length minus offset bits)", not the ceil(length / 8) octets a plain prefix
+    carries.  The two only agree when the offset is zero.
+    """
+    return (length - offset + 7) // 8
+
+
+def _address_from_pattern(pattern, length, offset):
+    """The sixteen octet address a pattern stands for: the pattern shifted right by offset.
+
+    The padding is dropped rather than carried into the address.  RFC 8956 section 3.1
+    says it "MUST be ignored on decoding", and two components describing the same match
+    have to render alike and hash to the same RIB index.
+    """
+    bits = length - offset
+    matched = int.from_bytes(pattern, 'big') >> (len(pattern) * 8 - bits) if bits > 0 else 0
+    return (matched << (IPV6_ADDRESS_BITS - length)).to_bytes(IPV6_ADDRESS_BYTES, 'big')
+
+
+def _pattern_from_address(address, length, offset):
+    """The bits of an address between offset and length, left aligned and zero padded."""
+    bits = length - offset
+    if bits <= 0:
+        return b''
+    size = _pattern_size_bytes(length, offset)
+    value = int.from_bytes(bytes(address).ljust(IPV6_ADDRESS_BYTES, b'\x00'), 'big')
+    matched = (value >> (IPV6_ADDRESS_BITS - length)) & ((1 << bits) - 1)
+    return (matched << (size * 8 - bits)).to_bytes(size, 'big')
+
+
 class IPrefix6(IPrefix, IComponent, IPv6):
     # Must be defined in subclasses
     CODE = -1
@@ -170,8 +220,18 @@ class IPrefix6(IPrefix, IComponent, IPv6):
         self.offset = offset
 
     def pack(self):
+        """Pack to wire format: [ID][length][offset][pattern...]
+
+        The pattern is the length-minus-offset bits of the address, left aligned, and not
+        the whole prefix: a /64-104 goes out as the five octets RFC 8956 section 3.8.1
+        writes rather than as thirteen no other implementation could read.  Routing it
+        through the shared helper also zeroes the padding below the mask, which the old
+        path did not: fe80::1/1 now goes out as 80 rather than fe.
+        """
+        length = self.cidr.mask
+        pattern = _pattern_from_address(self.cidr.pack_ip(), length, self.offset)
         # ID is defined in subclasses
-        return bytes([self.ID, self.cidr.mask, self.offset]) + self.cidr.pack_ip()  # pylint: disable=E1101
+        return bytes([self.ID, length, self.offset]) + pattern  # pylint: disable=E1101
 
     def short(self):
         return '{}/{}'.format(self.cidr, self.offset)
@@ -181,13 +241,43 @@ class IPrefix6(IPrefix, IComponent, IPv6):
 
     @classmethod
     def make(cls, bgp):
-        offset = bgp[1]
-        prefix, mask = CIDR.decode(AFI.ipv6, bgp[0:1] + bgp[2:])
-        return cls(prefix, mask, offset), bgp[CIDR.size(mask) + 2 :]
+        """Unpack from wire format [length][offset][pattern...].
+
+        Sizing the pattern from the length alone, as a plain prefix is sized, read
+        ceil(length / 8) octets where RFC 8956 section 3.1 writes
+        ceil((length - offset) / 8).  The RFC's own first example then ran off the end of
+        its NLRI and came back as an invalid NLRI: no IPv6 flow specification carrying an
+        offset could be read at all, and none exabgp sent could be read by anybody else.
+        """
+        if len(bgp) < 2:
+            raise Notify(3, 10, 'not enough data to extract the length and offset of a flow ipv6 prefix')
+        length, offset = bgp[0], bgp[1]
+        # RFC 8956 section 3.1: "If length = 0 and offset = 0, this component matches every
+        # address; otherwise, length MUST be in the range offset < length < 129" or the
+        # component is malformed.  The offset half was never compared to anything, so a
+        # match on bits 64 through 32, which do not exist, was accepted from any peer.
+        if (length, offset) != (0, 0) and not offset < length <= IPV6_ADDRESS_BITS:
+            raise Notify(
+                3,
+                10,
+                'flow ipv6 prefix of length %d and offset %d is outside the range RFC 8956 allows' % (length, offset),
+            )
+        size = _pattern_size_bytes(length, offset)
+        pattern = bytes(bgp[2 : 2 + size])
+        if len(pattern) != size:
+            raise Notify(
+                3,
+                10,
+                'flow ipv6 prefix needs %d octets of pattern but only %d are left' % (size, len(pattern)),
+            )
+        return cls(_address_from_pattern(pattern, length, offset), length, offset), bgp[2 + size :]
 
 
 class IOperation(IComponent):
     # need to implement encode which encode the value of the operator
+
+    # one more than the largest value `encode` can write
+    VALUE_LIMIT = 1 << 64
 
     def __init__(self, operations, value):
         self.operations = operations
@@ -212,6 +302,8 @@ class IOperation(IComponent):
 
 
 class IOperationByte(IOperation):
+    VALUE_LIMIT = 1 << 8
+
     def encode(self, value):
         return 1, bytes([value])
 
@@ -220,6 +312,8 @@ class IOperationByte(IOperation):
 
 
 class IOperationByteShort(IOperation):
+    VALUE_LIMIT = 1 << 16
+
     def encode(self, value):
         if value < (1 << 8):
             return 1, bytes([value])
@@ -227,6 +321,8 @@ class IOperationByteShort(IOperation):
 
 
 class IOperationByteShortLong(IOperation):
+    VALUE_LIMIT = 1 << 32
+
     def encode(self, value):
         if value < (1 << 8):
             return 1, bytes([value])
@@ -398,14 +494,22 @@ class FlowIPProtocol(IOperationByte, NumericString, IPv4):
     ID = 0x03
     NAME = 'protocol'
     converter = staticmethod(converter(Protocol.named, Protocol))
-    decoder = staticmethod(decoder(ord, Protocol))
+    # _number, not ord: RFC 8955 4.2.1.1 lets the peer announce the value in any of the four
+    # widths the operator's len field encodes, 1, 2, 4 or 8 octets, and ord() reads exactly
+    # one byte.  On anything wider it raised TypeError, which Flow.unpack_nlri does not catch
+    # (it catches Notify, ValueError and IndexError), so it walked out of Update.unpack_message
+    # to the reactor's catch-all, which resets the session without a NOTIFICATION.  The peer
+    # sends the same UPDATE again on the next attempt, so the peering never establishes.  The
+    # width we ENCODE is a separate question and is unchanged.
+    decoder = staticmethod(decoder(_number, Protocol))
 
 
 class FlowNextHeader(IOperationByte, NumericString, IPv6):
     ID = 0x03
     NAME = 'next-header'
     converter = staticmethod(converter(Protocol.named, Protocol))
-    decoder = staticmethod(decoder(ord, Protocol))
+    # _number, not ord: see FlowIPProtocol above, RFC 8955 4.2.1.1
+    decoder = staticmethod(decoder(_number, Protocol))
 
 
 class FlowAnyPort(IOperationByteShort, NumericString, IPv4, IPv6):
@@ -474,13 +578,48 @@ class FlowTrafficClass(IOperationByte, NumericString, IPv6):
     decoder = staticmethod(_number)
 
 
+# RFC 8955 section 4.2.2.12 lays the fragment bitmask out as | 0 0 0 0 | LF FF IsF DF |,
+# RFC 8956 section 3.6 as | 0 0 0 0 | LF FF IsF 0 |: IPv6 has no Don't Fragment header
+# field, so the bit RFC 8955 gives to DF is a reserved zero for AFI 2.  Both documents say
+# of their reserved bits "MUST be set to 0 on NLRI encoding and MUST be ignored during
+# decoding", so what a family does not define is dropped as the value is read.  Kept, a
+# bitmask of 0xF5 was rendered "dont-fragment+first-fragment+unknown fragment type 245",
+# and an IPv6 bitmask of 0x01 was published as a match on a field IPv6 does not have.
+FRAGMENT_BITS_IPV4 = Fragment.DONT | Fragment.IS | Fragment.FIRST | Fragment.LAST
+FRAGMENT_BITS_IPV6 = Fragment.IS | Fragment.FIRST | Fragment.LAST
+
+
+def _fragment(defined_bits):
+    """Build the fragment value decoder of one family, dropping the bits it reserves."""
+
+    def _masked(value):
+        return Fragment(_number(value) & defined_bits)
+
+    return _masked
+
+
 # BinaryOperator
-class FlowFragment(IOperationByteShort, BinaryString, IPv4, IPv6):
+class FlowFragment(IOperationByteShort, BinaryString, IPv4):
     ID = 0x0C
     NAME = 'fragment'
     FLAG = True
     converter = staticmethod(converter(Fragment.named))
-    decoder = staticmethod(decoder(ord, Fragment))
+    # the value is one or two bytes, so ord() would raise on the two byte form
+    decoder = staticmethod(_fragment(FRAGMENT_BITS_IPV4))
+
+
+class FlowFragmentIPv6(IOperationByteShort, BinaryString, IPv6):
+    """Type 12 for AFI 2, split from FlowFragment the way type 11 is already split between
+    FlowDSCP and FlowTrafficClass: the component is the same on the wire but the set of
+    bits the family defines is not, and the decoder is the only place that difference can
+    be applied.
+    """
+
+    ID = 0x0C
+    NAME = 'fragment'
+    FLAG = True
+    converter = staticmethod(converter(Fragment.named))
+    decoder = staticmethod(_fragment(FRAGMENT_BITS_IPV6))
 
 
 # draft-raszuk-idr-flow-spec-v6-01
@@ -497,7 +636,15 @@ class FlowFlowLabel(IOperationByteShortLong, NumericString, IPv6):
 FLOW_LENGTH_EXTENDED_MASK = 0xF0  # Mask for extended length (upper 4 bits)
 FLOW_LENGTH_EXTENDED_VALUE = 0xF0  # Value indicating extended length (240)
 FLOW_LENGTH_LOWER_MASK = 0x0F  # Mask for lower 4 bits in extended length
-FLOW_LENGTH_EXTENDED_SHIFT = 16  # Shift for extended length calculation
+# RFC 8955 section 4.1: an extended length is "encoded using 3 hex digits (0xfnnn)", so
+# the low nibble of the first octet holds bits 8 to 11 of the length and the second octet
+# holds bits 0 to 7.  This was 16, which read 0xf12c as 65580 rather than 300, so every
+# Flow NLRI of 256 octets or more was refused with Notify(3, 10) - and that raise happens
+# before the try in unpack_nlri, so a legal UPDATE from a conforming peer closed the
+# session rather than invalidating one NLRI.  pack_nlri has always written the correct
+# 12 bit form, so exabgp could not read back what it had just written.  Lengths 240 to
+# 255 worked, because the nibble is zero there, which is why this lasted.
+FLOW_LENGTH_EXTENDED_SHIFT = 8  # Shift for extended length calculation
 FLOW_LENGTH_COMPACT_MAX = 0xF0  # Maximum length for compact encoding (240)
 FLOW_LENGTH_EXTENDED_MAX = 0x0FFF  # Maximum length for extended encoding (4095)
 
@@ -633,27 +780,66 @@ class Flow(NLRI):
     def __str__(self):
         return self.extensive()
 
-    def json(self, compact=None):
-        string = []
+    def as_dict(self):
+        family = self.family().afi_safi()
+        r = {}
         for index in sorted(self.rules):
             rules = self.rules[index]
             s = []
             for idx, rule in enumerate(rules):
-                # only add ' ' after the first element
-                if idx and not rule.operations & NumericOperator.AND:
-                    s.append(', ')
-                s.append('"{}"'.format(rule))
-            string.append(' "{}": [ {} ]'.format(rules[0].NAME, ''.join(str(_) for _ in s).replace('""', '')))
-        nexthop = ', "next-hop": "{}"'.format(self.nexthop) if self.nexthop is not NoNextHop else ''
-        rd = '' if self.rd is RouteDistinguisher.NORD else ', {}'.format(self.rd.json())
-        compatibility = ', "string": "{}"'.format(self.extensive())
-        return '{' + ','.join(string) + rd + nexthop + compatibility + ' }'
+                if idx and rule.operations & NumericOperator.AND:
+                    s[-1] = f'{s[-1]}{rule}'
+                else:
+                    s.append(f'{rule}')
+            r[rules[0].NAME] = s
+
+        flow = {
+            'rules': r,
+            'nexthop': None if self.nexthop is NoNextHop else str(self.nexthop),
+            'rd': None if self.rd is RouteDistinguisher.NORD else self.rd._str(),
+            'family': {'afi': f'{family[0]}', 'safi': f'{family[1]}'},
+        }
+        return flow
+
+    def json(self, compact=None):
+        # build the members and join them, a flow with no rule used to emit '{, ...'
+        members = []
+        for index in sorted(self.rules):
+            rules = self.rules[index]
+            # rules joined by AND belong to one value, the rest are separate ones.
+            # This used to be built from quoted fragments and then repaired with
+            # .replace('""', ''), which ate the quotes of any rule rendering empty
+            # and left '[ , "is-fragment" ]' behind.
+            values = []
+            for idx, rule in enumerate(rules):
+                if idx and rule.operations & NumericOperator.AND:
+                    values[-1] += str(rule)
+                else:
+                    values.append(str(rule))
+            members.append('"{}": [ {} ]'.format(rules[0].NAME, ', '.join(json.dumps(_) for _ in values)))
+        # an RD which is not NORD can still render empty, and an empty member breaks the join
+        rd = '' if self.rd is RouteDistinguisher.NORD else self.rd.json()
+        if rd:
+            members.append(rd)
+        if self.nexthop is not NoNextHop:
+            members.append('"next-hop": {}'.format(json.dumps(str(self.nexthop))))
+        members.append('"string": {}'.format(json.dumps(self.extensive())))
+        return '{ ' + ', '.join(members) + ' }'
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # RFC 7911 section 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
+        if not bgp:
+            raise Notify(3, 10, 'not enough data to extract the length of the flow NLRI')
+
         length, bgp = bgp[0], bgp[1:]
 
         if length & FLOW_LENGTH_EXTENDED_MASK == FLOW_LENGTH_EXTENDED_VALUE:  # bigger than 240
+            if not bgp:
+                raise Notify(3, 10, 'not enough data to extract the extended length of the flow NLRI')
             extra, bgp = bgp[0], bgp[1:]
             length = ((length & FLOW_LENGTH_LOWER_MASK) << FLOW_LENGTH_EXTENDED_SHIFT) + extra
 
@@ -664,47 +850,16 @@ class Flow(NLRI):
 
         bgp = bgp[:length]
         nlri = cls(afi, safi, action)
+        nlri.addpath = path_info
 
         try:
             if safi == SAFI.flow_vpn:
-                nlri.rd = RouteDistinguisher(bgp[:8])
-                bgp = bgp[8:]
+                if len(bgp) < RouteDistinguisher.LENGTH:
+                    raise Notify(3, 10, 'not enough data to extract the route distinguisher of the flow NLRI')
+                nlri.rd = RouteDistinguisher(bgp[: RouteDistinguisher.LENGTH])
+                bgp = bgp[RouteDistinguisher.LENGTH :]
 
-            seen = []
-
-            while bgp:
-                what, bgp = bgp[0], bgp[1:]
-
-                if what not in decode.get(afi, {}):
-                    raise Notify(3, 10, 'unknown flowspec component received for address family %d' % what)
-
-                seen.append(what)
-                if sorted(seen) != seen:
-                    raise Notify(3, 10, 'components are not sent in the right order {}'.format(seen))
-
-                decoded = decode[afi][what]
-                klass = factory[afi][what]
-
-                if decoded == 'prefix':
-                    adding, bgp = klass.make(bgp)
-                    if not nlri.add(adding):
-                        raise Notify(
-                            3,
-                            10,
-                            'components are incompatible (two sources, two destinations, mix ipv4/ipv6) {}'.format(
-                                seen
-                            ),
-                        )
-                else:
-                    end = False
-                    while not end:
-                        byte, bgp = bgp[0], bgp[1:]
-                        end = CommonOperator.eol(byte)
-                        operator = CommonOperator.operator(byte)
-                        length = CommonOperator.length(byte)
-                        value, bgp = bgp[:length], bgp[length:]
-                        adding = klass.decoder(value)
-                        nlri.add(klass(operator, adding))
+            bgp = cls._unpack_components(afi, bgp, nlri)
 
             return nlri, bgp + over
         except Notify:
@@ -713,3 +868,95 @@ class Flow(NLRI):
             return None, over
         except IndexError:
             return None, over
+
+    @classmethod
+    def _unpack_components(cls, afi, bgp, nlri):
+        """Read the components of one flow NLRI into `nlri`, in the order they arrive.
+
+        RFC 8955 section 10 defers to RFC 7606, so every refusal here is a
+        treat-as-withdraw: the Notify is caught by `unpack_nlri`.
+        """
+        seen = []
+
+        while bgp:
+            what, bgp = bgp[0], bgp[1:]
+
+            if what not in decode.get(afi, {}):
+                raise Notify(3, 10, 'unknown flowspec component received for address family %d' % what)
+
+            seen.append(what)
+            if sorted(seen) != seen:
+                raise Notify(3, 10, 'components are not sent in the right order {}'.format(seen))
+            # RFC 8955 section 4.2: "a given component type MAY (exactly once) be present".
+            # A packet matches the intersection of every component, so two type 3
+            # components can never both hold, yet the second one's operations were appended
+            # to the first one's list with its AND bit clear: "protocol tcp AND protocol
+            # udp", which matches nothing, was reported as "protocol [ =tcp =udp ]", which
+            # matches both.  A repeated destination or source prefix is the one relaxation,
+            # because `add` has taken one from the configuration for years: some vendors
+            # send it, and what exabgp will encode it has to be able to read back.
+            if len(seen) > 1 and seen[-2] == what and what not in (FlowDestination.ID, FlowSource.ID):
+                raise Notify(3, 10, 'flow component %d is present more than once' % what)
+
+            decoded = decode[afi][what]
+            klass = factory[afi][what]
+
+            if decoded == 'prefix':
+                adding, bgp = klass.make(bgp)
+                if not nlri.add(adding):
+                    raise Notify(
+                        3,
+                        10,
+                        'components are incompatible (two sources, two destinations, mix ipv4/ipv6) {}'.format(seen),
+                    )
+            else:
+                bgp = cls._unpack_operations(what, decoded, klass, bgp, nlri)
+
+        # RFC 8955 section 4.2 encodes the value as <[component]+>, one component or more.
+        # A filter with no component at all is the intersection of nothing, which matches
+        # every packet, so a zero length NLRI reached the API as the bare string `flow` and
+        # a controller acting on it would have rate limited or discarded all traffic on the
+        # box.
+        if not nlri.rules:
+            raise Notify(3, 10, 'flow NLRI carries no component, which would match every packet')
+
+        return bgp
+
+    @staticmethod
+    def _unpack_operations(what, decoded, klass, bgp, nlri):
+        """Read the operator and value pairs of one component, up to its end of list.
+
+        Returns what is left of the payload.
+        """
+        # RFC 8955 sections 4.2.1.1 and 4.2.1.2 reserve a different part of the operator
+        # octet for each flavour, so the mask has to come from the component's own kind.
+        operator_class = BinaryOperator if decoded == 'binary' else NumericOperator
+        end = False
+        first = True
+        while not end:
+            byte, bgp = bgp[0], bgp[1:]
+            end = CommonOperator.eol(byte)
+            operator = operator_class.operator(byte)
+            if first:
+                # RFC 8955 section 4.2.1.1: in the first operator octet of a sequence the
+                # AND bit MUST be treated as always unset. Kept, it rendered as `&=tcp`,
+                # an AND against a pair which does not exist.
+                operator &= CommonOperator.AND ^ 0xFF
+                first = False
+            size = CommonOperator.length(byte)
+            # the operator says how many bytes the value takes. If they are not there the
+            # slice is short or empty, and the decoder either raises out of the reactor,
+            # or worse invents a value and the filter carries a match the peer never sent.
+            if len(bgp) < size:
+                raise Notify(3, 10, 'flow component %d announces a %d byte value with %d left' % (what, size, len(bgp)))
+            value, bgp = bgp[:size], bgp[size:]
+            decoded_value = klass.decoder(value)
+            # The width is the sender's choice, the value is not: a protocol of 262 matches
+            # no packet, and index() packs the rules again, where bytes([262]) raised
+            # ValueError on the first route stored. RFC 8955 4.2 makes it malformed.
+            if decoded_value >= klass.VALUE_LIMIT:
+                raise Notify(
+                    3, 10, 'flow component %d has a value of %d, too large for its field' % (what, decoded_value)
+                )
+            nlri.add(klass(operator, decoded_value))
+        return bgp

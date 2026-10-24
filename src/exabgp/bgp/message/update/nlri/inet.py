@@ -84,6 +84,15 @@ class INET(NLRI):
             return '"{}"'.format(self.cidr.prefix())
         return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        nlri = {
+            'prefix': self.cidr.prefix(),
+            'nexthop': None if self.nexthop is NoNextHop else str(self.nexthop),
+            'family': {'afi': str(family[0]), 'safi': str(family[1])},
+        }
+        return nlri
+
     @classmethod
     def _pathinfo(cls, data, addpath):
         if addpath:
@@ -103,9 +112,12 @@ class INET(NLRI):
 
         if addpath:
             if len(bgp) <= PATH_INFO_SIZE:
-                raise ValueError('Trying to extract path-information but we do not have enough data')
+                raise Notify(3, 10, 'not enough data to extract the path-information of the NLRI')
             nlri.path_info = PathInfo(bgp[:PATH_INFO_SIZE])
             bgp = bgp[PATH_INFO_SIZE:]
+
+        if not bgp:
+            raise Notify(3, 10, 'not enough data to extract the mask of the NLRI')
 
         mask = bgp[0]
         bgp = bgp[1:]
@@ -115,31 +127,85 @@ class INET(NLRI):
 
         if safi.has_label():
             labels = []
+            # RFC 3107: the mask covers the label stack AND the prefix together, so
+            # the only thing on the wire saying where the stack ends is a terminator.
+            # Without one this loop ran until the mask was spent, read the PREFIX
+            # bytes as more labels, and left nothing behind: the NLRI decoded to
+            # 0.0.0.0/0, which we would then re-advertise.  A peer choosing to omit
+            # the bottom of stack bit could make us originate a default route.
+            terminated = False
             while mask - rd_mask >= LABEL_SIZE_BITS:
+                if len(bgp) < 3:
+                    raise Notify(3, 10, 'not enough data to extract the label stack of the NLRI')
                 label = int(unpack('!L', bytes([0]) + bgp[:3])[0])
                 bgp = bgp[3:]
                 mask -= LABEL_SIZE_BITS  # 3 bytes
                 # The last 4 bits are the bottom of Stack
                 # The last bit is set for the last label
                 labels.append(label >> 4)
+                if label & LABEL_BOTTOM_OF_STACK_BIT:
+                    terminated = True
+                    break
+                # RFC 3107 gives two whole-stack conventions which carry no bottom
+                # of stack bit: 0x800000 on a withdrawal, and 0x000000 for a
+                # next-hop.  They describe the stack rather than a label within
+                # one, so they only end it when they ARE the stack.  Accepting
+                # them at any depth is what let the mpls-vpn case through the
+                # first version of this gate: an unterminated first label made the
+                # loop read the route distinguisher, whose leading zero bytes look
+                # exactly like the next-hop convention, and the stack "terminated"
+                # on the peer's RD.
+                if len(labels) > 1:
+                    continue
+                # RFC 8277 2.2, of the S bit: "This 1-bit field MUST be set to one
+                # on transmission and MUST be ignored on reception", and 2.4 says
+                # the same of the three octet Compatibility field a withdraw carries
+                # where a label would be: "Upon reception, the value of the
+                # Compatibility field MUST be ignored".  Both bind every session
+                # exabgp forms: the 2.3 reading applies only once the Multiple Labels
+                # Capability has been sent AND received, and exabgp has no capability
+                # code 8 to exchange.
+                #
+                # So for a one field stack it is the LENGTH which says where the stack
+                # ends, not the S bit: if the bits the length leaves behind this field
+                # are a prefix this family can hold, they are the prefix.  Refusing
+                # them instead is what used to reset the session over a legal
+                # MP_UNREACH withdraw.
+                #
+                # Zero bits left is excluded on purpose.  A /0 and a stack which ate
+                # the prefix are the same bytes, and a peer-supplied default route is
+                # what that costs, so there the two conventions below stay the only
+                # way out of the loop.  Beyond depth one the S bit stays the only
+                # terminator, which is what the raise after the loop holds.
+                if 0 < mask - rd_mask <= IP.length(afi) * 8:
+                    terminated = True
+                    break
                 # This is a route withdrawal
                 if label == LABEL_WITHDRAW_VALUE and action == Action.WITHDRAW:
+                    terminated = True
                     break
                 # This is a next-hop
                 if label == LABEL_NEXTHOP_VALUE:
+                    terminated = True
                     break
-                if label & LABEL_BOTTOM_OF_STACK_BIT:
-                    break
+            if labels and not terminated:
+                raise Notify(3, 10, 'invalid label stack in the NLRI, no bottom of stack bit and no terminator')
             nlri.labels = Labels(labels)
 
         if rd_size:
             mask -= rd_mask  # the route distinguisher
+            if len(bgp) < rd_size:
+                raise Notify(3, 10, 'not enough data to extract the route distinguisher of the NLRI')
             rd = bgp[:rd_size]
             bgp = bgp[rd_size:]
             nlri.rd = RouteDistinguisher(rd)
 
         if mask < 0:
             raise Notify(3, 10, 'invalid length in NLRI prefix')
+
+        # a mask longer than the address family allows would index past the prefix
+        if mask > IP.length(afi) * 8:
+            raise Notify(3, 10, 'invalid mask %d in NLRI prefix for %s' % (mask, AFI(afi)))
 
         if not bgp and mask:
             raise Notify(3, 10, 'not enough data for the mask provided to decode the NLRI')

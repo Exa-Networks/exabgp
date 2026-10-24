@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 
@@ -27,6 +28,8 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 @LinkState.register()
 class Srv6EndpointBehavior(BaseLS):
     TLV = 1250
+    REPR = 'SRv6 Endpoint Behavior'
+    MINIMUM = 4  # Endpoint Behavior(2) + Flags(1) + Algorithm(1)
 
     def __init__(
         self,
@@ -40,6 +43,10 @@ class Srv6EndpointBehavior(BaseLS):
 
     @classmethod
     def unpack(cls, data):
+        # a minimum, not an exact length: this release renders a longer TLV and a
+        # future field must not turn a working route into a protocol error
+        if len(data) < cls.MINIMUM:
+            raise Notify(3, 5, f'Unable to decode attribute, not enough data for {cls.REPR}')
         flags = []  # No flags defined according to RFC 9514 and 9352
         algorithm = data[3]
         endpoint_behavior = unpack('!H', data[0:2])[0]
@@ -53,6 +60,13 @@ class Srv6EndpointBehavior(BaseLS):
             self.algorithm,
         )
 
+    def __repr__(self):
+        # this class keeps named fields, not a content attribute, so the
+        # inherited __repr__ raised AttributeError from str()
+        return '{}: endpoint-behavior {}, flags {}, algorithm {}'.format(
+            self.REPR, self.endpoint_behavior, self.flags, self.algorithm
+        )
+
     def json(self, compact=None):
         return '"srv6-endpoint-behavior": ' + json.dumps(
             {
@@ -62,3 +76,12 @@ class Srv6EndpointBehavior(BaseLS):
             },
             indent=compact,
         )
+
+    def as_dict(self):
+        return {
+            'srv6-endpoint-behavior': {
+                'endpoint-behavior': self.endpoint_behavior,
+                'flags': self.flags,
+                'algorithm': self.algorithm,
+            }
+        }

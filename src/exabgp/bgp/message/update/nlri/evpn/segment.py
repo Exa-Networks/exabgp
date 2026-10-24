@@ -83,6 +83,7 @@ class EthernetSegment(EVPN):
 
     @classmethod
     def unpack(cls, data):
+        cls.check_length(data, 19)
         rd = RouteDistinguisher.unpack(data[:8])
         esi = ESI.unpack(data[8:18])
         iplen = data[18]
@@ -94,16 +95,38 @@ class EthernetSegment(EVPN):
                 'IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits' % iplen,
             )
 
+        if len(data) != 19 + iplen // 8:
+            raise Notify(
+                3,
+                10,
+                'Ethernet Segment EVPN NLRI is %d bytes, expecting %d for an IP of %d bits'
+                % (len(data), 19 + iplen // 8, iplen),
+            )
+
         ip = IP.unpack(data[19 : 19 + (iplen // 8)])
 
         return cls(rd, esi, ip, data)
 
+    def as_dict(self):
+        nlri = EVPN.as_dict(self)
+        nlri['parsed'] = True
+        nlri['nexthop'] = None if self.nexthop is None else str(self.nexthop)
+        nlri['rd'] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri['esi'] = str(self.esi)
+        nlri['ip'] = None if self.ip is None else str(self.ip)
+        return nlri
+
     def json(self, compact=None):
-        content = ' "code": %d, ' % self.CODE
-        content += '"parsed": true, '
-        content += '"raw": "{}", '.format(self._raw())
-        content += '"name": "{}", '.format(self.NAME)
-        content += '{}, '.format(self.rd.json())
-        content += self.esi.json()
-        content += ', "ip": "{}"'.format(str(self.ip))
-        return '{{{} }}'.format(content)
+        # members are collected and joined: a member which renders empty (an
+        # absent label stack, an absent route distinguisher) used to leave a
+        # doubled or trailing comma and the line stopped being JSON
+        members = [
+            '"code": %d' % self.CODE,
+            '"parsed": true',
+            '"raw": "{}"'.format(self._raw()),
+            '"name": "{}"'.format(self.NAME),
+            self.rd.json(),
+            self.esi.json(),
+            '"ip": "{}"'.format(str(self.ip)),
+        ]
+        return '{{ {} }}'.format(', '.join(_ for _ in members if _))

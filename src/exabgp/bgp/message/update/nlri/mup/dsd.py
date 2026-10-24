@@ -72,6 +72,7 @@ class DirectSegmentDiscoveryRoute(MUP):
     @classmethod
     def unpack(cls, data, afi):
         data_len = len(data)
+        cls.check_length(data, 8)
         rd = RouteDistinguisher.unpack(data[:8])
         size = data_len - 8
         if size not in [4, 16]:
@@ -79,6 +80,12 @@ class DirectSegmentDiscoveryRoute(MUP):
         ip = IP.unpack(data[8 : 8 + size])
 
         return cls(rd, ip, afi)
+
+    def as_dict(self):
+        nlri = MUP.as_dict(self)
+        nlri['rd'] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri['ip'] = str(self.ip)
+        return nlri
 
     def json(self, compact=None):
         content = '"name": "{}", '.format(self.NAME)

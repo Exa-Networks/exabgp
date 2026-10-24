@@ -21,6 +21,8 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 
+from exabgp.logger import log
+
 
 # ================================================================= MP NLRI (14)
 
@@ -35,10 +37,15 @@ class MPURNLRI(Attribute, Family):
         self.nlris = nlris
 
     def __eq__(self, other):
+        if not isinstance(other, MPURNLRI):
+            return NotImplemented
         return self.ID == other.ID and self.FLAG == other.FLAG and self.nlris == other.nlris
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def packed_attributes(self, negotiated, maximum=Negotiated.FREE_SIZE):
         if not self.nlris:
@@ -52,19 +59,22 @@ class MPURNLRI(Attribute, Family):
                 continue
             mpurnlri.append(nlri.pack(negotiated))
 
-        payload = self.afi.pack() + self.safi.pack()
-        header_length = len(payload)
+        # The same Cease over our own encoding as MPRNLRI used to raise, see the note there.
+        # A withdrawal we cannot pack is worse than an announcement we cannot pack, since the
+        # peer keeps forwarding to a prefix we have stopped carrying, but a Cease does not send
+        # it either: it takes the other families with it and returns on the next session.
+        header = self.afi.pack() + self.safi.pack()
+        payload = header
         for nlri in mpurnlri:
-            if self._len(payload + nlri) > maximum:
-                if len(payload) == header_length or len(payload) > maximum:
-                    raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
-                yield self._attribute(payload)
-                payload = self.afi.pack() + self.safi.pack() + nlri
+            if self._len(header + nlri) > maximum:
+                log.critical(lambda: 'can not pack one NLRI in an MP_UNREACH_NLRI, not withdrawing it', 'parser')
                 continue
+            if self._len(payload + nlri) > maximum:
+                yield self._attribute(payload)
+                payload = header
             payload = payload + nlri
-        if len(payload) == header_length or len(payload) > maximum:
-            raise Notify(6, 0, 'attributes size is so large we can not even pack on MPURNLRI')
-        yield self._attribute(payload)
+        if payload != header:
+            yield self._attribute(payload)
 
     def pack(self, negotiated):
         return b''.join(self.packed_attributes(negotiated))
@@ -79,13 +89,19 @@ class MPURNLRI(Attribute, Family):
     def unpack(cls, data, direction, negotiated):
         nlris = []
 
+        # Both raises below are 3/9, "UPDATE Message Error"/"Optional Attribute Error",
+        # which RFC 4760 section 7 names for a session ended over an incorrect MP
+        # attribute.  They used to be 3/0 Unspecific, which named nothing.
+
         # -- Reading AFI/SAFI
+        if len(data) < 3:
+            raise Notify(3, 9, 'invalid %s, not enough data for the family' % cls.__name__)
         afi, safi = unpack('!HB', data[:3])
         offset = 3
         data = data[offset:]
 
         if negotiated and (afi, safi) not in negotiated.families:
-            raise Notify(3, 0, 'presented a non-negotiated family {} {}'.format(AFI.create(afi), SAFI.create(safi)))
+            raise Notify(3, 9, 'presented a non-negotiated family {} {}'.format(AFI.create(afi), SAFI.create(safi)))
 
         # Do we need to handle Path Information with the route (AddPath)
         if direction == Direction.IN:

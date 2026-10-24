@@ -1,13 +1,10 @@
-"""nodename.py
+"""opaque.py
 
 Created by Evelio Vila on 2016-12-01.
 Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 """
 
 from __future__ import annotations
-
-import json
-from struct import unpack
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
@@ -18,26 +15,19 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #    |              Type             |             Length            |
 #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-#    //                     Node Name (variable)                    //
+#    //                     Opaque node attributes (variable)       //
 #    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #    https://tools.ietf.org/html/rfc7752#section-3.3.1.5 Opaque Node Attribute Format
 #
-# 	  This TLV is added here for completeness but we don't look into the TLV.
-#   Use of draft-tantsura-bgp-ls-segment-routing-msd-02 in this TLV is not clear
+# This TLV is added here for completeness but we don't look into the TLV.
 
 
 @LinkState.register()
 class NodeOpaque(BaseLS):
     TLV = 1025
-    REPR = 'Node Opaque attribute'
+    REPR = 'Opaque Node Attribute'
     JSON = 'opaque'
-
-    def __init__(self, opaque):
-        BaseLS.__init__(self, opaque)
 
     @classmethod
     def unpack(cls, data):
-        return cls(unpack('!%ds' % len(data), data)[0])
-
-    def json(self, compact=None):
-        return f'"{self.JSON}": {json.dumps(self.content)}'
+        return cls(data)

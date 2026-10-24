@@ -25,6 +25,8 @@ from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Negotiated
 
+from exabgp.logger import log
+
 
 # ==================================================== MP Unreacheable NLRI (15)
 #
@@ -41,10 +43,15 @@ class MPRNLRI(Attribute, Family):
         self.nlris = nlris
 
     def __eq__(self, other):
+        if not isinstance(other, MPRNLRI):
+            return NotImplemented
         return self.ID == other.ID and self.FLAG == other.FLAG and self.nlris == other.nlris
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def packed_attributes(self, negotiated, maximum=Negotiated.FREE_SIZE):
         if not self.nlris:
@@ -83,20 +90,25 @@ class MPRNLRI(Attribute, Family):
             # mpunli[nexthop] = nlri
             mpnlri.setdefault(nexthop, []).append(nlri.pack(negotiated))
 
+        # An NLRI which does not fit a message of its own used to raise Notify(6, 0), a Cease
+        # sent to the peer over the size of what WE were about to encode.  The peer had done
+        # nothing: it lost every route of every family, and on the next session it would lose
+        # them again, because the announcement we could not pack is still in our RIB.  A local
+        # encoding limit is not a protocol error, so it is logged and the route is left out,
+        # which is what the native IPv4 pass in Update._packed_nlris already does.
         for nexthop, nlris in mpnlri.items():
-            payload = self.afi.pack() + self.safi.pack() + bytes([len(nexthop)]) + nexthop + bytes([0])
-            header_length = len(payload)
+            header = self.afi.pack() + self.safi.pack() + bytes([len(nexthop)]) + nexthop + bytes([0])
+            payload = header
             for nlri in nlris:
-                if self._len(payload + nlri) > maximum:
-                    if len(payload) == header_length or len(payload) > maximum:
-                        raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
-                    yield self._attribute(payload)
-                    payload = self.afi.pack() + self.safi.pack() + bytes([len(nexthop)]) + nexthop + bytes([0]) + nlri
+                if self._len(header + nlri) > maximum:
+                    log.critical(lambda: 'can not pack one NLRI in an MP_REACH_NLRI, not announcing it', 'parser')
                     continue
+                if self._len(payload + nlri) > maximum:
+                    yield self._attribute(payload)
+                    payload = header
                 payload = payload + nlri
-            if len(payload) == header_length or len(payload) > maximum:
-                raise Notify(6, 0, 'attributes size is so large we can not even pack on MPRNLRI')
-            yield self._attribute(payload)
+            if payload != header:
+                yield self._attribute(payload)
 
     def pack(self, negotiated):
         return b''.join(self.packed_attributes(negotiated))
@@ -112,7 +124,19 @@ class MPRNLRI(Attribute, Family):
     def unpack(cls, data, direction, negotiated):
         nlris = []
 
+        # Every Notify below is 3/9, "UPDATE Message Error"/"Optional Attribute Error".
+        # RFC 4760 section 7 names that code and subcode for a session terminated over an
+        # incorrect MP attribute, and every raise in here is us deciding the attribute is
+        # incorrect.  3/0 Unspecific, which most of them used to send, told the peer only
+        # that we had ended the session and left it to guess at which attribute.
+
         # -- Reading AFI/SAFI
+        # AFI(2) + SAFI(1) + next-hop length(1) + reserved(1) is the smallest MP_REACH
+        # there can be.  Checking only the first three left `data[3]` reading off the end
+        # of a three octet attribute, and IndexError is re-raised out of
+        # Attributes.parse for an attribute which is not treat-as-withdraw.
+        if len(data) < 5:
+            raise Notify(3, 9, 'invalid %s, not enough data for the family and next-hop' % cls.__name__)
         _afi, _safi = unpack('!HB', data[:3])
         afi, safi = AFI.create(_afi), SAFI.create(_safi)
         offset = 3
@@ -120,14 +144,18 @@ class MPRNLRI(Attribute, Family):
 
         # we do not want to accept unknown families
         if negotiated and (afi, safi) not in negotiated.families:
-            raise Notify(3, 0, 'presented a non-negotiated family {}/{}'.format(afi, safi))
+            raise Notify(3, 9, 'presented a non-negotiated family {}/{}'.format(afi, safi))
 
         # -- Reading length of next-hop
         len_nh = data[offset]
         offset += 1
 
+        # the next-hop and the reserved octet behind it are both sized by the peer
+        if len(data) < offset + len_nh + 1:
+            raise Notify(3, 9, f'MP_REACH_NLRI truncated: need {offset + len_nh + 1} bytes, got {len(data)}')
+
         if (afi, safi) not in Family.size:
-            raise Notify(3, 0, 'unsupported {} {}'.format(afi, safi))
+            raise Notify(3, 9, 'unsupported {} {}'.format(afi, safi))
 
         length, rd = Family.size[(afi, safi)]
 
@@ -145,14 +173,14 @@ class MPRNLRI(Attribute, Family):
                 nh_afi = AFI.ipv4
             else:
                 raise Notify(
-                    3, 0, 'unsupported family {} {} with extended next-hop capability enabled'.format(afi, safi)
+                    3, 9, 'unsupported family {} {} with extended next-hop capability enabled'.format(afi, safi)
                 )
             length, _ = Family.size[(nh_afi, safi)]
 
         if len_nh not in length:
             raise Notify(
                 3,
-                0,
+                9,
                 'invalid %s %s next-hop length %d expected %s'
                 % (afi, safi, len_nh, ' or '.join(str(_) for _ in length)),
             )
@@ -163,24 +191,28 @@ class MPRNLRI(Attribute, Family):
         nhs = data[offset + rd : offset + rd + size]
         nexthops = [nhs[pos : pos + 16] for pos in range(0, len(nhs), 16)]
 
-        # chech the RD is well zero
-        if rd and sum([int(_) for _ in data[offset:8]]) != 0:
-            raise Notify(3, 0, "MP_REACH_NLRI next-hop's route-distinguisher must be zero")
+        # check the route distinguisher is indeed zero. This read the fixed slice
+        # data[offset:8], which with an offset of 4 and an eight byte RD inspected
+        # only its first four bytes, and inspected nothing at all had the offset
+        # ever passed 8. Every VPN family was half checked.
+        if rd and sum(data[offset : offset + rd]) != 0:
+            raise Notify(3, 9, "MP_REACH_NLRI next-hop's route-distinguisher must be zero")
 
         offset += len_nh
 
-        # Skip a reserved bit as somone had to bug us !
-        reserved = data[offset]
+        # RFC 4760 section 3 reads "A 1 octet field that MUST be set to 0, and SHOULD be
+        # ignored upon receipt".  We ignore it.  Ending the session over this byte cost the
+        # peer every route it had announced, in every family, over a field the document
+        # tells the receiver not to read, and a reserved field carrying something one day
+        # is what reserved fields are for.  The length check above already proved the octet
+        # is inside the attribute, so only the offset matters here.
         offset += 1
-
-        if reserved != 0:
-            raise Notify(3, 0, 'the reserved bit of MP_REACH_NLRI is not zero')
 
         # Reading the NLRIs
         data = data[offset:]
 
         if not data:
-            raise Notify(3, 0, 'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi, safi))
+            raise Notify(3, 9, 'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi, safi))
 
         while data:
             if nexthops:

@@ -18,6 +18,7 @@ from exabgp.bgp.message.open import ASN
 from exabgp.bgp.message.open import RouterID
 from exabgp.bgp.message.open import HoldTime
 from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import RouteRefresh
 
 from exabgp.bgp.message.direction import Direction
@@ -71,11 +72,18 @@ open_body = [
 
 class TestData(unittest.TestCase):
     def test_1_open(self) -> None:
+        # this OPEN carries route-refresh twice, under the RFC code and under the code
+        # Cisco uses.  Both resolve to the same RouteRefresh class, and the code actually
+        # received now lives on the instance rather than on the class, so the expected
+        # value for 128 must be unpacked through Capability.unpack() to carry that code.
+        # RouteRefresh() alone would hold the declared RFC code and compare unequal to
+        # the peer's Cisco one (RouteRefresh equality is ID sensitive, see refresh.py).
+        cisco_route_refresh = Capability.unpack(Capability.CODE.ROUTE_REFRESH_CISCO, Capabilities(), b'')
         check_capa = {
             1: [(AFI.ipv4, SAFI.unicast), (AFI.ipv6, SAFI.unicast)],
             2: RouteRefresh(),
             65: 65534,
-            128: RouteRefresh(),
+            128: cisco_route_refresh,
         }
 
         message_id = 1
@@ -98,6 +106,28 @@ class TestData(unittest.TestCase):
         self.assertEqual(o.router_id, RouterID('127.0.0.1'))
         self.assertEqual(o.hold_time, 180)
         self.assertEqual(o.capabilities, {})
+
+
+class TestRouterID(unittest.TestCase):
+    def test_create_ipv4_open(self) -> None:
+        for packed in (None, b'\xc0\x00\x02\x01'):
+            with self.subTest(packed=packed):
+                router_id = RouterID.create('192.0.2.1', packed)
+                self.assertIsInstance(router_id, RouterID)
+                self.assertEqual(router_id.pack(), b'\xc0\x00\x02\x01')
+                message = Open(Version(4), ASN(65000), HoldTime(180), router_id, Capabilities())
+                wire = message.message()
+                self.assertEqual(wire[24:28], b'\xc0\x00\x02\x01')
+                decoded = Open.unpack_message(wire[Message.HEADER_LEN :])
+                self.assertEqual(decoded.router_id, router_id)
+
+    def test_create_rejects_ipv6(self) -> None:
+        # Dynamic neighbours without a router-id use this factory on the
+        # discovered address; an IPv6 address must not reach the OPEN encoder.
+        for address in ('2001:db8::1', '::ffff:192.0.2.1'):
+            for packed in (None, RouterID.pton('192.0.2.1')):
+                with self.subTest(address=address, packed=packed), self.assertRaises(ValueError):
+                    RouterID.create(address, packed)
 
 
 if __name__ == '__main__':

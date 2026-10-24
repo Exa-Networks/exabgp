@@ -294,6 +294,11 @@ class Family:
         (AFI.ipv4, SAFI.flow_vpn): ((0, 4), 0),
         (AFI.ipv4, SAFI.rtc): ((4, 16), 0),
         (AFI.ipv6, SAFI.unicast): ((16, 32), 0),
+        # RFC 4760: multicast reachability uses the same next-hop encoding as
+        # unicast. Without this the family can be configured and announced but
+        # not received, so two speakers agreeing on it drop the session on the
+        # first route.
+        (AFI.ipv6, SAFI.multicast): ((16, 32), 0),
         (AFI.ipv6, SAFI.nlri_mpls): ((16, 32), 0),
         (AFI.ipv6, SAFI.mup): ((4, 16), 0),
         (AFI.ipv6, SAFI.mpls_vpn): ((24, 40), 8),
@@ -303,6 +308,12 @@ class Family:
         (AFI.l2vpn, SAFI.vpls): ((4,), 0),
         (AFI.l2vpn, SAFI.evpn): ((4,), 0),
         (AFI.bgpls, SAFI.bgp_ls): ((4, 16), 0),
+        # RFC 7752 section 3.2.1: for the VPN SAFI the next hop is a VPN-IPv4 or
+        # VPN-IPv6 address with the route distinguisher set to zero, which is the
+        # same shape as the mpls-vpn families. 12 = RD(8) + IPv4(4),
+        # 24 = RD(8) + IPv6(16), and the 8 is the RD the decoder skips and checks
+        # is all zeros.
+        (AFI.bgpls, SAFI.bgp_ls_vpn): ((12, 24), 8),
     }
 
     def __init__(self, afi, safi):

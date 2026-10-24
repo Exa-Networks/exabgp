@@ -46,7 +46,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.bgp.message.notification import Notify
 import struct
+
+
+MULTI_TOPOLOGY_SIZE = 2  # RFC 9552 5.2.2.1: length is 2*n, one 16 bit field per MT-ID
+MULTI_TOPOLOGY_ID_MASK = 0x0FFF  # the low 12 bits; the top 4 are the reserved R bits
 
 
 class MTID:
@@ -56,11 +61,19 @@ class MTID:
 
     @classmethod
     def unpack(cls, data):
-        # tids = []
-        # for i in range(0, len(data), 2):
-        #     payload = struct.unpack('!H', data[i:i+2])[0]
-        #     tids.append(payload & 0x0FFF)
-        tids = struct.unpack('!H', data[:2])[0]
+        if len(data) < MULTI_TOPOLOGY_SIZE:
+            raise Notify(
+                3,
+                10,
+                'invalid BGP-LS multi-topology sub-TLV, expected %d bytes, got %d' % (MULTI_TOPOLOGY_SIZE, len(data)),
+            )
+        # RFC 9552 5.2.2.1: the top four bits are reserved and "MUST be set to 0
+        # ... when originated and ignored on receipt".  They were not ignored, so
+        # a peer setting them changed the MT-ID we reported, and topology_ids is
+        # part of the link NLRI's __eq__ and __hash__: the same link in the same
+        # topology compared unequal to itself depending on bits we are told to
+        # disregard.
+        tids = struct.unpack('!H', data[:2])[0] & MULTI_TOPOLOGY_ID_MASK
         return cls(tids, data)
 
     def json(self):
@@ -68,11 +81,21 @@ class MTID:
         # tids = ', '.join(_ for _ in self.topologies)
         # return f'[{tids}]'
 
+    def as_dict(self):
+        return self.topologies
+
     def __eq__(self, other):
+        if not isinstance(other, MTID):
+            return NotImplemented
         return self.topologies == other.topologies
 
-    def __neq__(self, other):
-        return self.topologies != other.topologies
+    def __ne__(self, other):
+        # this was spelled __neq__, which Python never calls, so != fell back to
+        # the negation of __eq__ and the method was decoration
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def __lt__(self, other):
         raise RuntimeError('Not implemented')
@@ -96,7 +119,11 @@ class MTID:
         return len(self._packed)
 
     def __hash__(self):
-        return hash(str(self))
+        # must agree with __eq__, which compares the masked MT-ID.  hashing
+        # str(self) reached the packed bytes instead, so two MTIDs which compare
+        # equal hashed differently the moment the reserved bits were masked: the
+        # RIB would index one link twice and a lookup could miss it
+        return hash(self.topologies)
 
     def pack(self):
         if self._packed:

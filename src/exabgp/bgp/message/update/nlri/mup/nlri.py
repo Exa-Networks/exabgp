@@ -10,6 +10,7 @@ from struct import pack
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 
 # https://datatracker.ietf.org/doc/draft-mpmz-bess-mup-safi/02/
@@ -28,6 +29,19 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 @NLRI.register(AFI.ipv4, SAFI.mup)
 @NLRI.register(AFI.ipv6, SAFI.mup)
 class MUP(NLRI):
+    # RD(8) + the route type length field, before the route type specific fields
+    PAYLOAD_OFFSET = 9
+
+    @classmethod
+    def check_length(cls, data, minimum):
+        """Reject wire data too short for this route type."""
+        if len(data) < minimum:
+            raise Notify(
+                3,
+                10,
+                '{} MUP NLRI is too short: need at least {} bytes, got {}'.format(cls.NAME, minimum, len(data)),
+            )
+
     registered = dict()
 
     # NEED to be defined in the subclasses
@@ -64,7 +78,20 @@ class MUP(NLRI):
     def _prefix(self):
         return 'mup:{}:'.format(self.registered.get(self.CODE, self).SHORT_NAME.lower())
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        return {
+            'arch': self.ARCHTYPE,
+            'code': self.CODE,
+            'raw': self._raw(),
+            'name': self.NAME,
+            'family': {'afi': str(family[0]), 'safi': str(family[1])},
+        }
+
     def pack_nlri(self, negotiated=None):
+        # RFC 7911 ADD-PATH is possible for MUP but not yet implemented, so MUP is kept out
+        # of Capabilities._ADD_PATH: a peer must never be told to expect a path identifier
+        # this returns without. Add it back to that list in the same change as the encoder.
         return pack('!BHB', self.ARCHTYPE, self.CODE, len(self._packed)) + self._packed
 
     @classmethod
@@ -77,12 +104,21 @@ class MUP(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # RFC 7911 section 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
+        # MUP NLRI: arch_type(1) + route_type(2) + length(1) + route_data(length)
+        if len(bgp) < 4:
+            raise Notify(3, 10, 'MUP NLRI too short: need at least 4 bytes, got {}'.format(len(bgp)))
         arch = bgp[0]
         code = int.from_bytes(bgp[1:3], 'big')
         length = bgp[3]
 
         # arch and code byte size is 4 byte
         end = length + 4
+        if len(bgp) < end:
+            raise Notify(3, 10, 'MUP NLRI truncated: need {} bytes, got {}'.format(end, len(bgp)))
         key = '{}:{}'.format(arch, code)
         if key in cls.registered:
             klass = cls.registered[key].unpack(bgp[4:end], afi)
@@ -90,7 +126,7 @@ class MUP(NLRI):
             klass = GenericMUP(arch, afi, code, bgp[4:end])
         klass.CODE = code
         klass.action = action
-        klass.addpath = addpath
+        klass.addpath = path_info
 
         return klass, bgp[end:]
 

@@ -18,6 +18,19 @@ class Text:
     def __init__(self, version):
         self.version = version
 
+    @staticmethod
+    def oneline(value):
+        """Keep peer supplied text on the line it belongs to
+
+        The text stream is one event per line, so a newline in a value forges a
+        whole event for anything reading it.  The decoders reject control
+        characters now, but the encoder must not depend on that.
+        """
+        text = str(value)
+        if text.isprintable():
+            return text
+        return ''.join(_ if (_.isprintable() and _ != '\x7f') else '\\x%02x' % ord(_) for _ in text)
+
     def _header_body(self, header, body):
         header = f' header {hexstring(header)}' if header else ''
         body = f' body {hexstring(body)}' if body else ''
@@ -36,7 +49,7 @@ class Text:
         return f'neighbor {neighbor["peer-address"]} connected\n'
 
     def down(self, neighbor, reason=''):
-        return f'neighbor {neighbor["peer-address"]} down - {reason}\n'
+        return f'neighbor {neighbor["peer-address"]} down - {self.oneline(reason)}\n'
 
     def shutdown(self):
         return f'shutdown {os.getpid()} {os.getppid()}\n'
@@ -62,7 +75,7 @@ class Text:
         return f'neighbor {neighbor["peer-address"]} {direction} keepalive{self._header_body(header, body)}\n'
 
     def open(self, neighbor, direction, sent_open, negotiated, header, body):
-        capabilities_str = str(sent_open.capabilities).lower()
+        capabilities_str = self.oneline(sent_open.capabilities).lower()
         header_body = self._header_body(header, body)
         return f'neighbor {neighbor["peer-address"]} {direction} open version {sent_open.version} asn {sent_open.asn} hold_time {sent_open.hold_time} router_id {sent_open.router_id} capabilities [{capabilities_str}]{header_body}\n'
 

@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
+"""Property tests over every registered BGP-LS attribute TLV
+
+The BGP-LS attribute is dispatched by attribute code with no address family
+gate, so a peer can attach it to a plain IPv4 unicast UPDATE without BGP-LS
+ever being negotiated.  Every TLV payload below is therefore untrusted input.
+
+The tests are parametrised FROM the registry, so a TLV registered next year is
+covered the day it is added rather than the day someone remembers to test it.
+
+Three properties, per TIGER_STYLE section 1.1:
+  1. malformed input raises Notify, never a Python exception
+  2. a decoded object survives json(), str() and repr()
+  3. the JSON it emits is one parseable object, with no member the peer chose
+"""
+
+import json
+from struct import pack
+
+import pytest
+from hypothesis import given, settings, HealthCheck
+from hypothesis import strategies as st
+
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+
+TLVS = sorted(LinkState.registered_lsids)
+
+# an unregistered code, which must fall through to GenericLSID
+UNKNOWN_TLV = 9999
+
+INJECTION = b'x", "injected": "owned'
+
+
+def all_keys(node):
+    """Every member name in the decoded JSON, at any depth"""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield key
+            yield from all_keys(value)
+    elif isinstance(node, list):
+        for value in node:
+            yield from all_keys(value)
+
+
+def render(scode, payload):
+    """Decode one TLV the way an UPDATE would, then render it every way the API does"""
+    attribute = LinkState.unpack(pack('!HH', scode, len(payload)) + payload, None, None)
+    return attribute.json(), str(attribute), repr(attribute)
+
+
+@pytest.mark.parametrize('scode', TLVS + [UNKNOWN_TLV])
+@pytest.mark.parametrize('length', range(0, 40))
+def test_short_tlv_raises_notify_or_renders(scode, length) -> None:
+    """A truncated TLV is a protocol error, never a Python exception"""
+    try:
+        emitted, _, _ = render(scode, b'A' * length)
+    except Notify:
+        return
+    json.loads(emitted)
+
+
+@pytest.mark.parametrize('scode', TLVS + [UNKNOWN_TLV])
+def test_quote_payload_cannot_inject(scode) -> None:
+    """A peer must not be able to add a member of its own to the API stream"""
+    try:
+        emitted, _, _ = render(scode, INJECTION)
+    except Notify:
+        return
+    parsed = json.loads(emitted)
+    assert 'injected' not in set(all_keys(parsed)), f'TLV {scode} let the peer inject a member'
+
+
+@pytest.mark.parametrize('scode', TLVS + [UNKNOWN_TLV])
+@pytest.mark.parametrize('payload', [b'\x00' * 8, b'\xff' * 8, b'\x00\x01\x02\x03\x04\x05\x06\x07'])
+def test_non_text_payload_stays_one_json_line(scode, payload) -> None:
+    """Control bytes and invalid UTF-8 must not break the line delimited stream"""
+    try:
+        emitted, _, _ = render(scode, payload)
+    except Notify:
+        return
+    assert len(emitted.splitlines()) == 1, f'TLV {scode} split the line delimited stream'
+    json.loads(emitted)
+
+
+@settings(max_examples=200, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(scode=st.sampled_from(TLVS + [UNKNOWN_TLV]), payload=st.binary(min_size=0, max_size=64))
+def test_arbitrary_bytes(scode, payload) -> None:
+    """Random bytes into any registered TLV: Notify, or a parseable single line"""
+    try:
+        emitted, _, _ = render(scode, payload)
+    except Notify:
+        return
+    json.loads(emitted)
+
+
+@settings(max_examples=200, suppress_health_check=[HealthCheck.function_scoped_fixture])
+@given(scode=st.sampled_from(TLVS + [UNKNOWN_TLV]), text=st.text(max_size=48))
+def test_arbitrary_text(scode, text) -> None:
+    """Arbitrary text, which is where quotes and control characters come from"""
+    try:
+        emitted, _, _ = render(scode, text.encode('utf-8'))
+    except Notify:
+        return
+    parsed = json.loads(emitted)
+    assert 'injected' not in set(all_keys(parsed))
+
+
+class TestValidTlvRenders:
+    """Real wire payloads, which the synthetic fillers above do not reach
+
+    A TLV which decodes but cannot be rendered breaks the API writer and the
+    logger, and after the decode boundary was tightened it also closed the
+    session.  These came out of the decoding functional suite.
+    """
+
+    # SRv6 End.X (TLV 1106) as sent by a real router
+    SRV6_ENDX = bytes.fromhex('003980000000FC0010000112E002000000000000000004E4000420101000')
+
+    def test_srv6_endx_renders_every_way(self) -> None:
+        # LinkState.__str__ renders each TLV, so this exercises Srv6EndX.__repr__,
+        # which used attribute access on what is a dict and raised AttributeError
+        emitted, as_str, _ = render(1106, self.SRV6_ENDX)
+        json.loads(emitted)
+        assert 'behavior' in as_str
+        assert 'sid' in as_str
+
+    def test_srv6_lan_endx_isis_renders_every_way(self) -> None:
+        # same shape with a six byte IS-IS neighbour id in front of the SID
+        payload = bytes.fromhex('0039800000000102030405060000000000000000000000000000000000')
+        try:
+            emitted, as_str, _ = render(1107, payload)
+        except Notify:
+            pytest.skip('payload rejected by the decoder, nothing to render')
+        json.loads(emitted)
+        assert 'neighbor-id' in as_str
+
+
+class TestNoTlvRelyOnTheBoundary:
+    """LinkState.unpack converts stray exceptions into Notify, which is a backstop
+    and not a substitute for a decoder checking its own reads.
+
+    A catch-all makes a fuzz sweep come back clean while the reads are still
+    unchecked, and because it also converts AttributeError and TypeError, any
+    render bug on VALID traffic becomes a session teardown.  That is not
+    hypothetical: it is how Srv6EndX, Srv6LanEndXOSPF, Srv6EndpointBehavior and
+    Srv6SidStructure were found, all four of them broken on well formed input.
+
+    So the boundary must catch only what nobody anticipated.  If this test fails,
+    the named TLV has a read nobody checked.
+    """
+
+    BOUNDARY = 'Invalid BGP-LS attribute TLV'
+
+    @pytest.mark.parametrize('scode', TLVS)
+    def test_tlv_checks_its_own_reads(self, scode) -> None:
+        masked = []
+        for length in range(0, 40):
+            for filler in (b'A', b'\x00', b'\xff', b'\x80', b'\x01\x02\x03'):
+                payload = (filler * (length // len(filler) + 1))[:length]
+                try:
+                    render(scode, payload)
+                except Notify as exc:
+                    if self.BOUNDARY in str(exc):
+                        masked.append((length, str(exc)))
+                except Exception:  # noqa: BLE001 - the property tests above cover these
+                    pass
+        assert not masked, f'TLV {scode} relies on the decode boundary: {masked[0][1]}'
+
+
+class TestTlvChecksAreMinimumsNotExactLengths:
+    """A length check must not refuse what the previous release renders
+
+    Every case here decodes and renders on 5.0.12. A check stricter than the
+    decoder needs turns a working route into a closed session on upgrade, which
+    is a worse outcome than the crash it was written to prevent.
+    """
+
+    @pytest.mark.parametrize('scode', [1153, 1154])
+    def test_an_empty_tag_list_is_not_refused(self, scode) -> None:
+        # none is a whole number of elements, and 5.0.12 renders an empty list
+        emitted, _, _ = render(scode, b'')
+        parsed = json.loads(emitted)
+        assert list(parsed.values()) == [[]]
+
+    @pytest.mark.parametrize('scode', [1250, 1252])
+    @pytest.mark.parametrize('length', range(4, 20))
+    def test_a_longer_tlv_is_not_refused(self, scode, length) -> None:
+        # the fixed fields are a MINIMUM: a TLV may carry fields added later
+        emitted, _, _ = render(scode, b'\x01' * length)
+        json.loads(emitted)
+
+    @pytest.mark.parametrize('scode', [1099, 1158])
+    @pytest.mark.parametrize('length', [2, 3])
+    def test_a_tlv_without_its_reserved_bytes_is_not_refused(self, scode, length) -> None:
+        # only the flags and the byte behind them are read before the SID loop
+        emitted, _, _ = render(scode, b'\x00' * length)
+        json.loads(emitted)
+
+
+# Ratchet on the registry this file parametrises over. A short registry does not
+# fail these tests, it collects fewer of them, and a smaller green number reads
+# exactly like a larger one. Marked so qa/bin/check_sweep_floors can ask for the
+# floor BY NAME: a file whose seeds break under thinning goes red with or without
+# a floor, so "something failed" cannot stand in for "the floor fired".
+LSID_FLOOR = 30
+
+
+@pytest.mark.registry_floor
+def test_the_registry_this_file_sweeps_is_populated() -> None:
+    assert len(TLVS) >= LSID_FLOOR, sorted(TLVS)

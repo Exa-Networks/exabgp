@@ -487,15 +487,15 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
     messages = list(update.messages(negotiated, include_withdraw=True))
     assert len(messages) >= 1
 
-    # Unpack
-    packed_data = messages[0][19:]
-    unpacked = Update.unpack_message(packed_data, Direction.IN, negotiated)
+    # Unpack. RFC 7606 5.1 keeps the Withdrawn Routes field and the NLRI field in separate
+    # messages, so the two actions are read across the whole batch rather than out of one.
+    unpacked = [Update.unpack_message(message[19:], Direction.IN, negotiated) for message in messages]
+    assert all(isinstance(message, Update) for message in unpacked)
 
-    # Verify both types present
-    assert isinstance(unpacked, Update)
-    assert len(unpacked.nlris) >= 2
+    nlris = [nlri for message in unpacked for nlri in message.nlris]
+    assert len(nlris) >= 2
 
-    actions = {nlri.action for nlri in unpacked.nlris}
+    actions = {nlri.action for nlri in nlris}
     assert Action.WITHDRAW in actions
     assert Action.ANNOUNCE in actions
 
@@ -835,8 +835,10 @@ def test_integration_full_update_cycle() -> None:
             # Should have NLRIs
             assert len(unpacked.nlris) >= 1
 
-            # Should have attributes
-            assert len(unpacked.attributes) >= 1
+            # RFC 4271 4.3 makes the Path Attributes field optional and the withdrawals now
+            # travel in their own message, which carries none. An announcement still has them.
+            if any(nlri.action == Action.ANNOUNCE for nlri in unpacked.nlris):
+                assert len(unpacked.attributes) >= 1
 
 
 @pytest.mark.fuzz

@@ -32,5 +32,5 @@ class IgpExTags(BaseLS):
 
     @classmethod
     def unpack(cls, data):
-        cls.check(data)
+        cls.check_multiple(data, 8)
         return cls([unpack('!Q', _)[0] for _ in split(data, 8)])

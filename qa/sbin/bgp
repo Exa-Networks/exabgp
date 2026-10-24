@@ -136,12 +136,13 @@ def find_exabgp_pid():
     processes = []
     cmdlines = []
 
+    # a zipapp (./release binary --functional) is started through its #! line, which ps shows
+    # as `python3 <zipapp> ...`: the interpreter is not always named by its path
+    binary = os.environ.get('EXABGP_BINARY', '')
+
     for line in os.popen('/bin/ps x'):
         low = line.strip().lower()
         if not low:
-            continue
-
-        if not any_word_in_line(low, ['/python ', '/python3 ', '/pypy ', '/pypy3 ']):
             continue
 
         cmdline = line.strip().split()[4:]
@@ -150,8 +151,15 @@ def find_exabgp_pid():
         if len(cmdline) < 1:
             continue
 
-        if not any_ends_in_list(cmdline, ['/main.py']):
-            continue
+        if binary:
+            if binary not in cmdline:
+                continue
+        else:
+            if not any_word_in_line(low, ['/python ', '/python3 ', '/pypy ', '/pypy3 ']):
+                continue
+
+            if not any_ends_in_list(cmdline, ['/main.py']):
+                continue
 
         if not any_word_in_list(cmdline, [conf_name]):
             continue

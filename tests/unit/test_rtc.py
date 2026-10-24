@@ -347,7 +347,7 @@ class TestRTCEdgeCases:
         with pytest.raises(Exception) as exc_info:
             RTC.unpack_nlri(AFI.ipv4, SAFI.rtc, invalid_packed, Action.UNSET, None)
 
-        assert 'incorrect RT length' in str(exc_info.value)
+        assert 'incorrect RTC length' in str(exc_info.value)
 
     def test_rtc_different_safi_unpack(self) -> None:
         """Test unpacking RTC works with different SAFI in unpack_nlri"""

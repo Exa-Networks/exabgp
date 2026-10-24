@@ -1,70 +1,107 @@
 name: Build container
 
+# Builds the image on ghcr.io:
+#   - main, once its tests pass, as `latest`
+#   - the 5.0 branch, once its tests pass, as `5.0` and `stable`
+#   - a release tag, when it is pushed, as <version>, <major>.<minor> and <major>
+#
+# A release is built from its tag push, not from the GitHub release: a release made by a
+# workflow (zipapp.yml makes one when there is none) uses GITHUB_TOKEN, and GitHub does not
+# start workflows from events made with it, so no image was built for 5.0.14.
+#
+# A workflow_run event always carries the ref and the commit of the default branch, so the
+# commit and the branch built are taken from the run which completed, not from github.ref.
+#
+# A tag push runs the workflow of the tagged commit: 5.0.x tags run this file, 6.x tags the
+# one of main. Run by hand with a tag, it builds that release, whatever its branch.
+
 on:
   workflow_run:
     workflows:
       - "Unit Testing"
       - "Linting"
-      - "Testing (Python 3.8 to 3.12)"
+      - "Testing (Python 3.12+)"
     branches:
       - "main"
+      - "5.0"
     types:
       - completed
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - "5.*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: the release tag to build and push (e.g. 5.0.14)
+        required: true
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # the commit to build
+  REF: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+  # the branch whose tests passed, empty for a release
+  BRANCH: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_branch || '' }}
+  # the release version, empty for a branch
+  TAG: ${{ github.event_name == 'push' && github.ref_name || github.event_name == 'workflow_dispatch' && inputs.tag || '' }}
 
 jobs:
   container:
     name: Build and push container
     runs-on: ubuntu-latest
+    # only a push to this repository: a fork's pull request from a branch named main also
+    # completes a workflow_run, and its commit must not be pushed as an image
     if: >-
-      ${{ (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
-          (github.event_name == 'release'      && github.event.action == 'published') }}
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     permissions:
       actions: write
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.REF }}
 
       - name: Wait for required checks
         if: github.event_name == 'workflow_run'
-        uses: lewagon/wait-on-check-action@v1.4.1
+        uses: lewagon/wait-on-check-action@v1.9.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.REF }}
           check-regexp: '^(unit-tests|lint-tests|functional-tests) \('
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Login to GHCR
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Extract metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          # semver tags add latest by default: latest is main's, never a release's
+          flavor: |
+            latest=false
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ env.BRANCH == 'main' }}
+            type=raw,value=5.0,enable=${{ env.BRANCH == '5.0' }}
+            type=raw,value=stable,enable=${{ env.BRANCH == '5.0' }}
+            type=semver,pattern={{version}},value=${{ env.TAG }},enable=${{ env.TAG != '' }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.TAG }},enable=${{ env.TAG != '' }}
+            type=semver,pattern={{major}},value=${{ env.TAG }},enable=${{ env.TAG != '' }}
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64

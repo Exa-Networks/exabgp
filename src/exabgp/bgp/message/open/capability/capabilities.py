@@ -10,6 +10,7 @@ from __future__ import annotations
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 
+from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.addpath import AddPath
@@ -33,6 +34,16 @@ OPEN_PARAM_LEN_MAX = 255  # Maximum parameter length for standard OPEN (8-bit fi
 OPEN_EXTENDED_MARKER = 255  # Marker value indicating extended optional parameters format
 MIN_EXTENDED_PARAM_LEN = 3  # Minimum length for extended parameter (type + 2-byte length)
 MIN_PARAM_LEN = 2  # Minimum length for standard parameter (type + length)
+
+# RFC 4271 6.2: an Optional Parameter type we do not recognise is Unsupported Optional
+# Parameters. Capabilities.unpack answered 2/0 Unspecific, which the next sentence of 6.2
+# reserves for a parameter we do recognise and which is malformed, so the peer could not
+# tell "I do not know this parameter" from "you sent this one wrongly". Both answers are
+# raised below and the pair is what makes either mean anything. This is about the Optional
+# Parameter type only: an unknown capability code inside parameter type 2 is ignored, as
+# RFC 5492 requires.
+OPEN_MESSAGE_ERROR = 2
+UNSUPPORTED_OPTIONAL_PARAMETER = 4
 
 # =================================================================== Parameter
 #
@@ -73,8 +84,11 @@ class Capabilities(dict):
         (AFI.ipv6, SAFI.nlri_mpls),
         (AFI.ipv4, SAFI.mpls_vpn),
         (AFI.ipv6, SAFI.mpls_vpn),
-        (AFI.ipv4, SAFI.mup),
-        (AFI.ipv6, SAFI.mup),
+        # MUP is not here, though it was: MUP.pack_nlri writes no path identifier, so
+        # offering ADD-PATH for it told a peer to expect four octets ahead of every MUP
+        # NLRI which were never sent, and the peer mis-framed the rest of the field.
+        # tests/unit/test_addpath_families_encode_path_id.py holds this list to what the
+        # encoders can actually do; put MUP back the day it packs a path identifier.
     ]
 
     _NEXTHOP = [
@@ -99,11 +113,17 @@ class Capabilities(dict):
         mp.extend(families)
         self[Capability.CODE.MULTIPROTOCOL] = mp
 
-    def _asn4(self, neighbor):
-        if not neighbor['capability']['asn4']:
+    def _asn4(self, advertise_asn4, effective_local_as):
+        if effective_local_as is None:
+            raise ValueError('No resolved local ASN available for ASN4 advertisement')
+        if effective_local_as == AS_TRANS:
+            raise ValueError('AS_TRANS is a wire placeholder, not a resolved local ASN')
+        if not advertise_asn4:
+            if effective_local_as > ASN4.MAX:
+                raise ValueError('A four-octet local ASN requires ASN4 advertisement')
             return
 
-        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(neighbor['local-as'])
+        self[Capability.CODE.FOUR_BYTES_ASN] = ASN4(effective_local_as)
 
     def _nexthop(self, neighbor):
         if not neighbor['capability']['nexthop']:
@@ -167,12 +187,17 @@ class Capabilities(dict):
     def _session(self, neighbor):
         if not neighbor['capability']['multi-session']:
             return
-        # XXX: FIXME: should it not be the RFC version ?
         self[Capability.CODE.MULTISESSION] = MultiSession().set([Capability.CODE.MULTIPROTOCOL])
+        # A Cisco router offers 131 alone, with a flags octet and no Session Id. Offering only
+        # the draft code left no code on both sides, and the session was refused with 2/9.
+        # A peer which does not know 131 ignores it (RFC 5492 section 3).
+        cisco = MultiSession()
+        cisco.ID = Capability.CODE.MULTISESSION_CISCO
+        self[Capability.CODE.MULTISESSION_CISCO] = cisco
 
-    def new(self, neighbor, restarted):
+    def new(self, neighbor, restarted, local_as=None):
         self._protocol(neighbor)
-        self._asn4(neighbor)
+        self._asn4(neighbor['capability']['asn4'], neighbor['local-as'] if local_as is None else local_as)
         self._nexthop(neighbor)
         self._addpath(neighbor)
         self._graceful(neighbor, restarted)
@@ -272,5 +297,7 @@ class Capabilities(dict):
                     capability, capv, value = _key_values('capability', value)
                     capabilities[capability] = Capability.unpack(capability, capabilities, capv)
             else:
-                raise Notify(2, 0, 'Unknow OPEN parameter {}'.format(hex(key)))
+                raise Notify(
+                    OPEN_MESSAGE_ERROR, UNSUPPORTED_OPTIONAL_PARAMETER, 'unknown OPEN parameter {}'.format(hex(key))
+                )
         return capabilities

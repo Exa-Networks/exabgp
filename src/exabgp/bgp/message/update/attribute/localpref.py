@@ -10,6 +10,7 @@ from __future__ import annotations
 from struct import pack
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 
 # ========================================================= Local Preference (5)
@@ -27,10 +28,15 @@ class LocalPreference(Attribute):
         self._packed = self._attribute(packed if packed is not None else pack('!L', localpref))
 
     def __eq__(self, other):
+        if not isinstance(other, LocalPreference):
+            return NotImplemented
         return self.ID == other.ID and self.FLAG == other.FLAG and self.localpref == other.localpref
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     def pack(self, negotiated=None):
         return self._packed
@@ -43,4 +49,6 @@ class LocalPreference(Attribute):
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
+        if len(data) != 4:
+            raise Notify(3, 5, 'invalid LOCAL_PREF, expected 4 bytes, got %d' % len(data))
         return cls(unpack('!L', data)[0], data)

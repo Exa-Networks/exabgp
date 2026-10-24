@@ -10,6 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import ipaddress
 import os
 import sys
 import json
@@ -45,12 +46,15 @@ class ACL:
             return
         # removing key first so the call to clear never loops forever
         uid, acl = cls._known.pop(key)
+        filename = cls._file(uid)
         try:
-            filename = cls._file(uid)
             if os.path.isfile(filename):
                 os.unlink(filename)
-        except Exception:
-            pass
+        except OSError as exc:
+            # The rule file is still in the policy directory and cl-acltool will install it
+            # again, so this flow keeps dropping traffic while exabgp believes it is gone.
+            sys.stderr.write(f'flow: {key} is withdrawn but its rule file remains, {filename}: {exc}\n')
+            sys.stderr.flush()
 
     @classmethod
     def _commit(cls):
@@ -63,22 +67,58 @@ class ACL:
                 stderr=subprocess.STDOUT,
                 stdout=subprocess.PIPE,
             ).communicate()[0]
-        except Exception:
-            pass
+        except Exception as exc:
+            # Every rule file we just wrote or deleted is only programmed into the switch by
+            # this reload. Silence here leaves exabgp announcing flows which filter nothing
+            # and withdrawing flows which keep dropping traffic, with nothing pointing at
+            # cl-acltool. The caller discards our return value, so this is the only report.
+            sys.stderr.write(f'flow: could not reload the switch ACLs, cl-acltool -i failed: {exc}\n')
+            sys.stderr.flush()
+            return None
 
     @staticmethod
-    def _build(flow, action):
+    def _prefix(value, what):
+        """Validate an IPv4 prefix before it goes into an ACL rule."""
+        if not isinstance(value, str):
+            raise ValueError('%s is not a string' % what)
+        return str(ipaddress.IPv4Network(value, strict=False))
+
+    @staticmethod
+    def _number(value, what, maximum):
+        """Validate a numeric flow component before it goes into an ACL rule.
+
+        FlowSpec numbers arrive with their comparison operator attached (">=1024"),
+        which iptables can not express, so the operator is dropped as it always was.
+        Only a plain decimal number is accepted once it is gone.
+        """
+        if not isinstance(value, str):
+            raise ValueError('%s is not a string' % what)
+        number = re.sub('[!<>=]', '', value)
+        if not number.isascii() or not number.isdigit():
+            raise ValueError('%s "%s" is not a number' % (what, value))
+        if int(number) > maximum:
+            raise ValueError('%s "%s" is larger than %d' % (what, value, maximum))
+        return number
+
+    @classmethod
+    def _build(cls, flow, action):
+        """Render an iptables rule from a flow.
+
+        Every component is validated and re-rendered from the parsed value, so no
+        part of the flow can inject anything into the rule which is not a number
+        or a prefix.
+        """
         acl = '[iptables]\n-A FORWARD --in-interface swp+'
         if 'protocol' in flow:
-            acl += ' -p ' + re.sub('[!<>=]', '', flow['protocol'][0])
+            acl += ' -p ' + cls._number(flow['protocol'][0], 'protocol', 255)
         if 'source-ipv4' in flow:
-            acl += ' -s ' + flow['source-ipv4'][0]
+            acl += ' -s ' + cls._prefix(flow['source-ipv4'][0], 'source-ipv4')
         if 'destination-ipv4' in flow:
-            acl += ' -d ' + flow['destination-ipv4'][0]
+            acl += ' -d ' + cls._prefix(flow['destination-ipv4'][0], 'destination-ipv4')
         if 'source-port' in flow:
-            acl += ' --sport ' + re.sub('[!<>=]', '', flow['source-port'][0])
+            acl += ' --sport ' + cls._number(flow['source-port'][0], 'source-port', 65535)
         if 'destination-port' in flow:
-            acl += ' --dport ' + re.sub('[!<>=]', '', flow['destination-port'][0])
+            acl += ' --dport ' + cls._number(flow['destination-port'][0], 'destination-port', 65535)
         acl = acl + ' -j DROP\n'
         return acl
 
@@ -87,8 +127,13 @@ class ACL:
         key = flow['string']
         if key in cls._known:
             return
+        try:
+            acl = cls._build(flow, action)
+        except (ValueError, IndexError, KeyError, TypeError) as exc:
+            sys.stderr.write('ignoring a flow which can not be turned into an ACL: %s\n' % exc)
+            sys.stderr.flush()
+            return
         uid = cls._uid()
-        acl = cls._build(flow, action)
         cls._known[key] = (uid, acl)
         try:
             with open(cls._file(uid), 'w') as f:
@@ -102,17 +147,23 @@ class ACL:
         key = flow['string']
         if key not in cls._known:
             return
-        uid, _ = cls._known[key]
         cls._delete(key)
+        # Deleting the rule file does not unprogram the switch: insert() and clear() both
+        # reload the policy directory after changing it, and a withdraw which does not keeps
+        # dropping traffic for a flow exabgp has already forgotten.
+        cls._commit()
 
     @classmethod
     def clear(cls):
-        for key in cls._known:
+        # iterate over a copy of the keys: _delete pops the entry it is given
+        for key in list(cls._known.keys()):
             cls._delete(key)
         cls._commit()
 
     @classmethod
-    def end(cls):
+    def end(cls, signum=0, frame=None):  # pylint: disable=W0613
+        # signum and frame are what python passes a signal handler, and are unused:
+        # they are here so ACL.end can be installed as one and still be called bare
         cls.clear()
         sys.exit(1)
 
@@ -125,49 +176,68 @@ class ACL:
         sys.stderr.flush()
 
 
-signal.signal(signal.SIGTERM, ACL.end)
+def main():
+    signal.signal(signal.SIGTERM, ACL.end)
 
+    opened = 0
+    buffered = ''
 
-opened = 0
-buffered = ''
-
-while True:
-    try:
-        line = sys.stdin.readline()
-        if not line or 'shutdown' in line:
+    while True:
+        try:
+            line = sys.stdin.readline()
+        except KeyboardInterrupt:
             ACL.end()
-        buffered += line
-        opened += line.count('{')
-        opened -= line.count('}')
-        if opened:
-            continue
-        line, buffered = buffered, ''
-        message = json.loads(line)
+            return
+        except OSError as exc:
+            # a broken stdin never recovers: without this the handler below would
+            # swallow the error and the loop would spin without ever making progress
+            sys.stderr.write('flow: can not read from stdin: %s\n' % exc)
+            sys.stderr.flush()
+            ACL.end()
+            return
 
-        if message['type'] == 'state' and message['neighbor']['state'] == 'down':
-            ACL.clear()
-            continue
+        try:
+            if not line or 'shutdown' in line:
+                ACL.end()
+            buffered += line
+            opened += line.count('{')
+            opened -= line.count('}')
+            if opened:
+                continue
+            line, buffered = buffered, ''
+            message = json.loads(line)
 
-        if message['type'] != 'update':
-            continue
+            if message['type'] == 'state' and message['neighbor']['state'] == 'down':
+                ACL.clear()
+                continue
 
-        update = message['neighbor']['message']['update']
+            if message['type'] != 'update':
+                continue
 
-        if 'announce' in update:
-            flow = update['announce']['ipv4 flow']
-            # The RFC allows both encoding
-            flow = flow['no-nexthop'][0] if 'no-nexthop' in flow else flow[0]
+            update = message['neighbor']['message']['update']
 
-            community = update['attribute']['extended-community'][0]
-            ACL.insert(flow, community)
-            continue
+            if 'announce' in update:
+                flow = update['announce']['ipv4 flow']
+                # The RFC allows both encoding
+                flow = flow['no-nexthop'][0] if 'no-nexthop' in flow else flow[0]
 
-        if 'withdraw' in update:
-            flow = update['withdraw']['ipv4 flow'][0]
-            ACL.remove(flow)
-            continue
+                community = update['attribute']['extended-community'][0]
+                ACL.insert(flow, community)
+                continue
 
-    except KeyboardInterrupt:
-        ACL.end()
-    except Exception:
-        pass
+            if 'withdraw' in update:
+                flow = update['withdraw']['ipv4 flow'][0]
+                ACL.remove(flow)
+                continue
+
+        except KeyboardInterrupt:
+            ACL.end()
+        except Exception as exc:
+            # The loop must outlive one bad message, but a dropped message is a flow which
+            # never reached the switch: say which message and why before reading the next.
+            sys.stderr.write(f'flow: ignored a message we could not process: {exc}\n')
+            sys.stderr.flush()
+
+
+if __name__ == '__main__':
+    main()

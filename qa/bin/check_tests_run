@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""
+Check that every file which defines tests is one pytest actually collects.
+
+pytest collects `test_*.py` and nothing else. A file full of working tests under any
+other name is never run, and nothing says so: the suite reports a healthy number and
+the tests inside it have not executed since the day the file was named.
+
+This branch carried four such files. Two of them held 24 tests which all passed the
+moment they were collected, and one of those is the file which found the attribute
+equality defect. The other two were a manual probe which opened a TCP connection to a
+hard coded public address, and a file commented out since 2009.
+
+Two ways this check could lie, both closed here:
+
+  an empty answer      if pytest cannot even import the tree, it collects nothing, and
+                       "no uncollected files" would be indistinguishable from "nothing
+                       was looked at". Collection failing is a failure, not a pass.
+
+  a file with no tests      a helper module named without `test_` is fine and must not
+                       be reported, so a file is only interesting when it actually
+                       defines a test function or a unittest.TestCase.
+"""
+
+import ast
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+TESTS = ROOT / 'tests'
+
+# a directory whose contents are inputs rather than tests
+SKIP_DIRS = {'__pycache__', 'data', 'fixtures'}
+
+
+# Directories where a function called test_something is production code rather
+# than a test: the CLI has a `test` subcommand, and build/ is a stale artefact.
+NOT_TEST_TREES = {'src', 'build', '.git', '.venv', '.ruff_cache', 'node_modules'}
+
+# A positive control for the walk below. It finds nothing today, and a walk which
+# resolves nothing is decoration unless the detector is shown to detect.
+PLANTED = 'class TestPlanted:\n    def test_it(self):\n        pass\n'
+
+# A gate which cannot run must not use the exit code that means it found
+# something. 1 is a finding, 2 is "do not believe this run".
+CANNOT_RUN = 2
+
+
+def cannot_run(why):
+    print(f'check_tests_run cannot run: {why}')
+    return CANNOT_RUN
+
+
+def defines_tests_in_source(source):
+    """defines_tests, for a string rather than a file, so it can be self tested"""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('test'):
+            return True
+        if isinstance(node, ast.ClassDef) and node.name.startswith('Test'):
+            return True
+    return False
+
+
+def stranded_outside_tests():
+    """Files defining tests which do not live under tests/, so nothing selects them
+
+    testpaths pins bare pytest to tests/, which stops a developer's local run and
+    CI selecting different sets. It also means a test file written ANYWHERE else
+    is now ignored by both rather than only by CI, which is quieter than what it
+    replaced. This is the check that keeps that from being a silent loss.
+
+    The detector is checked against a planted source first, in main() rather than
+    here, and with an if rather than an assert. `python -O` strips asserts, and a
+    control which vanishes under -O is worse than none: measured, a broken detector
+    under -O exited 0 and the gate reported itself fine. Same shape as the
+    compat_gate fix earlier in this series, where a cannot-run path exited 1 and
+    impersonated a finding.
+    """
+    found = []
+    for path in sorted(ROOT.rglob('*.py')):
+        parts = path.relative_to(ROOT).parts
+        if parts[0] in NOT_TEST_TREES or parts[0] == 'tests':
+            continue
+        if any(part in SKIP_DIRS for part in parts):
+            continue
+        if defines_tests(path):
+            found.append(path.relative_to(ROOT))
+    return found
+
+
+def defines_tests(path):
+    """True when the file holds something pytest would run if it could see it"""
+    try:
+        tree = ast.parse(path.read_text(encoding='utf-8', errors='replace'))
+    except SyntaxError:
+        return False
+
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith('test'):
+            return True
+        if isinstance(node, ast.ClassDef) and node.name.startswith('Test'):
+            return True
+        # unittest.TestCase under any name
+        if isinstance(node, ast.ClassDef):
+            for base in node.bases:
+                if isinstance(base, ast.Attribute) and base.attr == 'TestCase':
+                    return True
+                if isinstance(base, ast.Name) and base.id == 'TestCase':
+                    return True
+    return False
+
+
+def collected():
+    """The files pytest reports it will run, or None when collection failed"""
+    result = subprocess.run(
+        [sys.executable, '-m', 'pytest', str(TESTS), '--collect-only', '-q', '--no-header'],
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+    )
+    # 0 is a clean collection, 5 is "no tests found" which is itself a problem here
+    if result.returncode not in (0,):
+        print('pytest could not collect the tests, so this check proves nothing:')
+        print((result.stdout + result.stderr).strip()[-2000:])
+        return None
+
+    seen = set()
+    for line in result.stdout.splitlines():
+        if '::' not in line:
+            continue
+        seen.add((ROOT / line.split('::')[0].strip()).resolve())
+    return seen
+
+
+def main():
+    run = collected()
+    if run is None:
+        return cannot_run('pytest could not collect the tests')
+
+    if not run:
+        return cannot_run('pytest collected no tests at all')
+
+    stranded = []
+    for path in sorted(TESTS.rglob('*.py')):
+        if any(part in SKIP_DIRS for part in path.parts):
+            continue
+        if path.resolve() in run:
+            continue
+        if not defines_tests(path):
+            continue
+        stranded.append(path.relative_to(ROOT))
+
+    if not defines_tests_in_source(PLANTED):
+        return cannot_run('the test detector does not detect a planted test, so the walk proves nothing')
+
+    outside = stranded_outside_tests()
+    if outside:
+        print('these files define tests and live outside tests/, so nothing runs them:')
+        for path in outside:
+            print(f'   {path}')
+        print('\nmove them under tests/, or rename them if they are not tests')
+        return 1
+
+    if stranded:
+        print('these files define tests pytest never collects:')
+        for path in stranded:
+            print(f'   {path}')
+        print('\nrename them to test_*.py, or delete them if they are not tests')
+        return 1
+
+    print(f'ok   every file defining tests is collected ({len(run)} files)')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

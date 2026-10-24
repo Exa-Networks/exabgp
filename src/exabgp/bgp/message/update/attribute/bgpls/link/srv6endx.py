@@ -9,9 +9,9 @@ from __future__ import annotations
 import json
 from struct import unpack
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState, unpack_subtlvs
 from exabgp.protocol.ip import IPv6
-from exabgp.util import hexstring
 
 #    RFC 9514:  4.1. SRv6 End.X SID TLV
 #  0                   1                   2                   3
@@ -35,6 +35,7 @@ from exabgp.util import hexstring
 
 @LinkState.register()
 class Srv6EndX(FlagLS):
+    FIXED_SIZE = 22
     TLV = 1106
     FLAGS = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     MERGE = True
@@ -46,8 +47,9 @@ class Srv6EndX(FlagLS):
     def __repr__(self):
         return '\n'.join(
             [
+                # content holds dicts, attribute access raised AttributeError from str()
                 'behavior: {}, flags: {}, algorithm: {}, weight: {}, sid: {}'.format(
-                    d.behavior, d.flags, d.algorithm, d.weight, d.sid
+                    d['behavior'], d['flags'], d['algorithm'], d['weight'], d['sid']
                 )
                 for d in self.content
             ],
@@ -66,6 +68,9 @@ class Srv6EndX(FlagLS):
 
     @classmethod
     def unpack(cls, data):
+        # Behavior(2) + Flags(1) + Algorithm(1) + Weight(1) + Reserved(1) + SID(16)
+        if len(data) < cls.FIXED_SIZE:
+            raise Notify(3, 5, f'Unable to decode attribute, not enough data for {cls.REPR}')
         behavior = unpack('!I', bytes([0, 0]) + data[:2])[0]
         flags = cls.unpack_flags(data[2:3])
         algorithm = data[3]
@@ -74,20 +79,14 @@ class Srv6EndX(FlagLS):
         data = data[22:]
         subtlvs = []
 
-        while data and len(data) >= cls.BGPLS_SUBTLV_HEADER_SIZE:
-            code = unpack('!H', data[0:2])[0]
-            length = unpack('!H', data[2:4])[0]
-
-            if code in cls.registered_subsubtlvs:
-                subsubtlv = cls.registered_subsubtlvs[code].unpack(
-                    data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE]
-                )
-                subtlvs.append(subsubtlv.json())
-            else:
-                subsubtlv = hexstring(data[cls.BGPLS_SUBTLV_HEADER_SIZE : length + cls.BGPLS_SUBTLV_HEADER_SIZE])
-                # BUG: To be fixed
-                subtlvs.append(subsubtlv.json())
-            data = data[length + cls.BGPLS_SUBTLV_HEADER_SIZE :]
+        # 'subtlv-not-implemented-N' is a published member name: it differs from the one the
+        # LAN sibling emits, and neither may be renamed, so each caller passes its own.
+        subtlvs = unpack_subtlvs(
+            data,
+            cls.registered_subsubtlvs,
+            lambda code, value: '"subtlv-not-implemented-{}": "{}"'.format(code, value),
+            'SRv6 End.X SID',
+        )
 
         content = {
             'flags': flags,
@@ -102,3 +101,6 @@ class Srv6EndX(FlagLS):
 
     def json(self, compact=None):
         return '"srv6-endx": [ {} ]'.format(', '.join([json.dumps(d, indent=compact) for d in self.content]))
+
+    def as_dict(self):
+        return {'srv6-endx': self.content}

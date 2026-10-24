@@ -41,18 +41,19 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
             msg = f'{neighbor} {family} {details}'
             reactor.processes.write(service, msg)
 
-    def to_json(key, changes):
+    def to_json_v1(key, changes):
         jason = {}
-        neighbor = reactor.neighbor(key)
         neighbor_ip = reactor.neighbor_ip(key)
         routes = jason.setdefault(neighbor_ip, {'routes': []})['routes']
 
         if extensive:
-            jason[neighbor_ip].update(NeighborTemplate.to_json(neighbor))
+            jason[neighbor_ip].update(NeighborTemplate.as_dict(reactor.neighbor_cli_data(key)))
 
         for change in changes:
             if not isinstance(change.nlri, route_type):
                 # log something about this drop?
+                continue
+            if not hasattr(change.nlri, 'cidr'):
                 continue
 
             routes.append(
@@ -62,12 +63,27 @@ def _show_adjrib_callback(reactor, service, last, route_type, advertised, rib_na
                 },
             )
 
-            for line in json.dumps(jason).split('\n'):
-                reactor.processes.write(service, line)
+            reactor.processes.write(service, json.dumps(jason))
+
+    def to_json_v2(key, changes):
+        neighbor_ip = reactor.neighbor_ip(key)
+        jason = {'peer': {'address': neighbor_ip}}
+
+        if extensive:
+            jason.update(NeighborTemplate.as_dict(reactor.neighbor_cli_data(key)))
+
+        for change in changes:
+            if not isinstance(change.nlri, route_type):
+                # log something about this drop?
+                continue
+            jason['route'] = change.as_dict()
+            reactor.processes.write(service, json.dumps(jason))
 
     def callback():
-        lines_per_yield = getenv().api.chunk
-        if last in ('routes', 'extensive', 'static', 'flow', 'l2vpn'):
+        env = getenv()
+        lines_per_yield = env.api.chunk
+        to_json = to_json_v2 if env.api.show_routes_format == 'v2' else to_json_v1
+        if last in ('routes', 'extensive', 'static', 'inet', 'flow', 'l2vpn'):
             peers = reactor.peers()
         else:
             peers = [n for n in reactor.peers() if f'neighbor {last}' in n]

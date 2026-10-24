@@ -28,6 +28,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
 # 	draft-ietf-isis-segment-routing-extensions Prefix-SID Sub-TLV
 
 # SID/Label data length when flags are not set
+HEADER_SIZE = 4  # Flags(1) + Algorithm(1) + Reserved(2)
+SRPREFIX_MINIMUM = 2  # only the flags and the algorithm are read
+SID_LABEL_LENGTH_FLAGS = 3
 SID_LABEL_LENGTH_NO_FLAGS = 4  # Length of SID/Label when V and L flags are both false
 
 
@@ -48,12 +51,16 @@ class SrPrefix(FlagLS):
     @classmethod
     def unpack(cls, data):
         # We only support IS-IS flags for now.
+        # only the flags and the algorithm are read here; the reserved bytes
+        # behind them may be absent, and this release renders such a TLV
+        if len(data) < SRPREFIX_MINIMUM:
+            raise Notify(3, 5, 'Unable to decode attribute, not enough data for SR Prefix')
         flags = cls.unpack_flags(data[0:1])
         #
         # Parse Algorithm
         sr_algo = data[1]
         # Move pointer 4 bytes: Flags(1) + Algorithm(1) + Reserved(2)
-        data = data[4:]
+        data = data[HEADER_SIZE:]
         # SID/Index/Label: according to the V and L flags, it contains
         # either:
         # *  A 3 octet local label where the 20 rightmost bits are used for
@@ -67,8 +74,10 @@ class SrPrefix(FlagLS):
         raw = []
         while data:
             if flags['V'] and flags['L']:
-                sid = unpack('!L', bytes([0]) + data[:3])[0]
-                data = data[3:]
+                if len(data) < SID_LABEL_LENGTH_FLAGS:
+                    raise Notify(3, 5, 'Unable to decode attribute, truncated SID in SR Prefix')
+                sid = unpack('!L', bytes([0]) + data[:SID_LABEL_LENGTH_FLAGS])[0]
+                data = data[SID_LABEL_LENGTH_FLAGS:]
                 sids.append(sid)
             elif (not flags['V']) and (not flags['L']):
                 if len(data) != SID_LABEL_LENGTH_NO_FLAGS:
@@ -86,3 +95,11 @@ class SrPrefix(FlagLS):
 
     def json(self, compact=None):
         return f'"sr-prefix-flags": {json.dumps(self.flags)}, "sids": {json.dumps(self.sids)}, "undecoded-sids": {json.dumps(self.undecoded)}, "sr-algorithm": {json.dumps(self.sr_algo)}'
+
+    def as_dict(self):
+        return {
+            'sr-prefix-flags': self.flags,
+            'sids': self.sids,
+            'undecoded-sids': self.undecoded,
+            'sr-algorithm': self.sr_algo,
+        }

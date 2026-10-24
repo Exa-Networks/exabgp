@@ -9,9 +9,11 @@ from __future__ import annotations
 
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.ip import IP
 from exabgp.protocol.ip import IPv6
 from exabgp.protocol.iso import ISO
+from exabgp.util import hexstring
 
 #           +--------------------+-------------------+----------+
 #           | Sub-TLV Code Point | Description       |   Length |
@@ -74,7 +76,15 @@ class NodeDescriptor:
 
     @classmethod
     def unpack(cls, data, igp):
+        if len(data) < 4:
+            raise Notify(3, 10, f'BGP-LS node descriptor is too short: need 4 bytes of header, got {len(data)}')
         node_type, length = unpack('!HH', data[0:4])
+        if len(data) < 4 + length:
+            raise Notify(
+                3,
+                10,
+                f'BGP-LS node descriptor sub-tlv {node_type} claims {length} bytes but only {len(data) - 4} remain',
+            )
         packed = data[: 4 + length]
         payload = packed[4:]
         remaining = data[4 + length :]
@@ -86,21 +96,21 @@ class NodeDescriptor:
         # autonomous-system
         if node_type == NODE_DESC_TLV_AS:
             if length != NODE_DESC_AS_LENGTH:
-                raise Exception(cls._error_tlvs[node_type])
+                raise Notify(3, 10, cls._error_tlvs[node_type])
             node_id = unpack('!L', payload)[0]
             return cls(node_id, node_type, psn, dr_id, packed), remaining
 
         # bgp-ls-id
         if node_type == NODE_DESC_TLV_BGPLS_ID:
             if length != NODE_DESC_BGPLS_ID_LENGTH:
-                raise Exception(cls._error_tlvs[node_type])
+                raise Notify(3, 10, cls._error_tlvs[node_type])
             node_id = unpack('!L', payload)[0]
             return cls(node_id, node_type, psn, dr_id, packed), remaining
 
         # ospf-area-id
         if node_type == NODE_DESC_TLV_OSPF_AREA:
             if length not in (NODE_DESC_OSPF_AREA_LENGTH, IPv6.BYTES):  # FIXME: it may only need to be 4
-                raise Exception(cls._error_tlvs[node_type])
+                raise Notify(3, 10, cls._error_tlvs[node_type])
             node_id = IP.unpack(payload)
             return cls(node_id, node_type, psn, dr_id, packed), remaining
 
@@ -111,7 +121,7 @@ class NodeDescriptor:
             # IS-IS non-pseudonode
             if igp in (IGP_ISIS_L1, IGP_ISIS_L2):
                 if length not in (ISIS_SYSID_LENGTH, ISIS_SYSID_PSN_LENGTH):
-                    raise Exception(cls._error_tlvs[node_type])
+                    raise Notify(3, 10, cls._error_tlvs[node_type])
                 node_id = (ISO.unpack_sysid(payload),)
                 if length == ISIS_SYSID_PSN_LENGTH:
                     psn = unpack('!B', payload[6:7])[0]
@@ -120,13 +130,66 @@ class NodeDescriptor:
             # OSPFv{2,3} non-pseudonode
             if igp in (IGP_OSPFV2, IGP_DIRECT, IGP_OSPFV3, IGP_STATIC):
                 if length not in (OSPF_ROUTER_ID_LENGTH, OSPF_ROUTER_DR_LENGTH):
-                    raise Exception(cls._error_tlvs[node_type])
+                    raise Notify(3, 10, cls._error_tlvs[node_type])
                 node_id = (IP.unpack(payload[:4]),)
                 if length == OSPF_ROUTER_DR_LENGTH:
                     dr_id = IP.unpack(payload[4:8])
                 return cls(node_id, node_type, psn, dr_id, packed), remaining
 
-        raise Exception(f'unknown node descriptor sub-tlv (node-type: {node_type}, igp: {igp})')
+        # RFC 9552 5.1: "Unknown and unsupported types MUST be preserved and propagated
+        # within both the NLRI and the BGP-LS Attribute.  The presence of unknown or
+        # unexpected TLVs MUST NOT result in the NLRI or the BGP-LS Attribute being
+        # considered malformed."  516, BGP Router Identifier, was assigned by RFC 9086
+        # after the four codes above were written, so refusing it took the session down
+        # against a conforming producer.  This is the answer the BGP-LS Attribute side
+        # has always given an unregistered TLV code, in GenericLSID: keep the bytes.
+        #
+        # An IGP Router-ID under a Protocol-ID this decoder does not know lands here too,
+        # and for the same reason: its shape is defined by the protocol, so without the
+        # protocol there is nothing to read it as but bytes.
+        return GenericNodeDescriptor(node_type, payload, packed), remaining
+
+    @classmethod
+    def unpack_descriptors(cls, data, igp):
+        """Read a whole Node Descriptor value, and hold it to the two rules of RFC 9552 5.2.1.
+
+        "At most, there MUST be one instance of each sub-TLV type present in any Node
+        Descriptor.  The sub-TLVs within a Node Descriptor MUST be arranged in ascending
+        order by sub-TLV type."  Section 8.2.2 lists both as syntactic validation a BGP-LS
+        speaker MUST perform, and names the ordering rule as its example of an error which
+        makes the NLRI malformed.
+
+        The comparison is on the sub-TLV *type code* and on nothing else, which is what
+        keeps it clear of the other half of 8.2.2: a Link-State NLRI "MUST NOT be
+        considered malformed or invalid based on the inclusion/exclusion of TLVs or
+        contents of the TLV fields".  An unregistered code is still accepted, still kept
+        byte for byte as a `GenericNodeDescriptor`, and is only required to be in its place
+        in the order, which is the reason 5.2.1 gives for asking for the order at all:
+        "This needs to be done to compare NLRIs, even when an implementation encounters an
+        unknown sub-TLV."  Two NLRIs differing only in the order of their sub-TLVs would
+        otherwise be two RIB entries for one link-state object.
+        """
+        descriptors = []
+        previous = None
+        while data:
+            descriptor, remaining = cls.unpack(data, igp)
+            if previous is not None and descriptor.node_type == previous:
+                raise Notify(3, 10, f'BGP-LS node descriptor sub-tlv {descriptor.node_type} is present more than once')
+            if previous is not None and descriptor.node_type < previous:
+                raise Notify(
+                    3,
+                    10,
+                    f'BGP-LS node descriptor sub-tlv {descriptor.node_type} follows {previous}, '
+                    f'which is not the ascending order required',
+                )
+            previous = descriptor.node_type
+            descriptors.append(descriptor)
+            # `unpack` always consumes its four octet header, so this cannot loop, but the
+            # bound is written down here rather than reasoned about at every call site.
+            if len(remaining) >= len(data):
+                raise Notify(3, 10, 'BGP-LS node descriptor made no progress')
+            data = remaining
+        return descriptors
 
     def json(self, compact=None):
         node = None
@@ -146,6 +209,22 @@ class NodeDescriptor:
             psn = f'"psn": "{self.psn}"'
         content = ', '.join(_ for _ in [node, designated, psn] if _)
         return f'{{ {content} }}'
+
+    def as_dict(self):
+        result = {}
+        if self.node_type == NODE_DESC_TLV_AS:
+            result['autonomous-system'] = self.node_id
+        if self.node_type == NODE_DESC_TLV_BGPLS_ID:
+            result['bgp-ls-identifier'] = str(self.node_id)
+        if self.node_type == NODE_DESC_TLV_OSPF_AREA:
+            result['ospf-area-id'] = str(self.node_id)
+        if self.node_type == NODE_DESC_TLV_IGP_ROUTER:
+            result['router-id'] = str(self.node_id[0])
+        if self.dr_id:
+            result['designated-router-id'] = str(self.dr_id)
+        if self.psn:
+            result['psn'] = str(self.psn)
+        return result
 
     def __eq__(self, other):
         return isinstance(other, NodeDescriptor) and self.node_id == other.node_id
@@ -181,3 +260,24 @@ class NodeDescriptor:
         if self._packed:
             return self._packed
         raise RuntimeError('pack when not fully implemented for {self.__name__}')
+
+
+class GenericNodeDescriptor(NodeDescriptor):
+    """A Node Descriptor sub-TLV whose code this build does not implement.
+
+    The sibling of `GenericLSID` on the NLRI side of RFC 9552 5.1.  `_packed` is the whole
+    sub-TLV, header included, so `pack` propagates it byte for byte, and both renderers
+    carry the code so two unknown codes in one descriptor do not collide.
+    """
+
+    def __init__(self, node_type, payload, packed):
+        NodeDescriptor.__init__(self, bytes(payload), node_type, None, None, packed)
+
+    def _key(self):
+        return f'generic-node-descriptor-{self.node_type}'
+
+    def json(self, compact=None):
+        return f'{{ "{self._key()}": "{hexstring(self.node_id)}" }}'
+
+    def as_dict(self):
+        return {self._key(): hexstring(self.node_id)}

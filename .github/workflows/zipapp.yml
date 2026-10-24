@@ -1,0 +1,158 @@
+name: Zipapp
+
+# Builds ExaBGP 5.0 as a zipapp (./release binary): one file holding the pure Python package,
+# which any Python 3.8 or later runs, on any platform. It is checked on Linux with the oldest
+# and the newest Python supported, functional suites included, then attached to the GitHub release of
+# the 5.0.x tag pushed, made if there is none yet, as exabgp-<version>.pyz and exabgp.pyz:
+#   https://github.com/Exa-Networks/exabgp/releases/download/<version>/exabgp.pyz
+#
+# main makes the 6.x releases. GitHub marks the release made last as the latest, whatever its
+# version, and https://github.com/Exa-Networks/exabgp/releases/latest/download/exabgp.pyz
+# serves the zipapp of the latest. So once a 6.x release exists, a 5.0 release is not made the
+# latest, and if it was made the latest by hand, the newest 6.x release is made it again.
+#
+# A pull request changing how the zipapp is built only builds and checks it.
+#
+# Run by hand with a tag, it builds that release and publishes it, checked with the tests of
+# the branch it is run on: how a release whose tests failed, not the release, is published.
+
+on:
+  push:
+    tags:
+      - "5.*"
+  pull_request:
+    branches: ["5.0"]
+    paths:
+      - .github/workflows/zipapp.yml
+      - release
+      - sbin/exabgp
+      - qa/sbin/bgp
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: the 5.0.x release to build and publish, empty to only build the branch
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zipapp-${{ github.ref }}
+
+env:
+  # the release to publish to, empty to only build and check
+  RELEASE: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+
+jobs:
+  build:
+    name: Build the zipapp
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the release is a 5.0.x tag
+        if: env.RELEASE != ''
+        run: |
+          if ! echo "$RELEASE" | grep -Eq '^5\.[0-9]+\.[0-9]+$'; then
+            echo "$RELEASE is not a 5.0.x release"
+            exit 1
+          fi
+
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.RELEASE != '' && format('refs/tags/{0}', env.RELEASE) || github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Check the tag is the version built
+        if: env.RELEASE != ''
+        run: |
+          version=$(python3 -c "import sys; sys.path.insert(0, 'src'); from exabgp.version import release; print(release)")
+          if [ "$version" != "$RELEASE" ]; then
+            echo "the tag is $RELEASE but src/exabgp/version.py says $version"
+            exit 1
+          fi
+
+      - name: Build the zipapp
+        run: python3 ./release binary
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: exabgp-zipapp
+          path: dist/exabgp-*.pyz
+          if-no-files-found: error
+
+  test:
+    name: test ${{ matrix.os }} python ${{ matrix.python-version }}
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.8"
+          - os: ubuntu-latest
+            python-version: "3.14"
+        # no macOS: 5.0 CI never ran there, and each test of the parsing suite timed out on
+        # a GitHub macOS runner when run against the zipapp (to be looked at)
+
+    steps:
+      - uses: actions/checkout@v5
+
+      # the Python the zipapp runs with: its #! line asks for the python3 on the PATH
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: exabgp-zipapp
+          path: dist
+
+      - name: Check the zipapp and run the functional suites against it
+        run: |
+          chmod +x dist/exabgp-*.pyz
+          python3 ./release binary --test "$(ls dist/exabgp-*.pyz)" --functional
+
+  publish:
+    name: Publish the release
+    needs: test
+    if: github.event_name == 'push' || inputs.tag != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: exabgp-zipapp
+          path: dist
+
+      - name: Attach the zipapp to the release
+        run: |
+          cd dist
+          pyz="exabgp-$RELEASE.pyz"
+          test -f "$pyz"
+          cp "$pyz" exabgp.pyz
+          sha256sum "$pyz" exabgp.pyz > SHA256SUMS
+          newest=$(gh release list --exclude-drafts --exclude-pre-releases --limit 1000 \
+            --json tagName --jq '.[].tagName' | grep -m 1 '^[6-9]\.' || true)
+          latest=true
+          if [ -n "$newest" ]; then
+            latest=false
+          fi
+          if ! gh release view "$RELEASE" > /dev/null 2>&1; then
+            gh release create "$RELEASE" --verify-tag --latest="$latest" --title "$RELEASE" \
+              --notes "See [the changelog](https://github.com/Exa-Networks/exabgp/blob/$RELEASE/doc/CHANGELOG.rst)."
+          fi
+          gh release upload "$RELEASE" "$pyz" exabgp.pyz SHA256SUMS --clobber
+          if [ -n "$newest" ] && [ "$(gh release view --json tagName --jq .tagName)" = "$RELEASE" ]; then
+            echo "$RELEASE was made the latest release, $newest is made it again"
+            gh release edit "$newest" --latest
+          fi

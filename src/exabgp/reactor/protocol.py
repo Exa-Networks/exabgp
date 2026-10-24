@@ -25,7 +25,9 @@ from exabgp.bgp.message import NOP
 from exabgp.bgp.message import _NOP
 from exabgp.bgp.message import Open
 from exabgp.bgp.message.open import Version
+from exabgp.bgp.message.open.asn import ASN, AS_TRANS
 from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability import Capability
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.bgp.message import Update
 from exabgp.bgp.message import EOR
@@ -45,6 +47,11 @@ from exabgp.logger import log
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000
+
+# RFC 4271 6.1 Message Header Error, and the subcode the reactor answers itself because
+# the header is read before any decoder sees the message.
+MESSAGE_HEADER_ERROR = 1
+BAD_MESSAGE_LENGTH = 2
 
 _UPDATE = Update([], b'')
 _OPERATIONAL = Operational(0x00)
@@ -102,8 +109,9 @@ class Protocol:
         md5 = self.neighbor['md5-password']
         md5_base64 = self.neighbor['md5-base64']
         ttl_out = self.neighbor['outgoing-ttl']
+        ttl_in = self.neighbor['incoming-ttl']
         itf = self.neighbor['source-interface']
-        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf)
+        self.connection = Outgoing(afi, peer, local, self.port, md5, md5_base64, ttl_out, itf, incoming_ttl=ttl_in)
 
         for connected in self.connection.establish():
             yield False
@@ -237,10 +245,20 @@ class Protocol:
                     elif packets:
                         self.peer.reactor.processes.packets(self.peer.neighbor, 'receive', msg_id, None, header, body)
                 # XXX: is notify not already Notify class ?
+                # RFC 4271 6.1 requires the Data field of a Bad Message Length to contain
+                # the erroneous Length field, so the two octets go back to the peer rather
+                # than the English sentence Connection.reader wrote for the log. `length`
+                # is that Length field: it is what reader read out of the header and
+                # refused. The three in-parser length checks already send it.
+                if (notify.code, notify.subcode) == (MESSAGE_HEADER_ERROR, BAD_MESSAGE_LENGTH):
+                    raise Notify(notify.code, notify.subcode, length.to_bytes(2, 'big'))
                 raise Notify(notify.code, notify.subcode, str(notify))
 
             if msg_id not in Message.CODE.MESSAGES:
-                raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id)
+                # RFC 4271 6.1: an unrecognised type is Bad Message Type (3), not
+                # Unspecific (0).  The catch-all further down keeps 0, because there
+                # we genuinely do not know what went wrong.
+                raise Notify(1, 3, 'can not decode message of type "%d"' % msg_id)
 
             if not length:
                 yield _NOP
@@ -372,15 +390,23 @@ class Protocol:
             local_as = self.neighbor['local-as']
         elif self.negotiated.received_open:
             local_as = self.negotiated.received_open.asn
+            if local_as == AS_TRANS and Capability.CODE.FOUR_BYTES_ASN in self.negotiated.received_open.capabilities:
+                local_as = ASN(self.negotiated.received_open.capabilities[Capability.CODE.FOUR_BYTES_ASN])
         else:
-            raise RuntimeError('no ASN available for the OPEN message')
+            raise Notify(6, 0, 'no ASN available for the OPEN message')
+
+        try:
+            capabilities = Capabilities().new(self.neighbor, self.peer._restarted, local_as=local_as)
+        except ValueError as exc:
+            # Use the peer's notification path rather than its unhandled-error reset.
+            raise Notify(6, 0, str(exc)) from exc
 
         sent_open = Open(
             Version(4),
             local_as,
             self.neighbor['hold-time'],
             self.neighbor['router-id'],
-            Capabilities().new(self.neighbor, self.peer._restarted),
+            capabilities,
         )
 
         # we do not buffer open message in purpose
@@ -407,7 +433,9 @@ class Protocol:
         for _ in self.write(notification):
             yield _NOP
         log.debug(
-            lambda: f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")',
+            lambda: (
+                f'>> NOTIFICATION ({notification.code},{notification.subcode},"{notification.data.decode("utf-8")}")'
+            ),
             self.connection.session(),
         )
         yield notification

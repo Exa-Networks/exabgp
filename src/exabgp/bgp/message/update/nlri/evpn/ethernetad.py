@@ -12,6 +12,7 @@ from exabgp.bgp.message.update.nlri.qualifier import Labels
 from exabgp.bgp.message.update.nlri.qualifier import ESI
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
 # +---------------------------------------+
@@ -74,6 +75,10 @@ class EthernetAD(EVPN):
 
     @classmethod
     def unpack(cls, data):
+        # RD(8) + ESI(10) + ETag(4), the label stack follows
+        cls.check_length(data, 22)
+        if (len(data) - 22) % 3:
+            raise Notify(3, 10, 'Ethernet A-D EVPN NLRI has a truncated label stack')
         rd = RouteDistinguisher.unpack(data[:8])
         esi = ESI.unpack(data[8:18])
         etag = EthernetTag.unpack(data[18:22])
@@ -81,13 +86,31 @@ class EthernetAD(EVPN):
 
         return cls(rd, esi, etag, label, data)
 
+    def as_dict(self):
+        nlri = EVPN.as_dict(self)
+        nlri['parsed'] = True
+        nlri['nexthop'] = None if self.nexthop is None else str(self.nexthop)
+        nlri['rd'] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri['esi'] = str(self.esi)
+        nlri['ethernet-tag'] = self.etag.tag
+        label = []
+        for value, raw in zip(self.label.labels, self.label.raw_labels):
+            label.append([value] if raw is None else [value, raw])
+        nlri['label'] = label
+        return nlri
+
     def json(self, compact=None):
-        content = ' "code": %d, ' % self.CODE
-        content += '"parsed": true, '
-        content += '"raw": "{}", '.format(self._raw())
-        content += '"name": "{}", '.format(self.NAME)
-        content += '{}, '.format(self.rd.json())
-        content += '{}, '.format(self.esi.json())
-        content += '{}, '.format(self.etag.json())
-        content += '{} '.format(self.label.json())
-        return '{{{}}}'.format(content)
+        # members are collected and joined: a member which renders empty (an
+        # absent label stack, an absent route distinguisher) used to leave a
+        # doubled or trailing comma and the line stopped being JSON
+        members = [
+            '"code": %d' % self.CODE,
+            '"parsed": true',
+            '"raw": "{}"'.format(self._raw()),
+            '"name": "{}"'.format(self.NAME),
+            self.rd.json(),
+            self.esi.json(),
+            self.etag.json(),
+            self.label.json(),
+        ]
+        return '{{ {} }}'.format(', '.join(_ for _ in members if _))

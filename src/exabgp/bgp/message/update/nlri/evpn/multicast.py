@@ -11,6 +11,7 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import EthernetTag
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 
 # +---------------------------------------+
@@ -68,21 +69,42 @@ class Multicast(EVPN):
 
     @classmethod
     def unpack(cls, data):
+        cls.check_length(data, 13)
         rd = RouteDistinguisher.unpack(data[:8])
         etag = EthernetTag.unpack(data[8:12])
         iplen = data[12]
         if iplen not in (4 * 8, 16 * 8):
-            raise Exception('IP len is %d, but EVPN route currently support only IPv4' % iplen)
+            raise Notify(3, 10, 'IP len is %d, but EVPN route currently support only IPv4 or IPv6' % iplen)
+        if len(data) != 13 + iplen // 8:
+            raise Notify(
+                3,
+                10,
+                'Inclusive Multicast EVPN NLRI is %d bytes, expecting %d for an IP of %d bits'
+                % (len(data), 13 + iplen // 8, iplen),
+            )
         ip = IP.unpack(data[13 : 13 + iplen // 8])
         return cls(rd, etag, ip, data)
 
+    def as_dict(self):
+        nlri = EVPN.as_dict(self)
+        nlri['parsed'] = True
+        nlri['nexthop'] = None if self.nexthop is None else str(self.nexthop)
+        nlri['rd'] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri['ethernet-tag'] = self.etag.tag
+        nlri['ip'] = None if self.ip is None else str(self.ip)
+        return nlri
+
     def json(self, compact=None):
-        content = ' "code": %d, ' % self.CODE
-        content += '"parsed": true, '
-        content += '"raw": "{}", '.format(self._raw())
-        content += '"name": "{}", '.format(self.NAME)
-        content += '{}, '.format(self.rd.json())
-        content += self.etag.json()
-        if self.ip:
-            content += ', "ip": "{}"'.format(str(self.ip))
-        return '{{{} }}'.format(content)
+        # members are collected and joined: a member which renders empty (an
+        # absent label stack, an absent route distinguisher) used to leave a
+        # doubled or trailing comma and the line stopped being JSON
+        members = [
+            '"code": %d' % self.CODE,
+            '"parsed": true',
+            '"raw": "{}"'.format(self._raw()),
+            '"name": "{}"'.format(self.NAME),
+            self.rd.json(),
+            self.etag.json(),
+            '"ip": "{}"'.format(str(self.ip)) if self.ip else '',
+        ]
+        return '{{ {} }}'.format(', '.join(_ for _ in members if _))

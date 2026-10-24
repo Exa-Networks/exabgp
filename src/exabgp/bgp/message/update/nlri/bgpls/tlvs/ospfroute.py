@@ -7,6 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from exabgp.bgp.message.notification import Notify
 from struct import unpack
 
 
@@ -34,6 +35,9 @@ from struct import unpack
 OSPF_ROUTE = {1: 'intra-area', 2: 'inter-area', 3: 'external-1', 4: 'external-2', 5: 'nssa-1', 6: 'nssa-2'}
 
 
+OSPF_ROUTE_TYPE_SIZE = 1
+
+
 class OspfRoute:
     def __init__(self, ospf_type, packed=None):
         self.ospf_type = ospf_type
@@ -41,13 +45,22 @@ class OspfRoute:
 
     @classmethod
     def unpack(cls, data):
-        if len(data) == 1:
-            ospf_type = unpack('!B', data[0:1])[0]
+        # without the else ospf_type was unbound and an AttributeError escaped
+        if len(data) != OSPF_ROUTE_TYPE_SIZE:
+            raise Notify(
+                3,
+                10,
+                'invalid BGP-LS OSPF route type sub-TLV, expected %d byte, got %d' % (OSPF_ROUTE_TYPE_SIZE, len(data)),
+            )
+        ospf_type = unpack('!B', data[0:1])[0]
         return cls(ospf_type=ospf_type)
 
     def json(self):
         content = '"ospf-route-type": {}'.format(self.ospf_type)
         return content
+
+    def as_dict(self):
+        return {'ospf-route-type': self.ospf_type}
 
     def __eq__(self, other):
         return self.ospf_type == other.ospf_type

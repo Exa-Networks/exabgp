@@ -10,6 +10,7 @@ from __future__ import annotations
 from struct import pack
 from struct import unpack
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.family import AFI
 from exabgp.protocol.family import SAFI
 from exabgp.bgp.message.open.capability.capability import Capability
@@ -20,6 +21,8 @@ from exabgp.bgp.message.open.capability.capability import Capability
 
 @Capability.register()
 class Graceful(Capability, dict):
+    HEADER_SIZE = 2  # restart flags and time
+    ENTRY_SIZE = 4  # AFI(2) + SAFI(1) + flags(1)
     MAX = 0xFFFF
     ID = Capability.CODE.GRACEFUL_RESTART
 
@@ -69,12 +72,16 @@ class Graceful(Capability, dict):
     @staticmethod
     def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
         # XXX: FIXME: should raise if instance was already setup
+        if len(data) < Graceful.HEADER_SIZE:
+            raise Notify(2, 0, 'invalid graceful-restart capability, not enough data for the header')
         restart = unpack('!H', data[:2])[0]
         restart_flag = restart >> 12
         restart_time = restart & Graceful.TIME_MASK
         data = data[2:]
         families = []
         while data:
+            if len(data) < Graceful.ENTRY_SIZE:
+                raise Notify(2, 0, 'invalid graceful-restart capability, trailing data')
             afi = AFI.unpack(data[:2])
             safi = SAFI.unpack(data[2])
             flag_family = data[3]

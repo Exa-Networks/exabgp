@@ -83,12 +83,17 @@ class ASPath(Attribute):
         self._json = ''
 
     def __eq__(self, other):
+        if not isinstance(other, ASPath):
+            return NotImplemented
         return (
             self.ID == other.ID and self.FLAG == other.FLAG and self.ASN4 == other.ASN4 and self.aspath == other.aspath
         )
 
     def __ne__(self, other):
-        return not self.__eq__(other)
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
     @classmethod
     def _segment(cls, seg_type, values, asn4):
@@ -131,10 +136,28 @@ class ASPath(Attribute):
             astrans.append(local)
 
         message = ASPath.pack_segments(astrans, negotiated.asn4)
-        if asn4:
-            message += AS4Path.pack_segments(self.aspath, asn4)
+        if not asn4:
+            return message
+
+        # RFC 6793 4.2.2 and 6: the AS4_PATH built beside the AS_PATH has to exclude every
+        # AS_CONFED_SEQUENCE and AS_CONFED_SET segment.  Copying the path unfiltered published
+        # confederation membership past the confederation border, in an attribute the RFC says
+        # may not carry those segment types at all.  Section 6 gives AS4_PATH no empty form
+        # either, so a path with nothing outside the confederation sends no AS4_PATH.
+        segments = AS4Path.pack_confed_free(self.aspath)
+        if segments:
+            message += AS4Path._attribute(segments)
 
         return message
+
+    @classmethod
+    def pack_confed_free(cls, aspath):
+        """The segments which may travel in an AS4_PATH, packed with four octet AS numbers."""
+        return b''.join(
+            cls._segment(content.ID, content, True)
+            for content in aspath
+            if not isinstance(content, (CONFED_SEQUENCE, CONFED_SET))
+        )
 
     def __len__(self):
         raise RuntimeError('it makes no sense to ask for the size of this object')
@@ -161,6 +184,15 @@ class ASPath(Attribute):
 
         self._json = json.dumps(jason)
         return self._json
+
+    def as_dict(self):
+        result = {}
+        for pos, content in enumerate(self.aspath):
+            result[pos] = {
+                'element': content.NAME,
+                'value': list(content),
+            }
+        return result
 
     @classmethod
     def _new_aspaths(cls, data, asn4, klass=None):
@@ -233,13 +265,31 @@ class AS4Path(ASPath):
     Empty: AS4Path | None = None
 
     def pack(self, negotiated=None):
-        ASPath.pack(self, True)
+        # This read `ASPath.pack(self, True)`, which passed True where a negotiated session
+        # belongs, so the inherited body raised AttributeError on `negotiated.asn4` before it
+        # could do anything, and discarded its result besides.  An AS4_PATH is four octet by
+        # definition (RFC 6793 4.2.1) whatever the session negotiated, and it never carries an
+        # AS4_PATH of its own the way ASPath.pack builds one, so it packs its own segments and
+        # nothing else.  pack_segments is resolved on the instance so the attribute header
+        # carries AS4Path's optional transitive flag rather than ASPath's.
+        return self.pack_segments(self.aspath, True)
 
     @classmethod
     def unpack(cls, data, direction, negotiated):
         if not data:
             return None  # AS4Path.Empty
-        return cls._new_aspaths(data, True, AS4Path)
+        path = cls._new_aspaths(data, True, AS4Path)
+
+        # RFC 6793 6: AS_CONFED_SEQUENCE and AS_CONFED_SET must never be carried in an
+        # AS4_PATH, and one which arrives with them has those path segments discarded, the
+        # attribute fields adjusted, and the UPDATE processed as it stands.  Keeping them let a
+        # peer outside our confederation put a confederation AS number into the path we
+        # publish: the reconstruction counts such a segment as no AS number, so it is carried
+        # into the merged AS_PATH whatever its length.
+        outside = [content for content in path.aspath if not isinstance(content, (CONFED_SEQUENCE, CONFED_SET))]
+        if len(outside) == len(path.aspath):
+            return path
+        return cls(outside, cls.pack_confed_free(path.aspath))
 
 
 AS4Path.Empty = AS4Path([], [])

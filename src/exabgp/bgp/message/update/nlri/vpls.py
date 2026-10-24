@@ -28,6 +28,11 @@ def _unique():
 unique = _unique()
 
 
+VPLS_HEADER_SIZE = 2
+# RD(8) + endpoint(2) + offset(2) + size(2) + base(3), the length the header announces
+VPLS_PAYLOAD_SIZE = 17
+
+
 @NLRI.register(AFI.l2vpn, SAFI.vpls)
 class VPLS(NLRI):
     # XXX: Should take AFI, SAFI and OUT.direction as parameter to match other NLRI
@@ -70,6 +75,19 @@ class VPLS(NLRI):
             + pack('!L', (self.base << 4) | 0x1)[1:]  # setting the bottom of stack, should we ?
         )
 
+    def as_dict(self):
+        family = self.family().afi_safi()
+        nlri = {
+            'rd': self.rd._str() if self.rd.rd else None,
+            'endpoint': self.endpoint,
+            'base': self.base,
+            'offset': self.offset,
+            'size': self.size,
+            'nexthop': None if self.nexthop is None else str(self.nexthop),
+            'family': {'afi': str(family[0]), 'safi': str(family[1])},
+        }
+        return nlri
+
     # XXX: FIXME: we need an unique key here.
     # XXX: What can we use as unique key ?
     def json(self, compact=None):
@@ -99,8 +117,19 @@ class VPLS(NLRI):
 
     @classmethod
     def unpack_nlri(cls, afi, safi, bgp, action, addpath):
+        # RFC 7911 section 3: with ADD-PATH negotiated the peer puts a four byte Path
+        # Identifier in front of every NLRI of this family, and it has to come off
+        # before the NLRI is read.
+        path_info, bgp = NLRI.consume_path_information(bgp, addpath)
         # label is 20bits, stored using 3 bytes, 24 bits
+        if len(bgp) < VPLS_HEADER_SIZE:
+            raise Notify(3, 10, 'not enough data to extract the length of the l2vpn vpls NLRI')
         (length,) = unpack('!H', bgp[0:2])
+        # a MINIMUM, not an exact length: this release reads the seventeen bytes it
+        # knows and ignores anything behind them, so a longer NLRI decodes today
+        # and refusing it would drop a route on upgrade
+        if length < VPLS_PAYLOAD_SIZE:
+            raise Notify(3, 10, 'l2vpn vpls length is %d, it must be at least %d' % (length, VPLS_PAYLOAD_SIZE))
         if len(bgp) != length + 2:
             raise Notify(3, 10, 'l2vpn vpls message length is not consistent with encoded bgp')
         rd = RouteDistinguisher(bgp[2:10])
@@ -108,5 +137,6 @@ class VPLS(NLRI):
         base = unpack('!L', b'\x00' + bgp[16:19])[0] >> 4
         nlri = cls(rd, endpoint, base, offset, size)
         nlri.action = action
+        nlri.addpath = path_info
         # nlri.nexthop = IP.unpack(nexthop)
         return nlri, bgp[19:]

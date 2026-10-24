@@ -133,6 +133,14 @@ class Prefix(EVPN):
         # Get the data length to understand if addresses are IPv4 or IPv6
         datalen = len(data)
 
+        if datalen not in (26 + 8, 26 + 32):
+            raise Notify(
+                3,
+                5,
+                'Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6 (34 or 58)'
+                % datalen,
+            )
+
         rd = RouteDistinguisher.unpack(data[:8])
         data = data[8:]
 
@@ -167,16 +175,37 @@ class Prefix(EVPN):
 
         return cls(rd, esi, etag, label, ip, iplen, gwip, exdata)
 
+    def as_dict(self):
+        nlri = EVPN.as_dict(self)
+        nlri['parsed'] = True
+        nlri['nexthop'] = None if self.nexthop is None else str(self.nexthop)
+        nlri['rd'] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri['esi'] = str(self.esi)
+        nlri['ethernet-tag'] = self.etag.tag
+        label = []
+        for value, raw in zip(self.label.labels, self.label.raw_labels):
+            label.append([value] if raw is None else [value, raw])
+        nlri['label'] = label
+        nlri['ip'] = str(self.ip)
+        nlri['iplen'] = self.iplen
+        nlri['gateway'] = str(self.gwip)
+        return nlri
+
     def json(self, compact=None):
-        content = ' "code": %d, ' % self.CODE
-        content += '"parsed": true, '
-        content += '"raw": "{}", '.format(self._raw())
-        content += '"name": "{}", '.format(self.NAME)
-        content += '{}, '.format(self.rd.json())
-        content += '{}, '.format(self.esi.json())
-        content += '{}, '.format(self.etag.json())
-        content += '{}, '.format(self.label.json())
-        content += '"ip": "{}", '.format(str(self.ip))
-        content += '"iplen": %d, ' % self.iplen
-        content += '"gateway": "{}" '.format(str(self.gwip))
-        return '{{{}}}'.format(content)
+        # members are collected and joined: a member which renders empty (an
+        # absent label stack, an absent route distinguisher) used to leave a
+        # doubled or trailing comma and the line stopped being JSON
+        members = [
+            '"code": %d' % self.CODE,
+            '"parsed": true',
+            '"raw": "{}"'.format(self._raw()),
+            '"name": "{}"'.format(self.NAME),
+            self.rd.json(),
+            self.esi.json(),
+            self.etag.json(),
+            self.label.json(),
+            '"ip": "{}"'.format(str(self.ip)),
+            '"iplen": %d' % self.iplen,
+            '"gateway": "{}"'.format(str(self.gwip)),
+        ]
+        return '{{ {} }}'.format(', '.join(_ for _ in members if _))

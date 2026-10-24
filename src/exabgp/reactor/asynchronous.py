@@ -34,8 +34,17 @@ class ASYNC:
         if self._error_handler:
             try:
                 self._error_handler(uid)
-            except Exception:
-                pass
+            except Exception as exc:
+                # This handler exists so a failed callback still sends done/error and the
+                # client does not hang. If the notification itself fails the client hangs
+                # anyway and there is nothing further to try, so the only thing left is to
+                # say which service it was. Swallowed rather than raised because this runs
+                # inside the reactor loop, where an exception takes more than this client.
+                log.error(
+                    lambda uid=uid, exc=exc: f'async | {uid} | could not tell the service its callback failed, '
+                    f'it waits for an answer which will not come ({exc})',
+                    'reactor',
+                )
 
     def ready(self):
         return not self._async

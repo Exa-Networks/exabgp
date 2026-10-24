@@ -529,7 +529,7 @@ class TestType1SessionTransformedRoute:
         invalid_data = packed_rd + packed_prefix + packed_teid_qfi + packed_endpoint
         packed = b'\x01\x00\x03' + bytes([len(invalid_data)]) + invalid_data
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(Notify):
             MUP.unpack_nlri(AFI.ipv4, SAFI.mup, packed, Action.UNSET, None)
 
     def test_t1st_variable_prefix_lengths(self) -> None:

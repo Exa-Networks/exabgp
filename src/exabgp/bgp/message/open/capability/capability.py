@@ -12,6 +12,34 @@ from __future__ import annotations
 from exabgp.bgp.message.notification import Notify
 
 
+def decode_utf8(data, what):
+    """Decode a peer supplied string from a capability.
+
+    The peer controls these bytes, so a decoding failure must end the session with
+    a NOTIFICATION and not with a UnicodeDecodeError escaping the parser.
+
+    Args:
+        data: The raw bytes to decode
+        what: Name of the field, used in the error message
+
+    Returns:
+        The decoded string
+
+    Raises:
+        Notify: If the bytes are not valid UTF-8
+    """
+    try:
+        decoded = bytes(data).decode('utf-8')
+    except UnicodeDecodeError as exc:
+        raise Notify(2, 0, 'the {} in the capability is not valid UTF-8 ({})'.format(what, exc)) from None
+
+    # a control character here would let a peer forge an event in the text API,
+    # which writes one line per event.  That is handled by the encoders, which
+    # escape what they are given: refusing the capability outright would drop
+    # sessions which come up today against routers with odd hostnames.
+    return decoded
+
+
 class _CapabilityCode(int):
     _cache = dict()
 
@@ -167,9 +195,7 @@ class Capability:
     @classmethod
     def klass(cls, what):
         if what in cls.registered_capability:
-            kls = cls.registered_capability[what]
-            kls.ID = what
-            return kls
+            return cls.registered_capability[what]
         if cls.unknown_capability:
             return cls.unknown_capability
         raise Notify(2, 4, 'can not handle capability {}'.format(what))
@@ -177,4 +203,12 @@ class Capability:
     @classmethod
     def unpack(cls, capability, capabilities, data):
         instance = capabilities.get(capability, Capability.klass(capability)())
+        # Record the code this peer used on the instance, never on the class. RouteRefresh
+        # and MultiSession are each registered under both an RFC and a Cisco code, and
+        # register() files both against the same class object, so klass() answers the very
+        # same class for either. __str__ and json() read self.ID to report which variant
+        # the peer asked for: assigning it to the class made that answer process wide, and
+        # the last OPEN parsed anywhere decided what every established session reported.
+        # The class attribute stays as declared, which is what register() reads at import.
+        instance.ID = capability
         return cls.klass(capability).unpack_capability(instance, data, capability)

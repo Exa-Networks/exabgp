@@ -10,6 +10,7 @@ from exabgp.protocol.ip import IP
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 
 from struct import pack
@@ -83,9 +84,26 @@ class InterworkSegmentDiscoveryRoute(MUP):
 
     @classmethod
     def unpack(cls, data, afi):
+        cls.check_length(data, cls.PAYLOAD_OFFSET)
         rd = RouteDistinguisher.unpack(data[:8])
         prefix_ip_len = data[8]
         size = 4 if afi != AFI.ipv6 else 16
+        max_bits = size * 8
+        if prefix_ip_len > max_bits:
+            raise Notify(
+                3,
+                10,
+                'mup isd prefix length is %d bits, more than the %d of an %s address' % (prefix_ip_len, max_bits, afi),
+            )
+
+        expected = 9 + (prefix_ip_len + 7) // 8
+        if len(data) != expected:
+            raise Notify(
+                3,
+                10,
+                'mup isd is %d bytes, expecting %d for a prefix of %d bits' % (len(data), expected, prefix_ip_len),
+            )
+
         ip = data[9:]
         padding = size - len(ip)
         if padding != 0 and padding > 0:
@@ -93,6 +111,13 @@ class InterworkSegmentDiscoveryRoute(MUP):
         prefix_ip = IP.unpack(ip)
 
         return cls(rd, prefix_ip_len, prefix_ip, afi)
+
+    def as_dict(self):
+        nlri = MUP.as_dict(self)
+        nlri['rd'] = None if self.rd is RouteDistinguisher.NORD else self.rd._str()
+        nlri['prefix_ip_len'] = self.prefix_ip_len
+        nlri['prefix_ip'] = str(self.prefix_ip)
+        return nlri
 
     def json(self, compact=None):
         content = '"name": "{}", '.format(self.NAME)

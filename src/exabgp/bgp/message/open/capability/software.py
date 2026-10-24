@@ -7,8 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # https://datatracker.ietf.org/doc/html/draft-abraitis-bgp-version-capability
 
 from __future__ import annotations
+import json
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.capability import Capability
+from exabgp.bgp.message.open.capability.capability import decode_utf8
 from exabgp.version import version
 
 
@@ -27,13 +30,17 @@ class Software(Capability):
         return 'Software({})'.format(self.software_version)
 
     def json(self):
-        return '{{ "software": "{}" }}'.format(self.software_version)
+        return '{{ "software": {} }}'.format(json.dumps(self.software_version))
 
     def extract(self):
         return [bytes([len(self.software_version)]) + self.software_version.encode('utf-8')]
 
     @staticmethod
     def unpack_capability(instance, data, capability=None):  # pylint: disable=W0613
+        if not data:
+            raise Notify(2, 0, 'Software capability too short: need at least 1 byte')
         l1 = data[0]
-        instance.software_version = data[1 : l1 + 1].decode('utf-8')
+        if len(data) < l1 + 1:
+            raise Notify(2, 0, 'Software capability truncated: need {} bytes, got {}'.format(l1 + 1, len(data)))
+        instance.software_version = decode_utf8(data[1 : l1 + 1], 'software version')
         return instance

@@ -147,11 +147,23 @@ class Notification(Message, Exception):
     def __str__(self):
         code_str = self._str_code.get(self.code, 'unknown error')
         subcode_str = self._str_subcode.get((self.code, self.subcode), 'unknow reason')
-        data_str = f' / {self.data.decode("ascii")}' if self.data else ''
+        try:
+            data_str = f' / {self.data.decode("ascii")}' if self.data else ''
+        except UnicodeDecodeError:
+            data_str = f' / {hexstring(self.data)}'
         return f'{code_str} / {subcode_str}{data_str}'
+
+    NOTIFICATION_HEADER_SIZE = 2  # RFC 4271 4.5: error code and error subcode
 
     @classmethod
     def unpack_message(cls, data, direction=None, negotiated=None):
+        # RFC 4271 4.5 makes the error code and subcode mandatory, and 6.5 says
+        # an error found while processing a NOTIFICATION closes the connection
+        # WITHOUT sending one back.  Returning a Notification is what does that
+        # here: the reactor raises it and resets in silence.  Reading data[1] off
+        # a shorter body raised IndexError instead, out of the message parser.
+        if len(data) < cls.NOTIFICATION_HEADER_SIZE:
+            return cls(0, 0, b'peer sent a NOTIFICATION of %d bytes, too short to carry a code' % len(data))
         return cls(data[0], data[1], data[2:])
 
 
@@ -163,6 +175,12 @@ class Notify(Notification):
     def __init__(self, code, subcode, data=None):
         if data is None:
             data = self._str_subcode.get((code, subcode), 'unknown notification type')
+        if isinstance(data, (bytes, bytearray, memoryview)):
+            # RFC 4271 6.1 for a Message Header Error: "The Data field MUST
+            # contain the erroneous Length field", which is two octets and not
+            # text, so it cannot go through the ascii encoding below
+            Notification.__init__(self, code, subcode, bytes(data), False)
+            return
         if (code, subcode) in [(6, 2), (6, 4)]:
             data = chr(len(data)) + data
         Notification.__init__(self, code, subcode, bytes(data, 'ascii'), False)

@@ -7,7 +7,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import os
 import uuid
 import copy
 import socket
@@ -18,7 +17,9 @@ from exabgp.protocol.family import AFI
 # from exabgp.util.coroutine import each
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.network.tcp import md5
-from exabgp.reactor.network.tcp import min_ttl
+from exabgp.reactor.network.tcp import sending_ttl
+from exabgp.reactor.network.tcp import set_minimum_ttl
+from exabgp.reactor.network.tcp import set_sending_ttl
 from exabgp.reactor.network.error import error
 from exabgp.reactor.network.error import errno
 from exabgp.reactor.network.error import NetworkError
@@ -32,6 +33,65 @@ from exabgp.logger import log
 
 # Network port constants
 MAX_PRIVILEGED_PORT = 1024  # Highest privileged port number (requires root on Unix)
+
+
+def set_listener_options(sock, ipv6):
+    """Set the two listening socket options, each on its own terms.
+
+    SO_REUSEADDR and IPV6_V6ONLY shared one try, so a platform refusing the first skipped
+    the second without asking for it at all. They are independent requests and are made
+    independently now.
+
+    Neither is required in order to bind, so neither failure is fatal here: SO_REUSEADDR
+    only smooths a restart, and a bind which genuinely can not happen fails loudly at
+    bind() just below. A refused IPV6_V6ONLY is worth more than a debug line, because it
+    changes which connections this socket will accept.
+    """
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    except (OSError, AttributeError) as exc:
+        # only affects how quickly a restart can rebind, and bind() reports the real problem
+        log.debug(lambda exc=exc: f'could not set SO_REUSEADDR on the listening socket ({exc})', 'network')
+
+    if not ipv6:
+        return
+
+    try:
+        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+    except (OSError, AttributeError) as exc:
+        log.warning(
+            lambda exc=exc: (
+                f'could not set IPV6_V6ONLY on the listening socket ({exc}), it may now accept '
+                f'IPv4-mapped connections which match no configured neighbor'
+            ),
+            'network',
+        )
+
+
+def set_accepted_ttl(connection, neighbor):
+    """Give an accepted connection the TTL its neighbour's configuration asks us to send with.
+
+    The listening socket is shared by every neighbour on an address and port, so it can
+    carry the minimum TTL checked on arrival but not a per-neighbour sending TTL. Until the
+    neighbour is known that has to wait, and before this nothing set it at all: outgoing-ttl
+    was ignored for every session the peer opened. What happened instead was that the
+    listener set IP_TTL to the incoming-ttl minimum, which accepted sockets inherited, where
+    RFC 5082 section 3 has a GTSM sender use 255.
+    """
+    value = sending_ttl(neighbor['outgoing-ttl'], neighbor['incoming-ttl'])
+    if value is None or connection.io is None:
+        return
+    try:
+        set_sending_ttl(connection.io, connection.afi, connection.peer, value)
+    except NetworkError as exc:
+        # the session can still come up, and a peer running GTSM will then drop it, which
+        # this line is what explains
+        log.error(
+            lambda connection=connection, value=value, exc=exc: (
+                f'could not set the sending ttl {value} for {connection.name()} ({exc})'
+            ),
+            'network',
+        )
 
 
 class Listener:
@@ -63,10 +123,9 @@ class Listener:
                 continue
             if local_port != port:
                 continue
-            if use_md5:
-                md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
+            md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
             if ttl_in:
-                min_ttl(sock, peer_ip, ttl_in)
+                set_minimum_ttl(sock, local_ip.afi, peer_ip.top(), ttl_in)
             return
 
         try:
@@ -75,13 +134,8 @@ class Listener:
             if use_md5:
                 md5(sock, peer_ip.top(), 0, use_md5, md5_base64)
             if ttl_in:
-                min_ttl(sock, peer_ip, ttl_in)
-            try:
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                if local_ip.ipv6():
-                    sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
-            except (OSError, AttributeError):
-                pass
+                set_minimum_ttl(sock, local_ip.afi, peer_ip.top(), ttl_in)
+            set_listener_options(sock, local_ip.ipv6())
             sock.setblocking(0)
             # s.settimeout(0.0)
             sock.bind((local_ip.top(), local_port))
@@ -94,6 +148,11 @@ class Listener:
                 ) from None
             elif exc.args[0] == errno.EADDRNOTAVAIL:
                 raise BindingError(f'could not listen on {local_ip}:{local_port}, this is an invalid address') from None
+            elif exc.args[0] == errno.EACCES:
+                raise BindingError(
+                    f'could not listen on {local_ip}:{local_port}, '
+                    f'binding below port {MAX_PRIVILEGED_PORT} requires root',
+                ) from None
             raise NetworkError(str(exc)) from None
         except NetworkError as exc:
             log.critical(lambda exc=exc: str(exc), 'network')
@@ -106,18 +165,17 @@ class Listener:
             self._listen(local_addr, remote_addr, port, md5_password, md5_base64, ttl_in)
             md5_suffix = ' with MD5' if md5_password else ''
             log.debug(
-                f'listening for BGP session(s) on {local_addr}:{port}{md5_suffix}',
+                lambda local_addr=local_addr, port=port, md5_suffix=md5_suffix: (
+                    f'listening for BGP session(s) on {local_addr}:{port}{md5_suffix}'
+                ),
                 'network',
             )
             return True
         except NetworkError as exc:
-            if os.geteuid() != 0 and port <= MAX_PRIVILEGED_PORT:
-                log.critical(
-                    f'can not bind to {local_addr}:{port}, you may need to run ExaBGP as root',
-                    'network',
-                )
-            else:
-                log.critical(lambda exc=exc: f'can not bind to {local_addr}:{port} ({exc})', 'network')
+            # the reason is the only line which is never a guess, so always print it:
+            # a privileged port is one way to fail to listen, an MD5 key the kernel
+            # will not install is another, and they need different answers
+            log.critical(lambda exc=exc: f'can not bind to {local_addr}:{port} ({exc})', 'network')
             log.critical(lambda: 'unset exabgp.tcp.bind if you do not want listen for incoming connections', 'network')
             log.critical(lambda: f'and check that no other daemon is already binding to port {port}', 'network')
             return False
@@ -194,10 +252,13 @@ class Listener:
                     ranged_neighbor.append(neighbor)
                     continue
 
+                set_accepted_ttl(connection, neighbor)
                 denied = reactor.handle_connection(key, connection)
                 if denied:
                     log.debug(
-                        lambda connection=connection: f'refused connection from {connection.name()} due to the state machine',
+                        lambda connection=connection: (
+                            f'refused connection from {connection.name()} due to the state machine'
+                        ),
                         'network',
                     )
                     break
@@ -208,7 +269,9 @@ class Listener:
                 matched = len(ranged_neighbor)
                 if matched > 1:
                     log.debug(
-                        f'could not accept connection from {connection.name()} (more than one neighbor match)',
+                        lambda connection=connection: (
+                            f'could not accept connection from {connection.name()} (more than one neighbor match)'
+                        ),
                         'network',
                     )
                     reactor.asynchronous.schedule(
@@ -235,16 +298,41 @@ class Listener:
                     new_neighbor['router-id'] = RouterID.create(connection.local)
 
                 new_peer = Peer(new_neighbor, reactor)
+                set_accepted_ttl(connection, new_neighbor)
                 denied = new_peer.handle_connection(connection)
                 if denied:
                     log.debug(
-                        lambda connection=connection: f'refused connection from {connection.name()} due to the state machine',
+                        lambda connection=connection: (
+                            f'refused connection from {connection.name()} due to the state machine'
+                        ),
                         'network',
                     )
                     return
 
                 reactor.register_peer(new_neighbor.name(), new_peer)
                 return
+
+    def close_unwanted(self, wanted):
+        """Close every listening socket the configuration no longer asks for.
+
+        _listen shares one socket per (address, port), so several neighbours can be behind
+        the one entry here and the dict does not record how many. The caller therefore
+        says which (address, port) pairs it still wants and this closes the rest, which
+        cannot drift the way a count would.
+
+        Without it the port of a neighbour removed by a reload stayed bound for the life
+        of the process and kept accepting connections nothing would ever serve.
+        """
+        for sock in list(self._sockets):
+            ip, port, _, _ = self._sockets[sock]
+            if (ip, port) in wanted:
+                continue
+            sock.close()
+            del self._sockets[sock]
+            self._accepted.pop(sock, None)
+            log.info(lambda ip=ip, port=port: f'stopped listening on {ip}:{port}', 'network')
+
+        self.serving = bool(self._sockets)
 
     def stop(self):
         if not self.serving:
