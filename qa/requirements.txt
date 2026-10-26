@@ -7,7 +7,7 @@ altgraph==0.17.5 ; sys_platform == 'darwin' or sys_platform == 'linux'
     #   pyinstaller
 annotated-doc==0.0.4 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via typer
-certifi==2026.2.25 ; sys_platform == 'darwin' or sys_platform == 'linux'
+certifi==2026.10.19 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests
 charset-normalizer==3.4.7 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests
