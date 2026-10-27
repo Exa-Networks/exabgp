@@ -56,7 +56,7 @@ class EthernetAD(EVPN):
         label: Labels | None,
         action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
-    ) -> 'EthernetAD':
+    ) -> EthernetAD:
         """Factory method to create EthernetAD from semantic parameters.
 
         Packs fields into wire format immediately (packed-bytes-first pattern).

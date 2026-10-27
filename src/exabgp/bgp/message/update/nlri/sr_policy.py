@@ -112,7 +112,7 @@ class SRPolicyNLRI(NLRI):
         return socket.inet_ntop(socket.AF_INET, self._packed[8:12])
 
     @classmethod
-    def create(cls, afi: AFI, distinguisher: int, color: int, endpoint: str) -> 'SRPolicyNLRI':
+    def create(cls, afi: AFI, distinguisher: int, color: int, endpoint: str) -> SRPolicyNLRI:
         """Create from semantic values."""
         packed = pack('!II', distinguisher, color)
         if afi == AFI.ipv6:
@@ -137,7 +137,7 @@ class SRPolicyNLRI(NLRI):
             )
         return None
 
-    def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         """Pack NLRI with 1-byte length prefix per RFC 9830 Section 3.
 
         Wire format: Length(1) + Distinguisher(4) + Color(4) + Endpoint(4 or 16)
@@ -151,12 +151,12 @@ class SRPolicyNLRI(NLRI):
     def _fresh(self) -> Self:
         return type(self)(self.afi, self._packed)
 
-    def __copy__(self) -> 'SRPolicyNLRI':
+    def __copy__(self) -> SRPolicyNLRI:
         new = self._fresh()
         self._copy_nlri_slots(new)
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'SRPolicyNLRI':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> SRPolicyNLRI:
         new = self._fresh()
         memo[id(self)] = new
         self._deepcopy_nlri_slots(new, memo)
@@ -198,7 +198,7 @@ class SRPolicyNLRI(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: 'Negotiated'
+        cls, afi: AFI, safi: SAFI, data: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[NLRI, Buffer]:
         """Unpack SR-Policy NLRI with 1-byte length prefix per RFC 9830 Section 3."""
         # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path

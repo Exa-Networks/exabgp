@@ -54,7 +54,7 @@ class Srv6SidStructure:
         arg_len: int,
         tpose_len: int,
         tpose_offset: int,
-    ) -> 'Srv6SidStructure':
+    ) -> Srv6SidStructure:
         """Factory method for semantic construction."""
         packed = pack('!BBBBBB', loc_block_len, loc_node_len, func_len, arg_len, tpose_len, tpose_offset)
         return cls(packed)

@@ -24,7 +24,8 @@ Test Coverage:
 """
 
 import struct
-from typing import Any, Generator
+from typing import Any
+from collections.abc import Generator
 from unittest.mock import Mock, patch
 
 import pytest

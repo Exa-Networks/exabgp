@@ -23,7 +23,8 @@ import asyncio
 import socket
 import struct
 from collections.abc import Callable, Iterator
-from typing import Any, Generator
+from typing import Any
+from collections.abc import Generator
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest

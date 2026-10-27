@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import ClassVar, Iterator
+from typing import ClassVar
+from collections.abc import Iterator
 
 from exabgp.protocol.family import AFI
 from .connection import Connection

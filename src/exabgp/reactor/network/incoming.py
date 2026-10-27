@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import socket
-from typing import ClassVar, Iterator
+from typing import ClassVar
+from collections.abc import Iterator
 
 from exabgp.util.errstr import errstr
 

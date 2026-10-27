@@ -57,7 +57,7 @@ class SharedJoin(MVPN):
         source: IP,
         group: IP,
         source_as: int,
-    ) -> 'SharedJoin':
+    ) -> SharedJoin:
         """Factory method to create SharedJoin from semantic parameters."""
         payload = (
             bytes(rd.pack_rd())
@@ -113,7 +113,7 @@ class SharedJoin(MVPN):
         return hash((self.afi, self._packed))
 
     @classmethod
-    def unpack_mvpn(cls, packed: Buffer, afi: AFI) -> 'MVPN':
+    def unpack_mvpn(cls, packed: Buffer, afi: AFI) -> MVPN:
         """Unpack SharedJoin from complete wire format bytes.
 
         Args:

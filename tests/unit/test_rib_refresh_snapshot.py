@@ -27,7 +27,7 @@ and yields `UpdateCollection`, where 5.0 stores `Change` and yields `Update`.
 
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 from unittest.mock import Mock
 
 import pytest

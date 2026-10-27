@@ -16,7 +16,6 @@ Covers:
 import sys
 import os
 import asyncio
-from typing import List
 from unittest.mock import Mock
 
 # Add src to path
@@ -88,7 +87,7 @@ def add_route_to_rib(rib: OutgoingRIB, prefix: str, afi: AFI = AFI.ipv4) -> Rout
     return change
 
 
-def consume_updates(rib: OutgoingRIB) -> List:
+def consume_updates(rib: OutgoingRIB) -> list:
     """Consume all pending updates from the RIB"""
     return list(rib.updates(grouped=False))
 

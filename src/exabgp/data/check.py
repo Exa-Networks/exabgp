@@ -8,7 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from ipaddress import AddressValueError, IPv4Address, IPv6Address
-from typing import Any, Callable, ClassVar
+from typing import Any, ClassVar
+from collections.abc import Callable
 
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.protocol.ip import IPv4

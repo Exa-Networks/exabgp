@@ -14,7 +14,7 @@ start with the AS the peer sees us as.
 
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 from unittest.mock import Mock, patch
 
 import pytest

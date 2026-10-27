@@ -61,7 +61,7 @@ def create_minimal_configuration(
     peer_as: int = 65533,
     families: str = 'ipv4 unicast',
     add_path: bool = False,
-) -> 'Configuration':
+) -> Configuration:
     """Create a minimal configuration for encode/decode operations.
 
     This is a convenience function for creating simple configurations
@@ -116,7 +116,7 @@ def create_minimal_configuration(
 
 
 def add_route_to_config(
-    configuration: 'Configuration',
+    configuration: Configuration,
     route_text: str,
     action: str = 'announce',
 ) -> bool:
@@ -166,7 +166,7 @@ def create_configuration_with_routes(
     families: str = 'ipv4 unicast',
     add_path: bool = False,
     action: str = 'announce',
-) -> 'Configuration':
+) -> Configuration:
     """Create configuration with routes already added.
 
     Convenience function combining create_minimal_configuration and add_route_to_config.

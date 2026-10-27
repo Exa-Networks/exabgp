@@ -7,7 +7,7 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Sequence
+from collections.abc import Sequence
 from exabgp.util import split
 
 from exabgp.bgp.message.notification import Notify

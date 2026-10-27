@@ -40,7 +40,7 @@ class LargeCommunity(Attribute):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'LargeCommunity':
+    def from_packet(cls, data: Buffer) -> LargeCommunity:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -57,7 +57,7 @@ class LargeCommunity(Attribute):
         return cls(data)
 
     @classmethod
-    def make_large_community(cls, global_admin: int, local_data1: int, local_data2: int) -> 'LargeCommunity':
+    def make_large_community(cls, global_admin: int, local_data1: int, local_data2: int) -> LargeCommunity:
         """Create from global administrator and local data values.
 
         Args:
@@ -130,7 +130,7 @@ class LargeCommunity(Attribute):
         return cls.from_packet(data)
 
     @classmethod
-    def cached(cls, packed: Buffer) -> 'LargeCommunity':
+    def cached(cls, packed: Buffer) -> LargeCommunity:
         if not cls.caching:
             return cls(packed)
         packed_bytes = bytes(packed)

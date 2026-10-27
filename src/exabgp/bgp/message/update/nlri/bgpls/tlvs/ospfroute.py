@@ -46,7 +46,7 @@ class OspfRoute:
         self._packed = packed if packed is not None else pack('!B', ospf_type)
 
     @classmethod
-    def unpack_ospfroute(cls, data: Buffer) -> 'OspfRoute':
+    def unpack_ospfroute(cls, data: Buffer) -> OspfRoute:
         if len(data) != OSPF_ROUTE_TYPE_SIZE:
             raise Notify(3, 10, f'BGP-LS ospf route type sub-tlv is {len(data)} bytes, expected {OSPF_ROUTE_TYPE_SIZE}')
         ospf_type = unpack('!B', data[0:1])[0]

@@ -96,7 +96,7 @@ class VPLSBase(NLRI):
         return instance
 
     @classmethod
-    def from_settings(cls, settings: 'VPLSSettings') -> Self:
+    def from_settings(cls, settings: VPLSSettings) -> Self:
         """Create VPLS NLRI from validated settings.
 
         This factory method validates settings and creates an immutable VPLS

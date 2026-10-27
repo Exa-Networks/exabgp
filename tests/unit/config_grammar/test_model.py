@@ -11,7 +11,8 @@ from __future__ import annotations
 import gc
 import json
 import re
-from typing import Any, Iterator
+from typing import Any
+from collections.abc import Iterator
 
 import pytest
 

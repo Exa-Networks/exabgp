@@ -54,13 +54,13 @@ class SessionSettings:
     """
 
     # Required fields
-    peer_address: 'IP | None' = None
-    local_as: 'ASN | None' = None
-    peer_as: 'ASN | None' = None
+    peer_address: IP | None = None
+    local_as: ASN | None = None
+    peer_as: ASN | None = None
 
     # Optional fields with defaults
-    local_address: 'IP | None' = None  # None = auto-discovery
-    router_id: 'RouterID | None' = None
+    local_address: IP | None = None  # None = auto-discovery
+    router_id: RouterID | None = None
     md5_password: str = ''
     md5_base64: bool = False
     # TCP-AO (RFC 5925) - mutually exclusive with MD5
@@ -81,11 +81,11 @@ class SessionSettings:
     role_otc: bool = True
     role_add_meta: bool = True
     # the address MD5 signs for, the local address unless configured; never with auto-discovery
-    md5_ip: 'IP | None' = None
-    local_link_local: 'IP | None' = None
+    md5_ip: IP | None = None
+    local_link_local: IP | None = None
     # RFC 5065: the confederation identifier, ASN(0) outside a confederation, and its other members
-    confederation: 'ASN | None' = None
-    confederation_members: tuple['ASN', ...] = ()
+    confederation: ASN | None = None
+    confederation_members: tuple[ASN, ...] = ()
 
     def validate(self) -> str:
         """Validate all settings are present and consistent.
@@ -117,7 +117,7 @@ def _default_session_settings() -> SessionSettings:
     return SessionSettings()
 
 
-def _default_capability() -> 'NeighborCapability':
+def _default_capability() -> NeighborCapability:
     """Factory for default NeighborCapability (used by dataclass field)."""
     from exabgp.bgp.neighbor.capability import NeighborCapability
 
@@ -183,21 +183,21 @@ class NeighborSettings:
     shutdown: bool = False
 
     # Capability
-    capability: 'NeighborCapability' = field(default_factory=_default_capability)
+    capability: NeighborCapability = field(default_factory=_default_capability)
 
     # Families
-    families: list[tuple['AFI', 'SAFI']] = field(default_factory=list)
-    nexthops: list[tuple['AFI', 'SAFI', 'AFI']] = field(default_factory=list)
-    addpaths: list[tuple['AFI', 'SAFI']] = field(default_factory=list)
+    families: list[tuple[AFI, SAFI]] = field(default_factory=list)
+    nexthops: list[tuple[AFI, SAFI, AFI]] = field(default_factory=list)
+    addpaths: list[tuple[AFI, SAFI]] = field(default_factory=list)
 
     # Routes and API (optional)
-    routes: list['Route'] = field(default_factory=list)
+    routes: list[Route] = field(default_factory=list)
     api: dict[str, Any] = field(default_factory=dict)
     # the operational messages of the configuration, sent once the session is up
-    operational: list['OperationalFamily'] = field(default_factory=list)
+    operational: list[OperationalFamily] = field(default_factory=list)
 
     # RFC 4486 4: per family, the most routes the peer may hold with us
-    prefix_limit: dict[tuple['AFI', 'SAFI'], int] = field(default_factory=dict)
+    prefix_limit: dict[tuple[AFI, SAFI], int] = field(default_factory=dict)
 
     def validate(self) -> str:
         """Validate all settings are present and consistent.

@@ -25,7 +25,8 @@ import json
 import re
 from struct import unpack
 from collections.abc import Callable, Iterator, MutableMapping
-from typing import TYPE_CHECKING, Any, ClassVar, Generator, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
+from collections.abc import Generator
 
 from exabgp.util.types import Buffer
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
@@ -626,7 +627,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         return attributes
 
     @classmethod
-    def from_attributes(cls, attrs: 'Attributes', negotiated: Negotiated) -> 'AttributeCollection':
+    def from_attributes(cls, attrs: Attributes, negotiated: Negotiated) -> AttributeCollection:
         """Create AttributeCollection from wire Attributes for modification.
 
         This is the bridge from wire container to semantic container.
@@ -1099,7 +1100,7 @@ class Attributes:
     values are derived via properties.
     """
 
-    def __init__(self, packed: Buffer, context: 'Negotiated | None' = None) -> None:
+    def __init__(self, packed: Buffer, context: Negotiated | None = None) -> None:
         """Create Attributes from packed bytes.
 
         Args:
@@ -1110,7 +1111,7 @@ class Attributes:
         self._context = context
 
     @classmethod
-    def from_set(cls, attr_set: AttributeCollection, negotiated: 'Negotiated') -> 'Attributes':
+    def from_set(cls, attr_set: AttributeCollection, negotiated: Negotiated) -> Attributes:
         """Create Attributes from semantic AttributeCollection.
 
         Args:
@@ -1128,7 +1129,7 @@ class Attributes:
         """Raw packed path attributes bytes."""
         return self._packed
 
-    def unpack_attributes(self, negotiated: 'Negotiated | None' = None) -> AttributeCollection:
+    def unpack_attributes(self, negotiated: Negotiated | None = None) -> AttributeCollection:
         """Unpack to semantic AttributeCollection.
 
         Args:

@@ -14,7 +14,6 @@ Lifecycle:
 
 import sys
 import os
-from typing import List
 from unittest.mock import Mock
 
 import pytest
@@ -94,7 +93,7 @@ def create_rib() -> OutgoingRIB:
     return OutgoingRIB(cache=True, families={(AFI.ipv4, SAFI.unicast)})
 
 
-def consume_updates(rib: OutgoingRIB) -> List:
+def consume_updates(rib: OutgoingRIB) -> list:
     """Consume all pending updates from the RIB."""
     return list(rib.updates(grouped=False))
 

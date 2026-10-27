@@ -24,7 +24,7 @@ class TriState(IntEnum):
     TRUE = 1
 
     @classmethod
-    def from_bool(cls, value: bool | None) -> 'TriState':
+    def from_bool(cls, value: bool | None) -> TriState:
         """Convert bool | None to TriState."""
         if value is None:
             return cls.UNSET

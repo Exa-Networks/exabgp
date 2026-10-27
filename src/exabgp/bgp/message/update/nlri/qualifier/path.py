@@ -20,8 +20,8 @@ class PathInfo:
 
     LENGTH: ClassVar[int] = 4  # Path info is always 4 bytes
     MAX: ClassVar = (1 << (8 * LENGTH)) - 1  # the largest path identifier, from its four octets
-    NOPATH: ClassVar['PathInfo']
-    DISABLED: ClassVar['PathInfo']
+    NOPATH: ClassVar[PathInfo]
+    DISABLED: ClassVar[PathInfo]
 
     def __init__(self, packed: Buffer) -> None:
         if packed and len(packed) != self.LENGTH:
@@ -30,14 +30,14 @@ class PathInfo:
         self._disabled = False
 
     @classmethod
-    def make_from_integer(cls, integer: int) -> 'PathInfo':
+    def make_from_integer(cls, integer: int) -> PathInfo:
         """Create PathInfo from integer value, which must fit in its four octets."""
         if not 0 <= integer <= cls.MAX:
             raise ValueError(f'path-information {integer} is invalid, it is 0-{cls.MAX}')
         return cls(integer.to_bytes(cls.LENGTH, 'big'))
 
     @classmethod
-    def make_from_ip(cls, ip: str) -> 'PathInfo':
+    def make_from_ip(cls, ip: str) -> PathInfo:
         """Create PathInfo from IP-style string (e.g., '1.2.3.4')."""
         packed = b''.join(bytes([int(_)]) for _ in ip.split('.'))
         return cls(packed)
@@ -94,7 +94,7 @@ class PathInfo:
             return self._packed
         return b'\x00\x00\x00\x00'
 
-    def __copy__(self) -> 'PathInfo':
+    def __copy__(self) -> PathInfo:
         """Preserve singleton identity for NOPATH and DISABLED."""
         if self is PathInfo.NOPATH or self is PathInfo.DISABLED:
             return self
@@ -107,7 +107,7 @@ class PathInfo:
         new._disabled = self._disabled
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'PathInfo':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> PathInfo:
         """Preserve singleton identity for NOPATH and DISABLED."""
         if self is PathInfo.NOPATH or self is PathInfo.DISABLED:
             return self
@@ -123,7 +123,7 @@ class PathInfo:
         return new
 
     @classmethod
-    def _create_nopath(cls) -> 'PathInfo':
+    def _create_nopath(cls) -> PathInfo:
         """Create the NOPATH sentinel. Called once at module load.
 
         Used when ADD-PATH is enabled but no specific path ID is set.
@@ -132,7 +132,7 @@ class PathInfo:
         return cls(b'')
 
     @classmethod
-    def _create_disabled(cls) -> 'PathInfo':
+    def _create_disabled(cls) -> PathInfo:
         """Create the DISABLED sentinel. Called once at module load.
 
         Used when ADD-PATH capability is not negotiated.

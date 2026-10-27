@@ -85,7 +85,7 @@ class CIDR:
 
     _mask_to_bytes: ClassVar[dict[int, int]] = {}
 
-    NOCIDR: ClassVar['CIDR']
+    NOCIDR: ClassVar[CIDR]
 
     def __init__(self, nlri: Buffer, afi: AFI) -> None:
         """Create a CIDR from NLRI wire format bytes.
@@ -107,7 +107,7 @@ class CIDR:
         self._mask = mask
 
     @classmethod
-    def _with_fields(cls, packed: bytes, mask: int) -> 'CIDR':
+    def _with_fields(cls, packed: bytes, mask: int) -> CIDR:
         """A CIDR holding these fields as they are, decoding nothing.
 
         mypyc cannot build an instance without running __init__, so this runs it on the
@@ -119,12 +119,12 @@ class CIDR:
         return instance
 
     @classmethod
-    def _create_nocidr(cls) -> 'CIDR':
+    def _create_nocidr(cls) -> CIDR:
         """Create the NOCIDR singleton. Called once at module load."""
         return cls._with_fields(b'', 0)
 
     @classmethod
-    def from_ipv4(cls, nlri: Buffer) -> 'CIDR':
+    def from_ipv4(cls, nlri: Buffer) -> CIDR:
         """Create CIDR from IPv4 NLRI wire format.
 
         Use this when AFI is known to be IPv4.
@@ -132,7 +132,7 @@ class CIDR:
         return cls(nlri, AFI.ipv4)
 
     @classmethod
-    def from_ipv6(cls, nlri: Buffer) -> 'CIDR':
+    def from_ipv6(cls, nlri: Buffer) -> CIDR:
         """Create CIDR from IPv6 NLRI wire format.
 
         Use this when AFI is known to be IPv6.
@@ -140,7 +140,7 @@ class CIDR:
         return cls(nlri, AFI.ipv6)
 
     @classmethod
-    def create_cidr(cls, packed: Buffer, mask: int) -> 'CIDR':
+    def create_cidr(cls, packed: Buffer, mask: int) -> CIDR:
         """Factory method to create a CIDR from packed IP bytes and mask.
 
         Args:
@@ -284,7 +284,7 @@ class CIDR:
         # return data[:4], mask
 
     @classmethod
-    def unpack_cidr(cls, data: Buffer, afi: AFI) -> 'CIDR':
+    def unpack_cidr(cls, data: Buffer, afi: AFI) -> CIDR:
         """Unpack CIDR from NLRI wire format bytes.
 
         Args:

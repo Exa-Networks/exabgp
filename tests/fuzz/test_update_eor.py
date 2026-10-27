@@ -15,7 +15,7 @@ Test Coverage:
 """
 
 import pytest
-from typing import Generator
+from collections.abc import Generator
 from unittest.mock import Mock, patch
 from tests import negotiation
 

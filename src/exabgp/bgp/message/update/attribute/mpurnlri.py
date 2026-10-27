@@ -9,7 +9,8 @@ from __future__ import annotations
 
 
 from struct import unpack
-from typing import ClassVar, Iterator
+from typing import ClassVar
+from collections.abc import Iterator
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import NLRIDiscard, Notify

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 
 from struct import pack, unpack
-from typing import Any, ClassVar, Self, Type, TYPE_CHECKING, TypeVar
+from typing import Any, ClassVar, Self, TYPE_CHECKING, TypeVar
 
 from exabgp.util.types import Buffer
 
@@ -128,7 +128,7 @@ class RTCBase(NLRI):
         return instance
 
     @classmethod
-    def from_settings(cls, settings: 'RTCSettings') -> Self:
+    def from_settings(cls, settings: RTCSettings) -> Self:
         """Create an RTC NLRI from validated settings.
 
         Raises:
@@ -240,7 +240,7 @@ class RTCBase(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls: Type[T], afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: bool, negotiated: Negotiated
+        cls: type[T], afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: bool, negotiated: Negotiated
     ) -> tuple[T, Buffer]:
         # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
         # Identifier in front of every NLRI of this family, and it has to come off

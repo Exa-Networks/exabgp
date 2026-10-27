@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 from exabgp.util.intvalue import json_number
 
-from typing import TYPE_CHECKING, ClassVar, Type
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -54,10 +54,10 @@ class ExtendedCommunityBase(Attribute):
     NON_TRANSITIVE: ClassVar[int] = 0x40
 
     # each sub-class which registers holds its own: asked of this class, it does not exist
-    registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]]]
+    registered_extended: ClassVar[dict[tuple[int, int], type[ExtendedCommunityBase]]]
 
     @classmethod
-    def register_subtype(cls, klass: Type[ExtendedCommunityBase]) -> Type[ExtendedCommunityBase]:
+    def register_subtype(cls, klass: type[ExtendedCommunityBase]) -> type[ExtendedCommunityBase]:
         """Register an extended community subclass by type/subtype.
 
         Note: Named differently from Attribute.register to avoid signature conflict.
@@ -83,10 +83,10 @@ class ExtendedCommunityBase(Attribute):
         """
         # Two top bits are iana and transitive bits
         self._packed: Buffer = packed
-        self.registered_klass: Type[ExtendedCommunityBase] | None = None
+        self.registered_klass: type[ExtendedCommunityBase] | None = None
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'ExtendedCommunityBase':
+    def from_packet(cls, data: Buffer) -> ExtendedCommunityBase:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -218,7 +218,7 @@ class ExtendedCommunityBase(Attribute):
         return hash(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> 'ExtendedCommunityBase':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> ExtendedCommunityBase:
         community = (registry_type(data[0]), data[1])
         if community in cls.registered_extended:
             klass = cls.registered_extended[community]
@@ -234,10 +234,10 @@ class ExtendedCommunity(ExtendedCommunityBase):
     ID: ClassVar = Attribute.CODE.EXTENDED_COMMUNITY
     FLAG: ClassVar = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]]] = {}
+    registered_extended: ClassVar[dict[tuple[int, int], type[ExtendedCommunityBase]]] = {}
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'ExtendedCommunity':
+    def from_packet(cls, data: Buffer) -> ExtendedCommunity:
         """Validate and create from wire-format bytes."""
         if len(data) != 8:
             raise ValueError(f'ExtendedCommunity must be 8 bytes, got {len(data)}')
@@ -253,10 +253,10 @@ class ExtendedCommunityIPv6(ExtendedCommunityBase):
     ID: ClassVar = Attribute.CODE.IPV6_EXTENDED_COMMUNITY
     FLAG: ClassVar = Attribute.Flag.TRANSITIVE | Attribute.Flag.OPTIONAL
 
-    registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]]] = {}
+    registered_extended: ClassVar[dict[tuple[int, int], type[ExtendedCommunityBase]]] = {}
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'ExtendedCommunityIPv6':
+    def from_packet(cls, data: Buffer) -> ExtendedCommunityIPv6:
         """Validate and create from wire-format bytes."""
         if len(data) != 20:
             raise ValueError(f'ExtendedCommunityIPv6 must be 20 bytes, got {len(data)}')

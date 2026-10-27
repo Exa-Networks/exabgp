@@ -22,7 +22,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import contextlib
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap

@@ -61,11 +61,11 @@ BAD_MESSAGE_TYPE = 3
 class Protocol:
     decode: bool = True
 
-    def __init__(self, peer: 'Peer') -> None:
-        self.peer: 'Peer' = peer
-        self.neighbor: 'Neighbor' = peer.neighbor
+    def __init__(self, peer: Peer) -> None:
+        self.peer: Peer = peer
+        self.neighbor: Neighbor = peer.neighbor
         self.negotiated: Negotiated = Negotiated.make_negotiated(self.neighbor, Direction.IN)
-        self.connection: 'Incoming' | Outgoing | None = None
+        self.connection: Incoming | Outgoing | None = None
         # RFC 4271 6.8: the OPEN read on this connection while a collision was resolved,
         # which read_open returns instead of reading another
         self.open_read: Open | None = None
@@ -109,7 +109,7 @@ class Protocol:
     def me(self, message: str) -> str:
         return f'{self.peer.neighbor.session.peer_address}/{self.peer.neighbor.session.peer_as} {message}'
 
-    def accept(self, incoming: 'Incoming') -> Protocol:
+    def accept(self, incoming: Incoming) -> Protocol:
         self.connection = incoming
 
         if self._api['neighbor-changes']:
@@ -324,7 +324,7 @@ class Protocol:
             log.debug(lazymsg('message.decode.traceback trace={t}', t=traceback.format_exc()), self._session())
             raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id.value) from None
 
-    def _header_error(self, notify: 'NotifyError', msg_id: MessageCode, header: Buffer, body: Buffer) -> Notify:
+    def _header_error(self, notify: NotifyError, msg_id: MessageCode, header: Buffer, body: Buffer) -> Notify:
         """Turn an error found reading the header into the Notify to raise, telling the API."""
         consolidate = self._api['receive-consolidate']
         parsed = self._api['receive-parsed']

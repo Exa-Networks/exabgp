@@ -31,7 +31,7 @@ from exabgp.util.intvalue import IntValue
 from exabgp.util.types import Buffer
 from struct import pack
 from struct import unpack
-from typing import Any, ClassVar, Type as TypingType, TypeVar, TYPE_CHECKING
+from typing import Any, ClassVar, TypeVar, TYPE_CHECKING
 
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.message.open.routerid import RouterID
@@ -108,7 +108,7 @@ class Operational(Message):
     ID: ClassVar = Message.CODE.OPERATIONAL
     FIXED_SIZE: ClassVar[int] = 4  # the operational header: a two octet type and a two octet length
 
-    registered_operational: ClassVar[dict[int, TypingType['Operational']]] = dict()
+    registered_operational: ClassVar[dict[int, type[Operational]]] = dict()
 
     # the operational types, draft-ietf-idr-operational-message
     SUBTYPE: ClassVar[type[OperationalSubtype]] = OperationalSubtype
@@ -152,7 +152,7 @@ class Operational(Message):
         return f'operational {self.NAME}'
 
     @classmethod
-    def register_operational(cls, klass: TypingType[_T]) -> TypingType[_T]:
+    def register_operational(cls, klass: type[_T]) -> type[_T]:
         """Register an Operational subtype (ADM, ASM, RPCQ, etc.) for unpacking.
 
         Note: This is distinct from Message.register which registers message types.
@@ -233,7 +233,7 @@ class UnknownOperational(Operational):
     CATEGORY: ClassVar[str] = 'unknown'
 
     @classmethod
-    def make_unknown(cls, what: int, data: Buffer) -> 'UnknownOperational':
+    def make_unknown(cls, what: int, data: Buffer) -> UnknownOperational:
         return cls(cls.pack_operational(what, data))
 
     @property
@@ -276,7 +276,7 @@ class OperationalFamily(Operational):
         return (self.afi, self.safi)
 
     @classmethod
-    def from_values(cls, values: dict[str, Any]) -> 'OperationalFamily':
+    def from_values(cls, values: dict[str, Any]) -> OperationalFamily:
         """Build one from what the configuration read, each category naming what it needs."""
         raise NotImplementedError(f'{cls.__qualname__} is built by its category')
 
@@ -357,7 +357,7 @@ class NSBase(OperationalFamily):
     ERROR_SUBCODE: ClassVar[bytes]
 
     @classmethod
-    def make_ns(cls, afi: int | AFI, safi: int | SAFI, sequence: Buffer) -> 'NSBase':
+    def make_ns(cls, afi: int | AFI, safi: int | SAFI, sequence: Buffer) -> NSBase:
         payload = cls.pack_family(afi, safi) + bytes(sequence) + cls.ERROR_SUBCODE
         return cls(cls.pack_operational(cls.SUBTYPE_ID, payload))
 
@@ -427,14 +427,14 @@ class AdvisoryBase(OperationalFamily):
     @classmethod
     def make_advisory(
         cls, afi: int | AFI, safi: int | SAFI, advisory: str | bytes, routerid: RouterID | None = None
-    ) -> 'AdvisoryBase':
+    ) -> AdvisoryBase:
         utf8 = advisory if isinstance(advisory, bytes) else advisory.encode('utf-8')
         if len(utf8) > MAX_ADVISORY:
             utf8 = utf8[: MAX_ADVISORY - 3] + b'...'
         return cls(cls.pack_operational(cls.SUBTYPE_ID, cls.pack_family(afi, safi) + utf8))
 
     @classmethod
-    def from_values(cls, values: dict[str, Any]) -> 'OperationalFamily':
+    def from_values(cls, values: dict[str, Any]) -> OperationalFamily:
         return cls.make_advisory(values['afi'], values['safi'], values['advisory'], values.get('routerid'))
 
     def extensive(self) -> str:
@@ -476,13 +476,11 @@ class QueryBase(SequencedOperationalFamily):
     CATEGORY: ClassVar[str] = 'query'
 
     @classmethod
-    def make_query(
-        cls, afi: int | AFI, safi: int | SAFI, routerid: RouterID | None, sequence: int | None
-    ) -> 'QueryBase':
+    def make_query(cls, afi: int | AFI, safi: int | SAFI, routerid: RouterID | None, sequence: int | None) -> QueryBase:
         return cls(cls.pack_sequenced(cls.SUBTYPE_ID, afi, safi, routerid, sequence, b''))
 
     @classmethod
-    def from_values(cls, values: dict[str, Any]) -> 'OperationalFamily':
+    def from_values(cls, values: dict[str, Any]) -> OperationalFamily:
         return cls.make_query(values['afi'], values['safi'], values.get('routerid'), values['sequence'])
 
     def extensive(self) -> str:
@@ -539,11 +537,11 @@ class ResponseCounter(SequencedOperationalFamily):
     @classmethod
     def make_counter(
         cls, afi: int | AFI, safi: int | SAFI, routerid: RouterID | None, sequence: int | None, counter: int
-    ) -> 'ResponseCounter':
+    ) -> ResponseCounter:
         return cls(cls.pack_sequenced(cls.SUBTYPE_ID, afi, safi, routerid, sequence, pack('!L', counter)))
 
     @classmethod
-    def from_values(cls, values: dict[str, Any]) -> 'OperationalFamily':
+    def from_values(cls, values: dict[str, Any]) -> OperationalFamily:
         return cls.make_counter(
             values['afi'], values['safi'], values.get('routerid'), values['sequence'], values['counter']
         )

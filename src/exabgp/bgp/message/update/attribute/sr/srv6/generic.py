@@ -40,7 +40,7 @@ class GenericSrv6ServiceSubTlv:
         return pack('!BH', self.code, len(self._packed)) + bytes(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, length: int) -> 'GenericSrv6ServiceSubTlv':
+    def unpack_attribute(cls, data: Buffer, length: int) -> GenericSrv6ServiceSubTlv:
         """Unpack TLV from bytes. Must be implemented by subclasses."""
         raise NotImplementedError('unpack_attribute must be implemented by subclasses')
 
@@ -76,6 +76,6 @@ class GenericSrv6ServiceDataSubSubTlv:
         return pack('!BH', self.code, len(self._packed)) + bytes(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, length: int) -> 'GenericSrv6ServiceDataSubSubTlv':
+    def unpack_attribute(cls, data: Buffer, length: int) -> GenericSrv6ServiceDataSubSubTlv:
         """Unpack TLV from bytes. Must be implemented by subclasses."""
         raise NotImplementedError('unpack_attribute must be implemented by subclasses')

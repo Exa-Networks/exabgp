@@ -65,10 +65,10 @@ class Update(Message):
         parse(negotiated), once, and read through data afterwards.
         """
         self._packed = packed
-        self._parsed: 'UpdateCollection | None' = None
+        self._parsed: UpdateCollection | None = None
 
     @classmethod
-    def from_collection(cls, collection: 'UpdateCollection') -> 'Update':
+    def from_collection(cls, collection: UpdateCollection) -> Update:
         """An UPDATE told to the API which the peer never sent as such: no bytes, only routes.
 
         RFC 8955 6 revalidation announces or withdraws a flow specification because a
@@ -106,11 +106,11 @@ class Update(Message):
         nlri_offset = attr_offset + 2 + attr_len
         return self._packed[nlri_offset:]
 
-    def pack_body(self, negotiated: 'Negotiated') -> Buffer:
+    def pack_body(self, negotiated: Negotiated) -> Buffer:
         return self._packed
 
     @property
-    def data(self) -> 'UpdateCollection':
+    def data(self) -> UpdateCollection:
         """Access parsed UpdateCollection.
 
         Returns:
@@ -123,7 +123,7 @@ class Update(Message):
             raise ValueError('Cannot access data: Update not parsed, call parse(negotiated) first')
         return self._parsed
 
-    def parse(self, negotiated: 'Negotiated') -> 'UpdateCollection':
+    def parse(self, negotiated: Negotiated) -> UpdateCollection:
         """Parse payload to semantic UpdateCollection with negotiated context, once."""
         if self._parsed is None:
             self._parsed = UpdateCollection._parse_payload(bytes(self._packed), negotiated)
@@ -135,7 +135,7 @@ class Update(Message):
         return UpdateCollection.split(data)
 
     @classmethod
-    def unpack_message(cls, data: Buffer, negotiated: 'Negotiated') -> Update:
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Update:
         """Unpack raw UPDATE payload to Update, or EOR which is one.
 
         This is the registered message handler called by Message.unpack().

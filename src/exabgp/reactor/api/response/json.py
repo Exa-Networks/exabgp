@@ -12,7 +12,8 @@ import json
 import os
 import socket
 import time
-from typing import Any, Callable, ClassVar, TYPE_CHECKING, cast
+from typing import Any, ClassVar, TYPE_CHECKING, cast
+from collections.abc import Callable
 
 from exabgp.util import hexstring
 
@@ -76,7 +77,7 @@ class JSON:
     #     self._count[neighbor.uid] = 0
     #     return 0
 
-    def _counter(self, neighbor: 'Neighbor') -> int:
+    def _counter(self, neighbor: Neighbor) -> int:
         increased = self._count.get(neighbor.uid, 0) + 1
         self._count[neighbor.uid] = increased
         return increased
@@ -103,7 +104,7 @@ class JSON:
         content: str,
         header: bytes,
         body: bytes,
-        neighbor: 'Neighbor | None',
+        neighbor: Neighbor | None,
         message_type: str | None = None,
     ) -> str:
         peer = f'"host" : "{socket.gethostname()}", '
@@ -116,7 +117,7 @@ class JSON:
 
         return f'{{ "exabgp": "{self.version}", "time": {self.time(time.time())}, {peer}{pid}{ppid}{counter}{mtype}{header_str}{body_str}{content} }}'
 
-    def _neighbor(self, neighbor: 'Neighbor', direction: str | None, content: str) -> str:
+    def _neighbor(self, neighbor: Neighbor, direction: str | None, content: str) -> str:
         local_addr = neighbor.session.local_address
         peer_addr = neighbor.session.peer_address
         local_as = neighbor.session.local_as
@@ -156,7 +157,7 @@ class JSON:
     def _minimalkv(self, extra: dict[str, Any]) -> str:
         return ', '.join(f'"{k}": {self._string(v)}' for (k, v) in extra.items() if v)
 
-    def up(self, neighbor: 'Neighbor') -> str:
+    def up(self, neighbor: Neighbor) -> str:
         return self._header(
             self._neighbor(
                 neighbor,
@@ -173,7 +174,7 @@ class JSON:
             message_type='state',
         )
 
-    def connected(self, neighbor: 'Neighbor') -> str:
+    def connected(self, neighbor: Neighbor) -> str:
         return self._header(
             self._neighbor(
                 neighbor,
@@ -190,7 +191,7 @@ class JSON:
             message_type='state',
         )
 
-    def down(self, neighbor: 'Neighbor', reason: str = '') -> str:
+    def down(self, neighbor: Neighbor, reason: str = '') -> str:
         return self._header(
             self._neighbor(
                 neighbor,
@@ -223,7 +224,7 @@ class JSON:
             message_type='notification',
         )
 
-    def _negotiated(self, negotiated: 'Negotiated') -> dict[str, str]:
+    def _negotiated(self, negotiated: Negotiated) -> dict[str, str]:
         families = [f'{family[0]} {self._safi_display_name(family[0], family[1])}' for family in negotiated.families]
         # nexthop is list[tuple[AFI, SAFI, AFI]] per RFC5549 - third element is nexthop AFI
         nexthop = [f'{nh[0]} {self._safi_display_name(nh[0], nh[1])} {nh[2]}' for nh in negotiated.nexthop]
@@ -260,7 +261,7 @@ class JSON:
         )
         return {'negotiated': f'{{ {kv_content} }} '}
 
-    def negotiated(self, neighbor: 'Neighbor', negotiated: 'Negotiated') -> str:
+    def negotiated(self, neighbor: Neighbor, negotiated: Negotiated) -> str:
         return self._header(
             self._neighbor(neighbor, None, self._raw_kv(self._negotiated(negotiated))),
             b'',
@@ -269,7 +270,7 @@ class JSON:
             message_type='negotiated',
         )
 
-    def fsm(self, neighbor: 'Neighbor', fsm: 'FSM') -> str:
+    def fsm(self, neighbor: Neighbor, fsm: FSM) -> str:
         return self._header(
             self._neighbor(neighbor, None, self._kv({'state': fsm.name()})),
             b'',
@@ -278,7 +279,7 @@ class JSON:
             message_type='fsm',
         )
 
-    def signal(self, neighbor: 'Neighbor', signal: int) -> str:
+    def signal(self, neighbor: Neighbor, signal: int) -> str:
         return self._header(
             self._neighbor(
                 neighbor,
@@ -298,12 +299,12 @@ class JSON:
 
     def notification(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        message: 'Notification',
+        message: Notification,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         # `message` is the Data field made readable, an RFC 9003 Shutdown Communication decoded;
         # `data` is the field as on the wire, and for API 4 the readable form, as 5.x gave it
@@ -334,12 +335,12 @@ class JSON:
 
     def packets(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
         category: MessageCode,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         kv_content = self._kv(
             {
@@ -361,19 +362,17 @@ class JSON:
             message_type=Message.string(category),
         )
 
-    def keepalive(
-        self, neighbor: 'Neighbor', direction: str, header: bytes, body: bytes, negotiated: 'Negotiated'
-    ) -> str:
+    def keepalive(self, neighbor: Neighbor, direction: str, header: bytes, body: bytes, negotiated: Negotiated) -> str:
         return self._header(self._neighbor(neighbor, direction, ''), header, body, neighbor, message_type='keepalive')
 
     def open(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        sent_open: 'Open',
+        sent_open: Open,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         capabilities_content = self._json_kv(sent_open.capabilities)
         kv_content = self._kv(
@@ -517,12 +516,12 @@ class JSON:
 
     def update(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        update: 'UpdateCollection',
+        update: UpdateCollection,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         message = self._update(update, include_meta=direction == 'receive' and neighbor.session.role_add_meta)
         if negotiated is not Negotiated.UNSET:
@@ -537,12 +536,12 @@ class JSON:
 
     def refresh(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        refresh: 'RouteRefresh',
+        refresh: RouteRefresh,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         kv_content = self._kv(
             {
@@ -568,7 +567,7 @@ class JSON:
         )
 
     def _operational_query(
-        self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
+        self, neighbor: Neighbor, direction: str, operational: OperationalFamily, header: bytes, body: bytes
     ) -> str:
         kv_content = self._kv(
             {
@@ -594,7 +593,7 @@ class JSON:
         )
 
     def _operational_advisory(
-        self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
+        self, neighbor: Neighbor, direction: str, operational: OperationalFamily, header: bytes, body: bytes
     ) -> str:
         # the advisory is free text the peer chose, and it is not promised to be UTF-8:
         # decoding without an error handler put a UnicodeDecodeError in the API writer
@@ -624,7 +623,7 @@ class JSON:
         )
 
     def _operational_counter(
-        self, neighbor: 'Neighbor', direction: str, operational: Any, header: bytes, body: bytes
+        self, neighbor: Neighbor, direction: str, operational: Any, header: bytes, body: bytes
     ) -> str:
         kv_content = self._kv(
             {
@@ -654,13 +653,13 @@ class JSON:
 
     def operational(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
         what: str,
-        operational: 'Operational',
+        operational: Operational,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         if what == 'advisory':
             return self._operational_advisory(neighbor, direction, cast('OperationalFamily', operational), header, body)
@@ -675,7 +674,7 @@ class JSON:
         return self._operational_unknown(neighbor, direction, operational, header, body)
 
     def _operational_unknown(
-        self, neighbor: 'Neighbor', direction: str, operational: Any, header: bytes, body: bytes
+        self, neighbor: Neighbor, direction: str, operational: Any, header: bytes, body: bytes
     ) -> str:
         kv_content = self._kv(
             {

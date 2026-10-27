@@ -35,7 +35,7 @@ class Srv6SIDInformation:
         self._packed = packed
 
     @classmethod
-    def unpack_srv6sid(cls, data: Buffer) -> 'Srv6SIDInformation':
+    def unpack_srv6sid(cls, data: Buffer) -> Srv6SIDInformation:
         if len(data) != IPv6.BYTES:
             raise Notify(3, 10, f'BGP-LS SRv6 SID information sub-tlv is {len(data)} bytes, expected {IPv6.BYTES}')
         sid = IPv6.ntop(data)

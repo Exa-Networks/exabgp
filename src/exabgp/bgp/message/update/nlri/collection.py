@@ -12,7 +12,8 @@ from __future__ import annotations
 
 from struct import pack
 from collections.abc import Mapping
-from typing import cast, ClassVar, Generator, TYPE_CHECKING
+from typing import cast, ClassVar, TYPE_CHECKING
+from collections.abc import Generator
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -74,7 +75,7 @@ class NLRICollection:
         self._nlris_cache: list[NLRI] = _UNPARSED
 
     @classmethod
-    def make_collection(cls, afi: AFI, safi: SAFI, nlris: list[NLRI], action: Action) -> 'NLRICollection':
+    def make_collection(cls, afi: AFI, safi: SAFI, nlris: list[NLRI], action: Action) -> NLRICollection:
         """Create NLRICollection from semantic data (NLRI list).
 
         Args:
@@ -181,7 +182,7 @@ class MPNLRICollection:
     def __init__(
         self,
         nlris: list[NLRI],
-        attributes: 'Mapping[int, Attribute]',
+        attributes: Mapping[int, Attribute],
         afi: AFI,
         safi: SAFI,
     ) -> None:
@@ -194,7 +195,7 @@ class MPNLRICollection:
             safi: Subsequent Address Family Identifier
         """
         self._nlris = nlris
-        self._routed_nlris: 'list[RoutedNLRI]' = []  # Empty for bare NLRI mode
+        self._routed_nlris: list[RoutedNLRI] = []  # Empty for bare NLRI mode
         self._attributes = attributes
         self._afi = afi
         self._safi = safi
@@ -202,11 +203,11 @@ class MPNLRICollection:
     @classmethod
     def from_routed(
         cls,
-        routed_nlris: 'list[RoutedNLRI]',
-        attributes: 'Mapping[int, Attribute]',
+        routed_nlris: list[RoutedNLRI],
+        attributes: Mapping[int, Attribute],
         afi: AFI,
         safi: SAFI,
-    ) -> 'MPNLRICollection':
+    ) -> MPNLRICollection:
         """Create MPNLRICollection from RoutedNLRIs (for reach/announces).
 
         Args:
@@ -227,12 +228,12 @@ class MPNLRICollection:
     @classmethod
     def from_wire(
         cls,
-        mprnlri: 'MPRNLRI | None',
-        mpurnlri: 'MPURNLRI | None',
-        attributes: 'Mapping[int, Attribute]',
+        mprnlri: MPRNLRI | None,
+        mpurnlri: MPURNLRI | None,
+        attributes: Mapping[int, Attribute],
         afi: AFI,
         safi: SAFI,
-    ) -> 'MPNLRICollection':
+    ) -> MPNLRICollection:
         """Create from wire containers (reach and/or unreach).
 
         Args:
@@ -259,7 +260,7 @@ class MPNLRICollection:
         return self._nlris
 
     @property
-    def attributes(self) -> 'Mapping[int, Attribute]':
+    def attributes(self) -> Mapping[int, Attribute]:
         """Get attributes dict indexed by Attribute.CODE."""
         return self._attributes
 
@@ -310,7 +311,7 @@ class MPNLRICollection:
         self,
         nlri_nexthop: IP,
         family_key: tuple[AFI, SAFI],
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> bytes:
         """Encode nexthop bytes for MP_REACH_NLRI.
 
@@ -365,7 +366,7 @@ class MPNLRICollection:
         return nh_rd + next_hop
 
     @staticmethod
-    def _lacks_extended_next_hop(nlri_nexthop: IP, family_key: tuple[AFI, SAFI], negotiated: 'Negotiated') -> bool:
+    def _lacks_extended_next_hop(nlri_nexthop: IP, family_key: tuple[AFI, SAFI], negotiated: Negotiated) -> bool:
         """An IPv4 route with an IPv6 next hop the peer did not agree to receive for this family.
 
         RFC 8950 4: "A BGP speaker MUST only advertise the IPv4 or VPN-IPv4 NLRI with an IPv6
@@ -380,7 +381,7 @@ class MPNLRICollection:
         return (afi, safi, AFI.ipv6) not in negotiated.nexthop
 
     @classmethod
-    def _next_hop_refused(cls, nlri_nexthop: IP, family_key: tuple[AFI, SAFI], negotiated: 'Negotiated') -> str:
+    def _next_hop_refused(cls, nlri_nexthop: IP, family_key: tuple[AFI, SAFI], negotiated: Negotiated) -> str:
         """Why this session can not carry this next hop, '' when it can.
 
         Such a route is not sent. draft-ietf-idr-linklocal-capability 4: with "no IPv6 next
@@ -407,7 +408,7 @@ class MPNLRICollection:
         return 'the peer did not negotiate the link-local next hop capability (draft-ietf-idr-linklocal-capability 2)'
 
     @staticmethod
-    def _ipv6_next_hop(nlri_nexthop: IP, packed: Buffer, negotiated: 'Negotiated') -> bytes:
+    def _ipv6_next_hop(nlri_nexthop: IP, packed: Buffer, negotiated: Negotiated) -> bytes:
         """The IPv6 next hop, 16 octets or global then link-local, 32 (draft-ietf-idr-linklocal-capability)."""
         nh_packed = bytes(packed)
         if nlri_nexthop.is_link_local():
@@ -434,7 +435,7 @@ class MPNLRICollection:
         preamble: bytes,
         packed_nlris: list[bytes],
         maximum: int,
-    ) -> 'Generator[bytes, None, None]':
+    ) -> Generator[bytes, None, None]:
         """Fill MP attributes of at most `maximum` octets with as many of these NLRIs as fit.
 
         An NLRI which does not fit an attribute of its own is logged and left out.  No
@@ -516,9 +517,9 @@ class MPNLRICollection:
 
     def packed_reach_attributes(
         self,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
         maximum: int = 4096,
-    ) -> 'Generator[bytes, None, None]':
+    ) -> Generator[bytes, None, None]:
         """Generate MP_REACH_NLRI wire-format attributes.
 
         Groups NLRIs by nexthop, handles fragmentation.
@@ -570,9 +571,9 @@ class MPNLRICollection:
 
     def packed_unreach_attributes(
         self,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
         maximum: int = 4096,
-    ) -> 'Generator[bytes, None, None]':
+    ) -> Generator[bytes, None, None]:
         """Generate MP_UNREACH_NLRI wire-format attributes.
 
         Handles fragmentation only (no nexthop grouping).

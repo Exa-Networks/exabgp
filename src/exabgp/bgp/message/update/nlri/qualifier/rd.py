@@ -20,7 +20,7 @@ from exabgp.util.types import Buffer
 
 
 class RouteDistinguisher:
-    NORD: ClassVar['RouteDistinguisher']
+    NORD: ClassVar[RouteDistinguisher]
 
     # RFC 4364 - Route Distinguisher Type Field
     TYPE_AS2_ADMIN: ClassVar[int] = 0  # Type 0: 2-byte AS administrator + 4-byte assigned number
@@ -93,13 +93,13 @@ class RouteDistinguisher:
         return ' rd {}'.format(self._str())
 
     @classmethod
-    def unpack_routedistinguisher(cls, data: Buffer) -> 'RouteDistinguisher':
+    def unpack_routedistinguisher(cls, data: Buffer) -> RouteDistinguisher:
         if len(data) != cls.LENGTH:
             raise Notify(3, 10, f'Route Distinguisher requires exactly {cls.LENGTH} bytes, got {len(data)}')
         return cls(data)
 
     @classmethod
-    def make_from_elements(cls, prefix: str, suffix: int) -> 'RouteDistinguisher':
+    def make_from_elements(cls, prefix: str, suffix: int) -> RouteDistinguisher:
         """Create RouteDistinguisher from prefix:suffix notation."""
         try:
             if '.' in prefix:
@@ -120,7 +120,7 @@ class RouteDistinguisher:
         except ValueError:
             raise ValueError('invalid route-distinguisher {}:{}'.format(prefix, suffix)) from None
 
-    def __copy__(self) -> 'RouteDistinguisher':
+    def __copy__(self) -> RouteDistinguisher:
         """Preserve the NORD singleton across a copy.
 
         NORD is compared with `is` by callers, so a copy which is a different object
@@ -134,7 +134,7 @@ class RouteDistinguisher:
         # __new__ and __dict__: a mypyc class has neither. _packed is all it holds.
         return type(self)(self._packed)
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'RouteDistinguisher':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> RouteDistinguisher:
         """Preserve the NORD singleton across a deep copy.
 
         _packed is bytes and immutable, so there is nothing under it to copy.

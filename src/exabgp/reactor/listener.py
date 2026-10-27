@@ -10,7 +10,8 @@ from __future__ import annotations
 import uuid
 import copy
 import socket
-from typing import Any, ClassVar, Generator, Iterator, TYPE_CHECKING
+from typing import Any, ClassVar, TYPE_CHECKING
+from collections.abc import Generator, Iterator
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
@@ -249,12 +250,12 @@ class Listener:
     }
 
     # Singleton for stopped listener (initialized after class definition)
-    STOPPED: ClassVar['Listener']
+    STOPPED: ClassVar[Listener]
 
-    def __init__(self, reactor: 'Reactor', backlog: int = 200) -> None:
+    def __init__(self, reactor: Reactor, backlog: int = 200) -> None:
         self.serving: bool = False
 
-        self._reactor: 'Reactor' = reactor
+        self._reactor: Reactor = reactor
         self._backlog: int = backlog
         self._sockets: dict[socket.socket, tuple[str, int, str, str | None, str]] = {}
         self._accepted: dict[socket.socket, socket.socket] = {}

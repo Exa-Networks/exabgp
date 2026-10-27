@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack
-from typing import TYPE_CHECKING, Any, ClassVar, Type, TypeVar, final
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, final
 
 from exabgp.util.intvalue import IntValue
 from exabgp.util.types import Buffer
@@ -163,7 +163,7 @@ class Message:
     STANDARD_MAX: ClassVar[int] = 4096
     EXTENDED_MAX: ClassVar[int] = 65535
 
-    registered_message: ClassVar[dict[int, Type[Message]]] = {}
+    registered_message: ClassVar[dict[int, type[Message]]] = {}
 
     ID: ClassVar[MessageCode]
     TYPE: ClassVar[bytes]
@@ -258,14 +258,14 @@ class Message:
         raise NotImplementedError('unpack_message not implemented in subclass')
 
     @classmethod
-    def register(cls, klass: Type[_M]) -> Type[_M]:
+    def register(cls, klass: type[_M]) -> type[_M]:
         if klass.ID.value in cls.registered_message:
             raise RuntimeError('only one class can be registered per message')
         cls.registered_message[klass.ID.value] = klass
         return klass
 
     @classmethod
-    def klass(cls, what: MessageCode) -> Type[Message]:
+    def klass(cls, what: MessageCode) -> type[Message]:
         klass = cls.registered_message.get(what.value)
         if klass is not None:
             return klass

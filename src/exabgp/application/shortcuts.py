@@ -10,7 +10,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import contextlib
-from typing import Callable, ClassVar
+from typing import ClassVar
+from collections.abc import Callable
 
 from exabgp.protocol.ip import IPv4
 

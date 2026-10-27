@@ -46,7 +46,7 @@ class OriginatorID(Attribute):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'OriginatorID':
+    def from_packet(cls, data: Buffer) -> OriginatorID:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -63,7 +63,7 @@ class OriginatorID(Attribute):
         return cls(data)
 
     @classmethod
-    def from_string(cls, ip_string: str) -> 'OriginatorID':
+    def from_string(cls, ip_string: str) -> OriginatorID:
         """Create from IP address string.
 
         Args:

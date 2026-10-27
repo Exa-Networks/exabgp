@@ -34,7 +34,7 @@ class LinkIdentifier:
         self._packed = packed if packed is not None else pack('!LL', local_id, remote_id)
 
     @classmethod
-    def unpack_linkid(cls, data: Buffer) -> 'LinkIdentifier':
+    def unpack_linkid(cls, data: Buffer) -> LinkIdentifier:
         # RFC 5307 3.1: two 4 byte identifiers.  Reading them from a shorter payload
         # raised struct.error out of json(), long after the message was accepted.
         if len(data) < LINK_ID_SIZE:

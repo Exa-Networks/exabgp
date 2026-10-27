@@ -77,7 +77,7 @@ class ConfigurationSettings:
         processes: the process sections by name, ProcessSettings or the dict the reactor takes
     """
 
-    neighbors: list['NeighborSettings'] = field(default_factory=list)
+    neighbors: list[NeighborSettings] = field(default_factory=list)
     processes: dict[str, Any] = field(default_factory=dict)
 
     def validate(self) -> str:

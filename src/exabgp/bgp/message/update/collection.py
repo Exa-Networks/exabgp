@@ -10,7 +10,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from itertools import chain, islice
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Generator, cast
+from typing import TYPE_CHECKING, cast
+from collections.abc import Generator
 
 from exabgp.util.types import Buffer
 
@@ -50,7 +51,7 @@ MAX_LOGGED_NLRI = 16
 MAX_LOGGED_UPDATE_OCTETS = Message.STANDARD_MAX
 
 
-def validate_announce_nlri(nlri: 'NLRI', nexthop: IP) -> str | None:
+def validate_announce_nlri(nlri: NLRI, nexthop: IP) -> str | None:
     """Validate NLRI and nexthop for announcement.
 
     Returns error message if invalid, None if valid.
@@ -88,7 +89,7 @@ MULTICAST_IPV4_MASK_BITS = 4
 UNSPECIFIED_IPV4 = bytes(4)
 
 
-def _semantic_error(routed: 'RoutedNLRI') -> str | None:
+def _semantic_error(routed: RoutedNLRI) -> str | None:
     """What is semantically wrong with a route of the legacy NLRI field, or None."""
     nexthop = routed.nexthop
     if nexthop.afi == AFI.ipv4:
@@ -105,7 +106,7 @@ def _semantic_error(routed: 'RoutedNLRI') -> str | None:
     return None
 
 
-def _withdraw_reason(nlri: 'NLRI', attributes: AttributeCollection, negotiated: Negotiated) -> str | None:
+def _withdraw_reason(nlri: NLRI, attributes: AttributeCollection, negotiated: Negotiated) -> str | None:
     """Why an announced route makes its whole UPDATE treat-as-withdraw, or None."""
     # RFC 8277 2.1: more labels than the Count we announced, or than one label when the
     # Multiple Labels Capability did not go both ways
@@ -289,7 +290,7 @@ class UpdateCollection:
         self._attributes = marked
 
     @classmethod
-    def make_eor(cls, afi: AFI, safi: SAFI) -> 'UpdateCollection':
+    def make_eor(cls, afi: AFI, safi: SAFI) -> UpdateCollection:
         """The End-of-RIB marker of a family."""
         return cls([], [], AttributeCollection(), eor=(afi, safi))
 
@@ -792,7 +793,7 @@ class UpdateCollection:
                 include_withdraw,
             )
 
-    def pack_messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator['Update', None, None]:
+    def pack_messages(self, negotiated: Negotiated, include_withdraw: bool = True) -> Generator[Update, None, None]:
         """Pack this UpdateCollection into wire-format Update messages.
 
         One UpdateCollection can produce multiple Update messages due to BGP
@@ -1219,7 +1220,7 @@ class UpdateCollection:
         return [nlri for nlri in withdraws if nlri.index() not in announced]
 
     @classmethod
-    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> 'UpdateCollection':
+    def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> UpdateCollection:
         """Parse raw UPDATE payload bytes into UpdateCollection.
 
         An End-of-RIB (RFC 4724) is returned marked with its family, see make_eor.

@@ -50,7 +50,7 @@ def _extract_watchdog_name(command: str, service: str, action: str = '') -> str:
 
 
 def announce_watchdog(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback(name: str) -> None:
         for neighbor_name in reactor.configuration.neighbors.keys():
@@ -68,7 +68,7 @@ def announce_watchdog(
 
 
 def withdraw_watchdog(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback(name: str) -> None:
         for neighbor_name in reactor.configuration.neighbors.keys():

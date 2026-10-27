@@ -86,14 +86,14 @@ class Route:
         """
         return self._nexthop
 
-    def with_nexthop(self, nexthop: IP) -> 'Route':
+    def with_nexthop(self, nexthop: IP) -> Route:
         """Return a new Route with a different nexthop.
 
         Route is immutable, so this creates a new instance.
         """
         return Route(self.nlri, self.attributes, nexthop=nexthop)
 
-    def with_merged_attributes(self, extra_attrs: 'AttributeCollection') -> 'Route':
+    def with_merged_attributes(self, extra_attrs: AttributeCollection) -> Route:
         """Return a new Route with additional attributes merged in.
 
         Route is immutable, so this creates a new instance.

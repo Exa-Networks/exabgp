@@ -12,7 +12,8 @@ from __future__ import annotations
 import sys
 import copy
 import struct
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING
+from collections.abc import Callable
 
 from exabgp.environment import getenv
 from exabgp.util.types import Buffer
@@ -621,7 +622,7 @@ def check_update(neighbor: Neighbor, raw: bytes) -> bool:
     return True
 
 
-def _get_json_encoder(generic: bool = False) -> 'JSONEncoder':
+def _get_json_encoder(generic: bool = False) -> JSONEncoder:
     """Get the appropriate JSON encoder based on API version setting.
 
     Args:

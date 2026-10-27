@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from struct import pack
 from struct import unpack
-from typing import ClassVar, Iterable
+from typing import ClassVar
+from collections.abc import Iterable
 
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.bgp.message.open.capability.capability import Capability, CapabilityDict

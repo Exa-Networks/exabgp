@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import re
-from typing import Iterable, Iterator
+from collections.abc import Iterable, Iterator
 
 
 def extract_neighbors(command: str) -> tuple[list[list[str]], str]:

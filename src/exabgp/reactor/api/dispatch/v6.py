@@ -146,7 +146,7 @@ def _v6_needs_peers() -> set[Handler]:
 
 def dispatch_v6(
     command: str,
-    reactor: 'Reactor',
+    reactor: Reactor,
     service: str,
 ) -> tuple[Handler, list[str], str]:
     """Dispatch v6 format command.

@@ -43,7 +43,7 @@ def _named_address(words: list[str]) -> str:
     return named[0] if named else ''
 
 
-def _of_address(reactor: 'Reactor', peers: list[str], address: str) -> list[str]:
+def _of_address(reactor: Reactor, peers: list[str], address: str) -> list[str]:
     """The peers whose peer address is `address`, every one of them when it is ''.
 
     The address is compared with the address of each peer: looked for in the name of the
@@ -53,7 +53,7 @@ def _of_address(reactor: 'Reactor', peers: list[str], address: str) -> list[str]
 
 
 def _show_adjrib_callback(
-    reactor: 'Reactor',
+    reactor: Reactor,
     service: str,
     address: str,
     route_type: tuple[type[NLRI], ...],
@@ -123,7 +123,7 @@ def _show_adjrib_callback(
     return callback
 
 
-def show_adj_rib(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def show_adj_rib(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     # command contains direction and options (e.g., "in extensive" or "out")
     words = command.split()
     extensive = 'extensive' in words
@@ -154,9 +154,9 @@ def show_adj_rib(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
 
 
 def flush_adj_rib_out(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool
 ) -> bool:
-    async def callback(self: 'API', peer_list: list[str]) -> None:
+    async def callback(self: API, peer_list: list[str]) -> None:
         peer_names = ', '.join(peer_list) if peer_list else 'all peers'
         self.log_message(f'flushing adjb-rib out for {peer_names}')
         for peer_name in peer_list:
@@ -183,10 +183,8 @@ def flush_adj_rib_out(
         return False
 
 
-def clear_adj_rib(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
-) -> bool:
-    async def callback(self: 'API', peer_list: list[str], direction: str) -> None:
+def clear_adj_rib(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
+    async def callback(self: API, peer_list: list[str], direction: str) -> None:
         peer_names = ', '.join(peer_list) if peer_list else 'all peers'
         self.log_message(f'clearing adjb-rib-{direction} for {peer_names}')
         for peer_name in peer_list:

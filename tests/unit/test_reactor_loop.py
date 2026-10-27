@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 from unittest.mock import Mock, MagicMock
 
 
@@ -49,11 +49,11 @@ class MockReactor:
         # Rate limiting
         self.max_loop_time: float = 1.0
         self._sleep_time: float = 0.01
-        self._busyspin: Dict[int, int] = {}
-        self._ratelimit: Dict[str, Dict[int, int]] = {}
+        self._busyspin: dict[int, int] = {}
+        self._ratelimit: dict[str, dict[int, int]] = {}
 
         # Peers
-        self._peers: Dict[str, Any] = {}
+        self._peers: dict[str, Any] = {}
 
         # Signal mock
         self.signal = MagicMock()
@@ -75,7 +75,7 @@ class MockReactor:
         if rate <= 0:
             return False
         second: int = int(time.time())
-        ratelimit: Dict[int, int] = self._ratelimit.get(peer, {})
+        ratelimit: dict[int, int] = self._ratelimit.get(peer, {})
         if second not in ratelimit:
             self._ratelimit[peer] = {second: rate - 1}
             return False
@@ -84,17 +84,17 @@ class MockReactor:
             return False
         return True
 
-    def active_peers(self) -> Set[str]:
+    def active_peers(self) -> set[str]:
         """Return set of active peer names."""
         return {key for key in self._peers.keys() if self._peers[key].action != 'LATER'}
 
-    def established_peers(self) -> Set[str]:
+    def established_peers(self) -> set[str]:
         """Return set of established peer names."""
         from exabgp.bgp.fsm import FSM
 
         return {key for key in self._peers.keys() if self._peers[key].fsm.state == FSM.ESTABLISHED}
 
-    def peers(self, service: str = '') -> List[str]:
+    def peers(self, service: str = '') -> list[str]:
         """Return list of peer names, optionally filtered by service."""
         if not service:
             return list(self._peers.keys())
@@ -108,7 +108,7 @@ class MockReactor:
             and service in self._peers[key].neighbor.api.get('processes', [])
         ]
 
-    def neighbor(self, peer_name: str) -> Optional[Any]:
+    def neighbor(self, peer_name: str) -> Any | None:
         """Get neighbor configuration for a peer."""
         peer = self._peers.get(peer_name, None)
         if peer is None:
@@ -319,7 +319,7 @@ class TestActivePeers:
         """Test empty peers returns empty set."""
 
         # Define a simple version that doesn't need imports
-        def active_peers(peers: Dict[str, Any]) -> Set[str]:
+        def active_peers(peers: dict[str, Any]) -> set[str]:
             """Return set of peers where action != 'LATER'."""
             return {key for key in peers.keys() if peers[key].action != 'LATER'}
 
@@ -330,7 +330,7 @@ class TestActivePeers:
         """Test filters out peers with ACTION.LATER."""
 
         # Define a simple version that doesn't need imports
-        def active_peers(peers: Dict[str, Any]) -> Set[str]:
+        def active_peers(peers: dict[str, Any]) -> set[str]:
             """Return set of peers where action != 'LATER'."""
             return {key for key in peers.keys() if peers[key].action != 'LATER'}
 
@@ -354,7 +354,7 @@ class TestEstablishedPeers:
         """Test empty peers returns empty set."""
 
         # Define a simple version that doesn't need imports
-        def established_peers(peers: Dict[str, Any], established_state: str) -> Set[str]:
+        def established_peers(peers: dict[str, Any], established_state: str) -> set[str]:
             """Return set of peers in established state."""
             return {key for key in peers.keys() if peers[key].fsm.state == established_state}
 
@@ -365,7 +365,7 @@ class TestEstablishedPeers:
         """Test filters peers by FSM.ESTABLISHED state."""
 
         # Define a simple version that doesn't need imports
-        def established_peers(peers: Dict[str, Any], established_state: str) -> Set[str]:
+        def established_peers(peers: dict[str, Any], established_state: str) -> set[str]:
             """Return set of peers in established state."""
             return {key for key in peers.keys() if peers[key].fsm.state == established_state}
 

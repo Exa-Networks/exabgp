@@ -14,7 +14,8 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from enum import Enum
-from typing import Any, Iterator, Mapping
+from typing import Any
+from collections.abc import Iterator, Mapping
 
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax

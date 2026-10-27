@@ -14,7 +14,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections import deque
-from typing import Iterator
+from collections.abc import Iterator
 
 from exabgp.protocol.family import AFI
 
@@ -46,7 +46,7 @@ class Tokeniser:
         self.fname: str = ''
         self.consumed: int = 0
 
-    def replenish(self, content: list[str]) -> 'Tokeniser':
+    def replenish(self, content: list[str]) -> Tokeniser:
         self.next.clear()
         self.tokens = content
         self.generator = iter(content)

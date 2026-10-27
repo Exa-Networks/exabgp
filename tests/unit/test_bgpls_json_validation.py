@@ -15,7 +15,7 @@ Tests cover:
 
 import json
 import pytest
-from typing import Any, Dict
+from typing import Any
 
 # Base classes
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import (
@@ -65,7 +65,7 @@ from exabgp.bgp.message.update.attribute.bgpls.prefix.sourcerouterid import Sour
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixattributesflags import PrefixAttributesFlags
 
 
-def validate_json(json_str: str, class_name: str) -> Dict[str, Any]:
+def validate_json(json_str: str, class_name: str) -> dict[str, Any]:
     """Validate JSON string and return parsed dict.
 
     Args:

@@ -7,7 +7,8 @@ Each handler processes a specific BGP message type.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Generator
+from typing import TYPE_CHECKING
+from collections.abc import Generator
 
 if TYPE_CHECKING:
     from exabgp.bgp.message import Message

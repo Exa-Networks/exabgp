@@ -74,7 +74,7 @@ class TunnelEncap(Attribute):
 
     # ExaBGP's Attributes.pack() calls attribute.pack(negotiated), so we
     # provide a thin wrapper that reuses the pack_attribute implementation.
-    def pack(self, negotiated: 'Negotiated') -> Buffer:  # pragma: no cover - simple delegation
+    def pack(self, negotiated: Negotiated) -> Buffer:  # pragma: no cover - simple delegation
         return self.pack_attribute(negotiated)
 
     def pack_attribute(self, negotiated: Negotiated) -> Buffer:

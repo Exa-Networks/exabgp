@@ -16,7 +16,8 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 import asyncio
 import inspect
 from collections import deque
-from typing import Any, Deque, Iterator, Tuple
+from typing import Any
+from collections.abc import Iterator
 
 import pytest
 
@@ -130,7 +131,7 @@ class ASYNC:
     LIMIT = 50
 
     def __init__(self):
-        self._async: Deque[Tuple[str, Any]] = deque()
+        self._async: deque[tuple[str, Any]] = deque()
 
     def schedule(self, uid: str, command: str, callback: Any):
         """Schedule a callback"""

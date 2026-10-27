@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar, Type
+from typing import TYPE_CHECKING, ClassVar
 
 from exabgp.util.types import Buffer
 
@@ -132,7 +132,7 @@ class PMSI(Attribute):
     # Ingress Replication), gets the generic PMSI and is shown as hex.
     TUNNEL_SIZE: ClassVar[int | None] = None
 
-    _pmsi_known: ClassVar[dict[int, Type[PMSI]]] = dict()
+    _pmsi_known: ClassVar[dict[int, type[PMSI]]] = dict()
     _name: ClassVar[dict[int, str]] = {
         0: 'No tunnel',
         1: 'RSVP-TE P2MP LSP',
@@ -156,7 +156,7 @@ class PMSI(Attribute):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'PMSI':
+    def from_packet(cls, data: Buffer) -> PMSI:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -189,7 +189,7 @@ class PMSI(Attribute):
         return klass(data)
 
     @classmethod
-    def make_pmsi(cls, tunnel_type: int, flags: int, label: int, tunnel: bytes, raw_label: int | None = None) -> 'PMSI':
+    def make_pmsi(cls, tunnel_type: int, flags: int, label: int, tunnel: bytes, raw_label: int | None = None) -> PMSI:
         """Create PMSI from semantic values.
 
         Args:
@@ -283,7 +283,7 @@ class PMSI(Attribute):
         )
 
     @classmethod
-    def register_tunnel_type(cls, klass: Type[PMSI]) -> Type[PMSI]:
+    def register_tunnel_type(cls, klass: type[PMSI]) -> type[PMSI]:
         """Register a PMSI subclass by tunnel type.
 
         Note: Named differently from Attribute.register to avoid signature conflict.
@@ -310,7 +310,7 @@ class PMSINoTunnel(PMSI):
     TUNNEL_SIZE: ClassVar[int | None] = 0
 
     @classmethod
-    def make_no_tunnel(cls, flags: int = 0, label: int = 0, raw_label: int | None = None) -> 'PMSINoTunnel':
+    def make_no_tunnel(cls, flags: int = 0, label: int = 0, raw_label: int | None = None) -> PMSINoTunnel:
         """Create PMSINoTunnel from semantic values.
 
         Args:
@@ -345,7 +345,7 @@ class PMSIIngressReplication(PMSI):
     @classmethod
     def make_ingress_replication(
         cls, ip: str, flags: int = 0, label: int = 0, raw_label: int | None = None
-    ) -> 'PMSIIngressReplication':
+    ) -> PMSIIngressReplication:
         """Create PMSIIngressReplication from semantic values.
 
         Args:

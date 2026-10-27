@@ -89,7 +89,7 @@ class option:
         return cls.option.get(source, True) and cls.logit.get(level, False)
 
     @classmethod
-    def load(cls, env: 'Environment') -> None:
+    def load(cls, env: Environment) -> None:
         cls.pid = os.getpid()
         cls.cwd = os.getcwd()
 
@@ -136,7 +136,7 @@ class option:
             cls.destination = 'stdout'
 
     @classmethod
-    def setup(cls, env: 'Environment') -> None:
+    def setup(cls, env: Environment) -> None:
         cls.load(env)
 
         # the time is used as we will need to re-init the logger once
@@ -206,7 +206,7 @@ class option:
         cls.formater = fmt if fmt else echo
 
     @classmethod
-    def _setup_remote_syslog(cls, env: 'Environment', now: str) -> None:
+    def _setup_remote_syslog(cls, env: Environment, now: str) -> None:
         """host:<addr>[:<port>] logs to a remote syslog server over UDP, not to a local file."""
         try:
             address = remote_syslog_address(cls.destination[len('host:') :])

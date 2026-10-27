@@ -269,7 +269,7 @@ class IPVPNBase(Label):
         return instance
 
     @classmethod
-    def from_settings(cls, settings: 'INETSettings') -> Self:
+    def from_settings(cls, settings: INETSettings) -> Self:
         """Create IPVPN NLRI from validated settings.
 
         This factory method validates settings and creates an immutable IPVPN

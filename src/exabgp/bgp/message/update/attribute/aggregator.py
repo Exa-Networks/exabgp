@@ -54,7 +54,7 @@ class Aggregator(Attribute):
         self._asn4: bool = asn4
 
     @classmethod
-    def from_packet(cls, data: Buffer, asn4: bool) -> 'Aggregator':
+    def from_packet(cls, data: Buffer, asn4: bool) -> Aggregator:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -73,7 +73,7 @@ class Aggregator(Attribute):
         return cls(data, asn4)
 
     @classmethod
-    def make_aggregator(cls, asn: ASN, speaker: IPv4) -> 'Aggregator':
+    def make_aggregator(cls, asn: ASN, speaker: IPv4) -> Aggregator:
         """Create from ASN and speaker address.
 
         Always stores in 4-byte ASN format internally. Conversion to 2-byte
@@ -153,7 +153,7 @@ class Aggregator(Attribute):
             ).pack_attribute(negotiated)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'Aggregator':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Aggregator:
         return cls.from_packet(data, negotiated.asn4)
 
 
@@ -177,7 +177,7 @@ class Aggregator4(Aggregator):
         super().__init__(packed, asn4=True)
 
     @classmethod
-    def from_packet(cls, data: Buffer, asn4: bool = True) -> 'Aggregator4':
+    def from_packet(cls, data: Buffer, asn4: bool = True) -> Aggregator4:
         """Validate and create from wire-format bytes.
 
         AS4_AGGREGATOR always uses 4-byte ASNs.
@@ -187,7 +187,7 @@ class Aggregator4(Aggregator):
         return cls(data)
 
     @classmethod
-    def make_aggregator(cls, asn: ASN, speaker: IPv4) -> 'Aggregator4':
+    def make_aggregator(cls, asn: ASN, speaker: IPv4) -> Aggregator4:
         """Create from ASN and speaker address."""
         packed = asn.pack_asn4() + speaker.pack_ip()
         return cls(packed)
@@ -197,7 +197,7 @@ class Aggregator4(Aggregator):
         return self._attribute(self._packed)
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> 'Aggregator4':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Aggregator4:
         return cls.from_packet(data)
 
 

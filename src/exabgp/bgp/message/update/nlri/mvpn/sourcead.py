@@ -75,7 +75,7 @@ class SourceAD(MVPN):
         afi: AFI,
         source: IP,
         group: IP,
-    ) -> 'SourceAD':
+    ) -> SourceAD:
         """Factory method to create SourceAD from semantic parameters."""
         payload = (
             bytes(rd.pack_rd())
@@ -124,7 +124,7 @@ class SourceAD(MVPN):
         return hash((self.afi, self._packed))
 
     @classmethod
-    def unpack_mvpn(cls, packed: Buffer, afi: AFI) -> 'MVPN':
+    def unpack_mvpn(cls, packed: Buffer, afi: AFI) -> MVPN:
         """Unpack SourceAD from complete wire format bytes.
 
         Args:

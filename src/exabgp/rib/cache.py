@@ -8,7 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import TYPE_CHECKING, Iterator, Self, cast
+from typing import TYPE_CHECKING, Self, cast
+from collections.abc import Iterator
 
 from exabgp.logger import log, lazymsg
 from exabgp.protocol.family import FamilyTuple
@@ -56,7 +57,7 @@ class Cache:
     def cached_routes(
         self,
         families: list[FamilyTuple] | None = None,
-    ) -> Iterator['Route']:
+    ) -> Iterator[Route]:
         """Yield all cached routes (announces only).
 
         Cache only stores announced routes. Withdraws remove routes from cache.
@@ -71,7 +72,7 @@ class Cache:
             for route in list(self._seen.get(family, {}).values()):
                 yield route
 
-    def in_cache(self, route: 'Route') -> bool:
+    def in_cache(self, route: Route) -> bool:
         """Check if route is already in cache (for announce deduplication).
 
         Only used from add_to_rib() which handles announces.
@@ -112,12 +113,12 @@ class Cache:
         return True
 
     @staticmethod
-    def _make_index(nlri: 'NLRI') -> bytes:
+    def _make_index(nlri: NLRI) -> bytes:
         """Compute cache index for an NLRI (family prefix + nlri index)."""
         afi, safi = nlri.family().afi_safi()
         return b'%02x%02x' % (afi.value, safi.value) + nlri.index()
 
-    def update_cache(self, route: 'Route') -> None:
+    def update_cache(self, route: Route) -> None:
         """Add announced route to cache.
 
         Only used from _update_rib() which handles announces.
@@ -134,7 +135,7 @@ class Cache:
         self._seen.setdefault(family, {})[index] = route
 
     # remove a route from cache (for withdrawals)
-    def update_cache_withdraw(self, nlri: 'NLRI') -> None:
+    def update_cache_withdraw(self, nlri: NLRI) -> None:
         if not self.enabled or not self.cache:
             return
 

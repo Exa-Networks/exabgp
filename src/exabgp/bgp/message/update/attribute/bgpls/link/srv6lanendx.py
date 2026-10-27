@@ -10,7 +10,8 @@ import json
 from struct import pack, unpack
 from exabgp.protocol.iso import ISO
 
-from typing import Callable, ClassVar, Protocol, Self
+from typing import ClassVar, Protocol, Self
+from collections.abc import Callable
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS

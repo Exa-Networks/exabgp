@@ -11,7 +11,8 @@ from __future__ import annotations
 from exabgp.util.intvalue import IntValue
 
 from struct import pack, unpack
-from typing import ClassVar, Generator, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
+from collections.abc import Generator
 
 from exabgp.util.types import Buffer
 
@@ -63,7 +64,7 @@ class RouteRefresh(Message):
         self._packed = packed
 
     @classmethod
-    def make_route_refresh(cls, afi: AFI | int, safi: SAFI | int, reserved: int = 0) -> 'RouteRefresh':
+    def make_route_refresh(cls, afi: AFI | int, safi: SAFI | int, reserved: int = 0) -> RouteRefresh:
         packed = pack('!HBB', int(afi), reserved, int(safi))
         return cls(packed)
 

@@ -108,7 +108,7 @@ def _parse_neighbor_params(line: str) -> tuple[dict[str, Any], list[str]]:
     """
 
     # Helper to parse key-value parameter
-    from typing import Callable
+    from collections.abc import Callable
 
     def parse_param(
         key: str, tokens: list[str], i: int, seen: set[str], parser: Callable[[str], Any]
@@ -268,9 +268,7 @@ def _build_neighbor(params: dict[str, Any], api_processes: list[str] | None = No
     return neighbor
 
 
-def neighbor_create(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
-) -> bool:
+def neighbor_create(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Create a new BGP neighbor dynamically at runtime.
 
     API format: peer create <ip> local-address <ip> local-as <asn> peer-as <asn> [router-id <ip>] [family-allowed <families>] [graceful-restart <seconds>] [group-updates true|false] [api <process>]...
@@ -345,7 +343,7 @@ def neighbor_create(
         return False
 
 
-def peer_delete(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def peer_delete(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Delete BGP peer(s) dynamically at runtime (v6 command).
 
     v6 format: peer delete <selector>

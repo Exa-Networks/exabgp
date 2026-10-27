@@ -17,7 +17,8 @@ import readline
 import sys
 import time
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from exabgp.application.shortcuts import CommandShortcuts
 from exabgp.cli.colors import Colors

@@ -28,7 +28,7 @@ class NeighAddr:
         self._packed = packed
 
     @classmethod
-    def unpack_neighaddr(cls, data: Buffer) -> 'NeighAddr':
+    def unpack_neighaddr(cls, data: Buffer) -> NeighAddr:
         if len(data) not in (IPv4.BYTES, IPv6.BYTES):
             raise Notify(
                 3,

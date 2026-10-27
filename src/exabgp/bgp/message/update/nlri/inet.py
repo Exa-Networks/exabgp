@@ -286,7 +286,7 @@ class INETBase(NLRI):
         mask: int,
         action: Action = Action.UNSET,
         path_info: PathInfo = PathInfo.DISABLED,
-        nexthop: 'IP | None' = None,
+        nexthop: IP | None = None,
     ) -> Self:
         """Factory method to create an INET route.
 
@@ -308,7 +308,7 @@ class INETBase(NLRI):
         return instance
 
     @classmethod
-    def from_settings(cls, settings: 'INETSettings') -> Self:
+    def from_settings(cls, settings: INETSettings) -> Self:
         """Create INET NLRI from validated settings.
 
         This factory method validates settings and creates an immutable INET
@@ -394,7 +394,7 @@ class INETBase(NLRI):
         # Nexthop validation handled by Route.feedback()
         return ''
 
-    def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         """Pack NLRI for wire transmission.
 
         Handles AddPath based on negotiated capability vs stored format:

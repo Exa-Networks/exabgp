@@ -27,9 +27,7 @@ def register_neighbor() -> None:
     pass
 
 
-def list_neighbor(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
-) -> bool:
+def list_neighbor(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """List all configured neighbors - JSON only, no filtering."""
 
     async def callback() -> None:
@@ -109,7 +107,7 @@ def teardown_notification(arguments: str) -> Notify:
     return Notify(code, subcode, ' '.join(tokens))
 
 
-def teardown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def teardown(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     try:
         notify = teardown_notification(command)
     except ValueError as exc:
@@ -123,7 +121,7 @@ def teardown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], co
     return True
 
 
-def disable(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def disable(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """`disable [<text>]`: close the session with Administrative Shutdown and keep it closed.
 
     The text is the RFC 9003 Shutdown Communication.  Unlike teardown, a peer which is not
@@ -141,7 +139,7 @@ def disable(self: 'API', reactor: 'Reactor', service: str, peers: list[str], com
     return True
 
 
-def enable(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def enable(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """`enable`: let a disabled peer connect again, straight away."""
     if command.strip():
         reactor.processes.answer_error_sync(service, f'enable takes no argument, got {command.strip()!r}')
@@ -171,7 +169,7 @@ def _selected(peers: list[str], address: str, name: str, peer_address: str) -> b
     return not address or peer_address == address
 
 
-async def _show_configuration(reactor: 'Reactor', service: str, peers: list[str], address: str) -> None:
+async def _show_configuration(reactor: Reactor, service: str, peers: list[str], address: str) -> None:
     try:
         for name, neighbor in list(reactor.configuration.neighbors.items()):
             if not _selected(peers, address, name, str(neighbor.session.peer_address)):
@@ -185,7 +183,7 @@ async def _show_configuration(reactor: 'Reactor', service: str, peers: list[str]
         await reactor.processes.answer_done(service)
 
 
-def _neighbor_json(reactor: 'Reactor', name: str, neighbor: 'Neighbor') -> dict[str, Any]:
+def _neighbor_json(reactor: Reactor, name: str, neighbor: Neighbor) -> dict[str, Any]:
     """What the JSON of `show` says of a neighbor: the runtime data of its peer, if it has one."""
     if name in reactor.peers():
         return NeighborTemplate.as_dict(reactor.neighbor_cli_data(name))
@@ -198,7 +196,7 @@ def _neighbor_json(reactor: 'Reactor', name: str, neighbor: 'Neighbor') -> dict[
     }
 
 
-async def _show_json(reactor: 'Reactor', service: str, peers: list[str], address: str) -> None:
+async def _show_json(reactor: Reactor, service: str, peers: list[str], address: str) -> None:
     # every configured neighbor, connected or not, as tooling and completion want them
     shown = []
     try:
@@ -219,7 +217,7 @@ async def _show_json(reactor: 'Reactor', service: str, peers: list[str], address
     await reactor.processes.answer_done(service)
 
 
-def _show_extensive_down(reactor: 'Reactor', service: str, neighbor: 'Neighbor') -> None:
+def _show_extensive_down(reactor: Reactor, service: str, neighbor: Neighbor) -> None:
     """What `show extensive` says of a configured neighbor which has no peer."""
     session = neighbor.session
     peer_address = str(session.peer_address) if session.peer_address else 'not set'
@@ -238,7 +236,7 @@ def _show_extensive_down(reactor: 'Reactor', service: str, neighbor: 'Neighbor')
     reactor.processes.write(service, '')
 
 
-async def _show_extensive(reactor: 'Reactor', service: str, peers: list[str], address: str) -> None:
+async def _show_extensive(reactor: Reactor, service: str, peers: list[str], address: str) -> None:
     # every configured neighbor, connected or not, so one which never connects is seen
     try:
         for name, neighbor in list(reactor.configuration.neighbors.items()):
@@ -258,7 +256,7 @@ async def _show_extensive(reactor: 'Reactor', service: str, peers: list[str], ad
         await reactor.processes.answer_done(service)
 
 
-async def _show_summary(reactor: 'Reactor', service: str, peers: list[str], address: str) -> None:
+async def _show_summary(reactor: Reactor, service: str, peers: list[str], address: str) -> None:
     try:
         reactor.processes.write(service, NeighborTemplate.summary_header)
         for name in reactor.peers():
@@ -277,9 +275,7 @@ async def _show_summary(reactor: 'Reactor', service: str, peers: list[str], addr
         await reactor.processes.answer_done(service)
 
 
-def show_neighbor(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
-) -> bool:
+def show_neighbor(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """`peer [<selector>] show [summary|extensive|configuration]`, or `show neighbor [<ip>] ...`.
 
     An API 6 helper is answered in JSON whatever the mode; the text modes are for API 4.

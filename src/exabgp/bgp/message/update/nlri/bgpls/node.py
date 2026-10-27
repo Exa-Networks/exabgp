@@ -83,7 +83,7 @@ class NODE(BGPLS):
         node_ids: list[NodeDescriptor],
         route_d: RouteDistinguisher = RouteDistinguisher.NORD,
         addpath: PathInfo | None = None,
-    ) -> 'NODE':
+    ) -> NODE:
         """Factory method to create NODE from semantic parameters.
 
         Note: nexthop is stored in Route, not NLRI. Pass nexthop to Route constructor.

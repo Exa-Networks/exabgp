@@ -56,38 +56,38 @@ class Text:
 
         return total_string
 
-    def _counter(self, neighbor: 'Neighbor') -> None:
+    def _counter(self, neighbor: Neighbor) -> None:
         return None
 
-    def up(self, neighbor: 'Neighbor') -> str:
+    def up(self, neighbor: Neighbor) -> str:
         return f'neighbor {neighbor.session.peer_address} up\n'
 
-    def connected(self, neighbor: 'Neighbor') -> str:
+    def connected(self, neighbor: Neighbor) -> str:
         return f'neighbor {neighbor.session.peer_address} connected\n'
 
-    def down(self, neighbor: 'Neighbor', reason: str = '') -> str:
+    def down(self, neighbor: Neighbor, reason: str = '') -> str:
         return f'neighbor {neighbor.session.peer_address} down - {oneline(reason)}\n'
 
     def shutdown(self) -> str:
         return f'shutdown {os.getpid()} {os.getppid()}\n'
 
-    def negotiated(self, neighbor: 'Neighbor', negotiated: 'Negotiated') -> None:
+    def negotiated(self, neighbor: Neighbor, negotiated: Negotiated) -> None:
         return None
 
-    def fsm(self, neighbor: 'Neighbor', fsm: 'FSM') -> None:
+    def fsm(self, neighbor: Neighbor, fsm: FSM) -> None:
         return None
 
-    def signal(self, neighbor: 'Neighbor', signal: int) -> None:
+    def signal(self, neighbor: Neighbor, signal: int) -> None:
         return None
 
     def notification(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        message: 'Notification',
+        message: Notification,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         data_hex = hexstring(message.data)
         header_body = self._header_body(header, body)
@@ -95,30 +95,28 @@ class Text:
 
     def packets(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        category: 'MessageCode',
+        category: MessageCode,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         return (
             f'neighbor {neighbor.session.peer_address} {direction} {category.value}{self._header_body(header, body)}\n'
         )
 
-    def keepalive(
-        self, neighbor: 'Neighbor', direction: str, header: bytes, body: bytes, negotiated: 'Negotiated'
-    ) -> str:
+    def keepalive(self, neighbor: Neighbor, direction: str, header: bytes, body: bytes, negotiated: Negotiated) -> str:
         return f'neighbor {neighbor.session.peer_address} {direction} keepalive{self._header_body(header, body)}\n'
 
     def open(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        sent_open: 'Open',
+        sent_open: Open,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         # the capabilities hold the peer's hostname and software version, free text it chose
         capabilities_str = oneline(str(sent_open.capabilities).lower())
@@ -127,12 +125,12 @@ class Text:
 
     def update(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        update: 'UpdateCollection',
+        update: UpdateCollection,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         prefix = f'neighbor {neighbor.session.peer_address} {direction} update'
 
@@ -164,41 +162,41 @@ class Text:
 
     def refresh(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        refresh: 'RouteRefresh',
+        refresh: RouteRefresh,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         return f'neighbor {neighbor.session.peer_address} {direction} route-refresh afi {refresh.afi} safi {refresh.safi} {refresh.reserved}{self._header_body(header, body)}\n'
 
     def _operational_advisory(
-        self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
+        self, neighbor: Neighbor, direction: str, operational: OperationalFamily, header: bytes, body: bytes
     ) -> str:
         # free text the peer chose, and not promised to be UTF-8
         data = bytes(operational.data).decode('utf-8', 'replace')
         return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} afi {operational.afi} safi {operational.safi} advisory "{oneline(data)}"{self._header_body(header, body)}'
 
     def _operational_query(
-        self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
+        self, neighbor: Neighbor, direction: str, operational: OperationalFamily, header: bytes, body: bytes
     ) -> str:
         return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} afi {operational.afi} safi {operational.safi}{self._header_body(header, body)}'
 
     def _operational_counter(
-        self, neighbor: 'Neighbor', direction: str, operational: 'Any', header: bytes, body: bytes
+        self, neighbor: Neighbor, direction: str, operational: Any, header: bytes, body: bytes
     ) -> str:
         return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} afi {operational.afi} safi {operational.safi} router-id {operational.routerid} sequence {operational.sequence} counter {operational.counter}{self._header_body(header, body)}'
 
     def operational(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
         what: str,
-        operational: 'Operational',
+        operational: Operational,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         if what == 'advisory':
             return self._operational_advisory(neighbor, direction, cast('OperationalFamily', operational), header, body)

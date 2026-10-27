@@ -40,23 +40,23 @@ class Negotiated:
     FREE_SIZE: ClassVar[int] = ExtendedMessage.INITIAL_SIZE - 19 - 2 - 2
 
     # Sentinel instance for when Negotiated is required but not used
-    UNSET: ClassVar['Negotiated']
+    UNSET: ClassVar[Negotiated]
 
     @classmethod
-    def make_negotiated(cls, neighbor: 'Neighbor', direction: 'Direction') -> 'Negotiated':
+    def make_negotiated(cls, neighbor: Neighbor, direction: Direction) -> Negotiated:
         """Factory method to create Negotiated instances.
 
         Use this instead of calling __init__ directly.
         """
         return cls(neighbor, direction)
 
-    def __init__(self, neighbor: 'Neighbor | None', direction: 'Direction') -> None:
+    def __init__(self, neighbor: Neighbor | None, direction: Direction) -> None:
         # None for UNSET only, which is no session: see the neighbor property
-        self._neighbor: 'Neighbor | None' = neighbor
-        self.direction: 'Direction' = direction
+        self._neighbor: Neighbor | None = neighbor
+        self.direction: Direction = direction
 
-        self.sent_open: 'Open' | None = None  # Open message
-        self.received_open: 'Open' | None = None  # Open message
+        self.sent_open: Open | None = None  # Open message
+        self.received_open: Open | None = None  # Open message
 
         self.holdtime: HoldTime = HoldTime(0)
         self.local_as: ASN = ASN(0)
@@ -101,18 +101,18 @@ class Negotiated:
         self.mismatch: list[tuple[str, FamilyTuple]] = []
 
     @property
-    def neighbor(self) -> 'Neighbor':
+    def neighbor(self) -> Neighbor:
         if self._neighbor is None:
             # UNSET had no neighbor attribute at all, and asking for it raised the same way
             raise AttributeError('Negotiated.UNSET is not a session and has no neighbor')
         return self._neighbor
 
     @neighbor.setter
-    def neighbor(self, neighbor: 'Neighbor') -> None:
+    def neighbor(self, neighbor: Neighbor) -> None:
         self._neighbor = neighbor
 
     @classmethod
-    def _create_unset(cls) -> 'Negotiated':
+    def _create_unset(cls) -> Negotiated:
         """Create an uninitialized sentinel instance for use when Negotiated is not needed."""
         from exabgp.bgp.message.direction import Direction
 
@@ -427,10 +427,10 @@ class Negotiated:
         data = b''.join(sent.tlvs(code) for code in missing)
         return Notify(2, 7, f'the peer did not advertise the required capabilities: {names}', data=data)
 
-    def nexthopself(self, afi: AFI) -> 'IP':
+    def nexthopself(self, afi: AFI) -> IP:
         return self.neighbor.ip_self(afi)
 
-    def link_local_address(self) -> 'IP | None':
+    def link_local_address(self) -> IP | None:
         """Get the local link-local IPv6 address if available."""
         return self.neighbor.session.ip_link_local()
 
@@ -446,7 +446,7 @@ class Negotiated:
         """
         return self.neighbor.is_multihop()
 
-    def is_local_address(self, address: 'IP') -> bool:
+    def is_local_address(self, address: IP) -> bool:
         """The address is ours on this session: what next-hop self resolves to, or written out.
 
         RFC 2545 3 has the link-local address follow a global next hop only when we share
@@ -597,7 +597,7 @@ class Negotiated:
 
         return self.direction == Direction.IN
 
-    def outbound(self) -> 'Negotiated':
+    def outbound(self) -> Negotiated:
         """This session, to decode what we sent on it rather than what the peer sent us.
 
         An UPDATE we wrote is read with ADD-PATH as we send it, and without the checks a

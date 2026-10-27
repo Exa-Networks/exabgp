@@ -11,7 +11,8 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Callable, ClassVar, Generic, Iterator, TypeVar, cast, overload
+from typing import Any, ClassVar, Generic, TypeVar, cast, overload
+from collections.abc import Callable, Iterator
 import configparser as ConfigParser
 
 from exabgp.environment import base

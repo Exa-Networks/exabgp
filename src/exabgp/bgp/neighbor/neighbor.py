@@ -40,7 +40,7 @@ class Neighbor:
     _GLOBAL: ClassVar[dict[str, int]] = {'uid': 1}
 
     # Singleton empty neighbor (initialized after class definition)
-    EMPTY: ClassVar['Neighbor']
+    EMPTY: ClassVar[Neighbor]
 
     # Session (connection-related) configuration
     session: Session
@@ -73,8 +73,8 @@ class Neighbor:
     _addpath: list[FamilyTuple]
     prefix_limit: dict[FamilyTuple, int]
     rib: RIB
-    routes: list['Route']
-    previous: 'Neighbor' | None
+    routes: list[Route]
+    previous: Neighbor | None
     eor: deque[Family]
     asm: dict[FamilyTuple, Operational]
     messages: deque[Operational]
@@ -154,7 +154,7 @@ class Neighbor:
         self._GLOBAL['uid'] += 1
 
     @classmethod
-    def _create_empty(cls) -> 'Neighbor':
+    def _create_empty(cls) -> Neighbor:
         """Create the empty neighbor singleton. Called once at module load.
 
         Used for:
@@ -166,7 +166,7 @@ class Neighbor:
         return cls()
 
     @classmethod
-    def from_settings(cls, settings: 'NeighborSettings', rib: bool = True) -> 'Neighbor':
+    def from_settings(cls, settings: NeighborSettings, rib: bool = True) -> Neighbor:
         """Create Neighbor from validated settings.
 
         This factory method enables programmatic Neighbor creation without
@@ -428,7 +428,7 @@ class Neighbor:
         ttl = self.session.outgoing_ttl
         return ttl is not None and ttl > 1
 
-    def next_hop_is_the_peer(self, route: 'Route') -> str:
+    def next_hop_is_the_peer(self, route: Route) -> str:
         """Why the next-hop of this route may not go to this neighbor, '' when it may.
 
         RFC 4271 5.1.3: "A route originated by a BGP speaker SHALL NOT be advertised to a
@@ -456,7 +456,7 @@ class Neighbor:
                 return f'next-hop {nexthop} is an address of the peer {peer} (RFC 4271 5.1.3)'
         return ''
 
-    def as_path_not_ours(self, route: 'Route') -> str:
+    def as_path_not_ours(self, route: Route) -> str:
         """Why the AS_PATH of this route is not what RFC 4271 5.1.2 has us send, '' when it is.
 
         An originated route goes to an external peer with our AS first, in an AS_SEQUENCE.
@@ -498,7 +498,7 @@ class Neighbor:
             )
         return chosen
 
-    def resolve_self(self, route: 'Route') -> 'Route':
+    def resolve_self(self, route: Route) -> Route:
         otc = route.attributes.get(Attribute.CODE.OTC)
         if isinstance(otc, OTCSelf) and otc.role != RoleValue.NO_ROLE:
             if self.session.role == RoleValue.NO_ROLE:

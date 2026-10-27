@@ -24,7 +24,7 @@ def opt_raw_label(label: int | None, format: str = ' (%d)') -> str:
 class Labels:
     MAX: ClassVar = pow(2, 20) - 1
 
-    NOLABEL: ClassVar['Labels']
+    NOLABEL: ClassVar[Labels]
 
     def __init__(self, packed: Buffer) -> None:
         if len(packed) % 3 != 0:
@@ -32,7 +32,7 @@ class Labels:
         self._packed = packed
 
     @classmethod
-    def make_labels(cls, labels: list[int], bos: bool = True) -> 'Labels':
+    def make_labels(cls, labels: list[int], bos: bool = True) -> Labels:
         """Create Labels from list of label integers."""
         if not labels:
             return cls(b'')
@@ -139,7 +139,7 @@ class Labels:
         return '[ ]'
 
     @classmethod
-    def unpack_labels(cls, data: Buffer) -> 'Labels':
+    def unpack_labels(cls, data: Buffer) -> Labels:
         """Unpack labels from data, stopping at bottom-of-stack bit."""
         packed_parts = []
         while len(data) >= 3:
@@ -151,7 +151,7 @@ class Labels:
                 break
         return cls(b''.join(packed_parts))
 
-    def __copy__(self) -> 'Labels':
+    def __copy__(self) -> Labels:
         """Preserve the NOLABEL singleton across a copy.
 
         NOLABEL is compared with `is` by callers, so a copy which is a different object
@@ -165,7 +165,7 @@ class Labels:
         # __new__ and __dict__: a mypyc class has neither. _packed is all it holds.
         return type(self)(self._packed)
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'Labels':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> Labels:
         """Preserve the NOLABEL singleton across a deep copy.
 
         _packed is bytes and immutable, so there is nothing under it to copy.

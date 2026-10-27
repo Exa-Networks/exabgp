@@ -61,7 +61,7 @@ class SrGb:
         self._packed: Buffer = packed
 
     @classmethod
-    def make_srgb(cls, srgbs: list[tuple[int, int]]) -> 'SrGb':
+    def make_srgb(cls, srgbs: list[tuple[int, int]]) -> SrGb:
         """Factory method for semantic construction."""
         payload: bytes = pack('!H', 0)  # flags
         for b, r in srgbs:

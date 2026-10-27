@@ -13,7 +13,7 @@ from __future__ import annotations
 import time
 from contextlib import contextmanager
 from types import TracebackType
-from typing import Iterator
+from collections.abc import Iterator
 
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log

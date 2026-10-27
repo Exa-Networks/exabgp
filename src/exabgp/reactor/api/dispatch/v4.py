@@ -173,7 +173,7 @@ def translate_v4_to_v6(command: str) -> str | None:
 
 def dispatch_v4(
     command: str,
-    reactor: 'Reactor',
+    reactor: Reactor,
     service: str,
 ) -> tuple[Handler, list[str], str]:
     """Dispatch v4 format command.
@@ -228,7 +228,7 @@ def dispatch_v4(
 
 def _dispatch_neighbor_v4(
     command: str,
-    reactor: 'Reactor',
+    reactor: Reactor,
     service: str,
 ) -> tuple[Handler, list[str], str]:
     """Dispatch neighbor-prefixed v4 commands.

@@ -26,7 +26,7 @@ from collections import deque
 from exabgp.util.backlog import Backlog
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable
+from collections.abc import Callable
 
 from exabgp.reactor.network.error import error
 

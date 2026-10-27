@@ -145,7 +145,7 @@ class Type1SessionTransformedRoute(MUP):
         source_ip_len: int,
         source_ip: IP | bytes,
         afi: AFI,
-    ) -> 'Type1SessionTransformedRoute':
+    ) -> Type1SessionTransformedRoute:
         """Factory method to create T1ST from semantic parameters."""
         # draft-mpmz-bess-mup-safi-05 3.1.1 and 3.1.3: the configuration refuses anything else
         address_bits = 32 if afi == AFI.ipv4 else 128

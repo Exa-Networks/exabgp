@@ -8,7 +8,8 @@ from __future__ import annotations
 
 
 from struct import pack, unpack
-from typing import ClassVar, Sequence
+from typing import ClassVar
+from collections.abc import Sequence
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS

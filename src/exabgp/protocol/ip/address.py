@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import builtins
 import socket
-from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, cast
+from collections.abc import Iterator
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
@@ -41,7 +42,7 @@ class IPFactory(Protocol):
     IPv4 and IPv6 implement this via their __init__(packed) signature.
     """
 
-    def __call__(self, packed: Buffer) -> 'IP': ...
+    def __call__(self, packed: Buffer) -> IP: ...
 
 
 class IPBase:
@@ -181,7 +182,7 @@ class IP(IPBase):
     def pack_ip(self) -> Buffer:
         return self._packed
 
-    def resolve(self, ip: 'IP') -> 'IP':
+    def resolve(self, ip: IP) -> IP:
         """Resolve address. For concrete IPs, returns self (already resolved).
 
         IPSelf subclass overrides to return the resolved concrete IP.
@@ -274,10 +275,10 @@ class IP(IPBase):
 
     # An address is never changed once built (IPSelf.resolve() returns a new one), so a copy
     # is the address itself, and NoNextHop keeps its identity.
-    def __copy__(self) -> 'IP':
+    def __copy__(self) -> IP:
         return self
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'IP':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> IP:
         return self
 
     @classmethod
@@ -304,7 +305,7 @@ class IPRange(IP):
         raise NotImplementedError(f'{cls.__name__}.from_string() needs a mask, use make_range()')
 
     @classmethod
-    def make_range(cls, string: str, mask: int) -> 'IPRange':
+    def make_range(cls, string: str, mask: int) -> IPRange:
         """Build a range from an address string and a prefix length."""
         return cls(IP.pton(string), mask)
 

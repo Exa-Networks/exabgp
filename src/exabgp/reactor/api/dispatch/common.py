@@ -9,7 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Iterator, Union
+from typing import TYPE_CHECKING, Union
+from collections.abc import Callable, Iterator
 
 from exabgp.reactor.api.tokeniser import Tokeniser
 
@@ -162,7 +163,7 @@ def is_selector_start(token: str) -> bool:
     return '.' in token or ':' in token
 
 
-def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> Iterator[str]:
+def extract_selector(tokeniser: Tokeniser, reactor: Reactor, service: str) -> Iterator[str]:
     """Extract peer selector by consuming tokens from the tokeniser.
 
     This function owns its token consumption - it will consume exactly
@@ -211,7 +212,7 @@ def extract_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> 
     yield from match_neighbors(reactor.peers(service), [definition])
 
 
-def _parse_bracket_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: str) -> Iterator[str]:
+def _parse_bracket_selector(tokeniser: Tokeniser, reactor: Reactor, service: str) -> Iterator[str]:
     """Parse bracket selector syntax: [ip1 key value, ip2].
 
     Called after '[' has been consumed.
@@ -276,7 +277,7 @@ def _parse_bracket_selector(tokeniser: Tokeniser, reactor: 'Reactor', service: s
 def dispatch(
     tree: DispatchTree,
     tokeniser: Tokeniser,
-    reactor: 'Reactor',
+    reactor: Reactor,
     service: str,
 ) -> tuple[Handler, list[str]]:
     """Walk dispatch tree consuming tokens until a handler is found.

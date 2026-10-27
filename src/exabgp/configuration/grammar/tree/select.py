@@ -14,7 +14,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection, NextHop, NextHopSelf

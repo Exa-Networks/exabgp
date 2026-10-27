@@ -10,7 +10,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Iterator, Sequence
+from typing import TYPE_CHECKING, ClassVar
+from collections.abc import Iterator, Sequence
 
 from exabgp.util.types import Buffer
 
@@ -54,7 +55,7 @@ class Communities(Attribute):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'Communities':
+    def from_packet(cls, data: Buffer) -> Communities:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -71,7 +72,7 @@ class Communities(Attribute):
         return cls(data)
 
     @classmethod
-    def make_communities(cls, communities: Sequence[Community]) -> 'Communities':
+    def make_communities(cls, communities: Sequence[Community]) -> Communities:
         """Create from list of Community objects.
 
         Args:
@@ -85,7 +86,7 @@ class Communities(Attribute):
         packed = b''.join(c.pack_attribute(Negotiated.UNSET) for c in sorted_communities)
         return cls(packed)
 
-    def add(self, data: Community) -> 'Communities':
+    def add(self, data: Community) -> Communities:
         """Add a community and return self (builder pattern).
 
         Note: This unpacks, adds, sorts, and repacks. For building many communities,

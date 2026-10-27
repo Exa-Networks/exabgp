@@ -5,7 +5,8 @@ This handler processes UPDATE messages and stores NLRIs in the incoming RIB.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Generator, cast
+from typing import TYPE_CHECKING, cast
+from collections.abc import Generator
 
 from exabgp.bgp.message import Message, Update
 from exabgp.bgp.message.update.eor import EOR

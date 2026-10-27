@@ -26,7 +26,7 @@ class EthernetTag:
         self._packed = packed
 
     @classmethod
-    def make_etag(cls, tag: int) -> 'EthernetTag':
+    def make_etag(cls, tag: int) -> EthernetTag:
         """Create EthernetTag from integer value."""
         return cls(pack('!L', tag))
 
@@ -73,7 +73,7 @@ class EthernetTag:
         return hash(self._packed)
 
     @classmethod
-    def unpack_etag(cls, data: Buffer) -> 'EthernetTag':
+    def unpack_etag(cls, data: Buffer) -> EthernetTag:
         if len(data) != cls.LENGTH:
             raise Notify(3, 10, f'EthernetTag requires exactly {cls.LENGTH} bytes, got {len(data)}')
         return cls(data)

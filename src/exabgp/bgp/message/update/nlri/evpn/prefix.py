@@ -84,7 +84,7 @@ class Prefix(EVPN):
         gwip: IP,
         action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
-    ) -> 'Prefix':
+    ) -> Prefix:
         """Factory method to create Prefix from semantic parameters.
 
         Packs fields into wire format immediately (packed-bytes-first pattern).

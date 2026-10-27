@@ -7,7 +7,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Type, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from collections.abc import Callable
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -70,15 +71,15 @@ class PrefixSid(Attribute):
     VALID_ZERO: ClassVar[bool] = True
 
     # Registered subclasses we know how to decode
-    registered_srids: ClassVar[dict[int, Type[Any]]] = dict()
+    registered_srids: ClassVar[dict[int, type[Any]]] = dict()
 
     def __init__(self, sr_attrs: list[Any], packed: Buffer | None = None) -> None:
         self.sr_attrs: list[Any] = sr_attrs
         self._packed: Buffer = self._attribute(packed if packed else b''.join(_.pack_tlv() for _ in sr_attrs))
 
     @classmethod
-    def register_sr(cls, srid: int | None = None, flag: int | None = None) -> Callable[[Type[Any]], Type[Any]]:
-        def register_srid(klass: Type[Any]) -> Type[Any]:
+    def register_sr(cls, srid: int | None = None, flag: int | None = None) -> Callable[[type[Any]], type[Any]]:
+        def register_srid(klass: type[Any]) -> type[Any]:
             scode: int = klass.TLV if srid is None else srid
             if scode in cls.registered_srids:
                 raise RuntimeError('only one class can be registered per Segment Routing TLV type')
@@ -88,7 +89,7 @@ class PrefixSid(Attribute):
         return register_srid
 
     @classmethod
-    def unpack_attribute(cls: Type[T], data: Buffer, negotiated: Negotiated) -> T:
+    def unpack_attribute(cls: type[T], data: Buffer, negotiated: Negotiated) -> T:
         # RFC 8669 section 6: an attribute "not meeting the minimum attribute length
         # requirement" is malformed, and the attribute must be ignored.  The smallest
         # thing this attribute can carry is one three byte TLV header, and it must carry

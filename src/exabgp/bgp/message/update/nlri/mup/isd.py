@@ -60,7 +60,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
         prefix_ip_len: int,
         prefix_ip: IP,
         afi: AFI,
-    ) -> 'InterworkSegmentDiscoveryRoute':
+    ) -> InterworkSegmentDiscoveryRoute:
         """Factory method to create ISD from semantic parameters."""
         # draft-mpmz-bess-mup-safi-05 3.1.1 and 3.1.3: the configuration refuses anything else
         address_bits = 32 if afi == AFI.ipv4 else 128

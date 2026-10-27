@@ -7,7 +7,8 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Any, Callable, ClassVar, Protocol, Type, TypeVar
+from typing import Any, ClassVar, Protocol, TypeVar
+from collections.abc import Callable
 
 from exabgp.protocol.ip import IPv6
 
@@ -53,7 +54,7 @@ class Srv6SidInformation:
     TLV: ClassVar[int] = 1
 
     # Registry maps TLV codes to Sub-Sub-TLV classes (uses HasTLV protocol)
-    registered_subsubtlvs: ClassVar[dict[int, Type[HasTLV]]] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type[HasTLV]]] = dict()
 
     def __init__(
         self,
@@ -80,8 +81,8 @@ class Srv6SidInformation:
         self.packed: Buffer = self.pack_tlv()
 
     @classmethod
-    def register(cls) -> Callable[[Type[SubSubTlvType]], Type[SubSubTlvType]]:
-        def register_subsubtlv(klass: Type[SubSubTlvType]) -> Type[SubSubTlvType]:
+    def register(cls) -> Callable[[type[SubSubTlvType]], type[SubSubTlvType]]:
+        def register_subsubtlv(klass: type[SubSubTlvType]) -> type[SubSubTlvType]:
             code: int = klass.TLV
             if code in cls.registered_subsubtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Service Sub-Sub-TLV type')

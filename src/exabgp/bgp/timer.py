@@ -10,7 +10,8 @@ from __future__ import annotations
 import random
 import time
 
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING
+from collections.abc import Callable
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.holdtime import HoldTime
@@ -41,7 +42,7 @@ def jitter_factor() -> float:
 
 class ReceiveTimer:
     def __init__(
-        self, session: Callable[[], str], holdtime: 'HoldTime', code: int, subcode: int, message: str = ''
+        self, session: Callable[[], str], holdtime: HoldTime, code: int, subcode: int, message: str = ''
     ) -> None:
         self.session = session
 
@@ -77,7 +78,7 @@ class ReceiveTimer:
 
 class SendTimer:
     def __init__(
-        self, session: Callable[[], str], holdtime: 'HoldTime', jitter: Callable[[], float] = jitter_factor
+        self, session: Callable[[], str], holdtime: HoldTime, jitter: Callable[[], float] = jitter_factor
     ) -> None:
         self.session = session
         self._jitter = jitter

@@ -10,7 +10,8 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections import deque
-from typing import Any, Callable, ClassVar
+from typing import Any, ClassVar
+from collections.abc import Callable
 
 from exabgp.logger import log, lazyexc, lazymsg
 

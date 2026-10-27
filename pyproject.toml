@@ -117,10 +117,13 @@ exclude = ["dev", "lib/exabgp/vendoring", "build", "site-packages", "qa/old"]
 # F82: Undefined names in __all__
 # select = ["E9", "F63", "F7", "F82"]
 
-# The rules ruff selected by default up to 0.15. 0.17 widened its default set, which
-# turned on some 3300 findings (pyupgrade, isort, simplify, ...) across the tree: name
-# the set, so a new ruff does not change what the gate checks
-select = ["E4", "E7", "E9", "F"]
+# The rules are named, so a new ruff does not change what the gate checks. E4, E7, E9 and F
+# were ruff's default up to 0.15; the default of 0.17 is being taken on a family at a time
+select = [
+	"E4", "E7", "E9", "F",
+	# pyupgrade: annotations
+	"UP006", "UP035", "UP037", "UP045",
+]
 
 # Ignore specific rules:
 # ERA001: Commented-out code (intentional in this codebase)

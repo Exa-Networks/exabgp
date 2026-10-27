@@ -12,7 +12,7 @@ import select
 import platform
 
 from struct import pack, calcsize
-from typing import Iterator
+from collections.abc import Iterator
 
 from exabgp.logger import log
 from exabgp.logger import lazymsg

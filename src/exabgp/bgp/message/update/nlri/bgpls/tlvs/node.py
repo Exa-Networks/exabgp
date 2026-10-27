@@ -89,7 +89,7 @@ class NodeDescriptor:
         self._packed = packed
 
     @classmethod
-    def unpack_node(cls, data: Buffer, igp: int) -> tuple['NodeDescriptor', Buffer]:
+    def unpack_node(cls, data: Buffer, igp: int) -> tuple[NodeDescriptor, Buffer]:
         if len(data) < 4:
             raise Notify.short(3, 10, 'BGP-LS node descriptor header', 4, len(data))
         node_type, length = unpack('!HH', bytes(data[0:4]))
@@ -147,7 +147,7 @@ class NodeDescriptor:
         return GenericNodeDescriptor(node_type, payload, packed), remaining
 
     @classmethod
-    def _unpack_igp_router_id(cls, payload: Buffer, igp: int, packed: Buffer) -> 'NodeDescriptor | None':
+    def _unpack_igp_router_id(cls, payload: Buffer, igp: int, packed: Buffer) -> NodeDescriptor | None:
         """The IGP Router-ID, read as the Protocol-ID says, or None for a protocol we cannot read.
 
         RFC 9552 5.2.1.4: "The TLV size in combination with the protocol identifier enables
@@ -179,7 +179,7 @@ class NodeDescriptor:
         return None
 
     @classmethod
-    def unpack_descriptors(cls, data: Buffer, igp: int) -> list['NodeDescriptor']:
+    def unpack_descriptors(cls, data: Buffer, igp: int) -> list[NodeDescriptor]:
         """Read a whole Node Descriptor value, and hold it to the two rules of RFC 9552 5.2.1.
 
         "At most, there MUST be one instance of each sub-TLV type present in any Node
@@ -198,7 +198,7 @@ class NodeDescriptor:
         unknown sub-TLV."  Two NLRIs which differ only in the order of their sub-TLVs would
         otherwise be two RIB entries for one link-state object.
         """
-        descriptors: list['NodeDescriptor'] = []
+        descriptors: list[NodeDescriptor] = []
         previous: int | None = None
         while data:
             descriptor, remaining = cls.unpack_node(data, igp)

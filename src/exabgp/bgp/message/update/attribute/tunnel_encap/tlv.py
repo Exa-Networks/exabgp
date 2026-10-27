@@ -34,7 +34,7 @@ Sub-TLV (within tunnel type Value):
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Any, ClassVar, Type
+from typing import Any, ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.util import hexstring
@@ -50,14 +50,14 @@ class TunnelTypeTLV:
 
     TUNNEL_TYPE: ClassVar[int] = -1
 
-    registered_tunnel_types: ClassVar[dict[int, Type[TunnelTypeTLV]]] = {}
+    registered_tunnel_types: ClassVar[dict[int, type[TunnelTypeTLV]]] = {}
 
     def __init__(self, packed: Buffer) -> None:
         self._packed: bytes = bytes(packed)
 
     @classmethod
     def register(cls, tunnel_type: int | None = None) -> Any:
-        def decorator(klass: Type[TunnelTypeTLV]) -> Type[TunnelTypeTLV]:
+        def decorator(klass: type[TunnelTypeTLV]) -> type[TunnelTypeTLV]:
             ttype = tunnel_type if tunnel_type is not None else klass.TUNNEL_TYPE
             if ttype in cls.registered_tunnel_types:
                 raise RuntimeError(f'Tunnel type {ttype} already registered')
@@ -147,14 +147,14 @@ class SubTLV:
 
     SUBTYPE: ClassVar[int] = -1
 
-    registered_subtypes: ClassVar[dict[int, Type[SubTLV]]] = {}
+    registered_subtypes: ClassVar[dict[int, type[SubTLV]]] = {}
 
     def __init__(self, packed: Buffer) -> None:
         self._packed: bytes = bytes(packed)
 
     @classmethod
     def register(cls, subtype: int | None = None) -> Any:
-        def decorator(klass: Type[SubTLV]) -> Type[SubTLV]:
+        def decorator(klass: type[SubTLV]) -> type[SubTLV]:
             stype = subtype if subtype is not None else klass.SUBTYPE
             if stype in cls.registered_subtypes:
                 raise RuntimeError(f'SubTLV subtype {stype} already registered')

@@ -31,12 +31,12 @@ class ESI:
         self._packed = packed
 
     @classmethod
-    def make_esi(cls, esi_bytes: Buffer) -> 'ESI':
+    def make_esi(cls, esi_bytes: Buffer) -> ESI:
         """Create ESI from bytes."""
         return cls(esi_bytes)
 
     @classmethod
-    def make_default(cls) -> 'ESI':
+    def make_default(cls) -> ESI:
         """Create ESI with default value (all zeros)."""
         return cls(cls.DEFAULT)
 
@@ -84,7 +84,7 @@ class ESI:
         return hash(self._packed)
 
     @classmethod
-    def unpack_esi(cls, data: Buffer) -> 'ESI':
+    def unpack_esi(cls, data: Buffer) -> ESI:
         if len(data) != cls.LENGTH:
             raise Notify(3, 10, f'ESI requires exactly {cls.LENGTH} bytes, got {len(data)}')
         return cls(data)

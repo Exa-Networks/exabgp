@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import Iterator
+from collections.abc import Iterator
 
 from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.read import _command_sections

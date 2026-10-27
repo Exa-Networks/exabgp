@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 import time
 import traceback
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Callable
 
 if TYPE_CHECKING:
     from exabgp.protocol.family import AFI, SAFI
@@ -92,7 +93,7 @@ def lazyattribute(flag: int, aid: int, length: int, data: Buffer) -> Callable[[]
     return _lazy
 
 
-def lazynlri(afi: 'AFI', safi: 'SAFI', addpath: bool, data: Buffer) -> Callable[[], str]:
+def lazynlri(afi: AFI, safi: SAFI, addpath: bool, data: Buffer) -> Callable[[], str]:
     def _lazy() -> str:
         family = '{} {}'.format(afi, safi)
         path = 'with path-information' if addpath else 'without path-information'

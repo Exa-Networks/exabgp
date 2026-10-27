@@ -42,11 +42,10 @@ from struct import pack
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     ClassVar,
     Protocol as TypingProtocol,
-    Type,
 )
+from collections.abc import Callable
 
 from exabgp.util.mypyc import trait
 from exabgp.util.types import Buffer
@@ -128,7 +127,7 @@ class IComponent:
         raise NotImplementedError(f'{self.__class__.__name__} must implement pack()')
 
     @classmethod
-    def make(cls, bgp: Buffer) -> tuple['IComponent', Buffer]:
+    def make(cls, bgp: Buffer) -> tuple[IComponent, Buffer]:
         """Unpack component from wire format. Must be overridden by subclasses."""
         raise NotImplementedError(f'{cls.__name__} must implement make()')
 
@@ -636,7 +635,7 @@ class BinaryString:
 # Components ..............................
 
 
-def converter(function: Callable[[str], int | BaseValue], klass: Type[BaseValue]) -> Callable[[str], BaseValue]:
+def converter(function: Callable[[str], int | BaseValue], klass: type[BaseValue]) -> Callable[[str], BaseValue]:
     def _integer(value: str) -> BaseValue:
         return klass(int(function(value)))
 
@@ -644,7 +643,7 @@ def converter(function: Callable[[str], int | BaseValue], klass: Type[BaseValue]
 
 
 def bounded(
-    function: Callable[[str], int | BaseValue], klass: Type[BaseValue], maximum: int
+    function: Callable[[str], int | BaseValue], klass: type[BaseValue], maximum: int
 ) -> Callable[[str], BaseValue]:
     """converter, refusing a value the component's field cannot hold.
 
@@ -662,7 +661,7 @@ def bounded(
 
 
 def decoder(
-    function: Callable[[bytes], int | BaseValue], klass: Type[BaseValue] = NumericValue
+    function: Callable[[bytes], int | BaseValue], klass: type[BaseValue] = NumericValue
 ) -> Callable[[bytes], BaseValue]:
     def _inner(value: bytes) -> BaseValue:
         # klass is always a BaseValue subclass, return type is guaranteed
@@ -1009,11 +1008,11 @@ FLOW_LENGTH_COMPACT_MAX: int = 0xF0  # Maximum length for compact encoding (240)
 FLOW_LENGTH_EXTENDED_MAX: int = 0x0FFF  # Maximum length for extended encoding (4095)
 
 decode: dict[AFI, dict[int, str]] = {AFI.ipv4: {}, AFI.ipv6: {}}
-factory: dict[AFI, dict[int, Type[IComponent]]] = {AFI.ipv4: {}, AFI.ipv6: {}}
+factory: dict[AFI, dict[int, type[IComponent]]] = {AFI.ipv4: {}, AFI.ipv6: {}}
 
 # Named rather than found with dir() and globals(): a compiled module (plan/wip-mypyc.md)
 # has neither, and the walk registered nothing, so every component was refused.
-COMPONENTS: tuple[Type[IComponent], ...] = (
+COMPONENTS: tuple[type[IComponent], ...] = (
     Flow4Destination,
     Flow4Source,
     Flow6Destination,
@@ -1099,7 +1098,7 @@ class Flow(NLRI):
         cls,
         afi: AFI = AFI.ipv4,
         safi: SAFI = SAFI.flow_ip,
-    ) -> 'Flow':
+    ) -> Flow:
         """Factory method to create an empty Flow NLRI for building rules.
 
         This is the preferred way to create a Flow for configuration.
@@ -1119,7 +1118,7 @@ class Flow(NLRI):
         return instance
 
     @classmethod
-    def from_settings(cls, settings: 'FlowSettings') -> 'Flow':
+    def from_settings(cls, settings: FlowSettings) -> Flow:
         """Create Flow NLRI from validated settings.
 
         This factory method validates settings and creates an immutable Flow
@@ -1491,7 +1490,7 @@ class Flow(NLRI):
     def _fresh(self) -> Self:
         return type(self)(self._packed, self.afi, self.safi)
 
-    def __copy__(self) -> 'Flow':
+    def __copy__(self) -> Flow:
         new = self._fresh()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
@@ -1501,7 +1500,7 @@ class Flow(NLRI):
         new._rd_override = self._rd_override
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'Flow':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> Flow:
         from copy import deepcopy
 
         new = self._fresh()

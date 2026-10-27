@@ -57,7 +57,7 @@ class SourceJoin(MVPN):
         source: IP,
         group: IP,
         source_as: int,
-    ) -> 'SourceJoin':
+    ) -> SourceJoin:
         """Factory method to create SourceJoin from semantic parameters."""
         payload = (
             bytes(rd.pack_rd())
@@ -113,7 +113,7 @@ class SourceJoin(MVPN):
         return hash((self.afi, self._packed))
 
     @classmethod
-    def unpack_mvpn(cls, packed: Buffer, afi: AFI) -> 'MVPN':
+    def unpack_mvpn(cls, packed: Buffer, afi: AFI) -> MVPN:
         """Unpack SourceJoin from complete wire format bytes.
 
         Args:

@@ -17,7 +17,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar, Iterator, Sequence
+from typing import TYPE_CHECKING, Any, ClassVar
+from collections.abc import Iterator, Sequence
 
 from exabgp.util.types import Buffer
 
@@ -67,16 +68,16 @@ class ExtendedCommunitiesBase(Attribute, ABC):
         ...
 
     @abstractmethod
-    def add(self, data: Any) -> 'ExtendedCommunitiesBase':
+    def add(self, data: Any) -> ExtendedCommunitiesBase:
         """Add a community and return self (builder pattern)."""
         ...
 
     @abstractmethod
-    def _with_communities(self, communities: Sequence[Any]) -> 'ExtendedCommunitiesBase':
+    def _with_communities(self, communities: Sequence[Any]) -> ExtendedCommunitiesBase:
         """A new attribute of the same code, holding these communities."""
         ...
 
-    def transitive_only(self) -> 'ExtendedCommunitiesBase | None':
+    def transitive_only(self) -> ExtendedCommunitiesBase | None:
         """These communities without the ones whose T bit is set, None when nothing is left.
 
         RFC 4360 6: a non-transitive community is removed before the route crosses into
@@ -121,7 +122,7 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'ExtendedCommunities':
+    def from_packet(cls, data: Buffer) -> ExtendedCommunities:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -146,7 +147,7 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         return cls(data)
 
     @classmethod
-    def make_extended_communities(cls, communities: Sequence[ExtendedCommunityBase]) -> 'ExtendedCommunities':
+    def make_extended_communities(cls, communities: Sequence[ExtendedCommunityBase]) -> ExtendedCommunities:
         """Create from list of ExtendedCommunity objects.
 
         Args:
@@ -159,10 +160,10 @@ class ExtendedCommunities(ExtendedCommunitiesBase):
         packed = b''.join(c.pack_attribute(Negotiated.UNSET) for c in sorted_communities)
         return cls(packed)
 
-    def _with_communities(self, communities: Sequence[ExtendedCommunityBase]) -> 'ExtendedCommunities':
+    def _with_communities(self, communities: Sequence[ExtendedCommunityBase]) -> ExtendedCommunities:
         return ExtendedCommunities.make_extended_communities(communities)
 
-    def add(self, data: ExtendedCommunityBase) -> 'ExtendedCommunities':
+    def add(self, data: ExtendedCommunityBase) -> ExtendedCommunities:
         """Add an extended community and return self (builder pattern).
 
         Note: This unpacks, adds, sorts, and repacks.
@@ -232,7 +233,7 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'ExtendedCommunitiesIPv6':
+    def from_packet(cls, data: Buffer) -> ExtendedCommunitiesIPv6:
         """Validate and create from wire-format bytes."""
         if len(data) % EXTENDED_COMMUNITY_IPV6_SIZE != 0:
             raise Notify(3, 1, 'could not decode ipv6 extended community {}'.format(str([hex(_) for _ in data])))
@@ -242,16 +243,16 @@ class ExtendedCommunitiesIPv6(ExtendedCommunitiesBase):
         return cls(data)
 
     @classmethod
-    def make_extended_communities_ipv6(cls, communities: Sequence[ExtendedCommunityIPv6]) -> 'ExtendedCommunitiesIPv6':
+    def make_extended_communities_ipv6(cls, communities: Sequence[ExtendedCommunityIPv6]) -> ExtendedCommunitiesIPv6:
         """Create from list of ExtendedCommunityIPv6 objects."""
         sorted_communities = sorted(communities)
         packed = b''.join(c.pack_attribute(Negotiated.UNSET) for c in sorted_communities)
         return cls(packed)
 
-    def _with_communities(self, communities: Sequence[ExtendedCommunityIPv6]) -> 'ExtendedCommunitiesIPv6':
+    def _with_communities(self, communities: Sequence[ExtendedCommunityIPv6]) -> ExtendedCommunitiesIPv6:
         return ExtendedCommunitiesIPv6.make_extended_communities_ipv6(communities)
 
-    def add(self, data: ExtendedCommunityIPv6) -> 'ExtendedCommunitiesIPv6':
+    def add(self, data: ExtendedCommunityIPv6) -> ExtendedCommunitiesIPv6:
         """Add an IPv6 extended community and return self (builder pattern)."""
         communities = list(self.communities)
         communities.append(data)

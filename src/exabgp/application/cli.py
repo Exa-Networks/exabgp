@@ -12,7 +12,7 @@ import sys
 import readline
 import atexit
 import socket as sock
-from typing import Callable
+from collections.abc import Callable
 
 from exabgp.cli.colors import Colors
 from exabgp.cli.completer import CommandCompleter

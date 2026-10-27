@@ -35,7 +35,7 @@ class EORNLRI(NLRI):
     def __init__(self, afi: AFI, safi: SAFI) -> None:
         NLRI.__init__(self, afi, safi)
 
-    def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         return EOR.make_eor(self.afi, self.safi).payload
 
     def __repr__(self) -> str:
@@ -97,7 +97,7 @@ class EOR(Update):
         return len(data) == cls.MP_SIZE and bytes(data[: len(cls.MP_PREFIX)]) == cls.MP_PREFIX
 
     @classmethod
-    def from_body(cls, data: Buffer) -> 'EOR | None':
+    def from_body(cls, data: Buffer) -> EOR | None:
         """The End-of-RIB this UPDATE body is, read from the wire alone, or None.
 
         RFC 4724 2 defines the marker by what the peer sent, so it is never decided from
@@ -138,7 +138,7 @@ class EOR(Update):
         return AFI.unpack_afi(data[expected - 3 : expected - 1]), SAFI.unpack_safi(data[expected - 1 : expected])
 
     @classmethod
-    def make_eor(cls, afi: AFI, safi: SAFI) -> 'EOR':
+    def make_eor(cls, afi: AFI, safi: SAFI) -> EOR:
         if afi == AFI.ipv4 and safi == SAFI.unicast:
             return cls(cls.IPV4_UNICAST)
         return cls(cls.MP_PREFIX + afi.pack_afi() + safi.pack_safi())
@@ -166,12 +166,12 @@ class EOR(Update):
         return AttributeCollection()
 
     @property
-    def data(self) -> 'UpdateCollection':
+    def data(self) -> UpdateCollection:
         from exabgp.bgp.message.update.collection import UpdateCollection
 
         return UpdateCollection.make_eor(self.afi, self.safi)
 
-    def parse(self, negotiated: 'Negotiated | None' = None) -> 'UpdateCollection':
+    def parse(self, negotiated: Negotiated | None = None) -> UpdateCollection:
         return self.data
 
     def __str__(self) -> str:

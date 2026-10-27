@@ -11,7 +11,7 @@ from copy import deepcopy
 
 from struct import pack, unpack
 from collections.abc import Iterator
-from typing import Any, ClassVar, Self, TYPE_CHECKING, Type, TypeVar, cast
+from typing import Any, ClassVar, Self, TYPE_CHECKING, TypeVar, cast
 
 from exabgp.util.types import Buffer
 
@@ -105,7 +105,7 @@ class BGPLS(NLRI):
     # BGPLS has no additional instance attributes beyond NLRI base class
     __slots__ = ()
 
-    registered_bgpls: ClassVar[dict[int, Type[BGPLS]]] = dict()
+    registered_bgpls: ClassVar[dict[int, type[BGPLS]]] = dict()
 
     CODE: ClassVar[int] = -1
     NAME: ClassVar[str] = 'Unknown'
@@ -156,7 +156,7 @@ class BGPLS(NLRI):
         return pack('!HH', self.CODE, announced) + packed_rd + descriptors
 
     @classmethod
-    def unpack_bgpls_nlri(cls, data: Buffer, rd: 'RouteDistinguisher') -> 'BGPLS':
+    def unpack_bgpls_nlri(cls, data: Buffer, rd: RouteDistinguisher) -> BGPLS:
         """Unpack NLRI-type-specific data. Override in subclasses."""
         raise NotImplementedError(f'{cls.__name__} must implement unpack_bgpls_nlri')
 
@@ -185,7 +185,7 @@ class BGPLS(NLRI):
     # This copies whatever the instance holds rather than naming route_d.  Naming it would
     # be the same mistake one attribute later, which is exactly what the first version of
     # this fix did.
-    def _copy_instance_state(self, new: 'BGPLS', memo: dict[Any, Any] | None = None) -> None:
+    def _copy_instance_state(self, new: BGPLS, memo: dict[Any, Any] | None = None) -> None:
         """Carry the instance state across a copy, deeply when asked to.
 
         From __getstate__(): a compiled class (plan/wip-mypyc.md) has no __dict__, and lists
@@ -197,14 +197,14 @@ class BGPLS(NLRI):
             for attribute, value in cast(dict[str, Any], part or {}).items():
                 setattr(new, attribute, deepcopy(value, memo) if memo is not None else value)
 
-    def __copy__(self) -> 'BGPLS':
+    def __copy__(self) -> BGPLS:
         new = self._fresh()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         self._copy_instance_state(new)
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'BGPLS':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> BGPLS:
         new = self._fresh()
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
@@ -213,7 +213,7 @@ class BGPLS(NLRI):
         return new
 
     @classmethod
-    def register_bgpls(cls, klass: Type[BGPLS]) -> Type[BGPLS]:
+    def register_bgpls(cls, klass: type[BGPLS]) -> type[BGPLS]:
         if klass.CODE in cls.registered_bgpls:
             raise RuntimeError('only one BGP LINK_STATE registration allowed')
         cls.registered_bgpls[klass.CODE] = klass
@@ -237,7 +237,7 @@ class BGPLS(NLRI):
             raise Notify.short(3, 10, f'BGP-LS {cls.__name__} NLRI', minimum, len(data))
 
     @classmethod
-    def iter_tlvs(cls, data: Buffer) -> 'Iterator[tuple[int, Buffer]]':
+    def iter_tlvs(cls, data: Buffer) -> Iterator[tuple[int, Buffer]]:
         """Walk a sequence of TLVs, checking every boundary as it goes.
 
         Args:
@@ -265,7 +265,7 @@ class BGPLS(NLRI):
             data = data[4 + tlv_length :]
 
     @classmethod
-    def iter_ordered_tlvs(cls, data: Buffer) -> 'Iterator[tuple[int, Buffer]]':
+    def iter_ordered_tlvs(cls, data: Buffer) -> Iterator[tuple[int, Buffer]]:
         """iter_tlvs, refusing the NLRI when a TLV is not in the order RFC 9552 5.1 sets.
 
         Ascending by type, then, for TLVs of one type, by Length, then by Value compared
@@ -330,7 +330,7 @@ class BGPLS(NLRI):
         return klass, data[length + 4 :]
 
     @classmethod
-    def _decoded(cls, code: int, length: int, data: Buffer, safi: SAFI) -> 'BGPLS':
+    def _decoded(cls, code: int, length: int, data: Buffer, safi: SAFI) -> BGPLS:
         """The NLRI of `code` from its framed bytes, parsed now rather than lazily."""
         if code in cls.registered_bgpls:
             if safi == SAFI.bgp_ls_vpn:

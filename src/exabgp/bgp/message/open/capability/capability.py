@@ -11,18 +11,12 @@ from __future__ import annotations
 
 from typing import (
     Any,
-    Callable,
     ClassVar,
     Generic,
-    ItemsView,
-    Iterable,
-    Iterator,
-    KeysView,
-    Type,
     TypeVar,
-    ValuesView,
     overload,
 )
+from collections.abc import Callable, ItemsView, Iterable, Iterator, KeysView, ValuesView
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.intvalue import IntValue
@@ -178,8 +172,8 @@ class CapabilityCodes:
 class Capability:
     CODE: ClassVar[type[CapabilityCodes]] = CapabilityCodes
 
-    registered_capability: ClassVar[dict[CapabilityCode, Type[Capability]]] = dict()
-    unknown_capability: ClassVar[Type[Capability] | None] = None
+    registered_capability: ClassVar[dict[CapabilityCode, type[Capability]]] = dict()
+    unknown_capability: ClassVar[type[Capability] | None] = None
 
     # The code the class is registered under. RouteRefresh and MultiSession are also
     # registered under a Cisco code: an instance says which one it is with code().
@@ -197,11 +191,11 @@ class Capability:
         raise NotImplementedError(f'{type(self).__name__}.extract_capability_bytes() not implemented')
 
     @classmethod
-    def unpack_capability(cls, instance: 'Capability', data: Buffer, capability: CapabilityCode) -> 'Capability':
+    def unpack_capability(cls, instance: Capability, data: Buffer, capability: CapabilityCode) -> Capability:
         """Unpack capability from bytes. Subclasses must implement."""
         raise NotImplementedError(f'{cls.__name__}.unpack_capability() not implemented')
 
-    def same_values(self, other: 'Capability') -> bool:
+    def same_values(self, other: Capability) -> bool:
         """Whether the other OPEN carried the same values for this capability.
 
         The multisession draft, section 7 item 1, matches a Session Id when "for every
@@ -214,15 +208,15 @@ class Capability:
         return '0x' + ''.join('{:02x}'.format(_) for _ in data)
 
     @classmethod
-    def unknown(cls, klass: Type[Capability]) -> Type[Capability]:
+    def unknown(cls, klass: type[Capability]) -> type[Capability]:
         if cls.unknown_capability is not None:
             raise RuntimeError('only one fallback function can be registered')
         cls.unknown_capability = klass
         return klass
 
     @classmethod
-    def register(cls, capability: CapabilityCode | None = None) -> Callable[[Type[Capability]], Type[Capability]]:
-        def register_capability(klass: Type[Capability]) -> Type[Capability]:
+    def register(cls, capability: CapabilityCode | None = None) -> Callable[[type[Capability]], type[Capability]]:
+        def register_capability(klass: type[Capability]) -> type[Capability]:
             # ID is defined by all the subclasses - otherwise they do not work :)
             what: CapabilityCode = klass.ID if capability is None else capability  # pylint: disable=E1101
             if what in cls.registered_capability:
@@ -233,7 +227,7 @@ class Capability:
         return register_capability
 
     @classmethod
-    def klass(cls, what: CapabilityCode) -> Type[Capability]:
+    def klass(cls, what: CapabilityCode) -> type[Capability]:
         if what in cls.registered_capability:
             return cls.registered_capability[what]
         if cls.unknown_capability:

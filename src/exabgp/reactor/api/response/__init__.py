@@ -27,32 +27,32 @@ class JSONEncoder(Protocol):
 
     def update(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        update: 'UpdateCollection',
+        update: UpdateCollection,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str: ...
 
     def notification(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        message: 'Notification',
+        message: Notification,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str: ...
 
     def open(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        sent_open: 'Open',
+        sent_open: Open,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str: ...
 
 
@@ -61,83 +61,83 @@ class ResponseEncoder(Protocol):
 
     version: str
 
-    def up(self, neighbor: 'Neighbor') -> str: ...
+    def up(self, neighbor: Neighbor) -> str: ...
 
-    def connected(self, neighbor: 'Neighbor') -> str: ...
+    def connected(self, neighbor: Neighbor) -> str: ...
 
-    def down(self, neighbor: 'Neighbor', reason: str = '') -> str: ...
+    def down(self, neighbor: Neighbor, reason: str = '') -> str: ...
 
     def shutdown(self) -> str: ...
 
-    def negotiated(self, neighbor: 'Neighbor', negotiated: 'Negotiated') -> str | None: ...
+    def negotiated(self, neighbor: Neighbor, negotiated: Negotiated) -> str | None: ...
 
-    def fsm(self, neighbor: 'Neighbor', fsm: 'FSM') -> str | None: ...
+    def fsm(self, neighbor: Neighbor, fsm: FSM) -> str | None: ...
 
-    def signal(self, neighbor: 'Neighbor', signal: int) -> str | None: ...
+    def signal(self, neighbor: Neighbor, signal: int) -> str | None: ...
 
     def notification(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        message: 'Notification',
+        message: Notification,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str: ...
 
     def packets(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        category: 'MessageCode',
+        category: MessageCode,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str: ...
 
     def keepalive(
-        self, neighbor: 'Neighbor', direction: str, header: bytes, body: bytes, negotiated: 'Negotiated'
+        self, neighbor: Neighbor, direction: str, header: bytes, body: bytes, negotiated: Negotiated
     ) -> str: ...
 
     def open(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        sent_open: 'Open',
+        sent_open: Open,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str: ...
 
     def update(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        update: 'UpdateCollection',
+        update: UpdateCollection,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str: ...
 
     def refresh(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        refresh: 'RouteRefresh',
+        refresh: RouteRefresh,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str: ...
 
     def operational(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
         what: str,
-        operational: 'Operational',
+        operational: Operational,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str: ...
 
 

@@ -54,15 +54,15 @@ class V4JSON:
             return None
         return result.replace(f'"exabgp": "{json_version}"', f'"exabgp": "{self.version}"')
 
-    def up(self, neighbor: 'Neighbor') -> str:
+    def up(self, neighbor: Neighbor) -> str:
         result = self._v6.up(neighbor)
         return self._patch_version(result) or ''
 
-    def connected(self, neighbor: 'Neighbor') -> str:
+    def connected(self, neighbor: Neighbor) -> str:
         result = self._v6.connected(neighbor)
         return self._patch_version(result) or ''
 
-    def down(self, neighbor: 'Neighbor', reason: str = '') -> str:
+    def down(self, neighbor: Neighbor, reason: str = '') -> str:
         result = self._v6.down(neighbor, reason)
         return self._patch_version(result) or ''
 
@@ -70,93 +70,91 @@ class V4JSON:
         result = self._v6.shutdown()
         return self._patch_version(result) or ''
 
-    def negotiated(self, neighbor: 'Neighbor', negotiated: 'Negotiated') -> str | None:
+    def negotiated(self, neighbor: Neighbor, negotiated: Negotiated) -> str | None:
         result = self._v6.negotiated(neighbor, negotiated)
         return self._patch_version(result)
 
-    def fsm(self, neighbor: 'Neighbor', fsm: 'FSM') -> str | None:
+    def fsm(self, neighbor: Neighbor, fsm: FSM) -> str | None:
         result = self._v6.fsm(neighbor, fsm)
         return self._patch_version(result)
 
-    def signal(self, neighbor: 'Neighbor', signal: int) -> str | None:
+    def signal(self, neighbor: Neighbor, signal: int) -> str | None:
         result = self._v6.signal(neighbor, signal)
         return self._patch_version(result)
 
     def notification(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        message: 'Notification',
+        message: Notification,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         result = self._v6.notification(neighbor, direction, message, header, body, negotiated)
         return self._patch_version(result) or ''
 
     def packets(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        category: 'MessageCode',
+        category: MessageCode,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         result = self._v6.packets(neighbor, direction, category, header, body, negotiated)
         return self._patch_version(result) or ''
 
-    def keepalive(
-        self, neighbor: 'Neighbor', direction: str, header: bytes, body: bytes, negotiated: 'Negotiated'
-    ) -> str:
+    def keepalive(self, neighbor: Neighbor, direction: str, header: bytes, body: bytes, negotiated: Negotiated) -> str:
         result = self._v6.keepalive(neighbor, direction, header, body, negotiated)
         return self._patch_version(result) or ''
 
     def open(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        sent_open: 'Open',
+        sent_open: Open,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         result = self._v6.open(neighbor, direction, sent_open, header, body, negotiated)
         return self._patch_version(result) or ''
 
     def update(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        update: 'UpdateCollection',
+        update: UpdateCollection,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         result = self._v6.update(neighbor, direction, update, header, body, negotiated)
         return self._patch_version(result) or ''
 
     def refresh(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        refresh: 'RouteRefresh',
+        refresh: RouteRefresh,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         result = self._v6.refresh(neighbor, direction, refresh, header, body, negotiated)
         return self._patch_version(result) or ''
 
     def operational(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
         what: str,
-        operational: 'Operational',
+        operational: Operational,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         result = self._v6.operational(neighbor, direction, what, operational, header, body, negotiated)
         return self._patch_version(result) or ''

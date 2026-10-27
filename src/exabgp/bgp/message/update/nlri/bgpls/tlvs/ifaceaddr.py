@@ -30,7 +30,7 @@ class IfaceAddr:
         self._packed = packed
 
     @classmethod
-    def unpack_ifaceaddr(cls, data: Buffer) -> 'IfaceAddr':
+    def unpack_ifaceaddr(cls, data: Buffer) -> IfaceAddr:
         # a length this decoder cannot read left addr unbound, which unpack_nlri did not
         # see: the descriptors parse lazily, so the peer's message was accepted and the
         # UnboundLocalError surfaced in the API writer calling json()

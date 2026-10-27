@@ -139,7 +139,7 @@ class Notification(Message):
         return (code, subcode) in cls._str_subcode and cls._str_subcode[(code, subcode)] != 'Reserved'
 
     @classmethod
-    def make_notification(cls, code: int, subcode: int, data: Buffer = b'') -> 'Notification':
+    def make_notification(cls, code: int, subcode: int, data: Buffer = b'') -> Notification:
         return cls(bytes([code, subcode]) + data)
 
     @property
@@ -317,13 +317,13 @@ class Notify(Exception):
         return bytes([len(communication)]) + communication
 
     @classmethod
-    def short(cls, code: int, subcode: int, what: str, need_octets: int, got_octets: int) -> 'Notify':
+    def short(cls, code: int, subcode: int, what: str, need_octets: int, got_octets: int) -> Notify:
         """The commonest malformation there is: fewer octets arrived than the field needs."""
         assert got_octets < need_octets, 'a payload which is not short is a different error'
         return cls(code, subcode, f'{what} needs {need_octets} octets, got {got_octets}')
 
     @classmethod
-    def make_notify(cls, code: int, subcode: int, detail: str = '') -> 'Notify':
+    def make_notify(cls, code: int, subcode: int, detail: str = '') -> Notify:
         return cls(code, subcode, detail)
 
     @classmethod

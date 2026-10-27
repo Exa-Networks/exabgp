@@ -8,7 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import string
-from typing import Iterator, overload
+from typing import overload
+from collections.abc import Iterator
 
 from exabgp.util.types import Buffer
 

@@ -8,7 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Iterator, cast
+from typing import TYPE_CHECKING, cast
+from collections.abc import Iterator
 
 from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.refresh import RouteRefresh
@@ -70,7 +71,7 @@ class OutgoingRIB(Cache):
 
     # New structure for withdraws - avoids deepcopy by not modifying nlri.action
     # Indexed by family -> nlri_index -> (NLRI, AttributeCollection)
-    _pending_withdraws: dict[FamilyTuple, dict[bytes, tuple['NLRI', 'AttributeCollection']]]
+    _pending_withdraws: dict[FamilyTuple, dict[bytes, tuple[NLRI, AttributeCollection]]]
 
     def __init__(self, cache: bool, families: set[FamilyTuple], enabled: bool = True) -> None:
         Cache.__init__(self, cache, families, enabled)
@@ -386,7 +387,7 @@ class OutgoingRIB(Cache):
                 self._watchdog[watchdog].setdefault('-', {})[route.index()] = route
                 self._watchdog[watchdog]['+'].pop(route.index())
 
-    def del_from_rib(self, route: 'Route') -> None:
+    def del_from_rib(self, route: Route) -> None:
         """Remove a route from the RIB.
 
         Args:
@@ -403,7 +404,7 @@ class OutgoingRIB(Cache):
         self._own(route_index, route, '')
         self._del_from_rib_impl(nlri, attrs, route_index)
 
-    def del_nlri_from_rib(self, nlri: 'NLRI', attributes: 'AttributeCollection | None' = None) -> None:
+    def del_nlri_from_rib(self, nlri: NLRI, attributes: AttributeCollection | None = None) -> None:
         """Remove an NLRI from the RIB.
 
         Args:
@@ -467,7 +468,7 @@ class OutgoingRIB(Cache):
         assert len(self._path_identifiers) < identifier, 'an identifier is allocated only once'
         return identifier
 
-    def _del_from_rib_impl(self, nlri: 'NLRI', attrs: 'AttributeCollection | None', route_index: bytes) -> None:
+    def _del_from_rib_impl(self, nlri: NLRI, attrs: AttributeCollection | None, route_index: bytes) -> None:
         """Shared implementation for route removal."""
 
         log.debug(lazymsg('rib.remove nlri={nlri}', nlri=nlri), 'rib')
@@ -504,7 +505,7 @@ class OutgoingRIB(Cache):
             return
         self._refresh_routes.append(route)
 
-    def add_to_rib(self, route: 'Route', force: bool = False, owner: str | None = None) -> None:
+    def add_to_rib(self, route: Route, force: bool = False, owner: str | None = None) -> None:
         """Add a route to the RIB.
 
         Args:
@@ -530,7 +531,7 @@ class OutgoingRIB(Cache):
 
         self._update_rib(route)
 
-    def add_nlri_to_rib(self, nlri: 'NLRI', attributes: 'AttributeCollection', force: bool = False) -> None:
+    def add_nlri_to_rib(self, nlri: NLRI, attributes: AttributeCollection, force: bool = False) -> None:
         """Add an NLRI with attributes to the RIB.
 
         Convenience method that creates a Route and delegates to add_to_rib.

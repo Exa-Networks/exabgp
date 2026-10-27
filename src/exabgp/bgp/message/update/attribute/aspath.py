@@ -19,7 +19,8 @@ from __future__ import annotations
 
 import json
 from struct import error, unpack
-from typing import TYPE_CHECKING, ClassVar, Iterable, Iterator, Sequence, Type, TypeVar, overload
+from typing import TYPE_CHECKING, ClassVar, TypeVar, overload
+from collections.abc import Iterable, Iterator, Sequence
 
 from exabgp.util.types import Buffer
 from exabgp.util.intvalue import json_number
@@ -162,7 +163,7 @@ class ASPath(Attribute):
 
     Empty: ClassVar[ASPath | None] = None
 
-    _DISPATCH: ClassVar[dict[int, Type[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET]]] = {
+    _DISPATCH: ClassVar[dict[int, type[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET]]] = {
         SET.ID: SET,
         SEQUENCE.ID: SEQUENCE,
         CONFED_SEQUENCE.ID: CONFED_SEQUENCE,
@@ -183,7 +184,7 @@ class ASPath(Attribute):
         self._asn4: bool = asn4
 
     @classmethod
-    def from_packet(cls, data: Buffer, asn4: bool) -> 'ASPath':
+    def from_packet(cls, data: Buffer, asn4: bool) -> ASPath:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -203,7 +204,7 @@ class ASPath(Attribute):
     @classmethod
     def make_aspath(
         cls, segments: Sequence[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET], asn4: bool = False
-    ) -> 'ASPath':
+    ) -> ASPath:
         """Create from parsed segments.
 
         Args:
@@ -239,7 +240,7 @@ class ASPath(Attribute):
         """Whether the path holds an AS_CONFED_SEQUENCE or an AS_CONFED_SET (RFC 5065)."""
         return any(isinstance(seg, (CONFED_SEQUENCE, CONFED_SET)) for seg in self.aspath)
 
-    def without_confed(self) -> 'ASPath':
+    def without_confed(self) -> ASPath:
         """The path a peer outside the confederation may be sent (RFC 5065 5)."""
         outside = tuple(seg for seg in self.aspath if not isinstance(seg, (CONFED_SEQUENCE, CONFED_SET)))
         return type(self)(self._pack_segments_raw(outside, self._asn4), self._asn4)
@@ -449,7 +450,7 @@ class AS4Path(ASPath):
         super().__init__(packed, asn4=True)
 
     @classmethod
-    def from_packet(cls, data: Buffer, asn4: bool = True) -> 'AS4Path':
+    def from_packet(cls, data: Buffer, asn4: bool = True) -> AS4Path:
         """Validate and create from wire-format bytes.
 
         AS4Path always uses 4-byte ASNs.
@@ -470,7 +471,7 @@ class AS4Path(ASPath):
     @classmethod
     def make_aspath(
         cls, segments: Sequence[SET | SEQUENCE | CONFED_SEQUENCE | CONFED_SET], asn4: bool = True
-    ) -> 'AS4Path':
+    ) -> AS4Path:
         """Create from parsed segments. Always uses 4-byte ASNs."""
         packed = cls._pack_segments_raw(tuple(segments), asn4=True)
         return cls(packed)

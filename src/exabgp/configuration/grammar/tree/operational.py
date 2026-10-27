@@ -18,7 +18,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import struct
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.operational import Advisory, OperationalFamily, Query, Response

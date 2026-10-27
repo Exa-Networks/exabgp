@@ -7,7 +7,8 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import Any, Callable, ClassVar, Protocol, Type, TypeVar
+from typing import Any, ClassVar, Protocol, TypeVar
+from collections.abc import Callable
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid, SR_TLV_SRV6_L2_SERVICE
@@ -44,7 +45,7 @@ class Srv6L2Service:
     TLV: ClassVar[int] = SR_TLV_SRV6_L2_SERVICE
 
     # Registry maps TLV codes to Sub-TLV classes (uses HasTLV protocol)
-    registered_subtlvs: ClassVar[dict[int, Type[HasTLV]]] = dict()
+    registered_subtlvs: ClassVar[dict[int, type[HasTLV]]] = dict()
 
     def __init__(self, subtlvs: list[Any], packed: Buffer | None = None) -> None:
         """Initialize L2 Service TLV.
@@ -57,8 +58,8 @@ class Srv6L2Service:
         self.packed: Buffer = self.pack_tlv()
 
     @classmethod
-    def register(cls) -> Callable[[Type[SubTlvType]], Type[SubTlvType]]:
-        def register_subtlv(klass: Type[SubTlvType]) -> Type[SubTlvType]:
+    def register(cls) -> Callable[[type[SubTlvType]], type[SubTlvType]]:
+        def register_subtlv(klass: type[SubTlvType]) -> type[SubTlvType]:
             scode: int = klass.TLV
             if scode in cls.registered_subtlvs:
                 raise RuntimeError('only one class can be registered per SRv6 Service Sub-TLV type')

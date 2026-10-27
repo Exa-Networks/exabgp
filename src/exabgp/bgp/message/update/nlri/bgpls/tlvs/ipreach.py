@@ -45,7 +45,7 @@ class IpReach:
         self._packed = packed
 
     @classmethod
-    def unpack_ipreachability(cls, data: Buffer, code: int) -> 'IpReach':
+    def unpack_ipreachability(cls, data: Buffer, code: int) -> IpReach:
         # FIXME
         # There seems to be a bug in the Cisco Xr implementation
         # that causes the Prefix IP field to be one octet less than

@@ -8,7 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from functools import wraps
-from typing import Callable, Any, TypeVar, Iterator
+from typing import Any, TypeVar
+from collections.abc import Callable, Iterator
 
 T = TypeVar('T')
 

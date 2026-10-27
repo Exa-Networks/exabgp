@@ -51,7 +51,7 @@ class Session:
     local_link_local: IP | None = None  # Link-local address for IPv6 (fe80::/10)
     local_as: ASN = field(default_factory=lambda: ASN(0))  # 0 = auto (mirror peer)
     peer_as: ASN = field(default_factory=lambda: ASN(0))  # 0 = auto
-    router_id: 'RouterID | None' = None  # Derived from local_address if None and IPv4
+    router_id: RouterID | None = None  # Derived from local_address if None and IPv4
     md5_password: str = ''
     md5_base64: bool = False
     md5_ip: IP | None = None  # Derived from local_address if None
@@ -247,7 +247,7 @@ class Session:
             self.md5_ip = self.local_address
 
     @classmethod
-    def from_settings(cls, settings: 'SessionSettings') -> 'Session':
+    def from_settings(cls, settings: SessionSettings) -> Session:
         """Create Session from validated settings.
 
         This factory method enables programmatic Session creation without

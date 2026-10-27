@@ -57,7 +57,7 @@ class Multicast(EVPN):
         ip: IP,
         action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
-    ) -> 'Multicast':
+    ) -> Multicast:
         """Factory method to create Multicast from semantic parameters.
 
         Packs fields into wire format immediately (packed-bytes-first pattern).

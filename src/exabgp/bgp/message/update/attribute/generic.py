@@ -74,7 +74,7 @@ class GenericAttribute(Attribute):
         self._flag = value
 
     @classmethod
-    def from_packet(cls, code: int, flag: int, data: Buffer) -> 'GenericAttribute':
+    def from_packet(cls, code: int, flag: int, data: Buffer) -> GenericAttribute:
         """Create from wire-format bytes.
 
         Args:
@@ -88,7 +88,7 @@ class GenericAttribute(Attribute):
         return cls(bytes(data), code, flag)
 
     @classmethod
-    def make_generic(cls, code: int, flag: int, data: Buffer) -> 'GenericAttribute':
+    def make_generic(cls, code: int, flag: int, data: Buffer) -> GenericAttribute:
         """Create from semantic values.
 
         Args:

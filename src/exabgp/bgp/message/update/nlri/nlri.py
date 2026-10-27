@@ -20,7 +20,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, Self, TYPE_CHECKING, Type, TypeVar
+from typing import Any, ClassVar, Self, TYPE_CHECKING, TypeVar
+from collections.abc import Callable
 
 from exabgp.util.mypyc import mypyc_attr
 from exabgp.util.types import Buffer
@@ -40,7 +41,7 @@ T = TypeVar('T', bound='NLRI')
 
 # Sentinel for unparsed NLRI cache (distinguishes "not parsed" from "parsed empty")
 # Use `is _UNPARSED` / `is not _UNPARSED` for comparison
-_UNPARSED: list['NLRI'] = []
+_UNPARSED: list[NLRI] = []
 
 
 # the families other than unicast, labelled and VPN are not compiled yet (qa/bin/build_mypyc)
@@ -60,19 +61,19 @@ class NLRI(Family):
 
     IS_EOR: ClassVar[bool] = False
 
-    registered_nlri: ClassVar[dict[str, Type[NLRI]]] = dict()
+    registered_nlri: ClassVar[dict[str, type[NLRI]]] = dict()
     registered_families: ClassVar[list[FamilyTuple]] = [(AFI.ipv4, SAFI.multicast)]
 
-    addpath: 'PathInfo'
+    addpath: PathInfo
     _packed: Buffer  # Wire format bytes (subclass-specific interpretation)
 
     # Singleton invalid NLRI (initialized after class definition)
-    INVALID: ClassVar['NLRI']
+    INVALID: ClassVar[NLRI]
     # Singleton empty NLRI for cleared references (initialized after class definition)
-    EMPTY: ClassVar['NLRI']
+    EMPTY: ClassVar[NLRI]
 
     @classmethod
-    def _create_singleton(cls, name: str) -> 'NLRI':
+    def _create_singleton(cls, name: str) -> NLRI:
         """Create a singleton NLRI (INVALID or EMPTY). Called once at module load."""
         return cls(AFI.undefined, SAFI.undefined)
 
@@ -103,7 +104,7 @@ class NLRI(Family):
         """
         raise NotImplementedError(f'{type(self).__name__} must implement _fresh')
 
-    def _copy_nlri_slots(self, new: 'NLRI') -> None:
+    def _copy_nlri_slots(self, new: NLRI) -> None:
         """Copy NLRI base class slots to new instance."""
         # Family.__slots__ = ('_afi', '_safi') - use private attrs directly
         new._afi = self._afi
@@ -112,7 +113,7 @@ class NLRI(Family):
         new.addpath = self.addpath
         new._packed = self._packed
 
-    def _deepcopy_nlri_slots(self, new: 'NLRI', memo: dict[Any, Any]) -> None:
+    def _deepcopy_nlri_slots(self, new: NLRI, memo: dict[Any, Any]) -> None:
         """Deep copy NLRI base class slots to new instance."""
         # Family.__slots__ = ('_afi', '_safi') - singletons, no deepcopy needed
         new._afi = self._afi
@@ -121,14 +122,14 @@ class NLRI(Family):
         new.addpath = self.addpath  # PathInfo - typically shared singleton
         new._packed = self._packed  # bytes - immutable
 
-    def __copy__(self) -> 'NLRI':
+    def __copy__(self) -> NLRI:
         """Preserve singleton identity for INVALID and EMPTY."""
         if self is NLRI.INVALID or self is NLRI.EMPTY:
             return self
         # Subclasses should override and call _copy_nlri_slots
         raise NotImplementedError(f'{type(self).__name__} must implement __copy__')
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'NLRI':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> NLRI:
         """Preserve singleton identity for INVALID and EMPTY."""
         if self is NLRI.INVALID or self is NLRI.EMPTY:
             return self
@@ -238,7 +239,7 @@ class NLRI(Family):
         """How many MPLS labels the route binds to its prefix (RFC 8277), none by default."""
         return 0
 
-    def with_path_info(self, path_info: PathInfo) -> 'NLRI':
+    def with_path_info(self, path_info: PathInfo) -> NLRI:
         """A copy identified by `path_info`, for a route which carries a Path Identifier."""
         raise RuntimeError(f'{type(self).__name__} carries no Path Identifier to replace')
 
@@ -287,8 +288,8 @@ class NLRI(Family):
         return f'{self.extensive()}{next_hop_text(nexthop)}'
 
     @classmethod
-    def register(cls, afi: AFI, safi: SAFI, force: bool = False) -> Callable[[Type[NLRI]], Type[NLRI]]:
-        def register_nlri(klass: Type[NLRI]) -> Type[NLRI]:
+    def register(cls, afi: AFI, safi: SAFI, force: bool = False) -> Callable[[type[NLRI]], type[NLRI]]:
+        def register_nlri(klass: type[NLRI]) -> type[NLRI]:
             new: FamilyTuple = (afi, safi)
             key = '{}/{}'.format(*new)
             if key in cls.registered_nlri:

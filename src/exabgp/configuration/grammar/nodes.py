@@ -35,10 +35,10 @@ class _Missing:
     # one object, compared with `is`: a copy of a leaf default (describe.py deepcopies them)
     # must still be MISSING. A compiled class can not return a cached object from __new__,
     # so the copies give back the object itself
-    def __copy__(self) -> '_Missing':
+    def __copy__(self) -> _Missing:
         return self
 
-    def __deepcopy__(self, memo: dict[int, Any]) -> '_Missing':
+    def __deepcopy__(self, memo: dict[int, Any]) -> _Missing:
         return self
 
     def __repr__(self) -> str:
@@ -111,7 +111,7 @@ class Block:
     keyword: str
     field: str
     section: Section[Any] = KEPT
-    children: tuple['Leaf | Block', ...] = ()
+    children: tuple[Leaf | Block, ...] = ()
     keep: Keep = Keep.SINGLE
     # the type of the word(s) naming the block (`process <name> {`, `neighbor <ip> {`)
     name: Type[Any] | None = None
@@ -124,7 +124,7 @@ class Block:
     missing: str = 'missing {names}'
     # a statement and a section may share a keyword: `route <prefix> ...;` and `route <prefix> { }`
     _leaves: dict[str, Leaf] = dataclass_field(default_factory=dict, init=False, repr=False, compare=False)
-    _blocks: dict[str, 'Block'] = dataclass_field(default_factory=dict, init=False, repr=False, compare=False)
+    _blocks: dict[str, Block] = dataclass_field(default_factory=dict, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         for child in self.children:
@@ -135,11 +135,11 @@ class Block:
     def leaf(self, keyword: str) -> Leaf | None:
         return self._leaves.get(keyword)
 
-    def block(self, keyword: str) -> 'Block | None':
+    def block(self, keyword: str) -> Block | None:
         return self._blocks.get(keyword)
 
     def leaves(self) -> list[Leaf]:
         return [child for child in self.children if isinstance(child, Leaf)]
 
-    def blocks(self) -> list['Block']:
+    def blocks(self) -> list[Block]:
         return [child for child in self.children if isinstance(child, Block)]

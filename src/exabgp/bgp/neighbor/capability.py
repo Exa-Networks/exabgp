@@ -44,12 +44,12 @@ class GracefulRestartConfig:
             raise ValueError(f'graceful-restart time must be 0-{GRACEFUL_RESTART_MAX_TIME}, got {self.time}')
 
     @classmethod
-    def disabled(cls) -> 'GracefulRestartConfig':
+    def disabled(cls) -> GracefulRestartConfig:
         """Create a disabled graceful restart config."""
         return cls(state=TriState.FALSE, time=0)
 
     @classmethod
-    def with_time(cls, time: int) -> 'GracefulRestartConfig':
+    def with_time(cls, time: int) -> GracefulRestartConfig:
         """Create an enabled graceful restart config with specified time."""
         return cls(state=TriState.TRUE, time=time)
 
@@ -99,7 +99,7 @@ class NeighborCapability:
     # Codes the peer must advertise back, or be refused with (2, 7) (RFC 5492 3)
     required: frozenset[CapabilityCode] = frozenset()
 
-    def copy(self) -> 'NeighborCapability':
+    def copy(self) -> NeighborCapability:
         """Create a copy of this capability configuration."""
         return NeighborCapability(
             asn4=self.asn4,

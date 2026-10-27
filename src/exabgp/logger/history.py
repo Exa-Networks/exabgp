@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import time
 from collections import deque
-from typing import Deque
 
 from exabgp.logger.format import _long_color_formater as formater
 
-_history: Deque[tuple[str, str, str, float]] = deque()
+_history: deque[tuple[str, str, str, float]] = deque()
 _max_history: int = 20
 
 

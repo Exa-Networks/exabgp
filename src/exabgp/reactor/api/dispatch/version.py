@@ -51,7 +51,7 @@ def command_api_version(command: str) -> int:
 def dispatch_for(
     version: int,
     command: str,
-    reactor: 'Reactor',
+    reactor: Reactor,
     service: str,
 ) -> tuple[Handler, list[str], str]:
     """Dispatch a command with the dispatcher of the helper's API version.

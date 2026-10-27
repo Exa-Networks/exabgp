@@ -392,7 +392,7 @@ class Reactor:
             return None
         return peer.handle_connection(connection)
 
-    def neighbor(self, peer_name: str) -> 'Neighbor' | None:
+    def neighbor(self, peer_name: str) -> Neighbor | None:
         if not (peer := self._peers.get(peer_name, None)):
             log.critical(lazymsg('peer.notfound peer={p} operation=neighbor_lookup', p=peer_name), 'reactor')
             return None
@@ -741,7 +741,7 @@ class Reactor:
         return True
 
     @staticmethod
-    def _reload_shutdown(peer: Peer, neighbor: 'Neighbor') -> None:
+    def _reload_shutdown(peer: Peer, neighbor: Neighbor) -> None:
         """Apply `shutdown` if the reload changed it, and otherwise leave the peer be.
 
         `peer <ip> disable` and `enable` change the state without changing the file, so a

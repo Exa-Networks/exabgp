@@ -18,7 +18,6 @@ a previous route with the same NLRI - no explicit withdraw needed.
 
 import sys
 import os
-from typing import List
 from unittest.mock import Mock
 
 # Add src to path
@@ -86,7 +85,7 @@ def create_change_with_origin(prefix: str, origin: int) -> Route:
     return Route(nlri, attrs, nexthop=IP_.NoNextHop)
 
 
-def consume_updates(rib: OutgoingRIB, grouped: bool = False) -> List:
+def consume_updates(rib: OutgoingRIB, grouped: bool = False) -> list:
     """Consume all pending updates from the RIB"""
     return list(rib.updates(grouped=grouped))
 

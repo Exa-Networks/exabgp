@@ -36,7 +36,7 @@ class SrLabelIndex:
         self._packed: Buffer = packed
 
     @classmethod
-    def make_labelindex(cls, labelindex: int) -> 'SrLabelIndex':
+    def make_labelindex(cls, labelindex: int) -> SrLabelIndex:
         """Factory method for semantic construction."""
         reserved, flags = 0, 0
         packed = pack('!B', reserved) + pack('!H', flags) + pack('!I', labelindex)

@@ -14,7 +14,8 @@ Test Coverage:
 - Integration between split() and NLRI parsing
 """
 
-from typing import Any, Generator
+from typing import Any
+from collections.abc import Generator
 from unittest.mock import Mock, patch
 
 import pytest

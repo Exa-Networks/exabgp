@@ -56,7 +56,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         rd: RouteDistinguisher,
         ip: IP,
         afi: AFI,
-    ) -> 'DirectSegmentDiscoveryRoute':
+    ) -> DirectSegmentDiscoveryRoute:
         """Factory method to create DSD from semantic parameters."""
         payload = bytes(rd.pack_rd()) + ip.pack_ip()
         # Include 4-byte header: arch(1) + code(2) + length(1) + payload

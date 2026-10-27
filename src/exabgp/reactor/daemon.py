@@ -89,14 +89,14 @@ def unreachable_by(path: str, uid: int, gids: set[int]) -> str:
 class Daemon:
     # NOTE: This class logs full PID file paths (self.pid) for operational clarity
     # Security review: Accepted as necessary for troubleshooting and debugging
-    def __init__(self, reactor: 'Reactor') -> None:
+    def __init__(self, reactor: Reactor) -> None:
         self.pid: str = getenv().daemon.pid
         self.user: str = getenv().daemon.user
         self.daemonize: bool = getenv().daemon.daemonize
         self.umask: int = getenv().daemon.umask
         self._saved_pid: bool = False
 
-        self.reactor: 'Reactor' = reactor
+        self.reactor: Reactor = reactor
 
         os.chdir('/')
         os.umask(self.umask)

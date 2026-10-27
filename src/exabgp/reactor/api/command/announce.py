@@ -32,7 +32,7 @@ def register_announce() -> None:
 OPERATIONAL_KINDS = frozenset({'asm', 'adm', 'rpcq', 'rpcp', 'apcq', 'apcp', 'lpcq', 'lpcp'})
 
 
-def validate_announce(route: 'Route') -> str | None:
+def validate_announce(route: Route) -> str | None:
     """Validate route for announcement, return error message or None if valid.
 
     Provides early validation at API level for immediate feedback.
@@ -41,13 +41,13 @@ def validate_announce(route: 'Route') -> str | None:
     return validate_announce_nlri(route.nlri, route.nexthop)
 
 
-def carrying(reactor: 'Reactor', peers: list[str], families: list[FamilyTuple]) -> list[str]:
+def carrying(reactor: Reactor, peers: list[str], families: list[FamilyTuple]) -> list[str]:
     """The peers whose neighbor carries every one of the families."""
     neighbors = reactor.configuration.neighbors
     return [peer for peer in peers if peer in neighbors and all(f in neighbors[peer].families() for f in families)]
 
 
-def refreshing(reactor: 'Reactor', peers: list[str], families: list[FamilyTuple]) -> list[str]:
+def refreshing(reactor: Reactor, peers: list[str], families: list[FamilyTuple]) -> list[str]:
     """The peers whose session may carry a ROUTE-REFRESH for every one of the families.
 
     RFC 2918 4: only a peer which sent the Route Refresh Capability, and only for a
@@ -57,7 +57,7 @@ def refreshing(reactor: 'Reactor', peers: list[str], families: list[FamilyTuple]
     return [peer for peer in peers if all(family in refreshable[peer] for family in families)]
 
 
-def unsendable(reactor: 'Reactor', peers: list[str], route: 'Route') -> str:
+def unsendable(reactor: Reactor, peers: list[str], route: Route) -> str:
     """Why the route can not be sent to any of `peers`, or '' when it can be.
 
     A route for a family none of the peers carries was answered done, as in 4.x and 5.x,
@@ -80,7 +80,7 @@ def unsendable(reactor: 'Reactor', peers: list[str], route: 'Route') -> str:
     return the_peer[0] if all(the_peer) else ''
 
 
-async def refused(self: 'API', reactor: 'Reactor', service: str, peers: list[str], routes: list['Route']) -> bool:
+async def refused(self: API, reactor: Reactor, service: str, peers: list[str], routes: list[Route]) -> bool:
     """Answer an error for the first route which can not be sent, before any is announced.
 
     Only `announce route` checked: `announce attributes ... rd 100:100 nlri ...` with no label
@@ -96,7 +96,7 @@ async def refused(self: 'API', reactor: 'Reactor', service: str, peers: list[str
     return False
 
 
-def parse_sync_mode(command: str, reactor: 'Reactor', service: str) -> tuple[str, bool]:
+def parse_sync_mode(command: str, reactor: Reactor, service: str) -> tuple[str, bool]:
     """Parse sync/async keyword from command and determine sync mode.
 
     Handles keywords in any order at end of command:
@@ -137,7 +137,7 @@ def parse_sync_mode(command: str, reactor: 'Reactor', service: str) -> tuple[str
     return command_stripped, sync_mode
 
 
-def register_flush_callbacks(peers: list[str], reactor: 'Reactor', sync_mode: bool) -> list[asyncio.Event]:
+def register_flush_callbacks(peers: list[str], reactor: Reactor, sync_mode: bool) -> list[asyncio.Event]:
     """Register flush callbacks for all connected peers if sync mode enabled.
 
     Returns:
@@ -157,7 +157,7 @@ def register_flush_callbacks(peers: list[str], reactor: 'Reactor', sync_mode: bo
 
 
 def announce_route(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -206,7 +206,7 @@ def announce_route(
 
 
 def withdraw_route(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -259,7 +259,7 @@ def withdraw_route(
 
 
 def announce_vpls(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -301,7 +301,7 @@ def announce_vpls(
 
 
 def withdraw_vpls(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -344,7 +344,7 @@ def withdraw_vpls(
 
 
 def announce_attributes(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -392,7 +392,7 @@ def announce_attributes(
 
 
 def withdraw_attribute(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -441,7 +441,7 @@ def withdraw_attribute(
 
 
 def announce_flow(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -483,7 +483,7 @@ def announce_flow(
 
 
 def withdraw_flow(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -526,7 +526,7 @@ def withdraw_flow(
 
 
 def announce_eor(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         # EOR requires established peers to send to
@@ -576,7 +576,7 @@ def announce_eor(
 
 
 def announce_refresh(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         # Route-refresh requires established peers to send to
@@ -620,7 +620,7 @@ def announce_refresh(
 
 
 def announce_operational(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     from exabgp.bgp.message.operational import Operational
 
@@ -663,7 +663,7 @@ def announce_operational(
 
 
 def announce_ipv4(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -705,7 +705,7 @@ def announce_ipv4(
 
 
 def withdraw_ipv4(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -748,7 +748,7 @@ def withdraw_ipv4(
 
 
 def announce_ipv6(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -790,7 +790,7 @@ def announce_ipv6(
 
 
 def withdraw_ipv6(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool, action: str = ''
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
         try:
@@ -864,7 +864,7 @@ _V6_WITHDRAW_HANDLERS: dict[str, str] = {
 }
 
 
-def v6_announce(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def v6_announce(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """v6 announce dispatcher - routes to specific handler based on type token.
 
     Command format: <type> <spec>
@@ -895,7 +895,7 @@ def v6_announce(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
     return bool(handler(self, reactor, service, peers, command, use_json, action='announce'))
 
 
-def v6_withdraw(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def v6_withdraw(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """v6 withdraw dispatcher - routes to specific handler based on type token.
 
     Command format: <type> <spec>

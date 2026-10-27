@@ -42,7 +42,7 @@ class Origin(Attribute):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'Origin':
+    def from_packet(cls, data: Buffer) -> Origin:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -62,7 +62,7 @@ class Origin(Attribute):
         return cls(data)
 
     @classmethod
-    def from_int(cls, origin: int) -> 'Origin':
+    def from_int(cls, origin: int) -> Origin:
         """Create Origin from semantic value with validation.
 
         Args:

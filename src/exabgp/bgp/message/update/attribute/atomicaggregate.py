@@ -40,7 +40,7 @@ class AtomicAggregate(Attribute):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'AtomicAggregate':
+    def from_packet(cls, data: Buffer) -> AtomicAggregate:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -57,7 +57,7 @@ class AtomicAggregate(Attribute):
         return cls(data)
 
     @classmethod
-    def make_atomic_aggregate(cls) -> 'AtomicAggregate':
+    def make_atomic_aggregate(cls) -> AtomicAggregate:
         """Create AtomicAggregate.
 
         Returns:

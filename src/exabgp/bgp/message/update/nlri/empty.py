@@ -47,7 +47,7 @@ class Empty(NLRI):
         super().__init__(afi, safi, PathInfo.DISABLED)
         self._packed = b''
 
-    def pack_nlri(self, negotiated: 'Negotiated') -> Buffer:
+    def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         """Pack to empty bytes (no NLRI)."""
         return b''
 
@@ -64,12 +64,12 @@ class Empty(NLRI):
     def _fresh(self) -> Self:
         return type(self)(self.afi, self.safi)
 
-    def __copy__(self) -> 'Empty':
+    def __copy__(self) -> Empty:
         new = self._fresh()
         self._copy_nlri_slots(new)
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'Empty':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> Empty:
         new = self._fresh()
         self._deepcopy_nlri_slots(new, memo)
         return new

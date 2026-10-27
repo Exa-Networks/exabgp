@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from exabgp.rib.route import Route
 
 
-def _sendable(name: str, neighbor: 'Neighbor', route: 'Route') -> bool:
+def _sendable(name: str, neighbor: Neighbor, route: Route) -> bool:
     """Whether an API route goes to this neighbor, saying why not, or why it is unusual.
 
     RFC 4271 5.1.3: never to the peer whose address is the next-hop. The API refuses the
@@ -52,7 +52,7 @@ def _sendable(name: str, neighbor: 'Neighbor', route: 'Route') -> bool:
     return True
 
 
-def _withdrawable(neighbor: 'Neighbor', route: 'Route') -> 'Route':
+def _withdrawable(neighbor: Neighbor, route: Route) -> Route:
     """The route to withdraw, `next-hop self` resolved when it can be, dropped when not.
 
     A withdrawal sends no next-hop: `withdraw route 2001:db8::/32 next-hop self` on an IPv4
@@ -76,9 +76,9 @@ class _Configuration:
         self.processes: dict[str, Any] = {}
         self.neighbors: dict[str, Any] = {}
         # Global route store: index -> Route (shared across neighbors)
-        self._routes: dict[bytes, 'Route'] = {}
+        self._routes: dict[bytes, Route] = {}
 
-    def store_route(self, route: 'Route') -> bytes:
+    def store_route(self, route: Route) -> bytes:
         """Store route in global store, incrementing refcount.
 
         Args:
@@ -113,7 +113,7 @@ class _Configuration:
             del self._routes[index]
         return True
 
-    def get_route(self, index: bytes) -> 'Route | None':
+    def get_route(self, index: bytes) -> Route | None:
         """Get route by index (O(1) lookup).
 
         Args:
@@ -124,7 +124,7 @@ class _Configuration:
         """
         return self._routes.get(index)
 
-    def announce_route(self, peers: list[str], route: 'Route', owner: str = '') -> bool:
+    def announce_route(self, peers: list[str], route: Route, owner: str = '') -> bool:
         """Announce route to matching peers.
 
         Args:
@@ -157,7 +157,7 @@ class _Configuration:
                     )
         return result
 
-    def withdraw_route(self, peers: list[str], route: 'Route') -> bool:
+    def withdraw_route(self, peers: list[str], route: Route) -> bool:
         """Withdraw route from matching peers.
 
         Args:
@@ -186,7 +186,7 @@ class _Configuration:
                     )
         return result
 
-    def announce_route_indexed(self, peers: list[str], route: 'Route', owner: str = '') -> tuple[bytes, bool]:
+    def announce_route_indexed(self, peers: list[str], route: Route, owner: str = '') -> tuple[bytes, bool]:
         """Announce route and store in global index for API access.
 
         Args:
@@ -241,7 +241,7 @@ class _Configuration:
                 self.neighbors[neighbor].eor.append(family)
         return result
 
-    def inject_operational(self, peers: list[str], operational: 'OperationalFamily') -> bool:
+    def inject_operational(self, peers: list[str], operational: OperationalFamily) -> bool:
         result = True
         for neighbor in self.neighbors:
             if neighbor in peers:
@@ -346,7 +346,7 @@ class Configuration(_Configuration):
 
         self.error = ConfigurationError()
         # the routes an API command read, until the API takes them
-        self._command_routes: list['Route'] = []
+        self._command_routes: list[Route] = []
         # how many sections the last API command left open: its routes are then not used
         self.open_sections = 0
         self._previous_neighbors: dict[str, Any] = {}
@@ -355,7 +355,7 @@ class Configuration(_Configuration):
         self._settings: ConfigurationSettings | None = None
 
     @classmethod
-    def from_settings(cls, settings: 'ConfigurationSettings') -> 'Configuration':
+    def from_settings(cls, settings: ConfigurationSettings) -> Configuration:
         """Create Configuration from validated settings, without reading a file.
 
         Raises:
@@ -474,12 +474,12 @@ class Configuration(_Configuration):
         self._command_routes = routes
         return True
 
-    def pop_routes(self) -> list['Route']:
+    def pop_routes(self) -> list[Route]:
         """The routes of the last API command, given once."""
         routes, self._command_routes = self._command_routes, []
         return routes
 
-    def parse_route_text(self, route_text: str, action: str = 'announce') -> list['Route']:
+    def parse_route_text(self, route_text: str, action: str = 'announce') -> list[Route]:
         """Parse route text into Route objects, the neighbors left as they are.
 
         Returns:

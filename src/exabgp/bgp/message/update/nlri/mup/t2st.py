@@ -77,7 +77,7 @@ class Type2SessionTransformedRoute(MUP):
         endpoint_ip: IP,
         teid: int,
         afi: AFI,
-    ) -> 'Type2SessionTransformedRoute':
+    ) -> Type2SessionTransformedRoute:
         """Factory method to create T2ST from semantic parameters."""
         payload = bytes(rd.pack_rd()) + pack('!B', endpoint_len) + endpoint_ip.pack_ip()
 

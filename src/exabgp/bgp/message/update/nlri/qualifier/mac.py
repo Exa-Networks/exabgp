@@ -9,7 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 
-from typing import ClassVar, Type
+from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
@@ -71,7 +71,7 @@ class MAC:
         return hash(self._packed)
 
     @classmethod
-    def unpack_mac(cls: Type[MAC], data: Buffer) -> MAC:
+    def unpack_mac(cls: type[MAC], data: Buffer) -> MAC:
         if len(data) != cls.LENGTH:
             raise Notify(3, 10, f'MAC requires exactly {cls.LENGTH} bytes, got {len(data)}')
         return cls(':'.join('{:02X}'.format(_) for _ in data), data)

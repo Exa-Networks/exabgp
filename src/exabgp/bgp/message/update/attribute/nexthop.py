@@ -57,7 +57,7 @@ class NextHop(Attribute):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'NextHop':
+    def from_packet(cls, data: Buffer) -> NextHop:
         """Validate and create from wire-format bytes.
 
         Four or sixteen octets, because MP_REACH_NLRI decodes its own next hop through
@@ -79,7 +79,7 @@ class NextHop(Attribute):
         return cls(data)
 
     @classmethod
-    def from_string(cls, ip_string: str) -> 'NextHop':
+    def from_string(cls, ip_string: str) -> NextHop:
         """Create from IP address string.
 
         Args:
@@ -112,7 +112,7 @@ class NextHop(Attribute):
         """Get packed bytes (IP interface compatibility)."""
         return self._packed
 
-    def resolve(self, ip: 'IP') -> 'NextHop':
+    def resolve(self, ip: IP) -> NextHop:
         """Resolve address. For concrete NextHop, returns self (already resolved).
 
         NextHopSelf subclass overrides to return a new NextHop with the resolved IP.
@@ -187,7 +187,7 @@ class NextHopSelf(NextHop):
         """True if resolve() has been called with a concrete IP."""
         return self._packed != b''
 
-    def resolve(self, ip: 'IP') -> 'NextHop':
+    def resolve(self, ip: IP) -> NextHop:
         """Resolve sentinel to concrete IP. Returns new NextHop (does NOT mutate self)."""
         if self.resolved:
             raise ValueError('NextHopSelf already resolved')

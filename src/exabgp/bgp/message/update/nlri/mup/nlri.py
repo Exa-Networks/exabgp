@@ -6,7 +6,8 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, TYPE_CHECKING
+from typing import Any, ClassVar, TYPE_CHECKING
+from collections.abc import Callable
 
 if TYPE_CHECKING:
     from exabgp.protocol.ip import IP
@@ -104,14 +105,14 @@ class MUP(NLRI):
         # Wire format: [family][arch_type(1)][route_type(2)][length(1)][payload] - _packed includes header
         return bytes(Family.index(self)) + self._packed
 
-    def __copy__(self) -> 'MUP':
+    def __copy__(self) -> MUP:
         new = self._fresh()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # MUP has empty __slots__ - nothing else to copy
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'MUP':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> MUP:
         new = self._fresh()
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)

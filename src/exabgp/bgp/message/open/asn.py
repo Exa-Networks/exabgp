@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from exabgp.util.types import Buffer
 from struct import pack, unpack
-from typing import ClassVar, Type, TypeVar
+from typing import ClassVar, TypeVar
 
 from exabgp.protocol.resource import Resource
 
@@ -69,7 +69,7 @@ class ASN(Resource):
         return pack('!L' if asn4 else '!H', self.value)
 
     @classmethod
-    def unpack_asn(cls: Type[ASN], data: Buffer, klass: Type[_ASN]) -> _ASN:
+    def unpack_asn(cls: type[ASN], data: Buffer, klass: type[_ASN]) -> _ASN:
         if len(data) == cls.SIZE_4BYTE:
             value = unpack('!L', data)[0]
         elif len(data) == cls.SIZE_2BYTE:
@@ -97,7 +97,7 @@ class ASN(Resource):
         return str(self.value)
 
     @classmethod
-    def from_string(cls: Type[ASN], value: str) -> ASN:
+    def from_string(cls: type[ASN], value: str) -> ASN:
         """Parse an ASN from its plain or dotted textual representation.
 
         Accepts "65001" (0 to 4294967295) and "1.1" (two components, each 0 to 65535).
@@ -133,12 +133,12 @@ class ASN(Resource):
         return int(self)
 
     @classmethod
-    def from_int(cls: Type[ASN], value: int) -> ASN:
+    def from_int(cls: type[ASN], value: int) -> ASN:
         """Create an ASN from an int, whether it needs two octets or four."""
         return ASN(value)
 
     @classmethod
-    def validate(cls: Type[ASN], value: int) -> bool:
+    def validate(cls: type[ASN], value: int) -> bool:
         """Validate value is within 16-bit ASN range.
 
         Args:

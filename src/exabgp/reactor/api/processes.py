@@ -36,7 +36,8 @@ import termios
 import time
 from exabgp.util.intvalue import json_number
 from threading import Thread
-from typing import IO, TYPE_CHECKING, Any, Callable, ClassVar, Generator, TypeVar, cast
+from typing import IO, TYPE_CHECKING, Any, ClassVar, TypeVar, cast
+from collections.abc import Callable, Generator
 
 
 if TYPE_CHECKING:
@@ -155,7 +156,7 @@ class ProcessRespawnError(ProcessError):
 # do not do anything if silenced. At module level: a compiled class body can not use a name
 # it defined itself, so the decorator can not be a staticmethod of Processes
 def silenced(function: _F) -> _F:
-    def closure(self: 'Processes', *args: Any, **kwargs: Any) -> None:
+    def closure(self: Processes, *args: Any, **kwargs: Any) -> None:
         if self.silence:
             return None
         return function(self, *args, **kwargs)
@@ -701,7 +702,7 @@ class Processes:
                 continue
             self._start(process)
 
-    def broken(self, neighbor: 'Neighbor') -> bool:
+    def broken(self, neighbor: Neighbor) -> bool:
         if self._broken:
             for process in self._configuration:
                 if process in self._broken:
@@ -1614,7 +1615,7 @@ class Processes:
         """Get sync mode for a specific service/process (default: False)"""
         return self._sync.get(service, False)
 
-    def _notify(self, neighbor: 'Neighbor', event: str) -> Generator[str, None, None]:
+    def _notify(self, neighbor: Neighbor, event: str) -> Generator[str, None, None]:
         if not neighbor.api:
             return
         for process in neighbor.api.get(event, []):
@@ -1622,39 +1623,39 @@ class Processes:
 
     # invalid-name
     @silenced
-    def up(self, neighbor: 'Neighbor') -> None:
+    def up(self, neighbor: Neighbor) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].up(neighbor), neighbor)
 
     @silenced
-    def connected(self, neighbor: 'Neighbor') -> None:
+    def connected(self, neighbor: Neighbor) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].connected(neighbor), neighbor)
 
     @silenced
-    def down(self, neighbor: 'Neighbor', reason: str) -> None:
+    def down(self, neighbor: Neighbor, reason: str) -> None:
         for process in self._notify(neighbor, 'neighbor-changes'):
             self.write(process, self._encoder[process].down(neighbor, reason), neighbor)
 
     @silenced
-    def negotiated(self, neighbor: 'Neighbor', negotiated: Negotiated) -> None:
+    def negotiated(self, neighbor: Neighbor, negotiated: Negotiated) -> None:
         for process in self._notify(neighbor, 'negotiated'):
             self.write(process, self._encoder[process].negotiated(neighbor, negotiated), neighbor)
 
     @silenced
-    def fsm(self, neighbor: 'Neighbor', fsm: 'FSM') -> None:
+    def fsm(self, neighbor: Neighbor, fsm: FSM) -> None:
         for process in self._notify(neighbor, 'fsm'):
             self.write(process, self._encoder[process].fsm(neighbor, fsm), neighbor)
 
     @silenced
-    def signal(self, neighbor: 'Neighbor', signal: int) -> None:
+    def signal(self, neighbor: Neighbor, signal: int) -> None:
         for process in self._notify(neighbor, 'signal'):
             self.write(process, self._encoder[process].signal(neighbor, signal), neighbor)
 
     @silenced
     def packets(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
         category: MessageCode,
         header: bytes,
@@ -1671,9 +1672,9 @@ class Processes:
     @silenced
     def notification(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        message: 'Notification',
+        message: Notification,
         header: bytes,
         body: bytes,
         negotiated: Negotiated,
@@ -1689,7 +1690,7 @@ class Processes:
     def message(
         self,
         message_id: MessageCode,
-        peer: 'Peer',
+        peer: Peer,
         direction: str,
         message: Message,
         header: bytes,
@@ -1702,7 +1703,7 @@ class Processes:
 
     @register_process(Message.CODE.OPEN)
     def _open(
-        self, peer: 'Peer', direction: str, message: 'Open', negotiated: Negotiated, header: bytes, body: bytes
+        self, peer: Peer, direction: str, message: Open, negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
         for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.OPEN.SHORT}'):
             self.write(
@@ -1711,7 +1712,7 @@ class Processes:
 
     @register_process(Message.CODE.UPDATE)
     def _update(
-        self, peer: 'Peer', direction: str, update: 'Update', negotiated: Negotiated, header: bytes, body: bytes
+        self, peer: Peer, direction: str, update: Update, negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
         # Encoders take the decoded UpdateCollection; an EOR's is marked as an End-of-RIB
         update_collection = update.data
@@ -1724,7 +1725,7 @@ class Processes:
 
     @register_process(Message.CODE.NOTIFICATION)
     def _notification(
-        self, peer: 'Peer', direction: str, message: 'Notification', negotiated: Negotiated, header: bytes, body: bytes
+        self, peer: Peer, direction: str, message: Notification, negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
         for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.NOTIFICATION.SHORT}'):
             self.write(
@@ -1736,7 +1737,7 @@ class Processes:
     # unused-argument, must keep the API
     @register_process(Message.CODE.KEEPALIVE)
     def _keepalive(
-        self, peer: 'Peer', direction: str, keepalive: Any, negotiated: Negotiated, header: bytes, body: bytes
+        self, peer: Peer, direction: str, keepalive: Any, negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
         for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.KEEPALIVE.SHORT}'):
             self.write(
@@ -1745,7 +1746,7 @@ class Processes:
 
     @register_process(Message.CODE.ROUTE_REFRESH)
     def _refresh(
-        self, peer: 'Peer', direction: str, refresh: 'RouteRefresh', negotiated: Negotiated, header: bytes, body: bytes
+        self, peer: Peer, direction: str, refresh: RouteRefresh, negotiated: Negotiated, header: bytes, body: bytes
     ) -> None:
         for process in self._notify(peer.neighbor, f'{direction}-{Message.CODE.ROUTE_REFRESH.SHORT}'):
             self.write(
@@ -1757,9 +1758,9 @@ class Processes:
     @register_process(Message.CODE.OPERATIONAL)
     def _operational(
         self,
-        peer: 'Peer',
+        peer: Peer,
         direction: str,
-        operational: 'Operational',
+        operational: Operational,
         negotiated: Negotiated,
         header: bytes,
         body: bytes,

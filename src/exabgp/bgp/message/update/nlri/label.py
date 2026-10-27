@@ -302,7 +302,7 @@ class LabelBase(INET):
         return instance
 
     @classmethod
-    def from_settings(cls, settings: 'INETSettings') -> Self:
+    def from_settings(cls, settings: INETSettings) -> Self:
         """Create Label NLRI from validated settings.
 
         This factory method validates settings and creates an immutable Label

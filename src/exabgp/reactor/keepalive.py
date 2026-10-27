@@ -27,7 +27,7 @@ class KA:
     Tracks when keepalives need to be sent and provides an async method to send them.
     """
 
-    def __init__(self, session: Any, proto: 'Protocol') -> None:
+    def __init__(self, session: Any, proto: Protocol) -> None:
         self._proto = proto
         self.send_timer: SendTimer = SendTimer(session, proto.negotiated.holdtime)
         # RFC 4271 8.2.2: what the session sends restarts it, the UPDATEs included

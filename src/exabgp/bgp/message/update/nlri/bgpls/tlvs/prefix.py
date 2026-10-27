@@ -30,7 +30,7 @@ class Prefix:
         self._packed = packed
 
     @classmethod
-    def unpack_prefix(cls, data: Buffer) -> 'Prefix':
+    def unpack_prefix(cls, data: Buffer) -> Prefix:
         if len(data) not in (IPv4.BYTES, IPv6.BYTES):
             raise Notify(
                 3,

@@ -26,7 +26,7 @@ def register_reactor() -> None:
     pass
 
 
-def help_command(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def help_command(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     from exabgp.reactor.api.dispatch import get_commands
 
     commands = get_commands()
@@ -84,7 +84,7 @@ def help_command(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
     return True
 
 
-def shutdown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def shutdown(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     reactor.signal.request(reactor.signal.SHUTDOWN)
     if use_json:
         reactor.processes.write(service, json.dumps({'status': 'shutdown in progress'}, default=json_number))
@@ -94,7 +94,7 @@ def shutdown(self: 'API', reactor: 'Reactor', service: str, peers: list[str], co
     return True
 
 
-def reload(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def reload(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     if not reactor.signal.request(reactor.signal.RELOAD):
         reactor.processes.answer_error_sync(service, 'shutdown in progress')
         return False
@@ -106,7 +106,7 @@ def reload(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comm
     return True
 
 
-def restart(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def restart(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     if not reactor.signal.request(reactor.signal.RESTART):
         reactor.processes.answer_error_sync(service, 'shutdown in progress')
         return False
@@ -118,7 +118,7 @@ def restart(self: 'API', reactor: 'Reactor', service: str, peers: list[str], com
     return True
 
 
-def version(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def version(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     if use_json:
         reactor.processes.write(
             service, json.dumps({'version': _version, 'application': 'exabgp'}, default=json_number)
@@ -129,13 +129,13 @@ def version(self: 'API', reactor: 'Reactor', service: str, peers: list[str], com
     return True
 
 
-def comment(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def comment(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     log.debug(lazymsg('api.comment text={text}', text=command.lstrip().lstrip('#').strip()), 'processes')
     reactor.processes.answer_done_sync(service)
     return True
 
 
-def reset(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def reset(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     reactor.asynchronous.clear(service)
 
     if use_json:
@@ -147,7 +147,7 @@ def reset(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comma
     return True
 
 
-def queue_status(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def queue_status(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Display write queue status for all API processes.
 
     Returns queue size (items and bytes) for each process.
@@ -173,7 +173,7 @@ def queue_status(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
     return True
 
 
-def crash(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def crash(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Raise inside a scheduled coroutine, to test what the reactor does when one does.
 
     The reactor answers `error` for a coroutine which raised, and that is the answer: one
@@ -187,27 +187,27 @@ def crash(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comma
     return True
 
 
-def disable_ack(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def disable_ack(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Disable ACK responses for this connection (sends 'done' for this command, then disables)"""
     reactor.processes.set_ack(service, False)
     reactor.processes.answer_done_sync(service, force=True)
     return True
 
 
-def enable_ack(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def enable_ack(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Re-enable ACK responses for this connection"""
     reactor.processes.set_ack(service, True)
     reactor.processes.answer_done_sync(service)
     return True
 
 
-def silence_ack(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def silence_ack(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Disable ACK responses immediately (no 'done' sent for this command)"""
     reactor.processes.set_ack(service, False)
     return True
 
 
-def enable_sync(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def enable_sync(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Enable sync mode - wait for routes to be flushed to wire before ACK.
 
     When sync mode is enabled, announce/withdraw commands will wait until
@@ -220,7 +220,7 @@ def enable_sync(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
     return True
 
 
-def disable_sync(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def disable_sync(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Disable sync mode - ACK immediately after RIB update (default).
 
     When sync mode is disabled (default), announce/withdraw commands return
@@ -232,7 +232,7 @@ def disable_sync(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
     return True
 
 
-def ping(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def ping(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Lightweight health check - responds with 'pong <UUID>' and active status
 
     Defaults to JSON output unless 'text' keyword is explicitly used.
@@ -261,7 +261,7 @@ def ping(self: 'API', reactor: 'Reactor', service: str, peers: list[str], comman
     return True
 
 
-def bye(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def bye(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Acknowledge a client leaving: the CLI sends "bye" when it quits, and waits for done.
 
     It once released the daemon's one CLI slot, and there is no slot to release any more.
@@ -270,9 +270,7 @@ def bye(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command
     return True
 
 
-def api_version_cmd(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
-) -> bool:
+def api_version_cmd(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Display or set the API version of the helpers.
 
     Usage:
@@ -314,14 +312,14 @@ def _api_version_name(version: int) -> str:
     return 'auto' if version == 0 else str(version)
 
 
-def _write(reactor: 'Reactor', service: str, use_json: bool, data: dict[str, Any], text: str) -> None:
+def _write(reactor: Reactor, service: str, use_json: bool, data: dict[str, Any], text: str) -> None:
     if use_json:
         reactor.processes.write(service, json.dumps(data, default=json_number))
     else:
         reactor.processes.write(service, text)
 
 
-def _show_api_version(reactor: 'Reactor', service: str, use_json: bool) -> bool:
+def _show_api_version(reactor: Reactor, service: str, use_json: bool) -> bool:
     """The setting, and the version this helper speaks (auto until its commands tell)."""
     from exabgp.environment import getenv
 
@@ -338,7 +336,7 @@ def _show_api_version(reactor: 'Reactor', service: str, use_json: bool) -> bool:
     return True
 
 
-def status(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def status(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Display daemon status information (UUID, uptime, version, peers)"""
     import os
     import time

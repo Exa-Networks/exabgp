@@ -11,7 +11,7 @@ are now refused, by the configuration and by the API, and no other code can be s
 from __future__ import annotations
 
 from collections import Counter
-from typing import Iterator
+from collections.abc import Iterator
 
 import pytest
 

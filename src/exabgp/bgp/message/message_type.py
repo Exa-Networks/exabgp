@@ -23,7 +23,7 @@ class MessageType(Enum):
     OPERATIONAL = 'operational'
 
     @classmethod
-    def from_str(cls, value: str) -> 'MessageType':
+    def from_str(cls, value: str) -> MessageType:
         """Convert string to MessageType, raises ValueError if invalid."""
         for member in cls:
             if member.value == value:

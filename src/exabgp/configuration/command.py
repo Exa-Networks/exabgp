@@ -102,7 +102,7 @@ def _shared(routes: list[Route]) -> str | None:
     return ' '.join(['announce', 'attributes', *values, 'nlri', *prefixes])
 
 
-def decode_to_api_command(payload_hex: str, neighbor: 'Neighbor') -> list[str]:
+def decode_to_api_command(payload_hex: str, neighbor: Neighbor) -> list[str]:
     """The API commands which send the UPDATE in `payload_hex` (the message after its header).
 
     One command for one route, or for routes which differ by their prefix only; a `group` of

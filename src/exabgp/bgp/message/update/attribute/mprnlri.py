@@ -9,7 +9,8 @@ from __future__ import annotations
 
 
 from struct import unpack
-from typing import ClassVar, Iterator, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
+from collections.abc import Iterator
 
 from exabgp.util.types import Buffer
 
@@ -207,7 +208,7 @@ class MPRNLRI(Attribute):
         _, _, nlri_iter = self._parse_nexthop_and_nlris()
         yield from nlri_iter
 
-    def iter_routed(self) -> Iterator['RoutedNLRI']:
+    def iter_routed(self) -> Iterator[RoutedNLRI]:
         """Yield RoutedNLRI from wire format.
 
         Generator that yields RoutedNLRI (nlri + nexthop) one by one.

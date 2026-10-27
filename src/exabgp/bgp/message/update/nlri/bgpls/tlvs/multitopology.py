@@ -62,7 +62,7 @@ class MTID:
         self._packed = packed
 
     @classmethod
-    def unpack_mtid(cls, data: Buffer) -> 'MTID':
+    def unpack_mtid(cls, data: Buffer) -> MTID:
         if len(data) < MTID_SIZE:
             raise Notify(3, 10, f'BGP-LS multi-topology sub-tlv is {len(data)} bytes, expected at least {MTID_SIZE}')
         # RFC 9552 5.2.2.1: the field is four reserved R bits then a 12 bit MT-ID, and

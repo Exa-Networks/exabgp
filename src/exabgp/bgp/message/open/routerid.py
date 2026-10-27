@@ -8,7 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.util.types import Buffer
-from typing import Type
 
 from exabgp.protocol.ip import IPFactory, IPv4
 
@@ -27,5 +26,5 @@ class RouterID(IPv4):
         return cls(string)
 
     @classmethod
-    def unpack_routerid(cls: Type[RouterID], data: Buffer) -> RouterID:
+    def unpack_routerid(cls: type[RouterID], data: Buffer) -> RouterID:
         return cls(IPv4.ntop(data))

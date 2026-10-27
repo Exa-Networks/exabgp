@@ -10,7 +10,8 @@ from __future__ import annotations
 from exabgp.util.intvalue import IntValue
 from exabgp.util.types import Buffer
 from struct import pack
-from typing import TYPE_CHECKING, Callable, ClassVar, Self, Type
+from typing import TYPE_CHECKING, ClassVar, Self
+from collections.abc import Callable
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -176,7 +177,7 @@ class Attribute:
     NO_GENERATION: ClassVar[bool] = False
 
     # Registered subclasses we know how to decode
-    registered_attributes: ClassVar[dict[tuple[int, int], Type[Attribute]]] = dict()
+    registered_attributes: ClassVar[dict[tuple[int, int], type[Attribute]]] = dict()
 
     # what this implementation knows as attributes
     attributes_known: ClassVar[list[int]] = []
@@ -187,7 +188,7 @@ class Attribute:
     caching: ClassVar[bool] = False
 
     # The attribute cache per attribute ID
-    cache: ClassVar[dict[int, Cache[bytes, 'Attribute']]] = {}
+    cache: ClassVar[dict[int, Cache[bytes, Attribute]]] = {}
 
     # ---------------------------------------------------------------------------
 
@@ -218,12 +219,12 @@ class Attribute:
         length: int = len(value)
         return length + 3 if length <= ATTR_LENGTH_EXTENDED_MAX else length + 4
 
-    def pack_attribute(self, negotiated: 'Negotiated') -> Buffer:
+    def pack_attribute(self, negotiated: Negotiated) -> Buffer:
         """Pack attribute for wire transmission. Must be overridden by subclasses."""
         raise NotImplementedError(f'{self.__class__.__name__} must implement pack_attribute()')
 
     @classmethod
-    def unpack_attribute(cls, data: Buffer, negotiated: 'Negotiated') -> 'Attribute':
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
         """Unpack attribute from wire format. Must be overridden by subclasses."""
         raise NotImplementedError(f'{cls.__name__} must implement unpack_attribute()')
 
@@ -329,8 +330,8 @@ class Attribute:
     @classmethod
     def register(
         cls, attribute_id: int | None = None, flag: int | None = None
-    ) -> Callable[[Type[Attribute]], Type[Attribute]]:
-        def register_attribute(klass: Type[Attribute]) -> Type[Attribute]:
+    ) -> Callable[[type[Attribute]], type[Attribute]]:
+        def register_attribute(klass: type[Attribute]) -> type[Attribute]:
             aid: int = klass.ID if attribute_id is None else attribute_id
             key: tuple[int, int] = cls._registry_key(aid, klass.FLAG if flag is None else flag)
             if key in cls.registered_attributes:
@@ -350,10 +351,10 @@ class Attribute:
         return cls._registry_key(attribute_id, flag) in cls.registered_attributes
 
     @classmethod
-    def klass(cls, attribute_id: int, flag: int) -> Type[Attribute]:
+    def klass(cls, attribute_id: int, flag: int) -> type[Attribute]:
         key: tuple[int, int] = cls._registry_key(attribute_id, flag)
         if key in cls.registered_attributes:
-            kls: Type[Attribute] = cls.registered_attributes[key]
+            kls: type[Attribute] = cls.registered_attributes[key]
             kls.ID = attribute_id
             return kls
 
@@ -362,7 +363,7 @@ class Attribute:
         raise RuntimeError(f'no class registered for attribute {attribute_id} with flag 0x{flag:02X}')
 
     @classmethod
-    def klass_by_id(cls, attribute_id: int) -> Type[Attribute] | None:
+    def klass_by_id(cls, attribute_id: int) -> type[Attribute] | None:
         """Get attribute class by ID, ignoring flag variations."""
         for (registered_aid, _), klass in cls.registered_attributes.items():
             if registered_aid == attribute_id:

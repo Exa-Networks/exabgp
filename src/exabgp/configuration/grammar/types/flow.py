@@ -12,7 +12,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Callable, cast
+from typing import Any, cast
+from collections.abc import Callable
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4

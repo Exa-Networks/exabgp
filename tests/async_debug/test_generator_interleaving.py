@@ -10,7 +10,7 @@ In async mode, we need to ensure generators don't block the event loop.
 """
 
 import asyncio
-from typing import Iterator, List
+from collections.abc import Iterator
 
 import pytest
 
@@ -27,7 +27,7 @@ def data_generator_2() -> Iterator[str]:
         yield f'GEN2-{i}'
 
 
-async def consume_generator_sync_style(gen: Iterator[str], name: str, results: List[str]):
+async def consume_generator_sync_style(gen: Iterator[str], name: str, results: list[str]):
     """
     Sync mode style: consume generator in tight loop
     This is what new_update_async() does
@@ -39,7 +39,7 @@ async def consume_generator_sync_style(gen: Iterator[str], name: str, results: L
     print(f'[{name}] Finished consumption (sync style)')
 
 
-async def consume_generator_async_style(gen: Iterator[str], name: str, results: List[str]):
+async def consume_generator_async_style(gen: Iterator[str], name: str, results: list[str]):
     """
     Async mode style: consume generator but yield control periodically
     This is what we SHOULD do if generators can block
@@ -134,7 +134,7 @@ async def test_state_modification_during_consumption():
         def __init__(self):
             self._data = []
 
-        def add_data(self, items: List[str]):
+        def add_data(self, items: list[str]):
             """Simulates resend() adding to _refresh_changes"""
             self._data.extend(items)
             print(f'[RIB] Added {len(items)} items, total now: {len(self._data)}')
@@ -193,7 +193,7 @@ async def test_concurrent_state_modification():
             self._data = []
             self.consumption_count = 0
 
-        def add_data(self, items: List[str]):
+        def add_data(self, items: list[str]):
             """Simulates resend() - called from API callback"""
             self._data.extend(items)
             print(f'[RIB] API callback added {len(items)} items, total: {len(self._data)}')

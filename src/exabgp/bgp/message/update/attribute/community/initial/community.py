@@ -48,7 +48,7 @@ class Community:
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'Community':
+    def from_packet(cls, data: Buffer) -> Community:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -65,7 +65,7 @@ class Community:
         return cls(data)
 
     @classmethod
-    def make_community(cls, asn: int, value: int) -> 'Community':
+    def make_community(cls, asn: int, value: int) -> Community:
         """Create from ASN and value.
 
         Args:
@@ -79,7 +79,7 @@ class Community:
         return cls(packed)
 
     @classmethod
-    def make_wellknown(cls, value: int) -> 'Community':
+    def make_wellknown(cls, value: int) -> Community:
         """Create from well-known community value.
 
         Args:
@@ -157,11 +157,11 @@ class Community:
         return 4
 
     @classmethod
-    def unpack_community(cls, data: Buffer, negotiated: Negotiated) -> 'Community':
+    def unpack_community(cls, data: Buffer, negotiated: Negotiated) -> Community:
         return cls.from_packet(data)
 
     @classmethod
-    def cached(cls, packed: Buffer) -> 'Community':
+    def cached(cls, packed: Buffer) -> Community:
         if not cls.caching:
             return cls(packed)
         # Convert to bytes for hashable cache key (memoryview is not hashable)

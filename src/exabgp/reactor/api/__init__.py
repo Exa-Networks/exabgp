@@ -42,8 +42,8 @@ GROUPED_ROUTES = frozenset({'route', 'ipv4', 'ipv6', 'flow', 'vpls', 'attribute'
 
 
 class API:
-    def __init__(self, reactor: 'Reactor') -> None:
-        self.reactor: 'Reactor' = reactor
+    def __init__(self, reactor: Reactor) -> None:
+        self.reactor: Reactor = reactor
         self.configuration: Configuration = Configuration([])
 
     def log_message(self, message: str, level: str = 'INFO') -> None:
@@ -69,7 +69,7 @@ class API:
         return words[-1] == 'json' if words else False
 
     def _held_by_group(
-        self, reactor: 'Reactor', service: str, handler: Handler, peers: list[str], remaining: str, use_json: bool
+        self, reactor: Reactor, service: str, handler: Handler, peers: list[str], remaining: str, use_json: bool
     ) -> bool:
         """Hold `peer <selector> announce|withdraw <route> ...` for the group block it is written in.
 
@@ -96,7 +96,7 @@ class API:
         group_cmd.group_add_command(self, reactor, service, peers, f'{action} {remaining}', use_json)
         return True
 
-    def process(self, reactor: 'Reactor', service: str, command: str) -> bool:
+    def process(self, reactor: Reactor, service: str, command: str) -> bool:
         """Process an API command (sync version).
 
         Uses parallel v4/v6 dispatchers based on API version setting.
@@ -135,7 +135,7 @@ class API:
             reactor.processes.answer_error_sync(service)
             return False
 
-    async def process_async(self, reactor: 'Reactor', service: str, command: str) -> bool:
+    async def process_async(self, reactor: Reactor, service: str, command: str) -> bool:
         """Process an API command (async version).
 
         Uses parallel v4/v6 dispatchers based on API version setting.

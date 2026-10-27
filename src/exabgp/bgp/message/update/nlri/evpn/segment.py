@@ -61,7 +61,7 @@ class EthernetSegment(EVPN):
         ip: IP,
         action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
-    ) -> 'EthernetSegment':
+    ) -> EthernetSegment:
         """Factory method to create EthernetSegment from semantic parameters.
 
         Packs fields into wire format immediately (packed-bytes-first pattern).

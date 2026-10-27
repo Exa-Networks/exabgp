@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Callable, ClassVar, Self, TYPE_CHECKING, Type
+from typing import Any, ClassVar, Self, TYPE_CHECKING
+from collections.abc import Callable
 
 from exabgp.util.types import Buffer
 
@@ -135,7 +136,7 @@ class MVPN(NLRI):
     # MVPN has no additional instance attributes beyond NLRI base class
     __slots__ = ()
 
-    registered_mvpn: ClassVar[dict[int, Type[MVPN]]] = dict()
+    registered_mvpn: ClassVar[dict[int, type[MVPN]]] = dict()
 
     # Wire format constant
     HEADER_SIZE: ClassVar[int] = 2  # type(1) + length(1)
@@ -193,14 +194,14 @@ class MVPN(NLRI):
     def index(self) -> bytes:
         return bytes(Family.index(self)) + self._packed
 
-    def __copy__(self) -> 'MVPN':
+    def __copy__(self) -> MVPN:
         new = self._fresh()
         # NLRI slots (includes Family slots: _afi, _safi)
         self._copy_nlri_slots(new)
         # MVPN has empty __slots__ - nothing else to copy
         return new
 
-    def __deepcopy__(self, memo: dict[Any, Any]) -> 'MVPN':
+    def __deepcopy__(self, memo: dict[Any, Any]) -> MVPN:
         new = self._fresh()
         memo[id(self)] = new
         # NLRI slots (includes Family slots: _afi, _safi)
@@ -209,10 +210,10 @@ class MVPN(NLRI):
         return new
 
     @classmethod
-    def register_mvpn(cls, code: int) -> Callable[[Type[MVPN]], Type[MVPN]]:
+    def register_mvpn(cls, code: int) -> Callable[[type[MVPN]], type[MVPN]]:
         """Register an MVPN route type subclass by its code."""
 
-        def decorator(klass: Type[MVPN]) -> Type[MVPN]:
+        def decorator(klass: type[MVPN]) -> type[MVPN]:
             # Set class attribute
             klass.CODE = code
             # Register
@@ -224,7 +225,7 @@ class MVPN(NLRI):
         return decorator
 
     @classmethod
-    def unpack_mvpn(cls, data: Buffer, afi: AFI) -> 'MVPN':
+    def unpack_mvpn(cls, data: Buffer, afi: AFI) -> MVPN:
         """Unpack MVPN route from bytes. Must be implemented by subclasses."""
         raise NotImplementedError('unpack_mvpn must be implemented by subclasses')
 

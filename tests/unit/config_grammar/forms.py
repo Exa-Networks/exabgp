@@ -17,7 +17,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterator
+from collections.abc import Iterator
 
 from config_grammar.forms_neighbor import BOOLEANS, NEIGHBOR_DOCUMENTS, NEIGHBOR_FORMS, SECTION_NEEDS
 from config_grammar.forms_route import (

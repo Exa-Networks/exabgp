@@ -84,7 +84,7 @@ class Open(Message):
     @classmethod
     def make_open(
         cls, version: Version, asn: ASN, hold_time: HoldTime, router_id: RouterID, capabilities: Capabilities
-    ) -> 'Open':
+    ) -> Open:
         # OPEN message ASN field is always 2 bytes (RFC 4271)
         # 4-byte ASN is negotiated via ASN4 capability
         fixed = version.pack_version() + asn.trans().pack_asn2() + hold_time.pack_holdtime() + router_id.pack_ip()

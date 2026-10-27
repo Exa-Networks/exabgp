@@ -15,7 +15,8 @@ import random
 import socket
 import select
 from exabgp.util.types import Buffer
-from typing import ClassVar, Iterator
+from typing import ClassVar
+from collections.abc import Iterator
 
 from exabgp.environment import getenv
 

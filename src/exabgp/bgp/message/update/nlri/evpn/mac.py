@@ -75,7 +75,7 @@ class MAC(EVPN):
         ip: IP | None,
         action: Action = Action.UNSET,
         addpath: PathInfo = PathInfo.DISABLED,
-    ) -> 'MAC':
+    ) -> MAC:
         """Factory method to create MAC from semantic parameters.
 
         Packs fields into wire format immediately (packed-bytes-first pattern).

@@ -24,7 +24,8 @@ import json
 from exabgp.util.intvalue import json_number
 from struct import error as struct_error, unpack
 from collections.abc import Mapping
-from typing import Any, Callable, ClassVar, Protocol, TYPE_CHECKING
+from typing import Any, ClassVar, Protocol, TYPE_CHECKING
+from collections.abc import Callable
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated

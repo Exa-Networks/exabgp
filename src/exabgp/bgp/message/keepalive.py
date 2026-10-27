@@ -38,7 +38,7 @@ class KeepAlive(Message):
         self._packed = packed
 
     @classmethod
-    def make_keepalive(cls) -> 'KeepAlive':
+    def make_keepalive(cls) -> KeepAlive:
         return cls(b'')
 
     def pack_body(self, negotiated: Negotiated) -> Buffer:

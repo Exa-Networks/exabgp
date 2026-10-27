@@ -28,7 +28,8 @@ import asyncio
 import time
 from collections import defaultdict
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, ClassVar, Generator, Iterator, NoReturn, cast
+from typing import TYPE_CHECKING, Any, ClassVar, NoReturn, cast
+from collections.abc import Generator, Iterator
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -200,7 +201,7 @@ class Peer:
     Supports both sync (generator) and async (asyncio) operation modes.
     """
 
-    def __init__(self, neighbor: 'Neighbor', reactor: 'Reactor') -> None:
+    def __init__(self, neighbor: Neighbor, reactor: Reactor) -> None:
         # Maximum connection attempts (0 = unlimited)
         self.max_connection_attempts: int = getenv().tcp.attempts
         self.connection_attempts: int = 0
@@ -208,10 +209,10 @@ class Peer:
 
         now: float = time.time()
 
-        self.reactor: 'Reactor' = reactor
-        self.neighbor: 'Neighbor' = neighbor
+        self.reactor: Reactor = reactor
+        self.neighbor: Neighbor = neighbor
         # The next restart neighbor definition
-        self._neighbor: 'Neighbor' | None = None
+        self._neighbor: Neighbor | None = None
 
         self.proto: Protocol | None = None
         self.fsm: FSM = FSM(self, FSM.IDLE)
@@ -553,7 +554,7 @@ class Peer:
         requested = set(self.neighbor.rib.outgoing.families) if family is None else {family}
         return requested - self._end_of_rib_sent
 
-    def reestablish(self, restart_neighbor: 'Neighbor' | None = None) -> None:
+    def reestablish(self, restart_neighbor: Neighbor | None = None) -> None:
         # we want to tear down the session and re-establish it
         self._teardown = Notify(6, 3)
         self._teardown_by_operator = False
@@ -562,7 +563,7 @@ class Peer:
         self._neighbor = restart_neighbor
         self._delay.reset()
 
-    def reconfigure(self, restart_neighbor: 'Neighbor' | None = None) -> None:
+    def reconfigure(self, restart_neighbor: Neighbor | None = None) -> None:
         # we want to update the route which were in the configuration file
         self._neighbor = restart_neighbor
         # Update self.neighbor immediately so API processes see the new configuration
@@ -633,7 +634,7 @@ class Peer:
             return self.proto.fd()
         return -1
 
-    def handle_connection(self, connection: 'Incoming') -> Iterator[bool] | None:
+    def handle_connection(self, connection: Incoming) -> Iterator[bool] | None:
         log.debug(lazymsg('peer.fsm.state state={s}', s=self.fsm.name()), self.id())
 
         # a peer whose neighbour has been removed from the configuration cannot serve this
@@ -745,7 +746,7 @@ class Peer:
         assert self.proto is not None and self.proto.negotiated.received_open is not None
         return self._outgoing_wins_collision(self.proto.negotiated.received_open)
 
-    def _hold_contender(self, connection: 'Incoming', restart: bool) -> None:
+    def _hold_contender(self, connection: Incoming, restart: bool) -> None:
         """Keep a connection until its OPEN is read, sending ours on it first.
 
         RFC 4271 6.8: one colliding with ours in OpenSent (`restart` False), whose OPEN says
@@ -792,7 +793,7 @@ class Peer:
         received = await contender.read_open(contender.connection.peer)
         return sent, received
 
-    async def _resolve_collision(self, contender: Protocol, connection: 'Incoming', restart: bool) -> None:
+    async def _resolve_collision(self, contender: Protocol, connection: Incoming, restart: bool) -> None:
         """Exchange OPENs on the held connection, then keep one connection of two."""
         assert contender.connection is not None
         wait = getenv().bgp.openwait
@@ -866,7 +867,7 @@ class Peer:
             self.stats['send-notification'] += 1
         self._drop_contender()
 
-    def _take_contender(self, connection: 'Incoming', received: Open, sent: Open | None) -> None:
+    def _take_contender(self, connection: Incoming, received: Open, sent: Open | None) -> None:
         """Close ours with a Cease, and go on with the connection whose OPEN was read."""
         log.debug(
             lazymsg('peer.connection.closing connection={c} reason=higher_router_id_incoming', c=connection.name()),
@@ -876,7 +877,7 @@ class Peer:
             self._supersede()
         self._adopt(connection, received, sent)
 
-    def _replace_restarted_session(self, connection: 'Incoming', received: Open, sent: Open | None) -> None:
+    def _replace_restarted_session(self, connection: Incoming, received: Open, sent: Open | None) -> None:
         """RFC 4724 4.2: end the session of a restarted peer as a lost TCP session, and take its new one.
 
         The previous TCP session "is simply closed": no NOTIFICATION, which would end the
@@ -894,7 +895,7 @@ class Peer:
         self._prepare_next_session()
         self._adopt(connection, received, sent)
 
-    def _adopt(self, connection: 'Incoming', received: Open, sent: Open | None) -> None:
+    def _adopt(self, connection: Incoming, received: Open, sent: Open | None) -> None:
         """Make the held connection the session, which goes on from the OPENs exchanged on it."""
         assert connection.io is not None, 'the connection kept is the one whose OPEN was just read'
         # made again, so the session is over the neighbour of now, should a reload have run

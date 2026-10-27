@@ -40,8 +40,8 @@ _V6_ROUTES_HANDLERS: dict[str, str] = {
 
 
 def v6_routes(
-    self: 'API',
-    reactor: 'Reactor',
+    self: API,
+    reactor: Reactor,
     service: str,
     peers: list[str],
     command: str,
@@ -83,7 +83,7 @@ def v6_routes(
     return bool(handler(self, reactor, service, peers, afi_safi_words, remaining, use_json))
 
 
-async def _answer_results(reactor: 'Reactor', service: str, results: list[dict[str, Any]], done: str) -> None:
+async def _answer_results(reactor: Reactor, service: str, results: list[dict[str, Any]], done: str) -> None:
     """Answer what add or remove did to each route, then done, or error when one was not done.
 
     `done` is the key of a result saying whether its route was added or removed. The JSON
@@ -123,8 +123,8 @@ def _parse_family_filter(afi_safi_words: list[str]) -> tuple[AFI | None, SAFI | 
 
 
 def routes_list(
-    self: 'API',
-    reactor: 'Reactor',
+    self: API,
+    reactor: Reactor,
     service: str,
     peers: list[str],
     afi_safi_words: list[str],
@@ -181,8 +181,8 @@ def routes_list(
 
 
 def routes_add(
-    self: 'API',
-    reactor: 'Reactor',
+    self: API,
+    reactor: Reactor,
     service: str,
     peers: list[str],
     afi_safi_words: list[str],
@@ -261,8 +261,8 @@ def routes_add(
 
 
 def routes_remove(
-    self: 'API',
-    reactor: 'Reactor',
+    self: API,
+    reactor: Reactor,
     service: str,
     peers: list[str],
     afi_safi_words: list[str],

@@ -7,7 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Iterator, ClassVar
+from typing import ClassVar
+from collections.abc import Iterator
 from exabgp.util import string_is_hex
 from exabgp.util.intvalue import IntValue
 

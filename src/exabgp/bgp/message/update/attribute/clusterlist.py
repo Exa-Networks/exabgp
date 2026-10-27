@@ -7,7 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, ClassVar, Sequence
+from typing import TYPE_CHECKING, ClassVar
+from collections.abc import Sequence
 
 from exabgp.util.types import Buffer
 
@@ -23,7 +24,7 @@ from exabgp.protocol.ip import IPFactory, IPv4
 
 class ClusterID(IPv4):
     @classmethod
-    def from_string(cls, string: str, klass: IPFactory | None = None) -> 'ClusterID':
+    def from_string(cls, string: str, klass: IPFactory | None = None) -> ClusterID:
         """Create ClusterID from string representation."""
         # klass parameter unused - ClusterID always returns ClusterID
         return cls(IPv4.pton(string))
@@ -54,7 +55,7 @@ class ClusterList(Attribute):
         self._packed: Buffer = packed
 
     @classmethod
-    def from_packet(cls, data: Buffer) -> 'ClusterList':
+    def from_packet(cls, data: Buffer) -> ClusterList:
         """Validate and create from wire-format bytes.
 
         Args:
@@ -71,7 +72,7 @@ class ClusterList(Attribute):
         return cls(data)
 
     @classmethod
-    def make_clusterlist(cls, clusters: Sequence[IPv4]) -> 'ClusterList':
+    def make_clusterlist(cls, clusters: Sequence[IPv4]) -> ClusterList:
         """Create from list of cluster IDs.
 
         Args:

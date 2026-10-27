@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import time
-from typing import Callable, ClassVar, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING
+from collections.abc import Callable
 
 if TYPE_CHECKING:
     from exabgp.environment.config import Environment
@@ -49,7 +50,7 @@ class _log:
     logger: ClassVar[Callable[..., None]] = _noop_logger
 
     @staticmethod
-    def init(env: 'Environment') -> None:
+    def init(env: Environment) -> None:
         option.setup(env)
 
     @classmethod

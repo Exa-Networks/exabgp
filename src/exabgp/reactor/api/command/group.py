@@ -116,7 +116,7 @@ def _add_to_group(service: str, peers: list[str], command: str) -> bool:
     return True
 
 
-def group_start(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def group_start(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Start a group block - begin buffering commands.
 
     Usage: group start
@@ -141,7 +141,7 @@ def group_start(self: 'API', reactor: 'Reactor', service: str, peers: list[str],
     return True
 
 
-def group_end(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def group_end(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """End a group block - process all buffered commands.
 
     Usage: group end
@@ -183,7 +183,7 @@ def group_end(self: 'API', reactor: 'Reactor', service: str, peers: list[str], c
     return True
 
 
-def group_inline(self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool) -> bool:
+def group_inline(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
     """Process single-line group command.
 
     Usage: group announce ... ; announce ... ; withdraw ...
@@ -223,8 +223,8 @@ def group_inline(self: 'API', reactor: 'Reactor', service: str, peers: list[str]
 
 
 async def _process_group(
-    api: 'API',
-    reactor: 'Reactor',
+    api: API,
+    reactor: Reactor,
     service: str,
     buffered: list[tuple[list[str], str]],
     use_json: bool,
@@ -281,14 +281,14 @@ async def _process_group(
 
 
 async def _apply(
-    api: 'API',
-    reactor: 'Reactor',
+    api: API,
+    reactor: Reactor,
     service: str,
     peers: list[str],
     cmd: str,
     remaining: str,
     action: str,
-    shared: 'Route | None',
+    shared: Route | None,
     applied: dict[str, int],
     touched: set[str],
     errors: list[str],
@@ -322,7 +322,7 @@ async def _apply(
 
 
 async def _answer_group(
-    reactor: 'Reactor', service: str, use_json: bool, applied: dict[str, int], errors: list[str]
+    reactor: Reactor, service: str, use_json: bool, applied: dict[str, int], errors: list[str]
 ) -> None:
     """Say what a group applied, and end with done, or with error when a command could not be applied.
 
@@ -349,7 +349,7 @@ async def _answer_group(
         await reactor.processes.answer_done(service)
 
 
-def _parse_routes(api: 'API', command: str, action: str = 'announce') -> list['Route']:
+def _parse_routes(api: API, command: str, action: str = 'announce') -> list[Route]:
     """Parse routes from command string.
 
     Handles various route formats:
@@ -394,7 +394,7 @@ def _parse_routes(api: 'API', command: str, action: str = 'announce') -> list['R
 
 
 def group_add_command(
-    self: 'API', reactor: 'Reactor', service: str, peers: list[str], command: str, use_json: bool
+    self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool
 ) -> bool:
     """Add a command to the current group buffer (called during multi-line grouping).
 

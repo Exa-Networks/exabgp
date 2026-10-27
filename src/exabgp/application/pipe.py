@@ -209,7 +209,8 @@ class Control:
             sys.stderr.write(f'cannot enable API acknowledgements: {exc}\n')
             sys.stderr.flush()
 
-        from typing import Any, Callable, TypeVar, cast
+        from typing import Any, TypeVar, cast
+        from collections.abc import Callable
 
         _F = TypeVar('_F', bound=Callable[..., Any])
 
@@ -292,7 +293,7 @@ class Control:
             self.r_pipe: b'',
         }
 
-        def grow(source: 'int | None', chunk: bytes) -> None:
+        def grow(source: int | None, chunk: bytes) -> None:
             """store only grows here, so the cap is only checked here.
 
             It used to be checked in the first branch of consume() alone, and the drain at
@@ -304,7 +305,7 @@ class Control:
                 sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
                 sys.exit(1)
 
-        def consume(source: 'int | None') -> None:
+        def consume(source: int | None) -> None:
             if not backlog[source] and b'\n' not in store[source]:
                 grow(source, read[source](1024))
             else:

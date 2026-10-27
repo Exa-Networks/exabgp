@@ -125,14 +125,14 @@ class INETSettings:
         rd: Route Distinguisher (for IPVPN)
     """
 
-    cidr: 'CIDR | None' = None
+    cidr: CIDR | None = None
     afi: AFI | None = None
     safi: SAFI | None = None
     action: Action = field(default=Action.UNSET)
     nexthop: IP = field(default_factory=lambda: IP.NoNextHop)
     path_info: PathInfo = field(default_factory=lambda: PathInfo.DISABLED)
-    labels: 'Labels | None' = None
-    rd: 'RouteDistinguisher | None' = None
+    labels: Labels | None = None
+    rd: RouteDistinguisher | None = None
 
     def set(self, name: str, value: Any) -> None:
         """Set a field with validation.
@@ -183,7 +183,7 @@ class FlowSettings:
     action: Action = field(default=Action.UNSET)
     nexthop: IP = field(default_factory=lambda: IP.NoNextHop)
     rules: dict[int, list[Any]] = field(default_factory=dict)  # dict[int, list[FlowRule]]
-    rd: 'RouteDistinguisher | None' = None
+    rd: RouteDistinguisher | None = None
     path_info: PathInfo = field(default_factory=lambda: PathInfo.DISABLED)
 
     def set(self, name: str, value: Any) -> None:

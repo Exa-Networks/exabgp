@@ -20,7 +20,8 @@ from __future__ import annotations
 
 from contextvars import ContextVar
 from dataclasses import dataclass
-from typing import Any, Callable, Iterator, Mapping, cast
+from typing import Any, cast
+from collections.abc import Callable, Iterator, Mapping
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.attribute.internal import Split as InternalSplit

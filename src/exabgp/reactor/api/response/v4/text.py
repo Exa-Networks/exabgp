@@ -52,16 +52,16 @@ class V4Text:
         total_string = header_str + body_str if body_str else header_str
         return total_string
 
-    def up(self, neighbor: 'Neighbor') -> str:
+    def up(self, neighbor: Neighbor) -> str:
         # Call v6 to ensure it's tested, then discard result
         _ = self._v6.up(neighbor)
         return f'neighbor {neighbor.session.peer_address} up\n'
 
-    def connected(self, neighbor: 'Neighbor') -> str:
+    def connected(self, neighbor: Neighbor) -> str:
         _ = self._v6.connected(neighbor)
         return f'neighbor {neighbor.session.peer_address} connected\n'
 
-    def down(self, neighbor: 'Neighbor', reason: str = '') -> str:
+    def down(self, neighbor: Neighbor, reason: str = '') -> str:
         _ = self._v6.down(neighbor, reason)
         return f'neighbor {neighbor.session.peer_address} down - {oneline(reason)}\n'
 
@@ -69,29 +69,29 @@ class V4Text:
         _ = self._v6.shutdown()
         return f'shutdown {os.getpid()} {os.getppid()}\n'
 
-    def negotiated(self, neighbor: 'Neighbor', negotiated: 'Negotiated') -> None:
+    def negotiated(self, neighbor: Neighbor, negotiated: Negotiated) -> None:
         # Call v6, but text format doesn't output negotiated info
         _ = self._v6.negotiated(neighbor, negotiated)
         return None
 
-    def fsm(self, neighbor: 'Neighbor', fsm: 'FSM') -> None:
+    def fsm(self, neighbor: Neighbor, fsm: FSM) -> None:
         # Call v6, but text format doesn't output FSM info
         _ = self._v6.fsm(neighbor, fsm)
         return None
 
-    def signal(self, neighbor: 'Neighbor', signal: int) -> None:
+    def signal(self, neighbor: Neighbor, signal: int) -> None:
         # Call v6, but text format doesn't output signal info
         _ = self._v6.signal(neighbor, signal)
         return None
 
     def notification(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        message: 'Notification',
+        message: Notification,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         _ = self._v6.notification(neighbor, direction, message, header, body, negotiated)
         # as 5.x: the Data field made readable (a Shutdown Communication decoded), in hexadecimal
@@ -101,32 +101,30 @@ class V4Text:
 
     def packets(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        category: 'MessageCode',
+        category: MessageCode,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         _ = self._v6.packets(neighbor, direction, category, header, body, negotiated)
         return (
             f'neighbor {neighbor.session.peer_address} {direction} {category.value}{self._header_body(header, body)}\n'
         )
 
-    def keepalive(
-        self, neighbor: 'Neighbor', direction: str, header: bytes, body: bytes, negotiated: 'Negotiated'
-    ) -> str:
+    def keepalive(self, neighbor: Neighbor, direction: str, header: bytes, body: bytes, negotiated: Negotiated) -> str:
         _ = self._v6.keepalive(neighbor, direction, header, body, negotiated)
         return f'neighbor {neighbor.session.peer_address} {direction} keepalive{self._header_body(header, body)}\n'
 
     def open(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        sent_open: 'Open',
+        sent_open: Open,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         _ = self._v6.open(neighbor, direction, sent_open, header, body, negotiated)
         # the capabilities hold the peer's hostname and software version, free text it chose
@@ -136,12 +134,12 @@ class V4Text:
 
     def update(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        update: 'UpdateCollection',
+        update: UpdateCollection,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         _ = self._v6.update(neighbor, direction, update, header, body, negotiated)
 
@@ -171,42 +169,42 @@ class V4Text:
 
     def refresh(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
-        refresh: 'RouteRefresh',
+        refresh: RouteRefresh,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         _ = self._v6.refresh(neighbor, direction, refresh, header, body, negotiated)
         return f'neighbor {neighbor.session.peer_address} {direction} route-refresh afi {refresh.afi} safi {refresh.safi} {refresh.reserved}{self._header_body(header, body)}\n'
 
     def _operational_advisory(
-        self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
+        self, neighbor: Neighbor, direction: str, operational: OperationalFamily, header: bytes, body: bytes
     ) -> str:
         # free text the peer chose, and not promised to be UTF-8
         data = bytes(operational.data).decode('utf-8', 'replace')
         return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} afi {operational.afi} safi {operational.safi} advisory "{oneline(data)}"{self._header_body(header, body)}'
 
     def _operational_query(
-        self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
+        self, neighbor: Neighbor, direction: str, operational: OperationalFamily, header: bytes, body: bytes
     ) -> str:
         return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} afi {operational.afi} safi {operational.safi}{self._header_body(header, body)}'
 
     def _operational_counter(
-        self, neighbor: 'Neighbor', direction: str, operational: Any, header: bytes, body: bytes
+        self, neighbor: Neighbor, direction: str, operational: Any, header: bytes, body: bytes
     ) -> str:
         return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} afi {operational.afi} safi {operational.safi} router-id {operational.routerid} sequence {operational.sequence} counter {operational.counter}{self._header_body(header, body)}'
 
     def operational(
         self,
-        neighbor: 'Neighbor',
+        neighbor: Neighbor,
         direction: str,
         what: str,
-        operational: 'Operational',
+        operational: Operational,
         header: bytes,
         body: bytes,
-        negotiated: 'Negotiated',
+        negotiated: Negotiated,
     ) -> str:
         # Call v6 first to ensure it's tested
         _ = self._v6.operational(neighbor, direction, what, operational, header, body, negotiated)

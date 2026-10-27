@@ -11,7 +11,6 @@ Both methods handle the transition between previous and new route sets.
 
 import sys
 import os
-from typing import List
 from unittest.mock import Mock
 
 import pytest
@@ -63,7 +62,7 @@ def create_rib(cache: bool = True) -> OutgoingRIB:
     return OutgoingRIB(cache=cache, families={(AFI.ipv4, SAFI.unicast)})
 
 
-def consume_updates(rib: OutgoingRIB) -> List:
+def consume_updates(rib: OutgoingRIB) -> list:
     """Consume all pending updates from the RIB."""
     return list(rib.updates(grouped=False))
 
