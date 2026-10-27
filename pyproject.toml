@@ -127,6 +127,9 @@ select = [
 	"UP032",
 	# pyupgrade: aliases and leftovers of Python 2
 	"UP008", "UP009", "UP012", "UP018", "UP024", "UP041",
+	# the small ones ruff fixes itself
+	"B009", "B010", "FURB188", "PIE790", "PIE808", "PLR0402", "PLR1711", "PLR1730",
+	"PYI019", "PYI055", "RET501", "RUF010", "RUF019", "RUF023", "SIM114", "SIM208", "TC005",
 	# isort
 	"I001",
 ]

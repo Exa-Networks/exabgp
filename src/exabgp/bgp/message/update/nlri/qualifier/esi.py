@@ -90,4 +90,4 @@ class ESI:
         return cls(data)
 
     def json(self, compact: bool = False) -> str:
-        return f'"esi": "{str(self)}"'
+        return f'"esi": "{self!s}"'

@@ -76,4 +76,4 @@ class MAC:
         return cls(':'.join(f'{_:02X}' for _ in data), data)
 
     def json(self, compact: bool = False) -> str:
-        return f'"mac": "{str(self)}"'
+        return f'"mac": "{self!s}"'

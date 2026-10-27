@@ -8,10 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, Self
-
-if TYPE_CHECKING:
-    pass
+from typing import ClassVar, Self
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS

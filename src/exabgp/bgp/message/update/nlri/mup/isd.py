@@ -155,7 +155,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
-        content += f'"prefix_ip": "{str(self.prefix_ip)}", '
+        content += f'"prefix_ip": "{self.prefix_ip!s}", '
         content += self.rd.json()
         content += f', "raw": "{self._raw()}"'
         return f'{{ {content} }}'

@@ -25,10 +25,10 @@ class UnknownCapability(Capability):
 
     def __str__(self) -> str:
         if self.capability in Capability.CODE.reserved:
-            return f'Reserved {str(self.capability)}'
+            return f'Reserved {self.capability!s}'
         if self.capability in Capability.CODE.unassigned:
-            return f'Unassigned {str(self.capability)}'
-        return f'Unknown {str(self.capability)}'
+            return f'Unassigned {self.capability!s}'
+        return f'Unknown {self.capability!s}'
 
     def json(self) -> str:
         if self.capability in Capability.CODE.reserved:

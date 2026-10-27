@@ -37,7 +37,7 @@ from tests import negotiation
 # every combination of the flag bits a peer chooses, including EXTENDED_LENGTH, which
 # changes how the length itself is read and is where the NEXT_HOP case came from
 FLAGS = [0x00, 0x40, 0x50, 0x80, 0xC0, 0xD0]
-SIZES = list(range(0, 20)) + [24, 32, 64, 255]
+SIZES = list(range(20)) + [24, 32, 64, 255]
 
 # one real prefix, so the UPDATE is a route rather than an End-of-RIB
 IPV4_PREFIX = bytes([24, 10, 0, 0])

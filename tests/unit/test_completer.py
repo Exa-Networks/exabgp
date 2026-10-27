@@ -640,7 +640,6 @@ class TestRealWorldScenarios:
 
         # v6 syntax would be 'rib show in' - but no 'extensive' option currently
         # Just verify the v4 path is blocked
-        pass
 
     def test_teardown_with_neighbor_ip(self):
         """Test completing 'teardown 192.168.1.1'"""

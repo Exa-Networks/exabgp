@@ -8,12 +8,7 @@ from __future__ import annotations
 
 import json
 from struct import unpack
-from typing import TYPE_CHECKING, Any, ClassVar, Self
-
-from exabgp.util.intvalue import json_number
-
-if TYPE_CHECKING:
-    pass
+from typing import Any, ClassVar, Self
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
@@ -23,6 +18,7 @@ from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SID
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.util import hexstring
+from exabgp.util.intvalue import json_number
 from exabgp.util.types import Buffer
 
 # BGP-LS SRv6 SID TLV type codes (RFC 9514)

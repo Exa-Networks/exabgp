@@ -106,7 +106,7 @@ def test_lying_length_prefix_only_raises_notify(family: tuple[AFI, SAFI], framed
 
 
 @pytest.mark.fuzz
-@pytest.mark.parametrize('code', list(range(0, 12)))
+@pytest.mark.parametrize('code', list(range(12)))
 # The only lengths at which a registered EVPN route type decodes at all, mapped by
 # sweeping every length from 0 to 51 against four fill bytes: 17 for the inclusive
 # multicast tag, 23 for the ethernet segment, 34 for the IP prefix route, and 22 for the
@@ -124,7 +124,7 @@ def test_evpn_route_types_only_raise_notify(code: int, framed: tuple[int, bytes]
 
 
 @pytest.mark.fuzz
-@pytest.mark.parametrize('code', list(range(0, 8)))
+@pytest.mark.parametrize('code', list(range(8)))
 # A two octet length agrees with a payload of at most sixty bytes 1/65536 of the time, so
 # this sweep reached the decoders behind the header in 0.3% of gate runs.  Twenty one is an
 # accepting length for the link NLRI on both SAFIs, and the one which caught a VPN NLRI

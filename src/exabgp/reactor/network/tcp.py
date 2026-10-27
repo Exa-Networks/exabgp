@@ -630,5 +630,5 @@ def ready(io: socket.socket) -> Iterator[tuple[bool, str]]:
             yield False, 'waiting for socket to become ready'
         # not `err`, the name of the int above: compiled, a name keeps a single type
         except OSError as exc:
-            yield False, f'error, retrying {str(exc)}'
+            yield False, f'error, retrying {exc!s}'
             return

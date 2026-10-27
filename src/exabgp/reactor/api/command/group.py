@@ -174,7 +174,7 @@ def group_end(self: API, reactor: Reactor, service: str, peers: list[str], comma
         try:
             await _process_group(self, reactor, service, buffered, use_json)
         except Exception as e:
-            error_msg = f'group processing failed: {type(e).__name__}: {str(e)}'
+            error_msg = f'group processing failed: {type(e).__name__}: {e!s}'
             log.error(lazymsg('api.group.error error={e}', e=error_msg), 'api')
             await reactor.processes.answer_error(service, error_msg)
 
@@ -213,7 +213,7 @@ def group_inline(self: API, reactor: Reactor, service: str, peers: list[str], co
         try:
             await _process_group(self, reactor, service, buffered, use_json)
         except Exception as e:
-            error_msg = f'group processing failed: {type(e).__name__}: {str(e)}'
+            error_msg = f'group processing failed: {type(e).__name__}: {e!s}'
             log.error(lazymsg('api.group.error error={e}', e=error_msg), 'api')
             await reactor.processes.answer_error(service, error_msg)
 

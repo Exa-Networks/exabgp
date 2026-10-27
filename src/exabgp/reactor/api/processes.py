@@ -120,37 +120,25 @@ def _unread_bytes(fd: int) -> int:
 class ProcessError(Exception):
     """Base exception for process-related errors."""
 
-    pass
-
 
 class ProcessStartError(ProcessError):
     """Failed to start subprocess."""
-
-    pass
 
 
 class ProcessCommunicationError(ProcessError):
     """Failed to communicate with subprocess."""
 
-    pass
-
 
 class ProcessWriteError(ProcessCommunicationError):
     """Failed to write to process stdin (broken pipe)."""
-
-    pass
 
 
 class ProcessReadError(ProcessCommunicationError):
     """Failed to read from process stdout."""
 
-    pass
-
 
 class ProcessRespawnError(ProcessError):
     """Process respawned too many times."""
-
-    pass
 
 
 # do not do anything if silenced. At module level: a compiled class body can not use a name

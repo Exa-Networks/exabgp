@@ -8,7 +8,7 @@ does not define.
 
 from __future__ import annotations
 
-import exabgp.bgp.message.update.nlri.flow as flow
+from exabgp.bgp.message.update.nlri import flow
 from exabgp.protocol.family import AFI
 
 

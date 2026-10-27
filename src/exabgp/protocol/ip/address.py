@@ -10,7 +10,7 @@ from __future__ import annotations
 import builtins
 import socket
 from collections.abc import Iterator
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, Self, TypeVar, cast
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask
@@ -231,7 +231,7 @@ class IP(IPBase):
         return cls._known.get(afi)
 
     @classmethod
-    def from_string(cls: type[IPT], string: str, klass: IPFactory | None = None) -> IPT:
+    def from_string(cls, string: str, klass: IPFactory | None = None) -> Self:
         """Build an address from its string form, deciding the family once.
 
         Called on IPv4 or IPv6 the string must belong to that family. Naming a
@@ -246,14 +246,14 @@ class IP(IPBase):
 
         data = inet_pton(cls._AFI_TO_AF[afi], string)
         if klass is not None:
-            return cast(IPT, klass(data))
+            return cast(Self, klass(data))
 
         factory = cls._known.get(afi)
         if factory is None:
             raise ValueError(f'Unknown IP address format: {string}')
         # the family check above makes the registered factory this class or a
         # subclass of it, so the cast can not widen the type
-        return cast(IPT, factory(data))
+        return cast(Self, factory(data))
 
     @classmethod
     def register(cls) -> None:
@@ -301,7 +301,7 @@ class IPRange(IP):
         self.mask = NetMask.make_netmask(mask, self.afi)
 
     @classmethod
-    def from_string(cls: type[IPT], string: str, klass: IPFactory | None = None) -> IPT:
+    def from_string(cls, string: str, klass: IPFactory | None = None) -> Self:
         raise NotImplementedError(f'{cls.__name__}.from_string() needs a mask, use make_range()')
 
     @classmethod

@@ -188,15 +188,15 @@ def announce_route(
 
             await reactor.processes.answer_done(service)
         except ValueError as e:
-            error_msg = f'Failed to parse route: {str(e)}'
+            error_msg = f'Failed to parse route: {e!s}'
             self.log_failure(error_msg)
             await reactor.processes.answer_error(service, error_msg)
         except IndexError as e:
-            error_msg = f'Invalid route syntax: {str(e)}'
+            error_msg = f'Invalid route syntax: {e!s}'
             self.log_failure(error_msg)
             await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
+            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
             self.log_exception(error_msg, e)
             await reactor.processes.answer_error(service, error_msg)
 
@@ -241,15 +241,15 @@ def withdraw_route(
 
             await reactor.processes.answer_done(service)
         except ValueError as e:
-            error_msg = f'Failed to parse route: {str(e)}'
+            error_msg = f'Failed to parse route: {e!s}'
             self.log_failure(error_msg)
             await reactor.processes.answer_error(service, error_msg)
         except IndexError as e:
-            error_msg = f'Invalid route syntax: {str(e)}'
+            error_msg = f'Invalid route syntax: {e!s}'
             self.log_failure(error_msg)
             await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
+            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
             self.log_exception(error_msg, e)
             await reactor.processes.answer_error(service, error_msg)
 
@@ -374,15 +374,15 @@ def announce_attributes(
 
             await reactor.processes.answer_done(service)
         except ValueError as e:
-            error_msg = f'Failed to parse route: {str(e)}'
+            error_msg = f'Failed to parse route: {e!s}'
             self.log_failure(error_msg)
             await reactor.processes.answer_error(service, error_msg)
         except IndexError as e:
-            error_msg = f'Invalid route syntax: {str(e)}'
+            error_msg = f'Invalid route syntax: {e!s}'
             self.log_failure(error_msg)
             await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
+            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
             self.log_exception(error_msg, e)
             await reactor.processes.answer_error(service, error_msg)
 
@@ -423,15 +423,15 @@ def withdraw_attribute(
 
             await reactor.processes.answer_done(service)
         except ValueError as e:
-            error_msg = f'Failed to parse route: {str(e)}'
+            error_msg = f'Failed to parse route: {e!s}'
             self.log_failure(error_msg)
             await reactor.processes.answer_error(service, error_msg)
         except IndexError as e:
-            error_msg = f'Invalid route syntax: {str(e)}'
+            error_msg = f'Invalid route syntax: {e!s}'
             self.log_failure(error_msg)
             await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
+            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
             self.log_exception(error_msg, e)
             await reactor.processes.answer_error(service, error_msg)
 

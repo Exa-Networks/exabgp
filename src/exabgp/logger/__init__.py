@@ -43,7 +43,6 @@ LogMessage = Callable[..., str]
 
 def _noop_logger(logger: Callable[[str], None], message: LogMessage, source: str, level: str) -> None:
     """No-op logger used when logging is disabled"""
-    pass
 
 
 class _log:

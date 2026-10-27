@@ -52,7 +52,7 @@ _HEXADECIMAL = re.compile(r'^[0-9A-Fa-f]+$')
 class RawCapture:
     """One `raw:` line, read the one way every reader agrees on."""
 
-    __slots__ = ('line_number', 'step', 'hexadecimal')
+    __slots__ = ('hexadecimal', 'line_number', 'step')
 
     def __init__(self, line_number: int, step: str, hexadecimal: str) -> None:
         assert len(hexadecimal) >= HEADER_HEX, 'parse_raw checked the header is present'
@@ -88,7 +88,7 @@ class RawProblem:
     are none in the corpus today, which is worth keeping true.
     """
 
-    __slots__ = ('line_number', 'text', 'reason')
+    __slots__ = ('line_number', 'reason', 'text')
 
     def __init__(self, line_number: int, text: str, reason: str) -> None:
         self.line_number = line_number
@@ -99,7 +99,7 @@ class RawProblem:
 class Skipped:
     """A capture a reader met and did not check, and the reason it did not."""
 
-    __slots__ = ('where', 'reason')
+    __slots__ = ('reason', 'where')
 
     def __init__(self, where: str, reason: str) -> None:
         self.where = where

@@ -241,7 +241,7 @@ class PersistentSocketConnection:
             sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
             sys.stderr.write('║  ERROR: Failed to communicate with ExaBGP daemon       ║\n')
             sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-            sys.stderr.write(f'║  {str(exc):<54} ║\n')
+            sys.stderr.write(f'║  {exc!s:<54} ║\n')
             sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
             sys.stderr.write('\n')
             sys.stderr.flush()

@@ -19,8 +19,7 @@ def _find_root() -> str:
     if _index >= 0:
         root = root[:_index]
 
-    if root.endswith('/'):
-        root = root[:-1]
+    root = root.removesuffix('/')
 
     return root
 

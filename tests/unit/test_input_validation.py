@@ -335,8 +335,8 @@ def test_evpn_short_nlri_raises_notify(code: int, length: int) -> None:
 
 
 def test_evpn_fuzz_never_raises_a_raw_exception() -> None:
-    for code in range(0, 8):
-        for length in range(0, 60):
+    for code in range(8):
+        for length in range(60):
             for _ in range(5):
                 data = bytes([code, length]) + os.urandom(length)
                 unpack_or_notify(EVPN.unpack_nlri, AFI.l2vpn, SAFI.evpn, data, Action.ANNOUNCE, False, Negotiated.UNSET)
@@ -353,7 +353,7 @@ def test_bgpls_short_nlri_raises_notify(code: int, length: int) -> None:
 
 def test_bgpls_fuzz_never_raises_a_raw_exception() -> None:
     for code in (1, 2, 3, 4, 6):
-        for length in range(0, 60):
+        for length in range(60):
             for _ in range(5):
                 data = pack('!HH', int(code), length) + os.urandom(length)
                 unpack_or_notify(
@@ -374,7 +374,7 @@ def test_mup_short_nlri_raises_notify(key: str, length: int) -> None:
 def test_mup_fuzz_never_raises_a_raw_exception() -> None:
     for key in ('1:1', '1:2', '1:3', '1:4'):
         arch, code = (int(_) for _ in key.split(':'))
-        for length in range(0, 60):
+        for length in range(60):
             for _ in range(5):
                 data = bytes([arch]) + code.to_bytes(2, 'big') + bytes([length]) + os.urandom(length)
                 for afi in (AFI.ipv4, AFI.ipv6):

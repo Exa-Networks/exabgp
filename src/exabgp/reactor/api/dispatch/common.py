@@ -43,19 +43,13 @@ SELECTOR_KEYS = frozenset(['local-ip', 'local-as', 'peer-as', 'router-id', 'fami
 class UnknownCommand(Exception):
     """Raised when a command cannot be dispatched."""
 
-    pass
-
 
 class NoMatchingPeers(Exception):
     """Raised when neighbor_support=True but no peers match the selector."""
 
-    pass
-
 
 class InvalidCommand(Exception):
     """Raised when the command syntax is invalid"""
-
-    pass
 
 
 # Command metadata for help display

@@ -237,7 +237,7 @@ def test_every_registered_attribute_can_be_compared_at_all() -> None:
     session = session_with_aigp()
     uncomparable = []
     for klass in sorted(set(Attribute.registered_attributes.values()), key=lambda k: k.__name__):
-        for width in range(0, MAX_PROBE_WIDTH):
+        for width in range(MAX_PROBE_WIDTH):
             try:
                 decoded = klass.unpack_attribute(bytes(width), session)
             except Exception:

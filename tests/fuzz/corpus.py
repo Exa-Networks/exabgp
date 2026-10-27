@@ -179,7 +179,7 @@ def seeds_for(family: str) -> list[bytes]:
     """Every seed for a family, framed both ways, plus the plain fill patterns."""
     payloads = list(NLRI_SEEDS.get(family, ()))
     payloads.extend(REFUSED_SEEDS.get(family, ()))
-    for length_bytes in range(0, MAX_FILL_LENGTH_BYTES + 1):
+    for length_bytes in range(MAX_FILL_LENGTH_BYTES + 1):
         for fill in FILLS:
             body = filled(length_bytes, fill)
             payloads.append(body)

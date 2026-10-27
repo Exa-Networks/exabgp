@@ -212,8 +212,7 @@ class UnidirectionalLinkLoss(BaseLS):
         if not 0.0 <= loss_percent <= _MAX_LOSS_PERCENT:
             raise ValueError(f'loss_percent must be 0.0-{_MAX_LOSS_PERCENT:.6f}, got {loss_percent}')
         encoded = int(loss_percent / cls._UNIT_PERCENT)
-        if encoded > _MAX_24BIT:
-            encoded = _MAX_24BIT
+        encoded = min(encoded, _MAX_24BIT)
         flags = 0x80 if anomalous else 0x00
         loss_bytes = encoded.to_bytes(3, 'big')
         return cls(bytes([flags]) + loss_bytes)

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
 
 # Import base constants
 from exabgp.environment.base import (
@@ -24,9 +23,6 @@ __all__ = [
     'getenv',
     'getconf',
 ]
-
-if TYPE_CHECKING:
-    pass
 
 
 def getenv() -> Environment:

@@ -138,13 +138,13 @@ class Srv6SidInformation:
         )
 
     def __str__(self) -> str:
-        s: str = f'sid-information [ sid:{str(self.sid)} flags:{self.flags} endpoint_behavior:0x{self.behavior:x} '
+        s: str = f'sid-information [ sid:{self.sid!s} flags:{self.flags} endpoint_behavior:0x{self.behavior:x} '
         if len(self.subsubtlvs) != 0:
             s += ' [ ' + ', '.join([str(subsubtlv) for subsubtlv in self.subsubtlvs]) + ' ]'
         return s + ' ]'
 
     def json(self, compact: bool | None = None) -> str:
-        s: str = f'{{ "sid": "{str(self.sid)}", "flags": {self.flags}, "endpoint_behavior": {self.behavior}'
+        s: str = f'{{ "sid": "{self.sid!s}", "flags": {self.flags}, "endpoint_behavior": {self.behavior}'
         content: str = ', '.join(subsubtlv.json() for subsubtlv in self.subsubtlvs)
         if content:
             s += f', {content}'

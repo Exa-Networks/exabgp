@@ -63,9 +63,7 @@ def _get_syslog_address() -> str:
     """
     if sys.platform == 'darwin':
         path = '/var/run/syslog'
-    elif sys.platform.startswith('freebsd'):
-        path = '/var/run/log'
-    elif sys.platform.startswith('netbsd'):
+    elif sys.platform.startswith('freebsd') or sys.platform.startswith('netbsd'):
         path = '/var/run/log'
     else:
         path = '/dev/log'

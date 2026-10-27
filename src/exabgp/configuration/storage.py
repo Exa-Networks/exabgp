@@ -26,8 +26,6 @@ from pathlib import Path
 class ConfigurationStorageError(Exception):
     """Error during configuration storage operations."""
 
-    pass
-
 
 def _read_nofollow(filepath: Path) -> bytes:
     """Read file contents atomically, refusing to follow symlinks.

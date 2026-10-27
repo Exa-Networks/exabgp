@@ -465,7 +465,8 @@ def main(argv: list[str] | None = None) -> int:
     # original deleted only argv[0], leaving the profiler's options in front of them.
     sys.argv[:] = [options.script, *options.arguments]
     prof = LineProfiler(max_mem=options.max_mem)
-    setattr(builtins, 'profile', prof)
+    # the profiled script calls profile() as a builtin, which builtins does not declare
+    vars(builtins)['profile'] = prof
     namespace: dict[str, Any] = {'__name__': '__main__', '__file__': script, '__builtins__': builtins}
     try:
         with open(script) as source:

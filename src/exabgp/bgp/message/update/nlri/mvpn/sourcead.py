@@ -158,8 +158,8 @@ class SourceAD(MVPN):
         content += f'"raw": "{self._raw()}", '
         content += f'"name": "{self.NAME}", '
         content += f'{self.rd.json()}, '
-        content += f'"source": "{str(self.source)}", '
-        content += f'"group": "{str(self.group)}"'
+        content += f'"source": "{self.source!s}", '
+        content += f'"group": "{self.group!s}"'
         return f'{{{content}}}'
 
 

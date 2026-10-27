@@ -141,7 +141,7 @@ class ExtendedCommunityBase(Attribute):
         return bytes(self._packed) >= bytes(other._packed)
 
     def iana(self) -> bool:
-        return not not (self._packed[0] & 0x80)
+        return bool(self._packed[0] & 128)
 
     def transitive(self) -> bool:
         # bit set means "not transitive"

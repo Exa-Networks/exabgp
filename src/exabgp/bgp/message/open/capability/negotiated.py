@@ -285,7 +285,7 @@ class Negotiated:
                         self.multisession = (
                             2,
                             8,
-                            f'when checking session id, capability {str(capa)} did not match',
+                            f'when checking session id, capability {capa!s} did not match',
                         )
                         break
 

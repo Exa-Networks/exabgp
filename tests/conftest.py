@@ -75,7 +75,7 @@ class _LoggingState:
         option.option = dict(self.sources)
         option.logit = dict(self.logit)
         # the logger is a class attribute holding a function, which mypy reads as a method
-        setattr(log, 'logger', self.log_function)
+        log.logger = self.log_function
         for name, section in env._sections().items():
             section._values.clear()
             section._values.update(self.env_sections[name])

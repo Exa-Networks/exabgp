@@ -57,7 +57,7 @@ class NLRI(Family):
 
     # Slots for NLRI base class (subclasses add their own slots)
     # afi/safi inherited from Family.__slots__
-    __slots__ = ('addpath', '_packed')
+    __slots__ = ('_packed', 'addpath')
 
     IS_EOR: ClassVar[bool] = False
 

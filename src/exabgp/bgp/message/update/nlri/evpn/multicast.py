@@ -133,7 +133,7 @@ class Multicast(EVPN):
         members.append(self.rd.json())
         members.append(self.etag.json())
         if self.ip:
-            members.append(f'"ip": "{str(self.ip)}"')
+            members.append(f'"ip": "{self.ip!s}"')
         return '{{ {} }}'.format(', '.join(member for member in members if member))
 
 

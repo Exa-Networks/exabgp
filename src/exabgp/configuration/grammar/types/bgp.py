@@ -757,7 +757,7 @@ TAKES_AN_ADDRESS = ('redirect-to-nexthop-ietf', 'copy-to-nexthop-ietf')
 
 
 def _digit(word: str) -> bool:
-    return is_decimal(word[:-1] if word.endswith('L') else word)
+    return is_decimal(word.removesuffix('L'))
 
 
 def _integer(word: str) -> int:
@@ -1002,7 +1002,7 @@ class Internal(Type[Any]):
     def __init__(
         self,
         name: str,
-        klass: type[InternalText] | type[InternalNumber],
+        klass: type[InternalText | InternalNumber],
         convert: Any,
         hint: str,
         examples: list[str],

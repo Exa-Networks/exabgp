@@ -118,8 +118,8 @@ class IpReach:
     def json(self, compact: bool = False) -> str:
         return ', '.join(
             [
-                f'"ip-reachability-tlv": "{str(self.prefix)}/{str(self.plength)}"',
-                f'"ip-reach-prefix": "{str(self.prefix)}/{str(self.plength)}"',
+                f'"ip-reachability-tlv": "{self.prefix!s}/{self.plength!s}"',
+                f'"ip-reach-prefix": "{self.prefix!s}/{self.plength!s}"',
             ],
         )
 

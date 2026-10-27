@@ -598,5 +598,3 @@ class Response:
 
 class Dump:
     """Dump messages for debugging (DUP, MUP, MUD - not yet implemented)."""
-
-    pass

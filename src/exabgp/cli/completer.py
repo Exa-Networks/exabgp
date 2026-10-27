@@ -1037,9 +1037,7 @@ class CommandCompleter:
         # AFI/SAFI completion for eor and route refresh
         if tokens[-1] in ('eor', 'refresh'):
             # Check if this is "announce route refresh" or similar
-            if len(tokens) >= 2 and tokens[-2] == 'route':
-                return self._complete_afi_safi(tokens, text)
-            elif tokens[-1] == 'eor':
+            if len(tokens) >= 2 and tokens[-2] == 'route' or tokens[-1] == 'eor':
                 return self._complete_afi_safi(tokens, text)
 
         # Route specification hints - but NOT for withdraw route

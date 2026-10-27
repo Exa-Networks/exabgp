@@ -249,7 +249,7 @@ class MAC(EVPN):
         members.append(self.mac.json())
         members.append(self.label.json())
         if self.ip:
-            members.append(f'"ip": "{str(self.ip)}"')
+            members.append(f'"ip": "{self.ip!s}"')
         return '{{ {} }}'.format(', '.join(member for member in members if member))
 
 

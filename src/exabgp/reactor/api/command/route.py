@@ -28,7 +28,6 @@ if TYPE_CHECKING:
 
 def register_route() -> None:
     """Registration hook (currently unused)."""
-    pass
 
 
 # v6 routes dispatcher mapping
@@ -172,7 +171,7 @@ def routes_list(
             await reactor.processes.answer(service, routes_data)
             await reactor.processes.answer_done(service)
         except Exception as e:
-            error_msg = f'Failed to list routes: {type(e).__name__}: {str(e)}'
+            error_msg = f'Failed to list routes: {type(e).__name__}: {e!s}'
             self.log_exception(error_msg, e)
             await reactor.processes.answer_error(service, error_msg)
 
@@ -248,11 +247,11 @@ def routes_add(
             await _answer_results(reactor, service, results, 'success')
 
         except ValueError as e:
-            error_msg = f'Failed to parse route: {str(e)}'
+            error_msg = f'Failed to parse route: {e!s}'
             self.log_failure(error_msg)
             await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
+            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
             self.log_exception(error_msg, e)
             await reactor.processes.answer_error(service, error_msg)
 
@@ -334,11 +333,11 @@ def routes_remove(
             await _answer_results(reactor, service, results, 'removed')
 
         except ValueError as e:
-            error_msg = f'Failed to parse route: {str(e)}'
+            error_msg = f'Failed to parse route: {e!s}'
             self.log_failure(error_msg)
             await reactor.processes.answer_error(service, error_msg)
         except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {str(e)}'
+            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
             self.log_exception(error_msg, e)
             await reactor.processes.answer_error(service, error_msg)
 

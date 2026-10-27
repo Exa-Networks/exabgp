@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from struct import pack, unpack
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self, TypeVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -88,7 +88,7 @@ class PrefixSid(Attribute):
         return register_srid
 
     @classmethod
-    def unpack_attribute(cls: type[T], data: Buffer, negotiated: Negotiated) -> T:
+    def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Self:
         # RFC 8669 section 6: an attribute "not meeting the minimum attribute length
         # requirement" is malformed, and the attribute must be ignored.  The smallest
         # thing this attribute can carry is one three byte TLV header, and it must carry

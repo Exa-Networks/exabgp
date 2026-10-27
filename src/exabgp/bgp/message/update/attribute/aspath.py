@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable, Iterator, Sequence
 from struct import error, unpack
-from typing import TYPE_CHECKING, ClassVar, TypeVar, overload
+from typing import TYPE_CHECKING, ClassVar, Self, TypeVar, overload
 
 from exabgp.util.intvalue import json_number
 from exabgp.util.types import Buffer
@@ -71,7 +71,7 @@ class Segment:
     @overload
     def __getitem__(self: _Segment, index: slice) -> _Segment: ...
 
-    def __getitem__(self: _Segment, index: int | slice) -> ASN | _Segment:
+    def __getitem__(self, index: int | slice) -> ASN | Self:
         if isinstance(index, slice):
             return type(self)(self.asns[index])
         return self.asns[index]

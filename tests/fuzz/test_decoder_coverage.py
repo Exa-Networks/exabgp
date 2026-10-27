@@ -66,7 +66,7 @@ def test_every_bgpls_tlv_decoder_is_reached(monkeypatch: pytest.MonkeyPatch) -> 
     attribute = Attribute.klass_by_id(Attribute.CODE.BGP_LS)
     assert attribute is not None
     for code in sorted(LinkState.registered_lsids):
-        for length in range(0, 24):
+        for length in range(24):
             for fill in (b'\x00', b'\xff', b'\x30'):
                 try:
                     attribute.unpack_attribute(struct.pack('!HH', int(code), length) + fill * length, Negotiated.UNSET)
@@ -123,7 +123,7 @@ def test_every_nlri_family_decoder_is_reached(monkeypatch: pytest.MonkeyPatch) -
         _counted(klass, 'unpack_nlri', klass.__name__, tally)
 
     for afi, safi in sorted(set(NLRI.known_families()), key=lambda f: (int(f[0]), int(f[1]))):
-        for length in range(0, 24):
+        for length in range(24):
             try:
                 NLRI.unpack_nlri(afi, safi, bytes([length]) + bytes(length), Action.ANNOUNCE, False, Negotiated.UNSET)
             except Notify:

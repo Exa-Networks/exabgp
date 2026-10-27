@@ -237,8 +237,8 @@ class RTCBase(NLRI):
 
     @classmethod
     def unpack_nlri(
-        cls: type[T], afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: bool, negotiated: Negotiated
-    ) -> tuple[T, Buffer]:
+        cls, afi: AFI, safi: SAFI, bgp: Buffer, action: Action, addpath: bool, negotiated: Negotiated
+    ) -> tuple[Self, Buffer]:
         # RFC 7911 3: with ADD-PATH negotiated the peer puts a four byte Path
         # Identifier in front of every NLRI of this family, and it has to come off
         # before the NLRI is read.

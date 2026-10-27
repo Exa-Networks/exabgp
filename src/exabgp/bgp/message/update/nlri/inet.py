@@ -432,7 +432,7 @@ class INETBase(NLRI):
         return self.index()
 
     def prefix(self) -> str:
-        return f'{self.cidr.prefix()}{str(self.path_info)}'
+        return f'{self.cidr.prefix()}{self.path_info!s}'
 
     def extensive(self) -> str:
         return self.prefix()

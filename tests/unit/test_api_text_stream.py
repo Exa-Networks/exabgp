@@ -54,7 +54,7 @@ def one_line(produced: str) -> None:
     reverted: they are not line endings, so nothing caught them. Every character which is
     not printable is escaped, so the assertion is on that.
     """
-    body = produced[:-1] if produced.endswith('\n') else produced
+    body = produced.removesuffix('\n')
     assert '\n' not in body, f'a peer ended the line early: {produced!r}'
     assert '\r' not in body, f'a peer ended the line early: {produced!r}'
     unprintable = [c for c in body if not c.isprintable() and c != ' ']

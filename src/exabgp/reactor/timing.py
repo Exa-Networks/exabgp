@@ -128,8 +128,7 @@ class LoopTimer:
         self._elapsed_ms = (time.perf_counter() - self._start) * 1000
         self._iteration += 1
         self._total_ms += self._elapsed_ms
-        if self._elapsed_ms > self._max_ms:
-            self._max_ms = self._elapsed_ms
+        self._max_ms = max(self._max_ms, self._elapsed_ms)
         return self._elapsed_ms
 
     def log_if_slow(self) -> None:

@@ -196,9 +196,9 @@ class Type2SessionTransformedRoute(MUP):
         content += ' "arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"endpoint_len": %d, ' % self.endpoint_len
-        content += f'"endpoint_ip": "{str(self.endpoint_ip)}", '
+        content += f'"endpoint_ip": "{self.endpoint_ip!s}", '
         content += self.rd.json() + ', '
-        content += f'"teid": "{str(self.teid)}", '
+        content += f'"teid": "{self.teid!s}", '
         content += f'"raw": "{self._raw()}"'
         return f'{{ {content} }}'
 

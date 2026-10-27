@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from struct import pack
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import Any, ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.link.adjacencysid import SID_LABEL_MASK, decode_sids
@@ -25,9 +25,6 @@ ISIS_NEIGHBOR_SIZE = 6  # an IS-IS System ID
 OSPF_NEIGHBOR_SIZE = 4  # an OSPF Router-ID
 # header (4) + an OSPF Router-ID (4) + a label (3) or an index (4), RFC 9085 2.2.2
 OSPF_LAN_SIZES: tuple[int, int] = (11, 12)
-
-if TYPE_CHECKING:
-    pass
 
 
 #   0                   1                   2                   3

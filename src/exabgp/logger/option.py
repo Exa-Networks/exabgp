@@ -120,9 +120,7 @@ class option:
 
         destination = env.log.destination
 
-        if destination in ('stdout', 'stderr', 'syslog'):
-            cls.destination = destination
-        elif destination.startswith('host:'):
+        if destination in ('stdout', 'stderr', 'syslog') or destination.startswith('host:'):
             cls.destination = destination
         elif destination.startswith('file:'):
             cls.destination = destination[5:]

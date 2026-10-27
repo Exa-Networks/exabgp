@@ -72,17 +72,14 @@ class V4Text:
     def negotiated(self, neighbor: Neighbor, negotiated: Negotiated) -> None:
         # Call v6, but text format doesn't output negotiated info
         _ = self._v6.negotiated(neighbor, negotiated)
-        return None
 
     def fsm(self, neighbor: Neighbor, fsm: FSM) -> None:
         # Call v6, but text format doesn't output FSM info
         _ = self._v6.fsm(neighbor, fsm)
-        return None
 
     def signal(self, neighbor: Neighbor, signal: int) -> None:
         # Call v6, but text format doesn't output signal info
         _ = self._v6.signal(neighbor, signal)
-        return None
 
     def notification(
         self,

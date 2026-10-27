@@ -41,7 +41,7 @@ class Srv6SIDInformation:
         return cls(sid, data)
 
     def json(self, compact: bool = False) -> str:
-        return f'"srv6-sid": "{str(self.sid)}"'
+        return f'"srv6-sid": "{self.sid!s}"'
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Srv6SIDInformation):

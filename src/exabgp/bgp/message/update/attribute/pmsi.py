@@ -43,7 +43,7 @@ PMSI_HEADER_SIZE = 5
 # wildcard (RFC 8338), and the experimental 0x7B-0x7E and 0xFB-0xFE. 0x80-0xFA is a
 # composite tunnel (RFC 8317), defined when the type in its low seven bits is. 0x09,
 # 0x0E-0x7A and 0x7F are unassigned or reserved, and are the undefined ones.
-ASSIGNED_TUNNEL_TYPES = frozenset({*range(0x00, 0x09), *range(0x0A, 0x0E), 0xFF})
+ASSIGNED_TUNNEL_TYPES = frozenset({*range(0x09), *range(0x0A, 0x0E), 0xFF})
 EXPERIMENTAL_TUNNEL_TYPES = frozenset({*range(0x7B, 0x7F), *range(0xFB, 0xFF)})
 COMPOSITE_TUNNEL_FIRST = 0x80
 COMPOSITE_TUNNEL_LAST = 0xFA

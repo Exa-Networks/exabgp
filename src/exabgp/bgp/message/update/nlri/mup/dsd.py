@@ -114,7 +114,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         content = f'"name": "{self.NAME}", '
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
-        content += f'"ip": "{str(self.ip)}", '
+        content += f'"ip": "{self.ip!s}", '
         content += self.rd.json()
         content += f', "raw": "{self._raw()}"'
         return f'{{ {content} }}'

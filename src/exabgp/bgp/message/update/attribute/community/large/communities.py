@@ -6,17 +6,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
-from typing import TYPE_CHECKING, ClassVar
-
-from exabgp.util.types import Buffer
-
-if TYPE_CHECKING:
-    pass
+from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.large.community import LargeCommunity
+from exabgp.util.types import Buffer
 
 # Large community size constant
 LARGE_COMMUNITY_SIZE = (
@@ -59,7 +55,7 @@ class LargeCommunities(Attribute):
             Notify: If data length is not a multiple of 12
         """
         if len(data) % LARGE_COMMUNITY_SIZE != 0:
-            raise Notify(3, 1, f'could not decode large community {str([hex(_) for _ in data])}')
+            raise Notify(3, 1, f'could not decode large community {[hex(_) for _ in data]!s}')
         # Deduplicate while preserving order
         seen: set[bytes] = set()
         unique_packed = b''

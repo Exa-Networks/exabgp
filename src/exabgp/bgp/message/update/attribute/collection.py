@@ -251,11 +251,11 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 continue
 
             if code not in self.representation:
-                yield f' attribute [ 0x{code:02X} 0x{attribute.FLAG:02X} {str(attribute)} ]'
+                yield f' attribute [ 0x{code:02X} 0x{attribute.FLAG:02X} {attribute!s} ]'
                 continue
 
             if attribute.GENERIC:
-                yield f' attribute [ 0x{code:02X} 0x{attribute.FLAG:02X} {str(attribute)} ]'
+                yield f' attribute [ 0x{code:02X} 0x{attribute.FLAG:02X} {attribute!s} ]'
                 continue
 
             how, _, name, presentation, _ = self.representation[code]

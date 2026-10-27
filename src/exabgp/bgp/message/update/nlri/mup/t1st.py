@@ -334,12 +334,12 @@ class Type1SessionTransformedRoute(MUP):
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
-        content += f'"prefix_ip": "{str(self.prefix_ip)}", '
-        content += f'"teid": "{str(self.teid)}", '
-        content += f'"qfi": "{str(self.qfi)}", '
+        content += f'"prefix_ip": "{self.prefix_ip!s}", '
+        content += f'"teid": "{self.teid!s}", '
+        content += f'"qfi": "{self.qfi!s}", '
         content += self.rd.json() + ', '
         content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
-        content += f'"endpoint_ip": "{str(self.endpoint_ip)}", '
+        content += f'"endpoint_ip": "{self.endpoint_ip!s}", '
         content += '"source_ip_len": %d, ' % self.source_ip_len
         # without a source the field is empty, not the repr of the empty bytes it is read as
         content += '"source_ip": "{}", '.format(str(self.source_ip) if self.source_ip_len else '')
@@ -410,7 +410,7 @@ class MalformedType1SessionTransformedRoute(MUP):
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
-        content += f'"prefix_ip": "{str(self.prefix_ip)}", '
+        content += f'"prefix_ip": "{self.prefix_ip!s}", '
         content += self.rd.json() + ', '
         content += f'"raw": "{self._raw()}"'
         return f'{{ {content} }}'

@@ -16,7 +16,7 @@ from exabgp.util.types import Buffer
 
 
 class PathInfo:
-    __slots__ = ('_packed', '_disabled')
+    __slots__ = ('_disabled', '_packed')
 
     LENGTH: ClassVar[int] = 4  # Path info is always 4 bytes
     MAX: ClassVar = (1 << (8 * LENGTH)) - 1  # the largest path identifier, from its four octets

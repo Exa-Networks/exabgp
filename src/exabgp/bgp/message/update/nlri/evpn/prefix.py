@@ -236,9 +236,9 @@ class Prefix(EVPN):
         members.append(self.esi.json())
         members.append(self.etag.json())
         members.append(self.label.json())
-        members.append(f'"ip": "{str(self.ip)}"')
+        members.append(f'"ip": "{self.ip!s}"')
         members.append('"iplen": %d' % self.iplen)
-        members.append(f'"gateway": "{str(self.gwip)}"')
+        members.append(f'"gateway": "{self.gwip!s}"')
         return '{{ {} }}'.format(', '.join(member for member in members if member))
 
 

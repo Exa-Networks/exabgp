@@ -29,7 +29,7 @@ class Route:
     for withdraws. This saves 8 bytes per route.
     """
 
-    __slots__ = ('nlri', 'attributes', '_nexthop', '_Route__index', '_refcount')
+    __slots__ = ('_Route__index', '_nexthop', '_refcount', 'attributes', 'nlri')
 
     nlri: NLRI
     attributes: AttributeCollection

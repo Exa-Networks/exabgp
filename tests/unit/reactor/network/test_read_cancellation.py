@@ -287,7 +287,7 @@ def test_bytes_consumed_in_the_same_tick_as_the_cancellation_are_kept(pair: obje
             handed['future'] = loop.create_future()
             return handed['future']
 
-        setattr(loop, 'sock_recv_into', stub_recv_into)
+        loop.sock_recv_into = stub_recv_into
         try:
             task = asyncio.ensure_future(connection._reader_async(Message.HEADER_LEN))
             for _ in range(100):

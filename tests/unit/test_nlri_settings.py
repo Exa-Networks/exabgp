@@ -543,7 +543,6 @@ class TestIPVPNFromSettings:
         """from_settings preserves action from settings"""
         # Note: test_from_settings_preserves_action removed
         # Action is no longer stored in NLRI - it's determined by which RIB method is called
-        pass
 
     # Note: test_from_settings_preserves_nexthop removed
     # nexthop is now stored in Route, not NLRI

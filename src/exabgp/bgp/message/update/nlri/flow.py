@@ -1046,7 +1046,7 @@ for kls in COMPONENTS:
 
     for _afi in _afis:
         factory[_afi][_ID] = kls
-        name = getattr(kls, 'NAME')
+        name = kls.NAME
 
         if issubclass(kls, IOperation):
             if issubclass(kls, BinaryString):
@@ -1076,7 +1076,7 @@ class Flow(NLRI):
     - Builder mode: created empty for config, rules added via add()
     """
 
-    __slots__ = ('_rules_cache', '_packed_stale', '_rd_override')
+    __slots__ = ('_packed_stale', '_rd_override', '_rules_cache')
 
     nexthop: Any
 

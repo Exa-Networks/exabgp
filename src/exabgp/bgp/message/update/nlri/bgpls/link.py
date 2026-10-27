@@ -8,10 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import TYPE_CHECKING, ClassVar, Self
-
-if TYPE_CHECKING:
-    pass
+from typing import ClassVar, Self
 
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ifaceaddr import IfaceAddr
@@ -210,10 +207,7 @@ class LINK(BGPLS):
         # Validate TLVs can be parsed (logging unknown TLVs)
         # Offset by 4-byte header: TLVs start at byte 13 (4 + 1 + 8)
         for tlv_type, value in cls.iter_ordered_tlvs(data[cls.DESCRIPTOR_OFFSET :]):
-            if tlv_type == TLV_LOCAL_NODE_DESC:
-                # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
-                NodeDescriptor.unpack_descriptors(value, proto_id)
-            elif tlv_type == TLV_REMOTE_NODE_DESC:
+            if tlv_type == TLV_LOCAL_NODE_DESC or tlv_type == TLV_REMOTE_NODE_DESC:
                 # RFC 9552 5.2.1: one instance of each sub-TLV type at most, ascending by type.
                 NodeDescriptor.unpack_descriptors(value, proto_id)
             elif tlv_type not in [

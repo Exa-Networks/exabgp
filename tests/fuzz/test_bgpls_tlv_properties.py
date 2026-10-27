@@ -161,7 +161,7 @@ def one_parseable_line(emitted: str, what: str) -> Any:
 
 
 @pytest.mark.parametrize('scode', SWEPT)
-@pytest.mark.parametrize('length', range(0, SHORT_TLV_MAX_LENGTH))
+@pytest.mark.parametrize('length', range(SHORT_TLV_MAX_LENGTH))
 def test_a_truncated_tlv_raises_notify_or_renders(scode: int, length: int) -> None:
     """A TLV shorter than its fixed fields is a protocol error, never a Python exception."""
     try:
@@ -205,7 +205,7 @@ def test_a_tlv_checks_its_own_reads(scode: int) -> None:
     nobody checked.
     """
     masked = []
-    for length in range(0, SHORT_TLV_MAX_LENGTH):
+    for length in range(SHORT_TLV_MAX_LENGTH):
         for fill in FILLS:
             try:
                 render(scode, filled(length, fill))

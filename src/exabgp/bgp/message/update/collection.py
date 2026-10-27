@@ -358,7 +358,7 @@ class UpdateCollection:
     # message not implemented we should use messages below.
 
     def __str__(self) -> str:
-        return '\n'.join([f'{str(self.nlris[n])}{str(self.attributes)}' for n in range(len(self.nlris))])
+        return '\n'.join([f'{self.nlris[n]!s}{self.attributes!s}' for n in range(len(self.nlris))])
 
     @staticmethod
     def prefix(data: Buffer) -> bytes:

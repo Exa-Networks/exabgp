@@ -30,7 +30,6 @@ def register_peer() -> None:
     This function is called during module initialization to ensure
     the handler functions are available.
     """
-    pass
 
 
 def _parse_ip(value: str) -> IP:
@@ -228,7 +227,7 @@ def _build_neighbor(params: dict[str, Any], api_processes: list[str] | None = No
     neighbor.session.router_id = params['router-id']
 
     # Optional: families (defaults to IPv4 unicast only)
-    if 'families' in params and params['families']:
+    if params.get('families'):
         for family in params['families']:
             neighbor.add_family(family)
     else:
