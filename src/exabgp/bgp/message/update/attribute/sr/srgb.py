@@ -7,14 +7,13 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
 from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
-from exabgp.util.types import Buffer
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 # RFC 8669 3.2: the Originator SRGB TLV value is two bytes of flags followed by one or more
 # SRGB entries, each a three byte base and a three byte range.

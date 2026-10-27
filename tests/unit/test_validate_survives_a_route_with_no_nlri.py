@@ -23,7 +23,6 @@ import os
 import pathlib
 import subprocess
 
-
 ROOT = pathlib.Path(__file__).parent.parent.parent
 
 EMPTY_MATCH = """

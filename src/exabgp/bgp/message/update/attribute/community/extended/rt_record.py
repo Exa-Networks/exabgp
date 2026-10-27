@@ -10,9 +10,8 @@ from __future__ import annotations
 from typing import ClassVar
 
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity, rt
 from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunityBase
-from exabgp.bgp.message.update.attribute.community.extended import rt
 from exabgp.util.mypyc import trait
 
 # draft-ietf-bess-service-chaining

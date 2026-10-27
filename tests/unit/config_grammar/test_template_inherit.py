@@ -15,8 +15,8 @@ from __future__ import annotations
 import pytest
 
 from exabgp.configuration.grammar.error import ConfigError
-from exabgp.configuration.grammar.tree import resolve
 from exabgp.configuration.grammar.read import read_text
+from exabgp.configuration.grammar.tree import resolve
 from exabgp.configuration.grammar.tree.resolve import MAX_INHERIT_DEPTH
 
 NEIGHBOR = (

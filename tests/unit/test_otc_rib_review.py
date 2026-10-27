@@ -1,10 +1,10 @@
 """OTC policy regressions for refresh replacements."""
 
 import pytest
-
-from exabgp.rib import RIB
 from test_otc_routes import configured, route, sent
 from test_paths_limit_rib import IPV4
+
+from exabgp.rib import RIB
 
 
 @pytest.fixture(autouse=True)

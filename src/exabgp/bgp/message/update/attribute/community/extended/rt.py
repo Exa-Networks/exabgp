@@ -13,15 +13,12 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
 
-from exabgp.util.types import Buffer
-
-from exabgp.protocol.ip import IPv4
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-
+from exabgp.protocol.ip import IPv4
+from exabgp.util.types import Buffer
 
 # ================================================================== RouteTarget
 # RFC 4360 / RFC 7153

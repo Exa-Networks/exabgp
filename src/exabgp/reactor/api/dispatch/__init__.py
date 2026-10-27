@@ -11,17 +11,17 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
 from exabgp.reactor.api.dispatch.common import (
-    Handler,
-    UnknownCommand,
-    NoMatchingPeers,
     COMMANDS,
-    get_commands,
+    SELECTOR_KEY,
+    DispatchNode,
     # Tree dispatch infrastructure
     DispatchTree,
-    DispatchNode,
-    SELECTOR_KEY,
+    Handler,
+    NoMatchingPeers,
+    UnknownCommand,
     dispatch,
     extract_selector,
+    get_commands,
 )
 from exabgp.reactor.api.dispatch.v4 import dispatch_v4
 from exabgp.reactor.api.dispatch.v6 import dispatch_v6

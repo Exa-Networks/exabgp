@@ -15,7 +15,6 @@ from unittest.mock import Mock
 
 import pytest
 
-
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'

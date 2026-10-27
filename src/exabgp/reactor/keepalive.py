@@ -8,9 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from exabgp.bgp.timer import SendTimer
 from exabgp.bgp.message import Notify
-
+from exabgp.bgp.timer import SendTimer
 from exabgp.reactor.network.error import NetworkError
 
 if TYPE_CHECKING:

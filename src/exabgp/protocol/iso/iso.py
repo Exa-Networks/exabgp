@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from exabgp.util.types import Buffer
 
-
 # =========================================================================== ISO
 #
 

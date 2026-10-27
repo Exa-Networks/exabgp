@@ -8,17 +8,17 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
-from exabgp.util.intvalue import json_number
-
 from typing import TYPE_CHECKING, ClassVar
+
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
+from struct import pack
+
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.util.types import Buffer
-
-from struct import pack
 
 # ======================================================= ExtendedCommunity (16)
 #

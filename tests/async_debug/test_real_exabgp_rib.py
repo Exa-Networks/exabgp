@@ -6,19 +6,19 @@ This imports and tests the actual OutgoingRIB class to see if there's
 something we're missing in our mock implementation.
 """
 
-import sys
 import os
+import sys
 
 # Add src to path so we can import exabgp
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 
-from exabgp.rib.outgoing import OutgoingRIB
-from exabgp.protocol.family import AFI, SAFI
-from exabgp.bgp.message.update.nlri.inet import INET
-from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
-from exabgp.rib.route import Route
+from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv4
+from exabgp.rib.outgoing import OutgoingRIB
+from exabgp.rib.route import Route
 
 
 def test_real_rib_resend():

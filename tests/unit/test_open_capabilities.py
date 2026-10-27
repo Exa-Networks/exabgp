@@ -16,24 +16,19 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.open import Open
-from exabgp.bgp.message.open import Version, ASN, RouterID, HoldTime
-from exabgp.bgp.message.open.capability import Capabilities
-from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability import RouteRefresh
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open import ASN, HoldTime, Open, RouterID, Version
+from exabgp.bgp.message.open.capability import Capabilities, Capability, RouteRefresh
+from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.asn4 import ASN4
+from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
-from exabgp.bgp.message.open.capability.addpath import AddPath
-from exabgp.bgp.message.open.capability.extended import ExtendedMessage
-from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
-
 
 # ==============================================================================
 # Test Helper Functions
@@ -49,6 +44,7 @@ def create_negotiated() -> Negotiated:
 def make_inet(prefix: str, afi: AFI = AFI.ipv4, safi: SAFI = SAFI.unicast, path_id: int = 0) -> INET:
     """Helper to create INET NLRI for tests."""
     import socket
+
     from exabgp.bgp.message.update.nlri.cidr import CIDR
     from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 
@@ -703,8 +699,9 @@ def test_link_local_nexthop_inequality_with_other() -> None:
 
 def test_link_local_nexthop_ordering_raises() -> None:
     """Test that ordering operations raise RuntimeError."""
-    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
     import pytest
+
+    from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
 
     cap1 = LinkLocalNextHop()
     cap2 = LinkLocalNextHop()
@@ -964,9 +961,10 @@ def test_paths_limit_first_tuple_wins_across_capability_instances() -> None:
 
 def test_paths_limit_unpack_truncated() -> None:
     """Test that truncated data raises Notify."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
-    from exabgp.bgp.message.notification import Notify
     import pytest
+
+    from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     cap = PathsLimit()
     data = b'\x00\x01\x01'  # Only 3 bytes, need 5
@@ -1101,8 +1099,9 @@ def test_paths_limit_max_value() -> None:
 
 def test_paths_limit_set_limit_rejects_negative() -> None:
     """Test that set_limit rejects negative values."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     import pytest
+
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     cap = PathsLimit()
     with pytest.raises(ValueError, match='paths limit must be 0-65535'):
@@ -1111,8 +1110,9 @@ def test_paths_limit_set_limit_rejects_negative() -> None:
 
 def test_paths_limit_set_limit_rejects_overflow() -> None:
     """Test that set_limit rejects values exceeding uint16."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     import pytest
+
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     cap = PathsLimit()
     with pytest.raises(ValueError, match='paths limit must be 0-65535'):
@@ -1121,8 +1121,8 @@ def test_paths_limit_set_limit_rejects_overflow() -> None:
 
 def test_paths_limit_negotiation_stores_peer_limit_only() -> None:
     """Test that negotiated paths_limit stores only the peer's limits."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     # Our OPEN: ADD-PATH send/receive + PATHS-LIMIT=5
     sent_caps = Capabilities()
@@ -1160,8 +1160,8 @@ def test_paths_limit_negotiation_stores_peer_limit_only() -> None:
 
 def test_paths_limit_negotiation_ignores_family_not_in_addpath() -> None:
     """Test that PATHS-LIMIT tuples not in received ADD-PATH are ignored."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     # Both sides: ADD-PATH for IPv4 only
     sent_caps = Capabilities()
@@ -1201,8 +1201,8 @@ def test_paths_limit_negotiation_ignores_family_not_in_addpath() -> None:
 
 def test_paths_limit_negotiation_ignored_without_addpath() -> None:
     """Test PATHS-LIMIT is ignored when ADD-PATH is not present."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     sent_caps = Capabilities()
     sent_mp = MultiProtocol()
@@ -1232,8 +1232,8 @@ def test_paths_limit_negotiation_ignored_without_addpath() -> None:
 
 def test_paths_limit_negotiation_send_only_not_stored() -> None:
     """Test PATHS-LIMIT not stored for families where addpath is send-only."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     # We send ADD-PATH receive-only, peer sends ADD-PATH receive-only
     sent_caps = Capabilities()
@@ -1291,9 +1291,9 @@ def test_paths_limit_prefix_index_different_prefixes() -> None:
 def test_paths_limit_outgoing_rib_enforcement() -> None:
     """Test OutgoingRIB.updates() enforces paths-limit per prefix."""
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+    from exabgp.protocol.ip import IP
     from exabgp.rib.outgoing import OutgoingRIB
     from exabgp.rib.route import Route
-    from exabgp.protocol.ip import IP
 
     family = (AFI.ipv4, SAFI.unicast)
     rib = OutgoingRIB(cache=False, families={family})
@@ -1322,9 +1322,9 @@ def test_paths_limit_outgoing_rib_enforcement() -> None:
 def test_paths_limit_outgoing_rib_different_prefixes() -> None:
     """Test paths-limit counts independently per prefix."""
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+    from exabgp.protocol.ip import IP
     from exabgp.rib.outgoing import OutgoingRIB
     from exabgp.rib.route import Route
-    from exabgp.protocol.ip import IP
 
     family = (AFI.ipv4, SAFI.unicast)
     rib = OutgoingRIB(cache=False, families={family})
@@ -1346,9 +1346,9 @@ def test_paths_limit_outgoing_rib_different_prefixes() -> None:
 def test_paths_limit_outgoing_rib_no_limit_family() -> None:
     """Test paths-limit doesn't affect families without a limit."""
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
+    from exabgp.protocol.ip import IP
     from exabgp.rib.outgoing import OutgoingRIB
     from exabgp.rib.route import Route
-    from exabgp.protocol.ip import IP
 
     family = (AFI.ipv4, SAFI.unicast)
     rib = OutgoingRIB(cache=False, families={family})
@@ -1424,8 +1424,8 @@ def test_advertised_paths_limit_unset_sentinel_empty() -> None:
 
 def test_advertised_paths_limit_populated_from_sent_open() -> None:
     """advertised_paths_limit captures our own PATHS-LIMIT for receive-direction families."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     sent_caps = Capabilities()
     sent_mp = MultiProtocol()
@@ -1458,8 +1458,8 @@ def test_advertised_paths_limit_populated_from_sent_open() -> None:
 
 def test_advertised_paths_limit_skips_send_only_addpath() -> None:
     """advertised_paths_limit only includes families which we actually receive."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     sent_caps = Capabilities()
     sent_mp = MultiProtocol()
@@ -1492,8 +1492,8 @@ def test_advertised_paths_limit_skips_send_only_addpath() -> None:
 
 def test_advertised_paths_limit_skips_family_not_in_sent_addpath() -> None:
     """A PATHS-LIMIT entry for a family not in our ADD-PATH is discarded."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     sent_caps = Capabilities()
     sent_mp = MultiProtocol()
@@ -1529,8 +1529,8 @@ def test_advertised_paths_limit_skips_family_not_in_sent_addpath() -> None:
 
 def test_advertised_paths_limit_empty_without_addpath_negotiated() -> None:
     """When ADD-PATH is not bilaterally negotiated, advertised_paths_limit is empty."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     sent_caps = Capabilities()
     sent_mp = MultiProtocol()
@@ -1561,8 +1561,8 @@ def test_advertised_paths_limit_empty_without_addpath_negotiated() -> None:
 
 def test_advertised_paths_limit_independent_from_paths_limit() -> None:
     """advertised_paths_limit (our caps) and paths_limit (peer caps) are tracked separately."""
-    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
     from exabgp.bgp.message.open.capability.mp import MultiProtocol
+    from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
     sent_caps = Capabilities()
     sent_mp = MultiProtocol()

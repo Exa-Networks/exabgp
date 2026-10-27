@@ -8,47 +8,43 @@ Tests cover RFC 5575 (Dissemination of Flow Specification Rules) components:
 - JSON serialization
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
-
-from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 import pytest
+
+from exabgp.bgp.message.action import Action
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri import Flow
 from exabgp.bgp.message.update.nlri.flow import (
-    Flow4Source,
+    BinaryOperator,
     Flow4Destination,
-    Flow6Source,
+    Flow4Source,
     Flow6Destination,
-    FlowIPProtocol,
-    FlowNextHeader,
+    Flow6Source,
     FlowAnyPort,
     FlowDestinationPort,
-    FlowSourcePort,
-    FlowICMPType,
-    FlowICMPCode,
-    FlowTCPFlag,
-    FlowPacketLength,
     FlowDSCP,
-    FlowTrafficClass,
-    FlowFragment,
     FlowFlowLabel,
+    FlowFragment,
+    FlowICMPCode,
+    FlowICMPType,
+    FlowIPProtocol,
+    FlowNextHeader,
+    FlowPacketLength,
+    FlowSourcePort,
+    FlowTCPFlag,
+    FlowTrafficClass,
     NumericOperator,
-    BinaryOperator,
 )
-from exabgp.protocol.resource import NumericValue
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.protocol.ip import IPv4, IP
-from exabgp.protocol.ip.tcp.flag import TCPFlag
-from exabgp.protocol.ip.fragment import Fragment
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.action import Action
+from exabgp.protocol.ip import IP, IPv4
+from exabgp.protocol.ip.fragment import Fragment
+from exabgp.protocol.ip.icmp import ICMPCode, ICMPType
+from exabgp.protocol.ip.tcp.flag import TCPFlag
 from exabgp.protocol.protocol import Protocol
-from exabgp.protocol.ip.icmp import ICMPType
-from exabgp.protocol.ip.icmp import ICMPCode
-
+from exabgp.protocol.resource import NumericValue
 
 # ============================================================================
 # IPv4 Flow Components

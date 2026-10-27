@@ -6,16 +6,15 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from struct import pack, unpack
 from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
-from collections.abc import Callable
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.notification import Notify, TreatAsWithdrawNotify
-
+from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.util import hexstring
 from exabgp.util.types import Buffer
 

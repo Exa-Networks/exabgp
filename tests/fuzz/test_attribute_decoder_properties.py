@@ -32,23 +32,21 @@ under test rather than the dispatch in front of it.
 from __future__ import annotations
 
 import json as jsonlib
-
 from struct import pack
 from typing import Any
 
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunityIPv6
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity, ExtendedCommunityIPv6
 from exabgp.protocol.family import Family
 from exabgp.util.enumeration import TriState
-
-from tests.fuzz.strategies import payload  # noqa: E402
 from tests import negotiation
+from tests.fuzz.strategies import payload  # noqa: E402
 
 pytestmark = pytest.mark.fuzz
 

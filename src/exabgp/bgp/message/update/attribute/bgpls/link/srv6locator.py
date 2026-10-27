@@ -6,16 +6,14 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 import json
 from struct import unpack
+from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.util.types import Buffer
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 # Minimum data length for SRv6 Locator TLV (RFC 9514 Section 5.1)
 # Flags (1) + Algorithm (1) + Reserved (2) + Metric (4) = 8 bytes

@@ -6,9 +6,8 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 from struct import pack, unpack
+from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid

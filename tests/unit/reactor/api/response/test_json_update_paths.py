@@ -17,17 +17,16 @@ from __future__ import annotations
 import socket
 from typing import Any
 
-
 from exabgp.bgp.message.update.attribute import AttributeCollection, NextHop, Origin
-from exabgp.bgp.message.update.collection import RouteLeak, RoutedNLRI, UpdateCollection
+from exabgp.bgp.message.update.attribute.aspath import AS4Path
+from exabgp.bgp.message.update.collection import RoutedNLRI, RouteLeak, UpdateCollection
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv4, IPv6
-from exabgp.reactor.api.response.json import JSON
-from exabgp.bgp.message.update.attribute.aspath import AS4Path
 from exabgp.reactor.api.response import json as json_module
+from exabgp.reactor.api.response.json import JSON
 
 # Compiled, JSON._update checks that it is given an UpdateCollection
 COMPILED = not str(json_module.__file__).endswith('.py')

@@ -13,16 +13,17 @@ Test Categories:
 - FlowSpec malformed components
 """
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
-import pytest
 import struct
 from typing import Any
-from hypothesis import given, strategies as st, settings, HealthCheck, assume
+
+import pytest
+from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import strategies as st
 
 from exabgp.bgp.message import Action
-from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.enumeration import TriState
 from tests import negotiation
 
@@ -51,8 +52,8 @@ def create_mock_negotiated(addpath: bool = False, asn4: bool = True) -> Any:
 @settings(deadline=None, max_examples=50)
 def test_ipv4_prefix_length_too_large(mask: int) -> None:
     """Test IPv4 NLRI with prefix length > 32."""
-    from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.nlri.inet import INET
 
     # Mask byte + prefix bytes (mask > 32 is invalid for IPv4)
     data = bytes([mask]) + b'\xc0\xa8\x01\x00'
@@ -71,8 +72,8 @@ def test_ipv4_prefix_length_too_large(mask: int) -> None:
 @settings(deadline=None, max_examples=50)
 def test_ipv6_prefix_length_too_large(mask: int) -> None:
     """Test IPv6 NLRI with prefix length > 128."""
-    from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.nlri.inet import INET
 
     # Mask byte + prefix bytes (mask > 128 is invalid for IPv6)
     data = bytes([mask]) + b'\x20\x01\x0d\xb8' + b'\x00' * 12
@@ -89,8 +90,8 @@ def test_ipv6_prefix_length_too_large(mask: int) -> None:
 @settings(deadline=None, max_examples=50)
 def test_ipv4_truncated_prefix(mask: int) -> None:
     """Test IPv4 NLRI where prefix bytes are truncated."""
-    from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.nlri.inet import INET
 
     # Calculate needed bytes
     needed_bytes = (mask + 7) // 8
@@ -109,8 +110,8 @@ def test_ipv4_truncated_prefix(mask: int) -> None:
 @pytest.mark.fuzz
 def test_inet_empty_data() -> None:
     """Test INET parsing with empty data."""
-    from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.nlri.inet import INET
 
     try:
         nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, b'', Action.ANNOUNCE, False, Negotiated.UNSET)
@@ -162,8 +163,8 @@ def test_inet_with_addpath(path_id: bytes, mask: int) -> None:
 @pytest.mark.fuzz
 def test_inet_addpath_truncated() -> None:
     """Test INET with AddPath but truncated path ID."""
-    from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.nlri.inet import INET
 
     # Only 3 bytes of path_id (should be 4)
     data = b'\x00\x00\x00' + bytes([24]) + b'\xc0\xa8\x01'
@@ -216,8 +217,8 @@ def test_labeled_nlri_valid(label_count: int) -> None:
 @pytest.mark.fuzz
 def test_labeled_nlri_no_bottom_of_stack() -> None:
     """Test labeled NLRI where label stack never terminates."""
-    from exabgp.bgp.message.update.nlri.label import Label
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.nlri.label import Label
 
     # Label without bottom-of-stack bit
     label = struct.pack('!I', 100 << 4)[1:]  # 3 bytes, no BoS
@@ -283,8 +284,8 @@ def test_vpn_nlri_rd_types(rd_type: int, rd_value: bytes) -> None:
 @pytest.mark.fuzz
 def test_vpn_nlri_truncated_rd() -> None:
     """Test VPN NLRI with truncated Route Distinguisher."""
-    from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 
     # Label (3 bytes) + truncated RD (4 bytes instead of 8)
     label = struct.pack('!I', (100 << 4) | 1)[1:]

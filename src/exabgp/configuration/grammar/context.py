@@ -13,10 +13,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from itertools import count
 from typing import TYPE_CHECKING, Any
-from collections.abc import Iterator
 
 from exabgp.protocol.family import AFI
 

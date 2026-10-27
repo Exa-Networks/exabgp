@@ -9,16 +9,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar
 import json
+from typing import ClassVar
 
-from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
-from exabgp.bgp.message.open.capability.capability import decode_utf8 as _decode_utf8
 from exabgp.bgp.message.notification import Notify
-from exabgp.util.dns import host, domain
-from exabgp.util.types import Buffer
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+from exabgp.bgp.message.open.capability.capability import decode_utf8 as _decode_utf8
+from exabgp.util.dns import domain, host
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 
 class HostName(Capability):

@@ -8,9 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
 from struct import pack, unpack
-from typing import Any, ClassVar, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from exabgp.util.types import Buffer
 
@@ -24,7 +23,6 @@ from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.protocol.family import AFI, SAFI, Family
-
 
 # RD(8) + endpoint(2) + offset(2) + size(2) + base(3), the length the two byte header announces
 VPLS_PAYLOAD_SIZE = 17

@@ -42,8 +42,6 @@ Phase 5: Mixed Community Types (tests 27-30)
   - Set operations
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
 import struct
 from typing import Any
 from unittest.mock import Mock
@@ -52,6 +50,7 @@ import pytest
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.neighbor import Neighbor
 
 
 def create_negotiated() -> Negotiated:
@@ -159,7 +158,7 @@ def test_standard_community_multiple() -> None:
 
     The COMMUNITIES attribute can contain multiple 4-byte communities.
     """
-    from exabgp.bgp.message.update.attribute.community import Community, Communities
+    from exabgp.bgp.message.update.attribute.community import Communities, Community
 
     # Create multiple communities
     comm1_bytes = struct.pack('!HH', 65000, 100)
@@ -214,8 +213,8 @@ def test_route_target_asn2_number() -> None:
     Format: target:ASN:NUMBER (e.g., target:65000:100)
     Most common RT format in MPLS VPNs.
     """
-    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
 
     negotiated = create_negotiated()
     # Create RT with 2-byte ASN
@@ -281,8 +280,8 @@ def test_route_target_asn4_number() -> None:
     Format: target:ASN:NUMBER (e.g., target:4200000000:100)
     Required for ASNs > 65535 (RFC 6793).
     """
-    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN4Number
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN4Number
 
     negotiated = create_negotiated()
     # Create RT with 4-byte ASN (>65535)
@@ -315,8 +314,8 @@ def test_route_target_transitive_flag() -> None:
     - 0: Transitive across ASes
     - 1: Non-transitive across ASes
     """
-    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
 
     negotiated = create_negotiated()
     # Create transitive RT
@@ -366,8 +365,8 @@ def test_route_origin_community() -> None:
     Similar to Route Target but indicates route origin.
     Used in MPLS VPNs to mark route source.
     """
-    from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASN4Number
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASN4Number
 
     negotiated = create_negotiated()
     # Create Route Origin
@@ -476,8 +475,8 @@ def test_traffic_engineering_community() -> None:
 
     Used for QoS and traffic engineering policies.
     """
-    from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
 
     negotiated = create_negotiated()
     # Create traffic rate community
@@ -592,8 +591,8 @@ def test_flowspec_redirect_community() -> None:
 
     Used with FlowSpec to redirect matching traffic to VRF.
     """
-    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
 
     # FlowSpec redirect uses Route Target format
     # Redirect to VRF identified by RT
@@ -681,8 +680,8 @@ def test_large_community_multiple() -> None:
 
     LARGE_COMMUNITIES attribute can contain multiple 12-byte values.
     """
-    from exabgp.bgp.message.update.attribute.community.large.community import LargeCommunity
     from exabgp.bgp.message.update.attribute.community.large.communities import LargeCommunities
+    from exabgp.bgp.message.update.attribute.community.large.community import LargeCommunity
 
     # Create multiple large communities
     lc1_bytes = struct.pack('!LLL', 65000, 100, 200)
@@ -752,12 +751,12 @@ def test_mixed_community_types() -> None:
     - LARGE_COMMUNITIES
     All in the same message.
     """
-    from exabgp.bgp.message.update.attribute.community import Community, Communities
-    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
-    from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
-    from exabgp.bgp.message.update.attribute.community.large.community import LargeCommunity
-    from exabgp.bgp.message.update.attribute.community.large.communities import LargeCommunities
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.community import Communities, Community
+    from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunities
+    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
+    from exabgp.bgp.message.update.attribute.community.large.communities import LargeCommunities
+    from exabgp.bgp.message.update.attribute.community.large.community import LargeCommunity
 
     # Create standard communities
     std_comm1 = Community(struct.pack('!HH', 65000, 100))
@@ -808,9 +807,9 @@ def test_community_equality() -> None:
 
     Same community values should be equal and hash identically.
     """
+    from exabgp.bgp.message.open.asn import ASN
     from exabgp.bgp.message.update.attribute.community import Community
     from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
-    from exabgp.bgp.message.open.asn import ASN
 
     # Standard communities
     comm1a = Community(struct.pack('!HH', 65000, 100))

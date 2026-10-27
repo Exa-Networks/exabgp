@@ -12,35 +12,32 @@ import json
 import os
 import socket
 import time
-from typing import Any, ClassVar, TYPE_CHECKING, cast
 from collections.abc import Callable
-
-from exabgp.util import hexstring
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.message import MessageCode
-from exabgp.bgp.message.update.attribute.mprnlri import NextHopWithLinkLocal
-
-from exabgp.environment import getenv
-from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.capability.role import RoleValue
-
-from exabgp.reactor.interrupt import Signal
+from exabgp.bgp.message.update.attribute.mprnlri import NextHopWithLinkLocal
+from exabgp.environment import getenv
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
+from exabgp.reactor.interrupt import Signal
+from exabgp.util import hexstring
 from exabgp.util.intvalue import IntValue, json_number
 
 if TYPE_CHECKING:
-    from exabgp.bgp.message.update.nlri import NLRI
-    from exabgp.bgp.neighbor import Neighbor
+    from exabgp.bgp.fsm import FSM
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.open import Open
+    from exabgp.bgp.message.operational import Operational, OperationalFamily
+    from exabgp.bgp.message.refresh import RouteRefresh
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.collection import RouteLeak
-    from exabgp.bgp.message.refresh import RouteRefresh
-    from exabgp.bgp.message.operational import Operational, OperationalFamily
-    from exabgp.bgp.fsm import FSM
+    from exabgp.bgp.message.update.nlri import NLRI
+    from exabgp.bgp.neighbor import Neighbor
 
 
 def nop(_: float) -> float:

@@ -4,10 +4,12 @@ import os
 from typing import TYPE_CHECKING
 
 # Import base constants
-from exabgp.environment.base import APPLICATION  # noqa: F401,E261
-from exabgp.environment.base import ENVFILE  # noqa: F401,E261
-from exabgp.environment.base import ROOT  # noqa: F401,E261
-from exabgp.environment.base import ETC  # noqa: F401,E261
+from exabgp.environment.base import (
+    APPLICATION,  # noqa: F401,E261
+    ENVFILE,  # noqa: F401,E261
+    ETC,  # noqa: F401,E261
+    ROOT,  # noqa: F401,E261
+)
 
 # Import new typed configuration system
 from exabgp.environment.config import Environment  # noqa: F401,E261

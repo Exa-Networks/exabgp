@@ -15,12 +15,11 @@ import pytest
 
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
-from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
-
+from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, ASPath
 from rfc.rfc7606_wire import (
     NEXT_HOP,
-    ORIGIN_IGP,
     OPTIONAL_TRANSITIVE,
+    ORIGIN_IGP,
     WELL_KNOWN_TRANSITIVE,
     announced,
     attribute,

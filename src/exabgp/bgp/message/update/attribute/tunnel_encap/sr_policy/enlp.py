@@ -22,13 +22,12 @@ ENLP values (RFC 9830):
 from __future__ import annotations
 
 import json
-
 from struct import pack
 from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import MalformedSubTLV, SubTLV
-from exabgp.util.types import Buffer
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 ENLP_NAMES: dict[int, str] = {
     1: 'push-ipv4',

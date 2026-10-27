@@ -15,6 +15,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.asn import ASN
@@ -23,7 +24,6 @@ from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.capability.role import Role, RoleValue
-from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.update import Update, UpdateCollection
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.otc import OTC
@@ -32,7 +32,6 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.api import API
 from exabgp.rib import RIB
-
 
 LOCAL_AS = 65537
 PEER_AS = 65002

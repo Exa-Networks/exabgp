@@ -2,32 +2,27 @@
 
 from __future__ import annotations
 
+import argparse
 import os
+import platform
+import signal
 import sys
 import time
-import signal
-import argparse
-import platform
-
-from exabgp.debug.intercept import trace_interceptor
-
-# import before the fork to improve copy on write memory savings
-from exabgp.reactor.loop import Reactor
-from exabgp.configuration.configuration import Configuration
-
-from exabgp.logger import log, lazyexc, lazymsg
-
-# this is imported from configuration.setup to make sure it was initialised
-from exabgp.environment import getenv
-from exabgp.environment import getconf
-from exabgp.environment.config import Environment
-from exabgp.environment import ROOT
 
 from exabgp.application.pipe import named_pipe
 from exabgp.application.unixsocket import unix_socket
-from exabgp.version import version
-
 from exabgp.bgp.message.update.attribute import Attribute
+from exabgp.configuration.configuration import Configuration
+from exabgp.debug.intercept import trace_interceptor
+
+# this is imported from configuration.setup to make sure it was initialised
+from exabgp.environment import ROOT, getconf, getenv
+from exabgp.environment.config import Environment
+from exabgp.logger import lazyexc, lazymsg, log
+
+# import before the fork to improve copy on write memory savings
+from exabgp.reactor.loop import Reactor
+from exabgp.version import version
 
 
 def __exit(memory: bool, code: int) -> None:

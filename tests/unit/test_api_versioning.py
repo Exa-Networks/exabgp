@@ -9,8 +9,9 @@ Created: 2024-12-04
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestApiVersionConfig:
@@ -81,8 +82,8 @@ class TestV4TextWrapper:
 
     def test_v4_text_has_v6_delegate(self) -> None:
         """Test V4Text creates internal v6 JSON encoder."""
-        from exabgp.reactor.api.response.v4.text import V4Text
         from exabgp.reactor.api.response.json import JSON
+        from exabgp.reactor.api.response.v4.text import V4Text
         from exabgp.version import text_v4
 
         v4_encoder = V4Text(text_v4)

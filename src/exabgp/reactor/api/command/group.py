@@ -26,9 +26,8 @@ import json
 from typing import TYPE_CHECKING
 
 from exabgp.configuration.grammar.lexer import split_commands
-from exabgp.logger import log, lazymsg
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.ip import IP
-
 from exabgp.reactor.api.command.announce import (
     parse_sync_mode,
     register_flush_callbacks,

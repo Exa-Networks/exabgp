@@ -25,19 +25,20 @@ same behaviour.
 """
 
 from __future__ import annotations
+
 from typing import Any
 
 import pytest
 
-from exabgp.configuration.grammar.lexer import lex_text
-from exabgp.configuration.grammar.types.flow import DESTINATION, SOURCE, Operation
-from exabgp.configuration.grammar.words import Words
 from exabgp.bgp.message.update.nlri.flow import (
     Flow4Destination,
     Flow4Source,
     Flow6Destination,
     Flow6Source,
 )
+from exabgp.configuration.grammar.lexer import lex_text
+from exabgp.configuration.grammar.types.flow import DESTINATION, SOURCE, Operation
+from exabgp.configuration.grammar.words import Words
 
 
 def tokeniser_for(token: str) -> Words:

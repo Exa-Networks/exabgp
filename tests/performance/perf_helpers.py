@@ -10,12 +10,11 @@ from typing import Any
 from unittest.mock import Mock
 
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.neighbor import Neighbor
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv4
 from tests import negotiation
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 def create_mock_logger() -> Any:

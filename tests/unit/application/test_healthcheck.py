@@ -13,18 +13,18 @@ from unittest.mock import patch
 
 import pytest
 
+from exabgp.application import healthcheck as healthcheck_module
 from exabgp.application.healthcheck import (
-    States,
-    check,
-    loop,
-    setup_logging,
-    setargs,
-    ip_ifname,
-    drop_privileges,
     IFNAME_MAX_LENGTH,
     IP_IFNAME_PARTS,
+    States,
+    check,
+    drop_privileges,
+    ip_ifname,
+    loop,
+    setargs,
+    setup_logging,
 )
-from exabgp.application import healthcheck as healthcheck_module
 
 # Compiled, `sys.platform` is read at build time: the branch for another platform is compiled
 # as unreachable, so patching sys.platform cannot select it.

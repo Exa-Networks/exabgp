@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import socket
 from struct import pack, unpack
-from typing import Any, Self, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, Self, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated

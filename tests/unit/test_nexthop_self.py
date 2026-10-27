@@ -10,6 +10,7 @@ Tests cover:
 import pytest
 
 from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
@@ -22,7 +23,6 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPSelf, IPv4, IPv6
 from exabgp.rib.outgoing import OutgoingRIB
 from exabgp.rib.route import Route
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 class TestNextHopSelfSentinel:

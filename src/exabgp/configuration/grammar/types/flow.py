@@ -12,8 +12,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, cast
 from collections.abc import Callable
+from typing import Any, cast
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
@@ -44,8 +44,8 @@ from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Printed, Type, WordOrSyntax
-from exabgp.configuration.grammar.words import Words
 from exabgp.configuration.grammar.types.word import decimal, is_decimal, lenient_number
+from exabgp.configuration.grammar.words import Words
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP, IPSelf, IPv4, IPv6

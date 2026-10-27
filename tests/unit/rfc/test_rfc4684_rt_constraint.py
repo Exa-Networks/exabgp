@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from struct import pack
 
-
 import pytest
 
 from exabgp.bgp.message.open.asn import ASN
@@ -31,7 +30,6 @@ from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
 from exabgp.rib import RIB
 from exabgp.rib.route import Route
-
 from rfc import rfc7606_wire
 from tests import negotiation
 

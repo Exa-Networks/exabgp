@@ -9,14 +9,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import configparser as ConfigParser
 import os
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from typing import Any, ClassVar, Generic, TypeVar, cast, overload
-from collections.abc import Callable, Iterator
-import configparser as ConfigParser
 
-from exabgp.environment import base
-from exabgp.environment import parsing
+from exabgp.environment import base, parsing
 from exabgp.protocol.ip import IP
 from exabgp.util.mypyc import mypyc_attr
 

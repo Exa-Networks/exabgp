@@ -18,8 +18,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import struct
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.operational import Advisory, OperationalFamily, Query, Response
@@ -30,8 +30,8 @@ from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.section import Collector, Pending, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
-from exabgp.configuration.grammar.words import Words
 from exabgp.configuration.grammar.types.word import decimal
+from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.ip import isipv4
 

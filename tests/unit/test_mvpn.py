@@ -6,23 +6,20 @@ Tests cover all MVPN route types defined in RFC 6514:
 - Route Type 7: C-Multicast Source Tree Join (SourceJoin)
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
+import pytest
 
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
-import pytest
-from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.mvpn.sourcead import SourceAD
-from exabgp.bgp.message.update.nlri.mvpn.sharedjoin import SharedJoin
-from exabgp.bgp.message.update.nlri.mvpn.sourcejoin import SourceJoin
-from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
-from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
+from exabgp.bgp.message.update.nlri.mvpn.sharedjoin import SharedJoin
+from exabgp.bgp.message.update.nlri.mvpn.sourcead import SourceAD
+from exabgp.bgp.message.update.nlri.mvpn.sourcejoin import SourceJoin
 from exabgp.bgp.message.update.nlri.nlri import Action
-
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
 
 # ============================================================================
 # MVPN Route Type 5: Source Active A-D Route (SourceAD)

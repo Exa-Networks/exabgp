@@ -7,10 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
-from struct import unpack
-from typing import ClassVar, TYPE_CHECKING
 from collections.abc import Iterator
+from struct import unpack
+from typing import TYPE_CHECKING, ClassVar
 
 from exabgp.util.types import Buffer
 

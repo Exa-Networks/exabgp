@@ -24,11 +24,8 @@ import pytest
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.capabilities import Capabilities
-from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
-from exabgp.bgp.message.open.capability.role import Role
-from exabgp.bgp.message.open.capability.role import RoleValue
-
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+from exabgp.bgp.message.open.capability.role import Role, RoleValue
 
 # ==============================================================================
 # Wire format

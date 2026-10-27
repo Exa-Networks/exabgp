@@ -6,16 +6,13 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from struct import pack, unpack
 from collections.abc import Sequence
-from exabgp.util import split
+from struct import pack, unpack
 
 from exabgp.bgp.message.notification import Notify
-
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
+from exabgp.util import split
 from exabgp.util.types import Buffer
-
 
 #      0                   1                   2                   3
 #      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1

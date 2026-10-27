@@ -14,22 +14,17 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
 
-from exabgp.reactor.api.tokeniser import formated
-from exabgp.configuration.grammar.read import read_operational
-
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
-from exabgp.protocol.family import Family
-
-from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message import Operational
-from exabgp.rib.route import Route
-
-from exabgp.logger import log, lazyexc, lazymsg
-from exabgp.reactor.api.dispatch import UnknownCommand, NoMatchingPeers
+from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.grammar.read import read_operational
+from exabgp.logger import lazyexc, lazymsg, log
+from exabgp.protocol.family import AFI, SAFI, Family
+from exabgp.reactor.api.dispatch import NoMatchingPeers, UnknownCommand
 from exabgp.reactor.api.dispatch.common import Handler
 from exabgp.reactor.api.dispatch.version import API_V6, dispatch_for
-from exabgp.configuration.configuration import Configuration
+from exabgp.reactor.api.tokeniser import formated
+from exabgp.rib.route import Route
 
 # API command parsing constants
 API_REFRESH_TOKEN_COUNT = 2  # Refresh command requires 2 tokens (AFI and SAFI)

@@ -1,24 +1,26 @@
 from __future__ import annotations
 
 import time
-from typing import ClassVar, TYPE_CHECKING
 from collections.abc import Callable
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.environment.config import Environment
 
-from exabgp.logger.option import option
+from exabgp.logger.format import (
+    formater,  # noqa: F401,E261,E501
+    lazyattribute,  # noqa: F401,E261,E501
+    lazyexc,  # noqa: F401,E261,E501
+    lazyformat,  # noqa: F401,E261,E501
+    lazymsg,  # noqa: F401,E261,E501
+    lazynlri,  # noqa: F401,E261,E501
+)
 from exabgp.logger.handler import get_logger  # noqa: F401,E261,E501
-from exabgp.logger.format import formater  # noqa: F401,E261,E501
-
-from exabgp.logger.format import lazyformat  # noqa: F401,E261,E501
-from exabgp.logger.format import lazyattribute  # noqa: F401,E261,E501
-from exabgp.logger.format import lazynlri  # noqa: F401,E261,E501
-from exabgp.logger.format import lazymsg  # noqa: F401,E261,E501
-from exabgp.logger.format import lazyexc  # noqa: F401,E261,E501
-
-from exabgp.logger.history import history  # noqa: F401,E261,E501
-from exabgp.logger.history import record  # noqa: F401,E261,E501
+from exabgp.logger.history import (
+    history,  # noqa: F401,E261,E501
+    record,  # noqa: F401,E261,E501
+)
+from exabgp.logger.option import option
 
 __all__ = [
     'get_logger',

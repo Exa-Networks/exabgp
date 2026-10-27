@@ -12,16 +12,15 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
-from exabgp.protocol.ip import IP
-from exabgp.protocol.family import Family, FamilyTuple
 from exabgp.bgp.message.update.collection import validate_announce_nlri
-
-from exabgp.logger import log, lazymsg
+from exabgp.logger import lazymsg, log
+from exabgp.protocol.family import Family, FamilyTuple
+from exabgp.protocol.ip import IP
 
 if TYPE_CHECKING:
-    from exabgp.rib.route import Route
     from exabgp.reactor.api import API
     from exabgp.reactor.loop import Reactor
+    from exabgp.rib.route import Route
 
 
 def register_announce() -> None:

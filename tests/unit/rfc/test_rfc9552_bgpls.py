@@ -30,15 +30,14 @@ from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
-from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, GenericBGPLS
 from exabgp.bgp.message.update.nlri.bgpls.node import NODE
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
 from exabgp.protocol.family import AFI, SAFI
-
 from rfc.community_wire import session
 
 # Section 5.2, Table 1

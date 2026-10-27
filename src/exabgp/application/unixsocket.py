@@ -9,26 +9,25 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import os
-import sys
-import stat
-import json
-import signal
-import select
-import socket
-import traceback
 import contextlib
+import json
+import os
 import re
-import time
+import select
+import signal
+import socket
+import stat
+import sys
 import threading
+import time
+import traceback
 from collections import deque
-
-from exabgp.util.backlog import Backlog
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from collections.abc import Callable
 
 from exabgp.reactor.network.error import error
+from exabgp.util.backlog import Backlog
 
 kb = 1024
 mb = kb * 1024

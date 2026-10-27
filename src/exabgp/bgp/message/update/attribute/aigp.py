@@ -7,9 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
 from struct import pack, unpack
-from typing import ClassVar, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, Self
+
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated

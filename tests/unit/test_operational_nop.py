@@ -11,21 +11,21 @@ License: 3-clause BSD
 """
 
 import struct
+
 from exabgp.bgp.message import Message
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.operational import (
-    Operational,
+    NS,
     Advisory,
+    Operational,
+    OperationalFamily,
     Query,
     Response,
-    NS,
-    OperationalFamily,
     SequencedOperationalFamily,
 )
-from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.protocol.family import AFI, SAFI
 from tests import negotiation
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 
 # ==============================================================================
 # Part 2: OPERATIONAL Message Constants and Registration

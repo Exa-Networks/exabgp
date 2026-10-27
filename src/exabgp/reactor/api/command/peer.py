@@ -11,13 +11,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from exabgp.protocol.ip import IP
-from exabgp.protocol.family import AFI, SAFI, FamilyTuple
-from exabgp.bgp.neighbor import Neighbor
-from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.configuration.grammar.tree.resolve import api as flatten_api
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
+from exabgp.protocol.ip import IP
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -303,8 +303,8 @@ def neighbor_create(self: API, reactor: Reactor, service: str, peers: list[str],
         neighbor = _build_neighbor(params, api_processes)
     except Exception as e:
         # Log full exception for debugging
-        import traceback
         import sys
+        import traceback
 
         sys.stderr.write(f'Exception in neighbor_create: {e}\n')
         traceback.print_exc(file=sys.stderr)

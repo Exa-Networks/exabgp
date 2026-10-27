@@ -19,13 +19,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
 import json
+from collections.abc import Callable, Mapping
+from struct import error as struct_error
+from struct import unpack
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
+
 from exabgp.util.intvalue import json_number
-from struct import error as struct_error, unpack
-from collections.abc import Mapping
-from typing import Any, ClassVar, Protocol, TYPE_CHECKING
-from collections.abc import Callable
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated

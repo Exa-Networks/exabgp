@@ -7,11 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from dataclasses import dataclass
 from itertools import chain, islice
 from struct import pack, unpack
 from typing import TYPE_CHECKING, cast
-from collections.abc import Generator
 
 from exabgp.util.types import Buffer
 
@@ -23,7 +23,6 @@ from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.role import RoleValue
-from exabgp.bgp.message.update.attribute.otc import OTC
 from exabgp.bgp.message.update.attribute import MPRNLRI, MPURNLRI, Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, SEQUENCE, ASPath
 from exabgp.bgp.message.update.attribute.attribute import Discard, TreatAsWithdraw
@@ -32,17 +31,18 @@ from exabgp.bgp.message.update.attribute.collection import (
     TREAT_AS_WITHDRAW_ACTION,
     in_type_order,
 )
+from exabgp.bgp.message.update.attribute.nexthop import NextHop
+from exabgp.bgp.message.update.attribute.otc import OTC
 from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.nlri import NLRI, MPNLRICollection
-from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
+from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP, IPv4, IPv6
-from exabgp.bgp.message.update.attribute.nexthop import NextHop
 
 # RFC 7606 6 asks for the NLRI involved and the entire malformed UPDATE in an error log. A
 # peer sets the size of both, so each is capped: the NLRI by count, the message at the size

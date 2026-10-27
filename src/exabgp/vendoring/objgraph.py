@@ -36,20 +36,18 @@ Released under the MIT licence.
 from __future__ import annotations
 
 import gc
-import re
 import inspect
-import types
+import itertools
 import operator
 import os
+import re
 import shutil
 import subprocess
-import tempfile
 import sys
-import itertools
-from collections.abc import Callable
-from collections.abc import Sequence
+import tempfile
+import types
+from collections.abc import Callable, Sequence
 from typing import TextIO
-
 
 __author__ = 'Marius Gedminas (marius@gedmin.as)'
 __copyright__ = 'Copyright (c) 2008-2015 Marius Gedminas and contributors'

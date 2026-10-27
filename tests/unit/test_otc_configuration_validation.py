@@ -3,7 +3,7 @@
 import pytest
 
 from exabgp.bgp.message.update import UpdateCollection
-from exabgp.bgp.message.update.attribute import Attribute, OTC
+from exabgp.bgp.message.update.attribute import OTC, Attribute
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.configuration import check

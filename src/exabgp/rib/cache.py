@@ -7,16 +7,16 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from copy import deepcopy
 from typing import TYPE_CHECKING, Self, cast
-from collections.abc import Iterator
 
-from exabgp.logger import log, lazymsg
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import FamilyTuple
 
 if TYPE_CHECKING:
-    from exabgp.rib.route import Route
     from exabgp.bgp.message.update.nlri.nlri import NLRI
+    from exabgp.rib.route import Route
 
 
 class Cache:

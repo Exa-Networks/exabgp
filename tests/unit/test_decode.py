@@ -12,26 +12,21 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 import unittest
 
-# INET include is required as it perform some AFI/SAFI registration
-from exabgp.bgp.message.update.nlri import INET  # noqa
-
-from exabgp.protocol.ip import IPv4
-
-from exabgp.bgp.message import UpdateCollection
-from exabgp.bgp.message import Open
+from exabgp.bgp.message import Open, UpdateCollection
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open import Version
-from exabgp.bgp.message.open import ASN
-from exabgp.bgp.message.open import RouterID
-from exabgp.bgp.message.open import HoldTime
-from exabgp.bgp.message.open.capability import Capabilities
-from exabgp.bgp.message.open.capability import Negotiated
-from exabgp.bgp.message.update.nlri import NLRI
-from exabgp.bgp.neighbor import Neighbor
-from exabgp.util.enumeration import TriState
+from exabgp.bgp.message.open import ASN, HoldTime, RouterID, Version
+from exabgp.bgp.message.open.capability import Capabilities, Negotiated
 
-from exabgp.logger import log
+# INET include is required as it perform some AFI/SAFI registration
+from exabgp.bgp.message.update.nlri import (
+    INET,  # noqa
+    NLRI,
+)
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.environment import getenv
+from exabgp.logger import log
+from exabgp.protocol.ip import IPv4
+from exabgp.util.enumeration import TriState
 
 log.init(getenv())
 

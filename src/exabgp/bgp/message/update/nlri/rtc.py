@@ -8,9 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
 from struct import pack, unpack
-from typing import Any, ClassVar, Self, TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, Self, TypeVar
 
 from exabgp.util.types import Buffer
 
@@ -19,10 +18,10 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.nlri.settings import RTCSettings
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended import RouteTarget
-from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI, Family
 

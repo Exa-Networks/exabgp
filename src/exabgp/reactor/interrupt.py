@@ -8,10 +8,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import signal
-from typing import ClassVar
 from types import FrameType
+from typing import ClassVar
 
-from exabgp.logger import log, lazymsg
+from exabgp.logger import lazymsg, log
 
 
 class Signal:

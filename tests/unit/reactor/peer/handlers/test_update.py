@@ -13,10 +13,10 @@ from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.environment import getenv
-from exabgp.protocol.ip import IP
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.reactor.peer.handlers.update import UpdateHandler
+from exabgp.protocol.ip import IP
 from exabgp.reactor.peer.context import PeerContext
+from exabgp.reactor.peer.handlers.update import UpdateHandler
 from exabgp.rib.incoming import IncomingRIB
 from tests import negotiation
 

@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from exabgp.util.types import Buffer
 from exabgp.bgp.message.notification import Notify
+from exabgp.util.types import Buffer
 
 # NOTE: RFC 7432 defines ESI Types (0-5) in the first byte.
 # Current implementation treats ESI as opaque 10-byte value.

@@ -7,9 +7,9 @@ from typing import Any
 
 import pytest
 
-from config_grammar.differential import Accepted, agree, grammar, grammar_file
+from config_grammar.differential import CONFIGURATIONS, Accepted, agree, grammar, grammar_file
+from config_grammar.differential import ROOT as REPOSITORY
 from config_grammar.forms import DOCUMENTS, all_forms
-from config_grammar.differential import CONFIGURATIONS, ROOT as REPOSITORY
 from exabgp.configuration.grammar.read import read_file, read_text
 from exabgp.configuration.grammar.render import quote, render
 from exabgp.configuration.grammar.tree.root import ROOT

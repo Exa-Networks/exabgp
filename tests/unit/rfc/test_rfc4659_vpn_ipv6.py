@@ -19,17 +19,17 @@ from typing import cast
 import pytest
 
 from exabgp.bgp.message import Action, Open
+from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open import ASN, HoldTime, RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities, Capability
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.neighbor import Neighbor
-from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPNBase
 from exabgp.bgp.message.update.nlri.label import LabelBase
 from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
 
 # Section 2: an 8 octet route distinguisher in front of a 16 octet IPv6 address.

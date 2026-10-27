@@ -22,8 +22,8 @@ import hashlib
 import json
 import os
 from collections import deque
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 from config_grammar.differential import (
     COMMANDS,

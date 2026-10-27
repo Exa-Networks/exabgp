@@ -64,12 +64,11 @@ what is here is the boundary itself.
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 import pytest
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN

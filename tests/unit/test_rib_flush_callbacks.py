@@ -10,8 +10,8 @@ Used by sync mode API commands for synchronous route announcement.
 """
 
 import asyncio
-import sys
 import os
+import sys
 from unittest.mock import Mock
 
 import pytest
@@ -29,9 +29,8 @@ mock_logger.warning = Mock()
 mock_logger.error = Mock()
 option.logger = mock_logger
 
-from exabgp.rib.outgoing import OutgoingRIB  # noqa: E402
 from exabgp.protocol.family import AFI, SAFI  # noqa: E402
-
+from exabgp.rib.outgoing import OutgoingRIB  # noqa: E402
 
 # ==============================================================================
 # Helper Functions

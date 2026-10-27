@@ -9,20 +9,19 @@ from unittest.mock import patch
 import pytest
 
 from exabgp.configuration.configuration import Configuration
-from exabgp.reactor.api.processes import Processes
-from exabgp.reactor.loop import Reactor
-
 from exabgp.reactor.api.command.group import (
     _GROUP_BUFFERS,
+    _add_to_group,
+    _end_group,
     _is_grouping,
     _start_group,
-    _end_group,
-    _add_to_group,
-    group_start,
     group_end,
     group_inline,
+    group_start,
     is_grouping,
 )
+from exabgp.reactor.api.processes import Processes
+from exabgp.reactor.loop import Reactor
 
 
 class PipedHelper:

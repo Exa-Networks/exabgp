@@ -10,11 +10,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import contextlib
-from typing import ClassVar
 from collections.abc import Callable
+from typing import ClassVar
 
 from exabgp.protocol.ip import IPv4
-
 
 # Type for shortcut matching function - can return bool or a truthy/falsy value
 ShortcutMatcher = Callable[[int, list[str]], bool | list[str]]

@@ -11,16 +11,15 @@ Examples:
 
 from __future__ import annotations
 
+import argparse
 import contextlib
 import json
 import re
 import sys
-import argparse
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from dataclasses import dataclass
 from typing import Any
-
 
 CONF_VERSIONS = ('3.4', '4', '5', 'main')
 API_VERSIONS = ('4', '5', 'main')

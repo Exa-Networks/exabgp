@@ -8,14 +8,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import contextlib
-import os
-import sys
-import pwd
 import errno
 import importlib
+import os
 import pkgutil
+import pwd
 import socket
 import stat
+import sys
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -24,9 +24,8 @@ if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor
 
 from exabgp.environment import getenv
+from exabgp.logger import lazymsg, log
 from exabgp.version import get_root
-
-from exabgp.logger import log, lazymsg
 
 MAXFD: int = 2048
 # the directory of the exabgp package, which the daemon imports from long after it started,

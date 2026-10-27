@@ -11,25 +11,25 @@ Coverage targets:
 - src/exabgp/bgp/message/update/attribute/sr/srgb.py (48% → 90%+)
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
-import pytest
 import struct
 
+import pytest
+
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid, GenericSRId
 from exabgp.bgp.message.update.attribute.sr.labelindex import SrLabelIndex
+from exabgp.bgp.message.update.attribute.sr.prefixsid import GenericSRId, PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
+from exabgp.bgp.message.update.attribute.sr.srv6.generic import (
+    GenericSrv6ServiceDataSubSubTlv,
+    GenericSrv6ServiceSubTlv,
+)
 from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
 from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
 from exabgp.bgp.message.update.attribute.sr.srv6.sidstructure import Srv6SidStructure
-from exabgp.bgp.message.update.attribute.sr.srv6.generic import (
-    GenericSrv6ServiceSubTlv,
-    GenericSrv6ServiceDataSubSubTlv,
-)
-from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.ip import IPv6
 from tests import negotiation
 

@@ -12,8 +12,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, Generic, TypeVar, cast
 from collections.abc import Callable
+from typing import Any, Generic, TypeVar, cast
 
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import INT64_MAX, TEXT, Shape, boolean, enumeration, integer_ranges

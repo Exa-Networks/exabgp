@@ -8,20 +8,20 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, cast
 from collections.abc import Iterator
+from typing import TYPE_CHECKING, cast
 
 from exabgp.bgp.message import UpdateCollection
-from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.open.capability.role import RoleValue
+from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.otc import OTCSelf
+from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.rtc import RTC
-from exabgp.protocol.ip import IP
 from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
+from exabgp.protocol.ip import IP
 from exabgp.rib.cache import Cache
 from exabgp.rib.route import Route
 

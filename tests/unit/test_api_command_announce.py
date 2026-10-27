@@ -17,7 +17,7 @@ import pytest
 
 from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.protocol.family import AFI, SAFI
-from tests.api_daemon import Daemon, FIRST, HELPER, SECOND, failed
+from tests.api_daemon import FIRST, HELPER, SECOND, Daemon, failed
 
 IPV4_UNICAST = (AFI.ipv4, SAFI.unicast)
 IPV6_UNICAST = (AFI.ipv6, SAFI.unicast)

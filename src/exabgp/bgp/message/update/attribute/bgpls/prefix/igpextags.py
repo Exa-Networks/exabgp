@@ -8,10 +8,8 @@ from __future__ import annotations
 
 from struct import pack, unpack
 
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 from exabgp.util import split
-
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
 from exabgp.util.types import Buffer
 
 #      0                   1                   2                   3

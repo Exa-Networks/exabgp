@@ -42,22 +42,20 @@ labelled ``lo:haproxy1``, ``lo:haproxy2``, etc.
 
 from __future__ import annotations
 
-import sys
-import os
-import subprocess
-import re
+import argparse
+import collections
 import logging
 import logging.handlers
-import argparse
+import os
+import re
 import signal
+import subprocess
+import sys
 import time
-import collections
-
-from enum import Enum
-from typing import Any
 from collections.abc import Collection
-from ipaddress import ip_network, IPv4Network, IPv6Network
-from ipaddress import ip_address, IPv4Address, IPv6Address
+from enum import Enum
+from ipaddress import IPv4Address, IPv4Network, IPv6Address, IPv6Network, ip_address, ip_network
+from typing import Any
 
 # Interface name validation constants
 IFNAME_MAX_LENGTH = 15  # Maximum interface name length (Linux kernel limit)

@@ -14,7 +14,6 @@ import pytest
 
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6capabilities import Srv6Capabilities
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-
 from rfc.community_wire import session
 
 SRV6_CAPABILITIES = 1038

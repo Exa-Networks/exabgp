@@ -13,17 +13,17 @@ a route which changes under whoever is holding it.
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 import ast
 import sys
-from copy import copy as shallow_copy, deepcopy
+from copy import copy as shallow_copy
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
 

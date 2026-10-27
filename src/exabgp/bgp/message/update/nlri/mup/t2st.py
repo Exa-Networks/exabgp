@@ -7,7 +7,7 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 from __future__ import annotations
 
 from struct import pack
-from typing import ClassVar, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, Self
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated

@@ -14,6 +14,7 @@ from exabgp.bgp.message.update.update import (
     UpdateWire,
 )
 
+# isort: split
 # EOR is an Update, so it is imported once Update is
 from exabgp.bgp.message.update.eor import EOR  # noqa: E402
 

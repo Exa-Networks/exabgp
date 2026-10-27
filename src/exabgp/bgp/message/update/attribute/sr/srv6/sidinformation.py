@@ -6,16 +6,15 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from struct import pack, unpack
 from typing import Any, ClassVar, Protocol, TypeVar
-from collections.abc import Callable
-
-from exabgp.protocol.ip import IPv6
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceDataSubSubTlv
 from exabgp.bgp.message.update.attribute.sr.srv6.l2service import Srv6L2Service
 from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
-from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceDataSubSubTlv
+from exabgp.protocol.ip import IPv6
 from exabgp.util.types import Buffer
 
 

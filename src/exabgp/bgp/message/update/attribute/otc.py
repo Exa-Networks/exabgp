@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-
 from struct import pack, unpack
-from typing import ClassVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN

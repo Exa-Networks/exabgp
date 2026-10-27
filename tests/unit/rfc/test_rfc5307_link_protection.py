@@ -14,7 +14,6 @@ import pytest
 
 from exabgp.bgp.message.update.attribute.bgpls.link.protection import LinkProtectionType
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-
 from rfc.community_wire import session
 
 LINK_PROTECTION_TYPE = 1093

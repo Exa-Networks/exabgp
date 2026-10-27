@@ -36,6 +36,7 @@ from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.configuration.cli_process import API_PREFIX
 from exabgp.environment import getenv
 from exabgp.logger import lazyexc, lazymsg, log
+from exabgp.protocol.family import FamilyTuple
 from exabgp.reactor.api import API
 from exabgp.reactor.api.processes import ProcessError, Processes
 from exabgp.reactor.asynchronous import ASYNC
@@ -44,7 +45,6 @@ from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.listener import Listener
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.timing import LoopTimer
-from exabgp.protocol.family import FamilyTuple
 from exabgp.rib.route import Route
 from exabgp.version import version
 

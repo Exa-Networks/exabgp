@@ -13,16 +13,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from exabgp.bgp.message.action import Action
-
-from exabgp.bgp.message.message import Message
-from exabgp.bgp.message.open import Open
-from exabgp.bgp.message.update import Update, UpdateCollection
-from exabgp.bgp.message.update import EOR
 from exabgp.bgp.message.keepalive import KeepAlive
-from exabgp.bgp.message.notification import Notification
-from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.notification import NotificationReceived
+from exabgp.bgp.message.message import Message
+from exabgp.bgp.message.notification import Notification, NotificationReceived, Notify
+from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.operational import Operational
+from exabgp.bgp.message.update import EOR, Update, UpdateCollection
 
 __all__ = [
     'Action',

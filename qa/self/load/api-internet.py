@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
+import random
 import sys
 import time
-import random
 
 
 def write(data):

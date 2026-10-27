@@ -9,13 +9,12 @@ Attribute List, before the read.
 
 from __future__ import annotations
 
-
 import pytest
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import Attributes
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # flag=TRANSITIVE (0x40), ORIGIN, length 1, IGP
 ORIGIN = bytes([0x40, 0x01, 0x01, 0x00])

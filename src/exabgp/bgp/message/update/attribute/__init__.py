@@ -53,6 +53,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+# isort: off
+# in the order the modules need each other: several import a name, NextHop among them,
+# from this package, so it must already be bound when they are imported
 from exabgp.bgp.message.update.attribute.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import Attributes, AttributeCollection, AttributesWire, AttributeSet
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
@@ -87,6 +90,7 @@ from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap  # noqa: F401
+# isort: on
 
 __all__ = [
     'Attribute',

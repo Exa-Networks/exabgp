@@ -1,11 +1,11 @@
 """Route validation rejects missing output and expected serialization errors."""
 
 import pytest
+from test_configuration_asn_context import configured
 
 from exabgp.bgp.message import UpdateCollection
 from exabgp.configuration import check
 from exabgp.rib import RIB
-from test_configuration_asn_context import configured
 from tests import negotiation
 
 # The faults are injected by replacing methods of UpdateCollection, which the compiled

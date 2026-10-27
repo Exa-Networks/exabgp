@@ -15,9 +15,9 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.update.collection import UpdateCollection
 
-from exabgp.bgp.message.update.update import Update
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.bgp.message.update.update import Update
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 

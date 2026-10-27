@@ -13,12 +13,12 @@ IPrefix6.cidr uses CIDR.from_ipv6().
 """
 
 from exabgp.bgp.message.update.nlri.flow import (
-    IPrefix4,
-    IPrefix6,
     Flow4Destination,
     Flow4Source,
     Flow6Destination,
     Flow6Source,
+    IPrefix4,
+    IPrefix6,
 )
 
 

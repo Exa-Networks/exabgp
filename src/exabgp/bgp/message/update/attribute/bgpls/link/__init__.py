@@ -56,7 +56,39 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+#   +-----------+----------------------------+----------+---------------+
+#   |  TLV Code | Description                |   Length |       Section |
+#   |   Point   |                            |          |               |
+#   +-----------+----------------------------+----------+---------------+
+#   |    1099   | Adjacency Segment          | variable | Section 2.2.1 |
+#   |           | Identifier (Adj-SID) TLV   |          |               |
+#   |    1100   | LAN Adjacency Segment      | variable | Section 2.2.2 |
+#   |           | Identifier (Adj-SID) TLV   |          |               |
+#   +-----------+----------------------------+----------+---------------+
+#   draft-gredler-idr-bgp-ls-segment-routing-ext-03
+from exabgp.bgp.message.update.attribute.bgpls.link.adjacencysid import AdjacencySid
+from exabgp.bgp.message.update.attribute.bgpls.link.admingroup import AdminGroup
+
+#  +================+===========================================+===========+
+#  | TLV Code Point | Description                               | Reference |
+#  +================+===========================================+===========+
+#  | 1114           | Unidirectional Link Delay                 | RFC 8571  |
+#  | 1115           | Min/Max Unidirectional Link Delay         | RFC 8571  |
+#  | 1116           | Unidirectional Delay Variation            | RFC 8571  |
+#  | 1117           | Unidirectional Link Loss                  | RFC 8571  |
+#  | 1118           | Unidirectional Residual Bandwidth         | RFC 8571  |
+#  | 1119           | Unidirectional Available Bandwidth        | RFC 8571  |
+#  | 1120           | Unidirectional Utilized Bandwidth         | RFC 8571  |
+#  +----------------+-------------------------------------------+-----------+
+from exabgp.bgp.message.update.attribute.bgpls.link.delaymetric import (
+    MinMaxUnidirLinkDelay,
+    UnidirectionalAvailableBw,
+    UnidirectionalDelayVar,
+    UnidirectionalLinkDelay,
+    UnidirectionalLinkLoss,
+    UnidirectionalResidualBw,
+    UnidirectionalUtilizedBw,
+)
 
 #  +-----------+---------------------+--------------+------------------+
 #  |  TLV Code | Description         |  IS-IS TLV   | Reference        |
@@ -91,31 +123,24 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #   +-----------+---------------------+--------------+------------------+
 #   https://tools.ietf.org/html/rfc7752#section-3.3.2 Link Attributes TLVs
 from exabgp.bgp.message.update.attribute.bgpls.link.igpmetric import IgpMetric
-from exabgp.bgp.message.update.attribute.bgpls.link.srlg import Srlg
-from exabgp.bgp.message.update.attribute.bgpls.link.mplsmask import MplsMask
-from exabgp.bgp.message.update.attribute.bgpls.link.temetric import TeMetric
-from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId
-from exabgp.bgp.message.update.attribute.bgpls.link.remoterouterid import RemoteRouterId
-from exabgp.bgp.message.update.attribute.bgpls.link.admingroup import AdminGroup
-from exabgp.bgp.message.update.attribute.bgpls.link.maxbw import MaxBw
-from exabgp.bgp.message.update.attribute.bgpls.link.maxreservablebw import MaxReservableBw
-from exabgp.bgp.message.update.attribute.bgpls.link.unreservedbw import UnreservedBw
-from exabgp.bgp.message.update.attribute.bgpls.link.protection import LinkProtectionType
-from exabgp.bgp.message.update.attribute.bgpls.link.opaque import LinkOpaque
+from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAdjacencySid
 from exabgp.bgp.message.update.attribute.bgpls.link.linkname import LinkName
 
-#   +-----------+----------------------------+----------+---------------+
-#   |  TLV Code | Description                |   Length |       Section |
-#   |   Point   |                            |          |               |
-#   +-----------+----------------------------+----------+---------------+
-#   |    1099   | Adjacency Segment          | variable | Section 2.2.1 |
-#   |           | Identifier (Adj-SID) TLV   |          |               |
-#   |    1100   | LAN Adjacency Segment      | variable | Section 2.2.2 |
-#   |           | Identifier (Adj-SID) TLV   |          |               |
-#   +-----------+----------------------------+----------+---------------+
-#   draft-gredler-idr-bgp-ls-segment-routing-ext-03
-from exabgp.bgp.message.update.attribute.bgpls.link.adjacencysid import AdjacencySid
-from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAdjacencySid
+#  +----------------+-------------------------------+-----------+
+#  | TLV Code Point | Description                   | Reference |
+#  +----------------+-------------------------------+-----------+
+#  |  258           | Link Local/Remote Identifiers | RFC 7752  |
+#  +----------------+-------------------------------+-----------+
+from exabgp.bgp.message.update.attribute.bgpls.link.localremoteid import LinkLocalRemoteId
+from exabgp.bgp.message.update.attribute.bgpls.link.maxbw import MaxBw
+from exabgp.bgp.message.update.attribute.bgpls.link.maxreservablebw import MaxReservableBw
+from exabgp.bgp.message.update.attribute.bgpls.link.mplsmask import MplsMask
+from exabgp.bgp.message.update.attribute.bgpls.link.opaque import LinkOpaque
+from exabgp.bgp.message.update.attribute.bgpls.link.protection import LinkProtectionType
+from exabgp.bgp.message.update.attribute.bgpls.link.remoterouterid import RemoteRouterId
+from exabgp.bgp.message.update.attribute.bgpls.link.srlg import Srlg
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6capabilities import Srv6Capabilities
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6endpointbehavior import Srv6EndpointBehavior
 
 #  +================+=============================+===========+
 #  | TLV Code Point | Description                 | Reference |
@@ -129,36 +154,10 @@ from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAd
 #  | 1252           | SRv6 SID Structure TLV      | RFC 9514  |
 #  +----------------+-----------------------------+-----------+
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
-from exabgp.bgp.message.update.attribute.bgpls.link.srv6sidstructure import Srv6SidStructure
-from exabgp.bgp.message.update.attribute.bgpls.link.srv6capabilities import Srv6Capabilities
-from exabgp.bgp.message.update.attribute.bgpls.link.srv6locator import Srv6Locator
-from exabgp.bgp.message.update.attribute.bgpls.link.srv6endpointbehavior import Srv6EndpointBehavior
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEndXISIS, Srv6LanEndXOSPF
-
-#  +================+===========================================+===========+
-#  | TLV Code Point | Description                               | Reference |
-#  +================+===========================================+===========+
-#  | 1114           | Unidirectional Link Delay                 | RFC 8571  |
-#  | 1115           | Min/Max Unidirectional Link Delay         | RFC 8571  |
-#  | 1116           | Unidirectional Delay Variation            | RFC 8571  |
-#  | 1117           | Unidirectional Link Loss                  | RFC 8571  |
-#  | 1118           | Unidirectional Residual Bandwidth         | RFC 8571  |
-#  | 1119           | Unidirectional Available Bandwidth        | RFC 8571  |
-#  | 1120           | Unidirectional Utilized Bandwidth         | RFC 8571  |
-#  +----------------+-------------------------------------------+-----------+
-from exabgp.bgp.message.update.attribute.bgpls.link.delaymetric import (
-    UnidirectionalLinkDelay,
-    MinMaxUnidirLinkDelay,
-    UnidirectionalDelayVar,
-    UnidirectionalLinkLoss,
-    UnidirectionalResidualBw,
-    UnidirectionalAvailableBw,
-    UnidirectionalUtilizedBw,
-)
-
-#  +----------------+-------------------------------+-----------+
-#  | TLV Code Point | Description                   | Reference |
-#  +----------------+-------------------------------+-----------+
-#  |  258           | Link Local/Remote Identifiers | RFC 7752  |
-#  +----------------+-------------------------------+-----------+
-from exabgp.bgp.message.update.attribute.bgpls.link.localremoteid import LinkLocalRemoteId
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6locator import Srv6Locator
+from exabgp.bgp.message.update.attribute.bgpls.link.srv6sidstructure import Srv6SidStructure
+from exabgp.bgp.message.update.attribute.bgpls.link.temetric import TeMetric
+from exabgp.bgp.message.update.attribute.bgpls.link.unreservedbw import UnreservedBw
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId

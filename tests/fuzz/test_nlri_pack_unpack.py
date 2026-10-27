@@ -5,7 +5,8 @@ and maintain roundtrip consistency for various NLRI types.
 """
 
 import pytest
-from hypothesis import given, strategies as st, settings, HealthCheck
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction

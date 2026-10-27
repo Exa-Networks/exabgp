@@ -5,17 +5,16 @@
 Tests the packed-bytes-first pattern for NLRI collection classes.
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
-
 import pytest
-from exabgp.protocol.family import AFI, SAFI
+
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.update.nlri.inet import INET
-from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.message.update.nlri.inet import INET
+from exabgp.bgp.message.update.nlri.qualifier import PathInfo
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 
 
@@ -86,8 +85,8 @@ class TestNLRICollectionLazyParsing:
 
     def test_nlris_not_parsed_until_accessed(self) -> None:
         """Test that NLRIs are parsed lazily."""
-        from exabgp.bgp.message.update.nlri.collection import NLRICollection
         from exabgp.bgp.message.update.nlri import _UNPARSED
+        from exabgp.bgp.message.update.nlri.collection import NLRICollection
 
         packed = b'\x18\xc0\xa8\x01'
         collection = NLRICollection(packed, AFI.ipv4, SAFI.unicast, addpath=False, action=Action.ANNOUNCE)
@@ -215,8 +214,8 @@ class TestMPNLRICollectionSemantic:
 
     def test_from_wire_with_mprnlri(self) -> None:
         """Test creating MPNLRICollection from MPRNLRI wire container."""
-        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
         from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
+        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 
         # Create a mock MPRNLRI from wire format
         # MP_REACH_NLRI format: AFI(2) + SAFI(1) + NH_len(1) + NH + reserved(1) + NLRI
@@ -238,8 +237,8 @@ class TestMPNLRICollectionSemantic:
 
     def test_from_wire_with_mpurnlri(self) -> None:
         """Test creating MPNLRICollection from MPURNLRI wire container."""
-        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
         from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
+        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 
         # MP_UNREACH_NLRI format: AFI(2) + SAFI(1) + NLRI
         afi_bytes = b'\x00\x02'  # AFI.ipv6
@@ -261,9 +260,9 @@ class TestMPNLRICollectionPacking:
 
     def test_packed_reach_attributes_single_nexthop(self) -> None:
         """Test packed_reach_attributes with single nexthop."""
+        from exabgp.bgp.message.open.capability.negotiated import Negotiated
         from exabgp.bgp.message.update.collection import RoutedNLRI
         from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
-        from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
         cidr = CIDR.create_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast)
@@ -282,8 +281,8 @@ class TestMPNLRICollectionPacking:
 
     def test_packed_unreach_attributes(self) -> None:
         """Test packed_unreach_attributes generates valid wire format."""
-        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
+        from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 
         cidr = CIDR.create_cidr(IP.pton('2001:db8::'), 32)
         nlri = INET.from_cidr(cidr, AFI.ipv6, SAFI.unicast)

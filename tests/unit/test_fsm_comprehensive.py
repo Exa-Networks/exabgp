@@ -8,9 +8,10 @@ Tests state definitions, transitions, validation, API callbacks, and edge cases.
 Created: 2025-11-08
 """
 
-import pytest
 import os
 from typing import Any
+
+import pytest
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'

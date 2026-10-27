@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from exabgp.protocol.ip.address import (
     IP,
+    IPT,
     IPBase,
     IPFactory,
     IPRange,
     IPSelf,
-    IPT,
     IPv4,
     IPv6,
 )

@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-import sys
 import argparse
 import platform
+import sys
 
-from exabgp.version import version, get_root
+from exabgp.version import get_root, version
 
 
 def setargs(sub: argparse.ArgumentParser) -> None:

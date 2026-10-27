@@ -9,16 +9,14 @@ from __future__ import annotations
 
 import random
 import time
-
-from typing import TYPE_CHECKING
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.holdtime import HoldTime
 
-from exabgp.logger import log, lazymsg
-from exabgp.bgp.message import Message
-from exabgp.bgp.message import Notify
+from exabgp.bgp.message import Message, Notify
+from exabgp.logger import lazymsg, log
 
 # RFC 4271 section 10: "The suggested default amount of jitter SHALL be determined by
 # multiplying the base value of the appropriate timer by a random factor, which is uniformly

@@ -3,17 +3,17 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from exabgp.bgp.neighbor import Neighbor
-    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.fsm import FSM
     from exabgp.bgp.message.message import MessageCode
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.open import Open
-    from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.refresh import RouteRefresh
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.operational import Operational
-    from exabgp.bgp.fsm import FSM
-    from exabgp.reactor.api.response.text import Text
+    from exabgp.bgp.message.refresh import RouteRefresh
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.neighbor import Neighbor
     from exabgp.reactor.api.response.json import JSON
+    from exabgp.reactor.api.response.text import Text
 
 
 class JSONEncoder(Protocol):
@@ -155,8 +155,8 @@ class Response:
     JSON: type[JSON]
     Text: type[Text]
 
-    from exabgp.reactor.api.response.text import Text
     from exabgp.reactor.api.response.json import JSON
+    from exabgp.reactor.api.response.text import Text
 
     # v4 encoders (legacy)
     V4 = V4

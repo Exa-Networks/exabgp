@@ -2,24 +2,17 @@ from __future__ import annotations
 
 import asyncio
 import time
-from typing import ClassVar
 from collections.abc import Iterator
+from typing import ClassVar
 
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI
-from .connection import Connection
-from .tcp import create, bind
-from .tcp import connect
-from .tcp import md5
 
-# from .tcp import nagle
-from .tcp import sending_ttl
-from .tcp import set_minimum_ttl
-from .tcp import set_sending_ttl
-from .tcp import asynchronous
-from .tcp import ready
+from .connection import Connection
 from .error import MD5Error, TCPAOError
 
-from exabgp.logger import log, lazymsg
+# from .tcp import nagle
+from .tcp import asynchronous, bind, connect, create, md5, ready, sending_ttl, set_minimum_ttl, set_sending_ttl
 
 
 class Outgoing(Connection):

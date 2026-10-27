@@ -15,15 +15,14 @@ from __future__ import annotations
 
 import pytest
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 from exabgp.bgp.neighbor.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv6
 from exabgp.util.enumeration import TriState
-
 from tests import negotiation
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 def _parse(cfg: str) -> tuple[bool, Configuration]:

@@ -6,12 +6,12 @@ Tests configuration validation functionality.
 from __future__ import annotations
 
 import argparse
-import tempfile
 import os
+import tempfile
 
 import pytest
 
-from exabgp.application.validate import setargs, cmdline
+from exabgp.application.validate import cmdline, setargs
 
 
 class TestSetargs:

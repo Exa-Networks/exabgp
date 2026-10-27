@@ -12,8 +12,8 @@ Action is implicit in which method is called:
 - del_from_rib() -> update_cache_withdraw() -> withdraws
 """
 
-import sys
 import os
+import sys
 from unittest.mock import Mock
 
 # Add src to path
@@ -29,13 +29,13 @@ mock_logger.warning = Mock()
 mock_logger.error = Mock()
 option.logger = mock_logger
 
-from exabgp.rib.cache import Cache  # noqa: E402
-from exabgp.rib.route import Route  # noqa: E402
-from exabgp.bgp.message.update.nlri.inet import INET  # noqa: E402
-from exabgp.bgp.message.update.nlri.cidr import CIDR  # noqa: E402
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection  # noqa: E402
+from exabgp.bgp.message.update.nlri.cidr import CIDR  # noqa: E402
+from exabgp.bgp.message.update.nlri.inet import INET  # noqa: E402
 from exabgp.protocol.family import AFI, SAFI  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
+from exabgp.rib.cache import Cache  # noqa: E402
+from exabgp.rib.route import Route  # noqa: E402
 
 
 def create_nlri(prefix: str = '10.0.0.0/24') -> INET:

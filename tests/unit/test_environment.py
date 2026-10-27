@@ -4,12 +4,11 @@
 Unit tests for exabgp.environment modules
 """
 
+from typing import Any
 from unittest.mock import patch
 
-from typing import Any
-
-from exabgp.environment import getenv, Environment
-from exabgp.environment.base import _find_root, APPLICATION, ROOT
+from exabgp.environment import Environment, getenv
+from exabgp.environment.base import APPLICATION, ROOT, _find_root
 from exabgp.environment.config import ConfigSection, option
 
 

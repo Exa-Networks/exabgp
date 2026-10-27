@@ -34,11 +34,11 @@ import subprocess
 import sys
 import termios
 import time
-from exabgp.util.intvalue import json_number
+from collections.abc import Callable, Generator
 from threading import Thread
 from typing import IO, TYPE_CHECKING, Any, ClassVar, TypeVar, cast
-from collections.abc import Callable, Generator
 
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     from exabgp.bgp.fsm import FSM
@@ -53,12 +53,12 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.message import MessageCode
 from exabgp.bgp.message.open.capability import Negotiated
 from exabgp.configuration.cli_process import API_PREFIX
-from exabgp.reactor.api.tokeniser import formated
-from exabgp.reactor.api.dispatch.version import API_AUTO, API_V4, API_V6, command_api_version
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
+from exabgp.reactor.api.dispatch.version import API_AUTO, API_V4, API_V6, command_api_version
 from exabgp.reactor.api.response import Response, ResponseEncoder
 from exabgp.reactor.api.response.answer import Answer
+from exabgp.reactor.api.tokeniser import formated
 from exabgp.reactor.network.error import error
 from exabgp.util.errstr import errstr
 from exabgp.version import json as json_version

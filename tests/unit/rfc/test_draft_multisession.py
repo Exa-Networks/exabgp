@@ -10,7 +10,6 @@ parsed configuration, so those tests start from configuration text.
 
 from __future__ import annotations
 
-
 import pytest
 
 from exabgp.bgp.message import Message

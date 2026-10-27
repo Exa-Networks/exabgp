@@ -17,7 +17,7 @@ from collections.abc import Iterator
 import pytest
 
 from exabgp.bgp.neighbor import NeighborTemplate
-from tests.api_daemon import Daemon, FIRST, SECOND, answer, failed
+from tests.api_daemon import FIRST, SECOND, Daemon, answer, failed
 
 CEASE = 6
 ADMINISTRATIVE_SHUTDOWN = 2

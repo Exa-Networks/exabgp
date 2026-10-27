@@ -16,14 +16,13 @@ Issue #927. RFC 8956 6.1 defines rt-redirect-ipv6, an IPv6-Address-Specific Exte
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 import os
 import pathlib
 import subprocess
 
 import pytest
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute.community.extended import (
     ExtendedCommunitiesIPv6,
     TrafficRedirectIPv6,

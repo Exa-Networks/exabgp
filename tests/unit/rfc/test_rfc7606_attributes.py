@@ -26,7 +26,6 @@ from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
-
 from rfc.rfc7606_wire import (
     EMPTY_AS_PATH,
     LOCAL_AS,

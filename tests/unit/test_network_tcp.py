@@ -8,24 +8,25 @@ Tests socket creation, binding, connection, and configuration.
 Created: 2025-11-08
 """
 
-import pytest
-from typing import Any
-import socket
-import select
 import binascii
 import errno
+import select
+import socket
 from struct import unpack
-from unittest.mock import patch, MagicMock
+from typing import Any
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from exabgp.protocol.family import AFI
 from exabgp.reactor.network import tcp
 from exabgp.reactor.network.error import (
-    NotConnected,
+    AsyncError,
     BindingError,
     MD5Error,
     NagleError,
+    NotConnected,
     TTLError,
-    AsyncError,
 )
 
 

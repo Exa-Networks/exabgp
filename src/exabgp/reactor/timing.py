@@ -11,13 +11,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import time
+from collections.abc import Iterator
 from contextlib import contextmanager
 from types import TracebackType
-from collections.abc import Iterator
 
 from exabgp.environment import getenv
 from exabgp.logger import lazymsg, log
-
 
 # Thresholds for slow operation warnings (milliseconds)
 SLOW_THRESHOLD_MS = 50

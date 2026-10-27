@@ -30,7 +30,6 @@ from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
-
 from rfc.rfc7606_wire import (
     EMPTY_AS_PATH,
     IPV4_PREFIX,

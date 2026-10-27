@@ -7,29 +7,27 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import socket
-import select
 import platform
-
-from struct import pack, calcsize
+import select
+import socket
 from collections.abc import Iterator
+from struct import calcsize, pack
 
-from exabgp.logger import log
-from exabgp.logger import lazymsg
-from exabgp.util.errstr import errstr
-from exabgp.util.psk import PSKError, decode_base64
-
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
-from exabgp.reactor.network.error import errno
-from exabgp.reactor.network.error import error
-
-from exabgp.reactor.network.error import NotConnected
-from exabgp.reactor.network.error import BindingError
-from exabgp.reactor.network.error import MD5Error
-from exabgp.reactor.network.error import NagleError
-from exabgp.reactor.network.error import TTLError
-from exabgp.reactor.network.error import AsyncError
+from exabgp.reactor.network.error import (
+    AsyncError,
+    BindingError,
+    MD5Error,
+    NagleError,
+    NotConnected,
+    TTLError,
+    errno,
+    error,
+)
+from exabgp.util.errstr import errstr
+from exabgp.util.psk import PSKError, decode_base64
 
 
 def bind_to_device(io: socket.socket, interface: str) -> None:

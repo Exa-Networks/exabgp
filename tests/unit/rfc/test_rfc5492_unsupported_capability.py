@@ -11,6 +11,7 @@ peering is not re-established until the operator acts.
 from __future__ import annotations
 
 import asyncio
+
 import pytest
 
 from exabgp.bgp.message import Message

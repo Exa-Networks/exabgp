@@ -7,13 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
 from typing import Any, ClassVar
 
-from exabgp.bgp.message.open.capability.capability import Capability, CapabilityList
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
-from exabgp.logger import log, lazymsg
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode, CapabilityList
+from exabgp.logger import lazymsg, log
 from exabgp.util.types import Buffer
 
 # ================================================================= MultiSession

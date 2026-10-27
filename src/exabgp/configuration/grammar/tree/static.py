@@ -18,16 +18,16 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator, Mapping
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any, cast
-from collections.abc import Callable, Iterator, Mapping
 
 from exabgp.bgp.message import Action
-from exabgp.bgp.message.update.attribute.internal import Split as InternalSplit
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.community import Communities, ExtendedCommunities, LargeCommunities
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesIPv6
+from exabgp.bgp.message.update.attribute.internal import Split as InternalSplit
 from exabgp.bgp.message.update.nlri import CIDR, INET, IPVPN, Label
 from exabgp.bgp.message.update.nlri.empty import Empty
 from exabgp.bgp.message.update.nlri.nlri import NLRI
@@ -42,10 +42,10 @@ from exabgp.configuration.grammar.section import Section, Store, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types import bgp
 from exabgp.configuration.grammar.types.base import Syntax, Type, WordOrSyntax
-from exabgp.logger import lazymsg, log
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
-from exabgp.configuration.grammar.words import Words
 from exabgp.configuration.grammar.types.word import decimal
+from exabgp.configuration.grammar.words import Words
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPRange
 from exabgp.rib.route import Route

@@ -7,9 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.types import Buffer
-
 from exabgp.protocol.ip import IPFactory, IPv4
+from exabgp.util.types import Buffer
 
 # ===================================================================== RouterID
 #

@@ -14,18 +14,20 @@ Test Categories:
 - Message-specific malformed content
 """
 
-import pytest
 import struct
 from typing import Any
-from hypothesis import given, strategies as st, settings, HealthCheck, assume
+
+import pytest
+from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import strategies as st
+
 from exabgp.bgp.message.notification import Notify
-from exabgp.reactor.network.error import LostConnection
-from tests.wire_reader import read_message
-from tests import negotiation
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.reactor.network.error import LostConnection
 from exabgp.util.enumeration import TriState
+from tests import negotiation
+from tests.wire_reader import read_message
 
 pytestmark = pytest.mark.fuzz
 
@@ -187,8 +189,8 @@ def test_invalid_message_type(msg_type: int) -> None:
 @settings(deadline=None, max_examples=50)
 def test_open_invalid_version(version: int) -> None:
     """Test that OPEN with version != 4 is rejected."""
-    from exabgp.bgp.message.open import Open
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open import Open
 
     # Minimal OPEN: version(1) + asn(2) + hold_time(2) + router_id(4) + opt_len(1) = 10 bytes
     open_data = bytes([version]) + struct.pack('!H', 65000) + struct.pack('!H', 90) + b'\xc0\xa8\x01\x01' + b'\x00'
@@ -207,8 +209,8 @@ def test_open_invalid_version(version: int) -> None:
 @settings(deadline=None, max_examples=9)
 def test_open_truncated(data_len: int) -> None:
     """Test that truncated OPEN messages are rejected."""
-    from exabgp.bgp.message.open import Open
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open import Open
 
     # Valid OPEN data, then truncate
     full_data = bytes([4]) + struct.pack('!H', 65000) + struct.pack('!H', 90) + b'\xc0\xa8\x01\x01' + b'\x00'
@@ -259,8 +261,8 @@ def test_open_invalid_hold_time(hold_time: int) -> None:
 @settings(deadline=None, max_examples=20)
 def test_update_withdrawn_length_exceeds_data(withdrawn_len: int) -> None:
     """Test UPDATE where withdrawn length exceeds available data."""
-    from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import Update
 
     # Claim we have withdrawn_len bytes but provide less
     # Just the 2-byte withdrawn length field
@@ -285,8 +287,8 @@ def test_update_withdrawn_length_exceeds_data(withdrawn_len: int) -> None:
 @settings(deadline=None, max_examples=50)
 def test_update_attribute_length_exceeds_data(attr_len: int) -> None:
     """Test UPDATE where attribute length exceeds available data."""
-    from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import Update
 
     # withdrawn_len=0, then attr_len claims more data than we have
     update_data = struct.pack('!H', 0) + struct.pack('!H', attr_len)
@@ -321,8 +323,8 @@ def test_update_random_payload(random_data: bytes) -> None:
 @pytest.mark.fuzz
 def test_update_empty_payload() -> None:
     """Test UPDATE with empty payload."""
-    from exabgp.bgp.message.update import Update
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import Update
 
     negotiated = create_mock_negotiated()
 

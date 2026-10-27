@@ -23,7 +23,6 @@ pins the behaviour the decision keeps.
 from __future__ import annotations
 
 import logging
-
 from struct import pack
 from typing import Any
 
@@ -35,13 +34,13 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, ASPath
-from exabgp.bgp.message.update.attribute.community.initial.communities import Communities
 from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
 from exabgp.bgp.message.update.attribute.collection import in_type_order
+from exabgp.bgp.message.update.attribute.community.initial.communities import Communities
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
-from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.attribute.origin import Origin
+from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.logger import log
 from exabgp.logger.option import echo, option
 from exabgp.protocol.family import AFI, SAFI

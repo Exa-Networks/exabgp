@@ -13,8 +13,7 @@ from typing import TYPE_CHECKING, ClassVar
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 from exabgp.util.types import Buffer

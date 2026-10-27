@@ -20,15 +20,15 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV, TunnelTypeTLV
-from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.preference import PreferenceSubTLV
-from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.enlp import ENLPSubTLV
-from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.priority import PrioritySubTLV
-from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.policy_name import PolicyNameSubTLV
-from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.candidate_path_name import CandidatePathNameSubTLV
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.binding_sid import BindingSIDSubTLV
-from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.srv6_binding_sid import SRv6BindingSIDSubTLV
+from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.candidate_path_name import CandidatePathNameSubTLV
+from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.enlp import ENLPSubTLV
+from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.policy_name import PolicyNameSubTLV
+from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.preference import PreferenceSubTLV
+from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.priority import PrioritySubTLV
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.segment_list import SegmentListSubTLV
+from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.srv6_binding_sid import SRv6BindingSIDSubTLV
+from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import SubTLV, TunnelTypeTLV
 from exabgp.util.types import Buffer
 
 _SR_POLICY_TUNNEL_TYPE = 15

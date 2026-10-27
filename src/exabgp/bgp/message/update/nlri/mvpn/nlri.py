@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, ClassVar, Self, TYPE_CHECKING
 from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar, Self
 
 from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
-    from exabgp.protocol.ip import IP
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify

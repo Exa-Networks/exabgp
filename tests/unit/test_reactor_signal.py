@@ -15,7 +15,6 @@ from __future__ import annotations
 import signal
 from unittest.mock import patch
 
-
 from exabgp.reactor.interrupt import Signal
 
 

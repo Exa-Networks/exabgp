@@ -5,13 +5,13 @@ Unit tests for SR Policy NLRI and Tunnel Encap attribute (RFC 9830 / RFC 9012).
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 import socket
 import struct
 
 import pytest
 
+from exabgp.bgp.message import Action
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import (
     BindingSIDSubTLV,
@@ -45,7 +45,6 @@ from exabgp.configuration.grammar.lexer import lex_text
 from exabgp.configuration.grammar.tree.sr_policy import SRPolicyLine
 from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.bgp.message import Action
 
 # what an sr-policy route says before its sub-TLVs
 _ROUTE_HEAD = ['distinguisher', '1', 'color', '1', 'endpoint', '10.0.0.1', 'next-hop', '10.0.0.2']

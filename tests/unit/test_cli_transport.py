@@ -376,8 +376,9 @@ class TestResponseRouter:
 
     def test_route_response_by_request_id(self) -> None:
         """Test response routing uses request_id when available (Fix 1)"""
-        from exabgp.application.unixsocket import ResponseRouter, ClientConnection
         import socket as sock
+
+        from exabgp.application.unixsocket import ClientConnection, ResponseRouter
 
         router = ResponseRouter()
 
@@ -399,8 +400,9 @@ class TestResponseRouter:
 
     def test_route_response_clears_on_done(self) -> None:
         """Test response routing clears tracking on done/error"""
-        from exabgp.application.unixsocket import ResponseRouter, ClientConnection
         import socket as sock
+
+        from exabgp.application.unixsocket import ClientConnection, ResponseRouter
 
         router = ResponseRouter()
 

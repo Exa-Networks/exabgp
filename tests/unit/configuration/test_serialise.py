@@ -11,9 +11,9 @@ import os
 from dataclasses import replace
 
 import pytest
-
 from config_grammar.differential import CONFIGURATIONS
 from config_grammar.differential import ROOT as REPOSITORY
+
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.grammar.read import read_file, read_text
 from exabgp.configuration.grammar.tree.static import Unprintable

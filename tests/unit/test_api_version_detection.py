@@ -24,6 +24,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from exabgp.environment import Environment
+from exabgp.reactor.api import processes as processes_module
 from exabgp.reactor.api.dispatch.common import UnknownCommand
 from exabgp.reactor.api.dispatch.version import (
     API_AUTO,
@@ -32,7 +33,6 @@ from exabgp.reactor.api.dispatch.version import (
     command_api_version,
     dispatch_for,
 )
-from exabgp.reactor.api import processes as processes_module
 from exabgp.reactor.api.processes import NETBSD_FIONWRITE, Processes, _is_answer, _unread_bytes
 from exabgp.reactor.api.response.json import JSON
 from exabgp.reactor.api.response.v4.json import V4JSON

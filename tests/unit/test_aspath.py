@@ -26,6 +26,7 @@ import struct
 from typing import Any
 
 import pytest
+
 from tests import negotiation
 
 
@@ -54,7 +55,7 @@ def test_aspath_empty() -> None:
 
 def test_aspath_simple_sequence_asn2() -> None:
     """Test AS_SEQUENCE with 2-byte ASN (legacy format)."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -76,7 +77,7 @@ def test_aspath_simple_sequence_asn2() -> None:
 
 def test_aspath_simple_sequence_asn4() -> None:
     """Test AS_SEQUENCE with 4-byte ASN (modern format)."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
 
     negotiated = create_negotiated_mock(asn4=True)
 
@@ -119,7 +120,7 @@ def test_aspath_single_asn() -> None:
 
 def test_aspath_as_set() -> None:
     """Test AS_SET segment type (unordered set of ASNs)."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SET
+    from exabgp.bgp.message.update.attribute.aspath import SET, AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -142,7 +143,7 @@ def test_aspath_as_set() -> None:
 
 def test_aspath_confed_sequence() -> None:
     """Test CONFED_SEQUENCE segment type (BGP confederation)."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, CONFED_SEQUENCE
+    from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -162,7 +163,7 @@ def test_aspath_confed_sequence() -> None:
 
 def test_aspath_confed_set() -> None:
     """Test CONFED_SET segment type."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, CONFED_SET
+    from exabgp.bgp.message.update.attribute.aspath import CONFED_SET, AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -185,7 +186,7 @@ def test_aspath_confed_set() -> None:
 
 def test_aspath_multiple_segments() -> None:
     """Test AS_PATH with multiple segments."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE, SET
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, SET, AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -209,7 +210,7 @@ def test_aspath_multiple_segments() -> None:
 
 def test_aspath_mixed_confederation() -> None:
     """Test AS_PATH with regular and confederation segments."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE, CONFED_SEQUENCE
+    from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, SEQUENCE, AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -234,7 +235,7 @@ def test_aspath_mixed_confederation() -> None:
 
 def test_as4path_unpacking() -> None:
     """Test AS4_PATH attribute (always uses 4-byte ASNs)."""
-    from exabgp.bgp.message.update.attribute.aspath import AS4Path, SEQUENCE
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS4Path
 
     negotiated = create_negotiated_mock(asn4=False)  # Negotiated ASN2, but AS4Path is always ASN4
 
@@ -258,8 +259,8 @@ def test_as4path_unpacking() -> None:
 
 def test_aspath_invalid_segment_type() -> None:
     """Test AS_PATH with invalid segment type."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -275,8 +276,8 @@ def test_aspath_invalid_segment_type() -> None:
 
 def test_aspath_truncated_segment_header() -> None:
     """Test AS_PATH with truncated segment header."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -292,8 +293,8 @@ def test_aspath_truncated_segment_header() -> None:
 
 def test_aspath_truncated_asn_data() -> None:
     """Test AS_PATH with truncated ASN data."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -310,8 +311,8 @@ def test_aspath_truncated_asn_data() -> None:
 
 def test_aspath_truncated_asn4_data() -> None:
     """Test AS_PATH with truncated 4-byte ASN data."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.attribute.aspath import AS2Path
 
     negotiated = create_negotiated_mock(asn4=True)
 
@@ -334,8 +335,8 @@ def test_aspath_truncated_asn4_data() -> None:
 
 def test_aspath_pack_asn2() -> None:
     """Test packing AS_PATH with 2-byte ASNs."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -356,8 +357,8 @@ def test_aspath_pack_asn2() -> None:
 
 def test_aspath_pack_asn4() -> None:
     """Test packing AS_PATH with 4-byte ASNs."""
-    from exabgp.bgp.message.update.attribute.aspath import AS4Path, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS4Path
 
     negotiated = create_negotiated_mock(asn4=True)
 
@@ -374,8 +375,8 @@ def test_aspath_pack_asn4() -> None:
 
 def test_aspath_pack_with_as_trans() -> None:
     """Test packing AS_PATH with ASN4 when peer doesn't support ASN4."""
-    from exabgp.bgp.message.update.attribute.aspath import AS4Path, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS4Path
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -398,8 +399,8 @@ def test_aspath_pack_with_as_trans() -> None:
 
 def test_aspath_string_representation() -> None:
     """Test AS_PATH string formatting."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
 
     # AS_SEQUENCE [65001, 65002]
     sequence = SEQUENCE([ASN(65001), ASN(65002)])
@@ -414,9 +415,10 @@ def test_aspath_string_representation() -> None:
 
 def test_aspath_json_representation() -> None:
     """Test AS_PATH JSON formatting."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
-    from exabgp.bgp.message.open.asn import ASN
     import json
+
+    from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
 
     sequence = SEQUENCE([ASN(65001), ASN(65002)])
     aspath = AS2Path.make_aspath([sequence])
@@ -431,15 +433,16 @@ def test_aspath_json_representation() -> None:
 
 def test_aspath_json_all_segment_types() -> None:
     """Test that each segment type has a distinct JSON element name."""
+    import json
+
+    from exabgp.bgp.message.open.asn import ASN
     from exabgp.bgp.message.update.attribute.aspath import (
-        AS2Path,
-        SET,
-        SEQUENCE,
         CONFED_SEQUENCE,
         CONFED_SET,
+        SEQUENCE,
+        SET,
+        AS2Path,
     )
-    from exabgp.bgp.message.open.asn import ASN
-    import json
 
     segments = [
         SEQUENCE([ASN(65001)]),
@@ -468,8 +471,8 @@ def test_aspath_json_all_segment_types() -> None:
 
 def test_aspath_equality() -> None:
     """Test AS_PATH equality comparison."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
 
     sequence1 = SEQUENCE([ASN(65001), ASN(65002)])
     aspath1 = AS2Path.make_aspath([sequence1])
@@ -482,8 +485,8 @@ def test_aspath_equality() -> None:
 
 def test_aspath_inequality() -> None:
     """Test AS_PATH inequality comparison."""
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
 
     sequence1 = SEQUENCE([ASN(65001), ASN(65002)])
     aspath1 = AS2Path.make_aspath([sequence1])

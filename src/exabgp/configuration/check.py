@@ -9,57 +9,41 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import sys
 import copy
 import struct
-from typing import TYPE_CHECKING
+import sys
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
-from exabgp.environment import getenv
-from exabgp.util.types import Buffer
-
-from exabgp.bgp.message import UpdateCollection
-from exabgp.bgp.message.update.collection import RoutedNLRI
-from exabgp.bgp.message.update.nlri.collection import IPV4_MAPPED_PREFIX
-from exabgp.bgp.message.update.attribute import Attribute, OTC, OTCSelf
-from exabgp.protocol.ip import IP
-from exabgp.protocol.family import AFI, SAFI
-from exabgp.bgp.message import Open
-from exabgp.bgp.message.open import Version
-from exabgp.bgp.message.open import RouterID
-from exabgp.bgp.message.open import HoldTime
-from exabgp.bgp.message.open.capability import Capabilities
-from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability import Negotiated
+# check_notification
+from exabgp.bgp.message import Notification, Notify, Open, UpdateCollection
+from exabgp.bgp.message.action import Action
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open import HoldTime, RouterID, Version
+from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotiated
 from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.asn4 import ASN4
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.role import Role, RoleValue
-from exabgp.bgp.message import Notify
+from exabgp.bgp.message.update.attribute import OTC, Attribute, OTCSelf
+from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.update.nlri import NLRI
+from exabgp.bgp.message.update.nlri.collection import IPV4_MAPPED_PREFIX
 from exabgp.bgp.neighbor import Neighbor
-
-from exabgp.bgp.message.action import Action
-from exabgp.bgp.message.direction import Direction
-
-from exabgp.logger import log, lazymsg
-from exabgp.logger import option
-
-# check_neighbor
-
-from exabgp.util.od import od
-from exabgp.rib.route import Route
+from exabgp.environment import getenv
+from exabgp.logger import lazymsg, log, option
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
 
 # check_update
-
 from exabgp.reactor.api.response import Response
+from exabgp.rib.route import Route
 
-# check_notification
-
-from exabgp.bgp.message import Notification
+# check_neighbor
+from exabgp.util.od import od
+from exabgp.util.types import Buffer
 
 # JSON version
-
 from exabgp.version import json as json_version
 from exabgp.version import json_v4 as json_v4_version
 

@@ -9,8 +9,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
 from collections.abc import Callable, Iterator
+from typing import TYPE_CHECKING, Union
 
 from exabgp.reactor.api.tokeniser import Tokeniser
 

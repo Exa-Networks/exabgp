@@ -8,8 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import os
-import sys
 import pdb  # noqa: T100
+import sys
 from types import TracebackType
 
 from exabgp.debug.report import format_panic

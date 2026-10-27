@@ -12,33 +12,28 @@ from __future__ import annotations
 
 import asyncio  # noqa: F401 - Used by async methods added in Steps 2-4
 import random
-import socket
 import select
-from exabgp.util.types import Buffer
-from typing import ClassVar
+import socket
 from collections.abc import Iterator
-
-from exabgp.environment import getenv
-
-from exabgp.util.errstr import errstr
-
-from exabgp.logger import log, lazymsg
-from exabgp.logger import lazyformat
+from typing import ClassVar
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.message import MessageCode
-
-from exabgp.reactor.network.error import error
-from exabgp.reactor.network.error import errno
-from exabgp.reactor.network.error import NetworkError
-from exabgp.reactor.network.error import TooSlowError
-from exabgp.reactor.network.error import NotConnected
-from exabgp.reactor.network.error import LostConnection
-from exabgp.reactor.network.error import NotifyError
-
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
-
+from exabgp.environment import getenv
+from exabgp.logger import lazyformat, lazymsg, log
 from exabgp.protocol.family import AFI
+from exabgp.reactor.network.error import (
+    LostConnection,
+    NetworkError,
+    NotConnected,
+    NotifyError,
+    TooSlowError,
+    errno,
+    error,
+)
+from exabgp.util.errstr import errstr
+from exabgp.util.types import Buffer
 
 # the type returned with an error found in the header, in place of the one it carries
 UNREAD = MessageCode(0)

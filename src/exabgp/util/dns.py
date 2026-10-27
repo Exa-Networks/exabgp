@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import socket
 
-
 __host_name: str = ''
 # None until resolved: '' is an answer (no domain known) and must be cached like any other
 __domain_name: str | None = None

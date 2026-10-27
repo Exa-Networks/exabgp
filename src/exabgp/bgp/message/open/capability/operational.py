@@ -9,10 +9,8 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-
-from exabgp.bgp.message.open.capability.capability import Capability, CapabilityList
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
-from exabgp.logger import log, lazymsg
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode, CapabilityList
+from exabgp.logger import lazymsg, log
 from exabgp.util.types import Buffer
 
 # https://tools.ietf.org/html/draft-ietf-idr-operational-message-00

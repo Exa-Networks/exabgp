@@ -14,7 +14,6 @@ from exabgp.protocol.ip import IP
 from exabgp.rib.outgoing import OutgoingRIB
 from exabgp.rib.route import Route
 
-
 IPV4 = (AFI.ipv4, SAFI.unicast)
 IPV6 = (AFI.ipv6, SAFI.unicast)
 

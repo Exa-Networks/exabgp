@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import pytest
 
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute.community.extended.rt import (
     RouteTarget,
@@ -22,7 +23,6 @@ from exabgp.bgp.message.update.attribute.community.extended.rt_record import (
     RTRecordASN4Number,
     RTRecordIPNumber,
 )
-from exabgp.bgp.message.open.asn import ASN
 
 TARGETS = [
     (RouteTargetASN2Number.make_route_target(ASN(64512), 22), RTRecordASN2Number),

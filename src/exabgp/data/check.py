@@ -7,13 +7,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from ipaddress import AddressValueError, IPv4Address, IPv6Address
 from typing import Any, ClassVar
-from collections.abc import Callable
 
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
-from exabgp.protocol.ip import IPv4
-from exabgp.protocol.ip import IPv6
+from exabgp.protocol.ip import IPv4, IPv6
 
 # MD5 password maximum length (RFC 2385)
 MD5_PASSWORD_MAX_LENGTH: int = 18  # Maximum length for MD5 authentication password

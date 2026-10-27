@@ -4,24 +4,24 @@
 
 from __future__ import annotations
 
-import json
 import argparse
-import contextlib
-import os
-import sys
-import readline
 import atexit
+import contextlib
+import json
+import os
+import readline
 import socket as sock
+import sys
 from collections.abc import Callable
 
+from exabgp.application.pipe import named_pipe
+from exabgp.application.shortcuts import CommandShortcuts
+from exabgp.application.unixsocket import unix_socket
 from exabgp.cli.colors import Colors
 from exabgp.cli.completer import CommandCompleter
 from exabgp.cli.formatter import OutputFormatter
 from exabgp.cli.history import HistoryTracker
 from exabgp.cli.persistent_connection import PersistentSocketConnection
-from exabgp.application.shortcuts import CommandShortcuts
-from exabgp.application.pipe import named_pipe
-from exabgp.application.unixsocket import unix_socket
 from exabgp.environment import ROOT
 
 

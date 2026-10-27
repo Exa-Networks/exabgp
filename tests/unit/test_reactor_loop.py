@@ -18,7 +18,7 @@ from __future__ import annotations
 import time
 import uuid
 from typing import Any
-from unittest.mock import Mock, MagicMock
+from unittest.mock import MagicMock, Mock
 
 
 class MockReactor:

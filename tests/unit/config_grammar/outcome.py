@@ -17,7 +17,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from exabgp.bgp.neighbor import Neighbor
-
 from exabgp.configuration.configuration import Configuration
 
 

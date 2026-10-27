@@ -8,14 +8,13 @@ The Settings pattern enables immutable NLRI by collecting all values first,
 then creating the NLRI in a single construction step.
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
 import pytest
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.qualifier import Labels, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.protocol.resource import NumericValue
@@ -249,11 +248,11 @@ class TestVPLSFromSettings:
         """VPLS from from_settings can be packed and unpacked"""
 
         from exabgp.bgp.message.action import Action
+        from exabgp.bgp.message.direction import Direction
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
         from exabgp.bgp.message.update.nlri.settings import VPLSSettings
         from exabgp.bgp.message.update.nlri.vpls import VPLS
         from exabgp.protocol.family import AFI, SAFI
-        from exabgp.bgp.message.direction import Direction
 
         rd = RouteDistinguisher.make_from_elements('10.0.0.1', 100)
         settings = VPLSSettings()

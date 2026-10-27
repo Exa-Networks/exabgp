@@ -26,8 +26,8 @@ from exabgp.configuration.grammar.nodes import Block, Leaf
 from exabgp.configuration.grammar.section import Kept, Store, Values
 from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
-from exabgp.configuration.grammar.words import Words
 from exabgp.configuration.grammar.types.word import is_decimal
+from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 
 PREFIX_LIMIT_MAX = 0xFFFFFFFF

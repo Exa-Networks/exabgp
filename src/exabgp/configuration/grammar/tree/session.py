@@ -14,8 +14,8 @@ from __future__ import annotations
 import re
 import time
 
-from exabgp.bgp.message.open.capability.labels import MULTIPLE_LABELS_MAX, MULTIPLE_LABELS_MIN
 from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.labels import MULTIPLE_LABELS_MAX, MULTIPLE_LABELS_MIN
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.configuration.grammar import shape
 from exabgp.configuration.grammar.context import ReadContext

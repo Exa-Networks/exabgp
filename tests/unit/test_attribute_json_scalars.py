@@ -18,12 +18,11 @@ Ported from the 5.0 branch, where the same helper is spelled `_is_json_number`.
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 import json
 
 import pytest
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.community.extended import (

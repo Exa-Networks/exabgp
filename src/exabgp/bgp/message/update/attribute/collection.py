@@ -23,22 +23,21 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable, Generator, Iterator, MutableMapping
 from struct import unpack
-from collections.abc import Callable, Iterator, MutableMapping
 from typing import TYPE_CHECKING, Any, ClassVar, cast
-from collections.abc import Generator
 
-from exabgp.util.types import Buffer
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 from exabgp.bgp.message.notification import Notify, TreatAsWithdrawNotify
-from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.open.asn import AS_TRANS
+from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.attribute.aggregator import Aggregator
 from exabgp.bgp.message.update.attribute.aspath import (
     CONFED_SEQUENCE,
@@ -57,11 +56,11 @@ from exabgp.bgp.message.update.attribute.attribute import (
 
 # For bagpipe
 from exabgp.bgp.message.update.attribute.community import Communities, Community
-from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
 from exabgp.bgp.message.update.attribute.community.extended.communities import (
     ExtendedCommunities,
     ExtendedCommunitiesBase,
 )
+from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
 from exabgp.bgp.message.update.attribute.generic import GenericAttribute
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.nexthop import NextHop

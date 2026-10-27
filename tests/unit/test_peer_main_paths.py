@@ -36,9 +36,9 @@ import pytest
 
 from exabgp.bgp.fsm import FSM
 from exabgp.bgp.message import KeepAlive, Notify, Operational, Update, UpdateCollection
-from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.operational import Advisory
+from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.bgp.timer import ReceiveTimer

@@ -6,17 +6,15 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 import json
 from struct import pack, unpack
-from exabgp.util import hexstring
+from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
-from exabgp.util.types import Buffer
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
+from exabgp.util import hexstring
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 #    draft-gredler-idr-bgp-ls-segment-routing-ext-03
 #    0                   1                   2                   3

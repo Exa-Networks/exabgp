@@ -5,9 +5,9 @@ Modern replacement for the old bash socket-based test.
 Tests: version, ping, status, shutdown (via api-simple.run process).
 """
 
+import os
 import subprocess
 import sys
-import os
 import time
 
 # Paths relative to repository root

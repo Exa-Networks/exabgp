@@ -23,14 +23,13 @@ to be out there.
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 from struct import pack
 
 import pytest
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
 from exabgp.bgp.message.update.nlri.bgpls.prefixv6 import PREFIXv6
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach

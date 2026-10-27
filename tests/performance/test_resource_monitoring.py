@@ -4,20 +4,21 @@ Tests that monitor system resource usage (memory, CPU) under high load
 to identify potential resource leaks or inefficiencies.
 """
 
-import psutil
 import os
-from io import BytesIO
 from collections import deque
+from io import BytesIO
 from typing import Any
 
-from exabgp.reactor.protocol import MAX_BACKLOG
+import psutil
+
 from exabgp.bgp.message import Update
+from exabgp.reactor.protocol import MAX_BACKLOG
 
 from .perf_helpers import (
-    create_simple_update_bytes,
     create_batch_messages,
     create_large_update_bytes,
     create_mock_negotiated,
+    create_simple_update_bytes,
 )
 
 

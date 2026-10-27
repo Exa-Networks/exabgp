@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from exabgp.reactor.api.tokeniser import Tokeniser
 from exabgp.reactor.api.dispatch.common import (
     SELECTOR_KEY,
     DispatchTree,
@@ -25,6 +24,7 @@ from exabgp.reactor.api.dispatch.common import (
     NoMatchingPeers,
     dispatch,
 )
+from exabgp.reactor.api.tokeniser import Tokeniser
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor

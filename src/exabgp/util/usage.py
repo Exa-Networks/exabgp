@@ -7,9 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import sys
 import resource
-
+import sys
 
 DIVISOR: float
 if sys.platform == 'darwin':

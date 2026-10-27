@@ -7,14 +7,14 @@ at high message rates.
 from io import BytesIO
 from typing import Any
 
-from exabgp.bgp.message import Update, KeepAlive
+from exabgp.bgp.message import KeepAlive, Update
 
 from .perf_helpers import (
-    create_simple_update_bytes,
-    create_keepalive_bytes,
     create_batch_messages,
+    create_keepalive_bytes,
     create_mixed_message_batch,
     create_mock_negotiated,
+    create_simple_update_bytes,
 )
 
 

@@ -33,6 +33,9 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from exabgp.bgp.message.update.attribute.bgpls.node.isisarea import IsisArea
+from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId
+from exabgp.bgp.message.update.attribute.bgpls.node.nodeflags import NodeFlags
 
 #   +-------------+----------------------+----------+-------------------+
 #   |   TLV Code  | Description          |   Length | Reference         |
@@ -52,12 +55,9 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 #   |             | Local Node           |          |                   |
 #   +-------------+----------------------+----------+-------------------+
 #   https://tools.ietf.org/html/rfc7752#section-3.3.1 - Node Attribute TLVs
-
 from exabgp.bgp.message.update.attribute.bgpls.node.nodename import NodeName
-from exabgp.bgp.message.update.attribute.bgpls.node.isisarea import IsisArea
-from exabgp.bgp.message.update.attribute.bgpls.node.nodeflags import NodeFlags
 from exabgp.bgp.message.update.attribute.bgpls.node.opaque import NodeOpaque
-from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRouterId
+from exabgp.bgp.message.update.attribute.bgpls.node.sralgo import SrAlgorithm
 
 # draft-gredler-idr-bgp-ls-segment-routing-ext-03 extensions
 #      +----------------+-----------------+----------+---------------+
@@ -66,6 +66,4 @@ from exabgp.bgp.message.update.attribute.bgpls.node.localrouterid import LocalRo
 #      |      1034      | SR Capabilities | variable | Section 2.1.1 |
 #      |      1035      | SR Algorithm    | variable | Section 2.1.2 |
 #      +----------------+-----------------+----------+---------------+
-
 from exabgp.bgp.message.update.attribute.bgpls.node.srcap import SrCapabilities
-from exabgp.bgp.message.update.attribute.bgpls.node.sralgo import SrAlgorithm

@@ -8,15 +8,13 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from struct import pack
 from typing import ClassVar
 
-from struct import pack
-
-from exabgp.protocol.family import AFI, SAFI, FamilyTuple
-from exabgp.bgp.message.open.capability.capability import Capability, CapabilityDict
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.notification import Notify
-from exabgp.logger import log, lazymsg
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode, CapabilityDict
+from exabgp.logger import lazymsg, log
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.util.types import Buffer
 
 

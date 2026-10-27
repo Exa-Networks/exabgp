@@ -7,9 +7,10 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from exabgp.util.intvalue import json_number
 from struct import unpack
-from typing import Any, ClassVar, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, ClassVar, Self
+
+from exabgp.util.intvalue import json_number
 
 if TYPE_CHECKING:
     pass

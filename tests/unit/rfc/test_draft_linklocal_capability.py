@@ -34,7 +34,6 @@ from exabgp.protocol.ip import IP, IPv6
 from exabgp.util.enumeration import TriState
 from tests import negotiation
 
-
 IPV4_UNICAST: FamilyTuple = (AFI.ipv4, SAFI.unicast)
 IPV4_VPN: FamilyTuple = (AFI.ipv4, SAFI.mpls_vpn)
 IPV6_UNICAST: FamilyTuple = (AFI.ipv6, SAFI.unicast)

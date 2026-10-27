@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import json
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
-from exabgp.util.types import Buffer
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 #
 #     0                   1                   2                   3

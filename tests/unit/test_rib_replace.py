@@ -9,8 +9,8 @@ These methods are critical for:
 Both methods handle the transition between previous and new route sets.
 """
 
-import sys
 import os
+import sys
 from unittest.mock import Mock
 
 import pytest
@@ -28,15 +28,14 @@ mock_logger.warning = Mock()
 mock_logger.error = Mock()
 option.logger = mock_logger
 
-from exabgp.rib.outgoing import OutgoingRIB  # noqa: E402
-from exabgp.rib.route import Route  # noqa: E402
-from exabgp.bgp.message.update.nlri.inet import INET  # noqa: E402
-from exabgp.bgp.message.update.nlri.cidr import CIDR  # noqa: E402
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection  # noqa: E402
 from exabgp.bgp.message.update.attribute.origin import Origin  # noqa: E402
+from exabgp.bgp.message.update.nlri.cidr import CIDR  # noqa: E402
+from exabgp.bgp.message.update.nlri.inet import INET  # noqa: E402
 from exabgp.protocol.family import AFI, SAFI  # noqa: E402
 from exabgp.protocol.ip import IP  # noqa: E402
-
+from exabgp.rib.outgoing import OutgoingRIB  # noqa: E402
+from exabgp.rib.route import Route  # noqa: E402
 
 # ==============================================================================
 # Helper Functions

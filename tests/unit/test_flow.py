@@ -7,21 +7,15 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
 import unittest
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri import Flow
-from exabgp.bgp.message.update.nlri.flow import Flow4Source
-from exabgp.bgp.message.update.nlri.flow import Flow4Destination
-from exabgp.bgp.message.update.nlri.flow import FlowAnyPort
-
-from exabgp.bgp.message.update.nlri.flow import NumericOperator
+from exabgp.bgp.message.update.nlri.flow import Flow4Destination, Flow4Source, FlowAnyPort, NumericOperator
+from exabgp.bgp.neighbor import Neighbor
 
 # from exabgp.bgp.message.update.attribute.community import *
-
 from exabgp.protocol.ip import IPv4
 from exabgp.protocol.resource import NumericValue
 

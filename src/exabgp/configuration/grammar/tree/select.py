@@ -13,9 +13,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Any
-from collections.abc import Callable
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection, NextHop, NextHopSelf
@@ -42,8 +42,8 @@ from exabgp.configuration.grammar.tree.static import (
 )
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement, Target
-from exabgp.configuration.grammar.words import Words
 from exabgp.configuration.grammar.types.word import decimal, is_decimal
+from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP, IPSelf, IPv4, IPv6
 from exabgp.rib.route import Route

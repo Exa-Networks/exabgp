@@ -4,9 +4,11 @@ The bytes go through a socketpair (see tests/wire_reader.py), so the header chec
 under test are the ones a peer's message actually meets.
 """
 
-import pytest
-from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
+
+import pytest
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 from exabgp.reactor.network.error import LostConnection, NotifyError
 from tests.wire_reader import read_message

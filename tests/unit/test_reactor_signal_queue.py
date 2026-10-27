@@ -14,13 +14,13 @@ from typing import Any, cast
 import pytest
 
 from exabgp.bgp.fsm import FSM
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.configuration.configuration import Configuration as Parsed
 from exabgp.reactor.api.command import reactor as reactor_command
 from exabgp.reactor.interrupt import Signal
 from exabgp.reactor.loop import Reactor
 from exabgp.reactor.peer import Peer
 from exabgp.rib import RIB
-from exabgp.bgp.neighbor import Neighbor
-from exabgp.configuration.configuration import Configuration as Parsed
 from tests import negotiation
 
 SERVICE = 'helper'

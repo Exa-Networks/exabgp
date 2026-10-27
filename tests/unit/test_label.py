@@ -5,16 +5,16 @@
 Created for comprehensive test coverage improvement
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
 import pytest
+
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.protocol.family import AFI, SAFI, Family
-from exabgp.bgp.message import Action
+from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.qualifier import Labels, PathInfo
-from exabgp.bgp.message.update.nlri.cidr import CIDR
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 
 

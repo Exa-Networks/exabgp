@@ -10,10 +10,9 @@ import errno
 import os
 import select
 import signal
+import socket as sock
 import sys
 import time
-
-import socket as sock
 from typing import ClassVar
 
 from exabgp.application.pipe import check_fifo, named_pipe

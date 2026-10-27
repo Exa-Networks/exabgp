@@ -16,18 +16,17 @@ not the process killed by a traceback.
 
 import json as jsonlib
 
-
 import pytest
-from hypothesis import example, given, strategies as st
-
-from tests.fuzz import corpus
-from tests.fuzz.strategies import framed, payload
+from hypothesis import example, given
+from hypothesis import strategies as st
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
+from tests.fuzz import corpus
+from tests.fuzz.strategies import framed, payload
 
 # de-duplicated: the registry lists (ipv4, multicast) twice
 FAMILIES = sorted(set(NLRI.known_families()), key=lambda family: (int(family[0]), int(family[1])))

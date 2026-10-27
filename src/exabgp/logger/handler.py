@@ -3,10 +3,10 @@
 
 from __future__ import annotations
 
-import os
-import sys
 import logging
 import logging.config
+import os
+import sys
 from typing import Any
 
 TIMED: str = '%(asctime)s: %(message)s'

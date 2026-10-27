@@ -8,9 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
 from struct import pack
-from typing import cast, ClassVar
+from typing import ClassVar, cast
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode, CapabilityDict

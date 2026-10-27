@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import json
 import re
-import pytest
 from pathlib import Path
 
-from exabgp.configuration.configuration import Configuration
-from exabgp.configuration.encoder import ConfigEncoder, config_to_json, _serialize_value
+import pytest
 
+from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.encoder import ConfigEncoder, _serialize_value, config_to_json
 
 # Directory containing test fixtures
 FIXTURES_DIR = Path(__file__).parent / 'fixtures'
@@ -236,8 +236,8 @@ class TestConfigEncoder:
 
     def test_encode_session(self) -> None:
         """Test Session encoding."""
-        from exabgp.bgp.neighbor.session import Session
         from exabgp.bgp.message.open.asn import ASN
+        from exabgp.bgp.neighbor.session import Session
         from exabgp.protocol.ip import IPv4
 
         session = Session()

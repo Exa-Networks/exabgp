@@ -9,7 +9,7 @@ AI Generated
 import unittest
 
 from exabgp.bgp.message.message import Message
-from exabgp.bgp.message.notification import Notify, Notification
+from exabgp.bgp.message.notification import Notification, Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 

@@ -18,12 +18,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Iterator, Sequence
 from struct import error, unpack
 from typing import TYPE_CHECKING, ClassVar, TypeVar, overload
-from collections.abc import Iterable, Iterator, Sequence
 
-from exabgp.util.types import Buffer
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated

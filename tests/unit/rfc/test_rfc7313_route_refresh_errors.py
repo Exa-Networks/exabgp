@@ -10,7 +10,6 @@ plain refresh request whatever it holds.
 """
 
 from __future__ import annotations
-from tests import negotiation
 
 from struct import pack
 from unittest.mock import Mock, patch
@@ -21,6 +20,7 @@ from exabgp.bgp.message import Message
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.capability import Capability
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
 from exabgp.bgp.message.open.capability.refresh import RouteRefresh as CapabilityRouteRefresh
 from exabgp.bgp.message.refresh import RouteRefresh
@@ -28,7 +28,7 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.peer.handlers import route_refresh
 from exabgp.reactor.peer.handlers.route_refresh import RouteRefreshHandler
 from rfc.message_wire import header, read_wire
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from tests import negotiation
 
 MESSAGE_HEADER_ERROR = 1  # RFC 4271 section 6.1
 BAD_MESSAGE_LENGTH = 2

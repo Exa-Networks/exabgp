@@ -13,8 +13,6 @@ Only the samples, which need real field values, are listed by hand, and
 
 from __future__ import annotations
 
-from exabgp.bgp.neighbor import Neighbor
-
 import ast
 import sys
 from pathlib import Path
@@ -23,6 +21,7 @@ import pytest
 
 from exabgp.bgp.message import KeepAlive, Message, Notification, Notify, Open, Update
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.message import MessageCode
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.capabilities import Capabilities
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
@@ -32,8 +31,8 @@ from exabgp.bgp.message.open.version import Version
 from exabgp.bgp.message.operational import Advisory, Operational, Query, Response, UnknownOperational
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.eor import EOR
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.bgp.message.message import MessageCode
 
 # route 10.0.0.0/24 next-hop 1.2.3.4, from `exabgp encode`
 UPDATE_BODY = bytes.fromhex('00000015400101004002004003040102030440050400000064180a0000')

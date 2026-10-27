@@ -13,9 +13,9 @@ Phase 3: Tests for UpdateSerializer
 """
 
 import pytest
-from tests import negotiation
-from exabgp.bgp.message.open.asn import ASN
 
+from exabgp.bgp.message.open.asn import ASN
+from tests import negotiation
 
 # ==============================================================================
 # Phase 1: Test aliases work (UpdateCollection, AttributeCollection)
@@ -102,9 +102,9 @@ def test_update_wire_from_payload() -> None:
 
 def test_update_wire_pack_message() -> None:
     """Test UpdateWire.pack_message() generates complete BGP message."""
-    from exabgp.bgp.message.update import UpdateWire
     from exabgp.bgp.message.message import Message
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.message.update import UpdateWire
 
     payload = b'\x00\x00\x00\x00'
     update = UpdateWire(payload)
@@ -122,16 +122,17 @@ def test_update_collection_roundtrip() -> None:
 
     Round-trip: payload → Update.parse() → UpdateCollection → messages() → payload
     """
+    import socket
+
     from exabgp.bgp.message.update import Update, UpdateCollection
     from exabgp.bgp.message.update.attribute import AttributeCollection, Origin
-    from exabgp.bgp.message.update.nlri.inet import INET
-    from exabgp.bgp.message.update.nlri.cidr import CIDR
-    from exabgp.protocol.ip import IP
-    from exabgp.protocol.family import AFI, SAFI
-    import socket
 
     # Create a simple UPDATE with one IPv4 route
     from exabgp.bgp.message.update.collection import RoutedNLRI
+    from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI, SAFI
+    from exabgp.protocol.ip import IP
 
     # Build it from UpdateCollection first
     attrs = AttributeCollection()
@@ -193,7 +194,7 @@ def test_attributes_wire_from_packed() -> None:
 
 def test_attributes_wire_from_set() -> None:
     """Test AttributesWire.from_set() creates wire container from AttributeCollection."""
-    from exabgp.bgp.message.update.attribute import AttributesWire, AttributeCollection, Origin
+    from exabgp.bgp.message.update.attribute import AttributeCollection, AttributesWire, Origin
 
     attr_set = AttributeCollection()
     attr_set.add(Origin.from_int(Origin.IGP))
@@ -212,8 +213,9 @@ def test_attributes_wire_from_set() -> None:
 
 def test_attributes_wire_unpack_attributes_lazy() -> None:
     """Test AttributesWire.unpack_attributes() returns AttributeCollection."""
-    from exabgp.bgp.message.update.attribute import AttributesWire, AttributeCollection
     from unittest.mock import patch
+
+    from exabgp.bgp.message.update.attribute import AttributeCollection, AttributesWire
 
     # ORIGIN attribute
     packed = bytes([0x40, 0x01, 0x01, 0x00])
@@ -243,7 +245,7 @@ def test_pack_messages_method_exists() -> None:
 
 def test_pack_messages_returns_update_objects() -> None:
     """Test UpdateCollection.pack_messages() returns iterator of Update."""
-    from exabgp.bgp.message.update import UpdateCollection, Update
+    from exabgp.bgp.message.update import Update, UpdateCollection
     from exabgp.bgp.message.update.attribute import AttributeCollection
 
     # Create UpdateCollection

@@ -15,8 +15,8 @@ import socket
 import struct
 import threading
 import time
-from typing import Any
 from collections.abc import Generator
+from typing import Any
 from unittest.mock import Mock
 
 import pytest
@@ -53,16 +53,15 @@ def mock_logger() -> Generator[None, None, None]:
 
 
 from exabgp.bgp.message import Message  # noqa: E402
+from exabgp.bgp.message.message import MessageCode  # noqa: E402
 from exabgp.protocol.family import AFI  # noqa: E402
 from exabgp.reactor.network import tcp  # noqa: E402
 from exabgp.reactor.network.connection import Connection  # noqa: E402
 from exabgp.reactor.network.error import LostConnection, NotConnected, NotifyError  # noqa: E402
 from exabgp.reactor.network.incoming import Incoming  # noqa: E402
 from exabgp.reactor.network.outgoing import Outgoing  # noqa: E402
-from tests.wire_reader import tcp_socketpair  # noqa: E402
 from exabgp.util.types import Buffer  # noqa: E402
-from exabgp.bgp.message.message import MessageCode  # noqa: E402
-
+from tests.wire_reader import tcp_socketpair  # noqa: E402
 
 # Long enough for a message already queued on loopback, short enough to fail a hung read.
 READ_SECONDS = 5.0

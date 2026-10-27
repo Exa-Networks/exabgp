@@ -14,12 +14,13 @@ import asyncio
 import json
 import socket
 from collections.abc import Callable
-from typing import Any
 from struct import pack
+from typing import Any
 
 import pytest
 
 from exabgp.bgp.fsm import FSM
+from exabgp.bgp.message import KeepAlive
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.asn import ASN
@@ -28,7 +29,6 @@ from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.graceful import Graceful
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message import KeepAlive
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.collection import UpdateCollection
 from exabgp.bgp.message.update.eor import EOR
@@ -43,7 +43,6 @@ from exabgp.rib import RIB
 from tests.negotiation import PROCESS, Told, connect, received
 from tests.negotiation import messages as negotiation_messages
 from tests.negotiation import peer as real_peer
-
 
 LOCAL_AS = 65001
 PEER_AS = 65002

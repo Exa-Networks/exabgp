@@ -7,40 +7,36 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import uuid
 import copy
 import socket
-from typing import Any, ClassVar, TYPE_CHECKING
+import uuid
 from collections.abc import Generator, Iterator
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
-    from exabgp.reactor.loop import Reactor
     from exabgp.bgp.neighbor import Neighbor
+    from exabgp.reactor.loop import Reactor
 
-from exabgp.protocol.ip import IP
+from exabgp.bgp.message.open.routerid import RouterID
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI
+from exabgp.protocol.ip import IP
+from exabgp.reactor.network.error import AcceptError, BindingError, NetworkError, errno, error
+from exabgp.reactor.network.incoming import Incoming
+from exabgp.reactor.network.tcp import (
+    bind_to_device,
+    listener_minimum_needed,
+    md5,
+    save_syn,
+    saved_syn_ttl,
+    sending_ttl,
+    set_listening_minimum,
+    set_minimum_ttl,
+    set_sending_ttl,
+)
 
 # from exabgp.util.coroutine import each
 from exabgp.reactor.peer import Peer
-from exabgp.reactor.network.tcp import md5
-from exabgp.reactor.network.tcp import bind_to_device
-from exabgp.reactor.network.tcp import save_syn
-from exabgp.reactor.network.tcp import saved_syn_ttl
-from exabgp.reactor.network.tcp import sending_ttl
-from exabgp.reactor.network.tcp import set_minimum_ttl
-from exabgp.reactor.network.tcp import set_sending_ttl
-from exabgp.reactor.network.tcp import listener_minimum_needed
-from exabgp.reactor.network.tcp import set_listening_minimum
-from exabgp.reactor.network.error import error
-from exabgp.reactor.network.error import errno
-from exabgp.reactor.network.error import NetworkError
-from exabgp.reactor.network.error import BindingError
-from exabgp.reactor.network.error import AcceptError
-from exabgp.reactor.network.incoming import Incoming
-
-from exabgp.bgp.message.open.routerid import RouterID
-
-from exabgp.logger import log, lazymsg
 
 # Network port constants
 MAX_PRIVILEGED_PORT: int = 1024  # Highest privileged port number (requires root on Unix)

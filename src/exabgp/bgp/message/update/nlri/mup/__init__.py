@@ -41,10 +41,9 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from exabgp.bgp.message.update.nlri.mup.nlri import MUP
-
-from exabgp.bgp.message.update.nlri.mup.isd import InterworkSegmentDiscoveryRoute
 from exabgp.bgp.message.update.nlri.mup.dsd import DirectSegmentDiscoveryRoute
+from exabgp.bgp.message.update.nlri.mup.isd import InterworkSegmentDiscoveryRoute
+from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from exabgp.bgp.message.update.nlri.mup.t1st import Type1SessionTransformedRoute
 from exabgp.bgp.message.update.nlri.mup.t2st import Type2SessionTransformedRoute
 

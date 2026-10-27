@@ -19,13 +19,9 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-from exabgp.bgp.message.open.capability import Capabilities
-from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability import RouteRefresh
-from exabgp.bgp.message.open.capability import LinkLocalNextHop
+from exabgp.bgp.message.open.capability import Capabilities, Capability, LinkLocalNextHop, RouteRefresh
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.open.capability.ms import MultiSession
-
 
 # ==============================================================================
 # Instance isolation -- the actual regression

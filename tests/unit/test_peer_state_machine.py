@@ -38,12 +38,12 @@ from exabgp.configuration.configuration import Configuration  # noqa: E402
 from exabgp.protocol.family import AFI, SAFI  # noqa: E402
 from exabgp.reactor.network.incoming import Incoming  # noqa: E402
 from exabgp.reactor.peer import Peer, Stats  # noqa: E402
+from exabgp.reactor.peer import peer as peer_module  # noqa: E402
 from exabgp.reactor.protocol import Protocol  # noqa: E402
 from exabgp.rib import RIB  # noqa: E402
-from tests.negotiation import connect, messages, negotiated, peer as real_peer, received  # noqa: E402
+from tests.negotiation import connect, messages, negotiated, received  # noqa: E402
+from tests.negotiation import peer as real_peer
 from tests.wire_reader import tcp_socketpair  # noqa: E402
-
-from exabgp.reactor.peer import peer as peer_module  # noqa: E402
 
 # a compiled module is an extension, with no .py file behind it
 COMPILED = not str(peer_module.__file__).endswith('.py')

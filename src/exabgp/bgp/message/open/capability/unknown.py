@@ -7,9 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
-from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
 from exabgp.util.types import Buffer
 
 # ============================================================ UnknownCapability

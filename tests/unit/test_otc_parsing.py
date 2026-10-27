@@ -20,7 +20,6 @@ from exabgp.configuration.setup import create_minimal_configuration
 from exabgp.reactor.api import API
 from exabgp.rib.route import Route
 
-
 FORMS = ['1.1', 'self', 'provider', 'customer', 'peer', 'rs', 'rs-client']
 FAMILIES = [
     ('route', '10.0.0.0/24 next-hop 192.0.2.1'),

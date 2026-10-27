@@ -14,8 +14,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections import Counter
-from typing import Any
 from collections.abc import Iterator
+from typing import Any
 
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update.nlri import NLRI

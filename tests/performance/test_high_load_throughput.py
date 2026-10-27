@@ -4,17 +4,16 @@ Tests the system's ability to handle high volumes of BGP messages
 and maintain throughput under sustained load.
 """
 
+from collections import deque
 from io import BytesIO
 from typing import Any
-from collections import deque
-
 
 from .perf_helpers import (
-    create_simple_update_bytes,
     create_batch_messages,
-    create_mixed_message_batch,
     create_large_update_bytes,
+    create_mixed_message_batch,
     create_mock_negotiated,
+    create_simple_update_bytes,
 )
 
 
@@ -57,7 +56,7 @@ class TestMessageStreamProcessing:
             keepalive_count=300,
             notification_count=100,
         )
-        from exabgp.bgp.message import Update, KeepAlive
+        from exabgp.bgp.message import KeepAlive, Update
 
         def process_stream():
             stream = BytesIO(batch_bytes)

@@ -5,8 +5,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open import HoldTime, Open, RouterID, Version
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability import Capabilities
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update import Update, UpdateCollection
@@ -15,12 +15,11 @@ from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.configuration.check import _negotiated
 from exabgp.configuration.configuration import Configuration
 from exabgp.logger import log
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.api import API
 from exabgp.reactor.api.response.json import JSON
 from exabgp.rib import RIB
-from exabgp.protocol.family import AFI, SAFI
 from tests import negotiation
-
 
 IPV4 = (AFI.ipv4, SAFI.unicast)
 IPV6 = (AFI.ipv6, SAFI.unicast)
@@ -295,8 +294,8 @@ def test_role_schema_marks_the_local_role_required():
 
 @pytest.mark.parametrize('local_as,peer_as', [(65001, 65001), (0, 65002), (65001, 0)])
 def test_programmatic_role_settings_reject_ibgp_and_unresolved_asns(local_as, peer_as):
-    from exabgp.bgp.neighbor.settings import SessionSettings
     from exabgp.bgp.neighbor.session import Session
+    from exabgp.bgp.neighbor.settings import SessionSettings
     from exabgp.protocol.ip import IP
 
     settings = SessionSettings(

@@ -12,9 +12,9 @@ from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.tunnel import (
     PolicyNameSubTLV,
     PreferenceSubTLV,
     PrioritySubTLV,
+    SegmentListSubTLV,
     SRPolicyTunnel,
     SRv6BindingSIDSubTLV,
-    SegmentListSubTLV,
 )
 
 __all__ = [

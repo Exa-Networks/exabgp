@@ -18,7 +18,6 @@ import pytest
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute import Attribute
-
 from rfc.rfc7606_wire import (
     EMPTY_AS_PATH,
     IPV4_PREFIX,

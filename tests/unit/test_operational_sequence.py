@@ -8,14 +8,14 @@ reply to any earlier query.
 """
 
 from struct import unpack
-from tests import negotiation
 
 import pytest
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.operational import Query, SequencedOperationalFamily
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from tests import negotiation
 
 HEADER = 19
 # operational type(2) + length(2) + afi(2) + safi(1) + router-id(4), then the sequence

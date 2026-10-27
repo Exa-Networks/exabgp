@@ -23,7 +23,6 @@ refused by the configuration when asked to advertise it.
 from __future__ import annotations
 
 import logging
-
 from struct import pack
 from typing import Any
 

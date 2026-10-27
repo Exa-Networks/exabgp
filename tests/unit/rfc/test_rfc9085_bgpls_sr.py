@@ -25,9 +25,9 @@ from struct import pack
 
 import pytest
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.link.adjacencysid import AdjacencySid
 from exabgp.bgp.message.update.attribute.bgpls.link.lanadjacencysid import LanAdjacencySid
-from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.node.sralgo import SrAlgorithm
 from exabgp.bgp.message.update.attribute.bgpls.node.srcap import SrCapabilities
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixattributesflags import PrefixAttributesFlags

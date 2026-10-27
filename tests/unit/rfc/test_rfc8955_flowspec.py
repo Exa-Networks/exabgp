@@ -33,8 +33,8 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
 from exabgp.bgp.message.update.attribute.community.extended.traffic import (
     TrafficAction,
-    TrafficNextHopSimpson,
     TrafficMark,
+    TrafficNextHopSimpson,
     TrafficRate,
     TrafficRatePackets,
 )

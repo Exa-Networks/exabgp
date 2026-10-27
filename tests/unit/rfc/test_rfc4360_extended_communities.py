@@ -33,15 +33,12 @@ from collections.abc import Callable
 import pytest
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute import Attribute
-from exabgp.bgp.message.update.attribute.community import ExtendedCommunities, ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesIPv6
-
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update.attribute import AttributeCollection
+from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
+from exabgp.bgp.message.update.attribute.community import ExtendedCommunities, ExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesIPv6
 from exabgp.protocol.ip import IP
-
 from rfc import rfc7606_wire
 from rfc.community_wire import parse, withdrawn
 

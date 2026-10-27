@@ -26,7 +26,6 @@ from exabgp.reactor import listener
 from exabgp.reactor.network import tcp
 from exabgp.reactor.network.incoming import Incoming
 
-
 # RFC 5082 section 3 wants 255 on the wire. 254 is the matching minimum for a directly
 # connected neighbour: one hop crossed, one decrement.
 GTSM_MINIMUM = 254

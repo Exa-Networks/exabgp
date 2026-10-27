@@ -14,9 +14,6 @@ The section has no RFC 2119 keyword, so these tests carry no rfc() marker.
 
 from __future__ import annotations
 
-from exabgp.bgp.neighbor import Neighbor
-
-
 import pytest
 
 from exabgp.bgp.message import Action
@@ -26,6 +23,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
 from exabgp.bgp.message.update.nlri.rtc import RTC
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
 
 ORIGIN = bytes.fromhex('0000FDE9')  # AS 65001

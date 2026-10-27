@@ -51,7 +51,6 @@ import struct
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
-
 MTID_SIZE = 2  # RFC 9552 5.2.2.1: each topology identifier is a 2 byte field
 MTID_MASK = 0x0FFF  # the low 12 bits are the MT-ID, the top 4 are reserved R bits
 

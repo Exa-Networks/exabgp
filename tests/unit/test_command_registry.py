@@ -7,7 +7,7 @@ Tests command introspection, metadata generation, and helper methods.
 
 from __future__ import annotations
 
-from exabgp.reactor.api.command.registry import CommandRegistry, CommandMetadata
+from exabgp.reactor.api.command.registry import CommandMetadata, CommandRegistry
 
 
 class TestCommandRegistryBasics:

@@ -47,9 +47,11 @@ Run Instructions:
     PYTHONPATH=src python -m pytest tests/ -v -m "not fuzz"
 """
 
-import pytest
-from hypothesis import given, strategies as st, settings, HealthCheck
 import struct
+
+import pytest
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
 # Mark all tests in this module as fuzz tests
 pytestmark = pytest.mark.fuzz

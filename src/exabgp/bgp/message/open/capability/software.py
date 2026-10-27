@@ -8,15 +8,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar
 import json
+from typing import ClassVar
 
-from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
 from exabgp.bgp.message.open.capability.unknown import UnknownCapability
-from exabgp.version import version
-from exabgp.util.types import Buffer
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
+from exabgp.version import version
 
 
 class Software(Capability):

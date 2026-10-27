@@ -5,10 +5,8 @@ Created by Stephane Litkowski on 2017-02-24.
 
 from __future__ import annotations
 
+from struct import pack, unpack
 from typing import TYPE_CHECKING, ClassVar
-
-from struct import pack
-from struct import unpack
 
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
@@ -16,7 +14,6 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.util.types import Buffer
-
 
 # ============================================================== InterfaceSet
 # draft-ietf-idr-flowspsec-interfaceset

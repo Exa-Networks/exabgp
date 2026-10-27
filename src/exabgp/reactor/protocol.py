@@ -8,8 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import traceback
-from typing import TYPE_CHECKING, Any, cast
 from collections.abc import Iterator
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -33,6 +33,7 @@ from exabgp.bgp.message import (
     Update,
 )
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.message import MessageCode
 from exabgp.bgp.message.open import RouterID, Version
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.capability import Capabilities, Capability, Negotiated
@@ -47,7 +48,6 @@ from exabgp.protocol.ip import IP
 from exabgp.reactor.network.outgoing import Outgoing
 from exabgp.rib.flow_validation import validate_flows
 from exabgp.util.types import Buffer
-from exabgp.bgp.message.message import MessageCode
 
 # This is the number of chuncked message we are willing to buffer, not the number of routes
 MAX_BACKLOG = 15000

@@ -7,18 +7,18 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import os
-import sys
-import fcntl
-import stat
-import time
-import signal
-import select
-import traceback
 import contextlib
-from exabgp.util.backlog import Backlog
+import fcntl
+import os
+import select
+import signal
+import stat
+import sys
+import time
+import traceback
 
 from exabgp.reactor.network.error import error
+from exabgp.util.backlog import Backlog
 
 kb = 1024
 mb = kb * 1024
@@ -209,8 +209,8 @@ class Control:
             sys.stderr.write(f'cannot enable API acknowledgements: {exc}\n')
             sys.stderr.flush()
 
-        from typing import Any, TypeVar, cast
         from collections.abc import Callable
+        from typing import Any, TypeVar, cast
 
         _F = TypeVar('_F', bound=Callable[..., Any])
 

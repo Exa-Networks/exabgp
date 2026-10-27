@@ -19,7 +19,6 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.configuration.check import _negotiated
 from exabgp.configuration.configuration import Configuration
 from exabgp.rib import RIB
-
 from tests.api_daemon import SECOND, Daemon
 
 # made by exabgp for the session it packs for, never taken as bytes

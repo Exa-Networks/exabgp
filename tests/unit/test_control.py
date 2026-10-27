@@ -7,8 +7,8 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-import time
 import socket
+import time
 import unittest
 from typing import Any
 

@@ -25,13 +25,13 @@ from struct import pack
 
 import pytest
 
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-from exabgp.bgp.message import Action
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 

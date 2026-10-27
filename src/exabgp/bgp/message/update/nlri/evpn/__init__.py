@@ -37,13 +37,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
-
 from exabgp.bgp.message.update.nlri.evpn.ethernetad import EthernetAD
 from exabgp.bgp.message.update.nlri.evpn.mac import MAC
 from exabgp.bgp.message.update.nlri.evpn.multicast import Multicast
-from exabgp.bgp.message.update.nlri.evpn.segment import EthernetSegment
+from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
 from exabgp.bgp.message.update.nlri.evpn.prefix import Prefix
+from exabgp.bgp.message.update.nlri.evpn.segment import EthernetSegment
 
 __all__ = [
     'EVPN',

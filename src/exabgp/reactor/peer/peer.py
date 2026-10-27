@@ -27,9 +27,8 @@ from __future__ import annotations
 import asyncio
 import time
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Generator, Iterator
 from typing import TYPE_CHECKING, Any, ClassVar, NoReturn, cast
-from collections.abc import Generator, Iterator
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -59,7 +58,6 @@ from exabgp.reactor.protocol import Protocol, UpdateSender
 from exabgp.reactor.timing import LoopTimer, timed_async
 from exabgp.rib.route import Route
 from exabgp.util.enumeration import TriState
-
 
 # RFC 4724 4.1 and 4.2 pull in opposite directions on the very first OPEN a process sends.
 # If this run follows an earlier one we are the Restarting Speaker and MUST set the Restart
@@ -1374,7 +1372,7 @@ class Peer:
         include_withdraw = False
         new_routes: UpdateSender | None = None
 
-        from exabgp.reactor.peer.handlers import UpdateHandler, RouteRefreshHandler
+        from exabgp.reactor.peer.handlers import RouteRefreshHandler, UpdateHandler
 
         update_handler = UpdateHandler()
         route_refresh_handler = RouteRefreshHandler(self.resend)

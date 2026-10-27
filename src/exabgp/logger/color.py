@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 # 'FATAL CRITICAL ERROR WARNING INFO DEBUG NOTSET'
 _RECORD: dict[str, str] = {
     'FATAL': '\033[00;31m',  # Strong Red

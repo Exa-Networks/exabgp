@@ -6,16 +6,14 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 import json
 from struct import unpack
+from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.util.types import Buffer
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 # Fixed data length for SRv6 Endpoint Behavior TLV (RFC 9514 Section 7.1)
 # Endpoint Behavior (2) + Flags (1) + Algorithm (1) = 4 bytes

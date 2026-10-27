@@ -20,26 +20,19 @@ import builtins  # noqa: E402
 import functools  # noqa: E402
 import importlib  # noqa: E402
 import importlib.util  # noqa: E402
+import inspect  # noqa: E402
+import linecache  # noqa: E402
 import os  # noqa: E402
 import pdb  # noqa: E402
+import subprocess  # noqa: E402
 import sys  # noqa: E402
 import time  # noqa: E402
 import types  # noqa: E402
 import warnings  # noqa: E402
-import linecache  # noqa: E402
-import inspect  # noqa: E402
-import subprocess  # noqa: E402
-from collections.abc import Callable  # noqa: E402
-from collections.abc import Mapping  # noqa: E402
-from collections.abc import Sequence  # noqa: E402
-from multiprocessing import Pipe  # noqa: E402
-from multiprocessing import Process  # noqa: E402
+from collections.abc import Callable, Mapping, Sequence  # noqa: E402
+from multiprocessing import Pipe, Process  # noqa: E402
 from multiprocessing.connection import Connection  # noqa: E402
-from typing import TYPE_CHECKING  # noqa: E402
-from typing import Any  # noqa: E402
-from typing import ParamSpec  # noqa: E402
-from typing import TextIO  # noqa: E402
-from typing import TypeVar  # noqa: E402
+from typing import TYPE_CHECKING, Any, ParamSpec, TextIO, TypeVar  # noqa: E402
 
 if TYPE_CHECKING:
     from _typeshed import TraceFunction

@@ -8,9 +8,10 @@ These tests verify:
 4. No race conditions in async command processing
 """
 
-import pytest
 import asyncio
 from collections import deque
+
+import pytest
 
 from exabgp.environment import getenv
 from exabgp.logger import log

@@ -14,15 +14,17 @@ Test Categories:
 - Aggregator and OriginatorID validation
 """
 
-import pytest
 import struct
 from typing import Any
-from hypothesis import given, strategies as st, settings, HealthCheck, assume
+
+import pytest
+from hypothesis import HealthCheck, assume, given, settings
+from hypothesis import strategies as st
+
 from exabgp.bgp.message.notification import Notify
-from tests import negotiation
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.enumeration import TriState
+from tests import negotiation
 
 pytestmark = pytest.mark.fuzz
 
@@ -124,8 +126,8 @@ def test_extended_length_attribute(value_len: int) -> None:
 @settings(deadline=None, max_examples=100)
 def test_length_mismatch(claimed_len: int, actual_len: int) -> None:
     """Test handling of length field mismatches."""
-    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 
     assume(claimed_len != actual_len)
 
@@ -178,8 +180,8 @@ def test_zero_length_mandatory_attribute() -> None:
 @settings(deadline=None, max_examples=50)
 def test_aspath_invalid_segment_type(seg_type: int) -> None:
     """Test AS_PATH with invalid segment type."""
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.attribute.aspath import ASPath
 
     # Invalid segment type + count + ASN
     data = bytes([seg_type, 1]) + struct.pack('!H', 65000)
@@ -197,8 +199,8 @@ def test_aspath_invalid_segment_type(seg_type: int) -> None:
 @settings(deadline=None, max_examples=50)
 def test_aspath_truncated_segment(seg_count: int) -> None:
     """Test AS_PATH with truncated segment (count > available ASNs)."""
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.attribute.aspath import ASPath
 
     # Claim seg_count ASNs but provide only one
     data = bytes([2, seg_count]) + struct.pack('!H', 65000)  # SEQUENCE
@@ -244,8 +246,8 @@ def test_aspath_valid_sequence(asn_count: int) -> None:
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=100)
 def test_aspath_random_data(random_data: bytes) -> None:
     """Test AS_PATH parsing doesn't crash on random data."""
-    from exabgp.bgp.message.update.attribute.aspath import ASPath
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update.attribute.aspath import ASPath
 
     try:
         ASPath.from_packet(random_data, asn4=False)

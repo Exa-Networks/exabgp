@@ -17,22 +17,18 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
 import pytest
 
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open import ASN, HoldTime, RouterID, Version
-from exabgp.bgp.message.open import Open
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.open.capability import Capability
-from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open import ASN, HoldTime, Open, RouterID, Version
+from exabgp.bgp.message.open.capability import Capabilities, Capability
 from exabgp.bgp.message.open.capability.capabilities import Parameter
-from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
+from exabgp.bgp.message.open.capability.ms import MultiSession
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
-
 
 # ==============================================================================
 # Helpers

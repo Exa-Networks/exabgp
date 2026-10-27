@@ -12,7 +12,6 @@ from struct import pack, unpack
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
-
 #     https://tools.ietf.org/html/rfc7752#section-3.2.3
 
 #      0                   1                   2                   3

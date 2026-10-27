@@ -6,12 +6,10 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
+from struct import pack, unpack
 from typing import ClassVar
 
-from struct import pack, unpack
-
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 from exabgp.util.types import Buffer
 
 

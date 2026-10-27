@@ -10,8 +10,8 @@ from typing import Any
 from exabgp.reactor.protocol import MAX_BACKLOG
 
 from .perf_helpers import (
-    create_simple_update_bytes,
     create_large_update_bytes,
+    create_simple_update_bytes,
 )
 
 

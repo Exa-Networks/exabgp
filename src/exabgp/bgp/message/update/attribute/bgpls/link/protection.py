@@ -8,8 +8,7 @@ from __future__ import annotations
 
 from typing import ClassVar
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState
 
 #       0                   1
 #       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5

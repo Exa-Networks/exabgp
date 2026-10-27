@@ -13,13 +13,12 @@ what the decoder does with the bytes the gate just approved.
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 from struct import pack
 
 import pytest
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.protocol.family import AFI, SAFI
 

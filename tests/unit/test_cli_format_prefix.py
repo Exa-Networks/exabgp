@@ -17,7 +17,6 @@ from unittest.mock import Mock, patch
 from exabgp.application.cli import InteractiveCLI
 from exabgp.cli.formatter import OutputFormatter
 
-
 REPLY = '{"test": "data"}'
 
 

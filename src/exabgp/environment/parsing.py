@@ -8,16 +8,14 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import os
-import sys
 import pwd
+import sys
 from typing import Any
 
-from exabgp.logger.handler import levels
-
-from exabgp.util.ip import isip
-from exabgp.protocol.ip import IP
-
 from exabgp.environment import base
+from exabgp.logger.handler import levels
+from exabgp.protocol.ip import IP
+from exabgp.util.ip import isip
 
 
 def integer(_: Any) -> int:

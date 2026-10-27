@@ -14,11 +14,12 @@ Test Coverage:
 - Integration between split() and NLRI parsing
 """
 
-from typing import Any
 from collections.abc import Generator
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+
 from tests import negotiation
 
 pytestmark = pytest.mark.fuzz
@@ -87,7 +88,7 @@ def test_unpack_with_minimal_attributes() -> None:
     """Test UPDATE with minimal valid attributes (ORIGIN only)."""
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.update.attribute import AttributeCollection
-    from tests.fuzz.update_helpers import create_update_message, create_origin_attribute
+    from tests.fuzz.update_helpers import create_origin_attribute, create_update_message
 
     negotiated = create_negotiated_mock()
 
@@ -112,7 +113,7 @@ def test_unpack_with_minimal_attributes() -> None:
 def test_split_integration_with_unpack() -> None:
     """Test that split() output integrates correctly with unpack_message()."""
     from exabgp.bgp.message.update import UpdateCollection
-    from tests.fuzz.update_helpers import create_update_message, create_ipv4_prefix
+    from tests.fuzz.update_helpers import create_ipv4_prefix, create_update_message
 
     negotiated = create_negotiated_mock()
 
@@ -165,8 +166,8 @@ def test_unpack_with_multiple_withdrawals() -> None:
 @pytest.mark.fuzz
 def test_unpack_handles_split_validation() -> None:
     """Test that unpack_message() properly handles split() validation errors."""
-    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import UpdateCollection
 
     negotiated = create_negotiated_mock()
 

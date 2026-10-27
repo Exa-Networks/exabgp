@@ -12,15 +12,15 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
-import pytest
-from exabgp.bgp.message import Message
-from exabgp.bgp.message.notification import Notification, NotificationReceived, Notify
-from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from typing import Any
 
+import pytest
+
+from exabgp.bgp.message import Message
+from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.notification import Notification, NotificationReceived, Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.neighbor import Neighbor
 
 # ==============================================================================
 # Test Helper Functions

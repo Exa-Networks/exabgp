@@ -28,14 +28,13 @@ from struct import pack
 import pytest
 
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update import Update, UpdateCollection
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srgb import SrGb
 from exabgp.bgp.message.update.attribute.sr.srv6.l3service import Srv6L3Service
-from exabgp.bgp.message.update import Update, UpdateCollection
 from exabgp.protocol.family import AFI, SAFI
-
 from rfc import rfc7606_wire
 
 pytestmark = pytest.mark.timeout(10)

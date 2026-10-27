@@ -11,7 +11,6 @@ from typing import ClassVar
 
 from exabgp.protocol.resource import Resource
 
-
 # ============================================================== ICMP Code Field
 # https://www.iana.org/assignments/icmp-parameters
 

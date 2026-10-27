@@ -4,15 +4,14 @@ Tests the system's ability to handle messages from multiple BGP peers
 simultaneously under high load.
 """
 
+from collections import defaultdict, deque
 from io import BytesIO
-from collections import deque, defaultdict
 from typing import Any
 
-
 from .perf_helpers import (
-    create_simple_update_bytes,
     create_batch_messages,
     create_mixed_message_batch,
+    create_simple_update_bytes,
 )
 
 

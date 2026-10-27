@@ -20,7 +20,6 @@ from exabgp.bgp.message.update.attribute.mprnlri import MPRNLRI
 from exabgp.bgp.message.update.attribute.mpurnlri import MPURNLRI
 from exabgp.bgp.message.update.nlri.vpls import VPLS
 from exabgp.protocol.family import AFI, SAFI
-
 from rfc.community_wire import session
 
 NEXT_HOP = bytes([10, 0, 0, 1])

@@ -22,8 +22,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import contextlib
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
@@ -60,8 +60,8 @@ from exabgp.configuration.grammar.shape import Shape
 from exabgp.configuration.grammar.tree.static import ROUTE_VALUES, add_attribute, one_attribute_words
 from exabgp.configuration.grammar.types.base import WordOrSyntax
 from exabgp.configuration.grammar.types.route import RouteStatement
-from exabgp.configuration.grammar.words import Words
 from exabgp.configuration.grammar.types.word import decimal, decimal_or_hexadecimal, is_decimal
+from exabgp.configuration.grammar.words import Words
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP
 from exabgp.rib.route import Route

@@ -7,11 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from copy import deepcopy
-
-from struct import pack, unpack
 from collections.abc import Iterator
-from typing import Any, ClassVar, Self, TYPE_CHECKING, TypeVar, cast
+from copy import deepcopy
+from struct import pack, unpack
+from typing import TYPE_CHECKING, Any, ClassVar, Self, TypeVar, cast
 
 from exabgp.util.types import Buffer
 

@@ -22,9 +22,8 @@ connect() open a real TCP connection to a listening socket on the loopback.
 import asyncio
 import socket
 import struct
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Generator, Iterator
 from typing import Any
-from collections.abc import Generator
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -347,8 +346,8 @@ async def test_protocol_read_message_invalid_type(mock_peer: Peer, connect: Any)
 @pytest.mark.asyncio
 async def test_protocol_new_eor_single_family(mock_peer: Peer, connect: Any) -> None:
     """Test creating and sending EOR for a single address family."""
-    from exabgp.protocol.family import AFI, SAFI
     from exabgp.bgp.message import EOR as EndOfRIB
+    from exabgp.protocol.family import AFI, SAFI
 
     protocol = Protocol(mock_peer)
     protocol.negotiated.families = [(AFI.ipv4, SAFI.unicast)]
@@ -969,8 +968,8 @@ async def test_protocol_connect_already_connected(mock_peer: Peer, connect: Any)
 
 def test_protocol_with_addpath_negotiated(mock_peer: Peer) -> None:
     """Test protocol with ADD-PATH capability negotiated."""
-    from exabgp.protocol.family import AFI, SAFI
     from exabgp.bgp.message.open.capability.negotiated import RequirePath
+    from exabgp.protocol.family import AFI, SAFI
 
     protocol = Protocol(mock_peer)
 
@@ -985,8 +984,8 @@ def test_protocol_with_addpath_negotiated(mock_peer: Peer) -> None:
 @pytest.mark.asyncio
 async def test_protocol_read_update_with_addpath(mock_peer: Peer, connect: Any) -> None:
     """Test reading UPDATE message when ADD-PATH is enabled."""
-    from exabgp.protocol.family import AFI, SAFI
     from exabgp.bgp.message.open.capability.negotiated import RequirePath
+    from exabgp.protocol.family import AFI, SAFI
 
     protocol = Protocol(mock_peer)
     asks(mock_peer, 'receive-parsed')

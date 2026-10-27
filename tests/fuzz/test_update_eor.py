@@ -14,9 +14,11 @@ Test Coverage:
 - Non-EOR messages (should not be detected as EOR)
 """
 
-import pytest
 from collections.abc import Generator
 from unittest.mock import Mock, patch
+
+import pytest
+
 from tests import negotiation
 
 pytestmark = pytest.mark.fuzz

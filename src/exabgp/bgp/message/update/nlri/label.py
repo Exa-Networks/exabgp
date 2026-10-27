@@ -79,12 +79,12 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from typing import Any, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Self
 
 if TYPE_CHECKING:
-    from exabgp.protocol.ip import IP
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.update.nlri.settings import INETSettings
+    from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.cidr import CIDR

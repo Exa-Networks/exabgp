@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+import logging
 import os
 import sys
 import time
-from typing import ClassVar, TYPE_CHECKING
-import logging
+from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.environment.config import Environment
 
-from exabgp.logger.handler import get_logger, _get_syslog_address, remote_syslog_address
-from exabgp.logger.format import formater as get_formater, FormatterFunc
+from exabgp.logger.format import FormatterFunc
+from exabgp.logger.format import formater as get_formater
+from exabgp.logger.handler import _get_syslog_address, get_logger, remote_syslog_address
 
 
 def echo(message: str, source: str, level: str, timestamp: time.struct_time) -> str:

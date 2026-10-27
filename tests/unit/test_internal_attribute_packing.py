@@ -1,11 +1,10 @@
 """Internal attribute decisions must never be encoded onto the BGP wire."""
 
-from tests import negotiation
-
 import pytest
 
 from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 from exabgp.bgp.message.update.attribute.attribute import Discard, TreatAsWithdraw
+from tests import negotiation
 
 
 @pytest.mark.parametrize('attribute', [Discard(), TreatAsWithdraw()])

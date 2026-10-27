@@ -11,7 +11,6 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.rib.route import Route
 from exabgp.util import program as program_module
 
-
 NEIGHBOR = """\
 neighbor 127.0.0.1 {
     router-id 1.2.3.4;

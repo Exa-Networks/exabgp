@@ -16,24 +16,23 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Iterator
+from dataclasses import dataclass
 
-from config_grammar.forms_neighbor import BOOLEANS, NEIGHBOR_DOCUMENTS, NEIGHBOR_FORMS, SECTION_NEEDS
+from config_grammar.forms_flow import FLOW_DOCUMENT_BODIES, MATCH_FORMS, ROUTE_FORMS, SCOPE_FORMS, THEN_FORMS
+from config_grammar.forms_l2vpn import L2VPN_DOCUMENT_BODIES, L2VPN_LEVEL_FORMS, VPLS, VPLS_BLOCK, VPLS_VALUE_FORMS
+from config_grammar.forms_neighbor import _N, BOOLEANS, NEIGHBOR_DOCUMENTS, NEIGHBOR_FORMS, SECTION_NEEDS
+from config_grammar.forms_operational import OPERATIONAL_DOCUMENT_BODIES, OPERATIONAL_FORMS
 from config_grammar.forms_route import (
     ANNOUNCE_FAMILIES,
     ANNOUNCE_FORMS,
     ANNOUNCE_NEXTHOP,
     ANNOUNCE_PREFIX,
-    ROUTE_DOCUMENTS_BODY,
     NETMASK_DOCUMENT_BODY,
+    ROUTE_DOCUMENTS_BODY,
     ROUTE_VALUE_FORMS,
     RTC_FORMS,
 )
-from config_grammar.forms_flow import FLOW_DOCUMENT_BODIES, MATCH_FORMS, ROUTE_FORMS, SCOPE_FORMS, THEN_FORMS
-from config_grammar.forms_l2vpn import L2VPN_DOCUMENT_BODIES, L2VPN_LEVEL_FORMS, VPLS, VPLS_BLOCK, VPLS_VALUE_FORMS
-from config_grammar.forms_neighbor import _N
-from config_grammar.forms_operational import OPERATIONAL_DOCUMENT_BODIES, OPERATIONAL_FORMS
 from config_grammar.forms_select import SELECT_FORMS
 from config_grammar.forms_sr_policy import SR_POLICY_FORMS
 from exabgp.configuration.grammar.nodes import Block, Leaf

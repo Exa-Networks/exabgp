@@ -9,10 +9,9 @@ See: https://github.com/Exa-Networks/exabgp/issues/1151
 
 from __future__ import annotations
 
-from exabgp.util.enumeration import TriState
-
 from exabgp.bgp.neighbor.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
+from exabgp.util.enumeration import TriState
 
 NEIGHBOR = """\
 neighbor 192.168.1.1 {

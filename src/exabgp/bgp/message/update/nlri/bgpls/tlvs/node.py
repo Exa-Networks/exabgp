@@ -7,13 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
 from struct import unpack
 from typing import Any, ClassVar
 
 from exabgp.bgp.message.notification import NLRIDiscard, Notify
-from exabgp.protocol.ip import IP
-from exabgp.protocol.ip import IPv6
+from exabgp.protocol.ip import IP, IPv6
 from exabgp.protocol.iso import ISO
 from exabgp.util import hexstring
 from exabgp.util.types import Buffer

@@ -12,8 +12,8 @@ from typing import ClassVar
 
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceDataSubSubTlv
 from exabgp.bgp.message.update.attribute.sr.srv6.sidinformation import Srv6SidInformation
-from exabgp.util.types import Buffer
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 # 3.2.1.  SRv6 SID Structure Sub-Sub-TLV
 #

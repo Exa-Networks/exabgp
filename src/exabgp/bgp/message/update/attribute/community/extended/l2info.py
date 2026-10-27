@@ -8,10 +8,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import ClassVar, TYPE_CHECKING
-
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
+from typing import TYPE_CHECKING, ClassVar
 
 from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
 

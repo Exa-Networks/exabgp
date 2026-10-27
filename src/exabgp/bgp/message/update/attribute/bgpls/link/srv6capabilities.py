@@ -7,13 +7,12 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from typing import ClassVar, Protocol
 from collections.abc import Callable
+from typing import ClassVar, Protocol
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.util.types import Buffer
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 
 class HasTLV(Protocol):

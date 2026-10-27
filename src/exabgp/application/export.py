@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-import sys
 import argparse
-
-from exabgp.environment import getenv
-from exabgp.environment import getconf
+import sys
 
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.encoder import config_to_json
-
 from exabgp.debug.intercept import trace_interceptor
-from exabgp.logger import log, lazymsg
+from exabgp.environment import getconf, getenv
+from exabgp.logger import lazymsg, log
 
 
 def setargs(sub: argparse.ArgumentParser) -> None:

@@ -4,8 +4,8 @@ from collections import Counter
 
 import pytest
 
-from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update import Update, UpdateCollection

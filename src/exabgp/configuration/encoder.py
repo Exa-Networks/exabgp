@@ -15,8 +15,8 @@ from dataclasses import is_dataclass
 from typing import Any
 
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.capability.role import RoleValue
+from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.neighbor.session import Session
 from exabgp.protocol.family import AFI, SAFI

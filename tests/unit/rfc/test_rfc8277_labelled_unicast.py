@@ -31,6 +31,7 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open import ASN, HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.capability import Capabilities
+from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update, UpdateCollection
 from exabgp.bgp.message.update.collection import RoutedNLRI
@@ -42,7 +43,6 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.rib.route import Route
 from exabgp.util.types import Buffer
-from exabgp.bgp.message.open.capability.capability import Capability
 
 # Section 2.2: the Length field counts bits, and a label contributes 24 of them.
 LABEL_BITS = 24
@@ -396,8 +396,8 @@ def test_the_configuration_parser_can_build_a_stack_we_are_not_allowed_to_send()
     """
     stack = Labels.make_labels([100, 200])
     assert len(stack) == 6
-    from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
     from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 
     built = IPVPN.from_cidr(
         CIDR.create_cidr(PREFIX + bytes([0]), PREFIX_BITS),

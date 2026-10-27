@@ -24,11 +24,12 @@ Test Coverage:
 """
 
 import struct
-from typing import Any
 from collections.abc import Generator
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+
 from tests import negotiation
 
 
@@ -133,8 +134,8 @@ def test_attributes_parse_extended_length() -> None:
 def test_attributes_parse_multiple_attributes() -> None:
     """Test parsing UPDATE with multiple attributes."""
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.med import MED
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     negotiated = create_negotiated_mock()
 
@@ -154,8 +155,8 @@ def test_attributes_parse_multiple_attributes() -> None:
 
 def test_attributes_parse_as_path() -> None:
     """Test parsing AS_PATH attribute."""
-    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
+    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 
     negotiated = create_negotiated_mock(asn4=False)
 
@@ -224,8 +225,8 @@ def test_attributes_duplicate_attribute_handling() -> None:
 
 def test_attributes_zero_length_atomic_aggregate_valid() -> None:
     """Test that ATOMIC_AGGREGATE can have zero length."""
-    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.update.attribute.atomicaggregate import AtomicAggregate
+    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 
     negotiated = create_negotiated_mock()
 
@@ -436,8 +437,8 @@ def test_attributes_invalid_flag_for_discard_attribute() -> None:
 
 def test_attributes_as4_path_alone() -> None:
     """Test that AS4_PATH can be parsed independently."""
-    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
     from exabgp.bgp.message.update.attribute.aspath import AS4Path
+    from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 
     negotiated = create_negotiated_mock(asn4=False)
 

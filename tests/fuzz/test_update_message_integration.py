@@ -21,6 +21,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+
 from tests import negotiation
 
 
@@ -89,10 +90,11 @@ def create_inet_nlri(
     - announces list → announcement
     - withdraws list → withdrawal
     """
-    from exabgp.bgp.message.update.nlri.inet import INET
     from exabgp.bgp.message.update.nlri.cidr import CIDR
+    from exabgp.bgp.message.update.nlri.inet import INET
+    from exabgp.protocol.family import AFI as AFI_CLASS
+    from exabgp.protocol.family import SAFI as SAFI_CLASS
     from exabgp.protocol.ip import IP, IPv6
-    from exabgp.protocol.family import AFI as AFI_CLASS, SAFI as SAFI_CLASS
 
     if afi is None:
         afi = AFI_CLASS.ipv4
@@ -125,8 +127,8 @@ def create_routed_nlri(
     Note: Action is determined by list placement, not stored in NLRI.
     """
     from exabgp.bgp.message.update.collection import RoutedNLRI
-    from exabgp.protocol.ip import IP, IPv6
     from exabgp.protocol.family import AFI as AFI_CLASS
+    from exabgp.protocol.ip import IP, IPv6
 
     if afi is None:
         afi = AFI_CLASS.ipv4
@@ -157,7 +159,7 @@ def test_messages_packs_simple_ipv4_announcement() -> None:
     This tests the critical messages() method that was previously UNTESTED.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock()
 
@@ -165,9 +167,9 @@ def test_messages_packs_simple_ipv4_announcement() -> None:
     routed = create_routed_nlri('10.0.0.0', 8, nexthop='192.0.2.1')
 
     # Create minimal attributes
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -262,7 +264,7 @@ def test_messages_filters_by_negotiated_families() -> None:
     Only routes for negotiated families should be included.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
     from exabgp.protocol.family import AFI, SAFI
 
     # Only negotiate IPv4 unicast
@@ -271,9 +273,9 @@ def test_messages_filters_by_negotiated_families() -> None:
     # Create IPv4 route (should be included) using RoutedNLRI for announces
     routed_v4 = create_routed_nlri('10.0.0.0', 8, nexthop='192.0.2.1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -301,16 +303,16 @@ def test_roundtrip_simple_ipv4_announcement() -> None:
     This validates data integrity through the full UPDATE cycle.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock()
 
     # Create original route using RoutedNLRI for announces
     original_routed = create_routed_nlri('10.0.0.0', 8, nexthop='192.0.2.1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     original_attributes = AttributeCollection()
     original_attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -369,7 +371,7 @@ def test_roundtrip_ipv4_withdrawal() -> None:
 def test_roundtrip_multiple_nlris() -> None:
     """Test pack then unpack preserves multiple NLRIs."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock()
 
@@ -379,9 +381,9 @@ def test_roundtrip_multiple_nlris() -> None:
         routed = create_routed_nlri(prefix, prefixlen, nexthop='192.0.2.1')
         routed_nlris.append(routed)
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -407,19 +409,19 @@ def test_roundtrip_multiple_nlris() -> None:
 def test_roundtrip_with_multiple_attributes() -> None:
     """Test pack then unpack preserves multiple path attributes."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock()
 
     # Create route using RoutedNLRI for announces
     routed = create_routed_nlri('10.0.0.0', 8, nexthop='192.0.2.1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
-    from exabgp.bgp.message.update.attribute.nexthop import NextHop
-    from exabgp.bgp.message.update.attribute.med import MED
-    from exabgp.bgp.message.update.attribute.localpref import LocalPreference
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
+    from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+    from exabgp.bgp.message.update.attribute.med import MED
+    from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -451,7 +453,7 @@ def test_roundtrip_with_multiple_attributes() -> None:
 def test_roundtrip_mixed_announce_withdraw() -> None:
     """Test pack then unpack preserves mixed announcements and withdrawals."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock()
 
@@ -462,9 +464,9 @@ def test_roundtrip_mixed_announce_withdraw() -> None:
     # Create announcements using RoutedNLRI for announces
     announce1 = create_routed_nlri('10.0.0.0', 8, nexthop='192.0.2.1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -508,7 +510,7 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
     IPv6 routes should be packed using multiprotocol extensions.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
     from exabgp.protocol.family import AFI, SAFI
 
     # Negotiate IPv6 unicast
@@ -517,8 +519,8 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
     # Create IPv6 route using RoutedNLRI for announces
     routed = create_routed_nlri('2001:db8::', 32, afi=AFI.ipv6, nexthop='2001:db8::1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -538,7 +540,7 @@ def test_messages_packs_ipv6_as_mp_reach() -> None:
 def test_roundtrip_ipv6_announcement() -> None:
     """Test pack then unpack preserves IPv6 announcement via MP_REACH."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
     from exabgp.protocol.family import AFI, SAFI
 
     negotiated = create_negotiated_mock(families=[(AFI.ipv6, SAFI.unicast)])
@@ -546,8 +548,8 @@ def test_roundtrip_ipv6_announcement() -> None:
     # Create IPv6 route using RoutedNLRI for announces
     routed = create_routed_nlri('2001:db8::', 32, afi=AFI.ipv6, nexthop='2001:db8::1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -577,7 +579,7 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
     Should generate messages with both standard NLRI and MP extensions.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
     from exabgp.protocol.family import AFI, SAFI
 
     # Negotiate both families
@@ -594,9 +596,9 @@ def test_messages_handles_mixed_ipv4_ipv6() -> None:
     # Create IPv6 route using RoutedNLRI for announces
     routed_v6 = create_routed_nlri('2001:db8::', 32, afi=AFI.ipv6, nexthop='2001:db8::1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -624,7 +626,7 @@ def test_messages_splits_large_nlri_set() -> None:
     When NLRIs exceed message size limit, should generate multiple messages.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock(msg_size=1024)  # Small message size
 
@@ -634,9 +636,9 @@ def test_messages_splits_large_nlri_set() -> None:
         routed = create_routed_nlri(f'10.{i % 256}.0.0', 16, nexthop='192.0.2.1')
         routed_nlris.append(routed)
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -657,7 +659,7 @@ def test_messages_splits_large_nlri_set() -> None:
 def test_messages_respects_negotiated_msg_size() -> None:
     """Test that messages() respects negotiated message size limit."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     # Small message size
     negotiated = create_negotiated_mock(msg_size=512)
@@ -668,9 +670,9 @@ def test_messages_respects_negotiated_msg_size() -> None:
         routed = create_routed_nlri(f'10.{i}.0.0', 16, nexthop='192.0.2.1')
         routed_nlris.append(routed)
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -691,17 +693,17 @@ def test_messages_respects_negotiated_msg_size() -> None:
 def test_messages_handles_large_attributes() -> None:
     """Test messages() with large attributes approaching size limits."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock()
 
     # Create route using RoutedNLRI for announces
     routed = create_routed_nlri('10.0.0.0', 8, nexthop='192.0.2.1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
-    from exabgp.bgp.message.update.attribute.nexthop import NextHop
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
+    from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Create large AS_PATH
     large_as_path = SEQUENCE([ASN(65000 + i) for i in range(100)])
@@ -732,7 +734,7 @@ def test_integration_full_update_cycle() -> None:
     Tests complete flow: create -> pack -> unpack -> verify
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock()
 
@@ -750,12 +752,12 @@ def test_integration_full_update_cycle() -> None:
         routed = create_routed_nlri(prefix, prefixlen, nexthop='192.0.2.1')
         announces.append(routed)
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
-    from exabgp.bgp.message.update.attribute.nexthop import NextHop
-    from exabgp.bgp.message.update.attribute.med import MED
-    from exabgp.bgp.message.update.attribute.localpref import LocalPreference
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
+    from exabgp.bgp.message.update.attribute.localpref import LocalPreference
+    from exabgp.bgp.message.update.attribute.med import MED
+    from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -828,7 +830,7 @@ def test_integration_empty_attributes_for_withdrawal_only() -> None:
 def test_integration_sorting_and_grouping() -> None:
     """Test that messages() properly sorts and groups NLRIs."""
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock()
 
@@ -837,9 +839,9 @@ def test_integration_sorting_and_grouping() -> None:
     nlri2 = create_inet_nlri('172.16.0.0', 12)  # Bare NLRI for withdraw
     routed3 = create_routed_nlri('10.1.0.0', 16, nexthop='192.0.2.1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -870,7 +872,7 @@ def test_messages_at_4k_boundary() -> None:
     import random
 
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock(msg_size=4096)
 
@@ -882,10 +884,10 @@ def test_messages_at_4k_boundary() -> None:
         routed = create_routed_nlri(f'10.{(i // 256) % 256}.{i % 256}.0', 24, nexthop='192.0.2.1')
         routed_nlris.append(routed)
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
-    from exabgp.bgp.message.update.attribute.nexthop import NextHop
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
+    from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Random AS_PATH with 5-15 ASNs for realistic attribute size
     random.seed(42)  # Reproducible
@@ -924,7 +926,7 @@ def test_messages_at_64k_boundary() -> None:
     import random
 
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
 
     negotiated = create_negotiated_mock(msg_size=65535)
 
@@ -935,10 +937,10 @@ def test_messages_at_64k_boundary() -> None:
         routed = create_routed_nlri(f'10.{(i // 65536) % 256}.{(i // 256) % 256}.{i % 256}', 24, nexthop='192.0.2.1')
         routed_nlris.append(routed)
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
-    from exabgp.bgp.message.update.attribute.nexthop import NextHop
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
+    from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Random AS_PATH with 10-30 ASNs for realistic attribute size
     random.seed(43)  # Reproducible, different seed
@@ -973,12 +975,12 @@ def test_messages_splits_when_nlris_exceed_limit() -> None:
     """
     import random
 
-    from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
-    from exabgp.bgp.message.update.attribute.origin import Origin
-    from exabgp.bgp.message.update.attribute.aspath import AS2Path, SEQUENCE
-    from exabgp.bgp.message.update.attribute.nexthop import NextHop
     from exabgp.bgp.message.open.asn import ASN
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
+    from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, AS2Path
+    from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     # Small message size to force splitting
     negotiated = create_negotiated_mock(msg_size=300)
@@ -1042,7 +1044,7 @@ def test_messages_excludes_non_negotiated_families() -> None:
     If only IPv4 unicast is negotiated, IPv6 NLRIs should be silently dropped.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
     from exabgp.protocol.family import AFI, SAFI
 
     # Only negotiate IPv4 unicast
@@ -1051,8 +1053,8 @@ def test_messages_excludes_non_negotiated_families() -> None:
     # Create IPv6 RoutedNLRI (not negotiated)
     routed_v6 = create_routed_nlri('2001:db8::', 32, afi=AFI.ipv6, nexthop='2001:db8::1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)
@@ -1074,7 +1076,7 @@ def test_messages_mixed_families_only_sends_negotiated() -> None:
     only IPv4 should appear in the packed messages.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.update.attribute import AttributeCollection, Attribute
+    from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection
     from exabgp.protocol.family import AFI, SAFI
 
     # Only negotiate IPv4 unicast
@@ -1086,9 +1088,9 @@ def test_messages_mixed_families_only_sends_negotiated() -> None:
     # Create IPv6 RoutedNLRI (NOT negotiated)
     routed_v6 = create_routed_nlri('2001:db8::', 32, afi=AFI.ipv6, nexthop='2001:db8::1')
 
-    from exabgp.bgp.message.update.attribute.origin import Origin
     from exabgp.bgp.message.update.attribute.aspath import AS2Path
     from exabgp.bgp.message.update.attribute.nexthop import NextHop
+    from exabgp.bgp.message.update.attribute.origin import Origin
 
     attributes = AttributeCollection()
     attributes[Attribute.CODE.ORIGIN] = Origin.from_int(Origin.IGP)

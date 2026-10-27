@@ -6,17 +6,15 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 import json
+from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6endx import Srv6EndX
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.bgpls.link.srv6lanendx import Srv6LanEndXISIS, Srv6LanEndXOSPF
-from exabgp.util.types import Buffer
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 # Fixed data length for SRv6 SID Structure TLV (RFC 9514 Section 8)
 # LB Length (1) + LN Length (1) + Function Length (1) + Argument Length (1) = 4 bytes

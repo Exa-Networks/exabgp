@@ -36,8 +36,8 @@ from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
-from tests import negotiation
 from exabgp.util.enumeration import TriState
+from tests import negotiation
 
 AIGP = int(Attribute.CODE.AIGP)
 DISCARD = int(Attribute.CODE.INTERNAL_DISCARD)

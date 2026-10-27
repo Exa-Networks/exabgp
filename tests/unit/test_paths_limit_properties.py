@@ -6,7 +6,8 @@ left holding more paths for a prefix than it asked for, and must not be left hol
 than the operator offered while the limit had room. Those two are the properties here.
 """
 
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 from exabgp.bgp.message import UpdateCollection
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
@@ -18,7 +19,6 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.rib.outgoing import OutgoingRIB
 from exabgp.rib.route import Route
-
 
 IPV4 = (AFI.ipv4, SAFI.unicast)
 PREFIXES = ('192.0.2.0/24', '198.51.100.0/24')

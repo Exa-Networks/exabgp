@@ -1,24 +1,20 @@
 from __future__ import annotations
 
 import socket
-from typing import ClassVar
 from collections.abc import Iterator
-
-from exabgp.util.errstr import errstr
-
-from .connection import Connection
-from .tcp import nagle
-from .tcp import asynchronous
-from .error import NetworkError
-from .error import NotConnected
+from typing import ClassVar
 
 from exabgp.bgp.message import Notify
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.neighbor import Neighbor
-from exabgp.logger import log, lazymsg
-
+from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI
+from exabgp.util.errstr import errstr
+
+from .connection import Connection
+from .error import NetworkError, NotConnected
+from .tcp import asynchronous, nagle
 
 
 class Incoming(Connection):

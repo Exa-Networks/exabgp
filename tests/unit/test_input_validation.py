@@ -9,14 +9,14 @@ NOTIFICATION or a ValueError.
 
 from __future__ import annotations
 
+import importlib
 import io
 import os
-import importlib
 import pathlib
 import platform
 import sys
-from typing import Any
 from struct import pack
+from typing import Any
 
 import pytest
 
@@ -24,7 +24,9 @@ from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.asn4 import ASN4
+from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.hostname import HostName
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.capability.software import Software
 from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
@@ -34,9 +36,6 @@ from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.grammar.types.bgp import extended_community as _extended_community
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.util.psk import PSKError, decode_base64
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.open.capability.capability import Capability
-
 
 # ============================================================================
 # Configuration: mandatory schema fields

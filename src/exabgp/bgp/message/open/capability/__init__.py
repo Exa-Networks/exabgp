@@ -12,25 +12,21 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.capabilities import Capabilities
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
-from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.addpath import AddPath
-from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
-from exabgp.bgp.message.open.capability.labels import MultipleLabels
 from exabgp.bgp.message.open.capability.asn4 import ASN4
+from exabgp.bgp.message.open.capability.capabilities import Capabilities
+from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.graceful import Graceful
+from exabgp.bgp.message.open.capability.labels import MultipleLabels
+from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.ms import MultiSession
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.open.capability.nexthop import NextHop
 from exabgp.bgp.message.open.capability.operational import Operational
-from exabgp.bgp.message.open.capability.refresh import RouteRefresh
-from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
-from exabgp.bgp.message.open.capability.refresh import REFRESH
-from exabgp.bgp.message.open.capability.linklocal import LinkLocalNextHop
-from exabgp.bgp.message.open.capability.role import Role
-from exabgp.bgp.message.open.capability.role import RoleValue
+from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
+from exabgp.bgp.message.open.capability.refresh import REFRESH, EnhancedRouteRefresh, RouteRefresh
+from exabgp.bgp.message.open.capability.role import Role, RoleValue
 
 # Do not remove this include or unknown capability will not be handled
 from exabgp.bgp.message.open.capability.unknown import UnknownCapability

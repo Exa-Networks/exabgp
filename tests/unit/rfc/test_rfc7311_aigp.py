@@ -13,7 +13,6 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute import aigp as aigp_module
 from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.util.enumeration import TriState
-
 from rfc.rfc7606_wire import (
     MANDATORY,
     NEXT_HOP,

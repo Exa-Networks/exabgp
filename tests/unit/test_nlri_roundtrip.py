@@ -7,52 +7,42 @@ Copyright (c) 2009-2015 Orange. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
 import unittest
 
+from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.reactor.protocol import AFI, SAFI
-
 from exabgp.bgp.message.update import AttributeCollection
-
-from exabgp.bgp.message.update.attribute.localpref import LocalPreference
-from exabgp.bgp.message.update.attribute.community.extended.communities import (
-    ExtendedCommunities,
-)
 from exabgp.bgp.message.update.attribute.community.extended import (
     RouteTargetASN2Number as RouteTarget,
+)
+from exabgp.bgp.message.update.attribute.community.extended import RTRecord
+from exabgp.bgp.message.update.attribute.community.extended.communities import (
+    ExtendedCommunities,
 )
 from exabgp.bgp.message.update.attribute.community.extended.encapsulation import (
     Encapsulation,
 )
-from exabgp.bgp.message.update.attribute.community.extended import RTRecord
-
-from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
-
-from exabgp.bgp.message.update.nlri.rtc import RTC
-
+from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.nlri.evpn.mac import MAC as EVPNMAC
 from exabgp.bgp.message.update.nlri.evpn.multicast import Multicast as EVPNMulticast
-from exabgp.bgp.message.update.nlri.evpn.prefix import Prefix as EVPNPrefix
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
-
+from exabgp.bgp.message.update.nlri.evpn.prefix import Prefix as EVPNPrefix
+from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
+from exabgp.bgp.message.update.nlri.mvpn.sharedjoin import SharedJoin as MVPN_SharedJoin
 from exabgp.bgp.message.update.nlri.mvpn.sourcead import SourceAD as MVPN_SourceAD
 from exabgp.bgp.message.update.nlri.mvpn.sourcejoin import SourceJoin as MVPN_SourceJoin
-from exabgp.bgp.message.update.nlri.mvpn.sharedjoin import SharedJoin as MVPN_SharedJoin
-
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.esi import ESI
 from exabgp.bgp.message.update.nlri.qualifier.etag import EthernetTag
+from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.mac import MAC
-
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.message.update.nlri.rtc import RTC
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.ip import IP
-
-from exabgp.bgp.message import Action
-from exabgp.bgp.message.open.asn import ASN
+from exabgp.reactor.protocol import AFI, SAFI
 
 
 def create_negotiated() -> Negotiated:

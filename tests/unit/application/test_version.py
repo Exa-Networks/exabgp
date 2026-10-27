@@ -9,8 +9,7 @@ import argparse
 from io import StringIO
 from unittest.mock import patch
 
-
-from exabgp.application.version import setargs, cmdline
+from exabgp.application.version import cmdline, setargs
 from exabgp.version import version
 
 

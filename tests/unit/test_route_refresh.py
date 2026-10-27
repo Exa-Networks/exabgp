@@ -8,19 +8,19 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
-from exabgp.bgp.neighbor import Neighbor
+import struct
 
 import pytest
-import struct
+
 from exabgp.bgp.message import Message
-from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
+from exabgp.bgp.message.refresh import RouteRefresh
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
 from tests import negotiation
-from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
-
 
 # ==============================================================================
 # Test Helper Functions

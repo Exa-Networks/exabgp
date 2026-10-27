@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from exabgp.application.encode import setargs, cmdline
+from exabgp.application.encode import cmdline, setargs
 
 
 class TestSetargs:

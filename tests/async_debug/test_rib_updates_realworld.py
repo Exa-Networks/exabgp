@@ -11,15 +11,15 @@ This test mimics the EXACT pattern used in ExaBGP:
 The goal is to find the exact failure mode that affects test T.
 """
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 import asyncio
 import inspect
 from collections import deque
-from typing import Any
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
+
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 
 class MockUpdate:

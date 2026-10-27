@@ -12,7 +12,6 @@ from typing import Any
 
 from exabgp.util.mypyc import mypyc_attr
 
-
 # ===================================================================== dictdict
 # an Hardcoded defaultdict with dict as method
 

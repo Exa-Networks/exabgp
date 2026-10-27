@@ -13,9 +13,8 @@ from typing import Any
 
 import pytest
 
-from exabgp.util.intvalue import IntValue, json_number
 from exabgp.bgp.message.open.capability.capability import CapabilityCode
-
+from exabgp.util.intvalue import IntValue, json_number
 
 # a subclass which names itself, the way the codes do. A real one, as the compiled build
 # refuses a class written here inheriting from the compiled IntValue

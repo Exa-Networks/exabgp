@@ -9,8 +9,7 @@ import argparse
 from io import StringIO
 from unittest.mock import patch
 
-
-from exabgp.application.environ import setargs, cmdline, default
+from exabgp.application.environ import cmdline, default, setargs
 from exabgp.environment import Env
 
 

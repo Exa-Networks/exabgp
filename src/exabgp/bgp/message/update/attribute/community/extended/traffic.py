@@ -23,22 +23,18 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import socket
-
 from math import isfinite
 from typing import TYPE_CHECKING, ClassVar
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-from struct import pack
-from struct import unpack
+from struct import pack, unpack
 
-from exabgp.protocol.ip import IPv4
-from exabgp.protocol.ip import IPv6
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunityIPv6
+from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommunity, ExtendedCommunityIPv6
+from exabgp.protocol.ip import IPv4, IPv6
 from exabgp.util.types import Buffer
 
 TRAFFIC_RATE_SIZE_BYTES = 8

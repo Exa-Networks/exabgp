@@ -45,40 +45,48 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity
-from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunityIPv6
-from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
-from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunitiesIPv6
+# the base classes first: every module below imports them from this package
+from exabgp.bgp.message.update.attribute.community.extended.communities import (
+    ExtendedCommunities,
+    ExtendedCommunitiesIPv6,
+)
+from exabgp.bgp.message.update.attribute.community.extended.community import ExtendedCommunity, ExtendedCommunityIPv6
 
-from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
-from exabgp.bgp.message.update.attribute.community.extended.origin import Origin
-from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASN2Number
-from exabgp.bgp.message.update.attribute.community.extended.origin import OriginIPASN
-from exabgp.bgp.message.update.attribute.community.extended.origin import OriginASN4Number
-from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
-from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number
-from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetIPNumber
-from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN4Number
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRatePackets
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficAction
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirect
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectASN4
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectIPv4
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficMark
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRedirectIPv6
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHopIPv4IETF
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHopIPv6IETF
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficNextHopSimpson
-from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
-from exabgp.bgp.message.update.attribute.community.extended.chso import ConsistentHashSortOrder
-from exabgp.bgp.message.update.attribute.community.extended.rt_record import RTRecord
-from exabgp.bgp.message.update.attribute.community.extended.flowspec_scope import InterfaceSet
-from exabgp.bgp.message.update.attribute.community.extended.mac_mobility import MacMobility
-from exabgp.bgp.message.update.attribute.community.extended.evpn import ESILabel
-from exabgp.bgp.message.update.attribute.community.extended.evpn import ESImportRouteTarget
-from exabgp.bgp.message.update.attribute.community.extended.mup import MUPExtendedCommunity
+# isort: split
 from exabgp.bgp.message.update.attribute.community.extended.bandwidth import Bandwidth
+from exabgp.bgp.message.update.attribute.community.extended.chso import ConsistentHashSortOrder
+from exabgp.bgp.message.update.attribute.community.extended.encapsulation import Encapsulation
+from exabgp.bgp.message.update.attribute.community.extended.evpn import ESILabel, ESImportRouteTarget
+from exabgp.bgp.message.update.attribute.community.extended.flowspec_scope import InterfaceSet
+from exabgp.bgp.message.update.attribute.community.extended.l2info import L2Info
+from exabgp.bgp.message.update.attribute.community.extended.mac_mobility import MacMobility
+from exabgp.bgp.message.update.attribute.community.extended.mup import MUPExtendedCommunity
+from exabgp.bgp.message.update.attribute.community.extended.origin import (
+    Origin,
+    OriginASN2Number,
+    OriginASN4Number,
+    OriginIPASN,
+)
+from exabgp.bgp.message.update.attribute.community.extended.rt import (
+    RouteTarget,
+    RouteTargetASN2Number,
+    RouteTargetASN4Number,
+    RouteTargetIPNumber,
+)
+from exabgp.bgp.message.update.attribute.community.extended.rt_record import RTRecord
+from exabgp.bgp.message.update.attribute.community.extended.traffic import (
+    TrafficAction,
+    TrafficMark,
+    TrafficNextHopIPv4IETF,
+    TrafficNextHopIPv6IETF,
+    TrafficNextHopSimpson,
+    TrafficRate,
+    TrafficRatePackets,
+    TrafficRedirect,
+    TrafficRedirectASN4,
+    TrafficRedirectIPv4,
+    TrafficRedirectIPv6,
+)
 
 __all__ = [
     'Bandwidth',

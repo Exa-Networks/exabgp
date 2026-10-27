@@ -12,7 +12,6 @@ what a decoder accepts, it must be able to re-encode.
 
 from __future__ import annotations
 
-
 import pytest
 
 from exabgp.bgp.message import Action

@@ -8,14 +8,12 @@ Tests cover all EVPN route types defined in RFC 7432:
 - Route Type 5: IP Prefix Advertisement (Prefix)
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
-
 import pytest
 
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.message.update.attribute import AttributeCollection
 from exabgp.bgp.message.update.nlri.evpn.ethernetad import EthernetAD
 from exabgp.bgp.message.update.nlri.evpn.mac import MAC
 from exabgp.bgp.message.update.nlri.evpn.multicast import Multicast
@@ -25,10 +23,10 @@ from exabgp.bgp.message.update.nlri.evpn.segment import EthernetSegment
 from exabgp.bgp.message.update.nlri.nlri import Action
 from exabgp.bgp.message.update.nlri.qualifier import ESI, EthernetTag, Labels, PathInfo, RouteDistinguisher
 from exabgp.bgp.message.update.nlri.qualifier import MAC as MACQUAL
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.rib.route import Route
-from exabgp.bgp.message.update.attribute import AttributeCollection
 
 
 def create_negotiated() -> Negotiated:

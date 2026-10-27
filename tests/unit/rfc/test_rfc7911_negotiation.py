@@ -26,14 +26,14 @@ from exabgp.bgp.message.open.capability.addpath import AddPath
 from exabgp.bgp.message.open.capability.capability import Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated, RequirePath
 from exabgp.bgp.message.update import Update, UpdateCollection
-from exabgp.bgp.neighbor import Neighbor
-from exabgp.configuration.configuration import Configuration
-from exabgp.rib import RIB
-from exabgp.rib.route import Route
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.configuration.configuration import Configuration
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.rib import RIB
+from exabgp.rib.route import Route
 
 IPV4_UNICAST = (AFI.ipv4, SAFI.unicast)
 

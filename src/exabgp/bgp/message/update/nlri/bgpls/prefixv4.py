@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import unpack
-from typing import ClassVar, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar, Self
 
 if TYPE_CHECKING:
     pass

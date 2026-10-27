@@ -15,8 +15,8 @@ from exabgp.bgp.message.update.nlri.flow import Flow, Flow4Destination
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.check import _negotiated
 from exabgp.configuration.configuration import Configuration
-from exabgp.reactor.protocol import Protocol
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
 from exabgp.rib.route import Route
 from tests import negotiation

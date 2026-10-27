@@ -17,8 +17,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar
 from collections.abc import Iterator, Sequence
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from exabgp.util.types import Buffer
 

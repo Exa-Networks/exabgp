@@ -11,8 +11,7 @@ from typing import ClassVar
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
-from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
 from exabgp.util.types import Buffer
 
 # ========================================================================= ASN4

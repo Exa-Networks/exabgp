@@ -19,7 +19,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from exabgp.bgp.fsm import FSM
-
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
@@ -27,8 +26,8 @@ from exabgp.environment import Environment
 from exabgp.protocol.family import AFI, SAFI, Family
 from exabgp.protocol.ip import IP
 from exabgp.reactor.asynchronous import ASYNC
-from exabgp.reactor.peer import Peer
 from exabgp.reactor.network.incoming import Incoming
+from exabgp.reactor.peer import Peer
 from exabgp.reactor.protocol import Protocol
 from exabgp.rib import RIB
 from exabgp.rib.route import Route

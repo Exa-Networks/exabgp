@@ -10,24 +10,18 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import sys
 import argparse
+import sys
 from typing import TYPE_CHECKING, NoReturn
 
+from exabgp.bgp.message import UpdateCollection
+from exabgp.bgp.message.update.attribute.otc import OTCSelf
+from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.configuration.check import _negotiated
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.setup import create_minimal_configuration
-
 from exabgp.debug.intercept import trace_interceptor
-
-from exabgp.environment import Env
-from exabgp.environment import getenv
-from exabgp.environment import getconf
-
-from exabgp.configuration.check import _negotiated
-from exabgp.bgp.message import UpdateCollection
-from exabgp.bgp.message.update.collection import RoutedNLRI
-from exabgp.bgp.message.update.attribute.otc import OTCSelf
-
+from exabgp.environment import Env, getconf, getenv
 from exabgp.logger import log
 
 if TYPE_CHECKING:

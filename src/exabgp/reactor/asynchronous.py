@@ -10,10 +10,10 @@ from __future__ import annotations
 import asyncio
 import inspect
 from collections import deque
-from typing import Any, ClassVar
 from collections.abc import Callable
+from typing import Any, ClassVar
 
-from exabgp.logger import log, lazyexc, lazymsg
+from exabgp.logger import lazyexc, lazymsg, log
 
 
 class ASYNC:

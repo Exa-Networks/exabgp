@@ -9,30 +9,31 @@ Created: 2025-11-08
 """
 
 import asyncio
-import pytest
-from collections.abc import Iterator
-from contextlib import contextmanager
 import os
 import socket
 import struct
+from collections.abc import Iterator
+from contextlib import contextmanager
 from unittest.mock import Mock, patch
+
+import pytest
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
+from exabgp.bgp.message import Message
 from exabgp.protocol.family import AFI
 from exabgp.reactor.network.connection import Connection
-from exabgp.reactor.network.outgoing import Outgoing
 from exabgp.reactor.network.error import (
-    NotConnected,
     LostConnection,
-    TooSlowError,
     NetworkError,
+    NotConnected,
     NotifyError,
+    TooSlowError,
     errno,
 )
-from exabgp.bgp.message import Message
+from exabgp.reactor.network.outgoing import Outgoing
 from tests.wire_reader import loopback_connection, read_message, read_messages
 
 # Long enough that the read is certainly waiting on the event loop when the data arrives.

@@ -31,10 +31,9 @@ recurses; this was the one path that did.
 
 from __future__ import annotations
 
-
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
 # flag=OPTIONAL (0x80), aid=0xEF (registered by nothing), length=0 -- the exact probe payload.
 UNKNOWN_NON_TRANSITIVE_ATTRIBUTE = bytes([0x80, 0xEF, 0x00])

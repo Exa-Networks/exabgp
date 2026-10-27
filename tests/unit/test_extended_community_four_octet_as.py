@@ -17,10 +17,9 @@ from __future__ import annotations
 import pytest
 
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 from exabgp.bgp.message.update.attribute.community.extended.origin import (
-    OriginASN4Number,
     OriginASN2Number,
+    OriginASN4Number,
     OriginIPASN,
 )
 from exabgp.bgp.message.update.attribute.community.extended.rt import (

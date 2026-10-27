@@ -20,13 +20,13 @@ import pytest
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open import ASN, Open
 from exabgp.bgp.message.open.capability import Capabilities, Capability
+from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.open.capability.mp import MultiProtocol
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.capability.unknown import UnknownCapability
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.util.enumeration import TriState
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
 
 IPV4_UNICAST: FamilyTuple = (AFI.ipv4, SAFI.unicast)
 IPV6_UNICAST: FamilyTuple = (AFI.ipv6, SAFI.unicast)

@@ -9,8 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from exabgp.bgp.neighbor import Neighbor
     from exabgp.bgp.message.open.capability import Negotiated
+    from exabgp.bgp.neighbor import Neighbor
     from exabgp.reactor.peer.peer import Stats
     from exabgp.reactor.protocol import Protocol
 

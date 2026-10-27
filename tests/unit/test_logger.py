@@ -5,22 +5,21 @@ Unit tests for exabgp.logger modules
 """
 
 import time
-from unittest.mock import patch, Mock
-
 from typing import Any
+from unittest.mock import Mock, patch
 
 from exabgp.logger import color
 from exabgp.logger.format import (
-    formater,
-    lazyformat,
-    lazyattribute,
-    lazynlri,
-    _short_formater,
+    _long_color_formater,
     _long_formater,
     _short_color_formater,
-    _long_color_formater,
+    _short_formater,
+    formater,
+    lazyattribute,
+    lazyformat,
+    lazynlri,
 )
-from exabgp.logger.tty import istty, _istty
+from exabgp.logger.tty import _istty, istty
 
 
 class TestColor:

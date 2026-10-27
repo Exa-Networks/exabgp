@@ -14,7 +14,6 @@ import pytest
 from exabgp.protocol.family import AFI
 from exabgp.protocol.ip import IP, IPRange, IPv4, IPv6
 
-
 # ==============================================================================
 # The family the caller asked for
 # ==============================================================================

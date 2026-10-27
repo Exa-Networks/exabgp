@@ -2,23 +2,19 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
 from typing import Any, NoReturn
 
-from exabgp.environment import getenv
-from exabgp.environment import getconf
-
-from exabgp.configuration.configuration import Configuration, ConfigurationError
 from exabgp.bgp.neighbor import NeighborTemplate
-
-from exabgp.debug.intercept import trace_interceptor
-from exabgp.logger import log, lazymsg
-from exabgp.logger.option import option
-
 from exabgp.configuration.check import check_generation
+from exabgp.configuration.configuration import Configuration, ConfigurationError
+from exabgp.debug.intercept import trace_interceptor
+from exabgp.environment import getconf, getenv
+from exabgp.logger import lazymsg, log
+from exabgp.logger.option import option
 
 
 def setargs(sub: argparse.ArgumentParser) -> None:

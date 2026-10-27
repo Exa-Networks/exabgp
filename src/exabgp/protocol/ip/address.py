@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import builtins
 import socket
-from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, cast
 from collections.abc import Iterator
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar, cast
 
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip.netmask import NetMask

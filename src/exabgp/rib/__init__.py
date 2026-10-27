@@ -10,9 +10,9 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import ClassVar, Self
 
+from exabgp.protocol.family import FamilyTuple
 from exabgp.rib.incoming import IncomingRIB
 from exabgp.rib.outgoing import OutgoingRIB
-from exabgp.protocol.family import FamilyTuple
 
 
 class RIB:

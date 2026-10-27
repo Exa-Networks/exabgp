@@ -13,9 +13,12 @@ Test Categories:
 - Extended format validation
 """
 
-import pytest
 import struct
-from hypothesis import given, strategies as st, settings, HealthCheck
+
+import pytest
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
+
 from exabgp.bgp.message.notification import Notify
 
 pytestmark = pytest.mark.fuzz
@@ -74,8 +77,8 @@ def create_open_params(params: bytes) -> bytes:
 @settings(suppress_health_check=[HealthCheck.too_slow], deadline=None, max_examples=100)
 def test_capabilities_random_data(random_data: bytes) -> None:
     """Test Capabilities.unpack doesn't crash on random data."""
-    from exabgp.bgp.message.open.capability.capabilities import Capabilities
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capabilities import Capabilities
 
     try:
         capabilities = Capabilities.unpack(random_data)
@@ -100,8 +103,8 @@ def test_capabilities_empty() -> None:
 @settings(deadline=None, max_examples=50)
 def test_capabilities_length_mismatch(opt_len: int) -> None:
     """Test Capabilities with option length exceeding data."""
-    from exabgp.bgp.message.open.capability.capabilities import Capabilities
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capabilities import Capabilities
 
     # Claim opt_len bytes but provide less
     data = bytes([opt_len]) + b'\x00' * (opt_len - 1)
@@ -132,8 +135,8 @@ def test_capabilities_extended_format() -> None:
 @settings(deadline=None, max_examples=50)
 def test_capabilities_extended_truncated(extended_len: int) -> None:
     """Test Capabilities extended format with truncated data."""
-    from exabgp.bgp.message.open.capability.capabilities import Capabilities
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capabilities import Capabilities
 
     # Claim extended_len bytes but provide less
     data = bytes([0xFF, 0xFF]) + struct.pack('!H', extended_len) + b'\x00' * (extended_len - 1)
@@ -187,9 +190,9 @@ def test_addpath_valid_entries(entry_count: int) -> None:
 @settings(deadline=None, max_examples=3)
 def test_addpath_not_multiple_of_4(extra_bytes: int) -> None:
     """Test AddPath capability with length not multiple of 4."""
+    from exabgp.bgp.message.notification import Notify
     from exabgp.bgp.message.open.capability.addpath import AddPath
     from exabgp.bgp.message.open.capability.capability import Capability
-    from exabgp.bgp.message.notification import Notify
 
     # Valid entry + extra bytes
     data = struct.pack('!H', 1) + bytes([1, 3]) + b'\x00' * extra_bytes
@@ -255,8 +258,8 @@ def test_addpath_send_receive_values(send_receive: int) -> None:
 @settings(deadline=None, max_examples=100)
 def test_multiprotocol_afi_safi_values(afi: int, safi: int) -> None:
     """Test MultiProtocol capability with various AFI/SAFI values."""
-    from exabgp.bgp.message.open.capability.mp import MultiProtocol
     from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.mp import MultiProtocol
 
     # Format: AFI(2) + reserved(1) + SAFI(1) = 4 bytes
     data = struct.pack('!H', int(afi)) + bytes([0, safi])
@@ -275,9 +278,9 @@ def test_multiprotocol_afi_safi_values(afi: int, safi: int) -> None:
 @settings(deadline=None, max_examples=4)
 def test_multiprotocol_truncated(data_len: int) -> None:
     """Test MultiProtocol capability with truncated data."""
-    from exabgp.bgp.message.open.capability.mp import MultiProtocol
-    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.mp import MultiProtocol
 
     # Less than 4 bytes
     data = b'\x00' * data_len
@@ -301,8 +304,8 @@ def test_multiprotocol_truncated(data_len: int) -> None:
 @settings(deadline=None, max_examples=30)
 def test_graceful_restart_valid(family_count: int) -> None:
     """Test Graceful Restart capability with valid family entries."""
-    from exabgp.bgp.message.open.capability.graceful import Graceful
     from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.graceful import Graceful
 
     # Format: flags+time(2) + [AFI(2)+SAFI(1)+flags(1)]*n
     data = struct.pack('!H', 0x8000 | 120)  # Restart bit + 120 seconds
@@ -324,9 +327,9 @@ def test_graceful_restart_valid(family_count: int) -> None:
 @pytest.mark.fuzz
 def test_graceful_restart_empty() -> None:
     """Test Graceful Restart capability with empty data."""
-    from exabgp.bgp.message.open.capability.graceful import Graceful
-    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.graceful import Graceful
 
     instance = Graceful()
 
@@ -342,9 +345,9 @@ def test_graceful_restart_empty() -> None:
 @settings(deadline=None, max_examples=3)
 def test_graceful_restart_not_aligned(extra_bytes: int) -> None:
     """Test Graceful Restart with entry not aligned to 4 bytes."""
-    from exabgp.bgp.message.open.capability.graceful import Graceful
-    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.graceful import Graceful
 
     # Header(2) + incomplete family entry
     data = struct.pack('!H', 0x8000 | 120) + b'\x00' * extra_bytes
@@ -387,9 +390,9 @@ def test_asn4_valid_values(asn: int) -> None:
 @settings(deadline=None, max_examples=4)
 def test_asn4_truncated(data_len: int) -> None:
     """Test ASN4 capability with truncated data."""
+    from exabgp.bgp.message.notification import Notify
     from exabgp.bgp.message.open.capability.asn4 import ASN4
     from exabgp.bgp.message.open.capability.capability import Capability
-    from exabgp.bgp.message.notification import Notify
 
     data = b'\x00' * data_len
 
@@ -415,9 +418,9 @@ def test_asn4_truncated(data_len: int) -> None:
 @settings(deadline=None, max_examples=50)
 def test_hostname_length_combinations(hostname_len: int, domain_len: int) -> None:
     """Test Hostname capability with various length combinations."""
-    from exabgp.bgp.message.open.capability.hostname import HostName
-    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.hostname import HostName
 
     # Format: hostname_len(1) + hostname + domain_len(1) + domain
     hostname = b'a' * min(hostname_len, 64)
@@ -438,9 +441,9 @@ def test_hostname_length_combinations(hostname_len: int, domain_len: int) -> Non
 @pytest.mark.fuzz
 def test_hostname_empty() -> None:
     """Test Hostname capability with empty data."""
-    from exabgp.bgp.message.open.capability.hostname import HostName
-    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.hostname import HostName
 
     instance = HostName()
 
@@ -454,9 +457,9 @@ def test_hostname_empty() -> None:
 @pytest.mark.fuzz
 def test_hostname_truncated_hostname() -> None:
     """Test Hostname capability where hostname length exceeds data."""
-    from exabgp.bgp.message.open.capability.hostname import HostName
-    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.hostname import HostName
 
     # Claim 10 bytes for hostname but provide only 5
     data = bytes([10]) + b'short'
@@ -480,8 +483,8 @@ def test_hostname_truncated_hostname() -> None:
 @settings(deadline=None, max_examples=30)
 def test_nexthop_valid_entries(entry_count: int) -> None:
     """Test NextHop capability with valid entries."""
-    from exabgp.bgp.message.open.capability.nexthop import NextHop
     from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.nexthop import NextHop
 
     # Each entry: AFI(2) + SAFI(2) + next-hop-AFI(2) = 6 bytes
     data = b''
@@ -504,9 +507,9 @@ def test_nexthop_valid_entries(entry_count: int) -> None:
 @settings(deadline=None, max_examples=5)
 def test_nexthop_not_multiple_of_6(extra_bytes: int) -> None:
     """Test NextHop capability with length not multiple of 6."""
-    from exabgp.bgp.message.open.capability.nexthop import NextHop
-    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.nexthop import NextHop
 
     # Valid entry + extra bytes
     data = struct.pack('!HHH', 1, 1, 2) + b'\x00' * extra_bytes
@@ -558,9 +561,9 @@ def test_unknown_capability(code: int, value_len: int) -> None:
 @settings(deadline=None, max_examples=50)
 def test_software_version_lengths(version_len: int) -> None:
     """Test Software Version capability with various lengths."""
-    from exabgp.bgp.message.open.capability.software import Software
-    from exabgp.bgp.message.open.capability.capability import Capability
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.open.capability.capability import Capability
+    from exabgp.bgp.message.open.capability.software import Software
 
     # Revision 00 put a length octet before the version, the current draft does not
     version = b'v' * min(version_len, 64)

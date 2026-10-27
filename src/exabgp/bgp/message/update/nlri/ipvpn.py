@@ -94,7 +94,7 @@ Class Hierarchy:
 
 from __future__ import annotations
 
-from typing import Any, Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Self
 
 from exabgp.util.types import Buffer
 

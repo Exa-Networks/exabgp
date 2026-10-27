@@ -8,17 +8,19 @@ Tests core connection behaviors without complex generator mocking.
 Created: 2025-11-08
 """
 
-import pytest
 import os
+
+import pytest
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
+from unittest.mock import Mock
+
+from exabgp.bgp.message.open.capability.extended import ExtendedMessage
 from exabgp.protocol.family import AFI
 from exabgp.reactor.network.connection import Connection
-from exabgp.bgp.message.open.capability.extended import ExtendedMessage
-from unittest.mock import Mock
 
 
 class TestConnectionBasics:

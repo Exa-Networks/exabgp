@@ -23,9 +23,8 @@ import json as jsonlib
 import struct
 
 import pytest
-from hypothesis import given, strategies as st
-
-from tests.fuzz.strategies import framed, payload
+from hypothesis import given
+from hypothesis import strategies as st
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability import Capability
@@ -33,6 +32,7 @@ from exabgp.bgp.message.open.capability.capability import CapabilityCode
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
+from tests.fuzz.strategies import framed, payload
 
 CAPABILITY_CODES = sorted(Capability.registered_capability, key=int)
 CAPABILITY_IDS = [f'{int(code)}-{code}' for code in CAPABILITY_CODES]

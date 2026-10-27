@@ -4,27 +4,27 @@ from __future__ import annotations
 
 import pytest
 
-# ProcessError hierarchy
-from exabgp.reactor.api.processes import (
-    ProcessError,
-    ProcessStartError,
-    ProcessCommunicationError,
-    ProcessWriteError,
-    ProcessReadError,
-    ProcessRespawnError,
-)
-
 # CLIError hierarchy
 from exabgp.application.error import (
-    CLIError,
     CLIConnectionError,
-    CLISocketError,
+    CLIError,
     CLIPipeError,
+    CLISocketError,
     CLITimeoutError,
 )
 
 # the configuration error
 from exabgp.configuration.grammar.error import ConfigError
+
+# ProcessError hierarchy
+from exabgp.reactor.api.processes import (
+    ProcessCommunicationError,
+    ProcessError,
+    ProcessReadError,
+    ProcessRespawnError,
+    ProcessStartError,
+    ProcessWriteError,
+)
 
 
 class TestProcessErrorHierarchy:

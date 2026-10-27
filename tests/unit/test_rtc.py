@@ -5,20 +5,18 @@
 Created for comprehensive test coverage improvement
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
-
-from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 import pytest
-from exabgp.protocol.family import AFI, SAFI
+
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTargetASN2Number as RouteTarget
-from exabgp.bgp.message.update.nlri.rtc import RTC
 from exabgp.bgp.message.update.nlri.nlri import NLRI
+from exabgp.bgp.message.update.nlri.rtc import RTC
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.protocol.family import AFI, SAFI
 
 
 def create_negotiated() -> Negotiated:

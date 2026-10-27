@@ -13,21 +13,21 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING, Any, cast
 
-from exabgp.util import hexstring
 from exabgp.reactor.api.response.json import JSON
 from exabgp.reactor.api.response.text import oneline
+from exabgp.util import hexstring
 from exabgp.version import json as json_version
 
 if TYPE_CHECKING:
-    from exabgp.bgp.neighbor import Neighbor
-    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.bgp.fsm import FSM
     from exabgp.bgp.message.message import MessageCode
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.open import Open
-    from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.refresh import RouteRefresh
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.operational import Operational, OperationalFamily
-    from exabgp.bgp.fsm import FSM
+    from exabgp.bgp.message.refresh import RouteRefresh
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.neighbor import Neighbor
 
 
 class V4Text:

@@ -7,8 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.protocol.ip import IP, IPv4, IPv6
 from exabgp.bgp.message.notification import Notify
+from exabgp.protocol.ip import IP, IPv4, IPv6
 from exabgp.util.types import Buffer
 
 #  https://tools.ietf.org/html/rfc5305#section-3.3

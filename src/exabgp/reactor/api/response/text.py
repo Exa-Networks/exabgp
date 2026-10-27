@@ -15,15 +15,16 @@ from exabgp.util import hexstring
 
 if TYPE_CHECKING:
     from typing import Any
-    from exabgp.bgp.neighbor import Neighbor
-    from exabgp.bgp.message.open.capability.negotiated import Negotiated
+
+    from exabgp.bgp.fsm import FSM
     from exabgp.bgp.message.message import MessageCode
     from exabgp.bgp.message.notification import Notification
     from exabgp.bgp.message.open import Open
-    from exabgp.bgp.message.update import UpdateCollection
-    from exabgp.bgp.message.refresh import RouteRefresh
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
     from exabgp.bgp.message.operational import Operational, OperationalFamily
-    from exabgp.bgp.fsm import FSM
+    from exabgp.bgp.message.refresh import RouteRefresh
+    from exabgp.bgp.message.update import UpdateCollection
+    from exabgp.bgp.neighbor import Neighbor
 
 
 def oneline(value: object) -> str:

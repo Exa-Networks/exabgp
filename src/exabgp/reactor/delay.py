@@ -7,11 +7,9 @@ Copyright (c) 2017-2017 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import time
-
 from collections.abc import Callable
 
 from exabgp.bgp.timer import jitter_factor
-
 
 # ======================================================================== Delay
 # Exponential backup for outgoing connection

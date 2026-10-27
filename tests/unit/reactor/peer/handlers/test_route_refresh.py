@@ -5,16 +5,15 @@ Mock where it declares a PeerContext or a Message. The resend callback stays a M
 a plain callable.
 """
 
-import pytest
-
 from unittest.mock import Mock
 
-from exabgp.bgp.message import KeepAlive
+import pytest
 
+from exabgp.bgp.message import KeepAlive
 from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.reactor.peer.handlers.route_refresh import RouteRefreshHandler
 from exabgp.reactor.peer.context import PeerContext
+from exabgp.reactor.peer.handlers.route_refresh import RouteRefreshHandler
 from tests import negotiation
 
 

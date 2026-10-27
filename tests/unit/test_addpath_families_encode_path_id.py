@@ -22,13 +22,12 @@ from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 from exabgp.bgp.message.update.nlri.label import Label
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
+from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.message.update.nlri.qualifier.labels import Labels
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.nlri.nlri import NLRI
-
 
 PATH_ID_SIZE = 4
 

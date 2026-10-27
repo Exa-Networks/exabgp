@@ -24,7 +24,6 @@ import pytest
 
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
-
 from rfc import rfc7606_wire as wire
 
 pytestmark = pytest.mark.timeout(10)

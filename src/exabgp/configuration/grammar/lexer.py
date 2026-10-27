@@ -14,8 +14,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
 
 from exabgp.configuration.grammar.error import ConfigError
 

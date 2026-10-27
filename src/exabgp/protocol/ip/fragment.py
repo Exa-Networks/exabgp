@@ -11,7 +11,6 @@ from typing import ClassVar
 
 from exabgp.protocol.resource import BitResource
 
-
 # =================================================================== Fragment
 
 # Uses bitmask operand format defined above.

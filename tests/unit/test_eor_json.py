@@ -12,8 +12,7 @@ import json
 import pytest
 
 from exabgp.bgp.message.update.eor import EOR
-from exabgp.protocol.family import AFI
-from exabgp.protocol.family import SAFI
+from exabgp.protocol.family import AFI, SAFI
 from exabgp.reactor.api.response.json import JSON
 
 

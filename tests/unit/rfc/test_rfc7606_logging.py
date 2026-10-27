@@ -18,7 +18,6 @@ from exabgp.bgp.message.message import Message
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.logger import log
 from exabgp.logger.option import echo, option
-
 from rfc.rfc7606_wire import (
     EMPTY_AS_PATH,
     IPV4_PREFIX,

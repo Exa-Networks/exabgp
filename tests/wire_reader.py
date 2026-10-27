@@ -15,11 +15,11 @@ import asyncio
 import socket
 import threading
 
+from exabgp.bgp.message.message import MessageCode
 from exabgp.protocol.family import AFI
 from exabgp.reactor.network.connection import Connection
 from exabgp.reactor.network.error import NotifyError
 from exabgp.util.types import Buffer
-from exabgp.bgp.message.message import MessageCode
 
 ReadResult = tuple[int, MessageCode, Buffer, Buffer, NotifyError | None]
 

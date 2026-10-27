@@ -7,7 +7,7 @@ from exabgp.bgp.message.open import ASN, HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.asn import AS_TRANS
 from exabgp.bgp.message.open.capability import ASN4, Capabilities, Capability
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
+from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, ASPath
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.neighbor import Neighbor

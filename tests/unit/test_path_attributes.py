@@ -31,9 +31,6 @@ Note: COMMUNITIES are extensively tested in test_communities.py (27 tests)
 Note: Multiprotocol extensions (MP_REACH/MP_UNREACH) will be in test_multiprotocol.py
 """
 
-from exabgp.bgp.neighbor import Neighbor
-from exabgp.util.enumeration import TriState
-
 import struct
 from typing import Any
 from unittest.mock import Mock
@@ -41,8 +38,10 @@ from unittest.mock import Mock
 import pytest
 
 from exabgp.bgp.message.direction import Direction
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.util.enumeration import TriState
 from tests import negotiation
 
 

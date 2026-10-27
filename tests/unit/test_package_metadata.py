@@ -1,12 +1,11 @@
 """Source builds obtain their download URL without importing runtime package state."""
 
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tomllib
 from email.parser import Parser
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 

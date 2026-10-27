@@ -7,24 +7,21 @@ Tests cover all MUP route types defined in draft-mpmz-bess-mup-safi:
 - Route Type 4: Type 2 Session Transformed (T2ST)
 """
 
-from exabgp.bgp.neighbor import Neighbor
-
+import pytest
 
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
-import pytest
-from exabgp.protocol.ip import IP
-from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
-from exabgp.bgp.message.update.nlri.mup.isd import InterworkSegmentDiscoveryRoute
 from exabgp.bgp.message.update.nlri.mup.dsd import DirectSegmentDiscoveryRoute
+from exabgp.bgp.message.update.nlri.mup.isd import InterworkSegmentDiscoveryRoute
+from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from exabgp.bgp.message.update.nlri.mup.t1st import Type1SessionTransformedRoute
 from exabgp.bgp.message.update.nlri.mup.t2st import Type2SessionTransformedRoute
-from exabgp.bgp.message.update.nlri.mup.nlri import MUP
-from exabgp.protocol.family import AFI, SAFI
-from exabgp.bgp.message.notification import NLRIDiscard, Notify
 from exabgp.bgp.message.update.nlri.nlri import Action
-
+from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
 
 # ============================================================================
 # MUP Route Type 1: Interwork Segment Discovery (ISD)

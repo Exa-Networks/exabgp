@@ -6,12 +6,12 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, TYPE_CHECKING
 from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
-    from exabgp.protocol.ip import IP
     from exabgp.bgp.message.open.capability.negotiated import Negotiated
+    from exabgp.protocol.ip import IP
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.notification import NLRIDiscard, Notify

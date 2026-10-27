@@ -6,15 +6,12 @@ Copyright (c) 2014-2017 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-
+from collections.abc import Sequence
 from struct import pack, unpack
 from typing import ClassVar
-from collections.abc import Sequence
 
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState
 from exabgp.util.types import Buffer
-
 
 #   This sub-TLV contains the amount of bandwidth reservable in this
 #   direction on this link.  Note that for oversubscription purposes,

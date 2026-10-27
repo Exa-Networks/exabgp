@@ -20,7 +20,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 from exabgp.configuration.configuration import Configuration
-
 from tests.api_daemon import FIRST, SECOND, Daemon
 
 

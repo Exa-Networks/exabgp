@@ -7,17 +7,15 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-import sys
 import platform
+import sys
 import traceback
 from io import StringIO
 from types import TracebackType
 
-from exabgp.version import version
-from exabgp.environment import Env
-from exabgp.environment import ROOT
-
+from exabgp.environment import ROOT, Env
 from exabgp.logger import history
+from exabgp.version import version
 
 
 def string_exception(exception: BaseException) -> str:

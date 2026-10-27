@@ -13,8 +13,9 @@ TDD: These tests are written BEFORE the implementation changes.
 They should FAIL initially, proving they test something real.
 """
 
-import pytest
 from struct import pack
+
+import pytest
 
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import (
     GenericLSID,
@@ -23,7 +24,6 @@ from exabgp.bgp.message.update.attribute.bgpls.linkstate import (
 from exabgp.bgp.message.update.attribute.bgpls.node.nodeflags import NodeFlags
 from exabgp.bgp.message.update.attribute.bgpls.prefix.prefixmetric import PrefixMetric
 from tests import negotiation
-
 
 # The BaseLS and FlagLS behaviour is checked through registered subclasses, PrefixMetric
 # (four octets, an int) and NodeFlags (one octet of flags): the compiled build refuses a

@@ -20,8 +20,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, Self, TYPE_CHECKING, TypeVar
 from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, ClassVar, Self, TypeVar
 
 from exabgp.util.mypyc import mypyc_attr
 from exabgp.util.types import Buffer
@@ -31,11 +31,11 @@ if TYPE_CHECKING:
     from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 
 from exabgp.bgp.message import Action
-from exabgp.protocol.ip import IP
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.qualifier.path import PathInfo
 from exabgp.logger import lazynlri, log
 from exabgp.protocol.family import AFI, SAFI, Family, FamilyTuple
+from exabgp.protocol.ip import IP
 
 T = TypeVar('T', bound='NLRI')
 

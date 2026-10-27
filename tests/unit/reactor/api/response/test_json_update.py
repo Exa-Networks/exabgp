@@ -13,30 +13,31 @@ This catches regressions like:
 
 import json
 import socket
+
 import pytest
 
-from exabgp.bgp.message.update import UpdateCollection
+from exabgp.bgp.fsm import FSM
+from exabgp.bgp.message import Message
 from exabgp.bgp.message.notification import Notification
-from exabgp.bgp.message.operational import Advisory, Query, Response
 from exabgp.bgp.message.open import ASN, HoldTime, Open, RouterID, Version
 from exabgp.bgp.message.open.capability import ASN4, Capabilities, Capability
 from exabgp.bgp.message.open.capability.hostname import HostName
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.open.capability.software import Software
 from exabgp.bgp.message.open.capability.refresh import REFRESH
+from exabgp.bgp.message.open.capability.software import Software
+from exabgp.bgp.message.operational import Advisory, Query, Response
 from exabgp.bgp.message.refresh import RouteRefresh
-from exabgp.bgp.message.update.collection import RoutedNLRI
+from exabgp.bgp.message.update import UpdateCollection
 from exabgp.bgp.message.update.attribute import AttributeCollection, Origin
+from exabgp.bgp.message.update.collection import RoutedNLRI
 from exabgp.bgp.message.update.eor import EOR
-from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.protocol.ip import IPv4, IPv6
-from exabgp.protocol.family import AFI, SAFI
-from exabgp.reactor.interrupt import Signal
-from exabgp.reactor.api.response.json import JSON
-from exabgp.bgp.message import Message
-from exabgp.bgp.fsm import FSM
+from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.neighbor import Neighbor
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IPv4, IPv6
+from exabgp.reactor.api.response.json import JSON
+from exabgp.reactor.interrupt import Signal
 from tests import negotiation
 
 IPV4_UNICAST = (AFI.ipv4, SAFI.unicast)

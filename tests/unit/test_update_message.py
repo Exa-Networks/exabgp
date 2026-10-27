@@ -24,6 +24,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
+
 from tests import negotiation
 
 
@@ -88,11 +89,11 @@ def test_update_with_mandatory_attributes() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
-        create_ipv4_prefix,
-        create_origin_attribute,
         create_as_path_attribute,
+        create_ipv4_prefix,
         create_next_hop_attribute,
+        create_origin_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()
@@ -134,10 +135,10 @@ def test_update_missing_mandatory_origin() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
-        create_ipv4_prefix,
         create_as_path_attribute,
+        create_ipv4_prefix,
         create_next_hop_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()
@@ -171,10 +172,10 @@ def test_update_missing_mandatory_as_path() -> None:
     """Test UPDATE with announcement but missing AS_PATH."""
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
         create_ipv4_prefix,
-        create_origin_attribute,
         create_next_hop_attribute,
+        create_origin_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()
@@ -207,10 +208,10 @@ def test_update_missing_mandatory_next_hop() -> None:
     """Test UPDATE with IPv4 announcement but missing NEXT_HOP."""
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
+        create_as_path_attribute,
         create_ipv4_prefix,
         create_origin_attribute,
-        create_as_path_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()
@@ -248,13 +249,13 @@ def test_update_with_all_wellknown_attributes() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
-        create_ipv4_prefix,
-        create_origin_attribute,
         create_as_path_attribute,
-        create_next_hop_attribute,
-        create_med_attribute,
+        create_ipv4_prefix,
         create_local_pref_attribute,
+        create_med_attribute,
+        create_next_hop_attribute,
+        create_origin_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()
@@ -302,12 +303,12 @@ def test_update_attribute_order_independence() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
-        create_ipv4_prefix,
-        create_origin_attribute,
         create_as_path_attribute,
-        create_next_hop_attribute,
+        create_ipv4_prefix,
         create_med_attribute,
+        create_next_hop_attribute,
+        create_origin_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()
@@ -357,11 +358,11 @@ def test_update_with_withdrawn_and_announced() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
-        create_ipv4_prefix,
-        create_origin_attribute,
         create_as_path_attribute,
+        create_ipv4_prefix,
         create_next_hop_attribute,
+        create_origin_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()
@@ -388,7 +389,7 @@ def test_update_with_withdrawn_and_announced() -> None:
 def test_update_attribute_length_validation() -> None:
     """Test UPDATE with various attribute lengths including edge cases."""
     from exabgp.bgp.message.update import UpdateCollection
-    from tests.fuzz.update_helpers import create_update_message, create_origin_attribute
+    from tests.fuzz.update_helpers import create_origin_attribute, create_update_message
 
     negotiated = create_negotiated_mock()
 
@@ -407,11 +408,11 @@ def test_update_with_multiple_nlri_prefixes() -> None:
     """Test UPDATE announcing multiple prefixes at once."""
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
-        create_ipv4_prefix,
-        create_origin_attribute,
         create_as_path_attribute,
+        create_ipv4_prefix,
         create_next_hop_attribute,
+        create_origin_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()
@@ -442,7 +443,7 @@ def test_update_only_withdrawals_no_attributes() -> None:
     When withdrawing routes, no path attributes are required.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from tests.fuzz.update_helpers import create_update_message, create_ipv4_prefix
+    from tests.fuzz.update_helpers import create_ipv4_prefix, create_update_message
 
     negotiated = create_negotiated_mock()
 
@@ -472,7 +473,7 @@ def test_update_with_mp_reach_nlri() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.protocol.family import AFI, SAFI
-    from tests.fuzz.update_helpers import create_update_message, create_path_attribute
+    from tests.fuzz.update_helpers import create_path_attribute, create_update_message
 
     # Mock with IPv6 unicast family support
     negotiated = create_negotiated_mock(families=[(AFI.ipv6, SAFI.unicast)])
@@ -511,7 +512,7 @@ def test_update_with_mp_unreach_nlri() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.protocol.family import AFI, SAFI
-    from tests.fuzz.update_helpers import create_update_message, create_path_attribute
+    from tests.fuzz.update_helpers import create_path_attribute, create_update_message
 
     negotiated = create_negotiated_mock(families=[(AFI.ipv6, SAFI.unicast)])
 
@@ -566,7 +567,7 @@ def test_update_mp_reach_and_mp_unreach_together() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.protocol.family import AFI, SAFI
-    from tests.fuzz.update_helpers import create_update_message, create_path_attribute
+    from tests.fuzz.update_helpers import create_path_attribute, create_update_message
 
     negotiated = create_negotiated_mock(families=[(AFI.ipv6, SAFI.unicast)])
 
@@ -596,7 +597,7 @@ def test_update_mp_unreach_only_is_valid() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from exabgp.protocol.family import AFI, SAFI
-    from tests.fuzz.update_helpers import create_update_message, create_path_attribute
+    from tests.fuzz.update_helpers import create_path_attribute, create_update_message
 
     negotiated = create_negotiated_mock(families=[(AFI.ipv6, SAFI.unicast)])
 
@@ -628,11 +629,11 @@ def test_update_maximum_attributes_size() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
-        create_origin_attribute,
         create_as_path_attribute,
         create_next_hop_attribute,
+        create_origin_attribute,
         create_path_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()
@@ -667,7 +668,7 @@ def test_update_with_extended_length_attributes() -> None:
     must be set and length encoded in 2 bytes.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from tests.fuzz.update_helpers import create_update_message, create_path_attribute
+    from tests.fuzz.update_helpers import create_path_attribute, create_update_message
 
     negotiated = create_negotiated_mock()
 
@@ -698,11 +699,11 @@ def test_update_empty_as_path_allowed() -> None:
     """
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
-        create_ipv4_prefix,
-        create_origin_attribute,
         create_as_path_attribute,
+        create_ipv4_prefix,
         create_next_hop_attribute,
+        create_origin_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()
@@ -733,7 +734,7 @@ def test_update_with_duplicate_attributes_detected() -> None:
     RFC 4271: Duplicate attributes should result in TREAT_AS_WITHDRAW or error.
     """
     from exabgp.bgp.message.update import UpdateCollection
-    from tests.fuzz.update_helpers import create_update_message, create_origin_attribute
+    from tests.fuzz.update_helpers import create_origin_attribute, create_update_message
 
     negotiated = create_negotiated_mock()
 
@@ -757,10 +758,10 @@ def test_update_zero_length_nlri_section() -> None:
     """Test UPDATE with zero-length NLRI section (only attributes)."""
     from exabgp.bgp.message.update import UpdateCollection
     from tests.fuzz.update_helpers import (
-        create_update_message,
-        create_origin_attribute,
         create_as_path_attribute,
         create_next_hop_attribute,
+        create_origin_attribute,
+        create_update_message,
     )
 
     negotiated = create_negotiated_mock()

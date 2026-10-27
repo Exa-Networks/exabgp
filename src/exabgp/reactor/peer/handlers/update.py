@@ -5,15 +5,15 @@ This handler processes UPDATE messages and stores NLRIs in the incoming RIB.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
 from collections.abc import Generator
+from typing import TYPE_CHECKING, cast
 
 from exabgp.bgp.message import Message, Update
 from exabgp.bgp.message.update.eor import EOR
 from exabgp.environment import getenv
 from exabgp.logger import lazyformat, lazymsg, log
-from exabgp.reactor.peer.handlers.base import MessageHandler
 from exabgp.protocol.family import SAFI
+from exabgp.reactor.peer.handlers.base import MessageHandler
 from exabgp.rib import prefix_limit
 from exabgp.rib.route import Route
 

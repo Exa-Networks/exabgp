@@ -33,20 +33,18 @@ that corpus once it lands.
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 import json as jsonlib
-
 from collections.abc import Iterator
 from struct import pack
 from typing import Any
 
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-
 from tests.fuzz.strategies import payload
 
 pytestmark = pytest.mark.fuzz

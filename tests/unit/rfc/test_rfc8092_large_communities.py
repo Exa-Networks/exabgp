@@ -30,7 +30,6 @@ from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community import LargeCommunities, LargeCommunity
 from exabgp.configuration.grammar.types.bgp import large_community as _large_community
-
 from rfc.community_wire import parse, withdrawn
 
 LARGE_COMMUNITY = int(Attribute.CODE.LARGE_COMMUNITY)

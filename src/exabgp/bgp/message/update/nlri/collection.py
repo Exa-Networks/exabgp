@@ -9,11 +9,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
+from collections.abc import Generator, Mapping
 from struct import pack
-from collections.abc import Mapping
-from typing import cast, ClassVar, TYPE_CHECKING
-from collections.abc import Generator
+from typing import TYPE_CHECKING, ClassVar, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated

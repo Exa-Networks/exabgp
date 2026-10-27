@@ -55,9 +55,9 @@ Wire Format (_packed):
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, ClassVar
 
 from exabgp.util.types import Buffer
-from typing import ClassVar, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from exabgp.bgp.message.open.capability.negotiated import Negotiated

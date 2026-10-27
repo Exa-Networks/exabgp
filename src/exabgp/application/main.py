@@ -7,30 +7,31 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
-import argparse
 from collections.abc import MutableMapping
 from types import ModuleType
 from typing import cast
 
-from exabgp.application import cli
-from exabgp.application import run
-from exabgp.application import server
-from exabgp.application import decode
-from exabgp.application import encode
-from exabgp.application import environ
-from exabgp.application import version
-from exabgp.application import validate
-from exabgp.application import syntax
-from exabgp.application import healthcheck
-from exabgp.application import shell
-from exabgp.application import schema
-from exabgp.application import export
-from exabgp.application import example
-from exabgp.application import migrate
+from exabgp.application import (
+    cli,
+    decode,
+    encode,
+    environ,
+    example,
+    export,
+    healthcheck,
+    migrate,
+    run,
+    schema,
+    server,
+    shell,
+    syntax,
+    validate,
+    version,
+)
 from exabgp.environment.config import EnvironmentValueError
-
 
 # what a PyInstaller one-file binary points at the libraries it unpacked, keeping the value it
 # found under <name>_ORIG (LIBPATH is the AIX name of LD_LIBRARY_PATH)

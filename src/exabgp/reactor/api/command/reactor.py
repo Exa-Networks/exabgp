@@ -12,10 +12,9 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from exabgp.version import version as _version
-
-from exabgp.logger import log, lazymsg
+from exabgp.logger import lazymsg, log
 from exabgp.util.intvalue import json_number
+from exabgp.version import version as _version
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API

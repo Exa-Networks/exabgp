@@ -20,10 +20,9 @@ so a pytest file was the only place their equivalents could live.
 import ast
 import importlib.machinery
 import importlib.util
-from pathlib import Path
-
 import subprocess
 import types
+from pathlib import Path
 
 import pytest
 

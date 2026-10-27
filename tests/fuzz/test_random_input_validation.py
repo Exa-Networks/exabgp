@@ -8,16 +8,17 @@ This module provides property-based fuzz tests for critical parsing components:
 - Binary protocol data handling
 """
 
+import struct
 from typing import Any
 
 import pytest
-from hypothesis import given, strategies as st, settings, HealthCheck
-import struct
+from hypothesis import HealthCheck, given, settings
+from hypothesis import strategies as st
 
+from exabgp.bgp.message import Message
 from exabgp.bgp.message.notification import Notify
 from exabgp.reactor.network.error import LostConnection, NotifyError
 from tests.wire_reader import read_message
-from exabgp.bgp.message import Message
 
 pytestmark = pytest.mark.fuzz
 

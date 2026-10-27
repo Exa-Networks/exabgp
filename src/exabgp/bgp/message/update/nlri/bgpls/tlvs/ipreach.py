@@ -7,9 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
-from struct import unpack
 from ipaddress import ip_address
+from struct import unpack
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer

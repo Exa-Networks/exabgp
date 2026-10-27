@@ -21,7 +21,6 @@ import pytest
 
 from exabgp.environment import Environment
 
-
 HELPER = {'run': ['/bin/cat'], 'encoder': 'text', 'respawn': True}
 
 # a value whose bucket has room to spare, so nothing here lands on a boundary

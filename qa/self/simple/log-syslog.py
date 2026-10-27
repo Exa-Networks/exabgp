@@ -2,8 +2,8 @@
 
 import os
 import sys
-import time
 import syslog
+import time
 
 
 def _prefixed(level, message):

@@ -21,14 +21,13 @@ import pytest
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open import Open
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.operational import Operational
 from exabgp.configuration.setup import create_minimal_configuration
 from exabgp.reactor.api.response.text import Text, oneline
 from exabgp.reactor.api.response.v4.text import V4Text
 from exabgp.version import version
-from exabgp.bgp.message.open.capability.capability import Capability
 
 FORGED = 'a\nneighbor 1.2.3.4 down - forged'
 

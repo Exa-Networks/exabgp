@@ -11,9 +11,9 @@ Tests:
 - Shutdown command cleanly stops ExaBGP
 """
 
+import os
 import subprocess
 import sys
-import os
 import time
 
 # Paths relative to repository root

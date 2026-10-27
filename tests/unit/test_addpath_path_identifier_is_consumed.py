@@ -40,8 +40,8 @@ import pytest
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS
-from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.evpn.nlri import EVPN
+from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.mup.nlri import MUP
 from exabgp.bgp.message.update.nlri.mvpn.nlri import MVPN
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo

@@ -12,7 +12,6 @@ from struct import pack, unpack
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.types import Buffer
 
-
 #       0                   1                   2                   3
 #       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 #      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+

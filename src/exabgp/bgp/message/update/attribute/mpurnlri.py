@@ -7,10 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
+from collections.abc import Iterator
 from struct import unpack
 from typing import ClassVar
-from collections.abc import Iterator
 
 from exabgp.bgp.message.action import Action
 from exabgp.bgp.message.notification import NLRIDiscard, Notify

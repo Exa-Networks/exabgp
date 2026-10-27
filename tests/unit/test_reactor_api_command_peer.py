@@ -9,21 +9,20 @@ from unittest.mock import patch
 
 import pytest
 
-from exabgp.configuration.configuration import Configuration
-from exabgp.reactor.api.processes import Processes
-from exabgp.reactor.loop import Reactor
-
-from exabgp.protocol.ip import IP
-from exabgp.protocol.family import AFI, SAFI
 from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.routerid import RouterID
+from exabgp.configuration.configuration import Configuration
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
 from exabgp.reactor.api.command.peer import (
-    _parse_ip,
+    _build_neighbor,
     _parse_asn,
     _parse_families,
+    _parse_ip,
     _parse_neighbor_params,
-    _build_neighbor,
 )
+from exabgp.reactor.api.processes import Processes
+from exabgp.reactor.loop import Reactor
 
 
 class TestParseIP:
@@ -432,8 +431,8 @@ class TestNeighborCreateCommand:
 
     def test_create_peer_validates_configuration(self, reactor, client):
         """Test that created peer has correct configuration."""
-        from exabgp.reactor.api.command.peer import neighbor_create
         from exabgp.protocol.family import AFI, SAFI
+        from exabgp.reactor.api.command.peer import neighbor_create
 
         command = '10.0.0.2 local-address 10.0.0.1 local-as 65000 peer-as 65001 router-id 2.3.4.5 family-allowed ipv4-unicast/ipv6-unicast'
         result = neighbor_create(reactor.api, reactor, 'test-service', [], command, False)

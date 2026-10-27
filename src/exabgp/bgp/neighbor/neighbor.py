@@ -22,8 +22,8 @@ from exabgp.bgp.message.refresh import RouteRefresh
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, ASPath
 from exabgp.bgp.message.update.attribute.nexthop import NextHop
-from exabgp.bgp.neighbor.capability import GRACEFUL_RESTART_MAX_TIME, GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.message.update.attribute.otc import OTCSelf
+from exabgp.bgp.neighbor.capability import GRACEFUL_RESTART_MAX_TIME, GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.neighbor.session import Session
 from exabgp.protocol.family import AFI, SAFI, Family, FamilyTuple
 from exabgp.protocol.ip import IP

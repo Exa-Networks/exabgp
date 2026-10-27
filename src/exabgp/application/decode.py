@@ -1,20 +1,15 @@
 from __future__ import annotations
 
-import sys
-import string
 import argparse
+import string
+import sys
 
 from exabgp.configuration.configuration import Configuration
 from exabgp.configuration.setup import create_minimal_configuration
-
 from exabgp.debug.intercept import trace_interceptor
-
-from exabgp.environment import Env
-from exabgp.environment import getenv
-from exabgp.environment import getconf
-
-from exabgp.reactor.loop import Reactor
+from exabgp.environment import Env, getconf, getenv
 from exabgp.logger import log
+from exabgp.reactor.loop import Reactor
 
 
 def is_bgp(message: str) -> bool:

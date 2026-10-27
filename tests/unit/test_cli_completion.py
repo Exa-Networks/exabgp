@@ -5,7 +5,8 @@ Test CLI tab completion and auto-expansion functionality
 
 import json
 import unittest
-from exabgp.application.cli import CommandCompleter, OutputFormatter, InteractiveCLI
+
+from exabgp.application.cli import CommandCompleter, InteractiveCLI, OutputFormatter
 
 
 class TestCLICompletion(unittest.TestCase):

@@ -9,8 +9,7 @@ import argparse
 from io import StringIO
 from unittest.mock import patch
 
-
-from exabgp.application.decode import setargs, cmdline, is_bgp
+from exabgp.application.decode import cmdline, is_bgp, setargs
 
 
 class TestIsBgp:

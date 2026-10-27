@@ -7,9 +7,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.intvalue import IntValue
-
 from typing import ClassVar
+
+from exabgp.util.intvalue import IntValue
 
 
 class Version(IntValue):

@@ -4,7 +4,7 @@ import pytest
 
 from exabgp.bgp.message.open import ASN
 from exabgp.bgp.message.update.attribute import AttributeCollection
-from exabgp.bgp.message.update.attribute.aspath import ASPath, SEQUENCE
+from exabgp.bgp.message.update.attribute.aspath import SEQUENCE, ASPath
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.configuration.check import _negotiated, check_generation
 from exabgp.configuration.configuration import Configuration

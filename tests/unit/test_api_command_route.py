@@ -16,7 +16,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from tests.api_daemon import Daemon, FIRST, HELPER, SECOND, answer, failed
+from tests.api_daemon import FIRST, HELPER, SECOND, Daemon, answer, failed
 
 
 @pytest.fixture

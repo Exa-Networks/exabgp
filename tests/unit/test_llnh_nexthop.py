@@ -13,12 +13,11 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri.collection import MPNLRICollection
 from exabgp.protocol.family import AFI, SAFI
-from exabgp.protocol.ip import IPv6, IP
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.protocol.ip import IP, IPv6
 from tests import negotiation
-
 
 # ==============================================================================
 # Test Fixtures

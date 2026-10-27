@@ -20,11 +20,13 @@ Test Coverage:
     - Wraparound scenarios
 """
 
-import pytest
-from hypothesis import example, given, strategies as st, settings, HealthCheck
 import struct
 
-from tests.fuzz.update_helpers import create_update_message, create_ipv4_prefix
+import pytest
+from hypothesis import HealthCheck, example, given, settings
+from hypothesis import strategies as st
+
+from tests.fuzz.update_helpers import create_ipv4_prefix, create_update_message
 
 pytestmark = pytest.mark.fuzz
 
@@ -37,8 +39,8 @@ def test_update_split_with_random_data(data: bytes) -> None:
 
     The split() method should either parse successfully or raise Notify(3, 1).
     """
-    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import UpdateCollection
 
     try:
         withdrawn, attributes, announced = UpdateCollection.split(data)
@@ -87,8 +89,8 @@ def test_update_split_withdrawn_length_fuzzing(withdrawn_len: int) -> None:
     three assertions had never run.  The @example pins it, and the fuzzing around it still
     covers every value which must be refused.
     """
-    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import UpdateCollection
 
     # Create UPDATE with specific withdrawn length claim
     # Provide exactly 10 bytes of actual withdrawn data
@@ -130,8 +132,8 @@ def test_update_split_attr_length_fuzzing(attr_len: int) -> None:
     forty rounds of a hundred examples it came up zero times, so `len(announced) == 0` was
     a branch nobody had exercised.  The @example pins that boundary.
     """
-    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import UpdateCollection
 
     # Create UPDATE with specific attr length claim
     # Provide exactly 15 bytes of actual attribute data
@@ -228,8 +230,8 @@ def test_update_split_with_attributes_and_nlri() -> None:
 @settings(deadline=None)
 def test_update_split_truncation(truncate_at: int) -> None:
     """Test UPDATE truncated at various positions."""
-    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import UpdateCollection
 
     # Create a valid UPDATE with known size
     prefix = create_ipv4_prefix('192.0.2.0', 24)
@@ -269,8 +271,8 @@ def test_update_split_truncation(truncate_at: int) -> None:
 @pytest.mark.fuzz
 def test_update_split_length_one_byte_too_short() -> None:
     """Test withdrawn length claiming 1 byte too few."""
-    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import UpdateCollection
 
     # Actual data: 10 bytes, claim: 9 bytes
     actual_data = b'\x18\xc0\x00\x02' + b'\x08\x0a' * 3  # 10 bytes
@@ -291,8 +293,8 @@ def test_update_split_length_one_byte_too_short() -> None:
 @pytest.mark.fuzz
 def test_update_split_length_one_byte_too_long() -> None:
     """Test withdrawn length claiming 1 byte too many."""
-    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import UpdateCollection
 
     # Actual data: 10 bytes, claim: 11 bytes
     actual_data = b'\x18\xc0\x00\x02' + b'\x08\x0a' * 3  # 10 bytes
@@ -312,8 +314,8 @@ def test_update_split_length_one_byte_too_long() -> None:
 @pytest.mark.fuzz
 def test_update_split_total_length_mismatch() -> None:
     """Test when component lengths don't match total length."""
-    from exabgp.bgp.message.update import UpdateCollection
     from exabgp.bgp.message.notification import Notify
+    from exabgp.bgp.message.update import UpdateCollection
 
     # Claim 5 bytes of withdrawals but only provide 4 bytes + attr_len field
     data = (

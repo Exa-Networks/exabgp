@@ -11,7 +11,6 @@ from typing import ClassVar
 
 from exabgp.protocol.resource import BitResource
 
-
 # ====================================================================== TCPFlag
 # https://www.iana.org/assignments/tcp-header-flags
 

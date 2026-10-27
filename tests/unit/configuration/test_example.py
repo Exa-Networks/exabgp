@@ -8,8 +8,8 @@ every keyword of the neighbor block.
 from __future__ import annotations
 
 from argparse import Namespace
-from pathlib import Path
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 

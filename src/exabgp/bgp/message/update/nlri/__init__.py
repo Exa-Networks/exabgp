@@ -38,6 +38,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+# isort: off
+# in the order the modules need each other: imported sorted, a module asks this
+# package for a name it does not yet have
 from exabgp.bgp.message.update.nlri.nlri import NLRI, _UNPARSED
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 
@@ -54,6 +57,7 @@ from exabgp.bgp.message.update.nlri.mvpn import MVPN
 from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI  # noqa: F401
 from exabgp.bgp.message.update.nlri.empty import Empty
 from exabgp.bgp.message.update.nlri.collection import NLRICollection, MPNLRICollection
+# isort: on
 
 __all__ = [
     'NLRI',

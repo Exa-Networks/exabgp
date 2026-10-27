@@ -7,12 +7,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-
-from exabgp.util.types import Buffer
 from struct import pack, unpack
 from typing import ClassVar, TypeVar
 
 from exabgp.protocol.resource import Resource
+from exabgp.util.types import Buffer
 
 _ASN = TypeVar('_ASN', bound='ASN')
 

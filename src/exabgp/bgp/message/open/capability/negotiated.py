@@ -7,7 +7,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any, ClassVar, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 if TYPE_CHECKING:
     from exabgp.bgp.message import Open
@@ -17,6 +17,7 @@ if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
     from exabgp.protocol.ip import IP
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import AS_TRANS, ASN
 from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
 from exabgp.bgp.message.open.capability.extended import ExtendedMessage
@@ -27,10 +28,8 @@ from exabgp.bgp.message.open.capability.refresh import REFRESH
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.open.holdtime import HoldTime
 from exabgp.bgp.message.open.routerid import RouterID
-from exabgp.bgp.message.notification import Notify
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.util.enumeration import TriState
-
 
 # what labels_limit answers where no capability binds the number of labels
 LABELS_UNLIMITED = 0xFFFF
@@ -221,8 +220,8 @@ class Negotiated:
         self.paths_limit = {}
         self.advertised_paths_limit = {}
         if recv_capa.announced(Capability.CODE.ADD_PATH) and sent_capa.announced(Capability.CODE.ADD_PATH):
-            from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
             from exabgp.bgp.message.open.capability.addpath import AddPath
+            from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
             recv_pl = recv_capa.get(Capability.CODE.PATHS_LIMIT, None)
             recv_ap = recv_capa.get(Capability.CODE.ADD_PATH, None)

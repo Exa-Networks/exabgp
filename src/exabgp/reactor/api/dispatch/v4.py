@@ -22,8 +22,8 @@ from __future__ import annotations
 from types import ModuleType
 from typing import TYPE_CHECKING
 
-from exabgp.reactor.api.dispatch.common import Handler, UnknownCommand, NoMatchingPeers
 from exabgp.reactor.api.command.limit import extract_neighbors, match_neighbors
+from exabgp.reactor.api.dispatch.common import Handler, NoMatchingPeers, UnknownCommand
 
 if TYPE_CHECKING:
     from exabgp.reactor.loop import Reactor

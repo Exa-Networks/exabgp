@@ -10,11 +10,12 @@ Created: 2025-11-08
 """
 
 import asyncio
-import pytest
 import os
 import socket
 import struct
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 # Set up environment before importing ExaBGP modules
 os.environ['exabgp_log_enable'] = 'false'
@@ -23,9 +24,9 @@ os.environ['exabgp_log_level'] = 'CRITICAL'
 from exabgp.protocol.family import AFI
 from exabgp.reactor.network.connection import Connection
 from exabgp.reactor.network.error import (
-    NotConnected,
     LostConnection,
     NetworkError,
+    NotConnected,
     errno,
 )
 from tests.wire_reader import loopback_connection

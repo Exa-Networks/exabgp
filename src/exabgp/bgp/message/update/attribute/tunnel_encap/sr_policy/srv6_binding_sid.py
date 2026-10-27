@@ -24,8 +24,8 @@ import socket
 from struct import pack
 from typing import ClassVar
 
-from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import MalformedSubTLV, SubTLV
 from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy.segment_list import SRv6EndpointBehavior
+from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import MalformedSubTLV, SubTLV
 from exabgp.util.types import Buffer
 
 _SRV6_BSID_VALUE_BASE_SIZE = 18  # flags(1) + reserved(1) + sid(16)

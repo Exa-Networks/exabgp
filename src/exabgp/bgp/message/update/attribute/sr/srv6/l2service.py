@@ -6,12 +6,12 @@ Copyright (c) 2022 Ryoga Saito. All rights reserved.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from struct import pack, unpack
 from typing import Any, ClassVar, Protocol, TypeVar
-from collections.abc import Callable
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid, SR_TLV_SRV6_L2_SERVICE
+from exabgp.bgp.message.update.attribute.sr.prefixsid import SR_TLV_SRV6_L2_SERVICE, PrefixSid
 from exabgp.bgp.message.update.attribute.sr.srv6.generic import GenericSrv6ServiceSubTlv
 from exabgp.util.types import Buffer
 

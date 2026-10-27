@@ -6,9 +6,8 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 
 from __future__ import annotations
 
-
-from exabgp.protocol.ip import IPv6
 from exabgp.bgp.message.notification import Notify
+from exabgp.protocol.ip import IPv6
 from exabgp.util.types import Buffer
 
 #     RFC 9514 6.1.  SRv6 SID Information TLV

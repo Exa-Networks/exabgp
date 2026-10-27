@@ -55,10 +55,9 @@ from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community import Communities, Community
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.configuration.configuration import Configuration
+from exabgp.configuration.grammar.types.bgp import community as _community
 from exabgp.rib import RIB
 from exabgp.rib.route import Route
-from exabgp.configuration.grammar.types.bgp import community as _community
-
 from rfc.community_wire import attribute, parse, withdrawn
 
 COMMUNITY = int(Attribute.CODE.COMMUNITY)

@@ -10,7 +10,7 @@ from exabgp.bgp.message.open.asn import ASN
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.open.capability.role import RoleValue
 from exabgp.bgp.message.update import Update
-from exabgp.bgp.message.update.attribute import Attribute, AttributeCollection, OTC, OTCNone, OTCSelf
+from exabgp.bgp.message.update.attribute import OTC, Attribute, AttributeCollection, OTCNone, OTCSelf
 from exabgp.bgp.neighbor import Neighbor
 
 

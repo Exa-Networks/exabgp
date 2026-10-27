@@ -27,7 +27,6 @@ from exabgp.bgp.message.update.attribute.aspath import CONFED_SEQUENCE, CONFED_S
 from exabgp.bgp.message.update.attribute.localpref import LocalPreference
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.configuration.configuration import Configuration
-
 from rfc.rfc7606_wire import (
     NEXT_HOP,
     ORIGIN_IGP,

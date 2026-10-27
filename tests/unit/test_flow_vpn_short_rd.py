@@ -18,11 +18,10 @@ against a correct fix -- INVALID is the observable peer-facing effect of the fix
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 import pytest
 
 from exabgp.bgp.message import Action
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.nlri import NLRI
 from exabgp.bgp.message.update.nlri.flow import Flow
 from exabgp.bgp.message.update.nlri.qualifier import RouteDistinguisher

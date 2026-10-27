@@ -6,20 +6,19 @@ Unit tests for exabgp.util modules
 
 import errno
 import resource
-from unittest.mock import patch
-
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 
-from exabgp.util.dictionary import Dictionary
-from exabgp.util.enumeration import enum
-from exabgp.util.usage import usage
-from exabgp.util.errstr import errstr
-from exabgp.util.ip import isipv4, isipv6, isip
-from exabgp.util.od import od
 from exabgp.util import dns
-from exabgp.util.dns import host, domain
+from exabgp.util.dictionary import Dictionary
+from exabgp.util.dns import domain, host
+from exabgp.util.enumeration import enum
+from exabgp.util.errstr import errstr
+from exabgp.util.ip import isip, isipv4, isipv6
+from exabgp.util.od import od
+from exabgp.util.usage import usage
 
 
 class TestDictionary:

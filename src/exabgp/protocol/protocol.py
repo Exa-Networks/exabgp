@@ -11,7 +11,6 @@ from typing import ClassVar
 
 from exabgp.protocol.resource import Resource
 
-
 # ===================================================================== Protocol
 # https://www.iana.org/assignments/protocol-numbers/
 

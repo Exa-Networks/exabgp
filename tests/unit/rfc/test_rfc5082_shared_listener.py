@@ -21,6 +21,7 @@ from __future__ import annotations
 import platform
 import socket
 from collections.abc import Iterator
+
 import pytest
 
 from exabgp.bgp.neighbor import Neighbor

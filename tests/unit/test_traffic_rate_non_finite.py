@@ -34,8 +34,6 @@ See https://github.com/Exa-Networks/exabgp/issues/1426.
 
 from __future__ import annotations
 
-from exabgp.bgp.message.open.capability.negotiated import Negotiated
-
 from struct import pack
 from typing import Any
 
@@ -43,11 +41,11 @@ import pytest
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import ASN
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update import Update
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate
-from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRatePackets
+from exabgp.bgp.message.update.attribute.community.extended.traffic import TrafficRate, TrafficRatePackets
 from exabgp.protocol.family import AFI, SAFI
 from tests import negotiation
 

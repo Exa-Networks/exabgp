@@ -13,9 +13,9 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from abc import abstractmethod
+from collections.abc import Iterator, Mapping
 from enum import Enum
 from typing import Any
-from collections.abc import Iterator, Mapping
 
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax

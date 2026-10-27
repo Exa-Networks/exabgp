@@ -3,8 +3,8 @@ from __future__ import annotations
 import os
 import time
 import traceback
-from typing import Any, TYPE_CHECKING
 from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from exabgp.protocol.family import AFI, SAFI

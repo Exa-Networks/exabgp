@@ -17,7 +17,7 @@ import socket as sock
 import sys
 import threading
 import time
-from queue import Queue, Empty
+from queue import Empty, Queue
 from typing import Any
 
 from exabgp.cli.colors import Colors

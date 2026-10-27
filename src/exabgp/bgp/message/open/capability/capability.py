@@ -9,6 +9,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from collections.abc import Callable, ItemsView, Iterable, Iterator, KeysView, ValuesView
 from typing import (
     Any,
     ClassVar,
@@ -16,7 +17,6 @@ from typing import (
     TypeVar,
     overload,
 )
-from collections.abc import Callable, ItemsView, Iterable, Iterator, KeysView, ValuesView
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.util.intvalue import IntValue

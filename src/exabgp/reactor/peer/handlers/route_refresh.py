@@ -5,8 +5,8 @@ This handler processes ROUTE_REFRESH messages and triggers route resend.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
 from collections.abc import Callable, Generator
+from typing import TYPE_CHECKING, cast
 
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.open.capability.capability import Capability

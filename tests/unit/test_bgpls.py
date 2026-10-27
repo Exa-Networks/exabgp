@@ -14,27 +14,27 @@ RFC 7752: North-Bound Distribution of Link-State and Traffic Engineering (TE) In
 RFC 9514: Border Gateway Protocol - Link State (BGP-LS) Extensions for Segment Routing over IPv6 (SRv6)
 """
 
-from exabgp.bgp.neighbor import Neighbor
+from struct import pack
 
 import pytest
-from struct import pack
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
-from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, GenericBGPLS, PROTO_CODES
-from exabgp.bgp.message.update.nlri.bgpls.node import NODE
 from exabgp.bgp.message.update.nlri.bgpls.link import LINK
+from exabgp.bgp.message.update.nlri.bgpls.nlri import BGPLS, PROTO_CODES, GenericBGPLS
+from exabgp.bgp.message.update.nlri.bgpls.node import NODE
 from exabgp.bgp.message.update.nlri.bgpls.prefixv4 import PREFIXv4
 from exabgp.bgp.message.update.nlri.bgpls.prefixv6 import PREFIXv6
 from exabgp.bgp.message.update.nlri.bgpls.srv6sid import SRv6SID
-from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ipreach import IpReach
+from exabgp.bgp.message.update.nlri.bgpls.tlvs.node import NodeDescriptor
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.ospfroute import OspfRoute
 from exabgp.bgp.message.update.nlri.bgpls.tlvs.srv6sidinformation import Srv6SIDInformation
+from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
+from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
 from tests import negotiation
-from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
 
 def with_bgpls_header(code: int, payload: bytes) -> bytes:
@@ -1065,8 +1065,9 @@ class TestBGPLSLinkAttributes:
 
     def test_max_bandwidth(self) -> None:
         """Test MaxBw attribute (TLV 1089)"""
-        from exabgp.bgp.message.update.attribute.bgpls.link.maxbw import MaxBw
         from struct import pack
+
+        from exabgp.bgp.message.update.attribute.bgpls.link.maxbw import MaxBw
 
         # 1 Gbps in bytes/sec as float
         bandwidth = 125000000.0
@@ -1078,8 +1079,9 @@ class TestBGPLSLinkAttributes:
 
     def test_rsvp_bandwidth(self) -> None:
         """Test MaxReservableBw attribute (TLV 1090)"""
-        from exabgp.bgp.message.update.attribute.bgpls.link.maxreservablebw import MaxReservableBw
         from struct import pack
+
+        from exabgp.bgp.message.update.attribute.bgpls.link.maxreservablebw import MaxReservableBw
 
         bandwidth = 100000000.0
         data = pack('!f', bandwidth)
@@ -1090,8 +1092,9 @@ class TestBGPLSLinkAttributes:
 
     def test_unreserved_bandwidth(self) -> None:
         """Test UnreservedBw attribute (TLV 1091)"""
-        from exabgp.bgp.message.update.attribute.bgpls.link.unreservedbw import UnreservedBw
         from struct import pack
+
+        from exabgp.bgp.message.update.attribute.bgpls.link.unreservedbw import UnreservedBw
 
         # 8 priority levels, each 4 bytes (float)
         bandwidths = [100000000.0] * 8
@@ -1103,8 +1106,9 @@ class TestBGPLSLinkAttributes:
 
     def test_te_metric(self) -> None:
         """Test TeMetric attribute (TLV 1092)"""
-        from exabgp.bgp.message.update.attribute.bgpls.link.temetric import TeMetric
         from struct import pack
+
+        from exabgp.bgp.message.update.attribute.bgpls.link.temetric import TeMetric
 
         metric = 100
         data = pack('!I', metric)

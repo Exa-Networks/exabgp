@@ -4,10 +4,10 @@ This test file validates that INET factory methods correctly handle
 explicit AFI parameters, avoiding the /32 IPv6 misclassification bug.
 """
 
-from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.cidr import CIDR
-from exabgp.protocol.family import AFI, SAFI
+from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
+from exabgp.protocol.family import AFI, SAFI
 
 
 class TestINETFromCidr:

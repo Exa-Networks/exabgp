@@ -44,16 +44,14 @@ import pytest
 from exabgp.bgp.message.update.attribute import AttributeCollection, Origin
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
-from exabgp.protocol.ip import IP
-from exabgp.rib import cache as cache_module
-from exabgp.rib.route import Route
-
-
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.protocol.ip import IP
 from exabgp.reactor import asynchronous as asynchronous_module
 from exabgp.reactor import listener as listener_module
 from exabgp.reactor.asynchronous import ASYNC
+from exabgp.rib import cache as cache_module
 from exabgp.rib.cache import Cache
+from exabgp.rib.route import Route
 
 
 class RecordingSocket:

@@ -150,7 +150,7 @@ class TestAddRouteToConfig:
 
     def test_add_route_basic(self):
         """add_route_to_config() should add route to neighbor RIB."""
-        from exabgp.configuration.setup import create_minimal_configuration, add_route_to_config
+        from exabgp.configuration.setup import add_route_to_config, create_minimal_configuration
 
         config = create_minimal_configuration(peer_address='127.0.1.1', families='ipv4 unicast')
         result = add_route_to_config(config, 'route 10.0.0.0/24 next-hop 1.2.3.4')
@@ -163,7 +163,7 @@ class TestAddRouteToConfig:
 
     def test_add_route_preserves_neighbors(self):
         """add_route_to_config() should preserve neighbors."""
-        from exabgp.configuration.setup import create_minimal_configuration, add_route_to_config
+        from exabgp.configuration.setup import add_route_to_config, create_minimal_configuration
 
         config = create_minimal_configuration(peer_address='127.0.1.2', families='ipv4 unicast')
         neighbor_count_before = len(config.neighbors)
@@ -174,7 +174,7 @@ class TestAddRouteToConfig:
 
     def test_add_route_invalid_syntax(self):
         """add_route_to_config() should return False for invalid route syntax."""
-        from exabgp.configuration.setup import create_minimal_configuration, add_route_to_config
+        from exabgp.configuration.setup import add_route_to_config, create_minimal_configuration
 
         config = create_minimal_configuration(peer_address='127.0.1.3', families='ipv4 unicast')
         result = add_route_to_config(config, 'invalid route syntax')
@@ -183,7 +183,7 @@ class TestAddRouteToConfig:
 
     def test_add_multiple_routes(self):
         """add_route_to_config() should work for multiple route additions."""
-        from exabgp.configuration.setup import create_minimal_configuration, add_route_to_config
+        from exabgp.configuration.setup import add_route_to_config, create_minimal_configuration
 
         config = create_minimal_configuration(peer_address='127.0.1.4', families='ipv4 unicast')
 

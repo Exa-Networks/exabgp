@@ -7,11 +7,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from struct import pack
 from typing import ClassVar
 
 from exabgp.util.intvalue import IntValue
-
-from struct import pack
 
 # =================================================================== HoldTime
 

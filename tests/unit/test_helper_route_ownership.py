@@ -12,18 +12,18 @@ helper crash never takes a static route with it.
 from __future__ import annotations
 
 import asyncio
-from types import SimpleNamespace
 from collections.abc import Iterator
+from types import SimpleNamespace
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from exabgp.environment import Environment
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.attribute.med import MED
 from exabgp.bgp.message.update.nlri.cidr import CIDR
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.configuration.configuration import Configuration
+from exabgp.environment import Environment
 from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IP
 from exabgp.reactor.api.dispatch.version import API_AUTO, API_V4, API_V6

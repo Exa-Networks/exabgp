@@ -7,35 +7,29 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from exabgp.util.intvalue import IntValue
-
-from exabgp.util.types import Buffer
-from typing import ClassVar, TYPE_CHECKING
-
-from exabgp.protocol.family import AFI, SAFI, FamilyTuple
-
-from exabgp.bgp.message.open.asn import ASN, AS_TRANS
-from exabgp.bgp.message.open.capability.capability import Capability
-from exabgp.bgp.message.open.capability.capability import CapabilityCode
-from exabgp.bgp.message.open.capability.nexthop import NextHop
-from exabgp.bgp.message.open.capability.addpath import AddPath
-from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
-from exabgp.bgp.message.open.capability.labels import MultipleLabels
-from exabgp.bgp.message.open.capability.asn4 import ASN4
-from exabgp.bgp.message.open.capability.graceful import Graceful
-from exabgp.bgp.message.open.capability.mp import MultiProtocol
-from exabgp.bgp.message.open.capability.ms import MultiSession
-from exabgp.bgp.message.open.capability.operational import Operational
-from exabgp.bgp.message.open.capability.refresh import RouteRefresh
-from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh
-from exabgp.bgp.message.open.capability.extended import ExtendedMessage
-from exabgp.bgp.message.open.capability.hostname import HostName
-from exabgp.bgp.message.open.capability.software import Software
-from exabgp.bgp.message.open.capability.role import Role, RoleValue
+from struct import pack, unpack
+from typing import TYPE_CHECKING, ClassVar
 
 from exabgp.bgp.message.notification import Notify
-
-from struct import pack, unpack
+from exabgp.bgp.message.open.asn import AS_TRANS, ASN
+from exabgp.bgp.message.open.capability.addpath import AddPath
+from exabgp.bgp.message.open.capability.asn4 import ASN4
+from exabgp.bgp.message.open.capability.capability import Capability, CapabilityCode
+from exabgp.bgp.message.open.capability.extended import ExtendedMessage
+from exabgp.bgp.message.open.capability.graceful import Graceful
+from exabgp.bgp.message.open.capability.hostname import HostName
+from exabgp.bgp.message.open.capability.labels import MultipleLabels
+from exabgp.bgp.message.open.capability.mp import MultiProtocol
+from exabgp.bgp.message.open.capability.ms import MultiSession
+from exabgp.bgp.message.open.capability.nexthop import NextHop
+from exabgp.bgp.message.open.capability.operational import Operational
+from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
+from exabgp.bgp.message.open.capability.refresh import EnhancedRouteRefresh, RouteRefresh
+from exabgp.bgp.message.open.capability.role import Role, RoleValue
+from exabgp.bgp.message.open.capability.software import Software
+from exabgp.protocol.family import AFI, SAFI, FamilyTuple
+from exabgp.util.intvalue import IntValue
+from exabgp.util.types import Buffer
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor

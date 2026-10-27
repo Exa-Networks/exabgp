@@ -7,19 +7,16 @@ Copyright (c) 2025 Exa Networks. All rights reserved.
 from __future__ import annotations
 
 import json
-from struct import pack, unpack
-from exabgp.protocol.iso import ISO
-
-from typing import ClassVar, Protocol, Self
 from collections.abc import Callable
+from struct import pack, unpack
+from typing import ClassVar, Protocol, Self
 
 from exabgp.bgp.message.notification import Notify
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
-from exabgp.bgp.message.update.attribute.bgpls.linkstate import merge_subtlvs, unpack_subtlvs
+from exabgp.bgp.message.update.attribute.bgpls.linkstate import FlagLS, LinkState, merge_subtlvs, unpack_subtlvs
 from exabgp.protocol.ip import IP, IPv6
-from exabgp.util.types import Buffer
+from exabgp.protocol.iso import ISO
 from exabgp.util.intvalue import json_number
+from exabgp.util.types import Buffer
 
 
 class SubSubTLV(Protocol):
