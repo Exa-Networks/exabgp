@@ -48,6 +48,12 @@ from exabgp.bgp.message.update.attribute.community import (
     LargeCommunity,
 )
 from exabgp.bgp.message.update.attribute.community.extended.l2info import CONTROL_FLAGS_DEFINED
+from exabgp.bgp.message.update.attribute.community.extended.rt import (
+    RouteTarget,
+    RouteTargetASN2Number,
+    RouteTargetASN4Number,
+    RouteTargetIPNumber,
+)
 from exabgp.bgp.message.update.attribute.internal import InternalNumber, InternalText
 from exabgp.bgp.message.update.attribute.internal import Name as InternalName
 from exabgp.bgp.message.update.attribute.internal import Split as InternalSplit
@@ -840,6 +846,32 @@ def extended_community(word: str) -> ExtendedCommunity:
     components = [_integer(part) if _digit(part) else _ipv4(part, word) for part in parts]
     header, encoding = _encode(command, components, parts)
     return _decoded_extended_community(header + pack(encoding, *components))
+
+
+def route_target(word: str) -> RouteTarget:
+    """A route target, `<asn>:<number>` or `<ip>:<number>`, `target:` in front or not.
+
+    Only the three route target encodings are built, so what comes back is a RouteTarget
+    by construction and nothing has to ask afterwards.
+    """
+    parts = word.removeprefix('target:').split(':')
+    if len(parts) != len(_ENCODE['target']):
+        raise ValueError(f"'{word}' is not a route target, it is <asn>:<number> or <ip>:<number>")
+    components = [_integer(part) if _digit(part) else _ipv4(part, word) for part in parts]
+    header, encoding = _encode('target', components, parts)
+    klass = _ROUTE_TARGETS[header]
+    try:
+        return klass.unpack_attribute(header + pack(encoding, *components))
+    except Notify as exc:
+        raise ValueError(f'invalid route target {word}: {exc.detail}') from None
+
+
+# the class of each route target encoding _encode picks for a `target`
+_ROUTE_TARGETS: dict[bytes, type[RouteTargetASN2Number | RouteTargetIPNumber | RouteTargetASN4Number]] = {
+    _HEADER['target']: RouteTargetASN2Number,
+    _HEADER['target4']: RouteTargetIPNumber,
+    _HEADER['target-as4']: RouteTargetASN4Number,
+}
 
 
 class ExtendedCommunitiesType(Type[ExtendedCommunities]):

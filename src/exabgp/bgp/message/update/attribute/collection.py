@@ -368,6 +368,18 @@ class AttributeCollection(MutableMapping[int, Attribute]):
     def has(self, k: int) -> bool:
         return k in self._data
 
+    def parsed[A: Attribute](self, klass: type[A]) -> A | None:
+        """The attribute of `klass`'s code, as `klass`: None when absent or kept generic.
+
+        Each attribute is stored under its own code, and the one class parsing a code is the
+        one registered for it, so an attribute which is not generic is `klass`. Kept generic,
+        the attribute is the bytes of one ExaBGP could not parse, which `klass` is not.
+        """
+        attribute = self._data.get(klass.ID)
+        if attribute is None or attribute.GENERIC:
+            return None
+        return cast(A, attribute)
+
     def add(self, attribute: Attribute | None, _: Any = None) -> None:
         # we return None as attribute if the unpack code must not generate them
         if attribute is None:

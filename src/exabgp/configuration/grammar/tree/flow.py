@@ -387,7 +387,7 @@ def traffic_action(community: Any) -> tuple[str, list[WordOrSyntax]] | None:
 
 def action_pairs(route: Route) -> list[tuple[str, list[WordOrSyntax]]]:
     """The actions of a flow route, as keyword and words; ValueError when one has no statement."""
-    from exabgp.bgp.message.update.attribute import Attribute, GenericAttribute
+    from exabgp.bgp.message.update.attribute import Attribute
     from exabgp.bgp.message.update.attribute.community.extended import TrafficNextHopIPv6IETF, TrafficRedirectIPv6
     from exabgp.configuration.grammar.types.base import Syntax
     from exabgp.configuration.grammar.types.bgp import HexAttribute
@@ -395,7 +395,7 @@ def action_pairs(route: Route) -> list[tuple[str, list[WordOrSyntax]]]:
     actions: list[tuple[str, list[WordOrSyntax]]] = []
     attribute: Any
     for code, attribute in route.attributes.items():
-        if isinstance(attribute, GenericAttribute):
+        if attribute.GENERIC:
             actions.append(('attribute', HexAttribute().render(attribute)))
         elif code == Attribute.CODE.EXTENDED_COMMUNITY:
             others: list[WordOrSyntax] = []
@@ -412,11 +412,15 @@ def action_pairs(route: Route) -> list[tuple[str, list[WordOrSyntax]]]:
             # the brackets of a list are syntax: as words, they were printed quoted, `"["`
             actions.append((keyword, text_words(str(attribute)) or [Syntax('['), Syntax(']')]))
         elif code == Attribute.CODE.IPV6_EXTENDED_COMMUNITY:
+            # the community says what it is by its type and sub-type, as on the wire
+            redirect = (TrafficRedirectIPv6.COMMUNITY_TYPE, TrafficRedirectIPv6.COMMUNITY_SUBTYPE)
+            nexthop = (TrafficNextHopIPv6IETF.COMMUNITY_TYPE, TrafficNextHopIPv6IETF.COMMUNITY_SUBTYPE)
             for each in attribute.communities:
-                if isinstance(each, TrafficRedirectIPv6):
+                kind = (each.COMMUNITY_TYPE, each.COMMUNITY_SUBTYPE)
+                if kind == redirect:
                     address, number = str(each).split()[-1][1:].split(']:')
                     actions.append(('redirect', [Syntax('['), address, Syntax(']'), f':{number}']))
-                elif isinstance(each, TrafficNextHopIPv6IETF):
+                elif kind == nexthop:
                     name, address = str(each).split()[:2]
                     actions.append(('copy' if name.startswith('copy') else 'redirect-to-nexthop-ietf', [address]))
                 else:

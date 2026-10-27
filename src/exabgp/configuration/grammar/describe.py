@@ -67,16 +67,22 @@ def locate(root: Block, path: list[str]) -> Block | Leaf:
     A keyword both a statement and a section (`route`) is the section: its statements are
     the values the one-line form takes too.
     """
-    node: Block | Leaf = root
-    for index, keyword in enumerate(path[:MAX_DEPTH]):
-        if isinstance(node, Leaf):
-            raise ValueError(f"'{path[index - 1]}' is a statement, it has no '{keyword}'")
-        child = node.block(keyword) or node.leaf(keyword)
-        if child is None:
-            known = ', '.join(each.keyword for each in node.children)
-            raise ValueError(f"no keyword '{keyword}' in {node.keyword or 'the configuration'}, only: {known}")
-        node = child
-    return node
+    block = root
+    walked = path[:MAX_DEPTH]
+    for index, keyword in enumerate(walked):
+        found = block.block(keyword)
+        if found is not None:
+            block = found
+            continue
+        leaf = block.leaf(keyword)
+        if leaf is None:
+            known = ', '.join(each.keyword for each in block.children)
+            raise ValueError(f"no keyword '{keyword}' in {block.keyword or 'the configuration'}, only: {known}")
+        # a statement ends the walk: what follows it would be inside a statement
+        if index + 1 < len(walked):
+            raise ValueError(f"'{keyword}' is a statement, it has no '{walked[index + 1]}'")
+        return leaf
+    return block
 
 
 def _statement(root: Block, path: list[str]) -> Leaf:

@@ -604,6 +604,29 @@ def test_flow_acl_rejects_injection() -> None:
         ACL._build({'destination-port': ['99999']}, 'drop')
 
 
+@pytest.mark.parametrize(
+    'flow',
+    [
+        {'source-ipv4': [['10.0.0.0/24']]},
+        {'destination-ipv4': [True]},
+        {'protocol': [['6']]},
+        {'destination-port': [False]},
+    ],
+)
+def test_flow_acl_refuses_a_value_json_did_not_give_as_one(flow: dict[str, list[object]]) -> None:
+    """A list or a boolean is read as its text, which is no prefix and no number."""
+    from exabgp.application.flow import ACL
+
+    with pytest.raises(ValueError):
+        ACL._build(flow, 'drop')
+
+
+def test_flow_acl_takes_a_port_json_gave_as_a_number() -> None:
+    from exabgp.application.flow import ACL
+
+    assert '--dport 80' in ACL._build({'destination-port': [80]}, 'drop')
+
+
 def test_flow_acl_renders_a_valid_rule() -> None:
     from exabgp.application.flow import ACL
 

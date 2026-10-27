@@ -79,22 +79,27 @@ class ACL:
         return output
 
     @staticmethod
-    def _prefix(value: Any, what: str) -> str:
+    def _text(flow: dict[str, Any], what: str) -> str:
+        """The first value of a flow component, as text, whatever JSON type it arrived as.
+
+        Its type is not checked: _prefix and _number accept only the text of a prefix or of
+        a number, so a list or a boolean, as text, is refused there with everything else.
+        """
+        return str(flow[what][0])
+
+    @staticmethod
+    def _prefix(value: str, what: str) -> str:
         """Validate an IPv4 prefix before it goes into an ACL rule."""
-        if not isinstance(value, str):
-            raise ValueError(f'{what} is not a string')
         return str(ipaddress.IPv4Network(value, strict=False))
 
     @staticmethod
-    def _number(value: Any, what: str, maximum: int) -> str:
+    def _number(value: str, what: str, maximum: int) -> str:
         """Validate a numeric flow component before it goes into an ACL rule.
 
         FlowSpec numbers arrive with their comparison operator attached (">=1024"),
         which iptables can not express, so the operator is dropped as it always was.
         Only a plain decimal number is accepted once it is gone.
         """
-        if not isinstance(value, str):
-            raise ValueError(f'{what} is not a string')
         number = re.sub('[!<>=]', '', value)
         if not number.isascii() or not number.isdigit():
             raise ValueError(f'{what} "{value}" is not a number')
@@ -112,15 +117,15 @@ class ACL:
         """
         acl = '[iptables]\n-A FORWARD --in-interface swp+'
         if 'protocol' in flow:
-            acl += ' -p ' + cls._number(flow['protocol'][0], 'protocol', 255)
+            acl += ' -p ' + cls._number(cls._text(flow, 'protocol'), 'protocol', 255)
         if 'source-ipv4' in flow:
-            acl += ' -s ' + cls._prefix(flow['source-ipv4'][0], 'source-ipv4')
+            acl += ' -s ' + cls._prefix(cls._text(flow, 'source-ipv4'), 'source-ipv4')
         if 'destination-ipv4' in flow:
-            acl += ' -d ' + cls._prefix(flow['destination-ipv4'][0], 'destination-ipv4')
+            acl += ' -d ' + cls._prefix(cls._text(flow, 'destination-ipv4'), 'destination-ipv4')
         if 'source-port' in flow:
-            acl += ' --sport ' + cls._number(flow['source-port'][0], 'source-port', 65535)
+            acl += ' --sport ' + cls._number(cls._text(flow, 'source-port'), 'source-port', 65535)
         if 'destination-port' in flow:
-            acl += ' --dport ' + cls._number(flow['destination-port'][0], 'destination-port', 65535)
+            acl += ' --dport ' + cls._number(cls._text(flow, 'destination-port'), 'destination-port', 65535)
         acl = acl + ' -j DROP\n'
         return acl
 

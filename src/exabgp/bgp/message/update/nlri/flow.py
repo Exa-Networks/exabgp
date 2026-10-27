@@ -119,6 +119,9 @@ class IComponent:
     NAME: ClassVar[str] = ''  # Human-readable name, set by subclasses
     FLAG: ClassVar[bool] = False
     decoder: ClassVar[Callable[[bytes], BaseValue]]  # Value decoder, set by subclasses
+    # how the component is read: 'prefix', 'numeric' or 'binary', set by IPrefix and the
+    # string mixins (declared, not given a value: here it would shadow theirs)
+    OPERATION: ClassVar[str]
 
     # Operator byte - 0 for prefix types, set by IOperation subclasses
     operations: int = 0
@@ -255,7 +258,7 @@ class FlowIPv6:
 
 @trait
 class IPrefix:
-    pass
+    OPERATION: ClassVar[str] = 'prefix'
 
 
 # Prococol
@@ -1048,17 +1051,8 @@ for kls in COMPONENTS:
         factory[_afi][_ID] = kls
         name = kls.NAME
 
-        if issubclass(kls, IOperation):
-            if issubclass(kls, BinaryString):
-                decode[_afi][_ID] = 'binary'
-            elif issubclass(kls, NumericString):
-                decode[_afi][_ID] = 'numeric'
-            else:
-                raise RuntimeError('invalid class defined (string)')
-        elif issubclass(kls, IPrefix):
-            decode[_afi][_ID] = 'prefix'
-        else:
-            raise RuntimeError('unvalid class defined (type)')
+        assert kls.OPERATION in ('prefix', 'numeric', 'binary'), f'{kls.__name__} does not say how it is read'
+        decode[_afi][_ID] = kls.OPERATION
 
 
 # ..........................................................
@@ -1293,7 +1287,7 @@ class Flow(NLRI):
         """
         # RFC 8955 sections 4.2.1.1 and 4.2.1.2 reserve a different part of the operator
         # octet for each flavour, so the mask has to come from the component's own class.
-        operator_class = BinaryOperator if issubclass(klass, BinaryString) else NumericOperator
+        operator_class = BinaryOperator if klass.OPERATION == 'binary' else NumericOperator
         end: int = 0
         first = True
         while not end:

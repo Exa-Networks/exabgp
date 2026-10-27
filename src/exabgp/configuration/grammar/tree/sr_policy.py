@@ -566,13 +566,14 @@ def _tunnel(route: Route) -> SRPolicyTunnel | None:
     others = [code for code in route.attributes if code not in HELD_CODES]
     if others:
         raise ValueError('an sr-policy route holds no attribute but its tunnel encapsulation and communities')
-    attribute = route.attributes.get(TunnelEncap.ID, None)
-    if attribute is None:
+    if not route.attributes.has(TunnelEncap.ID):
         return None
-    if not isinstance(attribute, TunnelEncap):
+    attribute = route.attributes.parsed(TunnelEncap)
+    if attribute is None:
         raise ValueError('an sr-policy route holds its tunnel encapsulation as a TunnelEncap')
     tlvs = attribute.tunnel_tlvs
-    if len(tlvs) != 1 or not isinstance(tlvs[0], SRPolicyTunnel) or not tlvs[0].subtlvs:
+    # an unknown tunnel type is kept as a GenericTunnelTLV, whose class says no type
+    if len(tlvs) != 1 or tlvs[0].TUNNEL_TYPE != SRPolicyTunnel.TUNNEL_TYPE or not tlvs[0].subtlvs:
         raise ValueError('an sr-policy route holds one SR policy tunnel')
     tunnel: SRPolicyTunnel = tlvs[0]
     return tunnel

@@ -205,18 +205,6 @@ class _RTCNextHop(Type[Any]):
 ROUTE_TARGET = shape.string(pattern=r'target:[^:\s]+:\d+')
 
 
-def _route_target(word: str) -> Any:
-    from exabgp.bgp.message.update.attribute.community.extended.rt import RouteTarget
-
-    kind, _, rest = word.partition(':')
-    if kind != 'target' and rest.count(':'):
-        raise ValueError(f"'{word}' is not a route target, it is <asn>:<number> or <ip>:<number>")
-    community = bgp.extended_community(word if kind == 'target' else f'target:{word}')
-    if not isinstance(community, RouteTarget):
-        raise ValueError(f"'{word}' is not a route target, it is <asn>:<number> or <ip>:<number>")
-    return community
-
-
 class _Default(Type[bool]):
     """`default`: the zero-length route target, which takes no value."""
 
@@ -242,7 +230,7 @@ RTC_VALUES: dict[str, RouteValue] = {
     'next-hop': RouteValue(_RTCNextHop(), Target.NLRI, 'nexthop', 'the next-hop, or self for the IPv4 local address'),
     'origin-as': RouteValue(ASN_WORD, Target.NLRI, 'origin_as', 'the AS of the route target membership, RFC 4684'),
     'route-target': RouteValue(
-        Word('route-target', '<asn>:<n>|<ip>:<n>', _route_target, ['65000:1'], shape=ROUTE_TARGET),
+        Word('route-target', '<asn>:<n>|<ip>:<n>', bgp.route_target, ['65000:1'], shape=ROUTE_TARGET),
         Target.NLRI,
         'route_target',
         'the route target the membership is for',
