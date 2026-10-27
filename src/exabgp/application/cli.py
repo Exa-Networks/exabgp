@@ -33,6 +33,7 @@ class InteractiveCLI:
         send_command: Callable[[str], str],
         history_file: str | None = None,
         daemon_uuid: str | None = None,
+        connected: Callable[[], bool] = lambda: True,
     ):
         """
         Initialize interactive CLI
@@ -41,8 +42,11 @@ class InteractiveCLI:
             send_command: Function to send commands to ExaBGP
             history_file: Path to save command history
             daemon_uuid: Optional daemon UUID for connection message
+            connected: Whether the connection to ExaBGP is still up, which the
+                background thread of a persistent connection decides
         """
         self.send_command = send_command
+        self.connected = connected
         self.formatter = OutputFormatter()
         self.running = True
         self.daemon_uuid = daemon_uuid
@@ -134,7 +138,7 @@ class InteractiveCLI:
                 line = input(prompt).strip()
 
                 # Check if background thread signaled shutdown
-                if not self.running:
+                if not self.connected():
                     break
 
                 # Skip empty lines
@@ -154,8 +158,9 @@ class InteractiveCLI:
                 self._quit()
                 break
             except KeyboardInterrupt:
-                # Ctrl+C pressed OR signal from background thread
-                if not self.running:
+                # Ctrl+C pressed OR signal from background thread, which clears the
+                # connection's running flag, not ours, before interrupting input()
+                if not self.connected():
                     # Signal from background thread - exit gracefully
                     sys.stdout.write('\n')  # Newline
                     break
@@ -521,6 +526,10 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
 
         send_func = send_command_pipe
         daemon_uuid = None
+
+        def connected() -> bool:
+            # a named pipe has no background thread to say it went away
+            return True
     else:
         # Use Unix socket transport
         sockets = unix_socket(ROOT, socketname)
@@ -567,12 +576,15 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
             expanded = CommandShortcuts.expand_shortcuts(command)
             return connection.send_command(expanded)
 
+        def connected() -> bool:
+            return connection.running
+
         send_func = send_command_persistent
         daemon_uuid = connection.daemon_uuid
 
     # Create and run interactive CLI
     try:
-        cli = InteractiveCLI(send_func, daemon_uuid=daemon_uuid)
+        cli = InteractiveCLI(send_func, daemon_uuid=daemon_uuid, connected=connected)
         cli.run()
         return 0
     except Exception as exc:
