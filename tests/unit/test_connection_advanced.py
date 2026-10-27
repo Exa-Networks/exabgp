@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_connection_advanced.py
 
 Advanced tests for network connection layer functionality.
@@ -180,7 +179,7 @@ class TestSocketReader:
         mock_sock = Mock()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
-        mock_sock.recv_into.side_effect = socket.timeout('timed out')
+        mock_sock.recv_into.side_effect = TimeoutError('timed out')
 
         with patch('exabgp.reactor.network.connection.log'):
             with pytest.raises(TooSlowError) as exc_info:

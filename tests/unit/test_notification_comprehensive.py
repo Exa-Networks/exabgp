@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_notification_comprehensive.py
 
 Comprehensive tests for BGP NOTIFICATION messages (RFC 4271 Section 4.5)

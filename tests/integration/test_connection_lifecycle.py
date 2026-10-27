@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_connection_lifecycle.py
 
 Integration tests for full connection lifecycle with real socket mocks.
@@ -141,7 +140,7 @@ class MockBGPServer:
                             if length > 19:
                                 body = self.client_socket.recv(length - 19)
                                 self.messages_received[-1] += body
-                    except socket.timeout:
+                    except TimeoutError:
                         pass
                     except Exception:
                         break
@@ -155,7 +154,7 @@ class MockBGPServer:
                             break
 
                     time.sleep(0.01)
-        except socket.timeout:
+        except TimeoutError:
             pass
         except Exception:
             pass

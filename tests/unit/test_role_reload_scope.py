@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_role_reload_scope.py
 
 Which of the three role settings restart a BGP session on reload.

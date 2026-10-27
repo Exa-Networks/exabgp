@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_ip_link_local.py
 
 Tests for IP address link-local detection.

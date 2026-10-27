@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_role_capability.py
 
 RFC 9234 BGP Role capability (code 9).

@@ -310,7 +310,7 @@ class Control:
                         )
                         sys.stdout.flush()
                         return False
-                    except socket.error:
+                    except OSError:
                         # Socket exists but nothing is listening - it's stale, remove it
                         os.unlink(self.socket_path)
                 else:

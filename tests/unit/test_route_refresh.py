@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_route_refresh.py
 
 Comprehensive tests for BGP ROUTE_REFRESH messages (RFC 2918, RFC 7313)

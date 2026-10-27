@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """Tests for normalize() (grammar/tree/static.py, once the legacy _normalize_nlri_type()) with MPLS labels
 
 This test file was created to catch issues with NLRI type normalization,

@@ -10,7 +10,6 @@ import contextlib
 import json
 import os
 import readline
-import socket as sock
 import sys
 from collections.abc import Callable
 
@@ -546,7 +545,7 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
         # Create persistent connection with health monitoring
         try:
             connection = PersistentSocketConnection(socket_path)
-        except sock.error as exc:
+        except OSError as exc:
             # Socket connection errors
             sys.stderr.write('\n')
             sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')

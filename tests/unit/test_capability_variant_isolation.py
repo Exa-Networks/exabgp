@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_capability_variant_isolation.py
 
 Regression tests for F6: Capability.klass() used to write the wire code it

@@ -800,7 +800,7 @@ class Peer:
         except Notify as notify:
             self._refuse_contender(contender, notify)
             return
-        except (asyncio.TimeoutError, NetworkError, NotificationReceived) as exc:
+        except (TimeoutError, NetworkError, NotificationReceived) as exc:
             # nothing to tell: the peer closed it, or never sent the OPEN it is held for
             log.debug(lazymsg('peer.connection.dropped reason=collision error={e}', e=str(exc)), self.id())
             self._drop_contender()
@@ -971,7 +971,7 @@ class Peer:
                 self.proto.read_open(self.neighbor.session.peer_address.top()), timeout=wait
             )
             return message
-        except asyncio.TimeoutError:
+        except TimeoutError:
             # RFC 4271 8.2.2: the hold timer expiring in OpenSent sends Hold Timer Expired.
             # (5, 1) is RFC 6608's for a message which arrived, and here none did
             raise Notify(4, 0, f'no OPEN received within {wait} seconds') from None
@@ -992,7 +992,7 @@ class Peer:
         wait = holdtime if holdtime else getenv().bgp.openwait
         try:
             message = await asyncio.wait_for(self.proto.read_keepalive(), timeout=wait)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             raise Notify(4, 0, f'no KEEPALIVE received within {wait} seconds') from None
         self.recv_timer.check_ka_timer(message)
 

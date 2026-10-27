@@ -311,7 +311,7 @@ class IPRange(IP):
 
     def __repr__(self) -> str:
         if (self.ipv4() and self.mask == IPv4.HOST_MASK) or (self.ipv6() and self.mask == IPv6.HOST_MASK):
-            return super(IPRange, self).__repr__()
+            return super().__repr__()
         return f'{self.top()}/{int(self.mask)}'
 
 

@@ -1,4 +1,3 @@
-# encoding: utf-8
 """ExaBGP tests package.
 
 This file makes the tests directory a Python package,

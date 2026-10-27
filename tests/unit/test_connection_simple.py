@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_connection_simple.py
 
 Simplified tests for network connection layer functionality.

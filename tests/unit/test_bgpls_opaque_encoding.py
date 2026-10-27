@@ -86,7 +86,7 @@ def test_a_name_the_rfc_does_not_allow_is_read_rather_than_refused(code: int, na
     whole BGP-LS attribute, and routers put UTF-8 on the wire whatever the RFC says.
     The name being non-conformant is the point of the test, not an oversight in it.
     """
-    document = render(code, 'café-rtr1'.encode('utf-8'))
+    document = render(code, 'café-rtr1'.encode())
 
     assert document[member] == 'café-rtr1', f'{name} refuses a non-conformant name outright'
 
@@ -137,6 +137,6 @@ def test_an_ascii_only_gate_is_not_back_on_the_name_tlvs() -> None:
     """
     for code, name, _member in NAMES:
         try:
-            render(code, 'café'.encode('utf-8'))
+            render(code, 'café'.encode())
         except Notify as notify:
             pytest.fail(f'{name} refuses a valid UTF-8 name: {notify}')

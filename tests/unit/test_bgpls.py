@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 
 """Comprehensive BGP-LS (Link-State) NLRI tests
 

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 
 """BGP-LS JSON Validation Tests
 
@@ -496,7 +495,7 @@ class TestEdgeCases:
 
     def test_unicode_link_name(self) -> None:
         """Link name with unicode produces valid JSON"""
-        attr = LinkName('link-tö-röuter'.encode('utf-8'))
+        attr = LinkName('link-tö-röuter'.encode())
         result = validate_json(attr.json(), 'LinkName(unicode)')
         assert 'link-name' in result
 

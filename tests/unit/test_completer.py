@@ -862,9 +862,8 @@ class TestCompleterExceptionHandling:
         """Test that neighbor IP fetching handles socket errors gracefully"""
 
         def socket_error_send(cmd):
-            import socket
 
-            raise socket.error('Connection refused')
+            raise OSError('Connection refused')
 
         completer = CommandCompleter(socket_error_send)
 

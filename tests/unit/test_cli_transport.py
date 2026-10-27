@@ -1,4 +1,3 @@
-# encoding: utf-8
 """test_cli_transport.py
 
 Unit tests for CLI transport selection (pipe vs Unix socket)

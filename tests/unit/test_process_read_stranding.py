@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 
 """The process readers must read the kernel fd, never the BufferedReader over it
 

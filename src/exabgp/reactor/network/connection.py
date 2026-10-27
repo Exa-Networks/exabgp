@@ -237,7 +237,7 @@ class Connection:
 
                 self._read_offset_bytes += nbytes
 
-            except socket.timeout as exc:
+            except TimeoutError as exc:
                 self.close()
                 log.warning(lazymsg('tcp.timeout name={n} peer={p}', n=self.name(), p=self.peer), self.session())
                 raise TooSlowError(f'Timeout while reading data from the network ({errstr(exc)})') from None

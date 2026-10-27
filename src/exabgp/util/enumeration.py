@@ -51,4 +51,4 @@ class TriState(IntEnum):
 
 # Taken from Vincent Bernat
 def enum(*sequential: str) -> type[object]:
-    return type(str('Enum'), (), dict(zip(sequential, sequential)))
+    return type('Enum', (), dict(zip(sequential, sequential)))

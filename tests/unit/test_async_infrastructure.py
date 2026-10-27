@@ -1,4 +1,3 @@
-# encoding: utf-8
 """tests/unit/test_async_infrastructure.py
 
 Tests for async/await infrastructure in ASYNC class

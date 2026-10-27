@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """A neighbour removed by a reload left a peer, a listening socket and a connection behind.
 
 Reported as https://github.com/Exa-Networks/exabgp/issues/1425: a passive neighbour with

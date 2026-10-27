@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_paths_limit_config.py
 
 Tests for PATHS-LIMIT configuration via add-path { ... limit N; } syntax.

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_open_capabilities.py
 
 Comprehensive tests for BGP OPEN message capabilities (RFC 5492)

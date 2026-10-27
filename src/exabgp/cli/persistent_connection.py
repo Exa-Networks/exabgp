@@ -220,7 +220,7 @@ class PersistentSocketConnection:
             # Switch to non-blocking for background threads
             self.socket.settimeout(0.1)
 
-        except sock.timeout:
+        except TimeoutError:
             sys.stderr.write('\n')
             sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
             sys.stderr.write('║  ERROR: Connection timeout                             ║\n')
@@ -492,7 +492,7 @@ class PersistentSocketConnection:
                         # User command response (or ping response during user command - route to user)
                         self.pending_responses.put(response)
 
-            except sock.timeout:
+            except TimeoutError:
                 # No data available, continue
                 continue
             except Exception as exc:

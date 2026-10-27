@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """cache.py
 
 Created by David Farrar on 2012-12-27.

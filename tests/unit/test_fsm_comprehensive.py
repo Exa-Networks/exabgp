@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_fsm_comprehensive.py
 
 Comprehensive tests for BGP Finite State Machine (FSM) implementation.

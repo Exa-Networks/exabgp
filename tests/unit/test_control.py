@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """control.py
 
 Created by Thomas Mangin on 2015-01-01.

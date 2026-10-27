@@ -142,7 +142,7 @@ def send_command_socket(socket_path: str, command_str: str, return_output: bool 
         client = sock.socket(sock.AF_UNIX, sock.SOCK_STREAM)
         client.settimeout(COMMAND_TIMEOUT)
         client.connect(socket_path)
-    except sock.error as exc:
+    except OSError as exc:
         error_msg = ''
         if exc.errno == errno.ENOENT:
             error_msg = 'ExaBGP is not running / Unix socket not found\n'
@@ -218,7 +218,7 @@ def send_command_socket(socket_path: str, command_str: str, return_output: bool 
                         sys.stdout.write(f'{string}\n')
                         sys.stdout.flush()
 
-            except sock.timeout:
+            except TimeoutError:
                 warning_msg = '\nwarning: no end of command message received\nwarning: normal if exabgp.api.ack is set to false otherwise some data may get stuck\n'
                 if return_output:
                     # Don't raise for timeout in interactive mode, just return what we got
@@ -228,12 +228,12 @@ def send_command_socket(socket_path: str, command_str: str, return_output: bool 
                     sys.stderr.flush()
                 successful = not getenv().api.ack
                 break
-            except sock.error as exc:
+            except OSError as exc:
                 if exc.errno in errno_block:
                     continue
                 error_msg = f'could not read response from ExaBGP ({exc})\n'
                 if return_output:
-                    raise IOError(error_msg.strip())
+                    raise OSError(error_msg.strip())
                 else:
                     sys.stdout.write(error_msg)
                     sys.stdout.flush()
@@ -330,7 +330,7 @@ def cmdline_batch(
         try:
             command_source = open(batch_file, 'r')
             source_name = batch_file
-        except IOError as exc:
+        except OSError as exc:
             sys.stderr.write(f'Could not open batch file: {exc}\n')
             sys.exit(1)
 

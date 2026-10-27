@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """parsing.py
 
 Created by Thomas Mangin on 2009-09-06.

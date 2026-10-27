@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_operational_nop.py
 
 Comprehensive tests for BGP OPERATIONAL messages

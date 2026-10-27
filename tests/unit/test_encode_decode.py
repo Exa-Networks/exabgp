@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_encode_decode.py
 
 Tests for the encode and decode CLI commands.

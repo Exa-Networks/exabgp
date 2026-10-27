@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """open.py
 
 Created by Thomas Morin, Orange on 2015-07-10.

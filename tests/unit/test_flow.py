@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """flow.py
 
 Created by Thomas Mangin on 2010-01-14.

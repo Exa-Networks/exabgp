@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding: utf-8
 """test_bgp_timers.py
 
 Comprehensive tests for BGP timer implementations.

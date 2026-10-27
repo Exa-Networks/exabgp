@@ -144,7 +144,7 @@ async def test_no_keepalive_within_the_hold_time_is_hold_timer_expired(monkeypat
     async def expired(awaitable: Any, timeout: float | None) -> Any:
         waited.append(timeout)
         awaitable.close()
-        raise asyncio.TimeoutError()
+        raise TimeoutError()
 
     monkeypatch.setattr(asyncio, 'wait_for', expired)
     try:

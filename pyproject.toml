@@ -125,6 +125,8 @@ select = [
 	"UP006", "UP035", "UP037", "UP045",
 	# pyupgrade: f-strings
 	"UP032",
+	# pyupgrade: aliases and leftovers of Python 2
+	"UP008", "UP009", "UP012", "UP018", "UP024", "UP041",
 	# isort
 	"I001",
 ]
