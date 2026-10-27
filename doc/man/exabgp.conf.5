@@ -464,6 +464,9 @@ withdraws the routes it announced from every neighbor, and a route which
 replaced one from the configuration gives the configured one back.
 This happens even when the process is respawned: the new process starts
 with nothing announced.
+The same policy applies when a reload removes the process, or a full reload
+replaces it: the exiting process's policy is used before its replacement's
+commands are applied.
 .Cm on-exit keep
 leaves the routes announced, as releases before 6.0 did.
 .Pp
