@@ -5,17 +5,17 @@ altgraph==0.17.5 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   macholib
     #   pyinstaller
-annotated-doc==0.0.4 ; sys_platform == 'darwin' or sys_platform == 'linux'
+annotated-doc==0.0.5 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via typer
-certifi==2026.10.19 ; sys_platform == 'darwin' or sys_platform == 'linux'
+ast-serialize==0.13.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
+    # via mypy
+certifi==2026.10.23 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests
-charset-normalizer==3.4.7 ; sys_platform == 'darwin' or sys_platform == 'linux'
+charset-normalizer==3.5.2 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests
-click==8.3.2 ; sys_platform == 'darwin' or sys_platform == 'linux'
-    # via
-    #   mutmut
-    #   typer
-coverage==7.13.5 ; sys_platform == 'darwin' or sys_platform == 'linux'
+click==8.5.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+    # via mutmut
+coverage==7.17.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   coveralls
     #   mutmut
@@ -23,58 +23,58 @@ coverage==7.13.5 ; sys_platform == 'darwin' or sys_platform == 'linux'
 coveralls==4.1.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 execnet==2.1.2 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via pytest-xdist
-hypothesis==6.151.13 ; sys_platform == 'darwin' or sys_platform == 'linux'
-idna==3.18 ; sys_platform == 'darwin' or sys_platform == 'linux'
+hypothesis==6.170.12 ; sys_platform == 'darwin' or sys_platform == 'linux'
+idna==3.20 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests
-iniconfig==2.3.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+iniconfig==2.3.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via pytest
 libcst==1.9.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via mutmut
-librt==0.9.0 ; (platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_python_implementation != 'PyPy' and sys_platform == 'linux')
+librt==0.16.0 ; (platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_python_implementation != 'PyPy' and sys_platform == 'linux')
     # via mypy
-linkify-it-py==2.1.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+linkify-it-py==2.2.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via markdown-it-py
 macholib==1.16.4 ; sys_platform == 'darwin'
     # via pyinstaller
-markdown-it-py==4.0.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+markdown-it-py==4.2.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   mdit-py-plugins
     #   rich
     #   textual
-mdit-py-plugins==0.5.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+mdit-py-plugins==0.6.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via textual
 mdurl==0.1.2 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via markdown-it-py
-mutmut==3.5.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
-mypy==1.20.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
+mutmut==3.8.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+mypy==2.4.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 mypy-extensions==1.1.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via mypy
-packaging==26.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+packaging==26.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   pyinstaller
     #   pyinstaller-hooks-contrib
     #   pytest
-pathspec==1.0.4 ; sys_platform == 'darwin' or sys_platform == 'linux'
+pathspec==1.1.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via mypy
-platformdirs==4.9.6 ; sys_platform == 'darwin' or sys_platform == 'linux'
+platformdirs==4.13.6 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via textual
-pluggy==1.6.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+pluggy==1.7.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   pytest
     #   pytest-cov
 psutil==7.2.2 ; sys_platform == 'darwin' or sys_platform == 'linux'
-py-cpuinfo==9.0.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+py-cpuinfo2==10.1.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via pytest-benchmark
 pyasyncore==1.0.5 ; sys_platform == 'darwin' or sys_platform == 'linux'
-pygments==2.20.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+pygments==2.21.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   pytest
     #   rich
     #   textual
 pyinstaller==6.22.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
-pyinstaller-hooks-contrib==2026.8 ; sys_platform == 'darwin' or sys_platform == 'linux'
+pyinstaller-hooks-contrib==2026.9 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via pyinstaller
-pytest==9.0.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
+pytest==9.1.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   mutmut
     #   pytest-asyncio
@@ -82,8 +82,8 @@ pytest==9.0.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
     #   pytest-cov
     #   pytest-timeout
     #   pytest-xdist
-pytest-asyncio==1.3.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
-pytest-benchmark==5.2.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
+pytest-asyncio==1.4.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
+pytest-benchmark==5.3.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 pytest-cov==7.1.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 pytest-timeout==2.4.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
 pytest-xdist==3.8.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
@@ -91,31 +91,29 @@ pyyaml==6.0.3 ; (python_full_version != '3.13.*' and sys_platform == 'darwin') o
     # via libcst
 pyyaml-ft==8.0.0 ; (python_full_version == '3.13.*' and sys_platform == 'darwin') or (python_full_version == '3.13.*' and sys_platform == 'linux')
     # via libcst
-requests==2.33.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
+requests==2.34.2 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via coveralls
 rich==15.0.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   textual
     #   typer
-ruff==0.15.10 ; sys_platform == 'darwin' or sys_platform == 'linux'
-setproctitle==1.3.7 ; sys_platform == 'darwin' or sys_platform == 'linux'
+ruff==0.17.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
+setproctitle==1.3.8 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via mutmut
-setuptools==84.0.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+setuptools==84.2.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via pyinstaller
 shellingham==1.5.4 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via typer
 sortedcontainers==2.4.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via hypothesis
-textual==8.2.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
+textual==8.2.8 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via mutmut
-typer==0.24.1 ; sys_platform == 'darwin' or sys_platform == 'linux'
+typer==0.27.3 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via coveralls
-typing-extensions==4.15.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
+typing-extensions==4.16.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via
     #   mypy
     #   pytest-asyncio
     #   textual
-uc-micro-py==2.0.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
-    # via linkify-it-py
 urllib3==2.8.0 ; sys_platform == 'darwin' or sys_platform == 'linux'
     # via requests

@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Build, install and test the compiled wheels
-        uses: pypa/cibuildwheel@v4.3.1
+        uses: pypa/cibuildwheel@v4.3.4
         env:
           CIBW_BUILD: "cp312-* cp313-* cp314-* cp315-*"
           CIBW_SKIP: "*-musllinux_*"

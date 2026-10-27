@@ -667,7 +667,9 @@ class Processes:
             log.debug(lazymsg('reason: {e}', e=exc), 'processes')
 
     def start(self, configuration: dict[str, dict[str, Any]], restart: bool = False) -> None:
-        # Terminate processes that are no longer in configuration
+        # Terminate processes that are no longer in configuration. A helper a reload stops
+        # has exited as far as its routes go: _queue_exit reads the on-exit and API version
+        # it ran with, so it must run before self._configuration is replaced below
         for process in list(self._process):
             if process not in configuration:
                 self._queue_exit(process)
@@ -685,7 +687,7 @@ class Processes:
                     else:
                         log.debug(lazymsg('process.config.unchanged process={p} action=keep', p=process), 'processes')
 
-        # Update configuration (needed by _start())
+        # Update configuration (needed by _start()), only once every exit above is queued
         self._configuration = configuration
 
         # Start/restart processes
@@ -1138,7 +1140,7 @@ class Processes:
 
         return True
 
-    def write(self, process: str, string: str | None, peer_or_neighbor: 'Neighbor' | 'Peer' | None = None) -> bool:
+    def write(self, process: str, string: str | None, peer_or_neighbor: Neighbor | Peer | None = None) -> bool:
         if string is None:
             return True
 
@@ -1159,7 +1161,7 @@ class Processes:
 
         return self._write_blocking(process, data)
 
-    async def write_async(self, process: str, string: str | None, neighbor: 'Neighbor' | None = None) -> bool:
+    async def write_async(self, process: str, string: str | None, neighbor: Neighbor | None = None) -> bool:
         """Async version of write() - non-blocking write to API process stdin
 
         Uses os.write() on non-blocking fd to write without blocking the event loop.

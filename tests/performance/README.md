@@ -347,6 +347,7 @@ Use psutil to monitor resources:
 import psutil
 import os
 
+
 def test_with_monitoring(self, benchmark):
     process = psutil.Process(os.getpid())
 

@@ -370,18 +370,18 @@ class JSON:
         self,
         neighbor: 'Neighbor',
         direction: str,
-        message: 'Open',
+        sent_open: 'Open',
         header: bytes,
         body: bytes,
         negotiated: 'Negotiated',
     ) -> str:
-        capabilities_content = self._json_kv(message.capabilities)
+        capabilities_content = self._json_kv(sent_open.capabilities)
         kv_content = self._kv(
             {
-                'version': message.version,
-                'asn': message.asn,
-                'hold_time': message.hold_time,
-                'router_id': message.router_id,
+                'version': sent_open.version,
+                'asn': sent_open.asn,
+                'hold_time': sent_open.hold_time,
+                'router_id': sent_open.router_id,
                 'capabilities': self._json(f'{{ {capabilities_content} }}'),
             },
         )
