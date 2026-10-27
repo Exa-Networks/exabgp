@@ -31,10 +31,10 @@ class Software(Capability):
         self.software_version: str = software_version
 
     def __str__(self) -> str:
-        return 'Software({})'.format(self.software_version)
+        return f'Software({self.software_version})'
 
     def json(self) -> str:
-        return '{{ "software": {} }}'.format(json.dumps(self.software_version, default=json_number))
+        return f'{{ "software": {json.dumps(self.software_version, default=json_number)} }}'
 
     def extract_capability_bytes(self) -> list[bytes]:
         """The version as the whole Capability Value, which revisions 15 to 18 of the draft use.

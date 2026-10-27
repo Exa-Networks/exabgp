@@ -121,7 +121,7 @@ class CapabilityCode(IntValue):
         return str(self)
 
     def name(self) -> str:
-        return self.names.get(self.value, 'unknown capability {}'.format(hex(self.value)))
+        return self.names.get(self.value, f'unknown capability {hex(self.value)}')
 
 
 # =================================================================== Capability
@@ -163,9 +163,9 @@ class CapabilityCodes:
         name: str | None = CapabilityCode.names.get(self, None)
         if name is None:
             if self in Capability.CODE.unassigned:
-                return 'unassigned-{}'.format(hex(self))
+                return f'unassigned-{hex(self)}'
             if self in Capability.CODE.reserved:
-                return 'reserved-{}'.format(hex(self))
+                return f'reserved-{hex(self)}'
         return name
 
 
@@ -205,7 +205,7 @@ class Capability:
 
     @staticmethod
     def hex(data: Buffer) -> str:
-        return '0x' + ''.join('{:02x}'.format(_) for _ in data)
+        return '0x' + ''.join(f'{_:02x}' for _ in data)
 
     @classmethod
     def unknown(cls, klass: type[Capability]) -> type[Capability]:

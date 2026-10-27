@@ -1662,7 +1662,7 @@ class Processes:
         body: bytes,
         negotiated: Negotiated,
     ) -> None:
-        for process in self._notify(neighbor, '{}-packets'.format(direction)):
+        for process in self._notify(neighbor, f'{direction}-packets'):
             self.write(
                 process,
                 self._encoder[process].packets(neighbor, direction, category, header, body, negotiated),

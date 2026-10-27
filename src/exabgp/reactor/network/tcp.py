@@ -232,10 +232,10 @@ def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: bool) -> No
         except OSError as exc:
             if exc.errno != errno.ENOENT:
                 raise MD5Error(
-                    'This linux machine does not support TCP_MD5SIG, you can not use MD5 ({})'.format(errstr(exc))
+                    f'This linux machine does not support TCP_MD5SIG, you can not use MD5 ({errstr(exc)})'
                 ) from None
     elif md5:
-        raise MD5Error('ExaBGP has no MD5 support for {}'.format(platform_os))
+        raise MD5Error(f'ExaBGP has no MD5 support for {platform_os}')
 
 
 # TCP-AO (RFC 5925) - TCP Authentication Option
@@ -391,7 +391,7 @@ def nagle(io: socket.socket, ip: str) -> None:
         # diable Nagle's algorithm (no grouping of packets)
         io.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     except (OSError, AttributeError):
-        raise NagleError("Could not disable nagle's algorithm for {}".format(ip)) from None
+        raise NagleError(f"Could not disable nagle's algorithm for {ip}") from None
 
 
 # RFC 5082 section 3: a GTSM speaker sends with the maximum TTL, so that the receiver can
@@ -523,9 +523,7 @@ def ttlv6(io: socket.socket, ip: str, ttl: int | None) -> None:
         try:
             io.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_UNICAST_HOPS, ttl)
         except OSError as exc:
-            raise TTLError(
-                'This OS does not support unicast_hops (ttl-security) for {} ({})'.format(ip, errstr(exc))
-            ) from None
+            raise TTLError(f'This OS does not support unicast_hops (ttl-security) for {ip} ({errstr(exc)})') from None
 
 
 # CPython does not export IP_MINTTL from socket on any platform, so looking it up by name
@@ -579,9 +577,7 @@ def min_ttl(io: socket.socket, ip: str, ttl: int | None) -> None:
             try:
                 io.setsockopt(socket.IPPROTO_IP, minttl, ttl)
             except OSError as exc:
-                raise TTLError(
-                    'This OS does not support IP_MINTTL (ttl-security) for {} ({})'.format(ip, errstr(exc))
-                ) from None
+                raise TTLError(f'This OS does not support IP_MINTTL (ttl-security) for {ip} ({errstr(exc)})') from None
 
 
 def min_ttlv6(io: socket.socket, ip: str, ttl: int | None) -> None:
@@ -593,7 +589,7 @@ def min_ttlv6(io: socket.socket, ip: str, ttl: int | None) -> None:
             io.setsockopt(socket.IPPROTO_IPV6, IPV6_MINHOPCOUNT, ttl)
         except OSError as exc:
             raise TTLError(
-                'This OS does not support IPV6_MINHOPCOUNT (ttl-security) for {} ({})'.format(ip, errstr(exc))
+                f'This OS does not support IPV6_MINHOPCOUNT (ttl-security) for {ip} ({errstr(exc)})'
             ) from None
         # the hop limit we send with is set by set_sending_ttl, for the reason in min_ttl
 
@@ -602,7 +598,7 @@ def asynchronous(io: socket.socket, ip: str) -> None:
     try:
         io.setblocking(False)
     except OSError as exc:
-        raise AsyncError('could not set socket non-blocking for {} ({})'.format(ip, errstr(exc))) from None
+        raise AsyncError(f'could not set socket non-blocking for {ip} ({errstr(exc)})') from None
 
 
 def ready(io: socket.socket) -> Iterator[tuple[bool, str]]:
@@ -629,10 +625,10 @@ def ready(io: socket.socket) -> Iterator[tuple[bool, str]]:
                     yield True, 'connection established'
                     return
                 elif err in error.block:
-                    yield False, 'connect attempt failed, retrying, reason {}'.format(errno.errorcode[err])
+                    yield False, f'connect attempt failed, retrying, reason {errno.errorcode[err]}'
                     return
             yield False, 'waiting for socket to become ready'
         # not `err`, the name of the int above: compiled, a name keeps a single type
         except OSError as exc:
-            yield False, 'error, retrying {}'.format(str(exc))
+            yield False, f'error, retrying {str(exc)}'
             return

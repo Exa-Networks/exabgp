@@ -50,7 +50,7 @@ class Srv6Capabilities(BaseLS):
         return {'O': 1 if flags_value & SRV6_CAPABILITIES_O_FLAG else 0}
 
     def __repr__(self) -> str:
-        return 'flags: {}'.format(self.flags)
+        return f'flags: {self.flags}'
 
     @classmethod
     def register_subsubtlv(cls) -> Callable[[type[HasTLV]], type[HasTLV]]:

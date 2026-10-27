@@ -60,7 +60,7 @@ class Srv6Locator(FlagLS):
         return []
 
     def __repr__(self) -> str:
-        return 'flags: {}, algorithm: {}, metric: {}'.format(self.flags, self.algorithm, self.metric)
+        return f'flags: {self.flags}, algorithm: {self.algorithm}, metric: {self.metric}'
 
     @classmethod
     def make_srv6_locator(cls, flags: dict[str, int], algorithm: int, metric: int) -> Srv6Locator:

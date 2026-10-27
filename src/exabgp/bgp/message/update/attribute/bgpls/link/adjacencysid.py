@@ -96,7 +96,7 @@ class AdjacencySid(FlagLS):
         return decode_sids(self._packed[4:], self.flags)[1]
 
     def __repr__(self) -> str:
-        return 'adj_flags: {}, sids: {}, undecoded_sid {}'.format(self.flags, self.sids, self.undecoded)
+        return f'adj_flags: {self.flags}, sids: {self.sids}, undecoded_sid {self.undecoded}'
 
     def json(self, compact: bool = False) -> str:
         import json

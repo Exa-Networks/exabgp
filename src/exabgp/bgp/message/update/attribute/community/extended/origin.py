@@ -81,7 +81,7 @@ class OriginASN2Number(Origin):
         return value
 
     def __repr__(self) -> str:
-        return 'origin:{}:{}'.format(self.asn, self.number)
+        return f'origin:{self.asn}:{self.number}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> OriginASN2Number:
@@ -118,7 +118,7 @@ class OriginIPASN(Origin):
         return ASN(unpack('!H', self._packed[6:8])[0])
 
     def __repr__(self) -> str:
-        return 'origin:{}:{}'.format(self.ip, self.asn)
+        return f'origin:{self.ip}:{self.asn}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> OriginIPASN:
@@ -156,7 +156,7 @@ class OriginASN4Number(Origin):
         return value
 
     def __repr__(self) -> str:
-        return 'origin:{}:{}'.format(self.asn, self.number)
+        return f'origin:{self.asn}:{self.number}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> OriginASN4Number:

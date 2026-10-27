@@ -151,14 +151,14 @@ class InterworkSegmentDiscoveryRoute(MUP):
         return instance, b''
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        content = '"name": "{}", '.format(self.NAME)
+        content = f'"name": "{self.NAME}", '
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
-        content += '"prefix_ip": "{}", '.format(str(self.prefix_ip))
+        content += f'"prefix_ip": "{str(self.prefix_ip)}", '
         content += self.rd.json()
-        content += ', "raw": "{}"'.format(self._raw())
-        return '{{ {} }}'.format(content)
+        content += f', "raw": "{self._raw()}"'
+        return f'{{ {content} }}'
 
 
 MUP.register_mup_route(archtype=1, code=1)(InterworkSegmentDiscoveryRoute)

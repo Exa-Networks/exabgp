@@ -330,7 +330,7 @@ class IPVPNBase(Label):
         return instance
 
     def extensive(self) -> str:
-        return '{}{}'.format(Label.extensive(self), str(self.rd))
+        return f'{Label.extensive(self)}{str(self.rd)}'
 
     def v4_qualifier(self) -> str:
         return str(self.rd)

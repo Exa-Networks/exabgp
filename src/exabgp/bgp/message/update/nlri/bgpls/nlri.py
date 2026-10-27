@@ -172,7 +172,7 @@ class BGPLS(NLRI):
         payload = self._packed[4:] if len(self._packed) > 4 else b''
         return 'bgp-ls:{}:{}'.format(
             self.registered_bgpls.get(self.CODE, self).SHORT_NAME.lower(),
-            '0x' + ''.join('{:02x}'.format(_) for _ in payload),
+            '0x' + ''.join(f'{_:02x}' for _ in payload),
         )
 
     # BGP-LS NLRI keep their descriptors in slots and everything else in an instance
@@ -250,15 +250,13 @@ class BGPLS(NLRI):
         """
         while data:
             if len(data) < 4:
-                raise Notify(3, 10, 'BGP-LS {} NLRI ends with a truncated TLV header'.format(cls.__name__))
+                raise Notify(3, 10, f'BGP-LS {cls.__name__} NLRI ends with a truncated TLV header')
             tlv_type, tlv_length = unpack('!HH', bytes(data[:4]))
             if len(data) < 4 + tlv_length:
                 raise Notify(
                     3,
                     10,
-                    'BGP-LS {} NLRI TLV {} claims {} bytes but only {} remain'.format(
-                        cls.__name__, tlv_type, tlv_length, len(data) - 4
-                    ),
+                    f'BGP-LS {cls.__name__} NLRI TLV {tlv_type} claims {tlv_length} bytes but only {len(data) - 4} remain',
                 )
             yield tlv_type, data[4 : 4 + tlv_length]
             data = data[4 + tlv_length :]
@@ -375,7 +373,7 @@ class BGPLS(NLRI):
 
     def _raw(self) -> str:
         # _packed includes 4-byte header
-        return ''.join('{:02X}'.format(_) for _ in self._packed)
+        return ''.join(f'{_:02X}' for _ in self._packed)
 
 
 NLRI.register(AFI.bgpls, SAFI.bgp_ls_vpn)(BGPLS)

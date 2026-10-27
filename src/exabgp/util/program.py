@@ -80,23 +80,23 @@ def validate_executable(prg: str) -> None:
         fd = os.open(prg, os.O_RDONLY)
     except OSError as e:
         if e.errno == ENOENT:
-            raise ValueError('can not locate the program "{}"'.format(prg)) from e
+            raise ValueError(f'can not locate the program "{prg}"') from e
         # Preserve exception chain for debugging while providing clear message
-        raise ValueError('can not access program "{}": {}'.format(prg, e)) from e
+        raise ValueError(f'can not access program "{prg}": {e}') from e
     try:
         # Use fstat on file descriptor - this is safe from TOCTOU
         # The file descriptor points to the final target, even if prg was a symlink
         s = os.fstat(fd)
 
         if stat.S_ISDIR(s.st_mode):
-            raise ValueError('can not execute directories "{}"'.format(prg))
+            raise ValueError(f'can not execute directories "{prg}"')
 
         # Security check: refuse to run setuid/setgid programs
         if s.st_mode & stat.S_ISUID:
-            raise ValueError('refusing to run setuid programs "{}"'.format(prg))
+            raise ValueError(f'refusing to run setuid programs "{prg}"')
 
         if s.st_mode & stat.S_ISGID:
-            raise ValueError('refusing to run setgid programs "{}"'.format(prg))
+            raise ValueError(f'refusing to run setgid programs "{prg}"')
 
         # Check if file is executable by current user
         check = stat.S_IXOTH
@@ -106,11 +106,11 @@ def validate_executable(prg: str) -> None:
             check |= stat.S_IXGRP
 
         if not (check & s.st_mode):
-            raise ValueError('exabgp will not be able to run this program "{}"'.format(prg))
+            raise ValueError(f'exabgp will not be able to run this program "{prg}"')
 
         # Additional security check: ensure it's a regular file
         if not stat.S_ISREG(s.st_mode):
-            raise ValueError('program must be a regular file "{}"'.format(prg))
+            raise ValueError(f'program must be a regular file "{prg}"')
 
     finally:
         os.close(fd)

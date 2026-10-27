@@ -247,7 +247,7 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                     if ':' in str1r:
                         str1r = str1r.replace('next-hop self', 'next-hop ::1')
                     else:
-                        str1r = str1r.replace('next-hop self', 'next-hop {}'.format(neighbor.session.local_address))
+                        str1r = str1r.replace('next-hop self', f'next-hop {neighbor.session.local_address}')
 
                 str1r = _as_mapped_next_hop(str1r, route1.nexthop, nexthop)
 
@@ -291,10 +291,10 @@ def check_generation(neighbors: dict[str, Neighbor]) -> bool:
                 _route1_json: Route = route1
 
                 def _log_nlri(_route1_json: Route = _route1_json) -> str:
-                    return 'JSON nlri {}'.format(_route1_json.nlri.json())
+                    return f'JSON nlri {_route1_json.nlri.json()}'
 
                 def _log_attr(_route1_json: Route = _route1_json) -> str:
-                    return 'JSON attr {}'.format(_route1_json.attributes.json())
+                    return f'JSON attr {_route1_json.attributes.json()}'
 
                 log.debug(_log_nlri, 'parser')
                 log.debug(_log_attr, 'parser')

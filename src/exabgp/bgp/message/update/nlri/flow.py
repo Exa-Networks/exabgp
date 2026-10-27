@@ -421,10 +421,10 @@ class IPrefix6(IComponent, IPrefix, FlowIPv6):
         return self.pack()
 
     def short(self) -> str:
-        return '{}/{}'.format(self.cidr, self._offset)
+        return f'{self.cidr}/{self._offset}'
 
     def __str__(self) -> str:
-        return '{}/{}'.format(self.cidr, self._offset)
+        return f'{self.cidr}/{self._offset}'
 
     @classmethod
     def make(cls, bgp: Buffer) -> tuple[IComponent, Buffer]:
@@ -599,7 +599,7 @@ class NumericString:
         if op in [NumericOperator.TRUE, NumericOperator.FALSE]:
             return self._string[op]
         value = self.value.short()
-        return '{}{}'.format(self._string.get(op, '{:02X}'.format(op)), value)
+        return '{}{}'.format(self._string.get(op, f'{op:02X}'), value)
 
     def __str__(self) -> str:
         return self.short()
@@ -627,7 +627,7 @@ class BinaryString:
 
     def short(self) -> str:
         op = self.operations & (CommonOperator.EOL ^ 0xFF)
-        return '{}{}'.format(self._string.get(op, '{:02X}'.format(op)), self.value)
+        return '{}{}'.format(self._string.get(op, f'{op:02X}'), self.value)
 
     def __str__(self) -> str:
         return self.short()
@@ -1477,8 +1477,8 @@ class Flow(NLRI):
                 r_str.append(short_fn() if short_fn else str(rule))
             line = ''.join(r_str)
             if len(r_str) > 1:
-                line = '[ {} ]'.format(line)
-            string.append(' {} {}'.format(rules[0].NAME, line))
+                line = f'[ {line} ]'
+            string.append(f' {rules[0].NAME} {line}')
         return ''.join(string)
 
     def extensive(self) -> str:
@@ -1549,7 +1549,7 @@ class Flow(NLRI):
     def json(self, announced: bool = True, compact: bool = False) -> str:
         """Serialize Flow NLRI to JSON (v6 format - no nexthop)."""
         members = self._json_members(compact)
-        members.append('"string": {}'.format(json.dumps(self.extensive(), default=json_number)))
+        members.append(f'"string": {json.dumps(self.extensive(), default=json_number)}')
         return '{' + ', '.join(members) + ' }'
 
     def v4_json(self, compact: bool = False, nexthop: IP | None = None) -> str:
@@ -1557,9 +1557,9 @@ class Flow(NLRI):
         members = self._json_members(compact)
         nh = nexthop if nexthop is not None else IP.NoNextHop
         if nh is not IP.NoNextHop:
-            members.append('"next-hop": "{}"'.format(nh))
+            members.append(f'"next-hop": "{nh}"')
         # as 5.x wrote it, the string ends with the next-hop the route has
-        members.append('"string": {}'.format(json.dumps(self.v4_text(nh), default=json_number)))
+        members.append(f'"string": {json.dumps(self.v4_text(nh), default=json_number)}')
         return '{' + ', '.join(members) + ' }'
 
     @classmethod

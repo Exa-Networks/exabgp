@@ -154,7 +154,7 @@ class MPRNLRI(Attribute):
         offset += 1
 
         if (self.afi, self.safi) not in Family.size:
-            raise Notify(3, 9, 'unsupported {} {}'.format(self.afi, self.safi))
+            raise Notify(3, 9, f'unsupported {self.afi} {self.safi}')
 
         _, rd = Family.size[(self.afi, self.safi)]
         # Only a field of exactly two addresses is the pair. A shorter field is one address,
@@ -276,7 +276,7 @@ class MPRNLRI(Attribute):
 
         # we do not want to accept unknown families
         if (afi, safi) not in negotiated.families:
-            raise Notify(3, 9, 'presented a non-negotiated family {}/{}'.format(afi, safi))
+            raise Notify(3, 9, f'presented a non-negotiated family {afi}/{safi}')
 
         # -- Reading length of next-hop
         len_nh = data[offset]
@@ -287,7 +287,7 @@ class MPRNLRI(Attribute):
             raise Notify.short(3, 9, 'MP_REACH_NLRI', offset + len_nh + 1, len(data))
 
         if (afi, safi) not in Family.size:
-            raise Notify(3, 9, 'unsupported {} {}'.format(afi, safi))
+            raise Notify(3, 9, f'unsupported {afi} {safi}')
 
         # RFC 8950 3: the length says which protocol the next hop belongs to, out of those
         # the family allows, and the Extended Next Hop Encoding capability adds IPv6 to an

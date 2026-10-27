@@ -81,7 +81,7 @@ class RouteDistinguisher:
     def json(self) -> str:
         if not self._packed:
             return ''
-        return '"rd": "{}"'.format(self._str())
+        return f'"rd": "{self._str()}"'
 
     def __hash__(self) -> int:
         return hash(self._packed)
@@ -89,7 +89,7 @@ class RouteDistinguisher:
     def __repr__(self) -> str:
         if not self._packed:
             return ''
-        return ' rd {}'.format(self._str())
+        return f' rd {self._str()}'
 
     @classmethod
     def unpack_routedistinguisher(cls, data: Buffer) -> RouteDistinguisher:
@@ -113,11 +113,11 @@ class RouteDistinguisher:
                 elif number < pow(2, 32) and suffix < pow(2, 16):
                     distinguisher = bytes([0, 2]) + pack('!L', number) + pack('!H', suffix)
                 else:
-                    raise ValueError('invalid route-distinguisher {}'.format(number))
+                    raise ValueError(f'invalid route-distinguisher {number}')
 
             return cls(distinguisher)
         except ValueError:
-            raise ValueError('invalid route-distinguisher {}:{}'.format(prefix, suffix)) from None
+            raise ValueError(f'invalid route-distinguisher {prefix}:{suffix}') from None
 
     def __copy__(self) -> RouteDistinguisher:
         """Preserve the NORD singleton across a copy.

@@ -120,11 +120,11 @@ class Role(Capability):
         if self.value == RoleValue.NO_ROLE:
             return 'Role(unset)'
         if self.value == RoleValue.UNASSIGNED:
-            return 'Role(unassigned {})'.format(self.octet)
-        return 'Role({})'.format(self.value)
+            return f'Role(unassigned {self.octet})'
+        return f'Role({self.value})'
 
     def json(self) -> str:
-        return '{{ "name": "role", "role": {} }}'.format(json.dumps(str(self.value)))
+        return f'{{ "name": "role", "role": {json.dumps(str(self.value))} }}'
 
     def extract_capability_bytes(self) -> list[bytes]:
         if self.value == RoleValue.NO_ROLE:
@@ -138,7 +138,7 @@ class Role(Capability):
         view = memoryview(data)
         if len(view) != cls.VALUE_SIZE:
             # The peer controls this length, so it is checked, never asserted.
-            raise Notify(2, 0, 'role capability is {} bytes, it must be {}'.format(len(view), cls.VALUE_SIZE))
+            raise Notify(2, 0, f'role capability is {len(view)} bytes, it must be {cls.VALUE_SIZE}')
 
         received = view[0]
         # An unassigned value is well formed. RFC 9234 4.2 makes it a Role Mismatch only
@@ -159,7 +159,7 @@ class Role(Capability):
             raise Notify(
                 2,
                 11,
-                'role capability sent twice with different roles, {} then {}'.format(instance.octet, received),
+                f'role capability sent twice with different roles, {instance.octet} then {received}',
             )
         log.debug(lazymsg('capability.role.duplicate action=ignore role={role}', role=role), 'parser')
         return instance

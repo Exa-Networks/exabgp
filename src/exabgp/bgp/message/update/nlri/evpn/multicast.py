@@ -90,12 +90,7 @@ class Multicast(EVPN):
         return IP.create_ip(self._packed[15 : 15 + iplen // 8])
 
     def __str__(self) -> str:
-        return '{}:{}:{}:{}'.format(
-            self._prefix(),
-            self.rd._str(),
-            self.etag,
-            self.ip,
-        )
+        return f'{self._prefix()}:{self.rd._str()}:{self.etag}:{self.ip}'
 
     @classmethod
     def unpack_evpn(cls, packed: Buffer) -> EVPN:
@@ -132,13 +127,13 @@ class Multicast(EVPN):
         members = [
             '"code": %d' % self.CODE,
             '"parsed": true',
-            '"raw": "{}"'.format(self._raw()),
-            '"name": "{}"'.format(self.NAME),
+            f'"raw": "{self._raw()}"',
+            f'"name": "{self.NAME}"',
         ]
         members.append(self.rd.json())
         members.append(self.etag.json())
         if self.ip:
-            members.append('"ip": "{}"'.format(str(self.ip)))
+            members.append(f'"ip": "{str(self.ip)}"')
         return '{{ {} }}'.format(', '.join(member for member in members if member))
 
 

@@ -59,7 +59,7 @@ class MUP(NLRI):
         self._packed: Buffer = b''
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}:{}:{}'.format(self.afi, self.safi, self.ARCHTYPE, self.CODE, self._packed.hex()))
+        return hash(f'{self.afi}:{self.safi}:{self.ARCHTYPE}:{self.CODE}:{self._packed.hex()}')
 
     def __len__(self) -> int:
         # _packed includes 4-byte header: arch_type(1) + route_type(2) + length(1)
@@ -81,7 +81,7 @@ class MUP(NLRI):
         payload = self._packed[4:] if len(self._packed) > 4 else b''
         return 'mup:{}:{}'.format(
             self.SHORT_NAME.lower(),
-            '0x' + ''.join('{:02x}'.format(_) for _ in payload),
+            '0x' + ''.join(f'{_:02x}' for _ in payload),
         )
 
     def __repr__(self) -> str:
@@ -92,7 +92,7 @@ class MUP(NLRI):
         return ''
 
     def _prefix(self) -> str:
-        return 'mup:{}:'.format(self.SHORT_NAME.lower())
+        return f'mup:{self.SHORT_NAME.lower()}:'
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for MUP but not yet implemented, so MUP is kept out
@@ -175,7 +175,7 @@ class MUP(NLRI):
         if len(data) < end:
             raise Notify.short(3, 10, 'MUP NLRI', end, len(data))
 
-        key = '{}:{}'.format(arch, code)
+        key = f'{arch}:{code}'
         if key not in cls.registered_mup:
             # draft-mpmz-bess-mup-safi-05 3.1: "Any other Route Types MUST be silently
             # ignored upon a receipt if a BGP speaker supports only 3gpp-5G architecture
@@ -205,7 +205,7 @@ class MUP(NLRI):
 
     def _raw(self) -> str:
         # _packed includes 4-byte header
-        return ''.join('{:02X}'.format(_) for _ in self._packed)
+        return ''.join(f'{_:02X}' for _ in self._packed)
 
 
 NLRI.register(AFI.ipv6, SAFI.mup)(MUP)

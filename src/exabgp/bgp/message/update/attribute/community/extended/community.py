@@ -207,9 +207,7 @@ class ExtendedCommunityBase(Attribute):
         return self._described() or self._hexadecimal()
 
     def json(self, compact: bool = False) -> str:
-        return '{{ "value": {}, "string": {} }}'.format(
-            self._value(), json.dumps(self._description(), default=json_number)
-        )
+        return f'{{ "value": {self._value()}, "string": {json.dumps(self._description(), default=json_number)} }}'
 
     def __repr__(self) -> str:
         return self._description()

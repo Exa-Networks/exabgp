@@ -112,10 +112,10 @@ class NetMask(Resource):
             raise ValueError('invalid address family')
 
         if not str(string).isdigit():
-            raise ValueError('invalid netmask {}'.format(string))
+            raise ValueError(f'invalid netmask {string}')
 
         value = int(string)
         if value < 0 or value > maximum:
-            raise ValueError('invalid netmask {}'.format(string))
+            raise ValueError(f'invalid netmask {string}')
 
         return cls._make(value, maximum)

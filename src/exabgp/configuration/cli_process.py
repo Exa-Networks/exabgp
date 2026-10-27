@@ -27,7 +27,7 @@ def cli_processes() -> dict[str, dict[str, Any]]:
     for variable, mode in MODES:
         if not os.environ.get(variable, ''):
             continue
-        name = '{}-{}-{:x}'.format(API_PREFIX, mode, uuid.uuid1().fields[0])
+        name = f'{API_PREFIX}-{mode}-{uuid.uuid1().fields[0]:x}'
         found[name] = {
             'run': [sys.executable, program],
             'encoder': 'text',

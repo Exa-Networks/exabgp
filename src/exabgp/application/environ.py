@@ -17,7 +17,7 @@ def setargs(sub: argparse.ArgumentParser) -> None:
 
 def default() -> None:
     sys.stdout.write('\nEnvironment values are:\n')
-    sys.stdout.write('\n'.join('    {}'.format(_) for _ in Env.default()))
+    sys.stdout.write('\n'.join(f'    {_}' for _ in Env.default()))
     sys.stdout.flush()
 
 
@@ -28,7 +28,7 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
     }
 
     for line in dispatch[cmdarg.env](cmdarg.diff):
-        sys.stdout.write('{}\n'.format(line))
+        sys.stdout.write(f'{line}\n')
         sys.stdout.flush()
 
 

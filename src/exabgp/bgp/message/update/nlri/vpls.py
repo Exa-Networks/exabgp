@@ -181,22 +181,16 @@ class VPLSBase(NLRI):
         content = ', '.join(
             [
                 self.rd.json(),
-                '"endpoint": {}'.format(self.endpoint),
-                '"base": {}'.format(self.base),
-                '"offset": {}'.format(self.offset),
-                '"size": {}'.format(self.block_size),
+                f'"endpoint": {self.endpoint}',
+                f'"base": {self.base}',
+                f'"offset": {self.offset}',
+                f'"size": {self.block_size}',
             ],
         )
-        return '{{ {} }}'.format(content)
+        return f'{{ {content} }}'
 
     def extensive(self) -> str:
-        return 'vpls{} endpoint {} base {} offset {} size {}'.format(
-            self.rd,
-            self.endpoint,
-            self.base,
-            self.offset,
-            self.block_size,
-        )
+        return f'vpls{self.rd} endpoint {self.endpoint} base {self.base} offset {self.offset} size {self.block_size}'
 
     def __str__(self) -> str:
         return self.extensive()

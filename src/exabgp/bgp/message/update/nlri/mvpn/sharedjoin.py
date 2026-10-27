@@ -134,13 +134,13 @@ class SharedJoin(MVPN):
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
         content = ' "code": %d, ' % self.CODE
         content += '"parsed": true, '
-        content += '"raw": "{}", '.format(self._raw())
-        content += '"name": "{}", '.format(self.NAME)
-        content += '{}, '.format(self.rd.json())
-        content += '"source-as": "{}", '.format(str(self.source_as))
-        content += '"source": "{}", '.format(str(self.source))
-        content += '"group": "{}"'.format(str(self.group))
-        return '{{{}}}'.format(content)
+        content += f'"raw": "{self._raw()}", '
+        content += f'"name": "{self.NAME}", '
+        content += f'{self.rd.json()}, '
+        content += f'"source-as": "{str(self.source_as)}", '
+        content += f'"source": "{str(self.source)}", '
+        content += f'"group": "{str(self.group)}"'
+        return f'{{{content}}}'
 
 
 MVPN.register_mvpn(code=6)(SharedJoin)

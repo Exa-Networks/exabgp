@@ -176,10 +176,10 @@ class GenericSRId:
         return self.code
 
     def __repr__(self) -> str:
-        return 'Attribute with code [ {} ] not implemented'.format(self.code)
+        return f'Attribute with code [ {self.code} ] not implemented'
 
     def __str__(self) -> str:
-        return 'sr-tlv-{}:0x{}'.format(self.code, bytes(self.rep).hex())
+        return f'sr-tlv-{self.code}:0x{bytes(self.rep).hex()}'
 
     def pack_tlv(self) -> bytes:
         """Re-emit the TLV exactly as the peer sent it.
@@ -194,4 +194,4 @@ class GenericSRId:
         return cls(code=scode, rep=data)
 
     def json(self, compact: bool | None = None) -> str:
-        return '"attribute-not-implemented-{}": "{}"'.format(self.code, hexstring(self.rep))
+        return f'"attribute-not-implemented-{self.code}": "{hexstring(self.rep)}"'

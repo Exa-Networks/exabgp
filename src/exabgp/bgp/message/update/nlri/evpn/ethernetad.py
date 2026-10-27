@@ -94,7 +94,7 @@ class EthernetAD(EVPN):
         return Labels.unpack_labels(self._packed[24:])
 
     def __str__(self) -> str:
-        return '{}:{}:{}:{}:{}'.format(self._prefix(), self.rd._str(), self.esi, self.etag, self.label)
+        return f'{self._prefix()}:{self.rd._str()}:{self.esi}:{self.etag}:{self.label}'
 
     def _route_key(self) -> bytes:
         # RFC 7432 7.1: the RD, the ESI and the Ethernet Tag; the label is an attribute
@@ -128,8 +128,8 @@ class EthernetAD(EVPN):
         members = [
             '"code": %d' % self.CODE,
             '"parsed": true',
-            '"raw": "{}"'.format(self._raw()),
-            '"name": "{}"'.format(self.NAME),
+            f'"raw": "{self._raw()}"',
+            f'"name": "{self.NAME}"',
         ]
         members.append(self.rd.json())
         members.append(self.esi.json())

@@ -217,7 +217,7 @@ def _find_script(script_name: str) -> str:
         if os.path.isfile(fn):
             return fn
 
-    sys.stderr.write('Could not find script {0}\n'.format(script_name))
+    sys.stderr.write(f'Could not find script {script_name}\n')
     raise SystemExit(1)
 
 
@@ -315,7 +315,7 @@ class LineProfiler:
         if event in ('line', 'return') and frame.f_code in self.code_map:
             c = _get_memory(os.getpid())
             if c >= self.max_mem:
-                t = 'Current memory {0:.2f} MB exceeded the maximum '.format(c) + 'of {0:.2f} MB\n'.format(self.max_mem)
+                t = f'Current memory {c:.2f} MB exceeded the maximum ' + f'of {self.max_mem:.2f} MB\n'
                 sys.stdout.write(t)
                 sys.stdout.write('Stepping into the debugger \n')
                 # The original also moved frame.f_lineno two lines back, to show the line
@@ -383,7 +383,7 @@ def _show_code(out: TextIO, code: types.CodeType, lines: dict[int, list[float]],
 
     first_line = min(lines_normalized)
     mem_old = max(lines_normalized[first_line])
-    template_mem = '{{0:{0}.{1}'.format(precision + 6, precision) + 'f} MB'
+    template_mem = f'{{0:{precision + 6}.{precision}' + 'f} MB'
     for idx, line in enumerate(linenos):
         mem_text = ''
         inc_text = ''

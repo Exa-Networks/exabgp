@@ -38,7 +38,7 @@ class MultiSession(CapabilityList[CapabilityCode]):
         variant = 'RFC' if self.code() == Capability.CODE.MULTISESSION else 'Cisco'
         return '{{ "name": "multisession", "variant": "{}", "capabilities": [{} ] }}'.format(
             variant,
-            ','.join(' "{}"'.format(str(capa)) for capa in self),
+            ','.join(f' "{str(capa)}"' for capa in self),
         )
 
     def extract_capability_bytes(self) -> list[bytes]:

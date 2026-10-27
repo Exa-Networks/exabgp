@@ -72,7 +72,7 @@ def _exit_with(message: str) -> NoReturn:
 
 def _write_usage() -> None:
     """Write the environment values and how to call encode."""
-    sys.stdout.write('Environment values are:\n{}\n\n'.format('\n'.join(' - {}'.format(_) for _ in Env.default())))
+    sys.stdout.write('Environment values are:\n{}\n\n'.format('\n'.join(f' - {_}' for _ in Env.default())))
     sys.stdout.write('Usage: exabgp encode "route 10.0.0.0/24 next-hop 1.2.3.4"\n')
     sys.stdout.write('       exabgp encode -c myconfig.conf\n\n')
     sys.stdout.write('Examples:\n')

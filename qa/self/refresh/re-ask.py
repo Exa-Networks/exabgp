@@ -20,7 +20,7 @@ while True:
         signal.alarm(4)
 
         line = sys.stdin.readline()
-        sys.stderr.write('received {}\n'.format(line.strip()))
+        sys.stderr.write(f'received {line.strip()}\n')
         sys.stderr.flush()
     except TimeError:
         sys.stdout.write('announce route-refresh ipv4 unicast\n')

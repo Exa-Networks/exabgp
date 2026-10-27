@@ -432,7 +432,7 @@ class INETBase(NLRI):
         return self.index()
 
     def prefix(self) -> str:
-        return '{}{}'.format(self.cidr.prefix(), str(self.path_info))
+        return f'{self.cidr.prefix()}{str(self.path_info)}'
 
     def extensive(self) -> str:
         return self.prefix()
@@ -443,10 +443,10 @@ class INETBase(NLRI):
     def json(self, announced: bool = True, compact: bool = False) -> str:
         internal = ', '.join([_ for _ in self._internal(announced) if _])
         if internal:
-            return '{{ "nlri": "{}", {} }}'.format(self.cidr.prefix(), internal)
+            return f'{{ "nlri": "{self.cidr.prefix()}", {internal} }}'
         if compact:
-            return '"{}"'.format(self.cidr.prefix())
-        return '{{ "nlri": "{}" }}'.format(self.cidr.prefix())
+            return f'"{self.cidr.prefix()}"'
+        return f'{{ "nlri": "{self.cidr.prefix()}" }}'
 
     @classmethod
     def _pathinfo(cls, data: Buffer, addpath: bool) -> tuple[PathInfo, Buffer]:

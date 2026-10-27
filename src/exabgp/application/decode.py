@@ -43,9 +43,7 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
     # Read from stdin if no payload provided
     if cmdarg.payload is None:
         if sys.stdin.isatty():
-            sys.stdout.write(
-                'Environment values are:\n{}\n\n'.format('\n'.join(' - {}'.format(_) for _ in Env.default()))
-            )
+            sys.stdout.write('Environment values are:\n{}\n\n'.format('\n'.join(f' - {_}' for _ in Env.default())))
             sys.stdout.write('Usage: exabgp decode <hex>\n')
             sys.stdout.write('       exabgp encode "route ..." | exabgp decode\n')
             sys.stdout.write('       echo "<hex>" | exabgp decode\n\n')

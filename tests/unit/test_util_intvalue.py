@@ -77,7 +77,7 @@ def test_there_is_no_index_so_every_implicit_use_is_found() -> None:
 def test_formatted_like_an_int_subclass(number: int) -> None:
     value, old = Named(number), OldNamed(number)
     assert f'{value}' == f'{old}' == value.name()
-    assert '{}'.format(value) == '{}'.format(old)
+    assert f'{value}' == f'{old}'
     assert '%s' % value == '%s' % old
     assert f'{value:04x}' == f'{old:04x}'
     assert f'{value:d}' == f'{old:d}'

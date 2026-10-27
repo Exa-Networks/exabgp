@@ -268,7 +268,7 @@ class Peer:
         self.capabilities_refused = False
 
     def id(self) -> str:
-        return 'peer-{}'.format(self.neighbor.uid)
+        return f'peer-{self.neighbor.uid}'
 
     def _close(self, message: str = '', error: str | Exception = '') -> None:
         if self.fsm not in (FSM.IDLE, FSM.ACTIVE):
@@ -1655,8 +1655,8 @@ class Peer:
         total_sent = 0
         total_rcvd = 0
         for message in ('open', 'notification', 'keepalive', 'update', 'refresh'):
-            sent = self.stats['send-{}'.format(message)]
-            rcvd = self.stats['receive-{}'.format(message)]
+            sent = self.stats[f'send-{message}']
+            rcvd = self.stats[f'receive-{message}']
             total_sent += sent
             total_rcvd += rcvd
             messages[message] = (sent, rcvd)

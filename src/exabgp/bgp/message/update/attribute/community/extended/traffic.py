@@ -239,7 +239,7 @@ class TrafficRedirect(ExtendedCommunity):
         return value
 
     def __repr__(self) -> str:
-        return 'redirect:{}:{}'.format(self.asn, self.target)
+        return f'redirect:{self.asn}:{self.target}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRedirect:
@@ -283,7 +283,7 @@ class TrafficRedirectASN4(ExtendedCommunity):
         # so an AS below 65536 carries the trailing L which asks for this one, or the text
         # reads back as 0x8008.
         suffix = 'L' if self.asn <= ASN.MAX_2BYTE else ''
-        return 'redirect:{}{}:{}'.format(self.asn, suffix, self.target)
+        return f'redirect:{self.asn}{suffix}:{self.target}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRedirectASN4:
@@ -322,7 +322,7 @@ class TrafficRedirectIPv4(ExtendedCommunity):
         return value
 
     def __repr__(self) -> str:
-        return 'redirect:{}:{}'.format(self.ip, self.target)
+        return f'redirect:{self.ip}:{self.target}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRedirectIPv4:
@@ -406,7 +406,7 @@ class TrafficNextHopIPv4IETF(ExtendedCommunity):
         return (
             # no "(with copy)" suffix: the keyword already says it, and this rendering is
             # read back as configuration by qa/bin/test_api_encode, so it has to be input
-            'copy-to-nexthop-ietf {}'.format(self.ip) if self.copy else 'redirect-to-nexthop-ietf {}'.format(self.ip)
+            f'copy-to-nexthop-ietf {self.ip}' if self.copy else f'redirect-to-nexthop-ietf {self.ip}'
         )
 
     @classmethod
@@ -451,7 +451,7 @@ class TrafficNextHopIPv6IETF(ExtendedCommunityIPv6):
         return (
             # no "(with copy)" suffix: the keyword already says it, and this rendering is
             # read back as configuration by qa/bin/test_api_encode, so it has to be input
-            'copy-to-nexthop-ietf {}'.format(self.ip) if self.copy else 'redirect-to-nexthop-ietf {}'.format(self.ip)
+            f'copy-to-nexthop-ietf {self.ip}' if self.copy else f'redirect-to-nexthop-ietf {self.ip}'
         )
 
     @classmethod

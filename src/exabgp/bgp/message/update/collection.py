@@ -358,7 +358,7 @@ class UpdateCollection:
     # message not implemented we should use messages below.
 
     def __str__(self) -> str:
-        return '\n'.join(['{}{}'.format(str(self.nlris[n]), str(self.attributes)) for n in range(len(self.nlris))])
+        return '\n'.join([f'{str(self.nlris[n])}{str(self.attributes)}' for n in range(len(self.nlris))])
 
     @staticmethod
     def prefix(data: Buffer) -> bytes:
@@ -470,7 +470,7 @@ class UpdateCollection:
                 mp_announces.setdefault(nlri.family().afi_safi(), []).append(routed)
                 continue
 
-            raise ValueError('unexpected nlri definition ({})'.format(nlri))
+            raise ValueError(f'unexpected nlri definition ({nlri})')
 
         return v4_announces, mp_announces, has_empty_nlri
 
@@ -1117,7 +1117,7 @@ class UpdateCollection:
             local_packed = getattr(local_address, '_packed', b'')
             if local_address is not None and nexthop_packed and local_packed and nexthop_packed == local_packed:
                 log.warning(
-                    lambda: 'received NEXT_HOP {} equals our local address (RFC 4271 violation)'.format(nexthop),
+                    lambda: f'received NEXT_HOP {nexthop} equals our local address (RFC 4271 violation)',
                     'parser',
                 )
         except (TypeError, KeyError) as exc:

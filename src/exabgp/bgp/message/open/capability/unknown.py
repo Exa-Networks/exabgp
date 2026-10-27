@@ -25,10 +25,10 @@ class UnknownCapability(Capability):
 
     def __str__(self) -> str:
         if self.capability in Capability.CODE.reserved:
-            return 'Reserved {}'.format(str(self.capability))
+            return f'Reserved {str(self.capability)}'
         if self.capability in Capability.CODE.unassigned:
-            return 'Unassigned {}'.format(str(self.capability))
-        return 'Unknown {}'.format(str(self.capability))
+            return f'Unassigned {str(self.capability)}'
+        return f'Unknown {str(self.capability)}'
 
     def json(self) -> str:
         if self.capability in Capability.CODE.reserved:
@@ -37,7 +37,7 @@ class UnknownCapability(Capability):
             iana = 'unassigned'
         else:
             iana = 'unknown'
-        raw = ''.join('{:02X}'.format(_) for _ in self.data)
+        raw = ''.join(f'{_:02X}' for _ in self.data)
         return '{ "name": "unknown", "iana": "%s", "value": %d, "raw": "%s" }' % (iana, self.capability, raw)
 
     def extract_capability_bytes(self) -> list[bytes]:

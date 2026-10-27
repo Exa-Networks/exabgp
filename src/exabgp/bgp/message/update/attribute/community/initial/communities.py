@@ -68,7 +68,7 @@ class Communities(Attribute):
             Notify: If data length is not a multiple of 4
         """
         if len(data) % COMMUNITY_SIZE != 0:
-            raise Notify(3, 1, 'could not decode community {}'.format(str([hex(_) for _ in data])))
+            raise Notify(3, 1, f'could not decode community {str([hex(_) for _ in data])}')
         return cls(data)
 
     @classmethod

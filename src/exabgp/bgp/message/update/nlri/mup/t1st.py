@@ -330,21 +330,21 @@ class Type1SessionTransformedRoute(MUP):
         return cls(data, afi), b''
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        content = '"name": "{}", '.format(self.NAME)
+        content = f'"name": "{self.NAME}", '
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
-        content += '"prefix_ip": "{}", '.format(str(self.prefix_ip))
-        content += '"teid": "{}", '.format(str(self.teid))
-        content += '"qfi": "{}", '.format(str(self.qfi))
+        content += f'"prefix_ip": "{str(self.prefix_ip)}", '
+        content += f'"teid": "{str(self.teid)}", '
+        content += f'"qfi": "{str(self.qfi)}", '
         content += self.rd.json() + ', '
         content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
-        content += '"endpoint_ip": "{}", '.format(str(self.endpoint_ip))
+        content += f'"endpoint_ip": "{str(self.endpoint_ip)}", '
         content += '"source_ip_len": %d, ' % self.source_ip_len
         # without a source the field is empty, not the repr of the empty bytes it is read as
         content += '"source_ip": "{}", '.format(str(self.source_ip) if self.source_ip_len else '')
-        content += '"raw": "{}"'.format(self._raw())
-        return '{{ {} }}'.format(content)
+        content += f'"raw": "{self._raw()}"'
+        return f'{{ {content} }}'
 
 
 MUP.register_mup_route(archtype=1, code=3)(Type1SessionTransformedRoute)
@@ -403,14 +403,14 @@ class MalformedType1SessionTransformedRoute(MUP):
         return hash(self.index())
 
     def __str__(self) -> str:
-        return '{}:{}:{}/{}'.format(self._prefix(), self.rd._str(), self.prefix_ip, self.prefix_ip_len)
+        return f'{self._prefix()}:{self.rd._str()}:{self.prefix_ip}/{self.prefix_ip_len}'
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        content = '"name": "{}", '.format(self.NAME)
+        content = f'"name": "{self.NAME}", '
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
-        content += '"prefix_ip": "{}", '.format(str(self.prefix_ip))
+        content += f'"prefix_ip": "{str(self.prefix_ip)}", '
         content += self.rd.json() + ', '
-        content += '"raw": "{}"'.format(self._raw())
-        return '{{ {} }}'.format(content)
+        content += f'"raw": "{self._raw()}"'
+        return f'{{ {content} }}'

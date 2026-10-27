@@ -48,7 +48,7 @@ class SrLabelIndex:
         return value
 
     def __repr__(self) -> str:
-        return '{}'.format(self.labelindex)
+        return f'{self.labelindex}'
 
     def pack_tlv(self) -> bytes:
         return pack('!B', self.TLV) + pack('!H', self.LENGTH) + self._packed

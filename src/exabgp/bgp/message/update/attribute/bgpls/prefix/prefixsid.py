@@ -102,7 +102,7 @@ class PrefixSid(FlagLS):
         return tuple(raw)
 
     def __repr__(self) -> str:
-        return 'prefix_flags: {}, sids: {}, undecoded_sid: {}'.format(self.flags, self.sids, self.undecoded)
+        return f'prefix_flags: {self.flags}, sids: {self.sids}, undecoded_sid: {self.undecoded}'
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> PrefixSid:

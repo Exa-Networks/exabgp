@@ -124,7 +124,7 @@ class GenericAttribute(Attribute):
         return len(self._packed)
 
     def __repr__(self) -> str:
-        return '0x' + ''.join('{:02x}'.format(_) for _ in self._packed)
+        return '0x' + ''.join(f'{_:02x}' for _ in self._packed)
 
     def pack_attribute(self, negotiated: Negotiated | None = None) -> bytes:
         flag: int = self.FLAG

@@ -154,7 +154,7 @@ class MVPN(NLRI):
         NLRI.__init__(self, afi=afi, safi=SAFI.mcast_vpn)
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}:{}'.format(self.afi, self.safi, self.CODE, self._packed.hex()))
+        return hash(f'{self.afi}:{self.safi}:{self.CODE}:{self._packed.hex()}')
 
     def __len__(self) -> int:
         return len(self._packed)
@@ -173,7 +173,7 @@ class MVPN(NLRI):
         # _packed[2:] is the payload (skip type + length header)
         return 'mvpn:{}:{}'.format(
             self.registered_mvpn.get(self.CODE, self).SHORT_NAME.lower(),
-            '0x' + ''.join('{:02x}'.format(_) for _ in self._packed[self.HEADER_SIZE :]),
+            '0x' + ''.join(f'{_:02x}' for _ in self._packed[self.HEADER_SIZE :]),
         )
 
     def __repr__(self) -> str:
@@ -184,7 +184,7 @@ class MVPN(NLRI):
         return ''
 
     def _prefix(self) -> str:
-        return 'mvpn:{}:'.format(self.registered_mvpn.get(self.CODE, self).SHORT_NAME.lower())
+        return f'mvpn:{self.registered_mvpn.get(self.CODE, self).SHORT_NAME.lower()}:'
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for MVPN but not yet implemented
@@ -263,7 +263,7 @@ class MVPN(NLRI):
         return klass, data[total_length:]
 
     def _raw(self) -> str:
-        return ''.join('{:02X}'.format(_) for _ in self._packed)
+        return ''.join(f'{_:02X}' for _ in self._packed)
 
 
 NLRI.register(AFI.ipv6, SAFI.mcast_vpn)(MVPN)

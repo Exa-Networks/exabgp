@@ -387,7 +387,7 @@ class LabelBase(INET):
         return new
 
     def prefix(self) -> str:
-        return '{}{}'.format(INET.prefix(self), self.labels)
+        return f'{INET.prefix(self)}{self.labels}'
 
     def v4_text(self, nexthop: IP | None = None) -> str:
         """As 5.x wrote it: the labels without their raw value, the next-hop before the rd."""

@@ -87,7 +87,7 @@ def lazyattribute(flag: int, aid: int, length: int, data: Buffer) -> Callable[[]
             flag,
             int(aid),
             length,
-            ' payload {}'.format(od(data)) if data else '',
+            f' payload {od(data)}' if data else '',
         )
 
     return _lazy
@@ -95,7 +95,7 @@ def lazyattribute(flag: int, aid: int, length: int, data: Buffer) -> Callable[[]
 
 def lazynlri(afi: AFI, safi: SAFI, addpath: bool, data: Buffer) -> Callable[[], str]:
     def _lazy() -> str:
-        family = '{} {}'.format(afi, safi)
+        family = f'{afi} {safi}'
         path = 'with path-information' if addpath else 'without path-information'
         payload = od(data) if data else 'none'
         return 'NLRI      %-18s %-28s payload %s' % (family, path, payload)

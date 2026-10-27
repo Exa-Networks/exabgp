@@ -72,7 +72,7 @@ class InterfaceSet(ExtendedCommunity):
 
     def __repr__(self) -> str:
         str_direction = self.names.get(self.direction, str(self.direction))
-        return 'interface-set:{}:{}:{}'.format(str_direction, str(self.asn), str(self.target))
+        return f'interface-set:{str_direction}:{str(self.asn)}:{str(self.target)}'
 
     def json(self, compact: bool = False) -> str:
         h = 0x00
@@ -80,7 +80,7 @@ class InterfaceSet(ExtendedCommunity):
             h <<= 8
             h += byte
         trans = 'true' if self.transitive() else 'false'
-        return '{{ "value": {}, "string": "{}", "transitive": {} }}'.format(h, repr(self), trans)
+        return f'{{ "value": {h}, "string": "{repr(self)}", "transitive": {trans} }}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> InterfaceSet:

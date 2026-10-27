@@ -157,9 +157,9 @@ class RTCBase(NLRI):
 
     def __str__(self) -> str:
         if self.prefix_length == RTC_PREFIX_MAX_BITS:
-            return 'rtc {}:{}'.format(self.origin, self.rt)
+            return f'rtc {self.origin}:{self.rt}'
         if self.prefix_length:
-            return 'rtc {}:{}/{}'.format(self.origin, self._target_prefix(), self.prefix_length)
+            return f'rtc {self.origin}:{self._target_prefix()}/{self.prefix_length}'
         return 'rtc wildcard'
 
     def __repr__(self) -> str:
@@ -168,11 +168,9 @@ class RTCBase(NLRI):
     def json(self, announced: bool = True, compact: bool = False) -> str:
         rt = self.rt
         if rt is not None:
-            return '{{ "origin": {}, "route-target": "{}" }}'.format(self.origin, rt)
+            return f'{{ "origin": {self.origin}, "route-target": "{rt}" }}'
         if self.prefix_length:
-            return '{{ "origin": {}, "route-target": null, "prefix-length": {}, "route-target-prefix": "{}" }}'.format(
-                self.origin, self.prefix_length, self._target_prefix()
-            )
+            return f'{{ "origin": {self.origin}, "route-target": null, "prefix-length": {self.prefix_length}, "route-target-prefix": "{self._target_prefix()}" }}'
         return '{ "origin": 0, "route-target": null }'
 
     def _fresh(self) -> Self:

@@ -139,7 +139,7 @@ class NLRI(Family):
     def __hash__(self) -> int:
         from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-        return hash('{}:{}:{}'.format(self.afi, self.safi, self.pack_nlri(Negotiated.UNSET).hex()))
+        return hash(f'{self.afi}:{self.safi}:{self.pack_nlri(Negotiated.UNSET).hex()}')
 
     def __eq__(self, other: object) -> bool:
         # An NLRI compared to anything else answers NotImplemented so Python can fall
@@ -296,7 +296,7 @@ class NLRI(Family):
                 if force:
                     cls.registered_nlri[key] = klass
                 else:
-                    raise RuntimeError('Tried to register {} twice'.format(key))
+                    raise RuntimeError(f'Tried to register {key} twice')
             else:
                 cls.registered_nlri[key] = klass
                 cls.registered_families.append(new)
@@ -338,10 +338,10 @@ class NLRI(Family):
         a, s = afi, safi
         log.debug(lazynlri(a, s, addpath, bytes(data)), 'parser')
 
-        key: str = '{}/{}'.format(a, s)
+        key: str = f'{a}/{s}'
         if key in cls.registered_nlri:
             return cls.registered_nlri[key].unpack_nlri(a, s, data, action, addpath, negotiated)
-        raise Notify(3, 0, 'trying to decode unknown family {}/{}'.format(a, s))
+        raise Notify(3, 0, f'trying to decode unknown family {a}/{s}')
 
 
 # Initialize the NLRI singletons

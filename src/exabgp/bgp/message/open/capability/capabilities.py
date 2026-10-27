@@ -330,9 +330,7 @@ class Capabilities(dict[CapabilityCode, Capability]):
                 raise Notify(
                     2,
                     0,
-                    'Bad length for OPEN (extended) {} (<{}) {}'.format(
-                        name, MIN_EXTENDED_PARAM_LEN, Capability.hex(data)
-                    ),
+                    f'Bad length for OPEN (extended) {name} (<{MIN_EXTENDED_PARAM_LEN}) {Capability.hex(data)}',
                 )
             # Optional parameters length
             ld: int = unpack('!H', data[1:3])[0]
@@ -341,7 +339,7 @@ class Capabilities(dict[CapabilityCode, Capability]):
                 raise Notify(
                     2,
                     0,
-                    'Bad length for OPEN (extended) {} (buffer underrun) {}'.format(name, Capability.hex(data)),
+                    f'Bad length for OPEN (extended) {name} (buffer underrun) {Capability.hex(data)}',
                 )
             key: int = data[0]
             value: Buffer = data[3:boundary]
@@ -350,11 +348,11 @@ class Capabilities(dict[CapabilityCode, Capability]):
 
         def _key_values(name: str, data: Buffer) -> tuple[int, Buffer, Buffer]:
             if len(data) < MIN_PARAM_LEN:
-                raise Notify(2, 0, 'Bad length for OPEN {} (<{}) {}'.format(name, MIN_PARAM_LEN, Capability.hex(data)))
+                raise Notify(2, 0, f'Bad length for OPEN {name} (<{MIN_PARAM_LEN}) {Capability.hex(data)}')
             ld: int = data[1]
             boundary: int = ld + 2
             if len(data) < boundary:
-                raise Notify(2, 0, 'Bad length for OPEN {} (buffer underrun) {}'.format(name, Capability.hex(data)))
+                raise Notify(2, 0, f'Bad length for OPEN {name} (buffer underrun) {Capability.hex(data)}')
             key: int = data[0]
             value: Buffer = data[2:boundary]
             rest: Buffer = data[boundary:]

@@ -148,7 +148,7 @@ class Srv6EndX(FlagLS):
         return cls(packed)
 
     def json(self, compact: bool = False) -> str:
-        return '"srv6-endx": {}'.format(json.dumps(self.content, default=json_number))
+        return f'"srv6-endx": {json.dumps(self.content, default=json_number)}'
 
 
 LinkState.register_lsid(tlv=1106, json_key='srv6-endx', repr_name='SRv6 End.X SID')(Srv6EndX)

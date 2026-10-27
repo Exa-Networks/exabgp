@@ -240,8 +240,8 @@ class MAC(EVPN):
         members = [
             '"code": %d' % self.CODE,
             '"parsed": true',
-            '"raw": "{}"'.format(self._raw()),
-            '"name": "{}"'.format(self.NAME),
+            f'"raw": "{self._raw()}"',
+            f'"name": "{self.NAME}"',
         ]
         members.append(self.rd.json())
         members.append(self.esi.json())
@@ -249,7 +249,7 @@ class MAC(EVPN):
         members.append(self.mac.json())
         members.append(self.label.json())
         if self.ip:
-            members.append('"ip": "{}"'.format(str(self.ip)))
+            members.append(f'"ip": "{str(self.ip)}"')
         return '{{ {} }}'.format(', '.join(member for member in members if member))
 
 

@@ -47,7 +47,7 @@ class EORNLRI(NLRI):
     def json(self, announced: bool = True, compact: bool = False) -> str:
         # every other NLRI renders an object because the caller puts the result
         # in a list, so a bare key and value here made the whole line unparseable
-        return '{{ "eor": {{ "afi" : "{}", "safi" : "{}" }} }}'.format(self.afi, self.safi)
+        return f'{{ "eor": {{ "afi" : "{self.afi}", "safi" : "{self.safi}" }} }}'
 
     def __len__(self) -> int:
         if self.afi == AFI.ipv4 and self.safi == SAFI.unicast:

@@ -345,7 +345,7 @@ class BaseLS:
         return f'"{self.JSON}": {json.dumps(jsonable(self.content), default=json_number)}'
 
     def __repr__(self) -> str:
-        return '{}: {}'.format(self.REPR, self.content)
+        return f'{self.REPR}: {self.content}'
 
     @classmethod
     def check_length(cls, data: Buffer, length: int) -> None:
@@ -422,7 +422,7 @@ class GenericLSID(BaseLS):
         return hexstring(self._packed)
 
     def __repr__(self) -> str:
-        return 'Attribute with code [ {} ] not implemented'.format(self.tlv())
+        return f'Attribute with code [ {self.tlv()} ] not implemented'
 
     def json_key(self) -> str:
         # one key per unknown code: GenericLSID merges, and the merge groups by key, so one
@@ -544,7 +544,7 @@ class FlagLS(BaseLS):
         return self.flags
 
     def __repr__(self) -> str:
-        return '{}: {}'.format(self.REPR, self.flags)
+        return f'{self.REPR}: {self.flags}'
 
     def json(self, compact: bool = False) -> str:
         return f'"{self.JSON}": {json.dumps(self.flags, default=json_number)}'

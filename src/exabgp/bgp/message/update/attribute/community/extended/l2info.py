@@ -64,7 +64,7 @@ class L2Info(ExtendedCommunity):
         return value
 
     def __repr__(self) -> str:
-        return 'l2info:{}:{}:{}:{}'.format(self.encaps, self.control, self.mtu, self.reserved)
+        return f'l2info:{self.encaps}:{self.control}:{self.mtu}:{self.reserved}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> L2Info:

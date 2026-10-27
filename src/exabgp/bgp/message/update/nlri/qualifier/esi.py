@@ -69,7 +69,7 @@ class ESI:
     def __str__(self) -> str:
         if self._packed == self.DEFAULT:
             return '-'
-        return ':'.join('{:02x}'.format(_) for _ in self._packed)
+        return ':'.join(f'{_:02x}' for _ in self._packed)
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -90,4 +90,4 @@ class ESI:
         return cls(data)
 
     def json(self, compact: bool = False) -> str:
-        return '"esi": "{}"'.format(str(self))
+        return f'"esi": "{str(self)}"'

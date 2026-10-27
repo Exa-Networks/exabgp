@@ -163,7 +163,7 @@ class SRPolicyNLRI(NLRI):
         return new
 
     def __hash__(self) -> int:
-        return hash('{}:{}:{}'.format(self.afi, self.safi, self._packed.hex()))
+        return hash(f'{self.afi}:{self.safi}:{self._packed.hex()}')
 
     def __len__(self) -> int:
         """Return length including the 1-byte length prefix."""
@@ -180,21 +180,13 @@ class SRPolicyNLRI(NLRI):
         return not self == other
 
     def __str__(self) -> str:
-        return 'sr-policy distinguisher {} color {} endpoint {}'.format(
-            self.distinguisher,
-            self.color,
-            self.endpoint,
-        )
+        return f'sr-policy distinguisher {self.distinguisher} color {self.color} endpoint {self.endpoint}'
 
     def __repr__(self) -> str:
         return str(self)
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        return '{{"distinguisher": {}, "color": {}, "endpoint": "{}"}}'.format(
-            self.distinguisher,
-            self.color,
-            self.endpoint,
-        )
+        return f'{{"distinguisher": {self.distinguisher}, "color": {self.color}, "endpoint": "{self.endpoint}"}}'
 
     @classmethod
     def unpack_nlri(

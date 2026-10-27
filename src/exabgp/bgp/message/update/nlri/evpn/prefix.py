@@ -229,16 +229,16 @@ class Prefix(EVPN):
         members = [
             '"code": %d' % self.CODE,
             '"parsed": true',
-            '"raw": "{}"'.format(self._raw()),
-            '"name": "{}"'.format(self.NAME),
+            f'"raw": "{self._raw()}"',
+            f'"name": "{self.NAME}"',
         ]
         members.append(self.rd.json())
         members.append(self.esi.json())
         members.append(self.etag.json())
         members.append(self.label.json())
-        members.append('"ip": "{}"'.format(str(self.ip)))
+        members.append(f'"ip": "{str(self.ip)}"')
         members.append('"iplen": %d' % self.iplen)
-        members.append('"gateway": "{}"'.format(str(self.gwip)))
+        members.append(f'"gateway": "{str(self.gwip)}"')
         return '{{ {} }}'.format(', '.join(member for member in members if member))
 
 

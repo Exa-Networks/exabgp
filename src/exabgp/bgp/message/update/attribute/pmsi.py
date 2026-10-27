@@ -265,7 +265,7 @@ class PMSI(Attribute):
         return len(self._packed)
 
     def prettytunnel(self) -> str:
-        return '0x' + ''.join('{:02X}'.format(_) for _ in self.tunnel) if self.tunnel else ''
+        return '0x' + ''.join(f'{_:02X}' for _ in self.tunnel) if self.tunnel else ''
 
     def __repr__(self) -> str:
         raw = self.raw_label

@@ -112,7 +112,7 @@ class Srv6L3Service:
 
     def json(self, compact: bool | None = None) -> str:
         content: str = '[ ' + ', '.join(subtlv.json() for subtlv in self.subtlvs) + ' ]'
-        return '"l3-service": {}'.format(content)
+        return f'"l3-service": {content}'
 
 
 PrefixSid.register_sr()(Srv6L3Service)

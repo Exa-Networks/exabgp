@@ -251,22 +251,22 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 continue
 
             if code not in self.representation:
-                yield ' attribute [ 0x{:02X} 0x{:02X} {} ]'.format(code, attribute.FLAG, str(attribute))
+                yield f' attribute [ 0x{code:02X} 0x{attribute.FLAG:02X} {str(attribute)} ]'
                 continue
 
             if attribute.GENERIC:
-                yield ' attribute [ 0x{:02X} 0x{:02X} {} ]'.format(code, attribute.FLAG, str(attribute))
+                yield f' attribute [ 0x{code:02X} 0x{attribute.FLAG:02X} {str(attribute)} ]'
                 continue
 
             how, _, name, presentation, _ = self.representation[code]
             if how == 'boolean':
-                yield ' {}'.format(name)
+                yield f' {name}'
             elif how == 'list':
                 value = str(attribute)
                 if value:  # Skip empty lists (e.g., empty AS_PATH)
-                    yield ' {} {}'.format(name, presentation % value)
+                    yield f' {name} {presentation % value}'
             else:
-                yield ' {} {}'.format(name, presentation % str(attribute))
+                yield f' {name} {presentation % str(attribute)}'
 
     @staticmethod
     def _as_json_scalar(text: str) -> str:
@@ -301,11 +301,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 # For generic mode, output hex; otherwise use str() which may be human-readable
                 if generic and hasattr(attribute, '_packed'):
                     hex_value = '0x' + attribute._packed.hex()
-                    yield '"attribute-0x{:02X}-0x{:02X}": {}'.format(
-                        code, attribute.FLAG, json.dumps(hex_value, default=json_number)
-                    )
+                    yield f'"attribute-0x{code:02X}-0x{attribute.FLAG:02X}": {json.dumps(hex_value, default=json_number)}'
                 else:
-                    yield '"attribute-0x{:02X}-0x{:02X}": {}'.format(code, attribute.FLAG, json.dumps(str(attribute)))
+                    yield f'"attribute-0x{code:02X}-0x{attribute.FLAG:02X}": {json.dumps(str(attribute))}'
                 continue
 
             how, _, name, _, presentation = self.representation[code]
@@ -315,18 +313,18 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 # MED and local preference print as decimal, which is a JSON number, but
                 # AIGP prints as 0x000000000000000a, which is not: unquoted it made the
                 # line unparseable. Whether the text is a number decides how it is emitted.
-                yield '"{}": {}'.format(name, self._as_json_scalar(presentation % str(attribute)))
+                yield f'"{name}": {self._as_json_scalar(presentation % str(attribute))}'
             elif how == 'string':
-                yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute), default=json_number))
+                yield f'"{name}": {json.dumps(presentation % str(attribute), default=json_number)}'
             elif how == 'list':
                 json_value = attribute.json()
                 if json_value != '{}':  # Skip empty lists (e.g., empty AS_PATH)
-                    yield '"{}": {}'.format(name, presentation % json_value)
+                    yield f'"{name}": {presentation % json_value}'
             elif how == 'inet':
-                yield '"{}": {}'.format(name, json.dumps(presentation % str(attribute), default=json_number))
+                yield f'"{name}": {json.dumps(presentation % str(attribute), default=json_number)}'
             # Should never be ran
             else:
-                yield '"{}": {}'.format(name, presentation % str(attribute))
+                yield f'"{name}": {presentation % str(attribute)}'
 
     def __init__(self) -> None:
         self._data: dict[int, Attribute] = {}
@@ -576,10 +574,10 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         if not self._idx:
             idx = ''.join(self._generate_text()) + ''.join(self[code].index_detail() for code in sorted(self.keys()))
             nexthop = str(self.get(Attribute.CODE.NEXT_HOP, 'missing'))
-            text = '{} next-hop {}'.format(idx, nexthop) if nexthop else idx
+            text = f'{idx} next-hop {nexthop}' if nexthop else idx
             for code in self.INTERNAL_IDENTITY:
                 if code in self:
-                    text += ' internal-{:04x}'.format(code)
+                    text += f' internal-{code:04x}'
             self._idx = text.encode()
         return self._idx
 
@@ -825,7 +823,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             seen.add(aid)
             return False
         if kls and kls.NO_DUPLICATE:
-            raise Notify(3, 1, 'multiple attribute for {}'.format(Attribute.CODE.name(aid)))
+            raise Notify(3, 1, f'multiple attribute for {Attribute.CODE.name(aid)}')
         log.debug(
             lazymsg(
                 'attribute.duplicate name={name} flag=0x{flag:02X} aid=0x{aid:02X} action=skip',

@@ -88,11 +88,7 @@ class DirectSegmentDiscoveryRoute(MUP):
         return not self == other
 
     def __str__(self) -> str:
-        return '{}:{}:{}'.format(
-            self._prefix(),
-            self.rd._str(),
-            self.ip,
-        )
+        return f'{self._prefix()}:{self.rd._str()}:{self.ip}'
 
     def __hash__(self) -> int:
         # Direct _packed hash - include afi since MUP supports both IPv4 and IPv6
@@ -115,13 +111,13 @@ class DirectSegmentDiscoveryRoute(MUP):
         return instance, b''
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        content = '"name": "{}", '.format(self.NAME)
+        content = f'"name": "{self.NAME}", '
         content += '"arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
-        content += '"ip": "{}", '.format(str(self.ip))
+        content += f'"ip": "{str(self.ip)}", '
         content += self.rd.json()
-        content += ', "raw": "{}"'.format(self._raw())
-        return '{{ {} }}'.format(content)
+        content += f', "raw": "{self._raw()}"'
+        return f'{{ {content} }}'
 
 
 MUP.register_mup_route(archtype=1, code=2)(DirectSegmentDiscoveryRoute)

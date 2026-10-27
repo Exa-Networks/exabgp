@@ -68,7 +68,7 @@ class LinkIdentifier:
         raise RuntimeError('Not implemented')
 
     def __str__(self) -> str:
-        return ':'.join('{:02X}'.format(_) for _ in self._packed)
+        return ':'.join(f'{_:02X}' for _ in self._packed)
 
     def __repr__(self) -> str:
         return self.__str__()

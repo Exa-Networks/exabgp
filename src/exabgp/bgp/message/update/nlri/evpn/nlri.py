@@ -87,7 +87,7 @@ class EVPN(NLRI):
         # _packed[2:] is the payload (skip type + length header)
         return 'evpn:{}:{}'.format(
             self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower(),
-            '0x' + ''.join('{:02x}'.format(_) for _ in self._packed[self.HEADER_SIZE :]),
+            '0x' + ''.join(f'{_:02x}' for _ in self._packed[self.HEADER_SIZE :]),
         )
 
     def __repr__(self) -> str:
@@ -116,7 +116,7 @@ class EVPN(NLRI):
         return ''
 
     def _prefix(self) -> str:
-        return 'evpn:{}:'.format(self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower())
+        return f'evpn:{self.registered_evpn.get(self.CODE, self).SHORT_NAME.lower()}:'
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
         # RFC 7911 ADD-PATH is possible for EVPN (AFI 25, SAFI 70) but not yet implemented
@@ -205,7 +205,7 @@ class EVPN(NLRI):
         return nlri, data[total_length:]
 
     def _raw(self) -> str:
-        return ''.join('{:02X}'.format(_) for _ in self._packed)
+        return ''.join(f'{_:02X}' for _ in self._packed)
 
 
 NLRI.register(AFI.l2vpn, SAFI.evpn)(EVPN)

@@ -46,13 +46,13 @@ class API:
 
     def log_failure(self, message: str, level: str = 'ERR') -> None:
         error = str(self.configuration.error)
-        report = '{}\nreason: {}'.format(message, error) if error else message
+        report = f'{message}\nreason: {error}' if error else message
         log.error(lazymsg('api.failure report={report}', report=report), 'processes', level)
 
     def log_exception(self, message: str, exc: BaseException, level: str = 'ERR') -> None:
         """Log a failure with full traceback when debug mode (-d) is enabled."""
         error = str(self.configuration.error)
-        report = '{}\nreason: {}'.format(message, error) if error else message
+        report = f'{message}\nreason: {error}' if error else message
         log.error(lazyexc('api.failure report={report} error={exc}', exc, report=report), 'processes', level)
 
     @staticmethod

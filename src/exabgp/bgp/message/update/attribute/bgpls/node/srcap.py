@@ -90,7 +90,7 @@ class SrCapabilities(FlagLS):
         return sids
 
     def __repr__(self) -> str:
-        return '{}: {}, sids: {}'.format(self.REPR, self.flags, self.sids)
+        return f'{self.REPR}: {self.flags}, sids: {self.sids}'
 
     @classmethod
     def unpack_bgpls(cls, data: Buffer) -> SrCapabilities:

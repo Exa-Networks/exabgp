@@ -52,7 +52,7 @@ class OspfRoute:
         return cls(ospf_type=ospf_type, packed=data)
 
     def json(self, compact: bool = False) -> str:
-        content = '"ospf-route-type": {}'.format(self.ospf_type)
+        content = f'"ospf-route-type": {self.ospf_type}'
         return content
 
     def __eq__(self, other: object) -> bool:
@@ -78,7 +78,7 @@ class OspfRoute:
         raise RuntimeError('Not implemented')
 
     def __str__(self) -> str:
-        return ':'.join('{:02X}'.format(_) for _ in self._packed)
+        return ':'.join(f'{_:02X}' for _ in self._packed)
 
     def __repr__(self) -> str:
         return self.__str__()

@@ -59,7 +59,7 @@ class LargeCommunities(Attribute):
             Notify: If data length is not a multiple of 12
         """
         if len(data) % LARGE_COMMUNITY_SIZE != 0:
-            raise Notify(3, 1, 'could not decode large community {}'.format(str([hex(_) for _ in data])))
+            raise Notify(3, 1, f'could not decode large community {str([hex(_) for _ in data])}')
         # Deduplicate while preserving order
         seen: set[bytes] = set()
         unique_packed = b''

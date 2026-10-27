@@ -111,7 +111,7 @@ class AttributeCodes:
     @classmethod
     def name(cls, code: int) -> str:
         """Return human-readable name for an attribute code."""
-        return cls.names.get(code, 'unknown-attribute-{}'.format(hex(code)))
+        return cls.names.get(code, f'unknown-attribute-{hex(code)}')
 
 
 class AttributeFlag(IntValue):
@@ -145,7 +145,7 @@ class AttributeFlag(IntValue):
             r.append('OPTIONAL')
             v -= 0x80
         if v:
-            r.append('UNKNOWN {}'.format(hex(v)))
+            r.append(f'UNKNOWN {hex(v)}')
         return ' '.join(r)
 
     def matches(self, value: int) -> bool:
@@ -425,7 +425,7 @@ class TreatAsWithdraw(Attribute):
     def __str__(self) -> str:
         if self.aid is None:
             return 'treat-as-withdraw'
-        return 'treat-as-withdraw due to {}'.format(Attribute.CODE.name(self.aid))
+        return f'treat-as-withdraw due to {Attribute.CODE.name(self.aid)}'
 
 
 # ==================================================================== Discard
@@ -452,7 +452,7 @@ class Discard(Attribute):
     def __str__(self) -> str:
         if self.aid is None:
             return 'discard'
-        return 'discard due to {}'.format(Attribute.CODE.name(self.aid))
+        return f'discard due to {Attribute.CODE.name(self.aid)}'
 
 
 Attribute.setCache()

@@ -52,7 +52,7 @@ class MAC:
         raise RuntimeError('comparing MAC for ordering does not make sense')
 
     def __str__(self) -> str:
-        return ':'.join('{:02X}'.format(_) for _ in self._packed)
+        return ':'.join(f'{_:02X}' for _ in self._packed)
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -73,7 +73,7 @@ class MAC:
     def unpack_mac(cls: type[MAC], data: Buffer) -> MAC:
         if len(data) != cls.LENGTH:
             raise Notify(3, 10, f'MAC requires exactly {cls.LENGTH} bytes, got {len(data)}')
-        return cls(':'.join('{:02X}'.format(_) for _ in data), data)
+        return cls(':'.join(f'{_:02X}' for _ in data), data)
 
     def json(self, compact: bool = False) -> str:
-        return '"mac": "{}"'.format(str(self))
+        return f'"mac": "{str(self)}"'

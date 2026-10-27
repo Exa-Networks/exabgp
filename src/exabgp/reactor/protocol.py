@@ -187,9 +187,9 @@ class Protocol:
 
     def _to_api(self, direction: str, message: Any, raw: bytes) -> None:
         # the API entries are the lists of processes which asked, so only their truth is kept
-        packets = bool(self._api['{}-packets'.format(direction)])
-        parsed = bool(self._api['{}-parsed'.format(direction)])
-        consolidate = bool(self._api['{}-consolidate'.format(direction)])
+        packets = bool(self._api[f'{direction}-packets'])
+        parsed = bool(self._api[f'{direction}-parsed'])
+        consolidate = bool(self._api[f'{direction}-consolidate'])
         neg: Negotiated = self._api_negotiated()
 
         if consolidate:
@@ -210,7 +210,7 @@ class Protocol:
         assert self.connection is not None
         raw: bytes = message.pack_message(negotiated)
 
-        code: str = 'send-{}'.format(Message.CODE.short(message.ID))
+        code: str = f'send-{Message.CODE.short(message.ID)}'
         self.peer.stats[code] += 1
 
         await self.connection.writer_async(raw)
@@ -233,7 +233,7 @@ class Protocol:
         """Send raw BGP message using async I/O."""
         assert self.connection is not None
         message_id = Message.CODE.of(raw[18])
-        code: str = 'send-{}'.format(Message.CODE.short(message_id))
+        code: str = f'send-{Message.CODE.short(message_id)}'
         self.peer.stats[code] += 1
 
         await self.connection.writer_async(raw)
@@ -291,7 +291,7 @@ class Protocol:
         """Log and count a message received, return if the API asked for its type."""
         log.debug(lazymsg('message.received type={t}', t=Message.CODE.name(msg_id)), self._session())
 
-        code = 'receive-{}'.format(Message.CODE.short(msg_id))
+        code = f'receive-{Message.CODE.short(msg_id)}'
         self.peer.stats[code] += 1
         # the API entries are the lists of processes which asked, so only their truth is kept
         for_api = bool(self._api.get(code, False))
@@ -329,7 +329,7 @@ class Protocol:
         consolidate = self._api['receive-consolidate']
         parsed = self._api['receive-parsed']
         packets = self._api['receive-packets']
-        code = 'receive-{}'.format(Message.CODE.NOTIFICATION.SHORT)
+        code = f'receive-{Message.CODE.NOTIFICATION.SHORT}'
         # Convert NotifyError to Notify for API and exception.  Connection fills the
         # Data field where an RFC defines it (RFC 4271 6.1, the erroneous Length field
         # of a Bad Message Length); its sentence stays in our log

@@ -18,7 +18,7 @@ def od(value: Buffer) -> str:
         for v in value:
             if even is False:
                 yield ' '
-            yield '{:02X}'.format(v)
+            yield f'{v:02X}'
             even = not even
 
     return ''.join(spaced(value))

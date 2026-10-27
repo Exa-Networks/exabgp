@@ -38,7 +38,7 @@ class NeighAddr:
         return cls(addr=IP.create_ip(data), packed=data)
 
     def json(self, compact: bool = False) -> str:
-        return '"{}"'.format(self.addr)
+        return f'"{self.addr}"'
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, NeighAddr):
@@ -63,7 +63,7 @@ class NeighAddr:
         raise RuntimeError('Not implemented')
 
     def __str__(self) -> str:
-        return ':'.join('{:02X}'.format(_) for _ in self._packed)
+        return ':'.join(f'{_:02X}' for _ in self._packed)
 
     def __repr__(self) -> str:
         return self.__str__()

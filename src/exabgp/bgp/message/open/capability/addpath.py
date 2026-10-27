@@ -56,7 +56,7 @@ class AddPath(CapabilityDict[FamilyTuple, int]):
             'AddPath('
             + ','.join(
                 [
-                    '{} {} {}'.format(self.named(self[aafi]), xafi, xsafi)
+                    f'{self.named(self[aafi])} {xafi} {xsafi}'
                     for (aafi, xafi, xsafi) in [((afi, safi), str(afi), str(safi)) for (afi, safi) in self]
                 ],
             )
@@ -65,7 +65,7 @@ class AddPath(CapabilityDict[FamilyTuple, int]):
 
     def json(self) -> str:
         families = ','.join(
-            '"{}/{}": {}'.format(xafi, xsafi, json.dumps(self.named(self[aafi]), default=json_number))
+            f'"{xafi}/{xsafi}": {json.dumps(self.named(self[aafi]), default=json_number)}'
             for (aafi, xafi, xsafi) in (((afi, safi), str(afi), str(safi)) for (afi, safi) in self)
         )
         return '{{ "name": "addpath"{}{} }}'.format(', ' if families else '', families)

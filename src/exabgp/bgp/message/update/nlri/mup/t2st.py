@@ -146,13 +146,7 @@ class Type2SessionTransformedRoute(MUP):
         return not self == other
 
     def __str__(self) -> str:
-        return '{}:{}:{}:{}:{}:'.format(
-            self._prefix(),
-            self.rd._str(),
-            self.endpoint_len,
-            self.endpoint_ip,
-            self.teid,
-        )
+        return f'{self._prefix()}:{self.rd._str()}:{self.endpoint_len}:{self.endpoint_ip}:{self.teid}:'
 
     def __hash__(self) -> int:
         # Direct _packed hash - include afi since MUP supports both IPv4 and IPv6
@@ -198,15 +192,15 @@ class Type2SessionTransformedRoute(MUP):
         return instance, b''
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        content = '"name": "{}", '.format(self.NAME)
+        content = f'"name": "{self.NAME}", '
         content += ' "arch": %d, ' % self.ARCHTYPE
         content += '"code": %d, ' % self.CODE
         content += '"endpoint_len": %d, ' % self.endpoint_len
-        content += '"endpoint_ip": "{}", '.format(str(self.endpoint_ip))
+        content += f'"endpoint_ip": "{str(self.endpoint_ip)}", '
         content += self.rd.json() + ', '
-        content += '"teid": "{}", '.format(str(self.teid))
-        content += '"raw": "{}"'.format(self._raw())
-        return '{{ {} }}'.format(content)
+        content += f'"teid": "{str(self.teid)}", '
+        content += f'"raw": "{self._raw()}"'
+        return f'{{ {content} }}'
 
 
 MUP.register_mup_route(archtype=1, code=4)(Type2SessionTransformedRoute)

@@ -38,13 +38,10 @@ class HostName(Capability):
         self.domain_name: str = domain() if domain_name is None else domain_name
 
     def __str__(self) -> str:
-        return 'Hostname({} {})'.format(self.host_name, self.domain_name)
+        return f'Hostname({self.host_name} {self.domain_name})'
 
     def json(self) -> str:
-        return '{{ "host-name": {}, "domain-name": {} }}'.format(
-            json.dumps(self.host_name, default=json_number),
-            json.dumps(self.domain_name, default=json_number),
-        )
+        return f'{{ "host-name": {json.dumps(self.host_name, default=json_number)}, "domain-name": {json.dumps(self.domain_name, default=json_number)} }}'
 
     @classmethod
     def _truncate(cls, name: str) -> bytes:

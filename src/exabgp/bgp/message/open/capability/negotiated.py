@@ -285,7 +285,7 @@ class Negotiated:
                         self.multisession = (
                             2,
                             8,
-                            'when checking session id, capability {} did not match'.format(str(capa)),
+                            f'when checking session id, capability {str(capa)} did not match',
                         )
                         break
 
@@ -369,9 +369,7 @@ class Negotiated:
             return (
                 2,
                 3,
-                'BGP Identifier collision, same router-id ({}) on both sides of this IBGP session'.format(
-                    self.received_open.router_id
-                ),
+                f'BGP Identifier collision, same router-id ({self.received_open.router_id}) on both sides of this IBGP session',
             )
 
         if self.received_open.hold_time and self.received_open.hold_time < HoldTime.MIN:

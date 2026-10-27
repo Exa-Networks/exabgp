@@ -81,7 +81,7 @@ AGREEMENTS = [
     (SEND_RECEIVE, None, False, False),
     (None, None, False, False),
 ]
-AGREEMENT_IDS = ['ours={} theirs={}'.format(ours, theirs) for ours, theirs, _, _ in AGREEMENTS]
+AGREEMENT_IDS = [f'ours={ours} theirs={theirs}' for ours, theirs, _, _ in AGREEMENTS]
 
 
 @pytest.mark.rfc('rfc7911#5-send-requires-both-directions')

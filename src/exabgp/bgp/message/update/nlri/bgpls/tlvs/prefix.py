@@ -41,7 +41,7 @@ class Prefix:
         return cls(iface_addr=addr, packed=data)
 
     def json(self, compact: bool = False) -> str:
-        content = '"interface-address": "{}"'.format(self.iface_address)
+        content = f'"interface-address": "{self.iface_address}"'
         return content
 
     def __eq__(self, other: object) -> bool:
@@ -67,7 +67,7 @@ class Prefix:
         raise RuntimeError('Not implemented')
 
     def __str__(self) -> str:
-        return ':'.join('{:02X}'.format(_) for _ in self.pack_tlv())
+        return ':'.join(f'{_:02X}' for _ in self.pack_tlv())
 
     def __repr__(self) -> str:
         return self.__str__()

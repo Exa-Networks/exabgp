@@ -69,13 +69,13 @@ class MessageCode(IntValue):
         self.NAME = str(self)
 
     def __str__(self) -> str:
-        return self.names.get(self.value, 'unknown message {}'.format(hex(self.value)))
+        return self.names.get(self.value, f'unknown message {hex(self.value)}')
 
     def __repr__(self) -> str:
         return str(self)
 
     def short(self) -> str:
-        return self.short_names.get(self.value, '{}'.format(self.value))
+        return self.short_names.get(self.value, f'{self.value}')
 
 
 class MessageCodes:
@@ -113,11 +113,11 @@ class MessageCodes:
 
     @staticmethod
     def name(message_id: MessageCode) -> str:
-        return MessageCode.names.get(message_id.value, 'unknown message {}'.format(hex(message_id.value)))
+        return MessageCode.names.get(message_id.value, f'unknown message {hex(message_id.value)}')
 
     @staticmethod
     def short(message_id: MessageCode) -> str:
-        return MessageCode.short_names.get(message_id.value, 'unknown message {}'.format(hex(message_id.value)))
+        return MessageCode.short_names.get(message_id.value, f'unknown message {hex(message_id.value)}')
 
     def __init__(self) -> None:
         raise RuntimeError('This class can not be instantiated')

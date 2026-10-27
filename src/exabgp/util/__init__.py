@@ -20,7 +20,7 @@ HEX_PREFIX_LENGTH: int = 2  # Length of '0x' prefix
 def hexstring(value: Buffer) -> str:
     def spaced(value: Buffer) -> Iterator[str]:
         for v in value:
-            yield '{:02X}'.format(v)
+            yield f'{v:02X}'
 
     return '0x' + ''.join(spaced(value))
 

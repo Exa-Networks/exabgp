@@ -201,7 +201,7 @@ class Srv6LanEndXISIS(Srv6):
         return cls(packed)
 
     def json(self, compact: bool = False) -> str:
-        return '"srv6-lan-endx-isis": {}'.format(json.dumps(self.content, default=json_number))
+        return f'"srv6-lan-endx-isis": {json.dumps(self.content, default=json_number)}'
 
 
 LinkState.register_lsid(tlv=1107, json_key='srv6-lan-endx-isis', repr_name='SRv6 LAN End.X SID ISIS')(Srv6LanEndXISIS)
@@ -298,7 +298,7 @@ class Srv6LanEndXOSPF(Srv6):
         return cls(packed)
 
     def json(self, compact: bool = False) -> str:
-        return '"srv6-lan-endx-ospf": {}'.format(json.dumps(self.content, default=json_number))
+        return f'"srv6-lan-endx-ospf": {json.dumps(self.content, default=json_number)}'
 
 
 LinkState.register_lsid(tlv=1108, json_key='srv6-lan-endx-ospf', repr_name='SRv6 LAN End.X SID OSPF')(Srv6LanEndXOSPF)

@@ -144,7 +144,7 @@ FAMILIES: list[tuple[AFI, SAFI]] = sorted(NLRI.registered_families, key=str)
 # quietly tests less, which is the one way a floor like this can stop being a floor. The
 # registry_floor test at the bottom is what stops that happening silently.
 MIN_FAMILIES = 24
-FAMILY_IDS: list[str] = ['{}/{}'.format(afi, safi) for afi, safi in FAMILIES]
+FAMILY_IDS: list[str] = [f'{afi}/{safi}' for afi, safi in FAMILIES]
 
 
 def session() -> Any:
@@ -156,7 +156,7 @@ def session() -> Any:
 @pytest.mark.parametrize('addpath', (False, True), ids=('no-addpath', 'addpath'))
 def test_an_nlri_decoder_raises_notify_and_not_something_else(afi: AFI, safi: SAFI, addpath: bool) -> None:
     """A family which answers with IndexError or struct.error hands the peer a traceback."""
-    klass = NLRI.registered_nlri.get('{}/{}'.format(afi, safi))
+    klass = NLRI.registered_nlri.get(f'{afi}/{safi}')
     if klass is None:
         pytest.skip('family is registered but has no decoder')
 

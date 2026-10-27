@@ -78,4 +78,4 @@ class EthernetTag:
         return cls(data)
 
     def json(self, compact: bool = False) -> str:
-        return '"ethernet-tag": {}'.format(self.tag)
+        return f'"ethernet-tag": {self.tag}'
