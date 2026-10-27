@@ -598,11 +598,7 @@ class JSON:
     ) -> str:
         # the advisory is free text the peer chose, and it is not promised to be UTF-8:
         # decoding without an error handler put a UnicodeDecodeError in the API writer
-        data = (
-            bytes(operational.data).decode('utf-8', 'replace')
-            if isinstance(operational.data, (bytes, bytearray, memoryview))
-            else operational.data
-        )
+        data = bytes(operational.data).decode('utf-8', 'replace')
         kv_content = self._kv(
             {
                 'name': operational.NAME,

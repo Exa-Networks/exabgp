@@ -215,15 +215,16 @@ def setup_logging(debug: bool, silent: bool, name: str | None, syslog_facility: 
 
     def syslog_address() -> str:
         """Return a sensible syslog address"""
+        # one chain, so mypy skips the arms of the other platforms rather than calling
+        # what follows the one it checks for unreachable
         if sys.platform == 'darwin':
             return '/var/run/syslog'
-        if sys.platform.startswith('freebsd'):
+        elif sys.platform.startswith('freebsd') or sys.platform.startswith('netbsd'):
             return '/var/run/log'
-        if sys.platform.startswith('netbsd'):
-            return '/var/run/log'
-        if sys.platform.startswith('linux'):
+        elif sys.platform.startswith('linux'):
             return '/dev/log'
-        raise OSError('Unable to guess syslog address for your platform, try to disable syslog')
+        else:
+            raise OSError('Unable to guess syslog address for your platform, try to disable syslog')
 
     logger.setLevel(debug and logging.DEBUG or logging.INFO)
     enable_syslog = syslog and not debug

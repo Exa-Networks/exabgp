@@ -43,9 +43,7 @@ class RouteRefreshHandler(MessageHandler):
         Triggers resend of routes for the requested address family.
         """
         self._refresh(ctx, cast(RouteRefresh, message))
-
-        return
-        yield  # Make this a generator
+        yield from ()  # a generator which yields nothing
 
     async def handle_async(self, ctx: PeerContext, message: Message) -> None:
         """Process the ROUTE-REFRESH message asynchronously.

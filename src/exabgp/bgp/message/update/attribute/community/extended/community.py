@@ -53,8 +53,8 @@ class ExtendedCommunityBase(Attribute):
     COMMUNITY_SUBTYPE: ClassVar[int] = 0x00  # MUST be redefined by subclasses
     NON_TRANSITIVE: ClassVar[int] = 0x40
 
-    # Need to be overwritten by sub-classes
-    registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]] | None] = None
+    # each sub-class which registers holds its own: asked of this class, it does not exist
+    registered_extended: ClassVar[dict[tuple[int, int], Type[ExtendedCommunityBase]]]
 
     @classmethod
     def register_subtype(cls, klass: Type[ExtendedCommunityBase]) -> Type[ExtendedCommunityBase]:
@@ -62,7 +62,6 @@ class ExtendedCommunityBase(Attribute):
 
         Note: Named differently from Attribute.register to avoid signature conflict.
         """
-        assert cls.registered_extended is not None
         key = (registry_type(klass.COMMUNITY_TYPE), klass.COMMUNITY_SUBTYPE)
         # Two classes on one key would leave the first unreachable, and nothing would say so.
         assert cls.registered_extended.get(key, klass).__name__ == klass.__name__, f'{klass.__name__} shares a key'
@@ -221,7 +220,6 @@ class ExtendedCommunityBase(Attribute):
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> 'ExtendedCommunityBase':
         community = (registry_type(data[0]), data[1])
-        assert cls.registered_extended is not None
         if community in cls.registered_extended:
             klass = cls.registered_extended[community]
             instance = klass.unpack_attribute(data, negotiated)

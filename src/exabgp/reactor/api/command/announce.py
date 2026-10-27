@@ -148,7 +148,7 @@ def register_flush_callbacks(peers: list[str], reactor: 'Reactor', sync_mode: bo
         for peer_key in peers:
             peer = reactor._peers.get(peer_key)
             # Only wait for peers with active session and RIB
-            if peer and peer.proto and peer.proto.connection and peer.neighbor.rib:
+            if peer and peer.proto and peer.proto.connection:
                 event = peer.neighbor.rib.outgoing.register_flush_callback()
                 flush_events.append(event)
                 log.debug(lazymsg('sync.callback.registered peer={p}', p=peer_key), 'api')

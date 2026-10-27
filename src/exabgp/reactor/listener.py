@@ -196,11 +196,11 @@ def _behind(local: str, neighbor: Neighbor) -> bool:
     one which discovers its local address.
     """
     address = IP.from_string(local)
-    if neighbor.session.peer_address is None or neighbor.session.peer_address.afi != address.afi:
+    if neighbor.session.peer_address.afi != address.afi:
         return False
     if neighbor.session.auto_discovery or not address.address():
         return True
-    return neighbor.session.local_address is not None and neighbor.session.local_address.address() == address.address()
+    return neighbor.session.local_address.address() == address.address()
 
 
 def shared_minimum(local: str, neighbors: list[Neighbor]) -> int:

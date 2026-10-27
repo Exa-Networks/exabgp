@@ -10,7 +10,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from exabgp.bgp.neighbor.settings import NeighborSettings
 from exabgp.configuration.grammar.context import PrintContext
@@ -24,7 +24,7 @@ from exabgp.logger import lazymsg, log
 class SessionCodec(Codec):
     """The TCP session and who is at each end of it."""
 
-    fields = (
+    fields: ClassVar[tuple[str, ...]] = (
         'peer-address',
         'local-address',
         'local-link-local',
@@ -59,7 +59,7 @@ class SessionCodec(Codec):
 class FamilyCodec(Codec):
     """The families negotiated, and the prefix limit of each."""
 
-    fields = ('family',)
+    fields: ClassVar[tuple[str, ...]] = ('family',)
 
     def resolve(self, values: Values, settings: NeighborSettings) -> None:
         settings.families = resolve.families(values)
@@ -77,7 +77,7 @@ class FamilyCodec(Codec):
 class CapabilityCodec(Codec):
     """What the OPEN advertises, and requires of the peer."""
 
-    fields = ('capability',)
+    fields: ClassVar[tuple[str, ...]] = ('capability',)
 
     def resolve(self, values: Values, settings: NeighborSettings) -> None:
         settings.capability = resolve.capability(values)
@@ -109,7 +109,7 @@ POLICY = (
 class PolicyCodec(Codec):
     """How the neighbor is run: its timers, its RIBs, what is sent to it."""
 
-    fields = ('hold-time', *POLICY)
+    fields: ClassVar[tuple[str, ...]] = ('hold-time', *POLICY)
 
     def resolve(self, values: Values, settings: NeighborSettings) -> None:
         hold_time = values.get('hold-time')
@@ -131,7 +131,7 @@ class PolicyCodec(Codec):
 class AddPathCodec(Codec):
     """The families ADD-PATH is negotiated for, and their PATHS-LIMIT."""
 
-    fields = ('add-path',)
+    fields: ClassVar[tuple[str, ...]] = ('add-path',)
 
     def resolve(self, values: Values, settings: NeighborSettings) -> None:
         settings.addpaths = resolve.addpaths(values, settings.capability, settings.families)
@@ -143,7 +143,7 @@ class AddPathCodec(Codec):
 class NextHopCodec(Codec):
     """The families whose next-hop may be of the other address family (RFC 8950)."""
 
-    fields = ('nexthop',)
+    fields: ClassVar[tuple[str, ...]] = ('nexthop',)
 
     def resolve(self, values: Values, settings: NeighborSettings) -> None:
         settings.nexthops = resolve.nexthops(values, settings.capability, settings.families)
@@ -158,7 +158,7 @@ class NextHopCodec(Codec):
 class APICodec(Codec):
     """Which API programs hear about the neighbor, and what they hear."""
 
-    fields = ('api',)
+    fields: ClassVar[tuple[str, ...]] = ('api',)
 
     def resolve(self, values: Values, settings: NeighborSettings) -> None:
         settings.api = resolve.api(values.get('api', {}))

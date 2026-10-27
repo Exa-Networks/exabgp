@@ -145,9 +145,7 @@ class UpdateHandler(MessageHandler):
             self._end_of_rib(ctx, cast(EOR, update))
             return
         self._apply(ctx, update.data)
-
-        return
-        yield  # Make this a generator
+        yield from ()  # a generator which yields nothing
 
     async def handle_async(self, ctx: PeerContext, message: Message) -> None:
         """Process the UPDATE message asynchronously.

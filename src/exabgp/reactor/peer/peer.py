@@ -506,8 +506,7 @@ class Peer:
                 'send-operational': 0,
             },
         )
-        if self.neighbor.rib:
-            self.neighbor.rib.uncache()
+        self.neighbor.rib.uncache()
 
     def remove(self) -> None:
         # RFC 4486 4: a peer de-configured SHOULD be sent Peer De-configured
@@ -522,11 +521,10 @@ class Peer:
         self.stop()
 
     def resend(self, enhanced: bool, family: FamilyTuple | None = None) -> None:
-        if self.neighbor.rib:
-            outgoing = self.neighbor.rib.outgoing
-            held_back = self._borr_held_back(enhanced, family)
-            for each in self._resend_families(family):
-                outgoing.resend(enhanced and each not in held_back, each)
+        outgoing = self.neighbor.rib.outgoing
+        held_back = self._borr_held_back(enhanced, family)
+        for each in self._resend_families(family):
+            outgoing.resend(enhanced and each not in held_back, each)
         self._delay.reset()
 
     def _resend_families(self, family: FamilyTuple | None) -> set[FamilyTuple]:
@@ -575,7 +573,7 @@ class Peer:
             # If peer is not ESTABLISHED, update RIB directly since the main loop
             # isn't running to process the _neighbor variable later.
             # GitHub issue #1126: stale adj-rib when neighbor offline during reload
-            if self.fsm != FSM.ESTABLISHED and self.neighbor.rib:
+            if self.fsm != FSM.ESTABLISHED:
                 previous = restart_neighbor.previous.routes if restart_neighbor.previous else []
                 current = restart_neighbor.routes
                 self.neighbor.rib.outgoing.replace_reload(previous, current)

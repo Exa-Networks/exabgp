@@ -175,6 +175,24 @@ no_implicit_reexport = true
 strict_equality = true
 extra_checks = true
 
+# Stricter than strict (2026-10-27): what mypy 2.4 can check beyond --strict which this
+# tree passes. explicit-override (1318 methods without @override) and disallow_any_explicit
+# (546 uses of Any) are not on: each is a project of its own
+warn_unreachable = true
+disallow_any_unimported = true
+enable_error_code = [
+	"deprecated",
+	"exhaustive-match",
+	"ignore-without-code",
+	"mutable-override",
+	"possibly-undefined",
+	"redundant-expr",
+	"redundant-self",
+	"truthy-bool",
+	"truthy-iterable",
+	"unused-awaitable",
+]
+
 # Import handling
 follow_imports = "normal"
 ignore_missing_imports = true

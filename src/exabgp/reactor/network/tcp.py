@@ -83,11 +83,10 @@ def set_reuse_options(io: socket.socket) -> None:
 
 
 def create(afi: AFI, interface: str | None = None) -> socket.socket:
+    assert afi in (AFI.ipv4, AFI.ipv6), 'a BGP session runs over IPv4 or IPv6'
+    family = socket.AF_INET if afi == AFI.ipv4 else socket.AF_INET6
     try:
-        if afi == AFI.ipv4:
-            io = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
-        if afi == AFI.ipv6:
-            io = socket.socket(socket.AF_INET6, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+        io = socket.socket(family, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         set_reuse_options(io)
 
         if interface:

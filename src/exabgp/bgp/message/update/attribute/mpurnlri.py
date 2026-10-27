@@ -119,7 +119,7 @@ class MPURNLRI(Attribute):
         _afi, _safi = unpack('!HB', data[:3])
         afi, safi = AFI.from_int(_afi), SAFI.from_int(_safi)
 
-        if negotiated and (afi, safi) not in negotiated.families:
+        if (afi, safi) not in negotiated.families:
             raise Notify(3, 9, 'presented a non-negotiated family {} {}'.format(afi, safi))
 
         # Get addpath flag for lazy NLRI parsing

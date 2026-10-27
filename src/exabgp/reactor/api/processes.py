@@ -102,13 +102,15 @@ def _unread_bytes(fd: int) -> int:
     not say, nor does any system not listed: a 0 which may be wrong is worse than nothing.
     """
     try:
+        # one chain, so mypy skips the arms of the other platforms
         if sys.platform.startswith('linux'):
             return _ioctl_int(fd, termios.FIONREAD)
-        if sys.platform.startswith('netbsd'):
+        elif sys.platform.startswith('netbsd'):
             return _ioctl_int(fd, NETBSD_FIONWRITE)
-        if sys.platform == 'darwin':
+        elif sys.platform == 'darwin':
             return os.fstat(fd).st_size
-        return -1
+        else:
+            return -1
     except (OSError, ValueError):
         # only a number for a log line: a descriptor already closed must not stop the reactor
         return -1

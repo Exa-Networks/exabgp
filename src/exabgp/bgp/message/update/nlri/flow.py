@@ -118,7 +118,7 @@ class IComponent:
     ID: ClassVar[int]  # Component type identifier, set by subclasses
     NAME: ClassVar[str] = ''  # Human-readable name, set by subclasses
     FLAG: ClassVar[bool] = False
-    decoder: ClassVar[Callable[[bytes], object]]  # Value decoder, set by subclasses
+    decoder: ClassVar[Callable[[bytes], BaseValue]]  # Value decoder, set by subclasses
 
     # Operator byte - 0 for prefix types, set by IOperation subclasses
     operations: int = 0
@@ -785,21 +785,21 @@ class FlowAnyPort(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x04
     NAME: ClassVar[str] = 'port'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value, NumericValue)
-    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = _number
 
 
 class FlowDestinationPort(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x05
     NAME: ClassVar[str] = 'destination-port'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value, NumericValue)
-    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = _number
 
 
 class FlowSourcePort(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x06
     NAME: ClassVar[str] = 'source-port'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(port_value, NumericValue)
-    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = _number
 
 
 class FlowICMPType(IOperationByte, NumericString, FlowIPv4, FlowIPv6):
@@ -830,7 +830,7 @@ class FlowPacketLength(IOperationByteShort, NumericString, FlowIPv4, FlowIPv6):
     ID: ClassVar[int] = 0x0A
     NAME: ClassVar[str] = 'packet-length'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(packet_length, NumericValue)
-    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = _number
 
 
 # RFC2474
@@ -838,7 +838,7 @@ class FlowDSCP(IOperationByte, NumericString, FlowIPv4):
     ID: ClassVar[int] = 0x0B
     NAME: ClassVar[str] = 'dscp'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(dscp_value, NumericValue)
-    decoder: ClassVar[Callable[[bytes], NumericValue]] = _dscp
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = _dscp
 
 
 # RFC2460
@@ -847,7 +847,7 @@ class FlowTrafficClass(IOperationByte, NumericString, FlowIPv6):
     NAME: ClassVar[str] = 'traffic-class'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(class_value, NumericValue)
     # RFC 8956 3 applies type 11 to IPv6 as RFC 8955 defines it: six bits of DSCP
-    decoder: ClassVar[Callable[[bytes], NumericValue]] = _dscp
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = _dscp
 
 
 # RFC 8955 section 4.2.2.12 lays the fragment bitmask out as | 0 0 0 0 | LF FF IsF DF |,
@@ -926,7 +926,7 @@ class FlowFlowLabel(IOperationLong, NumericString, FlowIPv6):
     ID: ClassVar[int] = 0x0D
     NAME: ClassVar[str] = 'flow-label'
     converter: ClassVar[Callable[[str], BaseValue]] = converter(label_value, NumericValue)
-    decoder: ClassVar[Callable[[bytes], NumericValue]] = _number
+    decoder: ClassVar[Callable[[bytes], BaseValue]] = _number
 
 
 _BOTH_FAMILIES: frozenset[AFI] = frozenset((AFI.ipv4, AFI.ipv6))
@@ -1230,6 +1230,8 @@ class Flow(NLRI):
                     adding, bgp = klass.make(bgp)
                     rules.setdefault(adding.ID, []).append(adding)
                 else:
+                    # our own table: every component which is not a prefix is an operation
+                    assert issubclass(klass, IOperation), f'flow component {what} is neither a prefix nor an operation'
                     bgp = self._parse_operations(what, klass, bgp, rules)
         except IndexError:
             # every read above is now bounded, so this is our own bug and not the peer's:
@@ -1281,7 +1283,7 @@ class Flow(NLRI):
     @staticmethod
     def _parse_operations(
         what: int,
-        klass: Any,
+        klass: type[IOperation],
         bgp: Buffer,
         rules: dict[int, list[IComponent]],
     ) -> Buffer:
@@ -1338,10 +1340,7 @@ class Flow(NLRI):
                     10,
                     'flow component %d has a value of %d, too large for the field it matches' % (what, adding_val),
                 )
-            # klass is an IOperation subclass taking (operator, value); the decoder is typed
-            # as returning object, so the value is narrowed before it is used
-            if issubclass(klass, IOperation) and isinstance(adding_val, BaseValue):
-                rules.setdefault(what, []).append(klass(operator, adding_val))
+            rules.setdefault(what, []).append(klass(operator, adding_val))
         return bgp
 
     def feedback(self, action: Action) -> str:

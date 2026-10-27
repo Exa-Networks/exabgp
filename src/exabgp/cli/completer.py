@@ -431,7 +431,7 @@ class CommandCompleter:
                     sys.stdout.write('\n')
 
                 # Show extended help if requested
-                if show_help and metadata:
+                if show_help:
                     syntax_hint = getattr(metadata, 'syntax_hint', '')
                     if syntax_hint:
                         sys.stdout.write(f'           {Colors.DIM}Syntax: {Colors.RESET}')

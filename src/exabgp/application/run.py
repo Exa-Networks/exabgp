@@ -74,15 +74,14 @@ def open_reader(recv: str) -> int:
             # for a handler inside a loop which leaves it (continue, sys.exit)
             blocked = exc.args[0] in errno_block
         else:
-            break
+            signal.alarm(0)
+            return reader
         if not blocked:
             sys.stdout.write('could not read answer from ExaBGP')
             sys.stdout.flush()
             sys.exit(1)
         signal.signal(signal.SIGALRM, open_timeout)
         signal.alarm(PIPE_OPEN_TIMEOUT)
-    signal.alarm(0)
-    return reader
 
 
 def open_writer(send: str) -> int:

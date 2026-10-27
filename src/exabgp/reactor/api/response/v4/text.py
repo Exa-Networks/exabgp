@@ -185,8 +185,7 @@ class V4Text:
         self, neighbor: 'Neighbor', direction: str, operational: 'OperationalFamily', header: bytes, body: bytes
     ) -> str:
         # free text the peer chose, and not promised to be UTF-8
-        raw = operational.data
-        data = bytes(raw).decode('utf-8', 'replace') if isinstance(raw, (bytes, bytearray, memoryview)) else raw
+        data = bytes(operational.data).decode('utf-8', 'replace')
         return f'neighbor {neighbor.session.peer_address} {direction} operational {operational.NAME} afi {operational.afi} safi {operational.safi} advisory "{oneline(data)}"{self._header_body(header, body)}'
 
     def _operational_query(

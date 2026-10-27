@@ -13,6 +13,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 from exabgp.configuration.grammar.context import ReadContext
 from exabgp.configuration.grammar.nodes import Block, Keep, Leaf
 from exabgp.configuration.grammar.section import Section, Values
@@ -21,7 +23,7 @@ from exabgp.configuration.settings import Encoder, OnExit, ProcessSettings
 
 
 class ProcessSection(Section[ProcessSettings]):
-    builds = ProcessSettings
+    builds: ClassVar[type | None] = ProcessSettings
 
     def build(self, name: str, values: Values, context: ReadContext) -> ProcessSettings:
         return ProcessSettings(**values)

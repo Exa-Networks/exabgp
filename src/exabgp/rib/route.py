@@ -160,8 +160,6 @@ class Route:
         Returns:
             Empty string if valid, error message if invalid.
         """
-        if self.nlri is None:
-            return 'route has no nlri'
         # Route handles nexthop validation (nexthop is stored in Route, not NLRI)
         if self._nexthop is IP.NoNextHop and action == Action.ANNOUNCE:
             return f'{self.nlri.safi.name()} nlri next-hop missing'
