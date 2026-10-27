@@ -1140,7 +1140,7 @@ class Processes:
 
         return True
 
-    def write(self, process: str, string: str | None, peer_or_neighbor: 'Neighbor' | 'Peer' | None = None) -> bool:
+    def write(self, process: str, string: str | None, peer_or_neighbor: Neighbor | Peer | None = None) -> bool:
         if string is None:
             return True
 
@@ -1161,7 +1161,7 @@ class Processes:
 
         return self._write_blocking(process, data)
 
-    async def write_async(self, process: str, string: str | None, neighbor: 'Neighbor' | None = None) -> bool:
+    async def write_async(self, process: str, string: str | None, neighbor: Neighbor | None = None) -> bool:
         """Async version of write() - non-blocking write to API process stdin
 
         Uses os.write() on non-blocking fd to write without blocking the event loop.
