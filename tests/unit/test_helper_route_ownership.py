@@ -283,6 +283,89 @@ def test_the_cli_helper_never_owns_routes(processes) -> None:
 
 
 # ==============================================================================
+# Reload applies the exiting helper's policy, not its replacement's
+# ==============================================================================
+
+
+@pytest.mark.parametrize('restart', [False, True])
+@pytest.mark.parametrize(
+    ('on_exit', 'version', 'withdraw'),
+    [
+        ('withdraw', API_V4, True),
+        ('keep', API_V6, False),
+        (None, API_V4, False),
+        (None, API_V6, True),
+        (None, API_AUTO, True),
+    ],
+)
+def test_reload_removing_a_helper_applies_its_exit_policy(processes, restart, on_exit, version, withdraw) -> None:
+    _start(processes, 'helper', on_exit=on_exit)
+    processes._api_version['helper'] = version
+    command = ('helper', 'announce route 192.0.2.0/24 next-hop self')
+    processes._command_queue.append(command)
+
+    processes.start({}, restart=restart)
+
+    expected = [command, ('helper', processes.EXITED)] if withdraw else [command]
+    assert list(processes.received_async()) == expected
+    assert 'helper' not in processes._process
+
+
+@pytest.mark.parametrize(
+    ('old_policy', 'new_policy', 'version', 'withdraw'),
+    [
+        ('withdraw', 'keep', API_V4, True),
+        ('keep', 'withdraw', API_V6, False),
+        (None, None, API_V4, False),
+        (None, None, API_V6, True),
+    ],
+)
+def test_full_reload_uses_the_replaced_helpers_policy(processes, old_policy, new_policy, version, withdraw) -> None:
+    original = {'run': ['/bin/cat'], 'encoder': 'text', 'respawn': True}
+    if old_policy is not None:
+        original['on-exit'] = old_policy
+    processes.start({'helper': original})
+    old_process = processes._process['helper']
+    processes._api_version['helper'] = version
+    command = ('helper', 'announce route 192.0.2.0/24 next-hop self')
+    processes._command_queue.append(command)
+    replacement = {'run': ['/bin/cat', '-u'], 'encoder': 'text', 'respawn': True}
+    if new_policy is not None:
+        replacement['on-exit'] = new_policy
+
+    processes.start({'helper': replacement}, restart=True)
+    successor = ('helper', 'announce route 198.51.100.0/24 next-hop self')
+    processes._command_queue.append(successor)
+
+    expected = [command, ('helper', processes.EXITED), successor] if withdraw else [command, successor]
+    assert list(processes.received_async()) == expected
+    assert processes._process['helper'] is not old_process
+
+
+@pytest.mark.parametrize('restart', [False, True])
+def test_reload_leaves_an_unchanged_helper_and_its_routes_alone(processes, restart) -> None:
+    _start(processes, 'helper')
+    original = processes._process['helper']
+    configuration = dict(processes._configuration)
+
+    processes.start(configuration, restart=restart)
+
+    assert processes._process['helper'] is original
+    assert list(processes.received_async()) == []
+
+
+def test_plain_reload_keeps_a_running_helper_with_changed_arguments(processes) -> None:
+    _start(processes, 'helper')
+    original = processes._process['helper']
+    replacement = dict(processes._configuration['helper'], run=['/bin/cat', '-u'])
+
+    processes.start({'helper': replacement})
+
+    assert processes._process['helper'] is original
+    assert list(processes.received_async()) == []
+
+
+# ==============================================================================
 # The reactor withdraws on every neighbour
 # ==============================================================================
 
@@ -305,3 +388,76 @@ def test_the_reactor_withdraws_the_helper_routes_on_every_neighbour() -> None:
         asyncio.run(scheduled[0][1])
 
     assert [withdrawn(each) for each in ribs] == [{PREFIX}, {PREFIX}]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('policy', ['withdraw', 'keep'])
+async def test_reload_removal_reaches_the_rib_without_a_final_helper_withdraw(processes, policy) -> None:
+    neighbor_text = """neighbor 192.0.2.1 {
+        router-id 192.0.2.2;
+        local-address 192.0.2.2;
+        local-as 65001;
+        peer-as 65002;
+        family { ipv4 unicast; }
+        api { processes [ healthcheck other ]; }
+    }"""
+    other = 'process other { run /bin/cat; respawn false; }'
+    healthcheck = f'process healthcheck {{ run /bin/cat; respawn false; on-exit {policy}; }}'
+    configuration = Configuration(
+        [healthcheck + other + neighbor_text, other + neighbor_text.replace('healthcheck other', 'other')],
+        text=True,
+    )
+    reactor = Reactor(configuration)
+    reactor._ips = []
+    reactor.processes = processes
+    assert reactor.reload(), configuration.error
+    processes.start(configuration.processes)
+    neighbor = next(iter(configuration.neighbors.values()))
+    rib = neighbor.rib.outgoing
+    rib.add_to_rib(route(), owner='healthcheck')
+    rib.add_to_rib(route(OTHER), owner='other')
+    list(rib.updates(grouped=False))
+
+    assert reactor.reload(), configuration.error
+    processes.start(configuration.processes)
+    assert next(iter(configuration.neighbors.values())).rib.outgoing is rib
+    for service, command in processes.received_async():
+        assert command == processes.EXITED
+        reactor._withdraw_helper_routes(service)
+    await reactor.asynchronous._run_async()
+
+    updates = list(rib.updates(grouped=False))
+    expected_withdrawn = {PREFIX} if policy == 'withdraw' else set()
+    expected_cached = {OTHER} if policy == 'withdraw' else {PREFIX, OTHER}
+    assert {str(nlri) for update in updates for nlri in update.withdraws} == expected_withdrawn
+    assert {str(entry.nlri) for entry in rib.cached_routes(None)} == expected_cached
+    assert len(rib.owned('healthcheck')) == (0 if policy == 'withdraw' else 1)
+    assert len(rib.owned('other')) == 1
+    assert 'healthcheck' not in processes._process
+    assert 'other' in processes._process
+
+
+@pytest.mark.asyncio
+async def test_full_reload_withdraws_before_the_successor_reannounces_the_same_prefix(processes, rib) -> None:
+    configuration = {'run': ['/bin/cat'], 'encoder': 'text', 'respawn': True, 'on-exit': 'withdraw'}
+    processes.start({'healthcheck': configuration})
+    rib.add_to_rib(route(med=1), owner='healthcheck')
+    rib.add_to_rib(route(OTHER), owner='healthcheck')
+    list(rib.updates(grouped=False))
+    neighbor = SimpleNamespace(rib=SimpleNamespace(outgoing=rib), routes=[], resolve_self=lambda r: r)
+    reactor = Reactor(SimpleNamespace(neighbors={'n': neighbor}))
+    reactor.processes = processes
+
+    processes.start({'healthcheck': dict(configuration, run=['/bin/cat', '-u'])}, restart=True)
+    for service, command in processes.received_async():
+        assert command == processes.EXITED
+        reactor._withdraw_helper_routes(service)
+
+    async def announce_successor() -> None:
+        rib.add_to_rib(route(med=9), owner='healthcheck')
+
+    reactor.asynchronous.schedule('healthcheck', 'successor announcement', announce_successor())
+    await reactor.asynchronous._run_async()
+
+    assert [entry.attributes[MED.ID].med for entry in rib.owned('healthcheck')] == [9]
+    assert [entry.attributes[MED.ID].med for entry in rib.cached_routes(None)] == [9]

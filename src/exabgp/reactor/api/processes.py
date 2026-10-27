@@ -670,6 +670,7 @@ class Processes:
         # Terminate processes that are no longer in configuration
         for process in list(self._process):
             if process not in configuration:
+                self._queue_exit(process)
                 self._terminate(process)
 
         # Identify which processes need restart (compare before updating self._configuration)
@@ -679,6 +680,7 @@ class Processes:
                 if process in self._process:
                     if self._configuration.get(process, {}) != configuration[process]:
                         log.debug(lazymsg('process.config.changed process={p} action=restart', p=process), 'processes')
+                        self._queue_exit(process)
                         processes_to_restart.add(process)
                     else:
                         log.debug(lazymsg('process.config.unchanged process={p} action=keep', p=process), 'processes')
