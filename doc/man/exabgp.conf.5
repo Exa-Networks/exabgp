@@ -464,9 +464,13 @@ withdraws the routes it announced from every neighbor, and a route which
 replaced one from the configuration gives the configured one back.
 This happens even when the process is respawned: the new process starts
 with nothing announced.
-The same policy applies when a reload removes the process, or a full reload
-replaces it: the exiting process's policy is used before its replacement's
-commands are applied.
+The same happens when a reload removes the process, or when a full reload
+restarts it because its section changed: the
+.Cm on-exit
+of the old process decides, and its routes are withdrawn before any command
+of the new one is applied.
+A plain reload does not restart a process whose section changed, so its
+routes stay.
 .Cm on-exit keep
 leaves the routes announced, as releases before 6.0 did.
 .Pp

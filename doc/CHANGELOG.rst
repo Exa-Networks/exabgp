@@ -4,6 +4,10 @@ Version explained:
  - bug   : increase on bug or incremental changes
 
 Version 6.0.0:
+ * Fix: a helper which a reload removes, or which a full reload restarts because its process
+   section changed, has its routes withdrawn as `on-exit` says, as when it exits on its own.
+   They stayed announced with nothing left to withdraw them. The `on-exit` and API version of
+   the old helper decide, and the withdraw comes before any command of the new one.
  * Fix: a message written to a helper carries the "negotiated" block of the session only when
    its api asks for `negotiated`, as up to 5.0. Every line carried it, and a line written
    before the OPEN exchange carried an empty session, with no family and a hold time of 0.
