@@ -85,18 +85,20 @@ People *love* thorough and clear bug reports. It make a big difference.
 
 ### Machine prerequisites
 
-The suite has to be both ends of a BGP session, so it needs a second local address to be the
-far end with: `qa/bin/check_reload_cleanup` connects to the daemon from `127.0.0.2`.
+The suite has to be both ends of a BGP session, so it needs local addresses other than
+`127.0.0.1` to be the far end with: `qa/bin/check_reload_cleanup` connects to the daemon from
+`127.0.0.2`, and `tests/unit/test_listener_ranged_neighbor.py` connects from `127.0.0.4`.
 
 On Linux the whole of `127.0.0.0/8` belongs to the loopback already and there is nothing to do.
-On macOS `lo0` only answers to `127.0.0.1`, so add the alias:
+On macOS `lo0` only answers to `127.0.0.1`, so add the aliases:
 
 ```
 sudo ifconfig lo0 alias 127.0.0.2 up
+sudo ifconfig lo0 alias 127.0.0.4 up
 ```
 
-macOS forgets that on reboot, so it has to be run again after a restart. On a BSD the
-equivalent is `sudo ifconfig lo0 alias 127.0.0.2 netmask 255.0.0.0`.
+macOS forgets them on reboot, so they have to be added again after a restart. On a BSD the
+equivalent is `sudo ifconfig lo0 alias <address> netmask 255.0.0.0`.
 
 `./qa/bin/test_everything` checks this before it starts anything and refuses to run without
 it, rather than letting the stage which needs it stand down and report a green suite which

@@ -755,23 +755,28 @@ def run_tests(test_indices: list[int], cache: dict[str, list[float]], verbose: b
     return 0
 
 
-# The suite has to be both ends of a BGP session, so it needs a second local address to be
-# the far end with: check_reload_cleanup connects to the daemon from 127.0.0.2 so the
-# accepted socket matches the neighbour the way the bug report describes.
+# The suite has to be both ends of a BGP session, so it needs local addresses other than
+# 127.0.0.1 to be the far end with.  Each is listed with the test which needs it.
 #
-# Linux gives the whole of 127.0.0.0/8 to the loopback, so it is already there.  macOS gives
-# lo0 only 127.0.0.1 and the rest has to be added by hand, which is why this is checked.
-SECOND_LOOPBACK = '127.0.0.2'
+# Linux gives the whole of 127.0.0.0/8 to the loopback, so they are already there.  macOS
+# gives lo0 only 127.0.0.1 and the rest has to be added by hand, which is why this is checked.
+LOOPBACKS: dict[str, str] = {
+    # check_reload_cleanup connects to the daemon from it, so the accepted socket matches the
+    # neighbour the way the bug report describes
+    '127.0.0.2': 'qa/bin/check_reload_cleanup connects to the daemon from it',
+    # a peer of a ranged neighbor which is not the first one to connect
+    '127.0.0.4': 'tests/unit/test_listener_ranged_neighbor.py connects from it',
+}
 
-# How a human puts it there, per platform.  Matched on a prefix because sys.platform carries
+# How a human puts one there, per platform.  Matched on a prefix because sys.platform carries
 # a version on the BSDs ('freebsd14').  A platform which is not in here is told what the two
 # common ones do rather than being handed the macOS command and left to find out.
 ALIAS_COMMANDS: dict[str, str] = {
-    'darwin': f'sudo ifconfig lo0 alias {SECOND_LOOPBACK} up',
-    'linux': f'sudo ip addr add {SECOND_LOOPBACK}/8 dev lo',
-    'freebsd': f'sudo ifconfig lo0 alias {SECOND_LOOPBACK} netmask 255.0.0.0',
-    'openbsd': f'sudo ifconfig lo0 alias {SECOND_LOOPBACK} netmask 255.0.0.0',
-    'netbsd': f'sudo ifconfig lo0 alias {SECOND_LOOPBACK} netmask 255.0.0.0',
+    'darwin': 'sudo ifconfig lo0 alias {address} up',
+    'linux': 'sudo ip addr add {address}/8 dev lo',
+    'freebsd': 'sudo ifconfig lo0 alias {address} netmask 255.0.0.0',
+    'openbsd': 'sudo ifconfig lo0 alias {address} netmask 255.0.0.0',
+    'netbsd': 'sudo ifconfig lo0 alias {address} netmask 255.0.0.0',
 }
 
 
@@ -798,30 +803,32 @@ def preflight() -> str | None:
     which quietly stands down on a machine missing a precondition reports the same green as
     a stage which ran, for as long as nobody looks, and that is what this replaces.
     """
-    if address_is_bindable(SECOND_LOOPBACK):
+    missing = [address for address in LOOPBACKS if not address_is_bindable(address)]
+    if not missing:
         return None
 
     command = next((value for key, value in ALIAS_COMMANDS.items() if sys.platform.startswith(key)), None)
     if command is None:
         remedy = [
-            f'  This is {sys.platform}, which I have no command for.  Add {SECOND_LOOPBACK} to the',
+            f'  This is {sys.platform}, which I have no command for.  Add each address to the',
             '  loopback interface however this system spells it.  For reference, macOS uses',
-            f'    sudo ifconfig lo0 alias {SECOND_LOOPBACK} up',
-            '  and Linux, where it is normally there already, uses',
-            f'    sudo ip addr add {SECOND_LOOPBACK}/8 dev lo',
+            *(f'    {ALIAS_COMMANDS["darwin"].format(address=address)}' for address in missing),
+            '  and Linux, where they are normally there already, uses',
+            *(f'    {ALIAS_COMMANDS["linux"].format(address=address)}' for address in missing),
         ]
     else:
-        remedy = ['  Run:', f'    {command}']
+        remedy = ['  Run:', *(f'    {command.format(address=address)}' for address in missing)]
 
     if sys.platform == 'darwin':
         remedy.append('')
-        remedy.append('  macOS forgets the alias on reboot, so this has to be run again after a restart.')
+        remedy.append('  macOS forgets these aliases on reboot, so they have to be added again after a restart.')
 
     lines = [
         f'{Colors.RED}{Colors.BOLD}refusing to run: this machine is missing a precondition{Colors.RESET}',
         '',
-        f'  {SECOND_LOOPBACK} cannot be bound as a source address.  The suite has to be both ends of',
-        '  a BGP session, so it needs a second local address to be the far end with.',
+        '  The suite has to be both ends of a BGP session, so it needs local addresses to be the',
+        '  far end with.  These cannot be bound as a source address:',
+        *(f'    {address}: {LOOPBACKS[address]}' for address in missing),
         '',
         *remedy,
         '',
