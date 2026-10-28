@@ -26,7 +26,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import operator
-from typing import Final
+from typing import Final, Self
 
 
 class IntValue:
@@ -42,6 +42,17 @@ class IntValue:
 
     def __int__(self) -> int:
         return self.value
+
+    # A copy is the object itself. The value is Final and never changes, and what a subclass
+    # adds (MessageCode's SHORT and NAME, CapabilityCode's NAME) is derived from it. copy
+    # rebuilt one by setting `value`, which mypyc 2.4 refuses for a Final attribute, and by
+    # calling __init__ without one, which a subclass refuses: a deepcopy of a neighbor
+    # failed in the compiled build and the one-file binary.
+    def __copy__(self) -> Self:
+        return self
+
+    def __deepcopy__(self, memo: dict[int, object]) -> Self:
+        return self
 
     def __bool__(self) -> bool:
         return self.value != 0
