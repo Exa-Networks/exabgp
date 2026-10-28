@@ -75,9 +75,8 @@ class VPLSSettings:
         elif name == 'offset':
             if not isinstance(value, int) or value < 0 or value > 65535:
                 raise ValueError(f'offset must be 0-65535, got {value}')
-        elif name == 'size':
-            if not isinstance(value, int) or value < 0 or value > 65535:
-                raise ValueError(f'size must be 0-65535, got {value}')
+        elif name == 'size' and (not isinstance(value, int) or value < 0 or value > 65535):
+            raise ValueError(f'size must be 0-65535, got {value}')
         setattr(self, name, value)
 
     def validate(self) -> str:

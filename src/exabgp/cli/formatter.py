@@ -119,7 +119,7 @@ class OutputFormatter:
         # Collect all keys across all objects
         all_keys: list[str] = []
         for item in data:
-            for key in item.keys():
+            for key in item:
                 if key not in all_keys:
                     all_keys.append(key)
 
@@ -224,10 +224,14 @@ class OutputFormatter:
 
         # Strategy 4: Find first non-complex value as fallback
         for key, value in item.items():
-            if value is not None and not isinstance(value, (dict, list)):
+            if (
+                value is not None
+                and not isinstance(value, (dict, list))
+                and not key.startswith('_')
+                and key not in ['state', 'status', 'type', 'duration']
+            ):
                 # Skip internal/metadata keys
-                if not key.startswith('_') and key not in ['state', 'status', 'type', 'duration']:
-                    return f'{key}={value}'
+                return f'{key}={value}'
 
         return None
 

@@ -86,13 +86,13 @@ class MockReactor:
 
     def active_peers(self) -> set[str]:
         """Return set of active peer names."""
-        return {key for key in self._peers.keys() if self._peers[key].action != 'LATER'}
+        return {key for key in self._peers if self._peers[key].action != 'LATER'}
 
     def established_peers(self) -> set[str]:
         """Return set of established peer names."""
         from exabgp.bgp.fsm import FSM
 
-        return {key for key in self._peers.keys() if self._peers[key].fsm.state == FSM.ESTABLISHED}
+        return {key for key in self._peers if self._peers[key].fsm.state == FSM.ESTABLISHED}
 
     def peers(self, service: str = '') -> list[str]:
         """Return list of peer names, optionally filtered by service."""
@@ -102,7 +102,7 @@ class MockReactor:
         # This mock implementation is simplified
         return [
             key
-            for key in self._peers.keys()
+            for key in self._peers
             if hasattr(self._peers[key].neighbor, 'api')
             and self._peers[key].neighbor.api
             and service in self._peers[key].neighbor.api.get('processes', [])
@@ -321,7 +321,7 @@ class TestActivePeers:
         # Define a simple version that doesn't need imports
         def active_peers(peers: dict[str, Any]) -> set[str]:
             """Return set of peers where action != 'LATER'."""
-            return {key for key in peers.keys() if peers[key].action != 'LATER'}
+            return {key for key in peers if peers[key].action != 'LATER'}
 
         result = active_peers({})
         assert result == set()
@@ -332,7 +332,7 @@ class TestActivePeers:
         # Define a simple version that doesn't need imports
         def active_peers(peers: dict[str, Any]) -> set[str]:
             """Return set of peers where action != 'LATER'."""
-            return {key for key in peers.keys() if peers[key].action != 'LATER'}
+            return {key for key in peers if peers[key].action != 'LATER'}
 
         peer1 = MagicMock()
         peer1.action = 'LATER'
@@ -356,7 +356,7 @@ class TestEstablishedPeers:
         # Define a simple version that doesn't need imports
         def established_peers(peers: dict[str, Any], established_state: str) -> set[str]:
             """Return set of peers in established state."""
-            return {key for key in peers.keys() if peers[key].fsm.state == established_state}
+            return {key for key in peers if peers[key].fsm.state == established_state}
 
         result = established_peers({}, 'ESTABLISHED')
         assert result == set()
@@ -367,7 +367,7 @@ class TestEstablishedPeers:
         # Define a simple version that doesn't need imports
         def established_peers(peers: dict[str, Any], established_state: str) -> set[str]:
             """Return set of peers in established state."""
-            return {key for key in peers.keys() if peers[key].fsm.state == established_state}
+            return {key for key in peers if peers[key].fsm.state == established_state}
 
         peer1 = MagicMock()
         peer1.fsm = MagicMock()

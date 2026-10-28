@@ -121,7 +121,7 @@ def _as_mapped_next_hop(text: str, configured: IP, decoded: IP) -> str:
 def check_generation(neighbors: dict[str, Neighbor]) -> bool:
     option.enabled['parser'] = True
 
-    for name in neighbors.keys():
+    for name in neighbors:
         neighbor = copy.deepcopy(neighbors[name])
         # Validate through a synthetic iBGP session without discarding a known ASN.
         neighbor.session.local_as = neighbor.session.peer_as or neighbor.session.local_as

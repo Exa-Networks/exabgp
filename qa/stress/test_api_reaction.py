@@ -52,7 +52,6 @@ class TestAPIResponseLatency:
 
         # Simulate a write queue
         queue: deque[bytes] = deque()
-        messages_written = 0
         latencies: list[float] = []
 
         async def write_message(msg: bytes) -> float:
@@ -69,7 +68,6 @@ class TestAPIResponseLatency:
             msg = f'{{"type": "announce", "id": {i}}}\n'.encode()
             latency = await write_message(msg)
             latencies.append(latency)
-            messages_written += 1
 
         avg_latency = sum(latencies) / len(latencies)
         max_latency = max(latencies)

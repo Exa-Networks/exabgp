@@ -163,9 +163,8 @@ class TestSocketReader:
         conn.io = mock_sock
         mock_sock.recv_into.return_value = 0  # Connection closed (recv_into returns 0)
 
-        with patch('exabgp.reactor.network.connection.log'):
-            with pytest.raises(LostConnection) as exc_info:
-                asyncio.run(conn._reader_async(10))
+        with patch('exabgp.reactor.network.connection.log'), pytest.raises(LostConnection) as exc_info:
+            asyncio.run(conn._reader_async(10))
 
         assert 'closed by the remote end' in str(exc_info.value)
         # The connection is closed, and the half read message forgotten with it
@@ -181,9 +180,8 @@ class TestSocketReader:
         conn.io = mock_sock
         mock_sock.recv_into.side_effect = TimeoutError('timed out')
 
-        with patch('exabgp.reactor.network.connection.log'):
-            with pytest.raises(TooSlowError) as exc_info:
-                asyncio.run(conn._reader_async(10))
+        with patch('exabgp.reactor.network.connection.log'), pytest.raises(TooSlowError) as exc_info:
+            asyncio.run(conn._reader_async(10))
 
         assert 'Timeout' in str(exc_info.value)
         # The connection is closed, and the half read message forgotten with it
@@ -199,9 +197,8 @@ class TestSocketReader:
         conn.io = mock_sock
         mock_sock.recv_into.side_effect = OSError(errno.ECONNRESET, 'Connection reset')
 
-        with patch('exabgp.reactor.network.connection.log'):
-            with pytest.raises(LostConnection) as exc_info:
-                asyncio.run(conn._reader_async(10))
+        with patch('exabgp.reactor.network.connection.log'), pytest.raises(LostConnection) as exc_info:
+            asyncio.run(conn._reader_async(10))
 
         assert 'issue reading on the socket' in str(exc_info.value)
         # The connection is closed, and the half read message forgotten with it
@@ -298,17 +295,19 @@ class TestGeneratorBasedWriter:
             mock_poller.poll.return_value = [(5, 4)]  # Always ready
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.log'):
-                    gen = conn.writer(b'test')
+            with (
+                patch('exabgp.reactor.network.connection.log'),
+                patch('exabgp.reactor.network.connection.log'),
+            ):
+                gen = conn.writer(b'test')
 
-                    results = []
-                    for result in gen:
-                        results.append(result)
+                results = []
+                for result in gen:
+                    results.append(result)
 
-                    # Should yield False on EAGAIN, then True
-                    assert False in results
-                    assert results[-1] is True
+                # Should yield False on EAGAIN, then True
+                assert False in results
+                assert results[-1] is True
 
     def test_writer_raises_network_error_on_epipe(self) -> None:
         """Test writer() raises NetworkError on EPIPE (broken pipe)"""
@@ -350,13 +349,15 @@ class TestGeneratorBasedWriter:
             mock_poller.poll.return_value = [(5, 4)]
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.log'):
-                    gen = conn.writer(b'test')
+            with (
+                patch('exabgp.reactor.network.connection.log'),
+                patch('exabgp.reactor.network.connection.log'),
+            ):
+                gen = conn.writer(b'test')
 
-                    with pytest.raises(LostConnection):
-                        for _ in gen:
-                            pass
+                with pytest.raises(LostConnection):
+                    for _ in gen:
+                        pass
 
 
 class TestBGPHeaderValidation:
@@ -884,15 +885,17 @@ class TestErrorPropagation:
             mock_poller.poll.return_value = [(5, 4)]
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.log'):
-                    gen = conn.writer(b'test')
+            with (
+                patch('exabgp.reactor.network.connection.log'),
+                patch('exabgp.reactor.network.connection.log'),
+            ):
+                gen = conn.writer(b'test')
 
-                    with pytest.raises(NetworkError) as exc_info:
-                        for _ in gen:
-                            pass
+                with pytest.raises(NetworkError) as exc_info:
+                    for _ in gen:
+                        pass
 
-                    assert 'Problem while writing data' in str(exc_info.value)
+                assert 'Problem while writing data' in str(exc_info.value)
 
     def test_reader_propagates_fatal_error(self) -> None:
         """Test _reader_async() propagates fatal socket errors"""
@@ -903,9 +906,8 @@ class TestErrorPropagation:
         conn.io = mock_sock
         mock_sock.recv_into.side_effect = OSError(errno.ECONNREFUSED, 'Connection refused')
 
-        with patch('exabgp.reactor.network.connection.log'):
-            with pytest.raises(LostConnection) as exc_info:
-                asyncio.run(conn._reader_async(10))
+        with patch('exabgp.reactor.network.connection.log'), pytest.raises(LostConnection) as exc_info:
+            asyncio.run(conn._reader_async(10))
 
         assert 'issue reading on the socket' in str(exc_info.value)
         # Socket should be closed
@@ -920,9 +922,8 @@ class TestErrorPropagation:
         conn.io = mock_sock
         mock_sock.recv_into.return_value = 0  # Connection closed (recv_into returns 0)
 
-        with patch('exabgp.reactor.network.connection.log'):
-            with pytest.raises(LostConnection) as exc_info:
-                asyncio.run(conn._reader_async(10))
+        with patch('exabgp.reactor.network.connection.log'), pytest.raises(LostConnection) as exc_info:
+            asyncio.run(conn._reader_async(10))
 
         assert 'closed by the remote end' in str(exc_info.value)
         # Socket should be closed
@@ -1019,9 +1020,8 @@ class TestEdgeCasesAndDefensiveMode:
         conn.io = mock_sock
         mock_sock.recv_into.side_effect = OSError(999, 'Undefined error')
 
-        with patch('exabgp.reactor.network.connection.log'):
-            with pytest.raises(NetworkError) as exc_info:
-                asyncio.run(conn._reader_async(10))
+        with patch('exabgp.reactor.network.connection.log'), pytest.raises(NetworkError) as exc_info:
+            asyncio.run(conn._reader_async(10))
 
         assert 'Problem while reading data' in str(exc_info.value)
 
@@ -1043,20 +1043,22 @@ class TestEdgeCasesAndDefensiveMode:
             mock_poller.poll.return_value = [(5, 4)]
             mock_poll.return_value = mock_poller
 
-            with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.log'):
-                    gen = conn.writer(b'test')
+            with (
+                patch('exabgp.reactor.network.connection.log'),
+                patch('exabgp.reactor.network.connection.log'),
+            ):
+                gen = conn.writer(b'test')
 
-                    # Should yield False and continue (not raise)
-                    results = []
-                    for result in gen:
-                        results.append(result)
-                        # Break after a few iterations to avoid infinite loop
-                        if len(results) > 10:
-                            break
+                # Should yield False and continue (not raise)
+                results = []
+                for result in gen:
+                    results.append(result)
+                    # Break after a few iterations to avoid infinite loop
+                    if len(results) > 10:
+                        break
 
-                    # Should have yielded at least one False
-                    assert False in results
+                # Should have yielded at least one False
+                assert False in results
 
     def test_reader_keeps_no_state_after_notify_error(self) -> None:
         """Test reader_async() keeps no half read message after NotifyError"""

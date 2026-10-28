@@ -101,7 +101,7 @@ class TestInterworkSegmentDiscoveryRoute:
         route2 = InterworkSegmentDiscoveryRoute.make_isd(rd, prefix_ip_len, prefix_ip, AFI.ipv4)
 
         assert route1 == route2
-        assert not route1 != route2
+        assert route1 == route2
 
     def test_isd_inequality(self) -> None:
         """Test inequality for different ISD routes"""
@@ -113,7 +113,7 @@ class TestInterworkSegmentDiscoveryRoute:
         route2 = InterworkSegmentDiscoveryRoute.make_isd(rd2, 24, prefix_ip, AFI.ipv4)
 
         assert route1 != route2
-        assert not route1 == route2
+        assert route1 != route2
 
     def test_isd_hash_consistency(self) -> None:
         """Test hash consistency for ISD routes"""
@@ -233,7 +233,7 @@ class TestDirectSegmentDiscoveryRoute:
         route2 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip, AFI.ipv4)
 
         assert route1 == route2
-        assert not route1 != route2
+        assert route1 == route2
 
     def test_dsd_inequality(self) -> None:
         """Test inequality for different DSD routes"""
@@ -245,7 +245,7 @@ class TestDirectSegmentDiscoveryRoute:
         route2 = DirectSegmentDiscoveryRoute.make_dsd(rd, ip2, AFI.ipv4)
 
         assert route1 != route2
-        assert not route1 == route2
+        assert route1 != route2
 
     def test_dsd_hash_consistency(self) -> None:
         """Test hash consistency for DSD routes"""
@@ -456,7 +456,7 @@ class TestType1SessionTransformedRoute:
         )
 
         assert route1 == route2
-        assert not route1 != route2
+        assert route1 == route2
 
     def test_t1st_hash_consistency(self) -> None:
         """Test hash consistency for T1ST routes"""
@@ -699,7 +699,7 @@ class TestType2SessionTransformedRoute:
         route2 = Type2SessionTransformedRoute.make_t2st(rd, 32, endpoint_ip, 0, AFI.ipv4)
 
         assert route1 == route2
-        assert not route1 != route2
+        assert route1 == route2
 
     def test_t2st_inequality(self) -> None:
         """Test inequality for different T2ST routes"""

@@ -52,9 +52,8 @@ class TestEncodeCommand(unittest.TestCase):
 
         # Capture stdout
         captured = io.StringIO()
-        with patch.object(sys, 'stdout', captured):
-            with patch.object(sys, 'exit'):
-                encode.cmdline(args)
+        with patch.object(sys, 'stdout', captured), patch.object(sys, 'exit'):
+            encode.cmdline(args)
 
         output = captured.getvalue().strip()
 
@@ -85,9 +84,8 @@ class TestEncodeCommand(unittest.TestCase):
         )
 
         captured = io.StringIO()
-        with patch.object(sys, 'stdout', captured):
-            with patch.object(sys, 'exit'):
-                encode.cmdline(args)
+        with patch.object(sys, 'stdout', captured), patch.object(sys, 'exit'):
+            encode.cmdline(args)
 
         output = captured.getvalue().strip()
 
@@ -116,9 +114,8 @@ class TestEncodeCommand(unittest.TestCase):
         )
 
         captured = io.StringIO()
-        with patch.object(sys, 'stdout', captured):
-            with patch.object(sys, 'exit'):
-                encode.cmdline(args)
+        with patch.object(sys, 'stdout', captured), patch.object(sys, 'exit'):
+            encode.cmdline(args)
 
         output = captured.getvalue().strip()
 
@@ -145,9 +142,8 @@ class TestEncodeCommand(unittest.TestCase):
         )
 
         captured = io.StringIO()
-        with patch.object(sys, 'stdout', captured):
-            with patch.object(sys, 'exit'):
-                encode.cmdline(args)
+        with patch.object(sys, 'stdout', captured), patch.object(sys, 'exit'):
+            encode.cmdline(args)
 
         output = captured.getvalue().strip()
 
@@ -175,9 +171,8 @@ class TestEncodeCommand(unittest.TestCase):
         )
 
         captured = io.StringIO()
-        with patch.object(sys, 'stdout', captured):
-            with patch.object(sys, 'exit'):
-                encode.cmdline(args)
+        with patch.object(sys, 'stdout', captured), patch.object(sys, 'exit'):
+            encode.cmdline(args)
 
         output = captured.getvalue().strip()
 
@@ -256,10 +251,12 @@ class TestDecodeCommand(unittest.TestCase):
         mock_stdin = io.StringIO(hex_payload + '\n')
 
         captured = io.StringIO()
-        with patch.object(sys, 'stdin', mock_stdin):
-            with patch.object(sys, 'stdout', captured):
-                with patch.object(sys.stdin, 'isatty', return_value=False):
-                    result = decode.cmdline(args)
+        with (
+            patch.object(sys, 'stdin', mock_stdin),
+            patch.object(sys, 'stdout', captured),
+            patch.object(sys.stdin, 'isatty', return_value=False),
+        ):
+            result = decode.cmdline(args)
 
         output = captured.getvalue()
 
@@ -292,10 +289,12 @@ class TestDecodeCommand(unittest.TestCase):
         mock_stdin = io.StringIO(hex1 + '\n' + hex2 + '\n')
 
         captured = io.StringIO()
-        with patch.object(sys, 'stdin', mock_stdin):
-            with patch.object(sys, 'stdout', captured):
-                with patch.object(sys.stdin, 'isatty', return_value=False):
-                    result = decode.cmdline(args)
+        with (
+            patch.object(sys, 'stdin', mock_stdin),
+            patch.object(sys, 'stdout', captured),
+            patch.object(sys.stdin, 'isatty', return_value=False),
+        ):
+            result = decode.cmdline(args)
 
         output = captured.getvalue()
 
@@ -393,9 +392,8 @@ class TestEncodeDecodeRoundTrip(unittest.TestCase):
         )
 
         encoded = io.StringIO()
-        with patch.object(sys, 'stdout', encoded):
-            with patch.object(sys, 'exit'):
-                encode.cmdline(encode_args)
+        with patch.object(sys, 'stdout', encoded), patch.object(sys, 'exit'):
+            encode.cmdline(encode_args)
 
         hex_output = encoded.getvalue().strip()
 
@@ -443,9 +441,8 @@ class TestEncodeDecodeRoundTrip(unittest.TestCase):
         )
 
         encoded = io.StringIO()
-        with patch.object(sys, 'stdout', encoded):
-            with patch.object(sys, 'exit'):
-                encode.cmdline(encode_args)
+        with patch.object(sys, 'stdout', encoded), patch.object(sys, 'exit'):
+            encode.cmdline(encode_args)
 
         hex_output = encoded.getvalue().strip()
 
@@ -491,9 +488,8 @@ class TestEncodeDecodeRoundTrip(unittest.TestCase):
         )
 
         encoded = io.StringIO()
-        with patch.object(sys, 'stdout', encoded):
-            with patch.object(sys, 'exit'):
-                encode.cmdline(encode_args)
+        with patch.object(sys, 'stdout', encoded), patch.object(sys, 'exit'):
+            encode.cmdline(encode_args)
 
         hex_output = encoded.getvalue().strip()
 

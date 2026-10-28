@@ -51,9 +51,11 @@ def spawn() -> Any:
     child = MagicMock()
     child.stdout.fileno.return_value = 31
     child.stdin.fileno.return_value = 32
-    with patch('exabgp.reactor.api.processes.subprocess.Popen', return_value=child) as popen:
-        with patch('exabgp.reactor.api.processes.fcntl.fcntl') as fcntl_call:
-            yield popen, fcntl_call, child
+    with (
+        patch('exabgp.reactor.api.processes.subprocess.Popen', return_value=child) as popen,
+        patch('exabgp.reactor.api.processes.fcntl.fcntl') as fcntl_call,
+    ):
+        yield popen, fcntl_call, child
 
 
 def configured(environment: Any, **overrides: Any) -> Any:

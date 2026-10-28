@@ -254,9 +254,12 @@ class CommandShortcuts:
         """
         expansions = []
         for nickname, full_name, match_condition in cls.SHORTCUTS:
-            if cls._matches(token, nickname, full_name) and match_condition(position, previous_tokens):
-                if full_name not in expansions:
-                    expansions.append(full_name)
+            if (
+                cls._matches(token, nickname, full_name)
+                and match_condition(position, previous_tokens)
+                and full_name not in expansions
+            ):
+                expansions.append(full_name)
         return expansions
 
     @classmethod

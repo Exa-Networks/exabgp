@@ -36,7 +36,7 @@ def list_neighbor(self: API, reactor: Reactor, service: str, peers: list[str], c
     async def callback() -> None:
         neighbors = []
         async with answering(reactor, service):
-            for neighbor_name in reactor.configuration.neighbors.keys():
+            for neighbor_name in reactor.configuration.neighbors:
                 neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
                 if not neighbor:
                     continue

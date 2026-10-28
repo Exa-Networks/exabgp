@@ -321,31 +321,32 @@ def cmdline_batch(
     batch_file: str, pipename: str, socketname: str, use_pipe_transport: bool, cmdarg: argparse.Namespace
 ) -> None:
     """Execute commands from file or stdin."""
-    # Read commands from file or stdin
-    if batch_file == '-':
-        # Read from stdin
-        command_source = sys.stdin
-        source_name = 'stdin'
-    else:
-        # Read from file
-        if not os.path.exists(batch_file):
-            sys.stderr.write(f'Batch file not found: {batch_file}\n')
-            sys.exit(1)
-        try:
-            command_source = open(batch_file, 'r')
-            source_name = batch_file
-        except OSError as exc:
-            sys.stderr.write(f'Could not open batch file: {exc}\n')
-            sys.exit(1)
+    # the stack closes the batch file however the loop ends; stdin is not closed
+    with contextlib.ExitStack() as stack:
+        # Read commands from file or stdin
+        if batch_file == '-':
+            # Read from stdin
+            command_source = sys.stdin
+            source_name = 'stdin'
+        else:
+            # Read from file
+            if not os.path.exists(batch_file):
+                sys.stderr.write(f'Batch file not found: {batch_file}\n')
+                sys.exit(1)
+            try:
+                command_source = stack.enter_context(open(batch_file))
+                source_name = batch_file
+            except OSError as exc:
+                sys.stderr.write(f'Could not open batch file: {exc}\n')
+                sys.exit(1)
 
-    sys.stdout.write(f'Executing commands from {source_name}...\n')
-    sys.stdout.flush()
+        sys.stdout.write(f'Executing commands from {source_name}...\n')
+        sys.stdout.flush()
 
-    # Process commands line by line
-    line_num = 0
-    errors = 0
+        # Process commands line by line
+        line_num = 0
+        errors = 0
 
-    try:
         for line in command_source:
             line_num += 1
             command = line.strip()
@@ -369,10 +370,6 @@ def cmdline_batch(
                     successful = cmdline_socket(socketname, sending, exit_on_completion=False)
             if not successful:
                 errors += 1
-
-    finally:
-        if batch_file != '-':
-            command_source.close()
 
     # Summary
     sys.stdout.write(f'\nBatch execution complete: {line_num} commands, {errors} errors\n')

@@ -98,7 +98,7 @@ class TestSourceAD:
         route2 = SourceAD.make_sourcead(rd, AFI.ipv4, source, group)
 
         assert route1 == route2
-        assert not route1 != route2
+        assert route1 == route2
 
     def test_sourcead_inequality(self) -> None:
         """Test inequality for different SourceAD routes"""
@@ -111,7 +111,7 @@ class TestSourceAD:
         route2 = SourceAD.make_sourcead(rd, AFI.ipv4, source2, group)
 
         assert route1 != route2
-        assert not route1 == route2
+        assert route1 != route2
 
     def test_sourcead_hash_consistency(self) -> None:
         """Test hash consistency for SourceAD routes"""
@@ -275,7 +275,7 @@ class TestSharedJoin:
         route2 = SharedJoin.make_sharedjoin(rd, AFI.ipv4, source, group, source_as)
 
         assert route1 == route2
-        assert not route1 != route2
+        assert route1 == route2
 
     def test_sharedjoin_inequality(self) -> None:
         """Test inequality for different SharedJoin routes"""
@@ -440,7 +440,7 @@ class TestSourceJoin:
         route2 = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source, group, source_as)
 
         assert route1 == route2
-        assert not route1 != route2
+        assert route1 == route2
 
     def test_sourcejoin_inequality(self) -> None:
         """Test inequality for different SourceJoin routes"""
@@ -454,7 +454,7 @@ class TestSourceJoin:
         route2 = SourceJoin.make_sourcejoin(rd, AFI.ipv4, source2, group, source_as)
 
         assert route1 != route2
-        assert not route1 == route2
+        assert route1 != route2
 
     def test_sourcejoin_hash_consistency(self) -> None:
         """Test hash consistency for SourceJoin routes"""

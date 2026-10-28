@@ -204,7 +204,7 @@ class Peer:
         # Maximum connection attempts (0 = unlimited)
         self.max_connection_attempts: int = getenv().tcp.attempts
         self.connection_attempts: int = 0
-        self.bind: bool = True if getenv().tcp.bind else False
+        self.bind: bool = bool(getenv().tcp.bind)
 
         now: float = time.time()
 

@@ -91,7 +91,7 @@ class BitResource(Resource):
 
     def named_bits(self) -> Iterator[str]:
         value = self.value
-        for bit in self.names.keys():
+        for bit in self.names:
             if value & bit or value == bit:
                 yield self.names[bit]
                 value -= bit
@@ -100,7 +100,7 @@ class BitResource(Resource):
 
     def bits(self) -> Iterator[str]:
         value = self.value
-        for bit in self.names.keys():
+        for bit in self.names:
             if value & bit or value == bit:
                 yield self.names[bit]
                 value -= bit

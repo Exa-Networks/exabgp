@@ -63,9 +63,8 @@ def _attempts(platform: str, refused: OSError | None = None) -> Iterator[list[in
 async def test_establish_gives_up_on_a_refused_authentication_key(authentication: dict[str, Any], failure: str) -> None:
     connection = _outgoing(**authentication)
 
-    with _attempts('Windows') as opened:
-        with patch('exabgp.reactor.network.outgoing.log') as logger:
-            connected = await connection.establish_async()
+    with _attempts('Windows') as opened, patch('exabgp.reactor.network.outgoing.log') as logger:
+        connected = await connection.establish_async()
 
     assert not connected
     # one attempt only: retrying a key the kernel rejected can not succeed
@@ -86,10 +85,9 @@ async def test_a_refused_key_is_reported_once_per_connection_attempt() -> None:
     """
     connection = _outgoing(**MD5)
 
-    with _attempts('Windows') as opened:
-        with patch('exabgp.reactor.network.outgoing.log') as logger:
-            for _ in range(3):
-                assert not await connection.establish_async()
+    with _attempts('Windows') as opened, patch('exabgp.reactor.network.outgoing.log') as logger:
+        for _ in range(3):
+            assert not await connection.establish_async()
 
     # one attempt and one report per reconnection cycle, never a burst within one
     assert len(opened) == 3
@@ -101,9 +99,11 @@ async def test_establish_keeps_retrying_a_transient_setup_failure() -> None:
     connection = _outgoing(**MD5)
 
     # out of file descriptors: tcp.create reports NotConnected, which a retry may get past
-    with _attempts('Windows', OSError(errno.EMFILE, 'Too many open files')) as opened:
-        with patch('exabgp.reactor.network.outgoing.log') as logger:
-            connected = await connection.establish_async(timeout=1.0, max_attempts=3)
+    with (
+        _attempts('Windows', OSError(errno.EMFILE, 'Too many open files')) as opened,
+        patch('exabgp.reactor.network.outgoing.log') as logger,
+    ):
+        connected = await connection.establish_async(timeout=1.0, max_attempts=3)
 
     assert not connected
     assert len(opened) == 3

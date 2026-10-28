@@ -96,18 +96,22 @@ class TestWrite:
     def test_a_broken_pipe_marks_the_process_broken_and_raises(self, processes: Any) -> None:
         with_stdin(processes, 'helper', 7)
 
-        with patch('exabgp.reactor.api.processes.os.write', side_effect=OSError(errno.EPIPE, 'broken pipe')):
-            with pytest.raises(ProcessError):
-                processes.write('helper', 'announce route')
+        with (
+            patch('exabgp.reactor.api.processes.os.write', side_effect=OSError(errno.EPIPE, 'broken pipe')),
+            pytest.raises(ProcessError),
+        ):
+            processes.write('helper', 'announce route')
 
         assert processes._broken == ['helper']
 
     def test_an_unexpected_errno_marks_the_process_broken_and_raises(self, processes: Any) -> None:
         with_stdin(processes, 'helper', 7)
 
-        with patch('exabgp.reactor.api.processes.os.write', side_effect=OSError(errno.EIO, 'io error')):
-            with pytest.raises(ProcessError):
-                processes.write('helper', 'announce route')
+        with (
+            patch('exabgp.reactor.api.processes.os.write', side_effect=OSError(errno.EIO, 'io error')),
+            pytest.raises(ProcessError),
+        ):
+            processes.write('helper', 'announce route')
 
         assert processes._broken == ['helper']
 
@@ -134,9 +138,11 @@ class TestWrite:
         poller = MagicMock()
         poller.poll.return_value = []
 
-        with patch('exabgp.reactor.api.processes.os.write', side_effect=OSError(errno.EAGAIN, 'again')):
-            with patch('exabgp.reactor.api.processes.select.poll', return_value=poller):
-                assert processes.write('helper', 'announce route') is False
+        with (
+            patch('exabgp.reactor.api.processes.os.write', side_effect=OSError(errno.EAGAIN, 'again')),
+            patch('exabgp.reactor.api.processes.select.poll', return_value=poller),
+        ):
+            assert processes.write('helper', 'announce route') is False
 
         # 5000ms of deadline at 100ms per poll, and the write is not treated as a failure.
         assert poller.poll.call_count == 50
@@ -154,9 +160,11 @@ class TestWrite:
                 raise outcome
             return outcome
 
-        with patch('exabgp.reactor.api.processes.os.write', side_effect=blocked_once):
-            with patch('exabgp.reactor.api.processes.select.poll', return_value=poller):
-                assert processes.write('helper', 'ab') is True
+        with (
+            patch('exabgp.reactor.api.processes.os.write', side_effect=blocked_once),
+            patch('exabgp.reactor.api.processes.select.poll', return_value=poller),
+        ):
+            assert processes.write('helper', 'ab') is True
 
         assert attempts == []
 

@@ -99,9 +99,8 @@ CHECK_TYPE: dict[int, Callable[[Any], bool]] = {
 
 def kind(kind: int, data: Any) -> bool:
     for t in CHECK_TYPE:
-        if kind & t:
-            if CHECK_TYPE[t](data):
-                return True
+        if kind & t and CHECK_TYPE[t](data):
+            return True
     return False
 
 
@@ -165,16 +164,14 @@ def range6(data: Any) -> bool:
 
 
 def ipv4_range(data: Any) -> bool:
-    if not data.count('/') == IPV4_RANGE_SEPARATOR_COUNT:
+    if data.count('/') != IPV4_RANGE_SEPARATOR_COUNT:
         return False
     addr, prefix = data.split('/')
     if not ipv4(addr):
         return False
     if not prefix.isdigit():
         return False
-    if not range4(int(prefix)):
-        return False
-    return True
+    return range4(int(prefix))
 
 
 def port(data: Any) -> bool:

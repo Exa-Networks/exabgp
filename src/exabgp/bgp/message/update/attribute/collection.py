@@ -293,9 +293,8 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             # - Internal pseudo-attributes (TreatAsWithdraw, Discard) that aren't real BGP attributes
             # - NextHop: output with NLRI in announce (as "nexthop" key)
             #   For withdraws, include_nexthop=True includes NEXT_HOP in attributes
-            if attribute.NO_GENERATION:
-                if not (include_nexthop and code == Attribute.CODE.NEXT_HOP):
-                    continue
+            if attribute.NO_GENERATION and not (include_nexthop and code == Attribute.CODE.NEXT_HOP):
+                continue
 
             if code not in self.representation:
                 # For generic mode, output hex; otherwise use str() which may be human-readable

@@ -645,7 +645,7 @@ class RequirePath:
         # python 2.4 compatibility mean no simple union but using sets.Set
         union: list[FamilyTuple] = []
         union.extend(send.keys())
-        union.extend([k for k in receive.keys() if k not in send.keys()])
+        union.extend([k for k in receive if k not in send])
 
         for k in union:
             here_will_send = bool(send.get(k, self.CANT) & self.SEND)

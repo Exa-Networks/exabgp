@@ -456,9 +456,8 @@ class TestDecoderFailure:
     @pytest.mark.asyncio
     async def test_a_python_exception_becomes_a_generic_header_error(self) -> None:
         proto, told = protocol(receive_keepalive=True, receive_packets=True)
-        with failing(ValueError('broken decoder')):
-            with pytest.raises(Notify) as raised:
-                await read(proto, KEEPALIVE_HEADER)
+        with failing(ValueError('broken decoder')), pytest.raises(Notify) as raised:
+            await read(proto, KEEPALIVE_HEADER)
         notify = raised.value
         assert (notify.code, notify.subcode) == (1, 0)
         assert str(notify) == str(Notify(1, 0, 'can not decode update message of type "4"'))
@@ -483,18 +482,16 @@ class TestDecoderFailure:
     @pytest.mark.asyncio
     async def test_the_python_exception_is_not_chained_to_the_header_error(self) -> None:
         proto, _ = protocol()
-        with failing(ValueError('broken decoder')):
-            with pytest.raises(Notify) as raised:
-                await read(proto, KEEPALIVE_HEADER)
+        with failing(ValueError('broken decoder')), pytest.raises(Notify) as raised:
+            await read(proto, KEEPALIVE_HEADER)
         assert raised.value.__suppress_context__ is True
 
     @pytest.mark.asyncio
     async def test_a_notify_from_the_decoder_is_raised_as_it_is(self) -> None:
         proto, _ = protocol()
         failure = Notify(3, 1, 'malformed attribute list')
-        with failing(failure):
-            with pytest.raises(Notify) as raised:
-                await read(proto, KEEPALIVE_HEADER)
+        with failing(failure), pytest.raises(Notify) as raised:
+            await read(proto, KEEPALIVE_HEADER)
         assert raised.value is failure
         assert len(last_logged()) == 1
 
@@ -502,7 +499,6 @@ class TestDecoderFailure:
     @pytest.mark.parametrize('failure', [KeyboardInterrupt(), SystemExit(3)])
     async def test_an_interrupt_is_not_converted(self, failure: BaseException) -> None:
         proto, _ = protocol()
-        with failing(failure):
-            with pytest.raises(type(failure)) as raised:
-                await read(proto, KEEPALIVE_HEADER)
+        with failing(failure), pytest.raises(type(failure)) as raised:
+            await read(proto, KEEPALIVE_HEADER)
         assert raised.value is failure

@@ -356,12 +356,10 @@ class TestBacklogStressScenarios:
 
         def concurrent_ops():
             backlog = deque()
-            added = 0
             removed = 0
 
             for i, msg in enumerate(messages):
                 backlog.append(msg)
-                added += 1
 
                 # Remove every 3rd message immediately
                 if i % 3 == 0 and backlog:

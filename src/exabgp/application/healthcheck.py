@@ -512,9 +512,8 @@ def loop(options: argparse.Namespace) -> None:
                     announce = f'{announce} local-preference {options.local_preference}'
                 if options.community or options.disabled_community:
                     community = options.community
-                    if target in (States.DOWN, States.DISABLED):
-                        if options.disabled_community:
-                            community = options.disabled_community
+                    if target in (States.DOWN, States.DISABLED) and options.disabled_community:
+                        community = options.disabled_community
                     if community:
                         announce = f'{announce} community [ {community} ]'
                 if options.extended_community:

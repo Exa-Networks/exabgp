@@ -186,9 +186,8 @@ class TestCmdline:
         setargs(parser)
         args = parser.parse_args(['invalid route syntax'])
 
-        with patch('sys.stdout', new_callable=StringIO):
-            with pytest.raises(SystemExit) as exc_info:
-                cmdline(args)
+        with patch('sys.stdout', new_callable=StringIO), pytest.raises(SystemExit) as exc_info:
+            cmdline(args)
 
         assert exc_info.value.code == 1
 
@@ -198,9 +197,8 @@ class TestCmdline:
         setargs(parser)
         args = parser.parse_args(['-f', 'invalid', 'route 10.0.0.0/24 next-hop 1.2.3.4'])
 
-        with patch('sys.stdout', new_callable=StringIO):
-            with pytest.raises(SystemExit) as exc_info:
-                cmdline(args)
+        with patch('sys.stdout', new_callable=StringIO), pytest.raises(SystemExit) as exc_info:
+            cmdline(args)
 
         assert exc_info.value.code == 1
 

@@ -20,44 +20,42 @@ class TestMainFunction:
 
     def test_main_no_args_shows_help(self) -> None:
         """Running with no args should show help and return 1."""
-        with patch('sys.argv', ['exabgp']):
-            with patch('sys.stdout', new_callable=StringIO):
-                result = main()
+        with patch('sys.argv', ['exabgp']), patch('sys.stdout', new_callable=StringIO):
+            result = main()
 
         assert result == 1
 
     def test_main_version_subcommand(self) -> None:
         """version subcommand should work."""
-        with patch('sys.argv', ['exabgp', 'version']):
-            with patch('sys.stdout', new_callable=StringIO) as mock_stdout:
-                result = main()
-                output = mock_stdout.getvalue()
+        with (
+            patch('sys.argv', ['exabgp', 'version']),
+            patch('sys.stdout', new_callable=StringIO) as mock_stdout,
+        ):
+            result = main()
+            output = mock_stdout.getvalue()
 
         assert result is None  # version doesn't return explicit code
         assert 'ExaBGP' in output
 
     def test_main_env_subcommand(self) -> None:
         """env subcommand should work."""
-        with patch('sys.argv', ['exabgp', 'env']):
-            with patch('sys.stdout', new_callable=StringIO):
-                result = main()
+        with patch('sys.argv', ['exabgp', 'env']), patch('sys.stdout', new_callable=StringIO):
+            result = main()
 
         # env outputs to stdout and returns None
         assert result is None
 
     def test_main_help_flag(self) -> None:
         """--help should show help and exit."""
-        with patch('sys.argv', ['exabgp', '--help']):
-            with pytest.raises(SystemExit) as exc_info:
-                main()
+        with patch('sys.argv', ['exabgp', '--help']), pytest.raises(SystemExit) as exc_info:
+            main()
 
         assert exc_info.value.code == 0
 
     def test_main_subcommand_help(self) -> None:
         """Subcommand --help should show subcommand help."""
-        with patch('sys.argv', ['exabgp', 'version', '--help']):
-            with pytest.raises(SystemExit) as exc_info:
-                main()
+        with patch('sys.argv', ['exabgp', 'version', '--help']), pytest.raises(SystemExit) as exc_info:
+            main()
 
         assert exc_info.value.code == 0
 
@@ -68,20 +66,24 @@ class TestCliModeEnvironment:
     def test_pipe_mode_with_env(self) -> None:
         """CLI pipe mode should be detected from environment."""
         # This tests the environment check logic
-        with patch.dict('os.environ', {'exabgp_api_cli_mode': 'pipe', 'exabgp_cli_pipe': ''}):
-            with patch('sys.argv', ['exabgp']):
-                # Will fall through since cli_named_pipe is empty
-                result = main()
+        with (
+            patch.dict('os.environ', {'exabgp_api_cli_mode': 'pipe', 'exabgp_cli_pipe': ''}),
+            patch('sys.argv', ['exabgp']),
+        ):
+            # Will fall through since cli_named_pipe is empty
+            result = main()
 
         # Falls through to normal processing
         assert result == 1
 
     def test_socket_mode_with_env(self) -> None:
         """CLI socket mode should be detected from environment."""
-        with patch.dict('os.environ', {'exabgp_api_cli_mode': 'socket', 'exabgp_cli_socket': ''}):
-            with patch('sys.argv', ['exabgp']):
-                # Will fall through since cli_unix_socket is empty
-                result = main()
+        with (
+            patch.dict('os.environ', {'exabgp_api_cli_mode': 'socket', 'exabgp_cli_socket': ''}),
+            patch('sys.argv', ['exabgp']),
+        ):
+            # Will fall through since cli_unix_socket is empty
+            result = main()
 
         # Falls through to normal processing
         assert result == 1
@@ -94,11 +96,13 @@ class TestBackwardsCompatibility:
         """Config file as first arg should trigger server subcommand."""
         # In 4.x, you could run: exabgp config.conf
         # This should be equivalent to: exabgp server config.conf
-        with patch('sys.argv', ['exabgp', 'nonexistent.conf']):
+        with (
+            patch('sys.argv', ['exabgp', 'nonexistent.conf']),
+            pytest.raises(SystemExit),
+        ):
             # Should add 'server' subcommand and try to run
             # Will fail because file doesn't exist, but shouldn't crash on parsing
-            with pytest.raises(SystemExit):
-                main()
+            main()
 
     def test_known_subcommand_not_modified(self) -> None:
         """Known subcommands should not have 'server' inserted."""
@@ -133,18 +137,22 @@ class TestSubcommandDispatch:
     def test_version_dispatches_to_version_module(self) -> None:
         """version subcommand should call version.cmdline."""
         # returns None, as the real one does: compiled, main() checks it returns an int or None
-        with patch('exabgp.application.version.cmdline', return_value=None) as mock_cmdline:
-            with patch('sys.argv', ['exabgp', 'version']):
-                main()
+        with (
+            patch('exabgp.application.version.cmdline', return_value=None) as mock_cmdline,
+            patch('sys.argv', ['exabgp', 'version']),
+        ):
+            main()
 
         mock_cmdline.assert_called_once()
 
     def test_env_dispatches_to_environ_module(self) -> None:
         """env subcommand should call environ.cmdline."""
         # returns None, as the real one does: compiled, main() checks it returns an int or None
-        with patch('exabgp.application.environ.cmdline', return_value=None) as mock_cmdline:
-            with patch('sys.argv', ['exabgp', 'env']):
-                main()
+        with (
+            patch('exabgp.application.environ.cmdline', return_value=None) as mock_cmdline,
+            patch('sys.argv', ['exabgp', 'env']),
+        ):
+            main()
 
         mock_cmdline.assert_called_once()
 

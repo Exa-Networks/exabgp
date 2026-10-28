@@ -735,7 +735,7 @@ class CommandCompleter:
     def _tree_partial_token(self, tokens: list[str], i: int, level: dict[str, Any]) -> list[str]:
         """tokens[i] is not a word at this level: the words it starts, if it is the last token."""
         # Token not in tree, try partial match
-        matches = [cmd for cmd in level.keys() if cmd.startswith(tokens[i]) and cmd != '__options__']
+        matches = [cmd for cmd in level if cmd.startswith(tokens[i]) and cmd != '__options__']
         # 'announce' (and so 'route-refresh') is only under 'peer', completed before the tree
         # is walked, and 'show' is not in the tree: there is nothing to filter out
         assert tokens[0] != 'peer', 'peer commands are completed before the tree is walked'
@@ -759,7 +759,7 @@ class CommandCompleter:
         assert isinstance(level, dict), 'the command tree is made of dicts, and lists under __options__'
 
         # After navigating, see what's available at current level
-        matches = [cmd for cmd in level.keys() if cmd.startswith(text) and cmd != '__options__']
+        matches = [cmd for cmd in level if cmd.startswith(text) and cmd != '__options__']
         # 'announce' (and so 'route-refresh') is only under 'peer', completed before the tree
         # is walked, and 'show' is not in the tree: there is nothing to filter out
         assert not tokens or tokens[0] != 'peer', 'peer commands are completed before the tree is walked'
@@ -841,13 +841,12 @@ class CommandCompleter:
                         text,
                         'command',
                     )
-                elif len(tokens) == 2:
+                if len(tokens) == 2 and tokens[1] == 'api':
                     # system api <version>
-                    if tokens[1] == 'api':
-                        candidates = ['version']
-                        matches = self._filter_candidates(candidates, text)
-                        self._add_completion_metadata('version', 'Show/set API version', 'option')
-                        return matches
+                    candidates = ['version']
+                    matches = self._filter_candidates(candidates, text)
+                    self._add_completion_metadata('version', 'Show/set API version', 'option')
+                    return matches
         return None
 
     def _peer_completions(self, tokens: list[str], text: str) -> list[str] | None:
@@ -928,34 +927,32 @@ class CommandCompleter:
         action = tokens[2]
 
         # "peer <ip> show" - suggest format options
-        if self._is_ip_address(selector) and action == 'show':
-            if len(tokens) == 3:
-                return self._offer(
-                    {
-                        'summary': 'Brief summary view',
-                        'extensive': 'Detailed view',
-                        'configuration': 'Show configuration',
-                    },
-                    text,
-                    'option',
-                )
+        if self._is_ip_address(selector) and action == 'show' and len(tokens) == 3:
+            return self._offer(
+                {
+                    'summary': 'Brief summary view',
+                    'extensive': 'Detailed view',
+                    'configuration': 'Show configuration',
+                },
+                text,
+                'option',
+            )
 
-        if (self._is_ip_address(selector) or selector == '*') and action in ('announce', 'withdraw'):
+        if ((self._is_ip_address(selector) or selector == '*') and action in ('announce', 'withdraw')) and len(
+            tokens
+        ) == 3:
             # After "peer <selector> announce/withdraw", suggest subcommands
-            if len(tokens) == 3:
-                subcommands = (
-                    ['route', 'route-refresh', 'eor', 'flow', 'vpls']
-                    if action == 'announce'
-                    else ['route', 'flow', 'vpls']
-                )
-                described = {
-                    'route': 'IPv4/IPv6 unicast route',
-                    'route-refresh': 'Route refresh request',
-                    'eor': 'End-of-RIB marker',
-                    'flow': 'FlowSpec rule',
-                    'vpls': 'VPLS route',
-                }
-                return self._offer({name: described[name] for name in subcommands}, text, 'command')
+            subcommands = (
+                ['route', 'route-refresh', 'eor', 'flow', 'vpls'] if action == 'announce' else ['route', 'flow', 'vpls']
+            )
+            described = {
+                'route': 'IPv4/IPv6 unicast route',
+                'route-refresh': 'Route refresh request',
+                'eor': 'End-of-RIB marker',
+                'flow': 'FlowSpec rule',
+                'vpls': 'VPLS route',
+            }
+            return self._offer({name: described[name] for name in subcommands}, text, 'command')
         return None
 
     def _route_context_completions(self, tokens: list[str], text: str) -> list[str] | None:
@@ -991,30 +988,29 @@ class CommandCompleter:
     def _set_completions(self, tokens: list[str], text: str) -> list[str] | None:
         """set display and set sync, or None when the command is not 'set'."""
         # Check for specific command patterns
-        if len(tokens) >= 1:
+        if len(tokens) >= 1 and tokens[0] == 'set':
             # Builtin CLI command: 'set display' / 'set sync'
             # Note: 'set encoding' removed - v6 API is JSON-only
-            if tokens[0] == 'set':
-                if len(tokens) == 1:
-                    # After 'set', suggest 'display' or 'sync'
+            if len(tokens) == 1:
+                # After 'set', suggest 'display' or 'sync'
+                return self._offer(
+                    {'display': 'Set display format', 'sync': 'Set sync mode for announce/withdraw'}, text, 'option'
+                )
+            elif len(tokens) == 2:
+                setting = tokens[1]
+                if setting in ('display',):
+                    # After 'set display', suggest 'json' or 'text'
+                    # Note: 'set encoding' removed - v6 API is JSON-only
+                    return self._offer({'json': 'Show raw JSON', 'text': 'Format as tables'}, text, 'option')
+                elif setting == 'sync':
+                    # After 'set sync', suggest 'on' or 'off'
                     return self._offer(
-                        {'display': 'Set display format', 'sync': 'Set sync mode for announce/withdraw'}, text, 'option'
+                        {'on': 'Wait for routes on wire before ACK', 'off': 'Return ACK immediately (default)'},
+                        text,
+                        'option',
                     )
-                elif len(tokens) == 2:
-                    setting = tokens[1]
-                    if setting in ('display',):
-                        # After 'set display', suggest 'json' or 'text'
-                        # Note: 'set encoding' removed - v6 API is JSON-only
-                        return self._offer({'json': 'Show raw JSON', 'text': 'Format as tables'}, text, 'option')
-                    elif setting == 'sync':
-                        # After 'set sync', suggest 'on' or 'off'
-                        return self._offer(
-                            {'on': 'Wait for routes on wire before ACK', 'off': 'Return ACK immediately (default)'},
-                            text,
-                            'option',
-                        )
-                # 'set' with other tokens - no more completions
-                return []
+            # 'set' with other tokens - no more completions
+            return []
         return None
 
     def _show_neighbor_completions(self, tokens: list[str], text: str) -> list[str]:
@@ -1038,21 +1034,19 @@ class CommandCompleter:
     def _trailing_keyword_completions(self, tokens: list[str], text: str) -> list[str] | None:
         """What the last keyword asks for: a family, a route attribute or a neighbor filter."""
         # AFI/SAFI completion for eor and route refresh
-        if tokens[-1] in ('eor', 'refresh'):
+        if tokens[-1] in ('eor', 'refresh') and (len(tokens) >= 2 and tokens[-2] == 'route' or tokens[-1] == 'eor'):
             # Check if this is "announce route refresh" or similar
-            if len(tokens) >= 2 and tokens[-2] == 'route' or tokens[-1] == 'eor':
-                return self._complete_afi_safi(tokens, text)
+            return self._complete_afi_safi(tokens, text)
 
         # Route specification hints - but NOT for withdraw route
         # (user needs to type IP/prefix first before any attributes)
         if tokens[-1] in ('route', 'ipv4', 'ipv6'):
             # Check if this is "withdraw route" or "neighbor X withdraw route"
-            if tokens[-1] == 'route':
+            if tokens[-1] == 'route' and 'withdraw' in tokens:
                 # Look backwards for "withdraw" command (but not "announce" - handled above)
-                if 'withdraw' in tokens:
-                    # Don't auto-complete after withdraw route commands
-                    # User must type IP/prefix first
-                    return []
+                # Don't auto-complete after withdraw route commands
+                # User must type IP/prefix first
+                return []
             return self._complete_route_spec(tokens, text)
 
         # Neighbor filter completion

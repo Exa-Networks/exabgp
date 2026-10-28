@@ -130,7 +130,9 @@ class Daemon:
             fd = os.open(self.pid, flags, mode)
         except OSError:
             try:
-                pid = open(self.pid, 'r').readline().strip()
+                # closed once read: the descriptor used to stay open until collected
+                with open(self.pid) as existing:
+                    pid = existing.readline().strip()
                 if self.check_pid(int(pid)):
                     log.debug(lazymsg('pid.exists.running path={p}', p=self.pid), 'daemon')
                     return False

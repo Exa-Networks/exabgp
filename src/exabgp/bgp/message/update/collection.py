@@ -63,20 +63,17 @@ def validate_announce_nlri(nlri: NLRI, nexthop: IP) -> str | None:
     Withdrawals don't need this validation (RFC 4271: MP_UNREACH_NLRI has no nexthop).
     """
     # 1. Nexthop validation - required for unicast/multicast announces
-    if nlri.safi in (SAFI.unicast, SAFI.multicast):
+    if nlri.safi in (SAFI.unicast, SAFI.multicast) and nexthop.afi == AFI.undefined:
         # Check for undefined nexthop (IP.NoNextHop has afi=AFI.undefined)
-        if nexthop.afi == AFI.undefined:
-            return f'announce requires nexthop: {nlri}'
+        return f'announce requires nexthop: {nlri}'
 
     # 2. Labels validation - required for labeled route announces
-    if nlri.safi.has_label():
-        if isinstance(nlri, Label) and nlri.labels is Labels.NOLABEL:
-            return f'labeled route announce requires labels: {nlri}'
+    if nlri.safi.has_label() and isinstance(nlri, Label) and nlri.labels is Labels.NOLABEL:
+        return f'labeled route announce requires labels: {nlri}'
 
     # 3. RD validation - required for VPN route announces
-    if nlri.safi.has_rd():
-        if isinstance(nlri, IPVPN) and nlri.rd is RouteDistinguisher.NORD:
-            return f'VPN route announce requires RD: {nlri}'
+    if nlri.safi.has_rd() and isinstance(nlri, IPVPN) and nlri.rd is RouteDistinguisher.NORD:
+        return f'VPN route announce requires RD: {nlri}'
 
     return None
 
@@ -535,7 +532,7 @@ class UpdateCollection:
 
         if mp_withdraws and only_withdraws:
             # Check if all MP withdraws are unicast/multicast (simple case)
-            for family in mp_withdraws.keys():
+            for family in mp_withdraws:
                 _afi, safi = family
                 if safi not in (SAFI.unicast, SAFI.multicast):
                     break
@@ -772,9 +769,8 @@ class UpdateCollection:
         # load stays at one message per few hundred prefixes.
         # Sizes are tracked progressively to avoid an O(n) len() on every concatenation.
         # See lab/benchmark_update_size.py for the benchmark (1.3-1.5x speedup).
-        if include_withdraw and v4_withdraws:
-            if not (yield from self._v4_withdraw_messages(negotiated, v4_withdraws)):
-                return
+        if include_withdraw and v4_withdraws and not (yield from self._v4_withdraw_messages(negotiated, v4_withdraws)):
+            return
 
         if not (yield from self._v4_announce_messages(negotiated, v4_announces, attr)):
             return

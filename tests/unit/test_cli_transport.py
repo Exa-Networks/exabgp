@@ -74,14 +74,16 @@ class TestUnixSocketDiscovery:
         """Test unix_socket() with explicit exabgp_api_socketpath"""
         test_path = '/custom/path/to/exabgp.sock'
 
-        with patch.dict(os.environ, {'exabgp_api_socketpath': test_path}):
-            with patch('os.path.exists', return_value=True):
-                with patch('os.stat', return_value=stat_of(stat.S_IFSOCK | 0o600)):
-                    result = unix_socket('', 'exabgp')
+        with (
+            patch.dict(os.environ, {'exabgp_api_socketpath': test_path}),
+            patch('os.path.exists', return_value=True),
+            patch('os.stat', return_value=stat_of(stat.S_IFSOCK | 0o600)),
+        ):
+            result = unix_socket('', 'exabgp')
 
-                    # Should return the directory containing the socket
-                    assert len(result) == 1
-                    assert '/custom/path/to/' in result[0]
+            # Should return the directory containing the socket
+            assert len(result) == 1
+            assert '/custom/path/to/' in result[0]
 
     def test_unix_socket_discovery_found(self) -> None:
         """Test unix_socket() finds socket in search locations"""
@@ -92,24 +94,22 @@ class TestUnixSocketDiscovery:
                 return stat_of(stat.S_IFSOCK | 0o600)
             raise FileNotFoundError()
 
-        with patch('os.path.exists', return_value=True):
-            with patch('os.stat', side_effect=mock_stat_side_effect):
-                result = unix_socket('', 'exabgp')
+        with patch('os.path.exists', return_value=True), patch('os.stat', side_effect=mock_stat_side_effect):
+            result = unix_socket('', 'exabgp')
 
-                # Should find socket in /run/exabgp/
-                assert len(result) == 1
-                assert result[0] == '/run/exabgp/'
+            # Should find socket in /run/exabgp/
+            assert len(result) == 1
+            assert result[0] == '/run/exabgp/'
 
     def test_unix_socket_discovery_not_found(self) -> None:
         """Test unix_socket() returns search paths when socket not found"""
-        with patch('os.path.exists', return_value=False):
-            with patch('os.stat', side_effect=FileNotFoundError()):
-                result = unix_socket('', 'exabgp')
+        with patch('os.path.exists', return_value=False), patch('os.stat', side_effect=FileNotFoundError()):
+            result = unix_socket('', 'exabgp')
 
-                # Should return list of search locations
-                assert len(result) > 1
-                assert '/run/exabgp/' in result
-                assert '/var/run/exabgp/' in result
+            # Should return list of search locations
+            assert len(result) > 1
+            assert '/run/exabgp/' in result
+            assert '/var/run/exabgp/' in result
 
     def test_unix_socket_not_a_socket(self) -> None:
         """Test unix_socket() skips regular files"""
@@ -118,12 +118,11 @@ class TestUnixSocketDiscovery:
             # Return a regular file, not a socket
             return stat_of(stat.S_IFREG | 0o644)
 
-        with patch('os.path.exists', return_value=True):
-            with patch('os.stat', side_effect=mock_stat_side_effect):
-                result = unix_socket('', 'exabgp')
+        with patch('os.path.exists', return_value=True), patch('os.stat', side_effect=mock_stat_side_effect):
+            result = unix_socket('', 'exabgp')
 
-                # Should not find socket (returns search paths)
-                assert len(result) > 1
+            # Should not find socket (returns search paths)
+            assert len(result) > 1
 
     def test_unix_socket_custom_name(self) -> None:
         """Test unix_socket() with custom socket name"""
@@ -133,13 +132,12 @@ class TestUnixSocketDiscovery:
                 return stat_of(stat.S_IFSOCK | 0o600)
             raise FileNotFoundError()
 
-        with patch('os.path.exists', return_value=True):
-            with patch('os.stat', side_effect=mock_stat_side_effect):
-                result = unix_socket('', 'custom')
+        with patch('os.path.exists', return_value=True), patch('os.stat', side_effect=mock_stat_side_effect):
+            result = unix_socket('', 'custom')
 
-                # Should find socket with custom name
-                assert len(result) == 1
-                assert result[0] == '/run/exabgp/'
+            # Should find socket with custom name
+            assert len(result) == 1
+            assert result[0] == '/run/exabgp/'
 
     def test_unix_socket_with_root_prefix(self) -> None:
         """Test unix_socket() with root parameter"""
@@ -149,13 +147,12 @@ class TestUnixSocketDiscovery:
                 return stat_of(stat.S_IFSOCK | 0o600)
             raise FileNotFoundError()
 
-        with patch('os.path.exists', return_value=True):
-            with patch('os.stat', side_effect=mock_stat_side_effect):
-                result = unix_socket('/custom/root', 'exabgp')
+        with patch('os.path.exists', return_value=True), patch('os.stat', side_effect=mock_stat_side_effect):
+            result = unix_socket('/custom/root', 'exabgp')
 
-                # Should find socket with root prefix
-                assert len(result) == 1
-                assert '/custom/root/run/exabgp/' in result[0]
+            # Should find socket with root prefix
+            assert len(result) == 1
+            assert '/custom/root/run/exabgp/' in result[0]
 
 
 class TestCLIArgumentParsing:

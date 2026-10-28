@@ -140,6 +140,8 @@ select = [
 	"PLW1510", "RUF059",
 	# flake8-comprehensions
 	"C401", "C402", "C404", "C405", "C408", "C413", "C414",
+	# flake8-simplify
+	"SIM102", "SIM103", "SIM113", "SIM115", "SIM117", "SIM118", "SIM201", "SIM202", "SIM210",
 	# isort
 	"I001",
 ]

@@ -215,18 +215,17 @@ def unix_socket(root: str, socketname: str = 'exabgp') -> list[str]:
 
     # Check for explicit path override
     explicit_path = os.environ.get('exabgp_api_socketpath', '')
-    if explicit_path:
-        if os.path.exists(explicit_path):
-            try:
-                if stat.S_ISSOCK(os.stat(explicit_path).st_mode):
-                    os.environ['exabgp_cli_socket'] = os.path.dirname(explicit_path) + '/'
-                    return [os.path.dirname(explicit_path) + '/']
-            except OSError as exc:
-                # The operator named this socket, and what follows ignores it and searches the
-                # standard locations, where it can find another daemon's socket and connect to
-                # it as if nothing had happened.
-                sys.stderr.write(f'warning: cannot use exabgp_api_socketpath {explicit_path}: {exc}\n')
-                sys.stderr.flush()
+    if explicit_path and os.path.exists(explicit_path):
+        try:
+            if stat.S_ISSOCK(os.stat(explicit_path).st_mode):
+                os.environ['exabgp_cli_socket'] = os.path.dirname(explicit_path) + '/'
+                return [os.path.dirname(explicit_path) + '/']
+        except OSError as exc:
+            # The operator named this socket, and what follows ignores it and searches the
+            # standard locations, where it can find another daemon's socket and connect to
+            # it as if nothing had happened.
+            sys.stderr.write(f'warning: cannot use exabgp_api_socketpath {explicit_path}: {exc}\n')
+            sys.stderr.flush()
 
     for location in locations:
         socket_path = location + socketname + '.sock'

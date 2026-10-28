@@ -300,12 +300,10 @@ class TestOutgoingConnectionLifecycle:
 
             # Attempt to establish connection
             established = False
-            attempts = 0
-            for result in outgoing.establish():
+            for attempts, result in enumerate(outgoing.establish(), 1):
                 if result:
                     established = True
                     break
-                attempts += 1
                 if attempts > 50:  # Prevent infinite loop
                     break
                 time.sleep(0.1)
@@ -546,12 +544,10 @@ class TestConnectionErrorScenarios:
 
         # Should not establish
         established = False
-        attempts = 0
-        for result in outgoing.establish():
+        for attempts, result in enumerate(outgoing.establish(), 1):
             if result:
                 established = True
                 break
-            attempts += 1
             if attempts > 5:  # Just try a few times
                 break
 

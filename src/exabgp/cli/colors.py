@@ -56,7 +56,4 @@ class Colors:
             return False
 
         # Check NO_COLOR environment variable (https://no-color.org/)
-        if os.environ.get('NO_COLOR'):
-            return False
-
-        return True
+        return not os.environ.get('NO_COLOR')

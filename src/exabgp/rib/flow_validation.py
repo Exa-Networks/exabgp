@@ -113,9 +113,12 @@ def feasible(flow: Route, unicast: list[Route], mode: str) -> bool:
     neighbouring = _neighbouring_as(best.attributes)
     for route in unicast:
         network = _unicast_network(route)
-        if network.prefixlen > destination.prefixlen and _within(network, destination):
-            if _neighbouring_as(route.attributes) != neighbouring:
-                return False
+        if (
+            network.prefixlen > destination.prefixlen
+            and _within(network, destination)
+            and _neighbouring_as(route.attributes) != neighbouring
+        ):
+            return False
     return True
 
 

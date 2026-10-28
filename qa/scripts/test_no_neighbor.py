@@ -90,9 +90,7 @@ def test_no_neighbor():
             if stderr:
                 print(f'STDERR:\n{stderr}')
             # Still consider it success if exit code was 0
-            if exit_code == 0:
-                return True
-            return False
+            return exit_code == 0
 
     except subprocess.TimeoutExpired:
         print('ERROR: Process did not terminate within timeout')

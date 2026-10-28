@@ -395,7 +395,7 @@ def migrate_api_command(command: str, from_version: str, to_version: str) -> tup
 def has_context_key(obj: dict[str, Any], context: str, parent_keys: list[str]) -> bool:
     """Check if context key exists in current dict or parent path."""
     # Check current dict keys
-    for key in obj.keys():
+    for key in obj:
         if context in str(key).lower():
             return True
     # Check parent path
@@ -458,11 +458,10 @@ def _transform_json(
             final_key = str_key
 
             for old, new, context in renames:
-                if str_key == old:
-                    if context is None or has_context_key(data, context, parent_keys):
-                        final_key = new
-                        changes.append(f"Renamed '{old}' to '{new}'")
-                        break
+                if str_key == old and (context is None or has_context_key(data, context, parent_keys)):
+                    final_key = new
+                    changes.append(f"Renamed '{old}' to '{new}'")
+                    break
 
             new_dict[final_key] = _transform_json(value, renames, changes, parent_keys + [str_key])
         return new_dict

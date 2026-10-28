@@ -97,9 +97,8 @@ def test_an_unopenable_pipe_names_the_reason(fifo: Any, capsys: Any) -> None:
     """The unreachable handler's message, now on the path which actually runs."""
     refused = OSError(errno.EACCES, 'Permission denied')
 
-    with patch.object(run_module.os, 'open', side_effect=refused):
-        with pytest.raises(SystemExit):
-            run_module.open_writer(str(fifo))
+    with patch.object(run_module.os, 'open', side_effect=refused), pytest.raises(SystemExit):
+        run_module.open_writer(str(fifo))
 
     captured = capsys.readouterr()
     assert 'could not communicate with ExaBGP' in captured.err
@@ -109,9 +108,11 @@ def test_an_unopenable_pipe_names_the_reason(fifo: Any, capsys: Any) -> None:
 
 def test_a_pipe_with_no_reader_still_says_exabgp_is_not_running(fifo: Any, capsys: Any) -> None:
     """ENXIO keeps its own sentence, which is the more useful one when it applies."""
-    with patch.object(run_module.os, 'open', side_effect=OSError(errno.ENXIO, 'No such device')):
-        with pytest.raises(SystemExit):
-            run_module.open_writer(str(fifo))
+    with (
+        patch.object(run_module.os, 'open', side_effect=OSError(errno.ENXIO, 'No such device')),
+        pytest.raises(SystemExit),
+    ):
+        run_module.open_writer(str(fifo))
 
     captured = capsys.readouterr()
     assert 'ExaBGP is not running' in captured.err

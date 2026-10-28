@@ -169,20 +169,22 @@ class TestConnectionResetDuringIO:
         writer_gen = conn.writer(test_data)
 
         # First iteration - partial send
-        with patch('select.poll') as mock_poll:
-            with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.log'):
-                    mock_poller = _poller()
-                    mock_poll.return_value = mock_poller
-                    mock_poller.poll.return_value = [(7, 4)]  # POLLOUT
+        with (
+            patch('select.poll') as mock_poll,
+            patch('exabgp.reactor.network.connection.log'),
+            patch('exabgp.reactor.network.connection.log'),
+        ):
+            mock_poller = _poller()
+            mock_poll.return_value = mock_poller
+            mock_poller.poll.return_value = [(7, 4)]  # POLLOUT
 
-                    # First iteration - partial send
-                    result = next(writer_gen)
-                    assert result is False
+            # First iteration - partial send
+            result = next(writer_gen)
+            assert result is False
 
-                    # Second iteration - connection reset
-                    with pytest.raises(NetworkError):
-                        next(writer_gen)
+            # Second iteration - connection reset
+            with pytest.raises(NetworkError):
+                next(writer_gen)
 
     def test_reset_during_message_read(self) -> None:
         """Test connection reset during message reception.
@@ -198,10 +200,12 @@ class TestConnectionResetDuringIO:
         # Mock recv_into to return 0 (connection closed)
         mock_sock.recv_into.return_value = 0
 
-        with patch('exabgp.reactor.network.connection.log'):
+        with (
+            patch('exabgp.reactor.network.connection.log'),
+            pytest.raises(LostConnection) as exc_info,
+        ):
             # Should raise LostConnection
-            with pytest.raises(LostConnection) as exc_info:
-                asyncio.run(conn._reader_async(19))  # BGP header size
+            asyncio.run(conn._reader_async(19))  # BGP header size
 
         assert 'TCP connection was closed' in str(exc_info.value)
         assert conn.io is None
@@ -302,19 +306,21 @@ class TestRapidConnectDisconnectCycles:
 
         writer_gen = conn.writer(test_data)
 
-        with patch('select.poll') as mock_poll:
-            with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.log'):
-                    mock_poller = _poller()
-                    mock_poll.return_value = mock_poller
-                    mock_poller.poll.return_value = [(20, 4)]
+        with (
+            patch('select.poll') as mock_poll,
+            patch('exabgp.reactor.network.connection.log'),
+            patch('exabgp.reactor.network.connection.log'),
+        ):
+            mock_poller = _poller()
+            mock_poll.return_value = mock_poller
+            mock_poller.poll.return_value = [(20, 4)]
 
-                    # First iteration
-                    result = next(writer_gen)
-                    assert result is False
+            # First iteration
+            result = next(writer_gen)
+            assert result is False
 
-                    # Close connection mid-operation
-                    conn.close()
+            # Close connection mid-operation
+            conn.close()
 
         # Verify socket closed
         mock_sock.close.assert_called_once()
@@ -409,21 +415,23 @@ class TestMessageQueueOrderingRaces:
         # Create writer
         writer_gen = conn.writer(write_data)
 
-        with patch('select.poll') as mock_poll:
-            with patch('exabgp.reactor.network.connection.log'):
-                with patch('exabgp.reactor.network.connection.log'):
-                    mock_poller = _poller()
-                    mock_poll.return_value = mock_poller
-                    mock_poller.poll.return_value = [(25, 4)]  # POLLOUT
+        with (
+            patch('select.poll') as mock_poll,
+            patch('exabgp.reactor.network.connection.log'),
+            patch('exabgp.reactor.network.connection.log'),
+        ):
+            mock_poller = _poller()
+            mock_poll.return_value = mock_poller
+            mock_poller.poll.return_value = [(25, 4)]  # POLLOUT
 
-                    # Write should complete
-                    try:
-                        result = next(writer_gen)
-                        # Keep iterating until complete
-                        while result is False:
-                            result = next(writer_gen)
-                    except StopIteration:
-                        pass
+            # Write should complete
+            try:
+                result = next(writer_gen)
+                # Keep iterating until complete
+                while result is False:
+                    result = next(writer_gen)
+            except StopIteration:
+                pass
 
         # Verify data was sent
         mock_sock.send.assert_called()

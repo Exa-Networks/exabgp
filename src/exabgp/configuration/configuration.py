@@ -442,7 +442,7 @@ class Configuration(_Configuration):
             if api.get('processes', []):
                 processes = api['processes']
             elif api.get('processes-match', []):
-                processes = [k for k in self.processes.keys() for pm in api['processes-match'] if re.match(pm, k)]
+                processes = [k for k in self.processes for pm in api['processes-match'] if re.match(pm, k)]
 
             for process in processes:
                 self.processes.setdefault(process, {})['neighbor-changes'] = api['neighbor-changes']

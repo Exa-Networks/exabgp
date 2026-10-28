@@ -154,10 +154,12 @@ class TestTheHelperGoingAway:
         os.read(processes._process['test'].stdout.fileno(), 1)
         exited(processes)
 
-        with patch('exabgp.reactor.api.processes.os.read', return_value=b''):
-            with patch('exabgp.reactor.api.processes.select.poll') as poller:
-                poller.return_value.poll.return_value = [(0, 1)]
-                assert list(processes.received()) == []
+        with (
+            patch('exabgp.reactor.api.processes.os.read', return_value=b''),
+            patch('exabgp.reactor.api.processes.select.poll') as poller,
+        ):
+            poller.return_value.poll.return_value = [(0, 1)]
+            assert list(processes.received()) == []
 
         assert problems(processes) == ['test']
 

@@ -108,9 +108,8 @@ class TestData(unittest.TestCase):
 
     def test_router_id_from_string_rejects_invalid_ipv4(self) -> None:
         for address in ('256.0.2.1', '192.0.2', 'not-an-address', '2001:db8::1', '::ffff:192.0.2.1'):
-            with self.subTest(address=address):
-                with self.assertRaises((ValueError, OSError)):
-                    RouterID.from_string(address)
+            with self.subTest(address=address), self.assertRaises((ValueError, OSError)):
+                RouterID.from_string(address)
 
 
 if __name__ == '__main__':

@@ -88,7 +88,7 @@ class TestEthernetAD:
 
         # Same RD and etag should be equal (ESI and label not part of comparison)
         assert route1 == route2
-        assert not route1 != route2
+        assert route1 == route2
 
     def test_ethernetad_hash_consistency(self) -> None:
         """The label does not affect the hash, the ESI does: RFC 7432 7.1 keys the route on

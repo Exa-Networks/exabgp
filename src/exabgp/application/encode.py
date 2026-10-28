@@ -189,7 +189,7 @@ def cmdline(cmdarg: argparse.Namespace) -> int:
         _exit_with('no neighbor defined in configuration')
 
     # Process each neighbor and encode their routes
-    for name in configuration.neighbors.keys():
+    for name in configuration.neighbors:
         neighbor = configuration.neighbors[name]
         try:
             _encode_neighbor(neighbor, cmdarg)

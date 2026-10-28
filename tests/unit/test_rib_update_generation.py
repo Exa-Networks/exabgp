@@ -437,9 +437,8 @@ class TestRouteRefreshGeneration:
             elif isinstance(u, UpdateCollection) and u.announces:
                 # Distinguish refresh routes from new announces by checking NLRI
                 nlri_str = str(u.announces[0].nlri)
-                if '10.0.1' in nlri_str:
-                    if first_announce_idx is None:
-                        first_announce_idx = i
+                if '10.0.1' in nlri_str and first_announce_idx is None:
+                    first_announce_idx = i
 
         assert last_refresh_idx is not None, 'Expected RouteRefresh messages'
         assert first_announce_idx is not None, 'Expected new announce update'
@@ -470,9 +469,8 @@ class TestRouteRefreshGeneration:
         for i, u in enumerate(updates):
             if isinstance(u, RouteRefresh):
                 last_refresh_idx = i
-            elif isinstance(u, UpdateCollection) and u.withdraws:
-                if first_withdraw_idx is None:
-                    first_withdraw_idx = i
+            elif isinstance(u, UpdateCollection) and u.withdraws and first_withdraw_idx is None:
+                first_withdraw_idx = i
 
         assert last_refresh_idx is not None, 'Expected RouteRefresh messages'
         assert first_withdraw_idx is not None, 'Expected withdraw update'

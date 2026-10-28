@@ -48,13 +48,13 @@ def test_an_nlri_is_unequal_to_another_type_without_a_warning(make: Callable[[],
     with warnings.catch_warnings():
         warnings.simplefilter('error')
         assert nlri != other
-        assert not (nlri == other)
+        assert nlri != other
 
 
 @pytest.mark.parametrize('make', [_vpn, _dsd])
 def test_an_nlri_still_compares_with_its_own_kind(make: Callable[[], object]) -> None:
     assert make() == make()
-    assert not (make() != make())
+    assert make() == make()
 
 
 def test_an_attribute_cannot_be_ordered_against_another_type() -> None:

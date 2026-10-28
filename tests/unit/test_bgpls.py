@@ -167,7 +167,7 @@ class TestNodeNLRI:
         node2 = NODE.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
 
         assert node1 == node2
-        assert not (node1 != node2)
+        assert node1 == node2
 
     def test_node_hash(self) -> None:
         """Test Node NLRI hashing"""
@@ -387,7 +387,7 @@ class TestLinkNLRI:
         link2 = LINK.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
 
         assert link1 == link2
-        assert not (link1 != link2)
+        assert link1 == link2
 
     def test_link_hash(self) -> None:
         """Test Link NLRI hashing"""
@@ -535,7 +535,7 @@ class TestPrefixV4NLRI:
         prefix2 = PREFIXv4.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
 
         assert prefix1 == prefix2
-        assert not (prefix1 != prefix2)
+        assert prefix1 == prefix2
 
     def test_prefix_v4_hash(self) -> None:
         """Test IPv4 Prefix NLRI hashing"""
@@ -680,7 +680,7 @@ class TestPrefixV6NLRI:
         prefix2 = PREFIXv6.unpack_bgpls_nlri(wire_data, rd=RouteDistinguisher.NORD)
 
         assert prefix1 == prefix2
-        assert not (prefix1 != prefix2)
+        assert prefix1 == prefix2
 
     def test_prefix_v6_hash(self) -> None:
         """Test IPv6 Prefix NLRI hashing"""

@@ -175,9 +175,8 @@ def test_tcp_md5_runtime_rejects_a_malformed_base64_key() -> None:
     from exabgp.reactor.network.error import MD5Error
     from exabgp.reactor.network.tcp import md5
 
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-        with pytest.raises(MD5Error):
-            md5(sock, '127.0.0.1', 179, 'not-valid!!', True)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock, pytest.raises(MD5Error):
+        md5(sock, '127.0.0.1', 179, 'not-valid!!', True)
 
 
 # ============================================================================

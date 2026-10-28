@@ -196,7 +196,7 @@ class TestFSMStateComparison:
         """Test FSM equality operator with different state"""
         peer, _ = a_peer()
         fsm = FSM(peer, FSM.IDLE)
-        assert not (fsm == FSM.ACTIVE)
+        assert fsm != FSM.ACTIVE
 
     def test_inequality_with_different_state(self) -> None:
         """Test FSM inequality operator with different state"""
@@ -208,7 +208,7 @@ class TestFSMStateComparison:
         """Test FSM inequality operator with matching state"""
         peer, _ = a_peer()
         fsm = FSM(peer, FSM.ESTABLISHED)
-        assert not (fsm != FSM.ESTABLISHED)
+        assert fsm == FSM.ESTABLISHED
 
     def test_multiple_state_comparisons(self) -> None:
         """Test FSM comparison across multiple states"""
@@ -865,7 +865,7 @@ class TestFSMStateComparisons:
             # Verify it doesn't match other states
             for other_state in all_states:
                 if other_state != state:
-                    assert not (fsm == other_state)
+                    assert fsm != other_state
 
     def test_neq_with_all_states(self) -> None:
         """Test __neq__ operator works with all states"""
@@ -882,7 +882,7 @@ class TestFSMStateComparisons:
 
         for state in all_states:
             fsm = FSM(peer, state)
-            assert not (fsm != state)
+            assert fsm == state
             # Verify it does differ from other states
             for other_state in all_states:
                 if other_state != state:
@@ -895,7 +895,7 @@ class TestFSMStateComparisons:
 
         # Should work with direct int value
         assert fsm == 0x01
-        assert not (fsm == 0x02)
+        assert fsm != 2
 
     def test_state_value_matches_constant(self) -> None:
         """Test FSM.state value matches state constant"""

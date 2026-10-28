@@ -140,14 +140,13 @@ def _extract_legacy_selectors(prefix: str, remaining: str) -> tuple[list[list[st
             returned.append(definition)
             # After comma, expect 'neighbor' or 'peer' keyword
             parts = command.split(' ', 2)
-            if len(parts) >= 2 and parts[1] in ('neighbor', 'peer'):
+            if len(parts) >= 2 and parts[1] in ('neighbor', 'peer') and len(parts) >= 3:
                 # Skip comma and keyword, get IP
-                if len(parts) >= 3:
-                    ip_and_rest = parts[2].split(' ', 1)
-                    ip = ip_and_rest[0]
-                    command = ip_and_rest[1] if len(ip_and_rest) > 1 else ''
-                    definition = [f'neighbor {ip}']
-                    continue
+                ip_and_rest = parts[2].split(' ', 1)
+                ip = ip_and_rest[0]
+                command = ip_and_rest[1] if len(ip_and_rest) > 1 else ''
+                definition = [f'neighbor {ip}']
+                continue
             break
 
         # Check if this is a selector key

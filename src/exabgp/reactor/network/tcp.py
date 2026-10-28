@@ -172,19 +172,18 @@ def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: bool) -> No
     elif platform_os == 'Linux':
         try:
             md5_bytes = None
-            if md5:
+            if md5 and md5_base64:
                 # The password is used as it was written unless base64 was asked for.
                 # Guessing the encoding from the password itself does not work: hex is a
                 # subset of the base64 alphabet, so a key from `openssl rand -hex 16`
                 # decodes cleanly into a different key and the session silently fails to
                 # authenticate against a peer using the password literally (#1423).
-                if md5_base64:
-                    try:
-                        md5_bytes = decode_base64(md5)
-                    # not `exc`, the OSError caught below: compiled, a name keeps a single
-                    # type, and every setsockopt failure would become a TypeError
-                    except PSKError as psk_exc:
-                        raise MD5Error(f'Failed to decode base 64 encoded PSK: {psk_exc}') from None
+                try:
+                    md5_bytes = decode_base64(md5)
+                # not `exc`, the OSError caught below: compiled, a name keeps a single
+                # type, and every setsockopt failure would become a TypeError
+                except PSKError as psk_exc:
+                    raise MD5Error(f'Failed to decode base 64 encoded PSK: {psk_exc}') from None
 
             # __kernel_sockaddr_storage
             n_af = IP.toaf(ip)

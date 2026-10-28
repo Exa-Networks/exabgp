@@ -41,12 +41,14 @@ def processes(request):
 
         from exabgp.reactor.api.processes import Processes
 
-        with patch('exabgp.reactor.api.processes.log', MagicMock()):
-            with patch('exabgp.reactor.api.processes.time.time', return_value=FROZEN_TIME):
-                created = Processes()
-                yield created
-                for name in list(created._process):
-                    created._terminate(name)
+        with (
+            patch('exabgp.reactor.api.processes.log', MagicMock()),
+            patch('exabgp.reactor.api.processes.time.time', return_value=FROZEN_TIME),
+        ):
+            created = Processes()
+            yield created
+            for name in list(created._process):
+                created._terminate(name)
 
 
 def test_two_reloads_in_one_window_do_not_raise(processes):

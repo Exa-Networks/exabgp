@@ -242,12 +242,11 @@ class Reactor:
         completed_peers = []
         for key in list(self._peers.keys()):
             peer = self._peers[key]
-            if peer._async_task is not None:
-                if peer._async_task.done():
-                    # a task which failed is reported, and removed as one which completed
-                    with isolated(self._task_failed(key)):
-                        peer._async_task.result()
-                    completed_peers.append(key)
+            if peer._async_task is not None and peer._async_task.done():
+                # a task which failed is reported, and removed as one which completed
+                with isolated(self._task_failed(key)):
+                    peer._async_task.result()
+                completed_peers.append(key)
 
         # Remove completed peers
         for key in completed_peers:
@@ -639,7 +638,7 @@ class Reactor:
         if self.listener is not Listener.STOPPED:
             self.listener.stop()
             self.listener = Listener.STOPPED
-        for key in self._peers.keys():
+        for key in self._peers:
             self._peers[key].shutdown()
         self.asynchronous.clear()
         self.processes.terminate()
@@ -776,8 +775,8 @@ class Reactor:
             log.warning(lazymsg('config.reload.failed error={e}', e=error_msg), 'reactor')
             return
 
-        for key in self._peers.keys():
-            if key not in self.configuration.neighbors.keys():
+        for key in self._peers:
+            if key not in self.configuration.neighbors:
                 peer = self._peers[key]
                 log.debug(lazymsg('peer.removing name={name}', name=peer.neighbor.name()), 'reactor')
                 self._peers[key].remove()

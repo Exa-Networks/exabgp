@@ -1037,7 +1037,7 @@ def test_originator_id_equality() -> None:
 
     # Should be equal (note: implementation only checks ID and FLAG)
     assert oid1 == oid2
-    assert not (oid1 != oid2)
+    assert oid1 == oid2
 
 
 def test_originator_id_different_ips() -> None:
@@ -1133,7 +1133,7 @@ def test_cluster_list_equality() -> None:
 
     # Should be equal
     assert cl1 == cl2
-    assert not (cl1 != cl2)
+    assert cl1 == cl2
 
 
 def test_cluster_list_length() -> None:
@@ -1226,7 +1226,7 @@ def test_aigp_equality() -> None:
 
     # Should be equal
     assert aigp1 == aigp2
-    assert not (aigp1 != aigp2)
+    assert aigp1 == aigp2
 
 
 def test_aigp_no_pack_without_negotiation() -> None:
@@ -1360,7 +1360,7 @@ def test_pmsi_equality() -> None:
 
     # Should be equal
     assert pmsi1 == pmsi2
-    assert not (pmsi1 != pmsi2)
+    assert pmsi1 == pmsi2
 
 
 def test_pmsi_inequality() -> None:

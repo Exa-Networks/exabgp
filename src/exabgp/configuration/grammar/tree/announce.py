@@ -464,9 +464,12 @@ def announce_family(route: Route) -> tuple[str, str] | None:
         prefix = nlri.cidr.prefix().split('/')[0]
     except Notify as exc:
         raise Unprintable(f'the route can not be shown: {exc}') from None
-    if normalize(nlri) is nlri and nlri.afi == IP.toafi(prefix):
-        if isinstance(nlri, Label) or nlri.safi == IP.tosafi(prefix):
-            return None
+    if (
+        normalize(nlri) is nlri
+        and nlri.afi == IP.toafi(prefix)
+        and (isinstance(nlri, Label) or nlri.safi == IP.tosafi(prefix))
+    ):
+        return None
     safi_keyword = (
         'mpls-vpn' if isinstance(nlri, IPVPN) else 'nlri-mpls' if isinstance(nlri, Label) else nlri.safi.name()
     )

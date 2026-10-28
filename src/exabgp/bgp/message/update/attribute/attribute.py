@@ -381,7 +381,7 @@ class Attribute:
             return cls.cache[cls.ID].retrieve(cache_key)
 
         key: tuple[int, int] = cls._registry_key(attribute_id, flag)
-        if key in Attribute.registered_attributes.keys():
+        if key in Attribute.registered_attributes:
             instance: Attribute = cls.klass(attribute_id, flag).unpack_attribute(data, negotiated)
 
             if cache:

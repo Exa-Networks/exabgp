@@ -216,9 +216,8 @@ def main() -> int | None:
             sys.exit(0)
 
     # compatibility with exabgp 4.x
-    if len(sys.argv) > 1 and not ('-h' in sys.argv or '--help' in sys.argv):
-        if sys.argv[1] not in shell.SUBCOMMANDS:
-            sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
+    if (len(sys.argv) > 1 and not ('-h' in sys.argv or '--help' in sys.argv)) and sys.argv[1] not in shell.SUBCOMMANDS:
+        sys.argv = sys.argv[0:1] + ['server'] + sys.argv[1:]
 
     parser = arguments()
 

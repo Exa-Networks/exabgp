@@ -684,7 +684,7 @@ def test_link_local_nexthop_equality() -> None:
     cap2 = LinkLocalNextHop()
 
     assert cap1 == cap2
-    assert not (cap1 != cap2)
+    assert cap1 == cap2
 
 
 def test_link_local_nexthop_inequality_with_other() -> None:

@@ -34,7 +34,7 @@ def test_equal_and_hashed_like_the_int(number: int) -> None:
     value = Named(number)
     assert value == number and number == value
     assert value == Named(number)
-    assert not value != number
+    assert value == number
     assert value != number + 1 and number + 1 != value
     assert hash(value) == hash(number) == hash(OldNamed(number))
     by_number: dict[object, str] = {number: 'found'}

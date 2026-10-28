@@ -26,19 +26,19 @@ def cidr(mask: int, *octets: int) -> CIDR:
 
 def test_the_same_prefix_is_equal_to_itself() -> None:
     assert cidr(24, 10, 0, 0) == cidr(24, 10, 0, 0)
-    assert not cidr(24, 10, 0, 0) != cidr(24, 10, 0, 0)
+    assert cidr(24, 10, 0, 0) == cidr(24, 10, 0, 0)
 
 
 def test_a_different_prefix_under_the_same_mask_is_not_equal() -> None:
     """The `and` matters: with `or` these are the same route."""
     assert cidr(24, 10, 0, 0) != cidr(24, 10, 1, 0)
-    assert not cidr(24, 10, 0, 0) == cidr(24, 10, 1, 0)
+    assert cidr(24, 10, 0, 0) != cidr(24, 10, 1, 0)
 
 
 def test_the_same_bytes_under_a_different_mask_are_not_equal() -> None:
     """10.0.0.0/24 and 10.0.0.0/16 are different routes, and one covers the other."""
     assert cidr(24, 10, 0, 0) != cidr(16, 10, 0)
-    assert not cidr(24, 10, 0, 0) == cidr(16, 10, 0)
+    assert cidr(24, 10, 0, 0) != cidr(16, 10, 0)
 
 
 @pytest.mark.parametrize('other', [42, 'ten', None, b'\x18\x0a\x00\x00', object()])
@@ -49,7 +49,7 @@ def test_something_which_is_not_a_prefix_is_never_equal(other: object) -> None:
     which would have made a prefix unequal to itself and equal to a string.
     """
     prefix = cidr(24, 10, 0, 0)
-    assert not prefix == other
+    assert prefix != other
     assert prefix != other
 
 

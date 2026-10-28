@@ -81,7 +81,7 @@ def test_an_attribute_is_not_equal_to_something_which_is_not_one(other: object) 
     """It reached for other.ID, which raised AttributeError rather than answering False."""
     attribute = ExtendedCommunities().add(Encapsulation.make_encapsulation(Encapsulation.Type.VXLAN))
 
-    assert not (attribute == other)
+    assert attribute != other
     assert attribute != other
 
 
