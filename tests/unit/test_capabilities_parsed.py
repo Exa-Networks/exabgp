@@ -7,6 +7,8 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 from __future__ import annotations
 
+import sys
+
 import pytest
 
 from exabgp.bgp.message.open.capability.addpath import AddPath
@@ -39,6 +41,7 @@ def test_a_class_registered_for_two_codes_is_found_under_either() -> None:
     assert capabilities.parsed(Capability.CODE.MULTISESSION_CISCO, MultiSession) is cisco
 
 
+@pytest.mark.skipif(sys.flags.optimize > 0, reason='checks an assert of ours, which -O removes')
 def test_asking_for_a_class_the_code_is_not_decoded_as_is_our_bug() -> None:
     capabilities = Capabilities()
     capabilities[Capability.CODE.ROLE] = Role(RoleValue.PROVIDER)
