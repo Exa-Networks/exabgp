@@ -52,6 +52,11 @@ class Segment:
     NAME: ClassVar[str]
     HEAD: ClassVar[str]
     TAIL: ClassVar[str]
+    # what the code asks of a segment, answered by the segment rather than by its class:
+    # whether its AS numbers are in order (a sequence, not a set), and whether it is one of
+    # the confederation's (RFC 5065), which leave the confederation stripped
+    ORDERED: ClassVar[bool]
+    CONFED: ClassVar[bool]
 
     def __init__(self, asns: Iterable[ASN] = ()) -> None:
         self.asns: list[ASN] = list(asns)
@@ -108,6 +113,8 @@ class SET(Segment):
     NAME: ClassVar[str] = 'as-set'
     HEAD: ClassVar[str] = '('
     TAIL: ClassVar[str] = ')'
+    ORDERED: ClassVar[bool] = False
+    CONFED: ClassVar[bool] = False
 
 
 class SEQUENCE(Segment):
@@ -115,6 +122,8 @@ class SEQUENCE(Segment):
     NAME: ClassVar[str] = 'as-sequence'
     HEAD: ClassVar[str] = '['
     TAIL: ClassVar[str] = ']'
+    ORDERED: ClassVar[bool] = True
+    CONFED: ClassVar[bool] = False
 
 
 class CONFED_SEQUENCE(Segment):
@@ -122,6 +131,8 @@ class CONFED_SEQUENCE(Segment):
     NAME: ClassVar[str] = 'as-confed-sequence'
     HEAD: ClassVar[str] = 'confed-sequence ['
     TAIL: ClassVar[str] = ']'
+    ORDERED: ClassVar[bool] = True
+    CONFED: ClassVar[bool] = True
 
 
 class CONFED_SET(Segment):
@@ -129,6 +140,8 @@ class CONFED_SET(Segment):
     NAME: ClassVar[str] = 'as-confed-set'
     HEAD: ClassVar[str] = 'confed-set ['
     TAIL: ClassVar[str] = ']'
+    ORDERED: ClassVar[bool] = False
+    CONFED: ClassVar[bool] = True
 
 
 # TypeVar for segment types - allows slicing to preserve type
@@ -232,29 +245,29 @@ class ASPath(Attribute):
         """Get ASNs from SEQUENCE segments (flattened)."""
         result: list[ASN] = []
         for seg in self.aspath:
-            if isinstance(seg, (SEQUENCE, CONFED_SEQUENCE)):
+            if seg.ORDERED:
                 result.extend(seg)
         return result
 
     def has_confed(self) -> bool:
         """Whether the path holds an AS_CONFED_SEQUENCE or an AS_CONFED_SET (RFC 5065)."""
-        return any(isinstance(seg, (CONFED_SEQUENCE, CONFED_SET)) for seg in self.aspath)
+        return any(seg.CONFED for seg in self.aspath)
 
     def without_confed(self) -> ASPath:
         """The path a peer outside the confederation may be sent (RFC 5065 5)."""
-        outside = tuple(seg for seg in self.aspath if not isinstance(seg, (CONFED_SEQUENCE, CONFED_SET)))
+        outside = tuple(seg for seg in self.aspath if not seg.CONFED)
         return type(self)(self._pack_segments_raw(outside, self._asn4), self._asn4)
 
     def has_set(self) -> bool:
         """Whether the path holds an AS_SET or an AS_CONFED_SET, both deprecated by RFC 9774."""
-        return any(isinstance(seg, (SET, CONFED_SET)) for seg in self.aspath)
+        return any(not seg.ORDERED for seg in self.aspath)
 
     @property
     def as_set(self) -> list[ASN]:
         """Get ASNs from SET segments (flattened)."""
         result: list[ASN] = []
         for seg in self.aspath:
-            if isinstance(seg, (SET, CONFED_SET)):
+            if not seg.ORDERED:
                 result.extend(seg)
         return result
 
@@ -397,7 +410,7 @@ class ASPath(Attribute):
         # confederation membership past the confederation border, in an attribute the RFC
         # says may not carry those segment types at all. A path made of nothing but
         # confederation segments leaves no AS4_PATH to send.
-        outside = tuple(c for c in self.aspath if not isinstance(c, (CONFED_SEQUENCE, CONFED_SET)))
+        outside = tuple(c for c in self.aspath if not c.CONFED)
         as4_packed = AS4Path._pack_segments_raw(outside, asn4=True)
         if as4_packed:
             message += AS4Path._attribute(as4_packed)
@@ -463,7 +476,7 @@ class AS4Path(ASPath):
         # attribute fields adjusted, and the UPDATE processed as it stands. Keeping them let
         # a peer outside our confederation put a confederation AS number into the path we
         # publish, because the merge folds AS_CONFED_SEQUENCE into as_seq with the rest.
-        outside = tuple(s for s in segments if not isinstance(s, (CONFED_SEQUENCE, CONFED_SET)))
+        outside = tuple(s for s in segments if not s.CONFED)
         if len(outside) != len(segments):
             return cls(cls._pack_segments_raw(outside, asn4=True))
         return cls(data)

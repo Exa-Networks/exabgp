@@ -939,9 +939,9 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         """
         total = 0
         for segment in segments:
-            if isinstance(segment, SEQUENCE):
+            if segment.ID == SEQUENCE.ID:
                 total += len(segment)
-            elif isinstance(segment, SET):
+            elif segment.ID == SET.ID:
                 total += 1
         return total
 
@@ -966,7 +966,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
                 continue
             if wanted <= 0:
                 break
-            if isinstance(segment, SEQUENCE) and len(segment) > wanted:
+            if segment.ID == SEQUENCE.ID and len(segment) > wanted:
                 leading.append(SEQUENCE(segment[:wanted]))
                 break
             leading.append(segment)
@@ -983,10 +983,10 @@ class AttributeCollection(MutableMapping[int, Attribute]):
         joined: list[PathSegment] = []
         for segment in segments:
             previous = joined[-1] if joined else None
-            if isinstance(segment, SEQUENCE) and isinstance(previous, SEQUENCE):
+            if previous is not None and segment.ID == previous.ID == SEQUENCE.ID:
                 joined[-1] = SEQUENCE(list(previous) + list(segment))
                 continue
-            if isinstance(segment, CONFED_SEQUENCE) and isinstance(previous, CONFED_SEQUENCE):
+            if previous is not None and segment.ID == previous.ID == CONFED_SEQUENCE.ID:
                 joined[-1] = CONFED_SEQUENCE(list(previous) + list(segment))
                 continue
             joined.append(segment)

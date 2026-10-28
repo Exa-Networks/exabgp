@@ -896,7 +896,7 @@ class UpdateCollection:
         # from another Member-AS, a path which does not start with an AS_CONFED_SEQUENCE
         if negotiated.confed_member:
             segments = path.aspath
-            if not segments or not isinstance(segments[0], CONFED_SEQUENCE):
+            if not segments or segments[0].ID != CONFED_SEQUENCE.ID:
                 return 'a path from another Member-AS not starting with an AS_CONFED_SEQUENCE (RFC 5065 5)'
         return None
 
@@ -915,7 +915,7 @@ class UpdateCollection:
         if neighbor is None or not neighbor.enforce_first_as:
             return None
         segments = path.aspath
-        if segments and isinstance(segments[0], SEQUENCE) and segments[0] and segments[0][0] == negotiated.peer_as:
+        if segments and segments[0].ID == SEQUENCE.ID and segments[0] and segments[0][0] == negotiated.peer_as:
             return None
         return f'the AS_PATH does not start with the peer AS {negotiated.peer_as}'
 

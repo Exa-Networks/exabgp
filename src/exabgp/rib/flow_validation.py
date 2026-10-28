@@ -90,7 +90,7 @@ def _neighbouring_as(attributes: AttributeCollection) -> int:
         return 0
     # the attribute stored under AS_PATH is the AS_PATH attribute
     segments = cast(ASPath, attributes[Attribute.CODE.AS_PATH]).aspath
-    if segments and isinstance(segments[0], SEQUENCE) and segments[0]:
+    if segments and segments[0].ID == SEQUENCE.ID and segments[0]:
         return int(segments[0][0])
     return 0
 
