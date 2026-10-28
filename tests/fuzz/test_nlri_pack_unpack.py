@@ -10,6 +10,7 @@ from hypothesis import strategies as st
 
 from exabgp.bgp.message import Action
 from exabgp.bgp.message.direction import Direction
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.nlri.inet import INET
 from exabgp.bgp.message.update.nlri.qualifier import PathInfo
 from exabgp.protocol.family import AFI, SAFI
@@ -60,7 +61,7 @@ def test_inet_ipv4_pack_unpack_roundtrip(ipv4_bytes: int, mask: int, with_addpat
         assert unpacked.cidr.mask == mask
         assert len(leftover) == 0
 
-    except Exception:
+    except (Notify, ValueError):
         # Some combinations might be invalid (e.g., mask > IP length)
         # That's expected and acceptable
         pass
@@ -94,7 +95,7 @@ def test_inet_ipv6_pack_requires_negotiated(mask: int) -> None:
         # Pack should fail without negotiated (this will raise TypeError)
         # Note: We're testing the signature, not calling it incorrectly
 
-    except Exception:
+    except (Notify, ValueError):
         # Some mask values might be invalid
         pass
 

@@ -9,6 +9,7 @@ Created: 2025-11-08
 """
 
 import asyncio
+import contextlib
 import os
 import socket
 import struct
@@ -142,7 +143,7 @@ class MockBGPServer:
                                 self.messages_received[-1] += body
                     except TimeoutError:
                         pass
-                    except Exception:
+                    except OSError:
                         break
 
                     # Send queued messages
@@ -150,20 +151,17 @@ class MockBGPServer:
                         msg = self.messages_to_send.pop(0)
                         try:
                             self.client_socket.sendall(msg)
-                        except Exception:
+                        except OSError:
                             break
 
                     time.sleep(0.01)
-        except TimeoutError:
-            pass
-        except Exception:
+        except OSError:
+            # the peer under test went away, TimeoutError included: the server stops
             pass
         finally:
             if self.client_socket:
-                try:
+                with contextlib.suppress(OSError):
                     self.client_socket.close()
-                except Exception:
-                    pass
 
     def queue_message(self, message: Any) -> None:
         """Queue a message to be sent to the client"""
@@ -175,15 +173,11 @@ class MockBGPServer:
         if self.server_thread:
             self.server_thread.join(timeout=1.0)
         if self.client_socket:
-            try:
+            with contextlib.suppress(OSError):
                 self.client_socket.close()
-            except Exception:
-                pass
         if self.server_socket:
-            try:
+            with contextlib.suppress(OSError):
                 self.server_socket.close()
-            except Exception:
-                pass
 
 
 def create_bgp_message(msg_type: Any, body: Any = b'') -> Any:
@@ -485,10 +479,8 @@ class TestIncomingConnectionLifecycle:
 
             incoming.close()
         finally:
-            try:
+            with contextlib.suppress(OSError):
                 client_sock.close()
-            except Exception:
-                pass
 
     def test_incoming_receive_message(self) -> None:
         """Test Incoming can receive messages from connected socket"""
@@ -514,10 +506,8 @@ class TestIncomingConnectionLifecycle:
 
             incoming.close()
         finally:
-            try:
+            with contextlib.suppress(OSError):
                 client_sock.close()
-            except Exception:
-                pass
 
     def test_incoming_send_message(self) -> None:
         """Test Incoming can send messages to connected socket"""
@@ -542,10 +532,8 @@ class TestIncomingConnectionLifecycle:
 
             incoming.close()
         finally:
-            try:
+            with contextlib.suppress(OSError):
                 client_sock.close()
-            except Exception:
-                pass
 
 
 class TestConnectionErrorScenarios:
@@ -616,10 +604,8 @@ class TestConnectionErrorScenarios:
         finally:
             if incoming:
                 incoming.close()
-            try:
+            with contextlib.suppress(OSError):
                 client_sock.close()
-            except Exception:
-                pass
 
 
 class TestConnectionConcurrency:

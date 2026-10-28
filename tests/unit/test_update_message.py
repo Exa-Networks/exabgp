@@ -25,6 +25,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from exabgp.bgp.message.notification import Notify
 from tests import negotiation
 
 
@@ -498,7 +499,7 @@ def test_update_with_mp_reach_nlri() -> None:
         result = UpdateCollection.unpack_message(data, negotiated)
         # Should return EOR or UPDATE
         assert result is not None
-    except Exception as e:
+    except Notify as e:
         # MP_REACH with no NLRI might be treated as EOR or error
         # Either behavior is acceptable for this test
         assert 'EOR' in str(type(e)) or 'Notify' in str(type(e)) or 'UPDATE' in str(type(result))

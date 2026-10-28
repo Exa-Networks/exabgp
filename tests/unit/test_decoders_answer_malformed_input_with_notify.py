@@ -34,6 +34,7 @@ subcode; the ledgers under qa/rfc/ are where that is checked, requirement by req
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 from struct import pack
 from typing import Any
 
@@ -48,6 +49,7 @@ from exabgp.bgp.message.update.attribute.collection import AttributeCollection
 from exabgp.bgp.message.update.nlri.nlri import NLRI
 from exabgp.bgp.neighbor import Neighbor
 from exabgp.protocol.family import AFI, SAFI
+from exabgp.util.isolated import isolated
 from tests import negotiation
 
 # buffers which fall off the end of something a decoder is about to read
@@ -152,6 +154,15 @@ def session() -> Any:
     return negotiation.negotiated([], asn4=False)
 
 
+def _listed(wrong: list[str], what: str) -> Callable[[Exception], None]:
+    """Record, as `what` raised it, whatever a decoder answered with that is not Notify."""
+
+    def report(exc: Exception) -> None:
+        wrong.append(f'{what} raised {type(exc).__name__}: {exc}')
+
+    return report
+
+
 @pytest.mark.parametrize('afi,safi', FAMILIES, ids=FAMILY_IDS)
 @pytest.mark.parametrize('addpath', (False, True), ids=('no-addpath', 'addpath'))
 def test_an_nlri_decoder_raises_notify_and_not_something_else(afi: AFI, safi: SAFI, addpath: bool) -> None:
@@ -162,12 +173,11 @@ def test_an_nlri_decoder_raises_notify_and_not_something_else(afi: AFI, safi: SA
 
     wrong: list[str] = []
     for payload in MALFORMED:
-        try:
-            klass.unpack_nlri(afi, safi, payload, Action.ANNOUNCE, addpath, session())
-        except Notify:
-            continue
-        except Exception as exc:
-            wrong.append(f'{payload.hex() or "<empty>"} raised {type(exc).__name__}: {exc}')
+        with isolated(_listed(wrong, payload.hex() or '<empty>')):
+            try:
+                klass.unpack_nlri(afi, safi, payload, Action.ANNOUNCE, addpath, session())
+            except Notify:
+                continue
 
     assert not wrong, f'{afi}/{safi} answered malformed input with something other than Notify:\n  ' + '\n  '.join(
         wrong
@@ -191,12 +201,11 @@ def test_an_attribute_decoder_raises_notify_and_not_something_else(code: int) ->
     for flag in ATTRIBUTE_FLAGS:
         for body in ATTRIBUTE_BODIES:
             wire = attribute_wire(flag, code, body)
-            try:
-                AttributeCollection.unpack(wire, negotiated)
-            except Notify:
-                continue
-            except Exception as exc:
-                wrong.append(f'flag 0x{flag:02X} body {body.hex() or "<empty>"} raised {type(exc).__name__}: {exc}')
+            with isolated(_listed(wrong, f'flag 0x{flag:02X} body {body.hex() or "<empty>"}')):
+                try:
+                    AttributeCollection.unpack(wire, negotiated)
+                except Notify:
+                    continue
 
     assert not wrong, f'attribute {code} ({name}) answered malformed input with something other than Notify:\n  ' + (
         '\n  '.join(wrong)
@@ -249,12 +258,11 @@ def test_a_message_decoder_raises_notify_and_not_something_else(message_type: in
 
     wrong: list[str] = []
     for body in MESSAGE_BODIES:
-        try:
-            Message.unpack(Message.CODE.of(message_type), body, negotiated)
-        except Notify:
-            continue
-        except Exception as exc:
-            wrong.append(f'{body.hex() or "<empty>"} raised {type(exc).__name__}: {exc}')
+        with isolated(_listed(wrong, body.hex() or '<empty>')):
+            try:
+                Message.unpack(Message.CODE.of(message_type), body, negotiated)
+            except Notify:
+                continue
 
     assert not wrong, f'message type {message_type} answered malformed input with something else:\n  ' + '\n  '.join(
         wrong[:10]

@@ -383,7 +383,7 @@ def test_multiple_nlri_parsing(nlri_count: int) -> None:
                 AFI.ipv4, SAFI.unicast, remaining, Action.ANNOUNCE, False, Negotiated.UNSET
             )
             nlris.append(nlri)
-        except Exception:
+        except Notify:
             break
 
     # Should parse at least some NLRIs
@@ -408,7 +408,7 @@ def test_multiple_nlri_one_truncated() -> None:
                 AFI.ipv4, SAFI.unicast, remaining, Action.ANNOUNCE, False, Negotiated.UNSET
             )
             nlris.append(nlri)
-        except Exception:
+        except Notify:
             # Expected for truncated NLRI
             break
 

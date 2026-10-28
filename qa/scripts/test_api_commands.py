@@ -5,6 +5,7 @@ Modern replacement for the old bash socket-based test.
 Tests: version, ping, status, shutdown (via api-simple.run process).
 """
 
+import contextlib
 import os
 import subprocess
 import sys
@@ -91,14 +92,12 @@ def test_api_commands():
         proc.kill()
         proc.wait()
         return False
-    except Exception as e:
+    except (OSError, ValueError) as e:
         print(f'ERROR: Unexpected exception: {e}')
         if 'proc' in locals():
-            try:
+            with contextlib.suppress(OSError):
                 proc.kill()
                 proc.wait()
-            except Exception:
-                pass
         return False
 
 

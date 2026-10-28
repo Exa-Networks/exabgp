@@ -11,6 +11,7 @@ Tests:
 - Shutdown command cleanly stops ExaBGP
 """
 
+import contextlib
 import os
 import subprocess
 import sys
@@ -98,14 +99,12 @@ def test_no_neighbor():
         proc.kill()
         proc.wait()
         return False
-    except Exception as e:
+    except (OSError, ValueError) as e:
         print(f'ERROR: Unexpected exception: {e}')
         if 'proc' in locals():
-            try:
+            with contextlib.suppress(OSError):
                 proc.kill()
                 proc.wait()
-            except Exception:
-                pass
         return False
 
 

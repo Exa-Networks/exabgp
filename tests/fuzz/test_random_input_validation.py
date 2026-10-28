@@ -67,16 +67,13 @@ def test_ipv4_creation(prefix_len: int, octet1: int, octet2: int, octet3: int, o
     """Test IPv4 address creation with valid boundary values."""
     from exabgp.protocol.ip import IPv4
 
-    ip_str = f'{octet1}.{octet2}.{octet3}.{octet4}/{prefix_len}'
+    # It gave IPv4() the text of a prefix, which takes packed bytes: the TypeError went into
+    # a blind except, so the test never built an address. Every one of these octets is valid.
+    ip_str = f'{octet1}.{octet2}.{octet3}.{octet4}'
 
-    try:
-        ip = IPv4(ip_str)
-        # Should succeed for valid inputs
-        assert ip is not None
-        assert str(ip) == ip_str
-    except (ValueError, Exception):
-        # May reject some edge cases
-        pass
+    ip = IPv4.from_string(ip_str)
+    assert str(ip) == ip_str
+    assert 0 <= prefix_len <= IPv4.BYTES * 8
 
 
 @pytest.mark.fuzz
@@ -209,16 +206,12 @@ def test_mpls_label_values(label_value: int, exp: int, ttl: int) -> None:
     """Test MPLS label creation with valid values."""
     from exabgp.bgp.message.update.nlri.qualifier import Labels
 
-    try:
-        label_obj = Labels.make_labels([label_value])
+    label_obj = Labels.make_labels([label_value])
 
-        # Verify we can pack it
-        packed = label_obj.pack_labels()
-        assert isinstance(packed, bytes)
-        assert len(packed) == 3  # One label = 3 bytes
-    except (ValueError, Exception) as e:
-        # Should succeed for all valid label values
-        pytest.fail(f'Valid label {label_value} failed: {e}')
+    # Verify we can pack it
+    packed = label_obj.pack_labels()
+    assert isinstance(packed, bytes)
+    assert len(packed) == 3  # One label = 3 bytes
 
 
 @pytest.mark.fuzz
@@ -239,18 +232,14 @@ def test_open_message_basic_structure(version: int, my_as: int, hold_time: int) 
         bytes([version]) + struct.pack('!H', my_as) + struct.pack('!H', hold_time) + bgp_id + bytes([opt_params_len])
     )
 
-    try:
-        from exabgp.environment import Env
+    # It called Open.unpack(env, data, None, None), which is not the decoder's signature:
+    # the TypeError went into a blind except, so whatever the bytes, the test passed.
+    from exabgp.bgp.message.open.capability.negotiated import Negotiated
 
-        env = Env()
-
-        open_msg = Open.unpack(env, open_data, None, None)
-
-        # Successfully parsed
-        assert open_msg is not None
-    except (ValueError, AttributeError, Exception):
-        # May fail due to environment setup or other requirements
-        pass
+    open_msg = Open.unpack_message(open_data, Negotiated.UNSET)
+    assert open_msg.version == version
+    assert open_msg.asn == my_as
+    assert open_msg.hold_time == hold_time
 
 
 @pytest.mark.fuzz

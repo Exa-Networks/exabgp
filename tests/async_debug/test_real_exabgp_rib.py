@@ -8,6 +8,7 @@ something we're missing in our mock implementation.
 
 import os
 import sys
+import traceback
 
 # Add src to path so we can import exabgp
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
@@ -19,6 +20,7 @@ from exabgp.protocol.family import AFI, SAFI
 from exabgp.protocol.ip import IPv4
 from exabgp.rib.outgoing import OutgoingRIB
 from exabgp.rib.route import Route
+from exabgp.util.isolated import isolated
 
 
 def test_real_rib_resend():
@@ -143,25 +145,24 @@ def test_real_rib_concurrent_operations():
         print(f'\n❌ TEST FAILED - Expected ≥3 routes in flush, got {count2}')
 
 
+def _test_error(exc: Exception) -> None:
+    print(f'\n❌ TEST ERROR: {exc}')
+    print(''.join(traceback.format_exception(exc)))
+
+
 def main():
     """Run all real ExaBGP tests"""
     print('\n' + '#' * 70)
     print('# REAL EXABGP RIB CLASS TESTS')
     print('#' * 70)
 
-    try:
+    with isolated(_test_error):
         test_real_rib_resend()
         test_real_rib_concurrent_operations()
 
         print('\n' + '#' * 70)
         print('# ALL REAL EXABGP TESTS COMPLETE')
         print('#' * 70)
-
-    except Exception as e:
-        print(f'\n❌ TEST ERROR: {e}')
-        import traceback
-
-        traceback.print_exc()
 
 
 if __name__ == '__main__':

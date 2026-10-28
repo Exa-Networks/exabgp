@@ -23,9 +23,6 @@ async def test_cancelled_error_handling():
     except asyncio.CancelledError:
         caught_cancelled_error = True
         print('✅ CancelledError caught successfully')
-    except Exception as e:
-        print(f'❌ Unexpected exception: {e}')
-        return False
 
     return caught_cancelled_error
 

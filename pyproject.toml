@@ -134,6 +134,8 @@ select = [
 	"TRY002", "TRY004", "TRY201", "TRY203", "TRY401",
 	# what looks like a bug: a value computed and dropped, a blind pytest.raises, exec
 	"B008", "B015", "B017", "B018", "PLR0124", "RUF012", "S102", "T100", "TC004",
+	# an exception caught whole: only exabgp.util.isolated may, everywhere else names it
+	"BLE001", "S110", "S112",
 	# isort
 	"I001",
 ]

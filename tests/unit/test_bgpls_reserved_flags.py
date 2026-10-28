@@ -24,6 +24,7 @@ from struct import pack
 
 import pytest
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import RESERVED, FlagLS, LinkState
@@ -65,7 +66,7 @@ def seed_width(klass: type[FlagLS]) -> int | None:
     for width in range(1, MAX_SEED_WIDTH):
         try:
             klass.unpack_bgpls(bytes(width))
-        except Exception:
+        except Notify:
             continue
         return width
     return None

@@ -246,7 +246,7 @@ def test_open_invalid_hold_time(hold_time: int) -> None:
         # If parsing succeeds, validate the hold_time is preserved
         # (validation happens at negotiation time, not parse time)
         assert open_msg.hold_time == hold_time
-    except Exception:
+    except Notify:
         # May reject at parse time
         pass
 
@@ -355,7 +355,7 @@ def test_update_minimum_valid() -> None:
         # Empty update - should have no routes
         assert len(parsed.announces) == 0
         assert len(parsed.withdraws) == 0
-    except Exception:
+    except Notify:
         # May be treated as EOR which is handled specially
         pass
 

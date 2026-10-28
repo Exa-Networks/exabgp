@@ -212,8 +212,6 @@ def test_a_tlv_checks_its_own_reads(scode: int) -> None:
             except Notify as exc:
                 if DECODE_BOUNDARY in str(exc):
                     masked.append((length, str(exc)))
-            except Exception:  # noqa: BLE001 - the properties above are what report these
-                pass
     assert not masked, f'TLV {scode} relies on the decode boundary: {masked[0][1]}'
 
 

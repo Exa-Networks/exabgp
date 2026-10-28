@@ -113,7 +113,7 @@ def widths(code: int) -> int | None:
     for width in range(1, MAX_TLV_WIDTH):
         try:
             attribute().unpack_attribute(tlv(code, bytes(width)), Negotiated.UNSET).json()
-        except Exception:
+        except Notify:
             continue
         return width
     return None

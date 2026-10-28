@@ -69,6 +69,3 @@ def test_a_registered_type_is_still_dispatched_to_its_decoder(code: int) -> None
         assert not (notify.code == MESSAGE_HEADER_ERROR and notify.subcode == BAD_MESSAGE_TYPE), (
             f'type {code} has a decoder but was refused as unknown'
         )
-    except Exception:
-        # a registered decoder refusing an empty body its own way is not this test's business
-        return

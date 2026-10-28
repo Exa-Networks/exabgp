@@ -25,6 +25,7 @@ from struct import pack
 
 import pytest
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import BaseLS, LinkState, jsonable
@@ -74,7 +75,7 @@ def smallest_decodable(code: int) -> bytes | None:
         payload = pack('!HH', int(code), length) + bytes(length)
         try:
             attribute().unpack_attribute(payload, Negotiated.UNSET).json()
-        except Exception:
+        except Notify:
             continue
         return payload
     return None
@@ -169,7 +170,7 @@ def smallest_instance(code: int) -> BaseLS | None:
     for width in range(1, MAX_SEED_WIDTH):
         try:
             instance = klass.unpack_bgpls(bytes(width))
-        except Exception:
+        except Notify:
             continue
         instance.json()
         return instance

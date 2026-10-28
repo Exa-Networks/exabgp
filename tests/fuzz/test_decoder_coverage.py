@@ -128,8 +128,6 @@ def test_every_nlri_family_decoder_is_reached(monkeypatch: pytest.MonkeyPatch) -
                 NLRI.unpack_nlri(afi, safi, bytes([length]) + bytes(length), Action.ANNOUNCE, False, Negotiated.UNSET)
             except Notify:
                 continue
-            except Exception:  # noqa: BLE001 - the property tests judge this, we only count
-                continue
 
     never = sorted(label for label, count in tally.items() if count == 0)
     assert not never, f'these NLRI decoders were never entered: {never}'

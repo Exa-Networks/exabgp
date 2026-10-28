@@ -22,6 +22,7 @@ from struct import pack
 
 import pytest
 
+from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.capability.negotiated import Negotiated
 from exabgp.bgp.message.update.attribute import Attribute
 from exabgp.bgp.message.update.attribute.collection import AttributeCollection
@@ -176,7 +177,7 @@ def two_decodings(klass: type[Attribute], session: object) -> tuple[Attribute, A
     if shaped is not None:
         try:
             one, other = (klass.unpack_attribute(payload, session) for payload in shaped)
-        except Exception:
+        except (Notify, ValueError):
             # a seed which no longer decodes is a broken seed, and the shape test below
             # says so by name rather than letting it error out of every test in the file
             return None
@@ -186,7 +187,7 @@ def two_decodings(klass: type[Attribute], session: object) -> tuple[Attribute, A
         try:
             one = klass.unpack_attribute(bytes(width), session)
             other = klass.unpack_attribute(bytes(width - 1) + bytes([1]), session)
-        except Exception:
+        except (Notify, ValueError):
             continue
         if one is None or other is None or type(one) is not type(other):
             continue
@@ -241,7 +242,7 @@ def test_every_registered_attribute_can_be_compared_at_all() -> None:
         for width in range(MAX_PROBE_WIDTH):
             try:
                 decoded = klass.unpack_attribute(bytes(width), session)
-            except Exception:
+            except (Notify, ValueError):
                 continue
             if decoded is None:
                 continue
@@ -270,7 +271,7 @@ def test_every_shaped_seed_still_decodes_to_its_own_attribute() -> None:
         for payload in payloads:
             try:
                 decoded = klass.unpack_attribute(payload, session)
-            except Exception as exc:
+            except (Notify, ValueError) as exc:
                 wrong[name] = f'raises {type(exc).__name__}'
                 break
             if type(decoded) is not klass:

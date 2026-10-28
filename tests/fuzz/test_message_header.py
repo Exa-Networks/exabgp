@@ -127,8 +127,6 @@ def test_header_parsing_with_random_data(data: bytes) -> None:
     except (ValueError, IndexError, struct.error):
         # Expected exceptions for malformed data
         pass
-    except Exception as e:
-        pytest.fail(f'Unexpected exception: {type(e).__name__}: {e}')
 
 
 @pytest.mark.fuzz

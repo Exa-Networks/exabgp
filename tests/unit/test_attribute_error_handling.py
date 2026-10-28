@@ -99,8 +99,6 @@ def test_the_sweep_reaches_the_attribute_it_names(code: int) -> None:
                 answered += 1
             except Notify:
                 answered += 1
-            except Exception:  # noqa: BLE001 - counted by the test above, not here
-                continue
 
     assert answered, f'no input reached attribute {code}, so this pins nothing about it'
 

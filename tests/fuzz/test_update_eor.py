@@ -19,6 +19,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from exabgp.bgp.message.notification import Notify
 from tests import negotiation
 
 pytestmark = pytest.mark.fuzz
@@ -73,7 +74,7 @@ def test_eor_not_triggered_by_similar_data() -> None:
         result = UpdateCollection.unpack_message(data, negotiated)
         # If it parses, it should not be an EOR
         assert not result.IS_EOR
-    except Exception:
+    except Notify:
         # May fail to parse, which is fine
         pass
 
@@ -130,7 +131,7 @@ def test_normal_update_not_detected_as_eor() -> None:
         result = UpdateCollection.unpack_message(data, negotiated)
         # Should not be EOR
         assert not result.IS_EOR
-    except Exception:
+    except Notify:
         # May fail due to incomplete mocking, which is okay
         # The important thing is it doesn't return EOR
         pass

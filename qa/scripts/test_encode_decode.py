@@ -14,6 +14,8 @@ import os
 import subprocess
 import sys
 
+from exabgp.util.isolated import isolated
+
 # Paths relative to repository root
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.join(SCRIPT_DIR, '..', '..')
@@ -335,6 +337,10 @@ def test_pipe_encode_to_decode():
     return True
 
 
+def _raised(exc: Exception) -> None:
+    print(f'  EXCEPTION: {exc}')
+
+
 def main():
     """Run all tests and report results."""
     if not os.path.exists(EXABGP_BIN):
@@ -360,13 +366,14 @@ def main():
     failed = 0
 
     for test in tests:
-        try:
+        # a test which raises is counted as failed, and the next one run
+        guard = isolated(_raised)
+        with guard:
             if test():
                 passed += 1
             else:
                 failed += 1
-        except Exception as e:
-            print(f'  EXCEPTION: {e}')
+        if guard.failed:
             failed += 1
 
     print(f'\n{"=" * 40}')

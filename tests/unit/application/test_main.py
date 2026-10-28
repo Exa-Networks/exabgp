@@ -5,6 +5,7 @@ Tests CLI argument parsing and subcommand dispatch.
 
 from __future__ import annotations
 
+import io
 import sys
 from io import StringIO
 from unittest.mock import patch
@@ -115,7 +116,8 @@ class TestBackwardsCompatibility:
         ]
 
         for subcmd in known_subcommands:
-            with patch('sys.argv', ['exabgp', subcmd]):
+            # a subcommand which reads its input gets none, rather than pytest's refusal
+            with patch('sys.argv', ['exabgp', subcmd]), patch('sys.stdin', io.StringIO('')):
                 # These should be recognized as subcommands
                 # For most, just verify they don't crash on import/setup
                 try:
@@ -123,10 +125,6 @@ class TestBackwardsCompatibility:
                     main()
                 except SystemExit:
                     pass  # Expected for many subcommands
-                except Exception as e:
-                    # Unexpected errors
-                    if 'no such option' not in str(e).lower():
-                        pass  # Some errors are expected (e.g., missing config)
 
 
 class TestSubcommandDispatch:
