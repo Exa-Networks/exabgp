@@ -129,45 +129,47 @@ class InteractiveCLI:
         """Run the interactive REPL"""
         self._print_banner()
 
+        # the guard holds no break or continue, which mypyc can not compile inside the
+        # try/finally a `with` is: _line says whether the session goes on
         while self.running:
+            ending = False
             with isolated(self._unexpected):
-                try:
-                    # Display prompt and read command
-                    prompt = self.formatter.format_prompt()
-                    line = input(prompt).strip()
+                ending = self._line()
+            if ending:
+                break
 
-                    # Check if background thread signaled shutdown
-                    if not self.connected():
-                        break
+    def _line(self) -> bool:
+        """Read and run one line: whether the session ends with it."""
+        try:
+            # Display prompt and read command
+            prompt = self.formatter.format_prompt()
+            line = input(prompt).strip()
 
-                    # Skip empty lines
-                    if not line:
-                        continue
+            # Check if background thread signaled shutdown
+            if not self.connected():
+                return True
 
-                    # Handle built-in REPL commands
-                    if self._handle_builtin(line):
-                        continue
+            # Skip empty lines, and handle built-in REPL commands
+            if not line or self._handle_builtin(line):
+                return False
 
-                    # Send to ExaBGP
-                    self._execute_command(line)
+            # Send to ExaBGP
+            self._execute_command(line)
+            return False
 
-                except EOFError:
-                    # Ctrl+D pressed
-                    sys.stdout.write('\n')  # Newline after ^D
-                    self._quit()
-                    break
-                except KeyboardInterrupt:
-                    # Ctrl+C pressed OR signal from background thread, which clears the
-                    # connection's running flag, not ours, before interrupting input()
-                    if not self.connected():
-                        # Signal from background thread - exit gracefully
-                        sys.stdout.write('\n')  # Newline
-                        break
-                    else:
-                        # User pressed Ctrl+C - quit normally
-                        sys.stdout.write('\n')  # Newline after ^C
-                        self._quit()
-                        break
+        except EOFError:
+            # Ctrl+D pressed
+            sys.stdout.write('\n')  # Newline after ^D
+            self._quit()
+            return True
+        except KeyboardInterrupt:
+            # Ctrl+C pressed OR signal from background thread, which clears the
+            # connection's running flag, not ours, before interrupting input()
+            sys.stdout.write('\n')
+            if self.connected():
+                # User pressed Ctrl+C - quit normally
+                self._quit()
+            return True
 
     def _unexpected(self, exc: Exception) -> None:
         """A line which failed in a way nothing handles: said, and the next line read."""

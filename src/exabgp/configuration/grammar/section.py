@@ -25,7 +25,7 @@ from __future__ import annotations
 
 import dataclasses
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, ClassVar, Generic, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
 
 from exabgp.configuration.grammar.context import PrintContext, ReadContext
 
@@ -47,7 +47,7 @@ def fields(built: Any) -> Values:
     raise TypeError(f'can not render {type(built).__name__}, it is not a dataclass')
 
 
-class Section(ABC, Generic[T]):
+class Section[T](ABC):
     """What a block stands for. A section keeps no state: what a read shares is in the context."""
 
     # the Settings dataclass build() makes, when unbuild() prints it field by field: each leaf

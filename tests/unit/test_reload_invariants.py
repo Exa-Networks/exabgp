@@ -36,11 +36,11 @@ import pytest
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.bgp.neighbor import Neighbor  # noqa: E402
-from exabgp.protocol.ip import IP  # noqa: E402
-from exabgp.reactor.loop import Reactor  # noqa: E402
-from exabgp.reactor.peer.peer import Peer  # noqa: E402
-from tests import negotiation  # noqa: E402
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.protocol.ip import IP
+from exabgp.reactor.loop import Reactor
+from exabgp.reactor.peer.peer import Peer
+from tests import negotiation
 
 
 def free_ports(count: int) -> list[int]:

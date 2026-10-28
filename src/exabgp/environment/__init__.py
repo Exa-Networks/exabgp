@@ -4,14 +4,14 @@ import os
 
 # Import base constants
 from exabgp.environment.base import (
-    APPLICATION,  # noqa: F401,E261
-    ENVFILE,  # noqa: F401,E261
-    ETC,  # noqa: F401,E261
-    ROOT,  # noqa: F401,E261
+    APPLICATION,
+    ENVFILE,
+    ETC,
+    ROOT,
 )
 
 # Import new typed configuration system
-from exabgp.environment.config import Environment  # noqa: F401,E261
+from exabgp.environment.config import Environment
 
 __all__ = [
     'APPLICATION',

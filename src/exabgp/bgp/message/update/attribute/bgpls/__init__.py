@@ -37,7 +37,7 @@ Created by Evelio Vila 2016-12-01
 Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 """
 
-# flake8: noqa: F401,E261
+# flake8: noqa: F401
 
 from __future__ import annotations
 

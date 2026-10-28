@@ -42,7 +42,7 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-# flake8: noqa: F401,E261
+# flake8: noqa: F401
 
 from __future__ import annotations
 

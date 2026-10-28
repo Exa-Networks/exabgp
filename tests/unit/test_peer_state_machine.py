@@ -26,22 +26,22 @@ os.environ['exabgp_log_level'] = 'CRITICAL'
 os.environ['exabgp_tcp_bind'] = '127.0.0.1'
 os.environ['exabgp_tcp_attempts'] = '0'
 
-from exabgp.bgp.fsm import FSM  # noqa: E402
-from exabgp.bgp.message import KeepAlive, Open  # noqa: E402
-from exabgp.bgp.message.notification import Notify  # noqa: E402
-from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, RouterID, Version  # noqa: E402
-from exabgp.bgp.message.open.capability.negotiated import Negotiated  # noqa: E402
-from exabgp.bgp.neighbor import Neighbor  # noqa: E402
-from exabgp.configuration.configuration import Configuration  # noqa: E402
-from exabgp.protocol.family import AFI, SAFI  # noqa: E402
-from exabgp.reactor.network.incoming import Incoming  # noqa: E402
-from exabgp.reactor.peer import Peer, Stats  # noqa: E402
-from exabgp.reactor.peer import peer as peer_module  # noqa: E402
-from exabgp.reactor.protocol import Protocol  # noqa: E402
-from exabgp.rib import RIB  # noqa: E402
-from tests.negotiation import connect, messages, negotiated, received  # noqa: E402
+from exabgp.bgp.fsm import FSM
+from exabgp.bgp.message import KeepAlive, Open
+from exabgp.bgp.message.notification import Notify
+from exabgp.bgp.message.open import ASN, Capabilities, HoldTime, RouterID, Version
+from exabgp.bgp.message.open.capability.negotiated import Negotiated
+from exabgp.bgp.neighbor import Neighbor
+from exabgp.configuration.configuration import Configuration
+from exabgp.protocol.family import AFI, SAFI
+from exabgp.reactor.network.incoming import Incoming
+from exabgp.reactor.peer import Peer, Stats
+from exabgp.reactor.peer import peer as peer_module
+from exabgp.reactor.protocol import Protocol
+from exabgp.rib import RIB
+from tests.negotiation import connect, messages, negotiated, received
 from tests.negotiation import peer as real_peer
-from tests.wire_reader import tcp_socketpair  # noqa: E402
+from tests.wire_reader import tcp_socketpair
 
 # a compiled module is an extension, with no .py file behind it
 COMPILED = not str(peer_module.__file__).endswith('.py')

@@ -26,7 +26,7 @@ else:
     except ImportError:
         _Class = TypeVar('_Class')
 
-        def trait(cls: _Class) -> _Class:
+        def trait[Class](cls: _Class) -> _Class:
             return cls
 
         def mypyc_attr(*attributes: str, **values: Any) -> Callable[[_Class], _Class]:

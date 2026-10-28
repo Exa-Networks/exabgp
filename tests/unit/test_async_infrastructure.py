@@ -15,7 +15,7 @@ import pytest
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.reactor.asynchronous import ASYNC  # noqa: E402
+from exabgp.reactor.asynchronous import ASYNC
 
 
 @pytest.fixture(autouse=True)

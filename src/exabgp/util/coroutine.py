@@ -9,16 +9,14 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator
 from functools import wraps
-from typing import Any, TypeVar
-
-T = TypeVar('T')
+from typing import Any
 
 
-def each(function: Callable[..., Iterator[T]]) -> Callable[..., Callable[[], T]]:
+def each[T](function: Callable[..., Iterator[T]]) -> Callable[..., Callable[[], T]]:
     @wraps(function)
     def start(*args: Any, **kwargs: Any) -> Callable[[], T]:
         generator = function(*args, **kwargs)
-        return lambda: next(generator)  # noqa
+        return lambda: next(generator)
 
     return start
 

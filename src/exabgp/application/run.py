@@ -126,7 +126,7 @@ def setargs(sub: argparse.ArgumentParser) -> None:
     # fmt:on
 
 
-def send_command_socket(socket_path: str, command_str: str, return_output: bool = False) -> str | bool:  # noqa: C901
+def send_command_socket(socket_path: str, command_str: str, return_output: bool = False) -> str | bool:
     """Send one command over a Unix socket.
 
     Returns captured output when `return_output` is true; otherwise returns

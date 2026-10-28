@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.update.attribute.attribute import Attribute
-from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import SRPolicyTunnel  # noqa: E402 (the import also triggers tunnel type 15 registration)
+from exabgp.bgp.message.update.attribute.tunnel_encap.sr_policy import SRPolicyTunnel
 from exabgp.bgp.message.update.attribute.tunnel_encap.tlv import TunnelTypeTLV
 from exabgp.util.types import Buffer
 

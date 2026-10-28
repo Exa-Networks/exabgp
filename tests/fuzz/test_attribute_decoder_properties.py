@@ -46,7 +46,7 @@ from exabgp.bgp.message.update.attribute.community.extended import ExtendedCommu
 from exabgp.protocol.family import Family
 from exabgp.util.enumeration import TriState
 from tests import negotiation
-from tests.fuzz.strategies import payload  # noqa: E402
+from tests.fuzz.strategies import payload
 
 pytestmark = pytest.mark.fuzz
 
@@ -156,7 +156,7 @@ def renders(attributes: AttributeCollection, what: str) -> None:
         str(attributes)
     except AssertionError:
         raise
-    except Exception as exc:  # noqa: BLE001 - which exception escapes is the whole point
+    except Exception as exc:
         raise AssertionError(f'{what} decoded but {type(exc).__name__} escaped its rendering: {exc}') from exc
 
 

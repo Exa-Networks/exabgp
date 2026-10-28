@@ -10,7 +10,7 @@ writer() is the generator Incoming.notification() still uses to refuse an unconf
 
 from __future__ import annotations
 
-import asyncio  # noqa: F401 - Used by async methods added in Steps 2-4
+import asyncio
 import random
 import select
 import socket

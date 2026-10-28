@@ -13,13 +13,11 @@ import configparser as ConfigParser
 import os
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
-from typing import Any, ClassVar, Generic, TypeVar, cast, overload
+from typing import Any, ClassVar, cast, overload
 
 from exabgp.environment import base, parsing
 from exabgp.protocol.ip import IP
 from exabgp.util.mypyc import mypyc_attr
-
-T = TypeVar('T')
 
 
 class EnvironmentValueError(ValueError):
@@ -35,7 +33,7 @@ class EnvironmentValueError(ValueError):
 # Python classes when compiled (mypyc_attr native_class=False), their methods compiled.
 @mypyc_attr(native_class=False)
 @dataclass
-class ConfigOption(Generic[T]):
+class ConfigOption[T]:
     """Descriptor for typed configuration options."""
 
     default: T
@@ -97,7 +95,7 @@ class ConfigOption(Generic[T]):
         return str(value)
 
 
-def option(
+def option[T](
     default: T,
     help: str,
     reader: Callable[[str], T] | None = None,

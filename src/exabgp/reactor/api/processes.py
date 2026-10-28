@@ -36,7 +36,7 @@ import termios
 import time
 from collections.abc import Callable, Generator
 from threading import Thread
-from typing import IO, TYPE_CHECKING, Any, ClassVar, TypeVar, cast
+from typing import IO, TYPE_CHECKING, Any, ClassVar, cast
 
 from exabgp.util.intvalue import json_number
 
@@ -66,7 +66,6 @@ from exabgp.version import json_v4 as json_v4_version
 from exabgp.version import text_v4 as text_v4_version
 
 # TypeVar for silenced decorator - preserves function signature
-_F = TypeVar('_F', bound=Callable[..., None])
 
 
 # pylint: disable=no-self-argument,not-callable,unused-argument,invalid-name
@@ -143,13 +142,13 @@ class ProcessRespawnError(ProcessError):
 
 # do not do anything if silenced. At module level: a compiled class body can not use a name
 # it defined itself, so the decorator can not be a staticmethod of Processes
-def silenced(function: _F) -> _F:
+def silenced[F: Callable[..., None]](function: F) -> F:
     def closure(self: Processes, *args: Any, **kwargs: Any) -> None:
         if self.silence:
             return None
         return function(self, *args, **kwargs)
 
-    return cast(_F, closure)
+    return cast(F, closure)
 
 
 # the function printing each message, filled by register_process as the class is built. At

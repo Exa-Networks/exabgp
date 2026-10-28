@@ -9,15 +9,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Generic, TypeVar
 
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import TEXT, Shape, boolean, enumeration, leaf_list, string
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
 from exabgp.util.program import resolve_program, validate_executable
-
-E = TypeVar('E', bound=StrEnum)
 
 TRUE_WORDS = ('true', 'enable', 'enabled', 'yes', '1')
 FALSE_WORDS = ('false', 'disable', 'disabled', 'no', '0')
@@ -66,7 +63,7 @@ class Bool(Type[bool]):
         return boolean()
 
 
-class Choice(Type[E], Generic[E]):
+class Choice[E: StrEnum](Type[E]):
     """One word out of a Python enumeration, in any case, returned as the enumeration member."""
 
     def __init__(self, enumeration: type[E], name: str = '') -> None:

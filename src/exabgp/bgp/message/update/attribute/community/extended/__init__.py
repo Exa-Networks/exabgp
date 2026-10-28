@@ -41,7 +41,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # Every Extended Community should be imported from this file
 # as it makes sure that all the registering decorator are run
 
-# flake8: noqa: F401,E261
+# flake8: noqa: F401
 
 from __future__ import annotations
 

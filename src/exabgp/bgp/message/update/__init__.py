@@ -16,7 +16,7 @@ from exabgp.bgp.message.update.update import (
 
 # isort: split
 # EOR is an Update, so it is imported once Update is
-from exabgp.bgp.message.update.eor import EOR  # noqa: E402
+from exabgp.bgp.message.update.eor import EOR
 
 __all__ = [
     'EOR',

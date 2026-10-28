@@ -81,7 +81,7 @@ class TestNormalizeNlriTypeLabel:
         result = normalize(nlri)
 
         # Should be downgraded to INET (exact type check)
-        assert type(result) is INET  # noqa: E721
+        assert type(result) is INET
 
 
 class TestNormalizeNlriTypeIPVPN:
@@ -147,13 +147,13 @@ class TestNormalizeNlriTypeINET:
         )
 
         # Verify initial state
-        assert type(nlri) is INET  # noqa: E721
+        assert type(nlri) is INET
 
         # Apply normalization
         result = normalize(nlri)
 
         # Should remain INET
-        assert type(result) is INET  # noqa: E721
+        assert type(result) is INET
 
 
 class TestLabelFromSettings:

@@ -15,11 +15,11 @@ import pytest
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.bgp import fsm as fsm_module  # noqa: E402
-from exabgp.bgp.fsm import FSM  # noqa: E402
-from exabgp.reactor.peer import Peer  # noqa: E402
-from tests import negotiation  # noqa: E402
-from tests.negotiation import Told  # noqa: E402
+from exabgp.bgp import fsm as fsm_module
+from exabgp.bgp.fsm import FSM
+from exabgp.reactor.peer import Peer
+from tests import negotiation
+from tests.negotiation import Told
 
 # The compiled build checks the declared type of every argument and attribute
 COMPILED = not str(fsm_module.__file__).endswith('.py')

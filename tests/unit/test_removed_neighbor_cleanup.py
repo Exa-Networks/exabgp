@@ -33,16 +33,16 @@ import pytest
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.bgp.fsm import FSM  # noqa: E402
-from exabgp.protocol.family import AFI  # noqa: E402
-from exabgp.protocol.ip import IP  # noqa: E402
-from exabgp.reactor.listener import Listener  # noqa: E402
-from exabgp.reactor.loop import Reactor  # noqa: E402
-from exabgp.reactor.network.incoming import Incoming  # noqa: E402
-from exabgp.reactor.peer.peer import Peer  # noqa: E402
-from exabgp.reactor.protocol import Protocol  # noqa: E402
-from tests import negotiation  # noqa: E402
-from tests.wire_reader import tcp_socketpair  # noqa: E402
+from exabgp.bgp.fsm import FSM
+from exabgp.protocol.family import AFI
+from exabgp.protocol.ip import IP
+from exabgp.reactor.listener import Listener
+from exabgp.reactor.loop import Reactor
+from exabgp.reactor.network.incoming import Incoming
+from exabgp.reactor.peer.peer import Peer
+from exabgp.reactor.protocol import Protocol
+from tests import negotiation
+from tests.wire_reader import tcp_socketpair
 
 LOCAL = IP.from_string('127.0.0.1')
 PEER = IP.from_string('127.0.0.2')

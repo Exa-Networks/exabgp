@@ -34,7 +34,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 
 # Every NLRI should be imported from this file
 
-# flake8: noqa: F401,E261
+# flake8: noqa: F401
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ from exabgp.bgp.message.update.nlri.rtc import RTC
 from exabgp.bgp.message.update.nlri.bgpls import BGPLS
 from exabgp.bgp.message.update.nlri.mup import MUP
 from exabgp.bgp.message.update.nlri.mvpn import MVPN
-from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI  # noqa: F401
+from exabgp.bgp.message.update.nlri.sr_policy import SRPolicyNLRI
 from exabgp.bgp.message.update.nlri.empty import Empty
 from exabgp.bgp.message.update.nlri.collection import NLRICollection, MPNLRICollection
 # isort: on

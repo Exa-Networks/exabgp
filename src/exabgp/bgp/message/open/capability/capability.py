@@ -13,8 +13,6 @@ from collections.abc import Callable, ItemsView, Iterable, Iterator, KeysView, V
 from typing import (
     Any,
     ClassVar,
-    Generic,
-    TypeVar,
     overload,
 )
 
@@ -249,10 +247,7 @@ class Capability:
         return cls.klass(capability).unpack_capability(instance, data, capability)
 
 
-_Item = TypeVar('_Item')
-
-
-class CapabilityList(Capability, Generic[_Item]):
+class CapabilityList[Item](Capability):
     """A capability whose value is a list of entries: families, codes, next hop conversions.
 
     These inherited from both Capability and list, which mypyc cannot compile. The entries
@@ -261,10 +256,10 @@ class CapabilityList(Capability, Generic[_Item]):
     the same entries.
     """
 
-    def __init__(self, items: Iterable[_Item] = ()) -> None:
-        self.items: list[_Item] = list(items)
+    def __init__(self, items: Iterable[Item] = ()) -> None:
+        self.items: list[Item] = list(items)
 
-    def __iter__(self) -> Iterator[_Item]:
+    def __iter__(self) -> Iterator[Item]:
         return iter(self.items)
 
     def __len__(self) -> int:
@@ -276,13 +271,13 @@ class CapabilityList(Capability, Generic[_Item]):
     def __contains__(self, item: object) -> bool:
         return item in self.items
 
-    def __getitem__(self, index: int) -> _Item:
+    def __getitem__(self, index: int) -> Item:
         return self.items[index]
 
-    def append(self, item: _Item) -> None:
+    def append(self, item: Item) -> None:
         self.items.append(item)
 
-    def extend(self, items: Iterable[_Item]) -> None:
+    def extend(self, items: Iterable[Item]) -> None:
         self.items.extend(items)
 
     def same_values(self, other: Capability) -> bool:
@@ -303,11 +298,7 @@ class CapabilityList(Capability, Generic[_Item]):
         return not self == other
 
 
-_Key = TypeVar('_Key')
-_Value = TypeVar('_Value')
-
-
-class CapabilityDict(Capability, Generic[_Key, _Value]):
+class CapabilityDict[Key, Value](Capability):
     """A capability whose value maps a family to something: ADD-PATH, graceful restart, ...
 
     These inherited from both Capability and dict, which mypyc cannot compile. The mapping
@@ -317,18 +308,18 @@ class CapabilityDict(Capability, Generic[_Key, _Value]):
     """
 
     def __init__(self) -> None:
-        self.entries: dict[_Key, _Value] = {}
+        self.entries: dict[Key, Value] = {}
 
-    def __getitem__(self, key: _Key) -> _Value:
+    def __getitem__(self, key: Key) -> Value:
         return self.entries[key]
 
-    def __setitem__(self, key: _Key, value: _Value) -> None:
+    def __setitem__(self, key: Key, value: Value) -> None:
         self.entries[key] = value
 
     def __contains__(self, key: object) -> bool:
         return key in self.entries
 
-    def __iter__(self) -> Iterator[_Key]:
+    def __iter__(self) -> Iterator[Key]:
         return iter(self.entries)
 
     def __len__(self) -> int:
@@ -338,24 +329,24 @@ class CapabilityDict(Capability, Generic[_Key, _Value]):
         return bool(self.entries)
 
     @overload
-    def get(self, key: _Key) -> _Value | None: ...
+    def get(self, key: Key) -> Value | None: ...
 
     @overload
-    def get(self, key: _Key, default: _Value) -> _Value: ...
+    def get(self, key: Key, default: Value) -> Value: ...
 
-    def get(self, key: _Key, default: _Value | None = None) -> _Value | None:
+    def get(self, key: Key, default: Value | None = None) -> Value | None:
         return self.entries.get(key, default)
 
     def clear(self) -> None:
         self.entries.clear()
 
-    def items(self) -> ItemsView[_Key, _Value]:
+    def items(self) -> ItemsView[Key, Value]:
         return self.entries.items()
 
-    def keys(self) -> KeysView[_Key]:
+    def keys(self) -> KeysView[Key]:
         return self.entries.keys()
 
-    def values(self) -> ValuesView[_Value]:
+    def values(self) -> ValuesView[Value]:
         return self.entries.values()
 
     # defining __eq__ leaves the class unhashable, as the dict was

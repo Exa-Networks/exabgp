@@ -49,8 +49,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # Every Attribute should be imported from this file
 # as it makes sure that all the registering decorator are run
 
-# flake8: noqa: F401,E261
-
 from __future__ import annotations
 
 # isort: off
@@ -89,7 +87,7 @@ from exabgp.bgp.message.update.attribute.pmsi import PMSI
 from exabgp.bgp.message.update.attribute.aigp import AIGP
 from exabgp.bgp.message.update.attribute.bgpls.linkstate import LinkState
 from exabgp.bgp.message.update.attribute.sr.prefixsid import PrefixSid
-from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap  # noqa: F401
+from exabgp.bgp.message.update.attribute.tunnel_encap import TunnelEncap
 # isort: on
 
 __all__ = [

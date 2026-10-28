@@ -13,13 +13,10 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
 
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import TEXT, Shape
 from exabgp.configuration.grammar.words import Words
-
-T = TypeVar('T')
 
 
 class Syntax:
@@ -75,7 +72,7 @@ class Printed:
         self.words = words
 
 
-class Type(ABC, Generic[T]):
+class Type[T](ABC):
     name = 'value'  # how an error refers to what was expected
 
     @abstractmethod

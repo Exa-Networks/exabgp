@@ -559,7 +559,7 @@ def normalize(nlri: NLRI) -> NLRI:
             return nlri
     else:
         target, safi = INET, IP.tosafi(nlri.cidr.prefix().split('/')[0])
-        if type(nlri) is INET:  # noqa: E721 - the exact class, a subclass is to be rebuilt
+        if type(nlri) is INET:
             return nlri
     kwargs: dict[str, Any] = {}
     if has_label:

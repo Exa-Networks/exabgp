@@ -17,9 +17,9 @@ import pytest
 os.environ['exabgp_log_enable'] = 'false'
 os.environ['exabgp_log_level'] = 'CRITICAL'
 
-from exabgp.bgp.message import KeepAlive, Notify, Update  # noqa: E402
-from exabgp.bgp.message.open.holdtime import HoldTime  # noqa: E402
-from exabgp.bgp.timer import ReceiveTimer, SendTimer  # noqa: E402
+from exabgp.bgp.message import KeepAlive, Notify, Update
+from exabgp.bgp.message.open.holdtime import HoldTime
+from exabgp.bgp.timer import ReceiveTimer, SendTimer
 
 # An UPDATE payload withdrawing 10.0.0.0/24: no path attributes, one withdrawn route
 WITHDRAW_PAYLOAD = bytes([0x00, 0x04, 0x18, 0x0A, 0x00, 0x00, 0x00, 0x00])

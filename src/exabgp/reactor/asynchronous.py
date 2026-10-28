@@ -219,14 +219,12 @@ class ASYNC:
         """Run every queued coroutine, including those the ones running schedule."""
         while self._async:
             uid, callback = self._async.popleft()
-            # one callback which fails does not stop the next
+            if not (inspect.iscoroutine(callback) or inspect.iscoroutinefunction(callback)):
+                # Mixed queue - shouldn't happen, but handle gracefully
+                # Put it back and switch to generator processing
+                self._async.appendleft((uid, callback))
+                break
+            # one callback which fails does not stop the next; the guard holds no break or
+            # continue, which mypyc can not compile inside the try/finally a `with` is
             with isolated(self._failed(uid)):
-                if inspect.iscoroutine(callback):
-                    await callback
-                elif inspect.iscoroutinefunction(callback):
-                    await callback()
-                else:
-                    # Mixed queue - shouldn't happen, but handle gracefully
-                    # Put it back and switch to generator processing
-                    self._async.appendleft((uid, callback))
-                    break
+                await (callback if inspect.iscoroutine(callback) else callback())

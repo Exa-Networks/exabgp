@@ -8,8 +8,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 # Every Message should be imported from this file
 # as it makes sure that all the registering decorator are run
 
-# flake8: noqa: F401,E261
-
 from __future__ import annotations
 
 from exabgp.bgp.message.action import Action

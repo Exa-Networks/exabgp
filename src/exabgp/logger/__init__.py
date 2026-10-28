@@ -8,17 +8,17 @@ if TYPE_CHECKING:
     from exabgp.environment.config import Environment
 
 from exabgp.logger.format import (
-    formater,  # noqa: F401,E261,E501
-    lazyattribute,  # noqa: F401,E261,E501
-    lazyexc,  # noqa: F401,E261,E501
-    lazyformat,  # noqa: F401,E261,E501
-    lazymsg,  # noqa: F401,E261,E501
-    lazynlri,  # noqa: F401,E261,E501
+    formater,
+    lazyattribute,
+    lazyexc,
+    lazyformat,
+    lazymsg,
+    lazynlri,
 )
-from exabgp.logger.handler import get_logger  # noqa: F401,E261,E501
+from exabgp.logger.handler import get_logger
 from exabgp.logger.history import (
-    history,  # noqa: F401,E261,E501
-    record,  # noqa: F401,E261,E501
+    history,
+    record,
 )
 from exabgp.logger.option import option
 

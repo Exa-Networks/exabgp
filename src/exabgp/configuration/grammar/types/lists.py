@@ -16,14 +16,11 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from enum import Enum
-from typing import Generic, TypeVar
 
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import Shape, leaf_list
 from exabgp.configuration.grammar.types.base import Syntax, Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
-
-T = TypeVar('T')
 
 OPEN = '['
 CLOSE = ']'
@@ -37,7 +34,7 @@ class Commas(Enum):
     ITEM = 'item'  # a comma is given to the item type, which refuses it
 
 
-class OneOrList(Type[list[T]], Generic[T]):
+class OneOrList[T](Type[list[T]]):
     def __init__(
         self,
         item: Type[T],

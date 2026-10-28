@@ -43,8 +43,6 @@ Copyright (c) 2009-2017 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
-# flake8: noqa: F401,E261
-
 from __future__ import annotations
 
 from exabgp.bgp.message.update.attribute.community.extended.communities import ExtendedCommunities

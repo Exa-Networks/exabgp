@@ -205,43 +205,47 @@ def main() -> None:
             ACL.end()
             return
 
+        if not line or 'shutdown' in line:
+            ACL.end()
+        buffered += line
+        opened += line.count('{')
+        opened -= line.count('}')
+        if opened:
+            continue
+        line, buffered = buffered, ''
+
+        # the guard holds no continue, which mypyc can not compile inside the try/finally a
+        # `with` is: what is done with a message is _act's
         with isolated(_unprocessed):
             try:
-                if not line or 'shutdown' in line:
-                    ACL.end()
-                buffered += line
-                opened += line.count('{')
-                opened -= line.count('}')
-                if opened:
-                    continue
-                line, buffered = buffered, ''
-                message = json.loads(line)
-
-                if message['type'] == 'state' and message['neighbor']['state'] == 'down':
-                    ACL.clear()
-                    continue
-
-                if message['type'] != 'update':
-                    continue
-
-                update = message['neighbor']['message']['update']
-
-                if 'announce' in update:
-                    flow = update['announce']['ipv4 flow']
-                    # The RFC allows both encoding
-                    flow = flow['no-nexthop'][0] if 'no-nexthop' in flow else flow[0]
-
-                    community = update['attribute']['extended-community'][0]
-                    ACL.insert(flow, community)
-                    continue
-
-                if 'withdraw' in update:
-                    flow = update['withdraw']['ipv4 flow'][0]
-                    ACL.remove(flow)
-                    continue
-
+                _act(json.loads(line))
             except KeyboardInterrupt:
                 ACL.end()
+
+
+def _act(message: dict[str, Any]) -> None:
+    """Program, or unprogram, the ACL an exabgp message is about."""
+    if message['type'] == 'state' and message['neighbor']['state'] == 'down':
+        ACL.clear()
+        return
+
+    if message['type'] != 'update':
+        return
+
+    update = message['neighbor']['message']['update']
+
+    if 'announce' in update:
+        flow = update['announce']['ipv4 flow']
+        # The RFC allows both encoding
+        flow = flow['no-nexthop'][0] if 'no-nexthop' in flow else flow[0]
+
+        community = update['attribute']['extended-community'][0]
+        ACL.insert(flow, community)
+        return
+
+    if 'withdraw' in update:
+        flow = update['withdraw']['ipv4 flow'][0]
+        ACL.remove(flow)
 
 
 if __name__ == '__main__':

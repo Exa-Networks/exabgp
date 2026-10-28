@@ -37,8 +37,6 @@ Copyright (c) 2023 BBSakura Networks Inc. All rights reserved.
 # Every MUP should be imported from this file
 # as it makes sure that all the registering decorator are run
 
-# flake8: noqa: F401,E261
-
 from __future__ import annotations
 
 from exabgp.bgp.message.update.nlri.mup.dsd import DirectSegmentDiscoveryRoute

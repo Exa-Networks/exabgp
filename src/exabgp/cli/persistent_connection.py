@@ -424,90 +424,100 @@ class PersistentSocketConnection:
         while self.running:
             if self.socket is None:
                 break
+            # the guard holds no break or continue, which mypyc can not compile inside the
+            # try/finally a `with` is: _read_once says whether the reader stops
+            ending = False
             guard = isolated(self._lost)
             with guard:
-                try:
-                    data = self.socket.recv(4096)
-                    if not data:
-                        # Socket closed - attempt reconnection
-                        if not self._reconnect():
-                            # Reconnection failed - signal main thread to exit
-                            self._signal_shutdown()
-                            break
-                        # Reconnected successfully, reset buffer and continue
-                        self.response_buffer = ''
-                        continue
-
-                    self.response_buffer += data.decode('utf-8')
-
-                    # Parse complete responses (ending with 'done\n' or 'error\n')
-                    # 'done' marks successful completion, 'error' marks error completion
-                    completion_found = (
-                        '\ndone\n' in self.response_buffer
-                        or self.response_buffer.endswith('done\n')
-                        or '\nerror\n' in self.response_buffer
-                        or self.response_buffer.endswith('error\n')
-                    )
-
-                    while completion_found:
-                        # Try 'done' first, then 'error'
-                        if '\ndone\n' in self.response_buffer:
-                            response, self.response_buffer = self.response_buffer.split('\ndone\n', 1)
-                        elif self.response_buffer.endswith('done\n'):
-                            response = self.response_buffer[:-5]  # Remove 'done\n'
-                            self.response_buffer = ''
-                        elif '\nerror\n' in self.response_buffer:
-                            response, self.response_buffer = self.response_buffer.split('\nerror\n', 1)
-                        elif self.response_buffer.endswith('error\n'):
-                            response = self.response_buffer[:-6]  # Remove 'error\n'
-                            self.response_buffer = ''
-                        else:
-                            break  # Should not reach here
-
-                        response = response.strip()
-
-                        # Check for next completion marker
-                        completion_found = (
-                            '\ndone\n' in self.response_buffer
-                            or self.response_buffer.endswith('done\n')
-                            or '\nerror\n' in self.response_buffer
-                            or self.response_buffer.endswith('error\n')
-                        )
-
-                        # Determine if this is a ping response (health check)
-                        # Ping responses can be in two formats:
-                        # - Text: "pong <uuid> active=true"
-                        # - JSON: {"pong": "<uuid>", "active": true}
-                        is_ping_response = False
-                        if response.startswith('pong '):
-                            # Text format ping response
-                            is_ping_response = True
-                        elif response.startswith('{') and '"pong"' in response and '"active"' in response:
-                            # JSON format ping response (check for both pong and active keys)
-                            # Only a reply we can parse is claimed as a health check. Anything
-                            # else goes to the user as the answer to the command they typed,
-                            # which is where an unreadable reply belongs.
-                            with contextlib.suppress(json.JSONDecodeError, ValueError):
-                                parsed = json.loads(response)
-                                if isinstance(parsed, dict) and 'pong' in parsed and 'active' in parsed:
-                                    is_ping_response = True
-
-                        # Route response based on whether we're waiting for user command
-                        with self.lock:
-                            waiting_for_user = self.pending_user_command
-
-                        if is_ping_response and not waiting_for_user:
-                            # Health check ping response - handle internally
-                            self._handle_ping_response(response)
-                        else:
-                            # User command response (or ping response during user command - route to user)
-                            self.pending_responses.put(response)
-
-                except TimeoutError:
-                    # No data available, continue
-                    continue
-            if guard.failed:
+                ending = self._read_once(self.socket)
+            if ending or guard.failed:
                 break
+
+    def _read_once(self, connection: sock.socket) -> bool:
+        """Read what the daemon sent and hand on each complete response: whether to stop."""
+        try:
+            data = connection.recv(4096)
+        except TimeoutError:
+            # No data available, continue
+            return False
+        if not data:
+            # Socket closed - attempt reconnection
+            if not self._reconnect():
+                # Reconnection failed - signal main thread to exit
+                self._signal_shutdown()
+                return True
+            # Reconnected successfully, reset buffer and continue
+            self.response_buffer = ''
+            return False
+
+        self.response_buffer += data.decode('utf-8')
+        self._dispatch_responses()
+        return False
+
+    def _dispatch_responses(self) -> None:
+        """Hand each complete response in the buffer to the user, or to the health check."""
+        # Parse complete responses (ending with 'done\n' or 'error\n')
+        # 'done' marks successful completion, 'error' marks error completion
+        completion_found = (
+            '\ndone\n' in self.response_buffer
+            or self.response_buffer.endswith('done\n')
+            or '\nerror\n' in self.response_buffer
+            or self.response_buffer.endswith('error\n')
+        )
+
+        while completion_found:
+            # Try 'done' first, then 'error'
+            if '\ndone\n' in self.response_buffer:
+                response, self.response_buffer = self.response_buffer.split('\ndone\n', 1)
+            elif self.response_buffer.endswith('done\n'):
+                response = self.response_buffer[:-5]  # Remove 'done\n'
+                self.response_buffer = ''
+            elif '\nerror\n' in self.response_buffer:
+                response, self.response_buffer = self.response_buffer.split('\nerror\n', 1)
+            elif self.response_buffer.endswith('error\n'):
+                response = self.response_buffer[:-6]  # Remove 'error\n'
+                self.response_buffer = ''
+            else:
+                break  # Should not reach here
+
+            response = response.strip()
+
+            # Check for next completion marker
+            completion_found = (
+                '\ndone\n' in self.response_buffer
+                or self.response_buffer.endswith('done\n')
+                or '\nerror\n' in self.response_buffer
+                or self.response_buffer.endswith('error\n')
+            )
+
+            # Determine if this is a ping response (health check)
+            # Ping responses can be in two formats:
+            # - Text: "pong <uuid> active=true"
+            # - JSON: {"pong": "<uuid>", "active": true}
+            is_ping_response = False
+            if response.startswith('pong '):
+                # Text format ping response
+                is_ping_response = True
+            elif response.startswith('{') and '"pong"' in response and '"active"' in response:
+                # JSON format ping response (check for both pong and active keys)
+                # Only a reply we can parse is claimed as a health check. Anything
+                # else goes to the user as the answer to the command they typed,
+                # which is where an unreadable reply belongs.
+                with contextlib.suppress(json.JSONDecodeError, ValueError):
+                    parsed = json.loads(response)
+                    if isinstance(parsed, dict) and 'pong' in parsed and 'active' in parsed:
+                        is_ping_response = True
+
+            # Route response based on whether we're waiting for user command
+            with self.lock:
+                waiting_for_user = self.pending_user_command
+
+            if is_ping_response and not waiting_for_user:
+                # Health check ping response - handle internally
+                self._handle_ping_response(response)
+            else:
+                # User command response (or ping response during user command - route to user)
+                self.pending_responses.put(response)
 
     def _lost(self, exc: Exception) -> None:
         """The connection broke under the reader: said once, and the CLI told to stop.

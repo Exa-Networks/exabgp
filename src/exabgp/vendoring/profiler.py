@@ -420,7 +420,7 @@ def _normalize(lines: dict[int, list[float]]) -> dict[int, list[float]]:
     return lines_normalized
 
 
-def profile(func: Callable[P, R], stream: TextIO | None = None) -> Callable[P, R]:
+def profile[**P, R](func: Callable[P, R], stream: TextIO | None = None) -> Callable[P, R]:
     """
     Decorator that will run the function and print a line-by-line profile
     """

@@ -13,14 +13,12 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, cast
 
 from exabgp.configuration.grammar.error import ConfigError
 from exabgp.configuration.grammar.shape import INT64_MAX, TEXT, Shape, boolean, enumeration, integer_ranges
 from exabgp.configuration.grammar.types.base import Type, WordOrSyntax
 from exabgp.configuration.grammar.words import Words
-
-T = TypeVar('T')
 
 # A number of the configuration is ASCII digits and nothing else. int() also reads a sign,
 # `_` between digits and the digits of every script: `1_000`, `+5` and `٣` were numbers.
@@ -68,7 +66,7 @@ def decimal_or_hexadecimal(word: str) -> int:
     return hexadecimal(word) if word[:2].lower() == '0x' else decimal(word)
 
 
-class Word(Type[T], Generic[T]):
+class Word[T](Type[T]):
     def __init__(
         self,
         name: str,
@@ -115,7 +113,7 @@ class Word(Type[T], Generic[T]):
 Ranges = tuple[tuple[int, int], ...]
 
 
-class Number(Word[T], Generic[T]):
+class Number[T](Word[T]):
     """A number within declared ranges, the constraint written once.
 
     The ranges give the check, the hint, the examples and the shape. `make` turns the number
