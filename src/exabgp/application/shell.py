@@ -859,7 +859,7 @@ def completion_command(shell: str) -> int:
         script = generate_completion(shell)
         sys.stdout.write(script)
         return 0
-    except Exception as e:
+    except ValueError as e:
         sys.stderr.write(f'Error generating completion: {e}\n')
         return 1
 
@@ -871,7 +871,7 @@ def install_completion(shell: str) -> int:
     # Generate the completion script
     try:
         script = generate_completion(shell)
-    except Exception as e:
+    except ValueError as e:
         sys.stderr.write(f'Error generating completion: {e}\n')
         return 1
 
@@ -882,7 +882,7 @@ def install_completion(shell: str) -> int:
     try:
         dest_path.write_text(script)
         sys.stdout.write(f'✓ Installed {shell} completion to: {dest_path}\n')
-    except Exception as e:
+    except OSError as e:
         sys.stderr.write(f'Error installing completion: {e}\n')
         return 1
 
@@ -915,7 +915,7 @@ def uninstall_completion(shell: str) -> int:
             dest_path.parent.rmdir()
             sys.stdout.write(f'✓ Removed empty directory: {dest_path.parent}\n')
 
-    except Exception as e:
+    except OSError as e:
         sys.stderr.write(f'Error removing completion: {e}\n')
         return 1
 

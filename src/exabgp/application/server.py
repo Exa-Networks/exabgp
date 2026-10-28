@@ -22,6 +22,7 @@ from exabgp.logger import lazyexc, lazymsg, log
 
 # import before the fork to improve copy on write memory savings
 from exabgp.reactor.loop import Reactor
+from exabgp.util.isolated import isolated
 from exabgp.version import version
 
 
@@ -176,6 +177,10 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
         sys.exit(1)
 
 
+def _profiled_failure(exc: Exception) -> None:
+    log.critical(lazyexc('profile.exception error={exc}', exc))
+
+
 def run(comment: str, configurations: list[str], pid: int = 0, text: bool = False) -> None:
     env = getenv()
 
@@ -297,12 +302,10 @@ def run(comment: str, configurations: list[str], pid: int = 0, text: bool = Fals
     destination = profile_name if profile_name.startswith('/') else os.path.join(cwd, profile_name)
 
     with cProfile.Profile() as profiler:
-        exit_code = 0
-        try:
+        # what stops the reactor under the profiler is logged, and the profile still written
+        exit_code = Reactor.Exit.unknown
+        with isolated(_profiled_failure):
             exit_code = Reactor(configuration).run()
-        except Exception as e:
-            exit_code = Reactor.Exit.unknown
-            log.critical(lazyexc('profile.exception error={exc}', e))
 
         try:
             profiler.dump_stats(destination)

@@ -318,7 +318,9 @@ class Protocol:
             return Message.unpack(msg_id, body, self.negotiated)
         except (KeyboardInterrupt, SystemExit, Notify):
             raise
-        except Exception as exc:
+        # a decoder answers malformed data with Notify: anything else is our bug, and the peer
+        # is still told with a NOTIFICATION rather than the session dying on a traceback
+        except Exception as exc:  # noqa: BLE001 (the decode boundary, which re-raises as Notify)
             log.debug(lazymsg('message.decode.failed type={t}', t=msg_id), self._session())
             log.debug(lazymsg('message.decode.error error={e}', e=str(exc)), self._session())
             log.debug(lazymsg('message.decode.traceback trace={t}', t=traceback.format_exc()), self._session())

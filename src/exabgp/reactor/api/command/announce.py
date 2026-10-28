@@ -159,46 +159,43 @@ def announce_route(
     self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
-        try:
-            # Parse sync mode and strip keywords
-            cmd, sync_mode = parse_sync_mode(command, reactor, service)
+        async with self.answering(reactor, service):
+            try:
+                # Parse sync mode and strip keywords
+                cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            routes = self.api_route(cmd, action)
-            if not routes:
-                error_msg = f'Could not parse route: {cmd}'
+                routes = self.api_route(cmd, action)
+                if not routes:
+                    error_msg = f'Could not parse route: {cmd}'
+                    self.log_failure(error_msg)
+                    await reactor.processes.answer_error(service, error_msg)
+                    return
+
+                # Register flush callbacks for connected peers (if sync mode)
+                flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+
+                if await refused(self, reactor, service, peers, routes):
+                    return
+
+                for route in routes:
+                    reactor.configuration.announce_route(peers, route, service)
+                    peer_list = ', '.join(peers) if peers else 'all peers'
+                    self.log_message(f'route added to {peer_list} : {route.extensive()}')
+                    await asyncio.sleep(0)
+
+                # Wait for all peers to flush to wire (if sync mode)
+                if flush_events:
+                    await asyncio.gather(*[e.wait() for e in flush_events])
+
+                await reactor.processes.answer_done(service)
+            except ValueError as e:
+                error_msg = f'Failed to parse route: {e!s}'
                 self.log_failure(error_msg)
                 await reactor.processes.answer_error(service, error_msg)
-                return
-
-            # Register flush callbacks for connected peers (if sync mode)
-            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
-
-            if await refused(self, reactor, service, peers, routes):
-                return
-
-            for route in routes:
-                reactor.configuration.announce_route(peers, route, service)
-                peer_list = ', '.join(peers) if peers else 'all peers'
-                self.log_message(f'route added to {peer_list} : {route.extensive()}')
-                await asyncio.sleep(0)
-
-            # Wait for all peers to flush to wire (if sync mode)
-            if flush_events:
-                await asyncio.gather(*[e.wait() for e in flush_events])
-
-            await reactor.processes.answer_done(service)
-        except ValueError as e:
-            error_msg = f'Failed to parse route: {e!s}'
-            self.log_failure(error_msg)
-            await reactor.processes.answer_error(service, error_msg)
-        except IndexError as e:
-            error_msg = f'Invalid route syntax: {e!s}'
-            self.log_failure(error_msg)
-            await reactor.processes.answer_error(service, error_msg)
-        except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
-            self.log_exception(error_msg, e)
-            await reactor.processes.answer_error(service, error_msg)
+            except IndexError as e:
+                error_msg = f'Invalid route syntax: {e!s}'
+                self.log_failure(error_msg)
+                await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -208,50 +205,47 @@ def withdraw_route(
     self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
-        try:
-            # Parse sync mode and strip keywords
-            cmd, sync_mode = parse_sync_mode(command, reactor, service)
+        async with self.answering(reactor, service):
+            try:
+                # Parse sync mode and strip keywords
+                cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            routes = self.api_route(cmd, action)
-            if not routes:
-                error_msg = f'Could not parse route: {cmd}'
+                routes = self.api_route(cmd, action)
+                if not routes:
+                    error_msg = f'Could not parse route: {cmd}'
+                    self.log_failure(error_msg)
+                    await reactor.processes.answer_error(service, error_msg)
+                    return
+
+                # Register flush callbacks for connected peers (if sync mode)
+                flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+
+                for route in routes:
+                    # NextHop is a mandatory field (but we do not require it for withdraws)
+                    if route.nexthop is IP.NoNextHop:
+                        route = route.with_nexthop(IP.from_string('0.0.0.0'))
+
+                    if reactor.configuration.withdraw_route(peers, route):
+                        peer_list = ', '.join(peers) if peers else 'all peers'
+                        self.log_message(f'route removed from {peer_list} : {route.extensive()}')
+                    else:
+                        peer_list = ', '.join(peers) if peers else 'all peers'
+                        self.log_failure(f'route not found on {peer_list} : {route.extensive()}')
+                    await asyncio.sleep(0)
+
+                # Wait for all peers to flush to wire (if sync mode)
+                if flush_events:
+                    await asyncio.gather(*[e.wait() for e in flush_events])
+
+                await reactor.processes.answer_done(service)
+            except ValueError as e:
+                error_msg = f'Failed to parse route: {e!s}'
                 self.log_failure(error_msg)
                 await reactor.processes.answer_error(service, error_msg)
-                return
-
-            # Register flush callbacks for connected peers (if sync mode)
-            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
-
-            for route in routes:
-                # NextHop is a mandatory field (but we do not require it for withdraws)
-                if route.nexthop is IP.NoNextHop:
-                    route = route.with_nexthop(IP.from_string('0.0.0.0'))
-
-                if reactor.configuration.withdraw_route(peers, route):
-                    peer_list = ', '.join(peers) if peers else 'all peers'
-                    self.log_message(f'route removed from {peer_list} : {route.extensive()}')
-                else:
-                    peer_list = ', '.join(peers) if peers else 'all peers'
-                    self.log_failure(f'route not found on {peer_list} : {route.extensive()}')
-                await asyncio.sleep(0)
-
-            # Wait for all peers to flush to wire (if sync mode)
-            if flush_events:
-                await asyncio.gather(*[e.wait() for e in flush_events])
-
-            await reactor.processes.answer_done(service)
-        except ValueError as e:
-            error_msg = f'Failed to parse route: {e!s}'
-            self.log_failure(error_msg)
-            await reactor.processes.answer_error(service, error_msg)
-        except IndexError as e:
-            error_msg = f'Invalid route syntax: {e!s}'
-            self.log_failure(error_msg)
-            await reactor.processes.answer_error(service, error_msg)
-        except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
-            self.log_exception(error_msg, e)
-            await reactor.processes.answer_error(service, error_msg)
+            except IndexError as e:
+                error_msg = f'Invalid route syntax: {e!s}'
+                self.log_failure(error_msg)
+                await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -346,45 +340,42 @@ def announce_attributes(
     self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
-        try:
-            # Parse sync mode and strip keywords
-            cmd, sync_mode = parse_sync_mode(command, reactor, service)
+        async with self.answering(reactor, service):
+            try:
+                # Parse sync mode and strip keywords
+                cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            routes = self.api_attributes(cmd, peers, action)
-            if not routes:
-                self.log_failure(f'command could not parse route in : {cmd}')
-                await reactor.processes.answer_error(service)
-                return
+                routes = self.api_attributes(cmd, peers, action)
+                if not routes:
+                    self.log_failure(f'command could not parse route in : {cmd}')
+                    await reactor.processes.answer_error(service)
+                    return
 
-            if await refused(self, reactor, service, peers, routes):
-                return
+                if await refused(self, reactor, service, peers, routes):
+                    return
 
-            # Register flush callbacks for connected peers (if sync mode)
-            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+                # Register flush callbacks for connected peers (if sync mode)
+                flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
-            for route in routes:
-                reactor.configuration.announce_route(peers, route, service)
-                peer_list = ', '.join(peers) if peers else 'all peers'
-                self.log_message(f'route added to {peer_list} : {route.extensive()}')
-                await asyncio.sleep(0)
+                for route in routes:
+                    reactor.configuration.announce_route(peers, route, service)
+                    peer_list = ', '.join(peers) if peers else 'all peers'
+                    self.log_message(f'route added to {peer_list} : {route.extensive()}')
+                    await asyncio.sleep(0)
 
-            # Wait for all peers to flush to wire (if sync mode)
-            if flush_events:
-                await asyncio.gather(*[e.wait() for e in flush_events])
+                # Wait for all peers to flush to wire (if sync mode)
+                if flush_events:
+                    await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done(service)
-        except ValueError as e:
-            error_msg = f'Failed to parse route: {e!s}'
-            self.log_failure(error_msg)
-            await reactor.processes.answer_error(service, error_msg)
-        except IndexError as e:
-            error_msg = f'Invalid route syntax: {e!s}'
-            self.log_failure(error_msg)
-            await reactor.processes.answer_error(service, error_msg)
-        except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
-            self.log_exception(error_msg, e)
-            await reactor.processes.answer_error(service, error_msg)
+                await reactor.processes.answer_done(service)
+            except ValueError as e:
+                error_msg = f'Failed to parse route: {e!s}'
+                self.log_failure(error_msg)
+                await reactor.processes.answer_error(service, error_msg)
+            except IndexError as e:
+                error_msg = f'Invalid route syntax: {e!s}'
+                self.log_failure(error_msg)
+                await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True
@@ -394,46 +385,43 @@ def withdraw_attribute(
     self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool, action: str = ''
 ) -> bool:
     async def callback() -> None:
-        try:
-            # Parse sync mode and strip keywords
-            cmd, sync_mode = parse_sync_mode(command, reactor, service)
+        async with self.answering(reactor, service):
+            try:
+                # Parse sync mode and strip keywords
+                cmd, sync_mode = parse_sync_mode(command, reactor, service)
 
-            routes = self.api_attributes(cmd, peers, action)
-            if not routes:
-                self.log_failure(f'command could not parse route in : {cmd}')
-                await reactor.processes.answer_error(service)
-                return
+                routes = self.api_attributes(cmd, peers, action)
+                if not routes:
+                    self.log_failure(f'command could not parse route in : {cmd}')
+                    await reactor.processes.answer_error(service)
+                    return
 
-            # Register flush callbacks for connected peers (if sync mode)
-            flush_events = register_flush_callbacks(peers, reactor, sync_mode)
+                # Register flush callbacks for connected peers (if sync mode)
+                flush_events = register_flush_callbacks(peers, reactor, sync_mode)
 
-            for route in routes:
-                if reactor.configuration.withdraw_route(peers, route):
-                    peer_list = ', '.join(peers) if peers else 'all peers'
-                    self.log_message(f'route removed from {peer_list} : {route.extensive()}')
-                    await asyncio.sleep(0)
-                else:
-                    peer_list = ', '.join(peers) if peers else 'all peers'
-                    self.log_failure(f'route not found on {peer_list} : {route.extensive()}')
-                    await asyncio.sleep(0)
+                for route in routes:
+                    if reactor.configuration.withdraw_route(peers, route):
+                        peer_list = ', '.join(peers) if peers else 'all peers'
+                        self.log_message(f'route removed from {peer_list} : {route.extensive()}')
+                        await asyncio.sleep(0)
+                    else:
+                        peer_list = ', '.join(peers) if peers else 'all peers'
+                        self.log_failure(f'route not found on {peer_list} : {route.extensive()}')
+                        await asyncio.sleep(0)
 
-            # Wait for all peers to flush to wire (if sync mode)
-            if flush_events:
-                await asyncio.gather(*[e.wait() for e in flush_events])
+                # Wait for all peers to flush to wire (if sync mode)
+                if flush_events:
+                    await asyncio.gather(*[e.wait() for e in flush_events])
 
-            await reactor.processes.answer_done(service)
-        except ValueError as e:
-            error_msg = f'Failed to parse route: {e!s}'
-            self.log_failure(error_msg)
-            await reactor.processes.answer_error(service, error_msg)
-        except IndexError as e:
-            error_msg = f'Invalid route syntax: {e!s}'
-            self.log_failure(error_msg)
-            await reactor.processes.answer_error(service, error_msg)
-        except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
-            self.log_exception(error_msg, e)
-            await reactor.processes.answer_error(service, error_msg)
+                await reactor.processes.answer_done(service)
+            except ValueError as e:
+                error_msg = f'Failed to parse route: {e!s}'
+                self.log_failure(error_msg)
+                await reactor.processes.answer_error(service, error_msg)
+            except IndexError as e:
+                error_msg = f'Invalid route syntax: {e!s}'
+                self.log_failure(error_msg)
+                await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, command, callback())
     return True

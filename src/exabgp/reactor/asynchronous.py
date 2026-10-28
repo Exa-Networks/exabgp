@@ -14,6 +14,7 @@ from collections.abc import Callable
 from typing import Any, ClassVar
 
 from exabgp.logger import lazyexc, lazymsg, log
+from exabgp.util.isolated import isolated
 
 
 class ASYNC:
@@ -52,19 +53,31 @@ class ASYNC:
 
     def _notify_error(self, uid: str) -> None:
         """Notify the service that its callback failed."""
-        if self._error_handler:
-            try:
-                self._error_handler(uid)
-            except Exception as exc:
-                # This handler exists so a failed callback still sends done/error and the
-                # client does not hang. If the notification itself fails the client hangs
-                # anyway and there is nothing further to try, so the only thing left is to
-                # say which service it was. Swallowed rather than raised because this runs
-                # inside the asyncio loop, where an exception takes more than this client.
-                log.error(
-                    lazymsg('async.error.notification.failed uid={uid} error={error}', uid=uid, error=str(exc)),
-                    'reactor',
-                )
+        if not self._error_handler:
+            return
+
+        # This handler exists so a failed callback still sends done/error and the client
+        # does not hang. If the notification itself fails the client hangs anyway and there
+        # is nothing further to try, so the only thing left is to say which service it was.
+        # Not raised because this runs inside the asyncio loop, where an exception takes
+        # more than this client.
+        def unnotified(exc: Exception) -> None:
+            log.error(
+                lazymsg('async.error.notification.failed uid={uid} error={error}', uid=uid, error=str(exc)),
+                'reactor',
+            )
+
+        with isolated(unnotified):
+            self._error_handler(uid)
+
+    def _failed(self, uid: str) -> Callable[[Exception], None]:
+        """What is done with the failure of a callback: logged, and its service told."""
+
+        def report(exc: Exception) -> None:
+            log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
+            self._notify_error(uid)
+
+        return report
 
     def ready(self) -> bool:
         return not self._async
@@ -179,19 +192,17 @@ class ASYNC:
 
     async def _step(self, uid: str, callback: Any) -> bool:
         """Advance one callback once: whether it has more to do."""
-        try:
-            if inspect.iscoroutine(callback) or inspect.iscoroutinefunction(callback):
-                await self._run_command(callback)
+        with isolated(self._failed(uid)):
+            try:
+                if inspect.iscoroutine(callback) or inspect.iscoroutinefunction(callback):
+                    await self._run_command(callback)
+                    return False
+                # Old style: resume generator (may yield multiple times)
+                next(callback)
+                return True
+            except StopIteration:
                 return False
-            # Old style: resume generator (may yield multiple times)
-            next(callback)
-            return True
-        except StopIteration:
-            return False
-        except Exception as exc:
-            log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
-            self._notify_error(uid)
-            return False
+        return False
 
     async def _run_command(self, callback: Any) -> None:
         """Run a coroutine queued among generators as the coroutine branch would."""
@@ -208,7 +219,8 @@ class ASYNC:
         """Run every queued coroutine, including those the ones running schedule."""
         while self._async:
             uid, callback = self._async.popleft()
-            try:
+            # one callback which fails does not stop the next
+            with isolated(self._failed(uid)):
                 if inspect.iscoroutine(callback):
                     await callback
                 elif inspect.iscoroutinefunction(callback):
@@ -218,7 +230,3 @@ class ASYNC:
                     # Put it back and switch to generator processing
                     self._async.appendleft((uid, callback))
                     break
-            except Exception as exc:
-                log.error(lazyexc('async.callback.error uid={uid} error={exc}', exc, uid=uid), 'reactor')
-                self._notify_error(uid)
-                # Continue to next callback even if one fails

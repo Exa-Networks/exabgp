@@ -38,6 +38,7 @@ from exabgp.protocol.ip import IP
 # check_update
 from exabgp.reactor.api.response import Response
 from exabgp.rib.route import Route
+from exabgp.util.isolated import isolated
 
 # check_neighbor
 from exabgp.util.od import od
@@ -622,6 +623,11 @@ def _get_json_encoder(generic: bool = False) -> JSONEncoder:
     return encoder
 
 
+def _ungenerated(exc: Exception) -> None:
+    """The API command of an UPDATE could not be written: said, and its JSON shown instead."""
+    sys.stdout.write(f'# API command generation failed ({exc}), falling back to JSON\n')
+
+
 def display_update(neighbor: Neighbor, raw: bytes, generic: bool = False, command: bool = False) -> bool:
     update = _make_update(neighbor, raw)
     if not update:
@@ -632,16 +638,16 @@ def display_update(neighbor: Neighbor, raw: bytes, generic: bool = False, comman
         from exabgp.configuration.command import decode_to_api_command
 
         payload = raw[19:].hex()  # Skip BGP header
-        try:
+        cmds: list[str] = []
+        guard = isolated(_ungenerated)
+        with guard:
             cmds = decode_to_api_command(payload, neighbor)
-        except Exception as exc:
-            sys.stdout.write(f'# API command generation failed ({exc}), falling back to JSON\n')
-        else:
-            if cmds:
-                for cmd in cmds:
-                    sys.stdout.write(cmd)
-                    sys.stdout.write('\n')
-                return True
+        if cmds:
+            for cmd in cmds:
+                sys.stdout.write(cmd)
+                sys.stdout.write('\n')
+            return True
+        if not guard.failed:
             sys.stdout.write('# no API command generated, falling back to JSON\n')
 
     encoder = _get_json_encoder(generic=generic)

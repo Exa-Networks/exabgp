@@ -9,7 +9,7 @@ from exabgp.logger import lazymsg, log
 from exabgp.protocol.family import AFI
 
 from .connection import Connection
-from .error import MD5Error, TCPAOError
+from .error import MD5Error, NetworkError, TCPAOError
 
 # from .tcp import nagle
 from .tcp import asynchronous, bind, connect, create, md5, ready, sending_ttl, set_minimum_ttl, set_sending_ttl
@@ -76,7 +76,7 @@ class Outgoing(Connection):
                 bind(self.io, self.local, self.afi)
             asynchronous(self.io, self.peer)
             return None
-        except Exception as exc:
+        except (OSError, NetworkError) as exc:
             if self.io:
                 self.io.close()
             self.io = None
@@ -91,7 +91,7 @@ class Outgoing(Connection):
             assert self.io is not None  # Set by _setup() above
             connect(self.io, self.peer, self.port, self.afi, self.md5)
             return None
-        except Exception as exc:
+        except (OSError, NetworkError) as exc:
             if self.io:
                 self.io.close()
             self.io = None

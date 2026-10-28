@@ -10,12 +10,15 @@ from __future__ import annotations
 import asyncio
 import json
 import shlex
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.neighbor import NeighborTemplate
 from exabgp.logger import lazymsg, log
+from exabgp.reactor.api.answering import answering
 from exabgp.util.intvalue import json_number
+from exabgp.util.isolated import isolated
 
 if TYPE_CHECKING:
     from exabgp.bgp.neighbor import Neighbor
@@ -32,7 +35,7 @@ def list_neighbor(self: API, reactor: Reactor, service: str, peers: list[str], c
 
     async def callback() -> None:
         neighbors = []
-        try:
+        async with answering(reactor, service):
             for neighbor_name in reactor.configuration.neighbors.keys():
                 neighbor = reactor.configuration.neighbors.get(neighbor_name, None)
                 if not neighbor:
@@ -62,9 +65,6 @@ def list_neighbor(self: API, reactor: Reactor, service: str, peers: list[str], c
             for line in json.dumps(neighbors, default=json_number).split('\n'):
                 reactor.processes.write(service, line)
                 await asyncio.sleep(0)
-        except Exception as e:
-            await reactor.processes.answer_error(service, str(e))
-        else:
             await reactor.processes.answer_done(service)
 
     reactor.asynchronous.schedule(service, command, callback())
@@ -170,16 +170,13 @@ def _selected(peers: list[str], address: str, name: str, peer_address: str) -> b
 
 
 async def _show_configuration(reactor: Reactor, service: str, peers: list[str], address: str) -> None:
-    try:
+    async with answering(reactor, service):
         for name, neighbor in list(reactor.configuration.neighbors.items()):
             if not _selected(peers, address, name, str(neighbor.session.peer_address)):
                 continue
             for line in str(neighbor).split('\n'):
                 reactor.processes.write(service, line)
                 await asyncio.sleep(0)
-    except Exception as e:
-        await reactor.processes.answer_error(service, str(e))
-    else:
         await reactor.processes.answer_done(service)
 
 
@@ -196,20 +193,29 @@ def _neighbor_json(reactor: Reactor, name: str, neighbor: Neighbor) -> dict[str,
     }
 
 
+def _undescribed(reactor: Reactor, service: str, name: str) -> Callable[[Exception], None]:
+    """Report a neighbor `show` could not describe, in the output, and go on with the next."""
+
+    def report(exc: Exception) -> None:
+        reactor.processes.write(service, f'# Error processing neighbor {name}: {exc}')
+
+    return report
+
+
 async def _show_json(reactor: Reactor, service: str, peers: list[str], address: str) -> None:
     # every configured neighbor, connected or not, as tooling and completion want them
     shown = []
-    try:
+
+    def unlisted(exc: Exception) -> None:
+        reactor.processes.write(service, f'# Error accessing neighbors: {exc}')
+
+    with isolated(unlisted):
         for name, neighbor in list(reactor.configuration.neighbors.items()):
             if not _selected(peers, address, name, str(neighbor.session.peer_address)):
                 continue
-            try:
+            # one neighbor which can not be described does not hide the others
+            with isolated(_undescribed(reactor, service, name)):
                 shown.append(_neighbor_json(reactor, name, neighbor))
-            except Exception as e:
-                # one neighbor which can not be described does not hide the others
-                reactor.processes.write(service, f'# Error processing neighbor {name}: {e}')
-    except Exception as e:
-        reactor.processes.write(service, f'# Error accessing neighbors: {e}')
 
     for line in json.dumps(shown, default=json_number).split('\n'):
         reactor.processes.write(service, line)
@@ -238,7 +244,7 @@ def _show_extensive_down(reactor: Reactor, service: str, neighbor: Neighbor) -> 
 
 async def _show_extensive(reactor: Reactor, service: str, peers: list[str], address: str) -> None:
     # every configured neighbor, connected or not, so one which never connects is seen
-    try:
+    async with answering(reactor, service):
         for name, neighbor in list(reactor.configuration.neighbors.items()):
             if not _selected(peers, address, name, str(neighbor.session.peer_address)):
                 continue
@@ -250,14 +256,11 @@ async def _show_extensive(reactor: Reactor, service: str, peers: list[str], addr
                 if line:
                     reactor.processes.write(service, line)
                 await asyncio.sleep(0)
-    except Exception as e:
-        await reactor.processes.answer_error(service, str(e))
-    else:
         await reactor.processes.answer_done(service)
 
 
 async def _show_summary(reactor: Reactor, service: str, peers: list[str], address: str) -> None:
-    try:
+    async with answering(reactor, service):
         reactor.processes.write(service, NeighborTemplate.summary_header)
         for name in reactor.peers():
             if not _selected(peers, address, name, reactor.neighbor_ip(name)):
@@ -269,9 +272,6 @@ async def _show_summary(reactor: Reactor, service: str, peers: list[str], addres
                 if line:
                     reactor.processes.write(service, line)
                 await asyncio.sleep(0)
-    except Exception as e:
-        await reactor.processes.answer_error(service, str(e))
-    else:
         await reactor.processes.answer_done(service)
 
 

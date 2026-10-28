@@ -43,12 +43,13 @@ def _is_pip_install() -> bool:
     if _is_venv():
         return False
 
-    try:
-        from importlib.metadata import version as pkg_version
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version as pkg_version
 
+    try:
         pkg_version('exabgp')
         return True
-    except Exception:
+    except PackageNotFoundError:
         return False
 
 

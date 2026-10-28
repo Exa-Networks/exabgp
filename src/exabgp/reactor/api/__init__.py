@@ -25,6 +25,7 @@ from exabgp.reactor.api.dispatch.common import Handler
 from exabgp.reactor.api.dispatch.version import API_V6, dispatch_for
 from exabgp.reactor.api.tokeniser import formated
 from exabgp.rib.route import Route
+from exabgp.util.isolated import isolated_async
 
 # API command parsing constants
 API_REFRESH_TOKEN_COUNT = 2  # Refresh command requires 2 tokens (AFI and SAFI)
@@ -54,6 +55,16 @@ class API:
         error = str(self.configuration.error)
         report = f'{message}\nreason: {error}' if error else message
         log.error(lazyexc('api.failure report={report} error={exc}', exc, report=report), 'processes', level)
+
+    def answering(self, reactor: Reactor, service: str, failed: str = 'Unexpected error') -> isolated_async:
+        """The guard of a command: what fails unhandled is logged, and answered to its helper."""
+
+        async def report(exc: Exception) -> None:
+            message = f'{failed}: {type(exc).__name__}: {exc!s}'
+            self.log_exception(message, exc)
+            await reactor.processes.answer_error(service, message)
+
+        return isolated_async(report)
 
     @staticmethod
     def _answers_in_json(api_version: int, command: str) -> bool:

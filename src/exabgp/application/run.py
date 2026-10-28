@@ -21,6 +21,7 @@ from exabgp.application.unixsocket import unix_socket
 from exabgp.environment import ROOT, getenv
 from exabgp.reactor.api.response.answer import Answer
 from exabgp.reactor.network.error import error
+from exabgp.util.isolated import isolated
 
 # Timeout and buffer size constants
 PIPE_OPEN_TIMEOUT = 5  # Seconds to wait for pipe open
@@ -313,6 +314,11 @@ def cmdline(cmdarg: argparse.Namespace) -> None:
         cmdline_socket(socketname, sending)
 
 
+def _unexecuted(exc: Exception) -> None:
+    """A command of the batch which failed: said, and counted as an error by the caller."""
+    sys.stderr.write(f'Error executing command: {exc}\n')
+
+
 def cmdline_batch(
     batch_file: str, pipename: str, socketname: str, use_pipe_transport: bool, cmdarg: argparse.Namespace
 ) -> None:
@@ -357,15 +363,13 @@ def cmdline_batch(
             sending = CommandShortcuts.expand_shortcuts(command)
 
             # Execute via transport and count a daemon-side refusal as an error.
-            try:
+            successful = False
+            with isolated(_unexecuted):
                 if use_pipe_transport:
                     successful = cmdline_pipe(pipename, sending, exit_on_completion=False)
                 else:
                     successful = cmdline_socket(socketname, sending, exit_on_completion=False)
-                if not successful:
-                    errors += 1
-            except Exception as exc:
-                sys.stderr.write(f'Error executing command: {exc}\n')
+            if not successful:
                 errors += 1
 
     finally:

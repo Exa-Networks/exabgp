@@ -21,6 +21,7 @@ from queue import Empty, Queue
 from typing import Any
 
 from exabgp.cli.colors import Colors
+from exabgp.util.isolated import isolated
 
 
 def _rejection_reason(line: str) -> str:
@@ -32,6 +33,24 @@ def _rejection_reason(line: str) -> str:
     except (ValueError, KeyError, TypeError):
         # not the JSON the daemon writes: the line as it came is the best there is to show
         return line
+
+
+def _uncommunicative(exc: Exception) -> None:
+    """The first exchange with the daemon failed: said, in a box on stderr, and exit 1."""
+    sys.stderr.write('\n')
+    sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+    sys.stderr.write('║  ERROR: Failed to communicate with ExaBGP daemon       ║\n')
+    sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+    sys.stderr.write(f'║  {exc!s:<54} ║\n')
+    sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+    sys.stderr.write('\n')
+    sys.stderr.flush()
+    sys.exit(1)
+
+
+def _attempt_failed(exc: Exception) -> None:
+    sys.stderr.write(f' ✗ Failed: {exc}\n')
+    sys.stderr.flush()
 
 
 class PersistentSocketConnection:
@@ -106,146 +125,137 @@ class PersistentSocketConnection:
     def _initial_ping(self) -> None:
         """Send initial synchronous ping to get daemon UUID before starting background threads"""
         assert self.socket is not None, 'Socket must be connected before ping'
-        try:
-            # Send ping (v6 API format)
-            ping_cmd = f'session ping {self.client_uuid} {self.client_start_time}\n'
+        with isolated(_uncommunicative):
             try:
-                self.socket.sendall(ping_cmd.encode('utf-8'))
-            except (BrokenPipeError, ConnectionResetError):
-                # Connection rejected before we could send
-                sys.stderr.write('\n')
-                sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-                sys.stderr.write('║  ERROR: Connection rejected by daemon                  ║\n')
-                sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-                sys.stderr.write('║  The ExaBGP daemon closed the connection.              ║\n')
-                sys.stderr.write('║  Please check if ExaBGP is running properly.           ║\n')
-                sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
-                sys.stderr.write('\n')
-                sys.stderr.flush()
-                sys.exit(1)
-
-            # Read response synchronously
-            response_buffer = ''
-            while True:
-                data = self.socket.recv(4096)
-                if not data:
-                    # Connection closed by daemon
+                # Send ping (v6 API format)
+                ping_cmd = f'session ping {self.client_uuid} {self.client_start_time}\n'
+                try:
+                    self.socket.sendall(ping_cmd.encode('utf-8'))
+                except (BrokenPipeError, ConnectionResetError):
+                    # Connection rejected before we could send
                     sys.stderr.write('\n')
                     sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-                    sys.stderr.write('║  ERROR: Connection closed by daemon                    ║\n')
+                    sys.stderr.write('║  ERROR: Connection rejected by daemon                  ║\n')
                     sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-                    sys.stderr.write('║  The ExaBGP daemon closed the connection unexpectedly. ║\n')
+                    sys.stderr.write('║  The ExaBGP daemon closed the connection.              ║\n')
                     sys.stderr.write('║  Please check if ExaBGP is running properly.           ║\n')
                     sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
                     sys.stderr.write('\n')
                     sys.stderr.flush()
                     sys.exit(1)
 
-                response_buffer += data.decode('utf-8')
+                # Read response synchronously
+                response_buffer = ''
+                while True:
+                    data = self.socket.recv(4096)
+                    if not data:
+                        # Connection closed by daemon
+                        sys.stderr.write('\n')
+                        sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+                        sys.stderr.write('║  ERROR: Connection closed by daemon                    ║\n')
+                        sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+                        sys.stderr.write('║  The ExaBGP daemon closed the connection unexpectedly. ║\n')
+                        sys.stderr.write('║  Please check if ExaBGP is running properly.           ║\n')
+                        sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+                        sys.stderr.write('\n')
+                        sys.stderr.flush()
+                        sys.exit(1)
 
-                # Check if we have complete response (pong + done OR error + done)
-                if '\ndone\n' in response_buffer or response_buffer.endswith('done\n'):
-                    break
+                    response_buffer += data.decode('utf-8')
 
-            # Check for immediate rejection (error response from daemon)
-            if response_buffer.startswith(('error:', '{"error": ')):
-                # Extract and display the error message from daemon: text, or JSON for API 6
-                error_msg = _rejection_reason(response_buffer.split('\n')[0])
-                sys.stderr.write('\n')
-                sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-                sys.stderr.write('║  ERROR: Connection rejected by daemon                  ║\n')
-                sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-                sys.stderr.write(f'║  {error_msg:<54} ║\n')
-                sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
-                sys.stderr.write('\n')
-                sys.stderr.flush()
-                sys.exit(1)
-
-            # Parse response (handle both JSON and text formats)
-            lines = response_buffer.split('\n')
-            uuid_found = False
-            is_active = True
-
-            for line in lines:
-                line = line.strip()
-                if not line or line == 'done':
-                    continue
-
-                # Try JSON format first
-                if line.startswith('{'):
-                    # The daemon answers a ping in JSON or in text, and the reply may carry
-                    # other lines. A line which opens with a brace and does not parse is
-                    # neither form of pong, so the search simply moves on to the next line.
-                    # The break stays outside the suppress: mypyc cannot compile a break
-                    # inside the try/finally a with statement becomes.
-                    parsed: Any = None
-                    with contextlib.suppress(json.JSONDecodeError, ValueError):
-                        parsed = json.loads(line)
-                    if isinstance(parsed, dict) and 'pong' in parsed:
-                        self.daemon_uuid = parsed['pong']
-                        is_active = parsed.get('active', True)
-                        uuid_found = True
+                    # Check if we have complete response (pong + done OR error + done)
+                    if '\ndone\n' in response_buffer or response_buffer.endswith('done\n'):
                         break
 
-                # Try text format
-                if line.startswith('pong '):
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        self.daemon_uuid = parts[1]
-                        uuid_found = True
-
-                        # Check if we're active
-                        if len(parts) >= 3 and parts[2].startswith('active='):
-                            is_active = parts[2].split('=')[1].lower() == 'true'
-                        break
-
-            if uuid_found:
-                if not is_active:
-                    # Connection established but marked as not active
+                # Check for immediate rejection (error response from daemon)
+                if response_buffer.startswith(('error:', '{"error": ')):
+                    # Extract and display the error message from daemon: text, or JSON for API 6
+                    error_msg = _rejection_reason(response_buffer.split('\n')[0])
                     sys.stderr.write('\n')
                     sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-                    sys.stderr.write('║  ERROR: Connection not active                          ║\n')
+                    sys.stderr.write('║  ERROR: Connection rejected by daemon                  ║\n')
                     sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-                    sys.stderr.write('║  The daemon rejected this CLI session.                 ║\n')
-                    sys.stderr.write('║  Please check daemon logs for details.                 ║\n')
+                    sys.stderr.write(f'║  {error_msg:<54} ║\n')
                     sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
                     sys.stderr.write('\n')
                     sys.stderr.flush()
                     sys.exit(1)
 
-                # Print connection message BEFORE returning (so it appears before banner)
-                sys.stderr.write(f'✓ Connected to ExaBGP daemon (UUID: {self.daemon_uuid})\n')
+                # Parse response (handle both JSON and text formats)
+                lines = response_buffer.split('\n')
+                uuid_found = False
+                is_active = True
+
+                for line in lines:
+                    line = line.strip()
+                    if not line or line == 'done':
+                        continue
+
+                    # Try JSON format first
+                    if line.startswith('{'):
+                        # The daemon answers a ping in JSON or in text, and the reply may carry
+                        # other lines. A line which opens with a brace and does not parse is
+                        # neither form of pong, so the search simply moves on to the next line.
+                        # The break stays outside the suppress: mypyc cannot compile a break
+                        # inside the try/finally a with statement becomes.
+                        parsed: Any = None
+                        with contextlib.suppress(json.JSONDecodeError, ValueError):
+                            parsed = json.loads(line)
+                        if isinstance(parsed, dict) and 'pong' in parsed:
+                            self.daemon_uuid = parsed['pong']
+                            is_active = parsed.get('active', True)
+                            uuid_found = True
+                            break
+
+                    # Try text format
+                    if line.startswith('pong '):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            self.daemon_uuid = parts[1]
+                            uuid_found = True
+
+                            # Check if we're active
+                            if len(parts) >= 3 and parts[2].startswith('active='):
+                                is_active = parts[2].split('=')[1].lower() == 'true'
+                            break
+
+                if uuid_found:
+                    if not is_active:
+                        # Connection established but marked as not active
+                        sys.stderr.write('\n')
+                        sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+                        sys.stderr.write('║  ERROR: Connection not active                          ║\n')
+                        sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+                        sys.stderr.write('║  The daemon rejected this CLI session.                 ║\n')
+                        sys.stderr.write('║  Please check daemon logs for details.                 ║\n')
+                        sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+                        sys.stderr.write('\n')
+                        sys.stderr.flush()
+                        sys.exit(1)
+
+                    # Print connection message BEFORE returning (so it appears before banner)
+                    sys.stderr.write(f'✓ Connected to ExaBGP daemon (UUID: {self.daemon_uuid})\n')
+                    sys.stderr.flush()
+
+                # Switch to non-blocking for background threads
+                self.socket.settimeout(0.1)
+
+            except TimeoutError:
+                sys.stderr.write('\n')
+                sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+                sys.stderr.write('║  ERROR: Connection timeout                             ║\n')
+                sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+                sys.stderr.write('║  ExaBGP daemon is not responding to commands.          ║\n')
+                sys.stderr.write('║                                                        ║\n')
+                sys.stderr.write('║  Possible causes:                                      ║\n')
+                sys.stderr.write('║    • The daemon is busy or overloaded                  ║\n')
+                sys.stderr.write('║    • The daemon crashed after accepting connection     ║\n')
+                sys.stderr.write('║                                                        ║\n')
+                sys.stderr.write('║  Please check if ExaBGP is running properly.           ║\n')
+                sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+                sys.stderr.write('\n')
                 sys.stderr.flush()
-
-            # Switch to non-blocking for background threads
-            self.socket.settimeout(0.1)
-
-        except TimeoutError:
-            sys.stderr.write('\n')
-            sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-            sys.stderr.write('║  ERROR: Connection timeout                             ║\n')
-            sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-            sys.stderr.write('║  ExaBGP daemon is not responding to commands.          ║\n')
-            sys.stderr.write('║                                                        ║\n')
-            sys.stderr.write('║  Possible causes:                                      ║\n')
-            sys.stderr.write('║    • The daemon is busy or overloaded                  ║\n')
-            sys.stderr.write('║    • The daemon crashed after accepting connection     ║\n')
-            sys.stderr.write('║                                                        ║\n')
-            sys.stderr.write('║  Please check if ExaBGP is running properly.           ║\n')
-            sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
-            sys.stderr.write('\n')
-            sys.stderr.flush()
-            sys.exit(1)
-        except Exception as exc:
-            sys.stderr.write('\n')
-            sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-            sys.stderr.write('║  ERROR: Failed to communicate with ExaBGP daemon       ║\n')
-            sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-            sys.stderr.write(f'║  {exc!s:<54} ║\n')
-            sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
-            sys.stderr.write('\n')
-            sys.stderr.flush()
-            sys.exit(1)
+                sys.exit(1)
 
     def _setup_signal_handler(self) -> None:
         """Setup signal handler for graceful shutdown from background threads"""
@@ -302,96 +312,95 @@ class PersistentSocketConnection:
 
         # Try to reconnect
         for attempt in range(1, max_attempts + 1):
-            try:
-                sys.stderr.write(f'  Attempt {attempt}/{max_attempts}...')
-                sys.stderr.flush()
-
-                # Wait before retry (except first attempt)
-                if attempt > 1:
-                    time.sleep(retry_delay)
-
-                # Reconnect
-                self._connect()
-
-                # Send initial ping to verify connection and get new UUID
-                self._initial_ping()
-
-                # Success!
-                sys.stderr.write(' ✓ Reconnected successfully!\n')
-
-                # Print reconnection message in green
-                reconnect_msg = f'✓ Reconnected to ExaBGP daemon (UUID: {self.daemon_uuid})'
-                if Colors.supports_color():
-                    sys.stderr.write(f'{Colors.GREEN}{reconnect_msg}{Colors.RESET}\n\n')
-                else:
-                    sys.stderr.write(f'{reconnect_msg}\n\n')
-                sys.stderr.flush()
-
-                # Redraw prompt with preserved input
-                # readline.redisplay() from background thread doesn't work - must manually redraw
+            # an attempt which fails is said, and the next one made
+            with isolated(_attempt_failed):
                 try:
-                    import readline
-
-                    # Get what user was typing
-                    buffer = readline.get_line_buffer()
-
-                    # Manually redraw using ANSI codes
-                    # \r - return to start of line
-                    # \033[K - clear from cursor to end of line
-                    sys.stdout.write('\r\033[K')
-
-                    # Write prompt with color
-                    if Colors.supports_color():
-                        prompt = f'{Colors.BOLD}{Colors.GREEN}exabgp{Colors.RESET}{Colors.BOLD}>{Colors.RESET} '
-                    else:
-                        prompt = 'exabgp> '
-                    sys.stdout.write(prompt)
-
-                    # Write the preserved input
-                    sys.stdout.write(buffer)
-
-                    # CRITICAL: Flush to make it appear immediately
-                    sys.stdout.flush()
-
-                except Exception:
-                    # Readline not available or failed, just write prompt manually
-                    sys.stdout.write('\r\033[K')
-                    if Colors.supports_color():
-                        prompt = f'{Colors.BOLD}{Colors.GREEN}exabgp{Colors.RESET}{Colors.BOLD}>{Colors.RESET} '
-                    else:
-                        prompt = 'exabgp> '
-                    sys.stdout.write(prompt)
-                    sys.stdout.flush()
-
-                # Success - resume health monitoring
-                self.reconnecting = False
-
-                # A reconnect runs on the reader thread. It must only resend the
-                # bytes here and then return to _read_loop, because send_command()
-                # waits on a queue which this same reader thread fills.
-                with self.lock:
-                    needs_retry = self._command_needs_retry
-                    last_cmd = self._last_command
-
-                if needs_retry and last_cmd:
-                    sys.stderr.write(f'⟳ Retrying command: {last_cmd[:50]}...\n')
+                    sys.stderr.write(f'  Attempt {attempt}/{max_attempts}...')
                     sys.stderr.flush()
+
+                    # Wait before retry (except first attempt)
+                    if attempt > 1:
+                        time.sleep(retry_delay)
+
+                    # Reconnect
+                    self._connect()
+
+                    # Send initial ping to verify connection and get new UUID
+                    self._initial_ping()
+
+                    # Success!
+                    sys.stderr.write(' ✓ Reconnected successfully!\n')
+
+                    # Print reconnection message in green
+                    reconnect_msg = f'✓ Reconnected to ExaBGP daemon (UUID: {self.daemon_uuid})'
+                    if Colors.supports_color():
+                        sys.stderr.write(f'{Colors.GREEN}{reconnect_msg}{Colors.RESET}\n\n')
+                    else:
+                        sys.stderr.write(f'{reconnect_msg}\n\n')
+                    sys.stderr.flush()
+
+                    # Redraw prompt with preserved input
+                    # readline.redisplay() from background thread doesn't work - must manually redraw
+                    try:
+                        import readline
+
+                        # Get what user was typing
+                        buffer = readline.get_line_buffer()
+
+                        # Manually redraw using ANSI codes
+                        # \r - return to start of line
+                        # \033[K - clear from cursor to end of line
+                        sys.stdout.write('\r\033[K')
+
+                        # Write prompt with color
+                        if Colors.supports_color():
+                            prompt = f'{Colors.BOLD}{Colors.GREEN}exabgp{Colors.RESET}{Colors.BOLD}>{Colors.RESET} '
+                        else:
+                            prompt = 'exabgp> '
+                        sys.stdout.write(prompt)
+
+                        # Write the preserved input
+                        sys.stdout.write(buffer)
+
+                        # CRITICAL: Flush to make it appear immediately
+                        sys.stdout.flush()
+
+                    except (ImportError, OSError):
+                        # Readline not available or failed, just write prompt manually
+                        sys.stdout.write('\r\033[K')
+                        if Colors.supports_color():
+                            prompt = f'{Colors.BOLD}{Colors.GREEN}exabgp{Colors.RESET}{Colors.BOLD}>{Colors.RESET} '
+                        else:
+                            prompt = 'exabgp> '
+                        sys.stdout.write(prompt)
+                        sys.stdout.flush()
+
+                    # Success - resume health monitoring
+                    self.reconnecting = False
+
+                    # A reconnect runs on the reader thread. It must only resend the
+                    # bytes here and then return to _read_loop, because send_command()
+                    # waits on a queue which this same reader thread fills.
                     with self.lock:
-                        if self.socket is None:
-                            raise ConnectionError('reconnected socket disappeared before command retry')
-                        self.socket.sendall((last_cmd + '\n').encode('utf-8'))
+                        needs_retry = self._command_needs_retry
+                        last_cmd = self._last_command
 
-                return True
+                    if needs_retry and last_cmd:
+                        sys.stderr.write(f'⟳ Retrying command: {last_cmd[:50]}...\n')
+                        sys.stderr.flush()
+                        with self.lock:
+                            if self.socket is None:
+                                raise ConnectionError('reconnected socket disappeared before command retry')
+                            self.socket.sendall((last_cmd + '\n').encode('utf-8'))
 
-            except SystemExit:
-                # _initial_ping raised SystemExit with user-friendly error (e.g., another client active)
-                # Stop all activity before exiting
-                self.reconnecting = False
-                self.running = False
-                raise
-            except Exception as exc:
-                sys.stderr.write(f' ✗ Failed: {exc}\n')
-                sys.stderr.flush()
+                    return True
+
+                except SystemExit:
+                    # _initial_ping raised SystemExit with user-friendly error (e.g., another client active)
+                    # Stop all activity before exiting
+                    self.reconnecting = False
+                    self.running = False
+                    raise
 
         # All attempts failed - stop all activity
         self.reconnecting = False
@@ -415,47 +424,24 @@ class PersistentSocketConnection:
         while self.running:
             if self.socket is None:
                 break
-            try:
-                data = self.socket.recv(4096)
-                if not data:
-                    # Socket closed - attempt reconnection
-                    if not self._reconnect():
-                        # Reconnection failed - signal main thread to exit
-                        self._signal_shutdown()
-                        break
-                    # Reconnected successfully, reset buffer and continue
-                    self.response_buffer = ''
-                    continue
-
-                self.response_buffer += data.decode('utf-8')
-
-                # Parse complete responses (ending with 'done\n' or 'error\n')
-                # 'done' marks successful completion, 'error' marks error completion
-                completion_found = (
-                    '\ndone\n' in self.response_buffer
-                    or self.response_buffer.endswith('done\n')
-                    or '\nerror\n' in self.response_buffer
-                    or self.response_buffer.endswith('error\n')
-                )
-
-                while completion_found:
-                    # Try 'done' first, then 'error'
-                    if '\ndone\n' in self.response_buffer:
-                        response, self.response_buffer = self.response_buffer.split('\ndone\n', 1)
-                    elif self.response_buffer.endswith('done\n'):
-                        response = self.response_buffer[:-5]  # Remove 'done\n'
+            guard = isolated(self._lost)
+            with guard:
+                try:
+                    data = self.socket.recv(4096)
+                    if not data:
+                        # Socket closed - attempt reconnection
+                        if not self._reconnect():
+                            # Reconnection failed - signal main thread to exit
+                            self._signal_shutdown()
+                            break
+                        # Reconnected successfully, reset buffer and continue
                         self.response_buffer = ''
-                    elif '\nerror\n' in self.response_buffer:
-                        response, self.response_buffer = self.response_buffer.split('\nerror\n', 1)
-                    elif self.response_buffer.endswith('error\n'):
-                        response = self.response_buffer[:-6]  # Remove 'error\n'
-                        self.response_buffer = ''
-                    else:
-                        break  # Should not reach here
+                        continue
 
-                    response = response.strip()
+                    self.response_buffer += data.decode('utf-8')
 
-                    # Check for next completion marker
+                    # Parse complete responses (ending with 'done\n' or 'error\n')
+                    # 'done' marks successful completion, 'error' marks error completion
                     completion_found = (
                         '\ndone\n' in self.response_buffer
                         or self.response_buffer.endswith('done\n')
@@ -463,48 +449,78 @@ class PersistentSocketConnection:
                         or self.response_buffer.endswith('error\n')
                     )
 
-                    # Determine if this is a ping response (health check)
-                    # Ping responses can be in two formats:
-                    # - Text: "pong <uuid> active=true"
-                    # - JSON: {"pong": "<uuid>", "active": true}
-                    is_ping_response = False
-                    if response.startswith('pong '):
-                        # Text format ping response
-                        is_ping_response = True
-                    elif response.startswith('{') and '"pong"' in response and '"active"' in response:
-                        # JSON format ping response (check for both pong and active keys)
-                        # Only a reply we can parse is claimed as a health check. Anything
-                        # else goes to the user as the answer to the command they typed,
-                        # which is where an unreadable reply belongs.
-                        with contextlib.suppress(json.JSONDecodeError, ValueError):
-                            parsed = json.loads(response)
-                            if isinstance(parsed, dict) and 'pong' in parsed and 'active' in parsed:
-                                is_ping_response = True
+                    while completion_found:
+                        # Try 'done' first, then 'error'
+                        if '\ndone\n' in self.response_buffer:
+                            response, self.response_buffer = self.response_buffer.split('\ndone\n', 1)
+                        elif self.response_buffer.endswith('done\n'):
+                            response = self.response_buffer[:-5]  # Remove 'done\n'
+                            self.response_buffer = ''
+                        elif '\nerror\n' in self.response_buffer:
+                            response, self.response_buffer = self.response_buffer.split('\nerror\n', 1)
+                        elif self.response_buffer.endswith('error\n'):
+                            response = self.response_buffer[:-6]  # Remove 'error\n'
+                            self.response_buffer = ''
+                        else:
+                            break  # Should not reach here
 
-                    # Route response based on whether we're waiting for user command
-                    with self.lock:
-                        waiting_for_user = self.pending_user_command
+                        response = response.strip()
 
-                    if is_ping_response and not waiting_for_user:
-                        # Health check ping response - handle internally
-                        self._handle_ping_response(response)
-                    else:
-                        # User command response (or ping response during user command - route to user)
-                        self.pending_responses.put(response)
+                        # Check for next completion marker
+                        completion_found = (
+                            '\ndone\n' in self.response_buffer
+                            or self.response_buffer.endswith('done\n')
+                            or '\nerror\n' in self.response_buffer
+                            or self.response_buffer.endswith('error\n')
+                        )
 
-            except TimeoutError:
-                # No data available, continue
-                continue
-            except Exception as exc:
-                if self.running:
-                    sys.stderr.write(f'\n\nERROR: Connection to ExaBGP lost: {exc}\n')
-                    sys.stderr.write('Press Enter to exit...\n')
-                    sys.stderr.flush()
-                    # Gracefully shut down the CLI (allows readline cleanup)
-                    # Note: Main thread is blocked in input(), so we set flag
-                    # and user must press Enter to trigger loop check
-                    self.running = False
+                        # Determine if this is a ping response (health check)
+                        # Ping responses can be in two formats:
+                        # - Text: "pong <uuid> active=true"
+                        # - JSON: {"pong": "<uuid>", "active": true}
+                        is_ping_response = False
+                        if response.startswith('pong '):
+                            # Text format ping response
+                            is_ping_response = True
+                        elif response.startswith('{') and '"pong"' in response and '"active"' in response:
+                            # JSON format ping response (check for both pong and active keys)
+                            # Only a reply we can parse is claimed as a health check. Anything
+                            # else goes to the user as the answer to the command they typed,
+                            # which is where an unreadable reply belongs.
+                            with contextlib.suppress(json.JSONDecodeError, ValueError):
+                                parsed = json.loads(response)
+                                if isinstance(parsed, dict) and 'pong' in parsed and 'active' in parsed:
+                                    is_ping_response = True
+
+                        # Route response based on whether we're waiting for user command
+                        with self.lock:
+                            waiting_for_user = self.pending_user_command
+
+                        if is_ping_response and not waiting_for_user:
+                            # Health check ping response - handle internally
+                            self._handle_ping_response(response)
+                        else:
+                            # User command response (or ping response during user command - route to user)
+                            self.pending_responses.put(response)
+
+                except TimeoutError:
+                    # No data available, continue
+                    continue
+            if guard.failed:
                 break
+
+    def _lost(self, exc: Exception) -> None:
+        """The connection broke under the reader: said once, and the CLI told to stop.
+
+        The main thread is blocked in input(), so the flag is all it can be given: the user
+        presses Enter and the loop sees it (and readline is cleaned up on the way out).
+        """
+        if not self.running:
+            return
+        sys.stderr.write(f'\n\nERROR: Connection to ExaBGP lost: {exc}\n')
+        sys.stderr.write('Press Enter to exit...\n')
+        sys.stderr.flush()
+        self.running = False
 
     def _health_monitor(self) -> None:
         """Background thread: send periodic pings"""

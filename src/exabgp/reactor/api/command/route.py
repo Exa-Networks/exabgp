@@ -142,7 +142,7 @@ def routes_list(
     """
 
     async def callback() -> None:
-        try:
+        async with self.answering(reactor, service, 'Failed to list routes'):
             afi_filter, safi_filter = _parse_family_filter(afi_safi_words)
 
             routes_data = []
@@ -170,10 +170,6 @@ def routes_list(
 
             await reactor.processes.answer(service, routes_data)
             await reactor.processes.answer_done(service)
-        except Exception as e:
-            error_msg = f'Failed to list routes: {type(e).__name__}: {e!s}'
-            self.log_exception(error_msg, e)
-            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, f'routes list {" ".join(afi_safi_words)}', callback())
     return True
@@ -197,63 +193,60 @@ def routes_add(
     """
 
     async def callback() -> None:
-        try:
-            if not command.strip():
-                await reactor.processes.answer_error(service, 'routes add requires route specification')
-                return
+        async with self.answering(reactor, service):
+            try:
+                if not command.strip():
+                    await reactor.processes.answer_error(service, 'routes add requires route specification')
+                    return
 
-            # Parse route specification
-            routes = self.api_route(command, 'announce')
-            if not routes:
-                error_msg = f'Could not parse route: {command}'
-                self.log_failure(error_msg)
-                await reactor.processes.answer_error(service, error_msg)
-                return
+                # Parse route specification
+                routes = self.api_route(command, 'announce')
+                if not routes:
+                    error_msg = f'Could not parse route: {command}'
+                    self.log_failure(error_msg)
+                    await reactor.processes.answer_error(service, error_msg)
+                    return
 
-            results = []
-            for route in routes:
-                # Validate route before announcing (early feedback)
-                error = unsendable(reactor, peers, route)
-                if error:
+                results = []
+                for route in routes:
+                    # Validate route before announcing (early feedback)
+                    error = unsendable(reactor, peers, route)
+                    if error:
+                        peer_list = ', '.join(peers) if peers else 'all peers'
+                        self.log_failure(f'invalid route for {peer_list}: {error}')
+                        results.append(
+                            {
+                                'route': route.extensive(),
+                                'success': False,
+                                'error': error,
+                            }
+                        )
+                        continue
+
+                    # Use indexed injection to get index
+                    index, success = reactor.configuration.announce_route_indexed(peers, route, service)
+
                     peer_list = ', '.join(peers) if peers else 'all peers'
-                    self.log_failure(f'invalid route for {peer_list}: {error}')
+                    if success:
+                        self.log_message(f'route added to {peer_list} : {route.extensive()}')
+                    else:
+                        self.log_message(f'route added (no matching peers) : {route.extensive()}')
+
                     results.append(
                         {
+                            'index': index.hex(),
                             'route': route.extensive(),
-                            'success': False,
-                            'error': error,
+                            'success': success,
                         }
                     )
-                    continue
+                    await asyncio.sleep(0)
 
-                # Use indexed injection to get index
-                index, success = reactor.configuration.announce_route_indexed(peers, route, service)
+                await _answer_results(reactor, service, results, 'success')
 
-                peer_list = ', '.join(peers) if peers else 'all peers'
-                if success:
-                    self.log_message(f'route added to {peer_list} : {route.extensive()}')
-                else:
-                    self.log_message(f'route added (no matching peers) : {route.extensive()}')
-
-                results.append(
-                    {
-                        'index': index.hex(),
-                        'route': route.extensive(),
-                        'success': success,
-                    }
-                )
-                await asyncio.sleep(0)
-
-            await _answer_results(reactor, service, results, 'success')
-
-        except ValueError as e:
-            error_msg = f'Failed to parse route: {e!s}'
-            self.log_failure(error_msg)
-            await reactor.processes.answer_error(service, error_msg)
-        except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
-            self.log_exception(error_msg, e)
-            await reactor.processes.answer_error(service, error_msg)
+            except ValueError as e:
+                error_msg = f'Failed to parse route: {e!s}'
+                self.log_failure(error_msg)
+                await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, f'routes add {command}', callback())
     return True
@@ -279,67 +272,64 @@ def routes_remove(
     """
 
     async def callback() -> None:
-        try:
-            if not command.strip():
-                await reactor.processes.answer_error(service, 'routes remove requires route spec or index')
-                return
-
-            # Check if removing by index
-            if command.strip().startswith('index '):
-                index_hex = command.strip()[6:].strip()
-                try:
-                    index = bytes.fromhex(index_hex)
-                except ValueError:
-                    await reactor.processes.answer_error(service, f'Invalid hex index: {index_hex}')
+        async with self.answering(reactor, service):
+            try:
+                if not command.strip():
+                    await reactor.processes.answer_error(service, 'routes remove requires route spec or index')
                     return
 
-                success = reactor.configuration.withdraw_route_by_index(peers, index)
-                if success:
+                # Check if removing by index
+                if command.strip().startswith('index '):
+                    index_hex = command.strip()[6:].strip()
+                    try:
+                        index = bytes.fromhex(index_hex)
+                    except ValueError:
+                        await reactor.processes.answer_error(service, f'Invalid hex index: {index_hex}')
+                        return
+
+                    success = reactor.configuration.withdraw_route_by_index(peers, index)
+                    if success:
+                        peer_list = ', '.join(peers) if peers else 'all peers'
+                        self.log_message(f'route removed from {peer_list} by index: {index_hex}')
+                    else:
+                        self.log_failure(f'route not found for index: {index_hex}')
+
+                    await _answer_results(reactor, service, [{'removed': success, 'index': index_hex}], 'removed')
+                    return
+
+                # Remove by route specification
+                routes = self.api_route(command, 'withdraw')
+                if not routes:
+                    error_msg = f'Could not parse route: {command}'
+                    self.log_failure(error_msg)
+                    await reactor.processes.answer_error(service, error_msg)
+                    return
+
+                results = []
+                for route in routes:
+                    success = reactor.configuration.withdraw_route(peers, route)
+
                     peer_list = ', '.join(peers) if peers else 'all peers'
-                    self.log_message(f'route removed from {peer_list} by index: {index_hex}')
-                else:
-                    self.log_failure(f'route not found for index: {index_hex}')
+                    if success:
+                        self.log_message(f'route removed from {peer_list} : {route.extensive()}')
+                    else:
+                        self.log_failure(f'route not found on {peer_list} : {route.extensive()}')
 
-                await _answer_results(reactor, service, [{'removed': success, 'index': index_hex}], 'removed')
-                return
+                    results.append(
+                        {
+                            'removed': success,
+                            'route': route.extensive(),
+                            'index': route.index().hex(),
+                        }
+                    )
+                    await asyncio.sleep(0)
 
-            # Remove by route specification
-            routes = self.api_route(command, 'withdraw')
-            if not routes:
-                error_msg = f'Could not parse route: {command}'
+                await _answer_results(reactor, service, results, 'removed')
+
+            except ValueError as e:
+                error_msg = f'Failed to parse route: {e!s}'
                 self.log_failure(error_msg)
                 await reactor.processes.answer_error(service, error_msg)
-                return
-
-            results = []
-            for route in routes:
-                success = reactor.configuration.withdraw_route(peers, route)
-
-                peer_list = ', '.join(peers) if peers else 'all peers'
-                if success:
-                    self.log_message(f'route removed from {peer_list} : {route.extensive()}')
-                else:
-                    self.log_failure(f'route not found on {peer_list} : {route.extensive()}')
-
-                results.append(
-                    {
-                        'removed': success,
-                        'route': route.extensive(),
-                        'index': route.index().hex(),
-                    }
-                )
-                await asyncio.sleep(0)
-
-            await _answer_results(reactor, service, results, 'removed')
-
-        except ValueError as e:
-            error_msg = f'Failed to parse route: {e!s}'
-            self.log_failure(error_msg)
-            await reactor.processes.answer_error(service, error_msg)
-        except Exception as e:
-            error_msg = f'Unexpected error: {type(e).__name__}: {e!s}'
-            self.log_exception(error_msg, e)
-            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, f'routes remove {command}', callback())
     return True

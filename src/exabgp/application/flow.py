@@ -21,6 +21,7 @@ from types import FrameType
 from typing import Any, ClassVar
 
 from exabgp.environment.parsing import boolean
+from exabgp.util.isolated import isolated
 
 
 class ACL:
@@ -180,6 +181,11 @@ class ACL:
         sys.stderr.flush()
 
 
+def _unprocessed(exc: Exception) -> None:
+    """A message the helper could not act on: said, and the next one read."""
+    print(f'flow: error processing message: {exc}', file=sys.stderr)
+
+
 def main() -> None:
     signal.signal(signal.SIGTERM, ACL.end)
 
@@ -199,44 +205,43 @@ def main() -> None:
             ACL.end()
             return
 
-        try:
-            if not line or 'shutdown' in line:
+        with isolated(_unprocessed):
+            try:
+                if not line or 'shutdown' in line:
+                    ACL.end()
+                buffered += line
+                opened += line.count('{')
+                opened -= line.count('}')
+                if opened:
+                    continue
+                line, buffered = buffered, ''
+                message = json.loads(line)
+
+                if message['type'] == 'state' and message['neighbor']['state'] == 'down':
+                    ACL.clear()
+                    continue
+
+                if message['type'] != 'update':
+                    continue
+
+                update = message['neighbor']['message']['update']
+
+                if 'announce' in update:
+                    flow = update['announce']['ipv4 flow']
+                    # The RFC allows both encoding
+                    flow = flow['no-nexthop'][0] if 'no-nexthop' in flow else flow[0]
+
+                    community = update['attribute']['extended-community'][0]
+                    ACL.insert(flow, community)
+                    continue
+
+                if 'withdraw' in update:
+                    flow = update['withdraw']['ipv4 flow'][0]
+                    ACL.remove(flow)
+                    continue
+
+            except KeyboardInterrupt:
                 ACL.end()
-            buffered += line
-            opened += line.count('{')
-            opened -= line.count('}')
-            if opened:
-                continue
-            line, buffered = buffered, ''
-            message = json.loads(line)
-
-            if message['type'] == 'state' and message['neighbor']['state'] == 'down':
-                ACL.clear()
-                continue
-
-            if message['type'] != 'update':
-                continue
-
-            update = message['neighbor']['message']['update']
-
-            if 'announce' in update:
-                flow = update['announce']['ipv4 flow']
-                # The RFC allows both encoding
-                flow = flow['no-nexthop'][0] if 'no-nexthop' in flow else flow[0]
-
-                community = update['attribute']['extended-community'][0]
-                ACL.insert(flow, community)
-                continue
-
-            if 'withdraw' in update:
-                flow = update['withdraw']['ipv4 flow'][0]
-                ACL.remove(flow)
-                continue
-
-        except KeyboardInterrupt:
-            ACL.end()
-        except Exception as exc:
-            print(f'flow: error processing message: {exc}', file=sys.stderr)
 
 
 if __name__ == '__main__':

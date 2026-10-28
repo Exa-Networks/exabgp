@@ -25,6 +25,7 @@ import errno
 import re
 import time
 import uuid
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any, ClassVar
 
 if TYPE_CHECKING:
@@ -46,6 +47,7 @@ from exabgp.reactor.listener import Listener
 from exabgp.reactor.peer import Peer
 from exabgp.reactor.timing import LoopTimer
 from exabgp.rib.route import Route
+from exabgp.util.isolated import isolated
 from exabgp.version import version
 
 
@@ -127,6 +129,15 @@ class Reactor:
         log.critical(lazymsg('process.lost processes={p} action=terminate', p=','.join(lost)), 'reactor')
         # the same way out as a SIGTERM, which closes every session and leaves the loop
         self.signal.received = Signal.SHUTDOWN
+
+    @staticmethod
+    def _task_failed(key: str) -> Callable[[Exception], None]:
+        """Log what ended the task of the peer `key`."""
+
+        def report(exc: Exception) -> None:
+            log.error(lazyexc('peer.task.failed peer={key} error={exc}', exc, key=key), 'reactor')
+
+        return report
 
     def _withdraw_helper_routes(self, service: str) -> None:
         """Withdraw every route a helper which exited had announced (issue #304).
@@ -233,11 +244,9 @@ class Reactor:
             peer = self._peers[key]
             if peer._async_task is not None:
                 if peer._async_task.done():
-                    try:
-                        # Check if task raised an exception
+                    # a task which failed is reported, and removed as one which completed
+                    with isolated(self._task_failed(key)):
                         peer._async_task.result()
-                    except Exception as exc:
-                        log.error(lazyexc('peer.task.failed peer={key} error={exc}', exc, key=key), 'reactor')
                     completed_peers.append(key)
 
         # Remove completed peers

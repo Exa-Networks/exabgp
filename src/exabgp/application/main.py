@@ -224,7 +224,7 @@ def main() -> int | None:
 
     try:
         cmdarg = parser.parse_args()
-    except Exception as exc:
+    except argparse.ArgumentError as exc:
         sys.exit(exc.args[-1])
 
     options = vars(cmdarg)

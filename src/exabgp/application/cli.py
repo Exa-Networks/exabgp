@@ -22,6 +22,7 @@ from exabgp.cli.formatter import OutputFormatter
 from exabgp.cli.history import HistoryTracker
 from exabgp.cli.persistent_connection import PersistentSocketConnection
 from exabgp.environment import ROOT
+from exabgp.util.isolated import isolated
 
 
 class InteractiveCLI:
@@ -131,45 +132,57 @@ class InteractiveCLI:
         self._print_banner()
 
         while self.running:
-            try:
-                # Display prompt and read command
-                prompt = self.formatter.format_prompt()
-                line = input(prompt).strip()
+            with isolated(self._unexpected):
+                try:
+                    # Display prompt and read command
+                    prompt = self.formatter.format_prompt()
+                    line = input(prompt).strip()
 
-                # Check if background thread signaled shutdown
-                if not self.connected():
-                    break
+                    # Check if background thread signaled shutdown
+                    if not self.connected():
+                        break
 
-                # Skip empty lines
-                if not line:
-                    continue
+                    # Skip empty lines
+                    if not line:
+                        continue
 
-                # Handle built-in REPL commands
-                if self._handle_builtin(line):
-                    continue
+                    # Handle built-in REPL commands
+                    if self._handle_builtin(line):
+                        continue
 
-                # Send to ExaBGP
-                self._execute_command(line)
+                    # Send to ExaBGP
+                    self._execute_command(line)
 
-            except EOFError:
-                # Ctrl+D pressed
-                sys.stdout.write('\n')  # Newline after ^D
-                self._quit()
-                break
-            except KeyboardInterrupt:
-                # Ctrl+C pressed OR signal from background thread, which clears the
-                # connection's running flag, not ours, before interrupting input()
-                if not self.connected():
-                    # Signal from background thread - exit gracefully
-                    sys.stdout.write('\n')  # Newline
-                    break
-                else:
-                    # User pressed Ctrl+C - quit normally
-                    sys.stdout.write('\n')  # Newline after ^C
+                except EOFError:
+                    # Ctrl+D pressed
+                    sys.stdout.write('\n')  # Newline after ^D
                     self._quit()
                     break
-            except Exception as exc:
-                sys.stdout.write(f'{self.formatter.format_error(f"Unexpected error: {exc}")}\n')
+                except KeyboardInterrupt:
+                    # Ctrl+C pressed OR signal from background thread, which clears the
+                    # connection's running flag, not ours, before interrupting input()
+                    if not self.connected():
+                        # Signal from background thread - exit gracefully
+                        sys.stdout.write('\n')  # Newline
+                        break
+                    else:
+                        # User pressed Ctrl+C - quit normally
+                        sys.stdout.write('\n')  # Newline after ^C
+                        self._quit()
+                        break
+
+    def _unexpected(self, exc: Exception) -> None:
+        """A line which failed in a way nothing handles: said, and the next line read."""
+        sys.stdout.write(f'{self.formatter.format_error(f"Unexpected error: {exc}")}\n')
+
+    def _failed(self, command: str) -> Callable[[Exception], None]:
+        """A command which failed: said, and recorded as failed in the history."""
+
+        def report(exc: Exception) -> None:
+            sys.stdout.write(f'{self.formatter.format_error(str(exc))}\n')
+            self.history_tracker.record_command(command, success=False)
+
+        return report
 
     def _print_banner(self) -> None:
         """Print welcome banner with ASCII art and version"""
@@ -347,7 +360,7 @@ Display Format (optional prefix):
         Args:
             command: Command to execute
         """
-        try:
+        with isolated(self._failed(command)):
             tokens = command.split()
 
             # Check for display format prefix (json/text at START)
@@ -440,10 +453,6 @@ Display Format (optional prefix):
 
             # Record command success (got valid response)
             self.history_tracker.record_command(command, success=True)
-        except Exception as exc:
-            sys.stdout.write(f'{self.formatter.format_error(str(exc))}\n')
-            # Record command failure (exception during execution)
-            self.history_tracker.record_command(command, success=False)
 
     def _quit(self) -> None:
         """Exit the REPL"""
@@ -474,6 +483,27 @@ Display Format (optional prefix):
                     sys.stdout.write(f'{Colors.DIM}{i:4d}{Colors.RESET}  {item}\n')
                 else:
                     sys.stdout.write(f'{i:4d}  {item}\n')
+
+
+def _unconnected(title: str) -> Callable[[Exception], None]:
+    """Say, in a box on stderr, that the daemon could not be reached, and why."""
+
+    def report(exc: Exception) -> None:
+        sys.stderr.write('\n')
+        sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
+        sys.stderr.write(f'║  ERROR: {title:<46} ║\n')
+        sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
+        sys.stderr.write(f'║  {exc!s:<54} ║\n')
+        sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
+        sys.stderr.write('\n')
+        sys.stderr.flush()
+
+    return report
+
+
+def _cli_error(exc: Exception) -> None:
+    sys.stderr.write(f'CLI error: {exc}\n')
+    sys.stderr.flush()
 
 
 def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool, cmdarg: argparse.Namespace) -> int:
@@ -543,31 +573,14 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
         socket_path = sockets[0]
 
         # Create persistent connection with health monitoring
-        try:
-            connection = PersistentSocketConnection(socket_path)
-        except OSError as exc:
-            # Socket connection errors
-            sys.stderr.write('\n')
-            sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-            sys.stderr.write('║  ERROR: Could not connect to ExaBGP daemon             ║\n')
-            sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-            sys.stderr.write(f'║  {exc!s:<54} ║\n')
-            sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
-            sys.stderr.write('\n')
-            sys.stderr.flush()
-            return 1
-        except SystemExit:
-            # Raised by _initial_ping() with user-friendly error already shown
-            raise
-        except Exception as exc:
-            sys.stderr.write('\n')
-            sys.stderr.write('╔════════════════════════════════════════════════════════╗\n')
-            sys.stderr.write('║  ERROR: Unexpected error connecting to ExaBGP          ║\n')
-            sys.stderr.write('╠════════════════════════════════════════════════════════╣\n')
-            sys.stderr.write(f'║  {exc!s:<54} ║\n')
-            sys.stderr.write('╚════════════════════════════════════════════════════════╝\n')
-            sys.stderr.write('\n')
-            sys.stderr.flush()
+        # _initial_ping() raises SystemExit having said why, which goes through untouched
+        with isolated(_unconnected('Unexpected error connecting to ExaBGP')):
+            try:
+                connection = PersistentSocketConnection(socket_path)
+            except OSError as exc:
+                _unconnected('Could not connect to ExaBGP daemon')(exc)
+                return 1
+        if connection is None:
             return 1
 
         def send_command_persistent(command: str) -> str:
@@ -583,12 +596,10 @@ def cmdline_interactive(pipename: str, socketname: str, use_pipe_transport: bool
 
     # Create and run interactive CLI
     try:
-        cli = InteractiveCLI(send_func, daemon_uuid=daemon_uuid, connected=connected)
-        cli.run()
-        return 0
-    except Exception as exc:
-        sys.stderr.write(f'CLI error: {exc}\n')
-        sys.stderr.flush()
+        with isolated(_cli_error):
+            cli = InteractiveCLI(send_func, daemon_uuid=daemon_uuid, connected=connected)
+            cli.run()
+            return 0
         return 1
     finally:
         # Clean up persistent connection if it exists

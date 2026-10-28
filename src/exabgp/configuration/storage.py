@@ -148,10 +148,8 @@ def safe_backup(filepath: str | Path) -> str | None:
 
         return str(backup_path)
 
-    except ConfigurationStorageError:
-        raise
-    except Exception as e:
-        raise ConfigurationStorageError(f'Failed to create backup: {e}')
+    except OSError as e:
+        raise ConfigurationStorageError(f'Failed to create backup: {e}') from None
     finally:
         if tmp_path:
             # We reach here holding the ConfigurationStorageError which says the backup
@@ -212,10 +210,8 @@ def safe_write(filepath: str | Path, content: str | bytes) -> None:
         os.rename(tmp_path, filepath)
         tmp_path = None  # Successfully moved, don't cleanup
 
-    except ConfigurationStorageError:
-        raise
-    except Exception as e:
-        raise ConfigurationStorageError(f'Failed to write config: {e}')
+    except OSError as e:
+        raise ConfigurationStorageError(f'Failed to write config: {e}') from None
     finally:
         # Clean up temp file if it still exists (error case)
         if tmp_path:

@@ -7,7 +7,8 @@ from typing import Any
 def _istty(std: Any) -> bool:
     try:
         return bool(std.isatty())
-    except Exception:
+    # no isatty, or a stream already closed
+    except (AttributeError, OSError, ValueError):
         return False
 
 

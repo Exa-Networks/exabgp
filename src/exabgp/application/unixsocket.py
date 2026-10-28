@@ -28,6 +28,7 @@ from enum import Enum
 
 from exabgp.reactor.network.error import error
 from exabgp.util.backlog import Backlog
+from exabgp.util.isolated import isolated
 
 kb = 1024
 mb = kb * 1024
@@ -832,19 +833,20 @@ class Control:
         """Run the socket server."""
         if not self.init():
             sys.exit(1)
-        try:
-            self.loop()
-        except KeyboardInterrupt:
-            self.cleanup()
-            sys.exit(0)
-        except Exception as exc:
-            sys.stderr.write(str(exc))
-            sys.stderr.write('\n\n')
-            sys.stderr.flush()
-            traceback.print_exc(file=sys.stderr)
-            sys.stderr.flush()
-            self.cleanup()
-            sys.exit(1)
+        with isolated(self._crashed):
+            try:
+                self.loop()
+            except KeyboardInterrupt:
+                self.cleanup()
+                sys.exit(0)
+
+    def _crashed(self, exc: Exception) -> None:
+        """The loop failed: what and where on stderr, the pipes and sockets cleaned, exit 1."""
+        sys.stderr.write(f'{exc}\n\n')
+        sys.stderr.write(''.join(traceback.format_exception(exc)))
+        sys.stderr.flush()
+        self.cleanup()
+        sys.exit(1)
 
 
 def main(location: str = '') -> None:

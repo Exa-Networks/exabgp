@@ -49,6 +49,8 @@ import types
 from collections.abc import Callable, Sequence
 from typing import TextIO
 
+from exabgp.util.isolated import isolated
+
 __author__ = 'Marius Gedminas (marius@gedmin.as)'
 __copyright__ = 'Copyright (c) 2008-2015 Marius Gedminas and contributors'
 __license__ = 'MIT'
@@ -958,11 +960,14 @@ def _long_typename(obj: object) -> str:
 
 
 def _safe_repr(obj: object) -> str:
-    try:
+    # Any repr() may raise, and one label is not worth losing the whole graph over.
+    with isolated(_unrepresentable):
         return _short_repr(obj)
-    except Exception:
-        # Any repr() may raise, and one label is not worth losing the whole graph over.
-        return '(unrepresentable)'
+    return '(unrepresentable)'
+
+
+def _unrepresentable(exc: Exception) -> None:
+    """A repr which raised: the object is labelled as such, the error has nothing to add."""
 
 
 def _short_repr(obj: object) -> str:

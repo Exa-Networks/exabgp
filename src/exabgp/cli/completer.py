@@ -28,6 +28,7 @@ from exabgp.cli.fuzzy import FuzzyMatcher
 from exabgp.cli.history import HistoryTracker
 from exabgp.configuration.grammar.describe import route_help
 from exabgp.reactor.api.command.registry import CommandRegistry
+from exabgp.util.isolated import isolated
 
 
 @dataclass
@@ -230,7 +231,7 @@ class CommandCompleter:
         Returns:
             Next matching completion or None (with space suffix if unambiguous)
         """
-        try:
+        with isolated(self._completion_failed):
             # Get the full line buffer to understand context
             line = readline.get_line_buffer()
             begin = readline.get_begidx()
@@ -257,17 +258,19 @@ class CommandCompleter:
             if len(self.matches) == 1 and state == 0 and not match.startswith('\b'):
                 return match + ' '
             return match
-        except Exception as exc:
-            # readline throws away anything a completion function raises, so a broken
-            # completion path would spend the whole session offering nothing and never
-            # say why. Report it once: this is called for every TAB and every '?', and
-            # repeating the message would make the prompt unusable.
-            if not self._completion_failure_reported:
-                self._completion_failure_reported = True
-                sys.stderr.write(f'\ncommand completion failed and offered nothing: {exc!r}\n')
-                sys.stderr.write('further completion failures in this session will not be reported\n')
-                sys.stderr.flush()
-            return None
+        return None
+
+    def _completion_failed(self, exc: Exception) -> None:
+        """readline throws away anything a completion function raises, so a broken
+        completion path would spend the whole session offering nothing and never say why.
+        Report it once: this is called for every TAB and every '?', and repeating the
+        message would make the prompt unusable."""
+        if self._completion_failure_reported:
+            return
+        self._completion_failure_reported = True
+        sys.stderr.write(f'\ncommand completion failed and offered nothing: {exc!r}\n')
+        sys.stderr.write('further completion failures in this session will not be reported\n')
+        sys.stderr.flush()
 
     def _refresh_matches(self, text: str, line: str, begin: int, end: int, show_help: bool) -> bool:
         """Rebuild the match list for a newly started completion.

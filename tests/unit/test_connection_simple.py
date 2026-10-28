@@ -123,7 +123,7 @@ class TestConnectionBasics:
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         mock_sock = Mock()
-        mock_sock.close.side_effect = Exception('Close failed')
+        mock_sock.close.side_effect = OSError('Close failed')
         conn.io = mock_sock
 
         # Should not raise, just set io to None

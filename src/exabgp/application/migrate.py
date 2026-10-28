@@ -622,7 +622,7 @@ def cmdline_conf(cmdarg: argparse.Namespace) -> int:
 
     try:
         content = config_path.read_text()
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         sys.stderr.write(f'Error reading file: {e}\n')
         return 1
 

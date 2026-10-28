@@ -171,12 +171,8 @@ def group_end(self: API, reactor: Reactor, service: str, peers: list[str], comma
 
     # Schedule async processing of all buffered commands
     async def callback() -> None:
-        try:
+        async with self.answering(reactor, service, 'group processing failed'):
             await _process_group(self, reactor, service, buffered, use_json)
-        except Exception as e:
-            error_msg = f'group processing failed: {type(e).__name__}: {e!s}'
-            log.error(lazymsg('api.group.error error={e}', e=error_msg), 'api')
-            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, 'group end', callback())
     return True
@@ -210,12 +206,8 @@ def group_inline(self: API, reactor: Reactor, service: str, peers: list[str], co
 
     # Schedule async processing
     async def callback() -> None:
-        try:
+        async with self.answering(reactor, service, 'group processing failed'):
             await _process_group(self, reactor, service, buffered, use_json)
-        except Exception as e:
-            error_msg = f'group processing failed: {type(e).__name__}: {e!s}'
-            log.error(lazymsg('api.group.error error={e}', e=error_msg), 'api')
-            await reactor.processes.answer_error(service, error_msg)
 
     reactor.asynchronous.schedule(service, 'group inline', callback())
     return True
@@ -388,7 +380,8 @@ def _parse_routes(api: API, command: str, action: str = 'announce') -> list[Rout
         else:
             # Unknown type, try as generic route
             return api.api_route(command, action=action)
-    except Exception:
+    except (ValueError, IndexError):
+        # a command which is not a route: the parsers raise these, a ConfigError among them
         return []
 
 

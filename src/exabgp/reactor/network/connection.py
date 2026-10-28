@@ -110,7 +110,7 @@ class Connection:
         try:
             self.io.close()
             log.warning(lazymsg('connection.closed peer={p}', p=self.peer), source=self.session())
-        except Exception as exc:
+        except OSError as exc:
             log.warning(lazymsg('connection.close.error error={e}', e=exc), source=self.session())
         self.io = None
 

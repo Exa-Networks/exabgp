@@ -18,6 +18,7 @@ from exabgp.bgp.neighbor.capability import GracefulRestartConfig
 from exabgp.configuration.grammar.tree.resolve import api as flatten_api
 from exabgp.protocol.family import AFI, SAFI, FamilyTuple
 from exabgp.protocol.ip import IP
+from exabgp.reactor.api.answering import answering_sync
 
 if TYPE_CHECKING:
     from exabgp.reactor.api import API
@@ -36,8 +37,8 @@ def _parse_ip(value: str) -> IP:
     """Parse IP address string into IP object."""
     try:
         return IP.from_string(value)
-    except Exception as e:
-        raise ValueError(f'invalid IP address {value}: {e}')
+    except (ValueError, OSError) as e:
+        raise ValueError(f'invalid IP address {value}: {e}') from None
 
 
 def _parse_asn(value: str) -> ASN:
@@ -290,7 +291,7 @@ def neighbor_create(self: API, reactor: Reactor, service: str, peers: list[str],
         peer create 127.0.0.2 local-address 127.0.0.1 local-as 65001 peer-as 65002 router-id 2.2.2.2 api peer-lifecycle
         peer create 10.0.0.2 local-address 10.0.0.1 local-as 65001 peer-as 65002 api proc1 api proc2
     """
-    try:
+    with answering_sync(reactor, service):
         # command contains params after "peer create" stripped (e.g., "127.0.0.2 local-address 127.0.0.1 ...")
         # Add "peer " prefix for _parse_neighbor_params which expects "neighbor <ip>" or "peer <ip>" format
         line = 'peer ' + command.strip()
@@ -300,46 +301,40 @@ def neighbor_create(self: API, reactor: Reactor, service: str, peers: list[str],
 
         # Build Neighbor object with API process configuration
         neighbor = _build_neighbor(params, api_processes)
-    except Exception as e:
-        # Log full exception for debugging
-        import sys
-        import traceback
+        return _create_peer(reactor, service, neighbor)
+    return False
 
-        sys.stderr.write(f'Exception in neighbor_create: {e}\n')
-        traceback.print_exc(file=sys.stderr)
-        sys.stderr.flush()
-        reactor.processes.answer_error_sync(service, f'Unexpected error: {type(e).__name__}: {e}')
-        return False
 
-    try:
-        # Check if peer already exists - use name() as key (string, matches dict types)
-        key = neighbor.name()
-        if key in reactor._peers:
-            reactor.processes.answer_error_sync(service, f'peer already exists: {neighbor.name()}')
+def _create_peer(reactor: Reactor, service: str, neighbor: Neighbor) -> bool:
+    """Add the dynamic peer of `neighbor`, answering `service` either way."""
+    with answering_sync(reactor, service, 'neighbor create error'):
+        try:
+            # Check if peer already exists - use name() as key (string, matches dict types)
+            key = neighbor.name()
+            if key in reactor._peers:
+                reactor.processes.answer_error_sync(service, f'peer already exists: {neighbor.name()}')
+                return False
+
+            # Add to configuration (for reload persistence - though we'll mark as dynamic)
+            reactor.configuration.neighbors[key] = neighbor
+
+            # Create and register Peer (import here to avoid circular import)
+            from exabgp.reactor.peer import Peer
+
+            peer = Peer(neighbor, reactor)
+            reactor._peers[key] = peer
+
+            # Mark as dynamic peer (ephemeral - removed on reload)
+            reactor._dynamic_peers.add(key)
+
+            # Success response - use _answer_sync() for sync context
+            reactor.processes._answer_sync(service, 'done')
+            return True
+        except ValueError as e:
+            reactor.processes.answer_error_sync(service, f'neighbor create failed: {e}')
             return False
 
-        # Add to configuration (for reload persistence - though we'll mark as dynamic)
-        reactor.configuration.neighbors[key] = neighbor
-
-        # Create and register Peer (import here to avoid circular import)
-        from exabgp.reactor.peer import Peer
-
-        peer = Peer(neighbor, reactor)
-        reactor._peers[key] = peer
-
-        # Mark as dynamic peer (ephemeral - removed on reload)
-        reactor._dynamic_peers.add(key)
-
-        # Success response - use _answer_sync() for sync context
-        reactor.processes._answer_sync(service, 'done')
-        return True
-
-    except ValueError as e:
-        reactor.processes.answer_error_sync(service, f'neighbor create failed: {e}')
-        return False
-    except Exception as e:
-        reactor.processes.answer_error_sync(service, f'neighbor create error: {e}')
-        return False
+    return False
 
 
 def peer_delete(self: API, reactor: Reactor, service: str, peers: list[str], command: str, use_json: bool) -> bool:
@@ -357,43 +352,42 @@ def peer_delete(self: API, reactor: Reactor, service: str, peers: list[str], com
     Note: Only dynamic peers created via 'peer create' should be deleted.
           Deleting static (configured) peers may cause issues on reload.
     """
-    try:
-        # peers list already parsed by dispatcher
-        if not peers:
-            # No matches - return error
-            reactor.processes.answer_error_sync(service, 'no neighbors match the selector')
+    with answering_sync(reactor, service, 'neighbor delete error'):
+        try:
+            # peers list already parsed by dispatcher
+            if not peers:
+                # No matches - return error
+                reactor.processes.answer_error_sync(service, 'no neighbors match the selector')
+                return False
+
+            # Delete each matched peer
+            deleted_count = 0
+            for peer_name in peers:
+                if peer_name in reactor._peers:
+                    # Get peer object
+                    peer = reactor._peers[peer_name]
+
+                    # Stop peer (sends NOTIFICATION, graceful shutdown)
+                    peer.remove()
+
+                    # Remove from reactor
+                    del reactor._peers[peer_name]
+
+                    # Remove from configuration
+                    if peer_name in reactor.configuration.neighbors:
+                        del reactor.configuration.neighbors[peer_name]
+
+                    # Remove from dynamic peers tracking
+                    if peer_name in reactor._dynamic_peers:
+                        reactor._dynamic_peers.remove(peer_name)
+
+                    deleted_count += 1
+
+            # Success response
+            reactor.processes.answer_done_sync(service)
+            return True
+
+        except ValueError as e:
+            reactor.processes.answer_error_sync(service, f'neighbor delete failed: {e}')
             return False
-
-        # Delete each matched peer
-        deleted_count = 0
-        for peer_name in peers:
-            if peer_name in reactor._peers:
-                # Get peer object
-                peer = reactor._peers[peer_name]
-
-                # Stop peer (sends NOTIFICATION, graceful shutdown)
-                peer.remove()
-
-                # Remove from reactor
-                del reactor._peers[peer_name]
-
-                # Remove from configuration
-                if peer_name in reactor.configuration.neighbors:
-                    del reactor.configuration.neighbors[peer_name]
-
-                # Remove from dynamic peers tracking
-                if peer_name in reactor._dynamic_peers:
-                    reactor._dynamic_peers.remove(peer_name)
-
-                deleted_count += 1
-
-        # Success response
-        reactor.processes.answer_done_sync(service)
-        return True
-
-    except ValueError as e:
-        reactor.processes.answer_error_sync(service, f'neighbor delete failed: {e}')
-        return False
-    except Exception as e:
-        reactor.processes.answer_error_sync(service, f'neighbor delete error: {e}')
-        return False
+    return False

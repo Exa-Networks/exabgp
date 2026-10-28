@@ -58,6 +58,7 @@ from exabgp.reactor.protocol import Protocol, UpdateSender
 from exabgp.reactor.timing import LoopTimer, timed_async
 from exabgp.rib.route import Route
 from exabgp.util.enumeration import TriState
+from exabgp.util.isolated import isolated
 
 # RFC 4724 4.1 and 4.2 pull in opposite directions on the very first OPEN a process sends.
 # If this run follows an earlier one we are the Restarting Speaker and MUST set the Restart
@@ -1431,84 +1432,84 @@ class Peer:
             log.error(lazyexc('async.mainloop.exception error={exc}', exc), self.id())
             raise
 
+    def _unhandled(self, exc: Exception) -> None:
+        """A failure of the peer loop no handler names: logged, and the session reset."""
+        log.error(lazymsg('peer.exception.unhandled error={msg}', msg=format_exception(exc)), 'reactor')
+        self._reset()
+
     async def _run(self) -> None:
         """Main peer loop using async/await"""
-        try:
-            await self._establish()
-            await self._main()
+        # what no handler below names is not filtered either: logged, and the peer reset
+        with isolated(self._unhandled):
+            try:
+                await self._establish()
+                await self._main()
 
-        # CONNECTION FAILURE
-        except NetworkError as network:
-            # Check if maximum connection attempts reached
-            if not self.can_reconnect():
-                log.debug(
-                    lazymsg('peer.connection.max_attempts_reached'),
-                    self.id(),
+            # CONNECTION FAILURE
+            except NetworkError as network:
+                # Check if maximum connection attempts reached
+                if not self.can_reconnect():
+                    log.debug(
+                        lazymsg('peer.connection.max_attempts_reached'),
+                        self.id(),
+                    )
+                    self.stop()
+
+                self._reset('closing connection', network)
+                return
+
+            # NOTIFY THE PEER OF AN ERROR
+            except Notify as notify:
+                # RFC 5492 3: a peering refused for want of a capability "SHOULD NOT be
+                # re-established automatically", the peer would only be refused again
+                if (notify.code, notify.subcode) == Notify.UNSUPPORTED_CAPABILITY:
+                    self.stop()
+                if self.proto:
+                    try:
+                        await self.proto.new_notification(notify)
+                    except (NetworkError, ProcessError):
+                        log.error(lazymsg('notification.send.failed'), self.id())
+                    self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
+                else:
+                    self._reset()
+
+                if not self.can_reconnect():
+                    log.debug(
+                        lazymsg('peer.connection.max_attempts_reached'),
+                        self.id(),
+                    )
+                    self.stop()
+
+                return
+
+            # THE PEER NOTIFIED US OF AN ERROR
+            except NotificationReceived as notification:
+                if (notification.code, notification.subcode) == UNSUPPORTED_OPTIONAL_PARAMETER:
+                    self.capabilities_refused = True
+                    log.warning(lazymsg('open.capabilities.refused action=retry-without-capabilities'), self.id())
+                # Check if maximum connection attempts reached
+                if not self.can_reconnect():
+                    log.debug(
+                        lazymsg('peer.connection.max_attempts_reached'),
+                        self.id(),
+                    )
+                    self.stop()
+
+                self._reset(
+                    f'notification received ({notification.code},{notification.subcode})',
+                    notification,
                 )
-                self.stop()
+                return
 
-            self._reset('closing connection', network)
-            return
+            # PROBLEM WRITING TO OUR FORKED PROCESSES
+            except ProcessError as process:
+                self._reset('process problem', process)
+                return
 
-        # NOTIFY THE PEER OF AN ERROR
-        except Notify as notify:
-            # RFC 5492 3: a peering refused for want of a capability "SHOULD NOT be
-            # re-established automatically", the peer would only be refused again
-            if (notify.code, notify.subcode) == Notify.UNSUPPORTED_CAPABILITY:
-                self.stop()
-            if self.proto:
-                try:
-                    await self.proto.new_notification(notify)
-                except (NetworkError, ProcessError):
-                    log.error(lazymsg('notification.send.failed'), self.id())
-                self._reset(f'notification sent ({notify.code},{notify.subcode})', notify)
-            else:
-                self._reset()
-
-            if not self.can_reconnect():
-                log.debug(
-                    lazymsg('peer.connection.max_attempts_reached'),
-                    self.id(),
-                )
-                self.stop()
-
-            return
-
-        # THE PEER NOTIFIED US OF AN ERROR
-        except NotificationReceived as notification:
-            if (notification.code, notification.subcode) == UNSUPPORTED_OPTIONAL_PARAMETER:
-                self.capabilities_refused = True
-                log.warning(lazymsg('open.capabilities.refused action=retry-without-capabilities'), self.id())
-            # Check if maximum connection attempts reached
-            if not self.can_reconnect():
-                log.debug(
-                    lazymsg('peer.connection.max_attempts_reached'),
-                    self.id(),
-                )
-                self.stop()
-
-            self._reset(
-                f'notification received ({notification.code},{notification.subcode})',
-                notification,
-            )
-            return
-
-        # PROBLEM WRITING TO OUR FORKED PROCESSES
-        except ProcessError as process:
-            self._reset('process problem', process)
-            return
-
-        # ....
-        except Interrupted as interruption:
-            self._reset(f'connection received before we could fully establish one ({interruption})')
-            return
-
-        # UNHANDLED PROBLEMS
-        except Exception as exc:
-            # Those messages can not be filtered in purpose
-            log.error(lazymsg('peer.exception.unhandled error={msg}', msg=format_exception(exc)), 'reactor')
-            self._reset()
-            return
+            # ....
+            except Interrupted as interruption:
+                self._reset(f'connection received before we could fully establish one ({interruption})')
+                return
 
     async def run(self) -> None:
         """Entry point for peer - runs the peer FSM using async/await"""
