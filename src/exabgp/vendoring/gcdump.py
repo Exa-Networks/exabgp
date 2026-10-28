@@ -20,7 +20,7 @@ def dump() -> None:
     for x in gc.garbage:
         s = str(x)
         if len(s) > MAX_DESCRIPTION_LENGTH:
-            s = '%s...' % s[:MAX_DESCRIPTION_LENGTH]
+            s = f'{s[:MAX_DESCRIPTION_LENGTH]}...'
 
         print('::', s)
         print('		type:', type(x))

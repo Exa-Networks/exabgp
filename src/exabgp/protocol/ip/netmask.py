@@ -58,7 +58,7 @@ class NetMask(Resource):
 
     def __str__(self) -> str:
         # return self.names.get(self,'%d' % int(self))
-        return '%d' % int(self)
+        return f'{int(self):d}'
 
     names: ClassVar[dict[int, str]] = {
         32: '255.255.255.255',

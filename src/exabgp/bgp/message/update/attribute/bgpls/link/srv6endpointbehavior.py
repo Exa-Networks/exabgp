@@ -74,10 +74,8 @@ class Srv6EndpointBehavior(BaseLS):
         return cls(data)
 
     def __str__(self) -> str:
-        return 'srv6-endpoint-behavior [0x%s, flags: %s, algorithm: %d]' % (
-            self.endpoint_behavior,
-            self.flags,
-            self.algorithm,
+        return (
+            f'srv6-endpoint-behavior [0x{self.endpoint_behavior}, flags: {self.flags}, algorithm: {self.algorithm:d}]'
         )
 
     @property

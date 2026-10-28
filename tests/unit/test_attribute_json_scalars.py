@@ -113,7 +113,7 @@ def test_anything_else_is_quoted(text: str) -> None:
 @pytest.mark.parametrize('text', JSON_INTEGERS + NOT_JSON_INTEGERS)
 def test_whatever_it_emits_parses_as_json(text: str) -> None:
     """The property the two tests above exist for, asserted over both lists at once."""
-    line = '{"med": %s}' % AttributeCollection._as_json_scalar(text)
+    line = f'{{"med": {AttributeCollection._as_json_scalar(text)}}}'
 
     json.loads(line)
 

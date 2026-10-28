@@ -28,7 +28,7 @@ class TestTCPAOStructPacking:
         assert padding == 120  # 128 - 8
 
         # Full packed sockaddr should be 128 bytes
-        sockaddr = pack('HH4s%dx' % padding, socket.AF_INET, 0, b'\x00' * 4)
+        sockaddr = pack(f'HH4s{padding:d}x', socket.AF_INET, 0, b'\x00' * 4)
         assert len(sockaddr) == SS_MAXSIZE
 
     def test_sockaddr_storage_ipv6_size(self) -> None:
@@ -39,7 +39,7 @@ class TestTCPAOStructPacking:
         padding = SS_MAXSIZE - ipv6_base_size
         assert padding == 100  # 128 - 28
 
-        sockaddr = pack('HHI16sI%dx' % padding, socket.AF_INET6, 0, 0, b'\x00' * 16, 0)
+        sockaddr = pack(f'HHI16sI{padding:d}x', socket.AF_INET6, 0, 0, b'\x00' * 16, 0)
         assert len(sockaddr) == SS_MAXSIZE
 
     def test_tcp_ao_add_struct_layout(self) -> None:

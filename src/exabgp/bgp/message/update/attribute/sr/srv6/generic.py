@@ -26,7 +26,7 @@ class GenericSrv6ServiceSubTlv:
         return self._packed
 
     def __repr__(self) -> str:
-        return 'SRv6 Service Sub-TLV type %d not implemented' % self.code
+        return f'SRv6 Service Sub-TLV type {self.code:d} not implemented'
 
     def json(self, compact: bool | None = None) -> str:
         # Generic/unknown TLV - show type code and hex data
@@ -59,7 +59,7 @@ class GenericSrv6ServiceDataSubSubTlv:
         return self._packed
 
     def __repr__(self) -> str:
-        return 'SRv6 Service Data Sub-Sub-TLV type %d not implemented' % self.code
+        return f'SRv6 Service Data Sub-Sub-TLV type {self.code:d} not implemented'
 
     def json(self, compact: bool | None = None) -> str:
         # The sub-sub-TLVs are members of the SID Information object, beside "sid" and

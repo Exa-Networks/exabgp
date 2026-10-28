@@ -406,4 +406,4 @@ class GenericBGPLS(BGPLS):
         return self._code
 
     def json(self, announced: bool = True, compact: bool = False) -> str:
-        return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.route_code, self._raw())
+        return f'{{ "code": {self.route_code:d}, "parsed": false, "raw": "{self._raw()}" }}'

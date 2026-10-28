@@ -355,7 +355,7 @@ WRAPPERS[('neighbor', 'flow', 'route', 'match')] = {
 for _block in ('then', 'scope'):
     WRAPPERS[('neighbor', 'flow', 'route', _block)] = {
         '': NEIGHBOR.replace(
-            '{inner}', _FLOW_ROUTE % ('match {{ destination 10.0.0.0/24; }} %s {{ {form}; }}' % _block)
+            '{inner}', _FLOW_ROUTE % (f'match {{{{ destination 10.0.0.0/24; }}}} {_block} {{{{ {{form}}; }}}}')
         )
     }
 _TEMPLATE_FLOW = (
@@ -371,7 +371,7 @@ WRAPPERS[('template', 'neighbor', 'flow', 'route', 'match')] = {
 }
 for _block in ('then', 'scope'):
     WRAPPERS[('template', 'neighbor', 'flow', 'route', _block)] = {
-        '': _TEMPLATE_FLOW % (_FLOW_ROUTE % ('match {{ destination 10.0.0.0/24; }} %s {{ {form}; }}' % _block))
+        '': _TEMPLATE_FLOW % (_FLOW_ROUTE % (f'match {{{{ destination 10.0.0.0/24; }}}} {_block} {{{{ {{form}}; }}}}'))
     }
 
 DOCUMENTS.extend(

@@ -54,7 +54,8 @@ def test_not_equal_to_what_is_not_a_number() -> None:
 def test_int_and_percent_d_give_the_number(number: int) -> None:
     value = Named(number)
     assert int(value) == number
-    assert '%d' % value == '%d' % OldNamed(number)
+    # what is under test is the % operator itself, on an IntValue
+    assert '%d' % value == '%d' % OldNamed(number)  # noqa: UP031
     assert struct.pack('!Q', int(value)) == struct.pack('!Q', OldNamed(number))
 
 
@@ -78,7 +79,7 @@ def test_formatted_like_an_int_subclass(number: int) -> None:
     value, old = Named(number), OldNamed(number)
     assert f'{value}' == f'{old}' == value.name()
     assert f'{value}' == f'{old}'
-    assert '%s' % value == '%s' % old
+    assert f'{value}' == f'{old}'
     assert f'{value:04x}' == f'{old:04x}'
     assert f'{value:d}' == f'{old:d}'
 

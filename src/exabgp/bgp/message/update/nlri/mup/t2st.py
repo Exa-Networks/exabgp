@@ -85,7 +85,7 @@ class Type2SessionTransformedRoute(MUP):
         teid_size = endpoint_len - endpoint_size
 
         if teid_size < 0 or teid_size > MUP_T2ST_TEID_MAX_SIZE:
-            raise ValueError('teid is too large %d (range 0~32)' % teid_size)
+            raise ValueError(f'teid is too large {teid_size:d} (range 0~32)')
 
         teid_packed = pack('!I', teid)
 
@@ -169,7 +169,7 @@ class Type2SessionTransformedRoute(MUP):
             raise Notify(
                 3,
                 10,
-                'endpoint length is %d, expecting %d to %d for %s' % (endpoint_len, afi_bit_size, max_endpoint, afi),
+                f'endpoint length is {endpoint_len:d}, expecting {afi_bit_size:d} to {max_endpoint:d} for {afi}',
             )
 
         teid_len = endpoint_len - afi_bit_size
@@ -178,7 +178,7 @@ class Type2SessionTransformedRoute(MUP):
             raise Notify(
                 3,
                 10,
-                'mup t2st is %d bytes, expecting %d for an endpoint of %d bits' % (len(data), expected, endpoint_len),
+                f'mup t2st is {len(data):d} bytes, expecting {expected:d} for an endpoint of {endpoint_len:d} bits',
             )
 
         # draft-mpmz-bess-mup-safi-05 3.1.4.1: "The TEID value of 0 is considered as an
@@ -193,9 +193,9 @@ class Type2SessionTransformedRoute(MUP):
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
         content = f'"name": "{self.NAME}", '
-        content += ' "arch": %d, ' % self.ARCHTYPE
-        content += '"code": %d, ' % self.CODE
-        content += '"endpoint_len": %d, ' % self.endpoint_len
+        content += f' "arch": {self.ARCHTYPE:d}, '
+        content += f'"code": {self.CODE:d}, '
+        content += f'"endpoint_len": {self.endpoint_len:d}, '
         content += f'"endpoint_ip": "{self.endpoint_ip!s}", '
         content += self.rd.json() + ', '
         content += f'"teid": "{self.teid!s}", '

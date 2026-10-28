@@ -505,7 +505,7 @@ class INETBase(NLRI):
 
         # a mask longer than the address family allows would index past the prefix
         if mask > IP.length(afi) * 8:
-            raise Notify(3, 10, 'invalid mask %d in NLRI prefix for %s' % (mask, afi))
+            raise Notify(3, 10, f'invalid mask {mask:d} in NLRI prefix for {afi}')
 
         if not data and mask:
             raise Notify(3, 10, 'not enough data for the mask provided to decode the NLRI')
@@ -516,7 +516,7 @@ class INETBase(NLRI):
             raise Notify(
                 3,
                 10,
-                'could not decode nlri with family %s (AFI %d) %s (SAFI %d)' % (afi, int(afi), safi, int(safi)),
+                f'could not decode nlri with family {afi} (AFI {int(afi):d}) {safi} (SAFI {int(safi):d})',
             )
 
         network, data = data[:size], data[size:]

@@ -255,7 +255,7 @@ class CIDR:
         mask = bgp[0]
         # a mask larger than the family holds would make the padding below negative
         if mask > IP.length(afi) * 8:
-            raise Notify(3, 10, 'could not decode CIDR, invalid mask %d for %s' % (mask, afi))
+            raise Notify(3, 10, f'could not decode CIDR, invalid mask {mask:d} for {afi}')
 
         size = CIDR.size(mask)
 

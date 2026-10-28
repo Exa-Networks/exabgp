@@ -130,7 +130,7 @@ def memory_usage(proc: object = -1, interval: float = 0.1, timeout: float | None
         # original looped forever on a PID given as a string without a timeout.
         samples = int(timeout / interval) if timeout is not None else 1
         return _memory_of_pid(pid, interval, samples)
-    raise TypeError('cannot measure the memory of %r' % (proc,))
+    raise TypeError(f'cannot measure the memory of {proc!r}')
 
 
 def _unpack_call(
@@ -138,10 +138,10 @@ def _unpack_call(
 ) -> tuple[Callable[..., object], Sequence[object], Mapping[str, object]]:
     """The function, arguments and keyword arguments of a call given as (f,), (f, args) or (f, args, kw)."""
     if not 1 <= len(proc) <= 3:
-        raise ValueError('a call is given as (f,), (f, args) or (f, args, kw), not %d items' % len(proc))
+        raise ValueError(f'a call is given as (f,), (f, args) or (f, args, kw), not {len(proc):d} items')
     function = proc[0]
     if not callable(function):
-        raise TypeError('%r is not callable' % (function,))
+        raise TypeError(f'{function!r} is not callable')
     args = proc[1] if len(proc) > 1 else ()
     kw = proc[2] if len(proc) > 2 else {}
     return function, args, kw
@@ -155,7 +155,7 @@ def _memory_of_call(
     if aspec.defaults is not None:
         n_args -= len(aspec.defaults)
     if n_args != len(args):
-        raise ValueError('Function expects %s value(s) but %s where given' % (n_args, len(args)))
+        raise ValueError(f'Function expects {n_args} value(s) but {len(args)} where given')
 
     child_conn, parent_conn = Pipe()  # this will store the sampler's results
     sampler = Process(target=_sample_memory, args=(os.getpid(), interval, child_conn))
@@ -240,7 +240,7 @@ class LineProfiler:
         # A builtin, or a function compiled by mypyc, has no code object to trace.
         code = getattr(func, '__code__', None)
         if not isinstance(code, types.CodeType):
-            warnings.warn('Could not extract a code object for the object %r' % (func,))
+            warnings.warn(f'Could not extract a code object for the object {func!r}')
             return
         if code not in self.code_map:
             self.code_map[code] = {}

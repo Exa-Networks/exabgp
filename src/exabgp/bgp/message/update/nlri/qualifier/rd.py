@@ -67,13 +67,14 @@ class RouteDistinguisher:
         return len(self._packed)
 
     def _str(self) -> str:
-        t, c1, c2, c3 = unpack('!HHHH', self._packed)
+        words: tuple[int, int, int, int] = unpack('!HHHH', self._packed)
+        t, c1, c2, c3 = words
         if t == self.TYPE_AS2_ADMIN:
-            rd = '%d:%d' % (c1, (c2 << 16) + c3)
+            rd = f'{c1}:{(c2 << 16) + c3}'
         elif t == self.TYPE_IPV4_ADMIN:
-            rd = '%d.%d.%d.%d:%d' % (c1 >> 8, c1 & 0xFF, c2 >> 8, c2 & 0xFF, c3)
+            rd = f'{c1 >> 8}.{c1 & 0xFF}.{c2 >> 8}.{c2 & 0xFF}:{c3}'
         elif t == self.TYPE_AS4_ADMIN:
-            rd = '%d:%d' % ((c1 << 16) + c2, c3)
+            rd = f'{(c1 << 16) + c2}:{c3}'
         else:
             rd = hexstring(self._packed)
         return rd

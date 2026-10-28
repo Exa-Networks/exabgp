@@ -276,15 +276,15 @@ class Type1SessionTransformedRoute(MUP):
             self._prefix(),
             self.rd._str(),
             self.prefix_ip,
-            '/%d' % self.prefix_ip_len,
+            f'/{self.prefix_ip_len:d}',
             self.teid,
             self.qfi,
             self.endpoint_ip,
-            '/%d' % self.endpoint_ip_len,
+            f'/{self.endpoint_ip_len:d}',
         )
 
         if self.source_ip_len != 0 and isinstance(self.source_ip, IP):
-            s += ':%s/%d' % (self.source_ip, self.source_ip_len)
+            s += f':{self.source_ip}/{self.source_ip_len:d}'
 
         return s
 
@@ -313,7 +313,7 @@ class Type1SessionTransformedRoute(MUP):
             raise Notify(
                 3,
                 10,
-                'mup t1st prefix length is %d bits, more than the %d of an %s address' % (prefix_ip_len, max_bits, afi),
+                f'mup t1st prefix length is {prefix_ip_len:d} bits, more than the {max_bits:d} of an {afi} address',
             )
         key_end = T1ST_PREFIX_OFFSET + (prefix_ip_len + 7) // 8
         cls.check_length(data, key_end)
@@ -331,16 +331,16 @@ class Type1SessionTransformedRoute(MUP):
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
         content = f'"name": "{self.NAME}", '
-        content += '"arch": %d, ' % self.ARCHTYPE
-        content += '"code": %d, ' % self.CODE
-        content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
+        content += f'"arch": {self.ARCHTYPE:d}, '
+        content += f'"code": {self.CODE:d}, '
+        content += f'"prefix_ip_len": {self.prefix_ip_len:d}, '
         content += f'"prefix_ip": "{self.prefix_ip!s}", '
         content += f'"teid": "{self.teid!s}", '
         content += f'"qfi": "{self.qfi!s}", '
         content += self.rd.json() + ', '
-        content += '"endpoint_ip_len": %d, ' % self.endpoint_ip_len
+        content += f'"endpoint_ip_len": {self.endpoint_ip_len:d}, '
         content += f'"endpoint_ip": "{self.endpoint_ip!s}", '
-        content += '"source_ip_len": %d, ' % self.source_ip_len
+        content += f'"source_ip_len": {self.source_ip_len:d}, '
         # without a source the field is empty, not the repr of the empty bytes it is read as
         content += '"source_ip": "{}", '.format(str(self.source_ip) if self.source_ip_len else '')
         content += f'"raw": "{self._raw()}"'
@@ -407,9 +407,9 @@ class MalformedType1SessionTransformedRoute(MUP):
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
         content = f'"name": "{self.NAME}", '
-        content += '"arch": %d, ' % self.ARCHTYPE
-        content += '"code": %d, ' % self.CODE
-        content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
+        content += f'"arch": {self.ARCHTYPE:d}, '
+        content += f'"code": {self.CODE:d}, '
+        content += f'"prefix_ip_len": {self.prefix_ip_len:d}, '
         content += f'"prefix_ip": "{self.prefix_ip!s}", '
         content += self.rd.json() + ', '
         content += f'"raw": "{self._raw()}"'

@@ -42,10 +42,10 @@ class Resource(BaseValue):
     # NOTE: Do not convert to f-strings! Using f-strings in __str__() methods
     # that call str() on self causes infinite recursion.
     def short(self) -> str:
-        return self.names.get(self.value, '%ld' % self.value)
+        return self.names.get(self.value, f'{self.value:d}')
 
     def __str__(self) -> str:
-        return self.names.get(self.value, 'unknown %s type %ld' % (self.NAME, self.value))
+        return self.names.get(self.value, f'unknown {self.NAME} type {self.value:d}')
 
     @classmethod
     def _ensure_loaded(cls) -> None:

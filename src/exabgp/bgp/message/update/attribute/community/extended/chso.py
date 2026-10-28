@@ -43,7 +43,7 @@ class ConsistentHashSortOrder(ExtendedCommunity):
         return value
 
     def __repr__(self) -> str:
-        return '%s:%d' % (self.DESCRIPTION, self.order)
+        return f'{self.DESCRIPTION}:{self.order:d}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> ConsistentHashSortOrder:

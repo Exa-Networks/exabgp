@@ -68,7 +68,7 @@ class Encapsulation(ExtendedCommunity):
         return value
 
     def __repr__(self) -> str:
-        return 'encap:{}'.format(Encapsulation._string.get(self.tunnel_type, 'encap:UNKNOWN-%d' % self.tunnel_type))
+        return 'encap:{}'.format(Encapsulation._string.get(self.tunnel_type, f'encap:UNKNOWN-{self.tunnel_type:d}'))
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> Encapsulation:

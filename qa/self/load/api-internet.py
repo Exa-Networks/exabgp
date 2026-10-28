@@ -32,23 +32,23 @@ def main():
 
     ip = {}
     nexthop = [
-        '%d.%d.%d.%d' % (random.randint(1, 200), random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        f'{random.randint(1, 200):d}.{random.randint(0, 255):d}.{random.randint(0, 255):d}.{random.randint(0, 255):d}'
         for _ in range(200)
     ]
 
     for ip1 in range(range1):
         for ip2 in range(256):
             for ip3 in range(256):
-                generated = '%d.%d.%d.%d' % (random.randint(1, 200), ip1, ip2, ip3)
+                generated = f'{random.randint(1, 200):d}.{ip1:d}.{ip2:d}.{ip3:d}'
                 ip[generated] = random.choice(nexthop)
 
     for ip2 in range(range2):
         for ip3 in range(256):
-            generated = '%d.%d.%d.%d' % (random.randint(1, 200), range1, ip2, ip3)
+            generated = f'{random.randint(1, 200):d}.{range1:d}.{ip2:d}.{ip3:d}'
             ip[generated] = random.choice(nexthop)
 
     for ip3 in range(range3):
-        generated = '%d.%d.%d.%d' % (random.randint(1, 200), range1, range2, ip3)
+        generated = f'{random.randint(1, 200):d}.{range1:d}.{range2:d}.{ip3:d}'
         ip[generated] = random.choice(nexthop)
 
     count = 0
@@ -57,11 +57,10 @@ def main():
     for k, v in ip.iteritems():
         count += 1
         write(
-            'announce route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'
-            % (k, v, len(k)),
+            f'announce route {k} next-hop {v} med 1{len(k):02d} as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]',
         )
         if count % 10000 == 0:
-            sys.stderr.write('initial : announced %d\n' % count)
+            sys.stderr.write(f'initial : announced {count:d}\n')
 
     count &= 0xFFFFFFFE
 
@@ -78,16 +77,14 @@ def main():
         for k, v in changed.iteritems():
             count += 2
             write(
-                'withdraw route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'
-                % (k, v, len(k)),
+                f'withdraw route {k} next-hop {v} med 1{len(k):02d} as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]',
             )
             ip[k] = random.choice(nexthop)
             write(
-                'announce route %s next-hop %s med 1%02d as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]'
-                % (k, ip[k], len(k)),
+                f'announce route {k} next-hop {ip[k]} med 1{len(k):02d} as-path [ 100 101 102 103 104 105 106 107 108 109 110 ]',
             )
             if count % 100 == 0:
-                sys.stderr.write('updates : announced %d\n' % count)
+                sys.stderr.write(f'updates : announced {count:d}\n')
 
         time.sleep(time.time() - now + 1.0)
 

@@ -14,16 +14,16 @@ time.sleep(1)
 while True:
     try:
         if counter % 2:
-            sys.stdout.write('announce route 10.0.%d.%d next-hop 1.2.3.4\n' % (counter >> 8, counter % 256))
+            sys.stdout.write(f'announce route 10.0.{counter >> 8:d}.{counter % 256:d} next-hop 1.2.3.4\n')
             sys.stdout.flush()
             time.sleep(1)
-            sys.stdout.write('withdraw route 10.0.%d.%d next-hop 1.2.3.4\n' % (counter >> 8, counter % 256))
+            sys.stdout.write(f'withdraw route 10.0.{counter >> 8:d}.{counter % 256:d} next-hop 1.2.3.4\n')
             sys.stdout.flush()
         else:
-            sys.stdout.write('announce route 2001:%d:: next-hop ::1\n' % counter)
+            sys.stdout.write(f'announce route 2001:{counter:d}:: next-hop ::1\n')
             sys.stdout.flush()
             time.sleep(1)
-            sys.stdout.write('withdraw route 2001:%d:: next-hop ::1\n' % counter)
+            sys.stdout.write(f'withdraw route 2001:{counter:d}:: next-hop ::1\n')
             sys.stdout.flush()
 
         counter += 1

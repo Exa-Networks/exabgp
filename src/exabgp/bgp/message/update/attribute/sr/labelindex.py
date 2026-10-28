@@ -62,7 +62,7 @@ class SrLabelIndex:
         return cls(data)
 
     def json(self, compact: bool = False) -> str:
-        return '"sr-label-index": %d' % (self.labelindex)
+        return f'"sr-label-index": {self.labelindex:d}'
 
 
 PrefixSid.register_sr()(SrLabelIndex)

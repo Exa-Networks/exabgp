@@ -132,7 +132,7 @@ class SharedJoin(MVPN):
         return cls(packed, afi)
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        content = ' "code": %d, ' % self.CODE
+        content = f' "code": {self.CODE:d}, '
         content += '"parsed": true, '
         content += f'"raw": "{self._raw()}", '
         content += f'"name": "{self.NAME}", '

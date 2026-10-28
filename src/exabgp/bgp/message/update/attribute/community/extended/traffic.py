@@ -108,7 +108,8 @@ class TrafficRate(ExtendedCommunity):
         return max(value, 0.0)
 
     def __repr__(self) -> str:
-        return 'rate-limit:%d' % self.rate
+        # the rate is a float on the wire, printed truncated as %d did
+        return f'rate-limit:{int(self.rate)}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRate:
@@ -151,7 +152,7 @@ class TrafficRatePackets(ExtendedCommunity):
         return max(value, 0.0)
 
     def __repr__(self) -> str:
-        return 'rate-limit:%d:packets' % self.rate
+        return f'rate-limit:{int(self.rate)}:packets'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRatePackets:
@@ -362,7 +363,7 @@ class TrafficMark(ExtendedCommunity):
         return self._packed[7] & self.DSCP_MASK
 
     def __repr__(self) -> str:
-        return 'mark %d' % self.dscp
+        return f'mark {self.dscp:d}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficMark:
@@ -531,7 +532,7 @@ class TrafficRedirectIPv6(ExtendedCommunityIPv6):
         return value
 
     def __repr__(self) -> str:
-        return 'redirect [%s]:%d' % (self.ip, self.asn)
+        return f'redirect [{self.ip}]:{self.asn:d}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> TrafficRedirectIPv6:

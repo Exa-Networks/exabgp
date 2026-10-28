@@ -101,14 +101,7 @@ class Srv6SidStructure:
         return pack('!B', self.TLV) + pack('!H', self.LENGTH) + self._packed
 
     def __str__(self) -> str:
-        return 'sid-structure [%d,%d,%d,%d,%d,%d]' % (
-            self.loc_block_len,
-            self.loc_node_len,
-            self.func_len,
-            self.arg_len,
-            self.tpose_len,
-            self.tpose_offset,
-        )
+        return f'sid-structure [{self.loc_block_len:d},{self.loc_node_len:d},{self.func_len:d},{self.arg_len:d},{self.tpose_len:d},{self.tpose_offset:d}]'
 
     def json(self, compact: bool | None = None) -> str:
         pairs: dict[str, int] = {

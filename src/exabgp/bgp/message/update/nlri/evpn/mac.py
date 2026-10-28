@@ -154,7 +154,7 @@ class MAC(EVPN):
             self.esi,
             self.etag,
             self.mac,
-            '' if self.maclen == MAC_ADDRESS_LEN_BITS else '/%d' % self.maclen,
+            '' if self.maclen == MAC_ADDRESS_LEN_BITS else f'/{self.maclen:d}',
             self.ip if self.ip else '',
             self.label,
         )
@@ -195,8 +195,7 @@ class MAC(EVPN):
             raise Notify(
                 3,
                 10,
-                'MAC Address length is given as %d bits in %s, and RFC 7432 9.2.1 allows only %d'
-                % (maclength, cls.NAME, MAC_ADDRESS_LEN_BITS),
+                f'MAC Address length is given as {maclength:d} bits in {cls.NAME}, and RFC 7432 9.2.1 allows only {MAC_ADDRESS_LEN_BITS:d}',
             )
 
         iplen_byte = 31  # After MAC address (2+8+10+4+1+6 = 31)
@@ -215,16 +214,14 @@ class MAC(EVPN):
             raise Notify(
                 3,
                 10,
-                'IP field length is given as %d bits in %s, expecting 0, %d (IPv4) or %d (IPv6)'
-                % (iplen_bits, cls.NAME, IPV4_ADDRESS_LEN_BITS, IPV6_ADDRESS_LEN_BITS),
+                f'IP field length is given as {iplen_bits:d} bits in {cls.NAME}, expecting 0, {IPV4_ADDRESS_LEN_BITS:d} (IPv4) or {IPV6_ADDRESS_LEN_BITS:d} (IPv6)',
             )
 
         if datalen not in expected:
             raise Notify(
                 3,
                 10,
-                'Data field length is given as %d, expecting %s for an IP field of %d bits'
-                % (datalen, ' or '.join(str(_) for _ in expected), iplen_bits),
+                f'Data field length is given as {datalen:d}, expecting {" or ".join(str(_) for _ in expected)} for an IP field of {iplen_bits:d} bits',
             )
 
         return cls(packed)
@@ -238,7 +235,7 @@ class MAC(EVPN):
         not JSON any more.
         """
         members = [
-            '"code": %d' % self.CODE,
+            f'"code": {self.CODE:d}',
             '"parsed": true',
             f'"raw": "{self._raw()}"',
             f'"name": "{self.NAME}"',

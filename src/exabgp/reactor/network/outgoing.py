@@ -243,8 +243,7 @@ class Outgoing(Connection):
         elapsed = time.time() - start_time
         log.debug(
             lambda: (
-                '[ASYNC] connection to %s:%d failed after %d attempts (%.1fs elapsed)'
-                % (self.peer, self.port, attempts, elapsed)
+                f'[ASYNC] connection to {self.peer}:{self.port:d} failed after {attempts:d} attempts ({elapsed:.1f}s elapsed)'
             ),
             self.session(),
         )

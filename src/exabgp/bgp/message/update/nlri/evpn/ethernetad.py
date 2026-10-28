@@ -126,7 +126,7 @@ class EthernetAD(EVPN):
         not JSON any more.
         """
         members = [
-            '"code": %d' % self.CODE,
+            f'"code": {self.CODE:d}',
             '"parsed": true',
             f'"raw": "{self._raw()}"',
             f'"name": "{self.NAME}"',

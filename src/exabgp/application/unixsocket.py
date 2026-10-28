@@ -501,7 +501,7 @@ class Control:
         """
         self._store[source] += chunk
         if command_too_large(self._store[source]):
-            sys.stderr.write('received a command larger than %d bytes - exiting\n' % MAX_COMMAND_SIZE)
+            sys.stderr.write(f'received a command larger than {MAX_COMMAND_SIZE:d} bytes - exiting\n')
             sys.stderr.flush()
             sys.exit(1)
 

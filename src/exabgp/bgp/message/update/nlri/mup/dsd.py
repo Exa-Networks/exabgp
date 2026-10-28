@@ -106,14 +106,14 @@ class DirectSegmentDiscoveryRoute(MUP):
         # key, so the Notify becomes the skip of this NLRI in MUP.unpack_nlri.
         expected = 16 if afi == AFI.ipv6 else 4
         if ip_size != expected:
-            raise Notify(3, 10, 'mup dsd address is %d octets, an %s address is %d' % (ip_size, afi, expected))
+            raise Notify(3, 10, f'mup dsd address is {ip_size:d} octets, an {afi} address is {expected:d}')
         instance = cls(data, afi)
         return instance, b''
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
         content = f'"name": "{self.NAME}", '
-        content += '"arch": %d, ' % self.ARCHTYPE
-        content += '"code": %d, ' % self.CODE
+        content += f'"arch": {self.ARCHTYPE:d}, '
+        content += f'"code": {self.CODE:d}, '
         content += f'"ip": "{self.ip!s}", '
         content += self.rd.json()
         content += f', "raw": "{self._raw()}"'

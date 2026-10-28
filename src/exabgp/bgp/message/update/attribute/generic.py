@@ -139,4 +139,4 @@ class GenericAttribute(Attribute):
         return bytes([flag, self.ID]) + len_value + self._packed
 
     def json(self, compact: bool = False) -> str:
-        return '{ "id": %d, "flag": %d, "payload": "%s"}' % (self.ID, self.FLAG, hexstring(self._packed))
+        return f'{{ "id": {self.ID:d}, "flag": {self.FLAG:d}, "payload": "{hexstring(self._packed)}"}}'

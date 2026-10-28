@@ -38,7 +38,7 @@ class UnknownCapability(Capability):
         else:
             iana = 'unknown'
         raw = ''.join(f'{_:02X}' for _ in self.data)
-        return '{ "name": "unknown", "iana": "%s", "value": %d, "raw": "%s" }' % (iana, self.capability, raw)
+        return f'{{ "name": "unknown", "iana": "{iana}", "value": {self.capability:d}, "raw": "{raw}" }}'
 
     def extract_capability_bytes(self) -> list[bytes]:
         return []

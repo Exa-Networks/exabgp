@@ -8,12 +8,11 @@ match = {
     ]
     * 20,
     1: [
-        'neighbor 127.0.0.1 announced route %d%d.0.0.0/8 next-hop 1.1.1.1 origin igp as-path [ 1 2 3 4 ] med 100'
-        % (number, number)
+        f'neighbor 127.0.0.1 announced route {number:d}{number:d}.0.0.0/8 next-hop 1.1.1.1 origin igp as-path [ 1 2 3 4 ] med 100'
         for number in range(1, 10)
     ]
     + [
-        'neighbor 127.0.0.1 announced route eor %d/%d (%s)' % (afi, safi, text)
+        f'neighbor 127.0.0.1 announced route eor {afi:d}/{safi:d} ({text})'
         for (afi, safi, text) in (
             (1, 1, 'ipv4 unicast'),
             (1, 2, 'ipv4 multicast'),
@@ -46,12 +45,12 @@ while True:
     options = match[count % 4]
 
     if line in options:
-        sys.stderr.write('%-3d ok      %s\n' % (count, line))
+        sys.stderr.write(f'{count:<3d} ok      {line}\n')
         sys.stderr.flush()
         count += 1
         continue
 
-    sys.stderr.write('%-3d failed  %s\n' % (count, line))
+    sys.stderr.write(f'{count:<3d} failed  {line}\n')
     # sys.stderr.write("---" + line + "---\n")
     # sys.stderr.write("---" + str(options) + "---\n")
     sys.stderr.flush()

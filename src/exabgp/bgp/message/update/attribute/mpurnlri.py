@@ -102,7 +102,7 @@ class MPURNLRI(Attribute):
         return 0
 
     def __repr__(self) -> str:
-        return 'MP_UNREACH_NLRI for %s %s' % (self.afi, self.safi)
+        return f'MP_UNREACH_NLRI for {self.afi} {self.safi}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:

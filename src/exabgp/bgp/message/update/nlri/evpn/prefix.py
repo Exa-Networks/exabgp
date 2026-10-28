@@ -173,7 +173,7 @@ class Prefix(EVPN):
             self.esi,
             self.etag,
             self.ip,
-            '/%d' % self.iplen,
+            f'/{self.iplen:d}',
             self.gwip,
             self.label,
         )
@@ -203,8 +203,7 @@ class Prefix(EVPN):
             raise Notify(
                 3,
                 10,
-                'Data field length is given as %d, but EVPN route currently support only IPv4 or IPv6 (36 or 60)'
-                % datalen,
+                f'Data field length is given as {datalen:d}, but EVPN route currently support only IPv4 or IPv6 (36 or 60)',
             )
 
         # RFC 9136 3.1: "between 0 and 32 (bits) for IPv4 and between 0 and 128 for IPv6",
@@ -213,7 +212,7 @@ class Prefix(EVPN):
         maximum = IPV4_PREFIX_BITS if datalen == IPV4_ROUTE_SIZE else IPV6_PREFIX_BITS
         if packed[24] > maximum:
             raise Notify(
-                3, 10, 'IP prefix length %d in %s is longer than the %d bits it holds' % (packed[24], cls.NAME, maximum)
+                3, 10, f'IP prefix length {packed[24]:d} in {cls.NAME} is longer than the {maximum:d} bits it holds'
             )
 
         return cls(packed)
@@ -227,7 +226,7 @@ class Prefix(EVPN):
         not JSON any more.
         """
         members = [
-            '"code": %d' % self.CODE,
+            f'"code": {self.CODE:d}',
             '"parsed": true',
             f'"raw": "{self._raw()}"',
             f'"name": "{self.NAME}"',
@@ -237,7 +236,7 @@ class Prefix(EVPN):
         members.append(self.etag.json())
         members.append(self.label.json())
         members.append(f'"ip": "{self.ip!s}"')
-        members.append('"iplen": %d' % self.iplen)
+        members.append(f'"iplen": {self.iplen:d}')
         members.append(f'"gateway": "{self.gwip!s}"')
         return '{{ {} }}'.format(', '.join(member for member in members if member))
 

@@ -197,7 +197,7 @@ def show_most_common_types(
     # max() of nothing raises: an empty list of objects prints an empty table.
     width = max((len(name) for name, _ in stats), default=0)
     for name, number in stats:
-        print('%-*s %i' % (width, name, number))
+        print(f'{name:<{width}} {number:d}')
 
 
 def show_growth(limit: int | None = 10, peak_stats: dict[str, int] | None = None, shortnames: bool = True) -> None:
@@ -244,7 +244,7 @@ def show_growth(limit: int | None = 10, peak_stats: dict[str, int] | None = None
     if deltas:
         width = max(len(name) for name, _ in deltas)
         for name, delta in deltas:
-            print('%-*s%9d %+9d' % (width, name, stats[name], delta))
+            print(f'{name:<{width}}{stats[name]:9d} {delta:+9d}')
 
 
 def get_leaking_objects(objects: Sequence[object] | None = None) -> list[object]:
@@ -760,7 +760,7 @@ def _show_graph(
         nodes = _write_graph(out, roots, options, ignore)
     finally:
         out.close()
-    print('Graph written to %s (%d nodes)' % (dot_filename, nodes))
+    print(f'Graph written to {dot_filename} ({nodes:d} nodes)')
     _present_graph(dot_filename, filename)
 
 
@@ -779,7 +779,7 @@ def _write_graph(out: TextIO, roots: list[object], options: _GraphOptions, ignor
     depth: dict[int, int] = {}
     ignore.update((id(queue), id(depth), id(ignore)))
     for root in roots:
-        out.write('  %s[fontcolor=red];\n' % (_obj_node_id(root)))
+        out.write(f'  {_obj_node_id(root)}[fontcolor=red];\n')
         depth[id(root)] = 0
         queue.append(root)
     gc.collect()
@@ -806,7 +806,7 @@ def _write_graph(out: TextIO, roots: list[object], options: _GraphOptions, ignor
 def _write_node(out: TextIO, target: object, tdepth: int, options: _GraphOptions) -> None:
     node = _obj_node_id(target)
     label = _obj_label(target, options.extra_info, options.refcounts, options.shortnames)
-    out.write('  %s[label="%s"];\n' % (node, label))
+    out.write(f'  {node}[label="{label}"];\n')
     h, s, v = _gradient((0.0, 0.0, 1.0), (0.0, 0.0, 0.3), tdepth, options.max_depth)
     if inspect.ismodule(target):
         h = 0.3
@@ -815,14 +815,14 @@ def _write_node(out: TextIO, target: object, tdepth: int, options: _GraphOptions
         h = 0.6
         s = 0.6
         v = 0.5 + v * 0.5
-    out.write('  %s[fillcolor="%g,%g,%g"];\n' % (node, h, s, v))
+    out.write(f'  {node}[fillcolor="{h:g},{s:g},{v:g}"];\n')
     if v < 0.5:
-        out.write('  %s[fontcolor=white];\n' % (node))
+        out.write(f'  {node}[fontcolor=white];\n')
     if hasattr(getattr(target, '__class__', None), '__del__'):
-        out.write('  %s->%s_has_a_del[color=red,style=dotted,len=0.25,weight=10];\n' % (node, node))
+        out.write(f'  {node}->{node}_has_a_del[color=red,style=dotted,len=0.25,weight=10];\n')
         out.write(
-            '  %s_has_a_del[label="__del__",shape=doublecircle,'
-            'height=0.25,color=red,fillcolor="0,.5,1",fontsize=6];\n' % (node)
+            f'  {node}_has_a_del[label="__del__",shape=doublecircle,'
+            'height=0.25,color=red,fillcolor="0,.5,1",fontsize=6];\n'
         )
 
 
@@ -852,7 +852,7 @@ def _write_edges(
         else:
             srcnode, tgtnode = source, target
         elabel = _edge_label(srcnode, tgtnode, options.shortnames)
-        out.write('  %s -> %s%s;\n' % (_obj_node_id(srcnode), _obj_node_id(tgtnode), elabel))
+        out.write(f'  {_obj_node_id(srcnode)} -> {_obj_node_id(tgtnode)}{elabel};\n')
         if id(source) not in depth:
             depth[id(source)] = next_depth
             queue.append(source)
@@ -864,17 +864,16 @@ def _write_skipped(out: TextIO, target: object, skipped: int, next_depth: int, o
     node = _obj_node_id(target)
     h, s, v = _gradient((0.0, 1.0, 1.0), (0.0, 1.0, 0.3), next_depth, options.max_depth)
     if options.swap_source_target:
-        label = '%d more references' % skipped
-        edge = '%s->too_many_%s' % (node, node)
+        label = f'{skipped:d} more references'
+        edge = f'{node}->too_many_{node}'
     else:
-        label = '%d more backreferences' % skipped
-        edge = 'too_many_%s->%s' % (node, node)
-    out.write('  %s[color=red,style=dotted,len=0.25,weight=10];\n' % edge)
+        label = f'{skipped:d} more backreferences'
+        edge = f'too_many_{node}->{node}'
+    out.write(f'  {edge}[color=red,style=dotted,len=0.25,weight=10];\n')
     out.write(
-        '  too_many_%s[label="%s",shape=box,height=0.25,'
-        'color=red,fillcolor="%g,%g,%g",fontsize=6];\n' % (node, label, h, s, v)
+        f'  too_many_{node}[label="{label}",shape=box,height=0.25,color=red,fillcolor="{h:g},{s:g},{v:g}",fontsize=6];\n'
     )
-    out.write('  too_many_%s[fontcolor=white];\n' % (node))
+    out.write(f'  too_many_{node}[fontcolor=white];\n')
 
 
 def _present_graph(dot_filename: str, filename: str | None = None) -> None:
@@ -903,9 +902,9 @@ def _present_graph(dot_filename: str, filename: str | None = None) -> None:
         dot.wait()
         if dot.returncode != 0:
             # XXX: shouldn't this go to stderr or a log?
-            print('dot failed (exit code %d) while executing "%s"' % (dot.returncode, ' '.join(cmd)))
+            print(f'dot failed (exit code {dot.returncode:d}) while executing "{" ".join(cmd)}"')
         else:
-            print('Image generated as %s' % filename)
+            print(f'Image generated as {filename}')
     else:
         if not filename:
             print('Graph viewer (xdot) and image renderer (dot) not found, not doing anything else')
@@ -914,7 +913,7 @@ def _present_graph(dot_filename: str, filename: str | None = None) -> None:
 
 
 def _obj_node_id(obj: object) -> str:
-    return ('o%d' % id(obj)).replace('-', '_')
+    return (f'o{id(obj):d}').replace('-', '_')
 
 
 def _obj_label(
@@ -925,7 +924,7 @@ def _obj_label(
     else:
         label = [_long_typename(obj)]
     if refcounts:
-        label[0] += ' [%d]' % (sys.getrefcount(obj) - 4)
+        label[0] += f' [{sys.getrefcount(obj) - 4:d}]'
         # Why -4?  To ignore the references coming from
         #   obj_label's frame (obj)
         #   show_graph's frame (target variable)
@@ -954,7 +953,7 @@ def _long_typename(obj: object) -> str:
     name = objtype.__name__
     module = getattr(objtype, '__module__', None)
     if module:
-        return '%s.%s' % (module, name)
+        return f'{module}.{name}'
     else:
         return name
 
@@ -977,9 +976,9 @@ def _short_repr(obj: object) -> str:
         # A Python 3 method object is always bound: an unbound method is the function itself.
         return obj.__name__ + ' (bound)'
     if isinstance(obj, types.FrameType):
-        return '%s:%s' % (obj.f_code.co_filename, obj.f_lineno)
+        return f'{obj.f_code.co_filename}:{obj.f_lineno}'
     if isinstance(obj, (tuple, list, dict, set)):
-        return '%d items' % len(obj)
+        return f'{len(obj):d} items'
     return repr(obj)[:40]
 
 
@@ -1014,7 +1013,7 @@ def _edge_label(source: object, target: object, shortnames: bool = True) -> str:
     if isinstance(source, types.FunctionType):
         for k in dir(source):
             if target is getattr(source, k):
-                return ' [label="%s",weight=10]' % _quote(k)
+                return f' [label="{_quote(k)}",weight=10]'
     if isinstance(source, dict):
         return _dict_edge_label(source, target, shortnames)
     return ''
@@ -1025,12 +1024,12 @@ def _dict_edge_label(source: dict[object, object], target: object, shortnames: b
     for k, v in source.items():
         if v is target:
             if isinstance(k, str) and _IDENTIFIER.match(k):
-                return ' [label="%s",weight=2]' % _quote(k)
+                return f' [label="{_quote(k)}",weight=2]'
             if shortnames:
                 tn = _short_typename(k)
             else:
                 tn = _long_typename(k)
-            return ' [label="%s"]' % _quote(tn + '\n' + _safe_repr(k))
+            return ' [label="{}"]'.format(_quote(tn + '\n' + _safe_repr(k)))
     return ''
 
 

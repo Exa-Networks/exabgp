@@ -42,7 +42,7 @@ class EORNLRI(NLRI):
         return self.extensive()
 
     def extensive(self) -> str:
-        return 'eor %ld/%ld (%s %s)' % (int(self.afi), int(self.safi), self.afi, self.safi)
+        return f'eor {int(self.afi):d}/{int(self.safi):d} ({self.afi} {self.safi})'
 
     def json(self, announced: bool = True, compact: bool = False) -> str:
         # every other NLRI renders an object because the caller puts the result

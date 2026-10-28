@@ -121,7 +121,7 @@ class UpdateHandler(MessageHandler):
             self._audit_withdraw(ctx, nlri)
             prefix_limit.release(ctx.neighbor, nlri)
             ctx.stats['receive-withdraws'] += 1
-            log.debug(lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str), ctx.peer_id)
+            log.debug(lazyformat(f'update.nlri number={self._number:d} nlri=', nlri, str), ctx.peer_id)
 
         # parsed.announces holds RoutedNLRI: the bare NLRI and its next hop make the Route
         for routed in parsed.announces:
@@ -130,7 +130,7 @@ class UpdateHandler(MessageHandler):
             ctx.neighbor.rib.incoming.update_cache(Route(nlri, parsed.attributes, nexthop=routed.nexthop))
             self._audit_announce(ctx, nlri)
             ctx.stats['receive-prefixes'] += 1
-            log.debug(lazyformat('update.nlri number=%d nlri=' % self._number, nlri, str), ctx.peer_id)
+            log.debug(lazyformat(f'update.nlri number={self._number:d} nlri=', nlri, str), ctx.peer_id)
 
         self._membership(ctx, parsed)
 

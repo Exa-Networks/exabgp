@@ -355,7 +355,7 @@ class Negotiated:
                 2,
                 2,
                 # the AS compared, which RFC 6793 4.1 has the capability give when there is one
-                'ASN in OPEN (%d) did not match ASN expected (%d)' % (self.peer_as, neighbor.session.peer_as),
+                f'ASN in OPEN ({self.peer_as:d}) did not match ASN expected ({neighbor.session.peer_as:d})',
             )
 
         # RFC 6286 : https://tools.ietf.org/html/rfc6286
@@ -373,7 +373,7 @@ class Negotiated:
             )
 
         if self.received_open.hold_time and self.received_open.hold_time < HoldTime.MIN:
-            return (2, 6, 'Hold Time is invalid (%d)' % self.received_open.hold_time)
+            return (2, 6, f'Hold Time is invalid ({self.received_open.hold_time:d})')
 
         if self.role_error is not None:
             return self.role_error

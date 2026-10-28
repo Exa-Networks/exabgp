@@ -117,7 +117,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
         return not self == other
 
     def __str__(self) -> str:
-        return '{}:{}:{}{}'.format(self._prefix(), self.rd._str(), self.prefix_ip, '/%d' % self.prefix_ip_len)
+        return '{}:{}:{}{}'.format(self._prefix(), self.rd._str(), self.prefix_ip, f'/{self.prefix_ip_len:d}')
 
     def __hash__(self) -> int:
         # Direct _packed hash - include afi since MUP supports both IPv4 and IPv6
@@ -136,7 +136,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
             raise Notify(
                 3,
                 10,
-                'mup isd prefix length is %d bits, more than the %d of an %s address' % (prefix_ip_len, max_bits, afi),
+                f'mup isd prefix length is {prefix_ip_len:d} bits, more than the {max_bits:d} of an {afi} address',
             )
 
         expected = 13 + (prefix_ip_len + 7) // 8
@@ -144,7 +144,7 @@ class InterworkSegmentDiscoveryRoute(MUP):
             raise Notify(
                 3,
                 10,
-                'mup isd is %d bytes, expecting %d for a prefix of %d bits' % (len(data), expected, prefix_ip_len),
+                f'mup isd is {len(data):d} bytes, expecting {expected:d} for a prefix of {prefix_ip_len:d} bits',
             )
 
         instance = cls(data, afi)
@@ -152,9 +152,9 @@ class InterworkSegmentDiscoveryRoute(MUP):
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
         content = f'"name": "{self.NAME}", '
-        content += '"arch": %d, ' % self.ARCHTYPE
-        content += '"code": %d, ' % self.CODE
-        content += '"prefix_ip_len": %d, ' % self.prefix_ip_len
+        content += f'"arch": {self.ARCHTYPE:d}, '
+        content += f'"code": {self.CODE:d}, '
+        content += f'"prefix_ip_len": {self.prefix_ip_len:d}, '
         content += f'"prefix_ip": "{self.prefix_ip!s}", '
         content += self.rd.json()
         content += f', "raw": "{self._raw()}"'

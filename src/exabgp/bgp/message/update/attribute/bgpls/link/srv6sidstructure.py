@@ -81,12 +81,7 @@ class Srv6SidStructure(BaseLS):
         return cls(data)
 
     def __str__(self) -> str:
-        return 'sid-structure [%d,%d,%d,%d,]' % (
-            self.loc_block_len,
-            self.loc_node_len,
-            self.func_len,
-            self.arg_len,
-        )
+        return f'sid-structure [{self.loc_block_len:d},{self.loc_node_len:d},{self.func_len:d},{self.arg_len:d},]'
 
     @property
     def content(self) -> dict[str, object]:

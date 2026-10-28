@@ -78,7 +78,8 @@ class LargeCommunity(Attribute):
 
     def _get_string(self) -> str:
         """Get string representation."""
-        return '%d:%d:%d' % unpack('!LLL', self._packed)
+        admin, first, second = unpack('!LLL', self._packed)
+        return f'{admin:d}:{first:d}:{second:d}'
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, LargeCommunity):
@@ -114,7 +115,8 @@ class LargeCommunity(Attribute):
         return hash(self._packed)
 
     def json(self, compact: bool = False) -> str:
-        return '[ %d, %d , %d ]' % unpack('!LLL', self._packed)
+        admin, first, second = unpack('!LLL', self._packed)
+        return f'[ {admin:d}, {first:d} , {second:d} ]'
 
     def pack_attribute(self, negotiated: Negotiated) -> Buffer:
         return self._packed

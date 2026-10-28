@@ -102,7 +102,7 @@ class Labels:
         if len(labels) >= 1:
             return '"label": [ {} ]'.format(
                 ', '.join(
-                    ['[%d%s]' % (label, opt_raw_label(value, ', %d')) for (label, value) in zip(labels, raw_labels)],
+                    [f'[{label:d}{opt_raw_label(value, ", %d")}]' for (label, value) in zip(labels, raw_labels)],
                 )
             )
         return ''
@@ -114,11 +114,11 @@ class Labels:
         if len(labels) > 1:
             return ' label [ {} ]'.format(
                 ' '.join(
-                    ['%d%s' % (label, opt_raw_label(value)) for (label, value) in zip(labels, raw_labels)],
+                    [f'{label:d}{opt_raw_label(value)}' for (label, value) in zip(labels, raw_labels)],
                 )
             )
         if len(labels) == 1:
-            return ' label %d%s' % (labels[0], opt_raw_label(raw_labels[0]))
+            return f' label {labels[0]:d}{opt_raw_label(raw_labels[0])}'
         return ''
 
     def __str__(self) -> str:
@@ -130,11 +130,11 @@ class Labels:
         if len(labels) > 1:
             return '[ {} ]'.format(
                 ','.join(
-                    ['%d%s' % (label, opt_raw_label(raw)) for (label, raw) in zip(labels, raw_labels)],
+                    [f'{label:d}{opt_raw_label(raw)}' for (label, raw) in zip(labels, raw_labels)],
                 )
             )
         if len(labels) == 1:
-            return '%d%s' % (labels[0], opt_raw_label(raw_labels[0]))
+            return f'{labels[0]:d}{opt_raw_label(raw_labels[0])}'
         return '[ ]'
 
     @classmethod

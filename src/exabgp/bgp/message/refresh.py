@@ -88,7 +88,7 @@ class RouteRefresh(Message):
         return 'REFRESH'
 
     def extensive(self) -> str:
-        return 'route refresh %s/%d/%s' % (self.afi, self.reserved, self.safi)
+        return f'route refresh {self.afi}/{self.reserved:d}/{self.safi}'
 
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> RouteRefresh:

@@ -121,7 +121,7 @@ class Aggregator(Attribute):
         return f'{self.asn}:{self.speaker}'
 
     def json(self, compact: bool = False) -> str:
-        return '{ "asn" : %d, "speaker" : "%s" }' % (self.asn, self.speaker)
+        return f'{{ "asn" : {self.asn:d}, "speaker" : "{self.speaker}" }}'
 
     def pack_attribute(self, negotiated: Negotiated) -> bytes:
         """Pack for sending to peer.

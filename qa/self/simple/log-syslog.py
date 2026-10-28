@@ -8,7 +8,7 @@ import time
 
 def _prefixed(level, message):
     now = time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())
-    return '%s %-8s %-6d %s' % (now, level, os.getpid(), message)
+    return f'{now} {level:<8} {os.getpid():<6d} {message}'
 
 
 syslog.openlog('ExaBGP')

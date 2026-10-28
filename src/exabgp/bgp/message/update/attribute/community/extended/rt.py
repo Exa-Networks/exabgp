@@ -84,7 +84,7 @@ class RouteTargetASN2Number(RouteTarget):
         return hash((self.asn, self.number))
 
     def __repr__(self) -> str:
-        return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
+        return f'{self.DESCRIPTION}:{self.asn:d}:{self.number:d}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> RouteTargetASN2Number:
@@ -125,7 +125,7 @@ class RouteTargetIPNumber(RouteTarget):
         return hash((self.ip, self.number))
 
     def __repr__(self) -> str:
-        return '%s:%s:%d' % (self.DESCRIPTION, self.ip, self.number)
+        return f'{self.DESCRIPTION}:{self.ip}:{self.number:d}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> RouteTargetIPNumber:
@@ -166,7 +166,7 @@ class RouteTargetASN4Number(RouteTarget):
         return hash((self.asn, self.number))
 
     def __repr__(self) -> str:
-        return '%s:%d:%d' % (self.DESCRIPTION, self.asn, self.number)
+        return f'{self.DESCRIPTION}:{self.asn:d}:{self.number:d}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated | None = None) -> RouteTargetASN4Number:

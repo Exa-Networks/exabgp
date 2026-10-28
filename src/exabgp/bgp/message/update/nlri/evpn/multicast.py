@@ -106,13 +106,12 @@ class Multicast(EVPN):
         cls.check_length(packed, 15)
         iplen = packed[14]
         if iplen not in (4 * 8, 16 * 8):
-            raise Notify(3, 10, 'IP len is %d, but EVPN route currently support only IPv4 or IPv6' % iplen)
+            raise Notify(3, 10, f'IP len is {iplen:d}, but EVPN route currently support only IPv4 or IPv6')
         if len(packed) != 15 + iplen // 8:
             raise Notify(
                 3,
                 10,
-                'Inclusive Multicast EVPN NLRI is %d bytes, expecting %d for an IP of %d bits'
-                % (len(packed), 15 + iplen // 8, iplen),
+                f'Inclusive Multicast EVPN NLRI is {len(packed):d} bytes, expecting {15 + iplen // 8:d} for an IP of {iplen:d} bits',
             )
         return cls(packed)
 
@@ -125,7 +124,7 @@ class Multicast(EVPN):
         not JSON any more.
         """
         members = [
-            '"code": %d' % self.CODE,
+            f'"code": {self.CODE:d}',
             '"parsed": true',
             f'"raw": "{self._raw()}"',
             f'"name": "{self.NAME}"',

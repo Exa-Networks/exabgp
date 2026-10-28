@@ -248,7 +248,7 @@ class MPRNLRI(Attribute):
         return 0
 
     def __repr__(self) -> str:
-        return 'MP_REACH_NLRI for %s %s' % (self.afi, self.safi)
+        return f'MP_REACH_NLRI for {self.afi} {self.safi}'
 
     @classmethod
     def unpack_attribute(cls, data: Buffer, negotiated: Negotiated) -> Attribute:
@@ -300,8 +300,7 @@ class MPRNLRI(Attribute):
             raise Notify(
                 3,
                 9,
-                'invalid %s %s next-hop length %d expected %s'
-                % (afi, safi, len_nh, ' or '.join(str(_) for _ in length)),
+                f'invalid {afi} {safi} next-hop length {len_nh:d} expected {" or ".join(str(_) for _ in length)}',
             )
 
         # check the RD is well zero, the RD of the link-local address too when there is one
@@ -320,7 +319,7 @@ class MPRNLRI(Attribute):
 
         # Verify there's NLRI data
         if offset >= len(data):
-            raise Notify(3, 9, 'No data to decode in an MPREACHNLRI but it is not an EOR %d/%d' % (afi, safi))
+            raise Notify(3, 9, f'No data to decode in an MPREACHNLRI but it is not an EOR {afi:d}/{safi:d}')
 
         # Get addpath flag for lazy NLRI parsing
         addpath = negotiated.required(afi, safi)

@@ -223,8 +223,8 @@ class VPLSBase(NLRI):
         attribute incorrect when an NLRI length "is inconsistent with the given AFI/SAFI".
         """
         if length != BGP_AD_PAYLOAD_SIZE:
-            return Notify(3, 10, 'l2vpn vpls length is %d, it needs at least %d' % (length, VPLS_PAYLOAD_SIZE))
-        discard = NLRIDiscard('l2vpn vpls NLRI of %d octets is a BGP-AD NLRI (RFC 6074), not decoded' % length)
+            return Notify(3, 10, f'l2vpn vpls length is {length:d}, it needs at least {VPLS_PAYLOAD_SIZE:d}')
+        discard = NLRIDiscard(f'l2vpn vpls NLRI of {length:d} octets is a BGP-AD NLRI (RFC 6074), not decoded')
         discard.skip = path_size + 2 + length
         assert discard.skip > 0, 'a discarded NLRI is stepped over, not re-read'
         return discard

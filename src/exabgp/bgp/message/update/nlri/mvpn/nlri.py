@@ -310,4 +310,4 @@ class GenericMVPN(MVPN):
         return f'unrecognised MCAST-VPN route type {self.route_code} (RFC 7606 5.4)'
 
     def json(self, announced: bool = True, compact: bool | None = None) -> str:
-        return '{ "code": %d, "parsed": false, "raw": "%s" }' % (self.route_code, self._raw())
+        return f'{{ "code": {self.route_code:d}, "parsed": false, "raw": "{self._raw()}" }}'

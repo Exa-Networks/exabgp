@@ -109,7 +109,8 @@ class Community:
         elif self._packed == self.BLACKHOLE:
             return 'blackhole'
         else:
-            return '%d:%d' % unpack('!HH', self._packed)
+            high, low = unpack('!HH', self._packed)
+            return f'{high:d}:{low:d}'
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Community):
@@ -145,7 +146,8 @@ class Community:
         return hash(self._packed)
 
     def json(self) -> str:
-        return '[ %d, %d ]' % unpack('!HH', self._packed)
+        high, low = unpack('!HH', self._packed)
+        return f'[ {high:d}, {low:d} ]'
 
     def pack_attribute(self, negotiated: Negotiated) -> Buffer:
         return self._packed

@@ -450,7 +450,7 @@ class IPrefix6(IComponent, IPrefix, FlowIPv6):
             raise Notify(
                 3,
                 10,
-                'flow ipv6 prefix of length %d and offset %d is outside the range RFC 8956 allows' % (length, offset),
+                f'flow ipv6 prefix of length {length:d} and offset {offset:d} is outside the range RFC 8956 allows',
             )
         size = _pattern_size_bytes(length, offset)
         pattern = bytes(bgp[2 : 2 + size])
@@ -458,7 +458,7 @@ class IPrefix6(IComponent, IPrefix, FlowIPv6):
             raise Notify(
                 3,
                 10,
-                'flow ipv6 prefix needs %d octets of pattern but only %d are left' % (size, len(pattern)),
+                f'flow ipv6 prefix needs {size:d} octets of pattern but only {len(pattern):d} are left',
             )
         address = _address_from_pattern(pattern, length, offset)
         return cls(bytes([length]) + address[: CIDR.size(length)], offset), bgp[2 + size :]
@@ -1209,7 +1209,7 @@ class Flow(NLRI):
                     # everything, so a controller reading it would rate limit or discard
                     # all traffic. RFC 8955 section 4.3 treats a malformed FlowSpec NLRI
                     # as a withdraw, which is what returning INVALID does here.
-                    raise Notify(3, 10, 'flow component %d is not one this family defines' % what)
+                    raise Notify(3, 10, f'flow component {what:d} is not one this family defines')
 
                 self._check_component_order(what, previous)
                 previous = what
@@ -1268,11 +1268,10 @@ class Flow(NLRI):
             raise Notify(
                 3,
                 10,
-                'flow component %d follows component %d, which is not the increasing type order required'
-                % (what, previous),
+                f'flow component {what:d} follows component {previous:d}, which is not the increasing type order required',
             )
         if what == previous:
-            raise Notify(3, 10, 'flow component %d is present more than once' % what)
+            raise Notify(3, 10, f'flow component {what:d} is present more than once')
 
     @staticmethod
     def _parse_operations(
@@ -1292,7 +1291,7 @@ class Flow(NLRI):
         first = True
         while not end:
             if not bgp:
-                raise Notify(3, 10, 'flow component %d ends without its end of list operator' % what)
+                raise Notify(3, 10, f'flow component {what:d} ends without its end of list operator')
             byte, bgp = bgp[0], bgp[1:]
             end = CommonOperator.eol(byte)
             operator = operator_class.operator(byte)
@@ -1313,16 +1312,14 @@ class Flow(NLRI):
                 raise Notify(
                     3,
                     10,
-                    'flow component %d announces a %d byte value, which is not a width RFC 8955 defines'
-                    % (what, length),
+                    f'flow component {what:d} announces a {length:d} byte value, which is not a width RFC 8955 defines',
                 )
             value_bytes, bgp = bytes(bgp[:length]), bgp[length:]
             if len(value_bytes) != length:
                 raise Notify(
                     3,
                     10,
-                    'flow component %d announces a %d byte value but only %d are left'
-                    % (what, length, len(value_bytes)),
+                    f'flow component {what:d} announces a {length:d} byte value but only {len(value_bytes):d} are left',
                 )
             adding_val = klass.decoder(value_bytes)
             # The width is the sender's choice, the value is not: a protocol of 262 matches
@@ -1332,7 +1329,7 @@ class Flow(NLRI):
                 raise Notify(
                     3,
                     10,
-                    'flow component %d has a value of %d, too large for the field it matches' % (what, adding_val),
+                    f'flow component {what:d} has a value of {adding_val:d}, too large for the field it matches',
                 )
             rules.setdefault(what, []).append(klass(operator, adding_val))
         return bgp

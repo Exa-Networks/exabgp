@@ -51,7 +51,7 @@ class ASN4(Capability):
         return hash(self.asn)
 
     def __str__(self) -> str:
-        return 'ASN4(%d)' % self.asn.value
+        return f'ASN4({self.asn.value:d})'
 
     def extract_capability_bytes(self) -> list[bytes]:
         return self.asn.extract_asn_bytes()
@@ -72,7 +72,7 @@ class ASN4(Capability):
         return cls(ASN.unpack_asn(data, ASN).value)
 
     def json(self) -> str:
-        return '{ "name": "asn4", "asn4": %d }' % self.asn.value
+        return f'{{ "name": "asn4", "asn4": {self.asn.value:d} }}'
 
     @classmethod
     def validate(cls, value: int) -> bool:

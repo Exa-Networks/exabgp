@@ -278,7 +278,7 @@ class APIName(Type[str]):
 
     def parse(self, words: Words) -> str:
         where = words.where()
-        name = words.word() or 'auto-named-%d' % int(time.time() * 1000000)
+        name = words.word() or f'auto-named-{int(time.time() * 1000000):d}'
         if any(character not in NAME_CHARACTERS for character in name):
             raise ConfigError(where, 'invalid character in name for api')
         return name

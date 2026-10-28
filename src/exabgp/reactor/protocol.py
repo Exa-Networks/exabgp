@@ -324,7 +324,7 @@ class Protocol:
             log.debug(lazymsg('message.decode.failed type={t}', t=msg_id), self._session())
             log.debug(lazymsg('message.decode.error error={e}', e=str(exc)), self._session())
             log.debug(lazymsg('message.decode.traceback trace={t}', t=traceback.format_exc()), self._session())
-            raise Notify(1, 0, 'can not decode update message of type "%d"' % msg_id.value) from None
+            raise Notify(1, 0, f'can not decode update message of type "{msg_id.value:d}"') from None
 
     def _header_error(self, notify: NotifyError, msg_id: MessageCode, header: Buffer, body: Buffer) -> Notify:
         """Turn an error found reading the header into the Notify to raise, telling the API."""

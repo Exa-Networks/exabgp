@@ -121,15 +121,14 @@ class EthernetSegment(EVPN):
             raise Notify(
                 3,
                 10,
-                'IP length field is given as %d in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits' % iplen,
+                f'IP length field is given as {iplen:d} in current Segment, expecting 32 (IPv4) or 128 (IPv6) bits',
             )
 
         if len(packed) != 21 + iplen // 8:
             raise Notify(
                 3,
                 10,
-                'Ethernet Segment EVPN NLRI is %d bytes, expecting %d for an IP of %d bits'
-                % (len(packed), 21 + iplen // 8, iplen),
+                f'Ethernet Segment EVPN NLRI is {len(packed):d} bytes, expecting {21 + iplen // 8:d} for an IP of {iplen:d} bits',
             )
 
         return cls(packed)
@@ -143,7 +142,7 @@ class EthernetSegment(EVPN):
         not JSON any more.
         """
         members = [
-            '"code": %d' % self.CODE,
+            f'"code": {self.CODE:d}',
             '"parsed": true',
             f'"raw": "{self._raw()}"',
             f'"name": "{self.NAME}"',

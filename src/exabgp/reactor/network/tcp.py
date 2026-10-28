@@ -197,29 +197,29 @@ def md5(io: socket.socket, ip: str, port: int, md5: str, md5_base64: bool) -> No
             if IP.toafi(ip) == AFI.ipv4:
                 # SS_MAXSIZE is 128 but addr_family, port and ipaddr (8 bytes total) are written independently of the padding
                 SS_MAXSIZE_PADDING = 128 - calcsize('HH4s')  # 8
-                sockaddr = pack('HH4s%dx' % SS_MAXSIZE_PADDING, socket.AF_INET, n_port, n_addr)
+                sockaddr = pack(f'HH4s{SS_MAXSIZE_PADDING:d}x', socket.AF_INET, n_port, n_addr)
             else:
                 SS_MAXSIZE_PADDING = 128 - calcsize('HI16sI')  # 28
                 SIN6_FLOWINFO = 0
                 SIN6_SCOPE_ID = 0
-                sockaddr = pack('HHI16sI%dx' % SS_MAXSIZE_PADDING, n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
+                sockaddr = pack(f'HHI16sI{SS_MAXSIZE_PADDING:d}x', n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
 
             TCP_MD5SIG_MAXKEYLEN = 80
             TCP_MD5SIG = 14
 
             if md5_bytes:
-                key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
+                key = pack(f'2xH4x{TCP_MD5SIG_MAXKEYLEN:d}s', len(md5_bytes), md5_bytes)
                 io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
             elif md5:
                 md5_bytes = bytes(md5, 'ascii')
-                key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, len(md5_bytes), md5_bytes)
+                key = pack(f'2xH4x{TCP_MD5SIG_MAXKEYLEN:d}s', len(md5_bytes), md5_bytes)
                 io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
             else:
                 # No key configured: clear any key the kernel still holds for this peer.
                 # Listener._listen() reuses its listening sockets across reloads, so a
                 # password removed from the configuration would otherwise stay installed
                 # and break a passive session (#1388).
-                key = pack('2xH4x%ds' % TCP_MD5SIG_MAXKEYLEN, 0, b'')
+                key = pack(f'2xH4x{TCP_MD5SIG_MAXKEYLEN:d}s', 0, b'')
                 try:
                     io.setsockopt(socket.IPPROTO_TCP, TCP_MD5SIG, sockaddr + key)
                 except OSError as exc:
@@ -330,12 +330,12 @@ def tcp_ao(
 
         if IP.toafi(ip) == AFI.ipv4:
             SS_MAXSIZE_PADDING = 128 - calcsize('HH4s')  # 120
-            sockaddr = pack('HH4s%dx' % SS_MAXSIZE_PADDING, socket.AF_INET, n_port, n_addr)
+            sockaddr = pack(f'HH4s{SS_MAXSIZE_PADDING:d}x', socket.AF_INET, n_port, n_addr)
         else:
             SS_MAXSIZE_PADDING = 128 - calcsize('HHI16sI')  # 100
             SIN6_FLOWINFO = 0
             SIN6_SCOPE_ID = 0
-            sockaddr = pack('HHI16sI%dx' % SS_MAXSIZE_PADDING, n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
+            sockaddr = pack(f'HHI16sI{SS_MAXSIZE_PADDING:d}x', n_af, n_port, SIN6_FLOWINFO, n_addr, SIN6_SCOPE_ID)
 
         # Pack algorithm name (64 bytes, null-padded)
         alg_name = kernel_alg.encode('ascii').ljust(ALG_NAME_LEN, b'\x00')
@@ -359,7 +359,7 @@ def tcp_ao(
 
         # Pack: ifindex(i) + flags(I) + reserved2(H) + prefix,sndid,rcvid,maclen,keyflags,keylen(6B) + key(80s)
         ao_data = pack(
-            'iIH6B%ds' % TCP_AO_MAXKEYLEN,
+            f'iIH6B{TCP_AO_MAXKEYLEN:d}s',
             ifindex,
             flags,
             reserved2,

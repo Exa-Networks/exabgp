@@ -9,5 +9,5 @@ while True:
     if ' route' in line:
         count += 1
         if count % 100 == 0:
-            sys.stderr.write('received %-10d\n' % count)
+            sys.stderr.write(f'received {count:<10d}\n')
             sys.stderr.flush()

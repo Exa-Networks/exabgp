@@ -107,8 +107,8 @@ class Open(Message):
 
     @property
     def router_id(self) -> RouterID:
-        numeric = unpack('!L', self._packed[5:9])[0]
-        return RouterID('%d.%d.%d.%d' % (numeric >> 24, (numeric >> 16) & 0xFF, (numeric >> 8) & 0xFF, numeric & 0xFF))
+        numeric: int = unpack('!L', self._packed[5:9])[0]
+        return RouterID(f'{numeric >> 24}.{(numeric >> 16) & 0xFF}.{(numeric >> 8) & 0xFF}.{numeric & 0xFF}')
 
     @property
     def capabilities(self) -> Capabilities:
@@ -120,13 +120,7 @@ class Open(Message):
         return self._packed
 
     def __str__(self) -> str:
-        return 'OPEN version=%d asn=%d hold_time=%s router_id=%s capabilities=[%s]' % (
-            self.version,
-            self.asn.trans(),
-            self.hold_time,
-            self.router_id,
-            self.capabilities,
-        )
+        return f'OPEN version={self.version:d} asn={self.asn.trans():d} hold_time={self.hold_time} router_id={self.router_id} capabilities=[{self.capabilities}]'
 
     @classmethod
     def unpack_message(cls, data: Buffer, negotiated: Negotiated) -> Open:

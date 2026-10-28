@@ -129,4 +129,4 @@ class ICMPCode(Resource):
     # names would have non-unique keys (some codes overlap for different types)
 
     def __str__(self) -> str:
-        return '%d' % int(self)
+        return f'{int(self):d}'

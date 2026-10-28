@@ -64,7 +64,7 @@ def session() -> Negotiated:
 
 
 def route4(index: int, med: int | None = None) -> Route:
-    address = IP.from_string('10.%d.%d.%d' % ((index >> 16) & 0xFF, (index >> 8) & 0xFF, index & 0xFF))
+    address = IP.from_string(f'10.{(index >> 16) & 0xFF:d}.{(index >> 8) & 0xFF:d}.{index & 0xFF:d}')
     nlri = INET.from_cidr(CIDR.create_cidr(address.pack_ip(), 32), AFI.ipv4, SAFI.unicast)
     attributes = AttributeCollection()
     attributes.add(Origin.from_int(0))
@@ -75,7 +75,7 @@ def route4(index: int, med: int | None = None) -> Route:
 
 
 def route6(index: int) -> Route:
-    address = IP.from_string('2001:db8:%x::' % index)
+    address = IP.from_string(f'2001:db8:{index:x}::')
     nlri = INET.from_cidr(CIDR.create_cidr(address.pack_ip(), 64), AFI.ipv6, SAFI.unicast)
     attributes = AttributeCollection()
     attributes.add(Origin.from_int(0))

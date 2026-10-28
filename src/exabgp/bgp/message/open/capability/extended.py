@@ -22,7 +22,7 @@ class ExtendedMessage(Capability):
     EXTENDED_SIZE: ClassVar[int] = 65535
 
     def __str__(self) -> str:
-        return 'Extended Message(%d)' % self.EXTENDED_SIZE
+        return f'Extended Message({self.EXTENDED_SIZE:d})'
 
     def extract_capability_bytes(self) -> list[bytes]:
         return [b'']
@@ -32,7 +32,7 @@ class ExtendedMessage(Capability):
         return cls()
 
     def json(self) -> str:
-        return '{ "name": "extended-message", "size": %d }' % self.EXTENDED_SIZE
+        return f'{{ "name": "extended-message", "size": {self.EXTENDED_SIZE:d} }}'
 
 
 Capability.register()(ExtendedMessage)

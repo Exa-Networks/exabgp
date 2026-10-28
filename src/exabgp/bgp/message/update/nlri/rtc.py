@@ -262,7 +262,7 @@ class RTCBase(NLRI):
             raise Notify(
                 3,
                 10,
-                'incorrect RTC length: %d (should be >=%d,<=%d)' % (length, RTC_PREFIX_MIN_BITS, RTC_PREFIX_MAX_BITS),
+                f'incorrect RTC length: {length:d} (should be >={RTC_PREFIX_MIN_BITS:d},<={RTC_PREFIX_MAX_BITS:d})',
             )
 
         # RFC 4760 section 4: the prefix takes the octets its length needs, rounded up, so a
