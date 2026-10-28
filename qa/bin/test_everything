@@ -175,6 +175,9 @@ TEST_COMMANDS: dict[str, str | list[str]] = {
     'compiled': [
         'uv run python qa/bin/build_mypyc',
         'env exabgp_log_enable=false PYTHONPATH=build/mypyc uv run pytest ./tests/ -q -p no:cacheprovider',
+        # what the config stage checks, compiled: -r deep-copies each neighbor, which only the
+        # one-file binary workflow ran compiled, and it broke there alone
+        'env EXABGP_COMPILED=1 ./sbin/exabgp configuration validate -nrv ./etc/exabgp/conf-ipself6.conf',
         'env EXABGP_COMPILED=1 ./qa/bin/functional decoding --quiet',
         'killall -9 python 2>/dev/null; sleep 0.5',
         'env EXABGP_COMPILED=1 ./qa/bin/functional encoding --quiet',
