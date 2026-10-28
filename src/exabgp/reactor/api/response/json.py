@@ -449,13 +449,12 @@ class JSON:
     ) -> list[str]:
         """Render each family's announced NLRI as a `"<afi> <safi>": { "<next-hop>": [ ... ] }` member."""
         add = []
-        for family in plus:
+        for family, nexthops in plus.items():
             leak = leaks.get(family) if leaks else None
             safi_name = self._safi_display_name(family[0], family[1])
             s = f'"{family[0]} {safi_name}": {{ '
             m = ''
-            for nexthop_str in plus[family]:
-                nlri_tuples = plus[family][nexthop_str]
+            for nexthop_str, nlri_tuples in nexthops.items():
                 m += f'"{nexthop_str}": [ '
                 m += ', '.join(self._nlri_to_json(nlri, nexthop_ip, leak) for nlri, nexthop_ip in nlri_tuples)
                 m += ' ], '
@@ -467,8 +466,7 @@ class JSON:
     def _withdraw_sections(self, minus: dict[FamilyTuple, list[NLRI]]) -> list[str]:
         """Render each family's withdrawn NLRI as a `"<afi> <safi>": [ ... ]` member."""
         remove = []
-        for family in minus:
-            nlris = minus[family]
+        for family, nlris in minus.items():
             safi_name = self._safi_display_name(family[0], family[1])
             s = f'"{family[0]} {safi_name}": [ '
             s += ', '.join(self._nlri_to_json(nlri) for nlri in nlris)

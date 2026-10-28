@@ -304,6 +304,6 @@ class CIDR:
 
 
 for netmask in range(129):
-    CIDR._mask_to_bytes[netmask] = int(math.ceil(float(netmask) / 8))
+    CIDR._mask_to_bytes[netmask] = math.ceil(float(netmask) / 8)
 
 CIDR.NOCIDR = CIDR._create_nocidr()

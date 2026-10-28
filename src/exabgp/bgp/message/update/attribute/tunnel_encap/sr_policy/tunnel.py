@@ -54,13 +54,13 @@ _SINGLE_OCCURRENCE_SUBTLVS: frozenset[int] = frozenset(
 )
 
 __all__ = [
-    'SRPolicyTunnel',
+    'BindingSIDSubTLV',
+    'CandidatePathNameSubTLV',
     'ENLPSubTLV',
+    'PolicyNameSubTLV',
     'PreferenceSubTLV',
     'PrioritySubTLV',
-    'PolicyNameSubTLV',
-    'CandidatePathNameSubTLV',
-    'BindingSIDSubTLV',
+    'SRPolicyTunnel',
     'SRv6BindingSIDSubTLV',
     'SegmentListSubTLV',
 ]

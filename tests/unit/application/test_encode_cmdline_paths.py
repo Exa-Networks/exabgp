@@ -169,8 +169,10 @@ class TestRouteArgument:
     def test_otc_self_is_refused_without_a_neighbor(self) -> None:
         assert _run([ROUTE + ' otc self']) == (
             1,
-            'configuration error: OTC self and role names require a real neighbor: '
-            'use encode -c or a literal OTC ASN\n',
+            (
+                'configuration error: OTC self and role names require a real neighbor: '
+                'use encode -c or a literal OTC ASN\n'
+            ),
         )
 
     def test_a_literal_otc_is_encoded(self) -> None:

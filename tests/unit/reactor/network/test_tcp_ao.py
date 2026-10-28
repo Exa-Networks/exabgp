@@ -154,7 +154,7 @@ class TestTCPAOAlgorithms:
             'hmac-sha-256': 'hmac(sha256)',
         }
 
-        for user_name, kernel_name in ALGORITHM_MAP.items():
+        for kernel_name in ALGORITHM_MAP.values():
             assert len(kernel_name.encode('ascii')) <= 64
             # Verify kernel names are valid strings
             assert kernel_name.isascii()

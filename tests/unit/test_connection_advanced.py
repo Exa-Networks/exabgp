@@ -267,9 +267,7 @@ class TestGeneratorBasedWriter:
             with patch('exabgp.reactor.network.connection.log'):
                 gen = conn.writer(b'testdata12')
 
-                results = []
-                for result in gen:
-                    results.append(result)
+                results = list(gen)
 
                 # Should yield False after first partial send, True when complete
                 assert False in results
@@ -301,9 +299,7 @@ class TestGeneratorBasedWriter:
             ):
                 gen = conn.writer(b'test')
 
-                results = []
-                for result in gen:
-                    results.append(result)
+                results = list(gen)
 
                 # Should yield False on EAGAIN, then True
                 assert False in results
@@ -593,9 +589,7 @@ class TestBufferManagement:
             with patch('exabgp.reactor.network.connection.log'):
                 gen = conn.writer(data)
 
-                results = []
-                for result in gen:
-                    results.append(result)
+                results = list(gen)
 
                 # Should eventually yield True
                 assert results[-1] is True

@@ -21,15 +21,15 @@ from exabgp.bgp.message.operational import Operational
 from exabgp.bgp.message.update import EOR, Update, UpdateCollection
 
 __all__ = [
+    'EOR',
     'Action',
+    'KeepAlive',
     'Message',
+    'Notification',
+    'NotificationReceived',
+    'Notify',
     'Open',
+    'Operational',
     'Update',
     'UpdateCollection',
-    'EOR',
-    'KeepAlive',
-    'Notification',
-    'Notify',
-    'NotificationReceived',
-    'Operational',
 ]

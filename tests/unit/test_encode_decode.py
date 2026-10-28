@@ -598,7 +598,7 @@ class TestSRPolicyDecode(unittest.TestCase):
         data = self._decode_json(self.SR_POLICY_PKT_1)
         announce = data['neighbor']['message']['update']['announce']
         self.assertIn('ipv4 sr-policy', announce)
-        nlris = list(announce['ipv4 sr-policy'].values())[0]
+        nlris = next(iter(announce['ipv4 sr-policy'].values()))
         self.assertEqual(len(nlris), 1)
         self.assertEqual(nlris[0]['distinguisher'], 0)
         self.assertEqual(nlris[0]['color'], 100)

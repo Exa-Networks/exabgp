@@ -98,8 +98,10 @@ def test_environment_dry_run_controls_acl_installation(value: str | None, tmp_pa
         [
             sys.executable,
             '-c',
-            'import json; from exabgp.application.flow import ACL; '
-            'print(json.dumps([ACL.dry, ACL._commit().decode()]))',
+            (
+                'import json; from exabgp.application.flow import ACL; '
+                'print(json.dumps([ACL.dry, ACL._commit().decode()]))'
+            ),
         ],
         check=True,
         capture_output=True,

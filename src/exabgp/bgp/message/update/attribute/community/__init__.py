@@ -55,10 +55,10 @@ from exabgp.bgp.message.update.attribute.community.large.communities import Larg
 from exabgp.bgp.message.update.attribute.community.large.community import LargeCommunity
 
 __all__ = [
-    'Community',
     'Communities',
-    'LargeCommunity',
-    'LargeCommunities',
-    'ExtendedCommunity',
+    'Community',
     'ExtendedCommunities',
+    'ExtendedCommunity',
+    'LargeCommunities',
+    'LargeCommunity',
 ]

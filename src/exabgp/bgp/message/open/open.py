@@ -24,12 +24,12 @@ from exabgp.bgp.message.open.routerid import RouterID
 from exabgp.bgp.message.open.version import Version
 
 __all__ = [
-    'Open',
-    'Version',
     'ASN',
-    'HoldTime',
-    'RouterID',
     'Capabilities',
+    'HoldTime',
+    'Open',
+    'RouterID',
+    'Version',
 ]
 
 # =================================================================== Open

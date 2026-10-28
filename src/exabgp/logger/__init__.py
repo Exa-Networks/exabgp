@@ -23,18 +23,18 @@ from exabgp.logger.history import (
 from exabgp.logger.option import option
 
 __all__ = [
-    'get_logger',
+    'LogMessage',
     'formater',
-    'lazyformat',
-    'lazyattribute',
-    'lazynlri',
-    'lazymsg',
-    'lazyexc',
+    'get_logger',
     'history',
+    'lazyattribute',
+    'lazyexc',
+    'lazyformat',
+    'lazymsg',
+    'lazynlri',
+    'log',
     'option',
     'record',
-    'LogMessage',
-    'log',
 ]
 
 # Type for log messages - must be callable returning string (use lazymsg or lambda)

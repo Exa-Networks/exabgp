@@ -81,7 +81,7 @@ def test_no_neighbor():
                 # Show test output for debugging
                 print('\nTest output:')
                 for line in stderr.strip().split('\n'):
-                    if line.startswith('TEST:') or line.startswith('  PASS:') or line.startswith('SUCCESS:'):
+                    if line.startswith(('TEST:', '  PASS:', 'SUCCESS:')):
                         print(f'  {line}')
             return True
         else:

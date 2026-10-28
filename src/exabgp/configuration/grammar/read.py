@@ -75,7 +75,7 @@ def read_command(section: str, text: str, announce: bool) -> tuple[list[Any], in
     from exabgp.configuration.grammar.tree.static import READING_COMMAND
 
     engine = Engine(block, ReadContext(announce=announce))
-    statements = lex_command(text if text.endswith(';') or text.endswith('}') else text + ' ;')
+    statements = lex_command(text if text.endswith((';', '}')) else text + ' ;')
     reading = READING_COMMAND.set(True)
     try:
         engine.read(statements)

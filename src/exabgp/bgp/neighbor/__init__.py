@@ -10,4 +10,4 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from exabgp.bgp.neighbor.capability import GracefulRestartConfig, NeighborCapability
 from exabgp.bgp.neighbor.neighbor import Neighbor, NeighborTemplate
 
-__all__ = ['GracefulRestartConfig', 'NeighborCapability', 'Neighbor', 'NeighborTemplate']
+__all__ = ['GracefulRestartConfig', 'Neighbor', 'NeighborCapability', 'NeighborTemplate']

@@ -440,13 +440,15 @@ def configured(shutdown: str) -> bool:
     line = f'    shutdown {shutdown};\n' if shutdown else ''
     configuration = Configuration(
         [
-            'neighbor 127.0.0.1 {\n'
-            '    router-id 1.1.1.1;\n'
-            '    local-address 127.0.0.2;\n'
-            '    local-as 1;\n'
-            '    peer-as 1;\n'
-            f'{line}'
-            '}\n'
+            (
+                'neighbor 127.0.0.1 {\n'
+                '    router-id 1.1.1.1;\n'
+                '    local-address 127.0.0.2;\n'
+                '    local-as 1;\n'
+                '    peer-as 1;\n'
+                f'{line}'
+                '}\n'
+            )
         ],
         text=True,
     )

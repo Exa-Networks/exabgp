@@ -46,9 +46,9 @@ from exabgp.bgp.message.update.nlri.evpn.segment import EthernetSegment
 
 __all__ = [
     'EVPN',
-    'EthernetAD',
     'MAC',
-    'Multicast',
+    'EthernetAD',
     'EthernetSegment',
+    'Multicast',
     'Prefix',
 ]

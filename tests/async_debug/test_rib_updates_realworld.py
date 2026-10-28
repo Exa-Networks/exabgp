@@ -58,8 +58,7 @@ class OutgoingRIB:
 
     def cached_changes(self) -> Iterator[MockUpdate]:
         """Returns all cached routes"""
-        for update in self._cache.values():
-            yield update
+        yield from self._cache.values()
 
     def resend(self):
         """
@@ -83,13 +82,11 @@ class OutgoingRIB:
         self._new_nlri = {}
 
         # Lines 229-252: Yield new updates
-        for update in new_nlri.values():
-            yield update
+        yield from new_nlri.values()
 
         # Lines 259-261: Yield refresh updates and CLEAR
         print(f'  [RIB.updates] Yielding {len(self._refresh_changes)} refresh items')
-        for change in self._refresh_changes:
-            yield change
+        yield from self._refresh_changes
         self._refresh_changes = []  # LINE 261 - CLEARS DURING ITERATION
 
 

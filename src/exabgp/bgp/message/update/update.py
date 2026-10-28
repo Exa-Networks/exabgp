@@ -21,11 +21,11 @@ from exabgp.bgp.message.update.nlri import MPNLRICollection, NLRICollection
 from exabgp.logger import lazyformat, log
 
 __all__ = [
+    'MPNLRICollection',
+    'NLRICollection',
     'Update',
     'UpdateCollection',
     'UpdateWire',
-    'NLRICollection',
-    'MPNLRICollection',
 ]
 
 

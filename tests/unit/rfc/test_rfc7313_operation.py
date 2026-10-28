@@ -364,8 +364,10 @@ def _configured(mode: str) -> Any:
 
     configuration = Configuration(
         [
-            'neighbor 192.0.2.1 { router-id 192.0.2.2; local-address 192.0.2.2; local-as 65001; peer-as 65002; '
-            f'capability {{ {mode} }} }}'
+            (
+                'neighbor 192.0.2.1 { router-id 192.0.2.2; local-address 192.0.2.2; local-as 65001; peer-as 65002; '
+                f'capability {{ {mode} }} }}'
+            )
         ],
         text=True,
     )

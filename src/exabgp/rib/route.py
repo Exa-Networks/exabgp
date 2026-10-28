@@ -107,10 +107,10 @@ class Route:
 
         merged = AttributeCollection()
         # First add extra attributes
-        for code, attr in extra_attrs.items():
+        for attr in extra_attrs.values():
             merged.add(attr)
         # Then add our attributes (these take precedence)
-        for code, attr in self.attributes.items():
+        for attr in self.attributes.values():
             merged.add(attr)
         return Route(self.nlri, merged, nexthop=self._nexthop)
 

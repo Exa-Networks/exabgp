@@ -211,7 +211,7 @@ class TestFlushWriteQueue:
         asyncio.run(processes.flush_write_queue())
 
         assert len(processes._write_queue['helper']) == 5
-        assert list(processes._write_queue['helper'])[0] == b'10\n'
+        assert next(iter(processes._write_queue['helper'])) == b'10\n'
 
     def test_a_terminated_process_has_its_queue_dropped(self, processes: Any) -> None:
         """State belonging to a client which is gone must not outlive it."""

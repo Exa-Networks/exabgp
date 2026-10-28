@@ -101,7 +101,7 @@ class TestCreateMinimalConfiguration:
         assert len(config.neighbors) == 1
 
         # Get the neighbor to verify settings
-        neighbor = list(config.neighbors.values())[0]
+        neighbor = next(iter(config.neighbors.values()))
         assert neighbor.session.local_as == 65000
         assert neighbor.session.peer_as == 65001
 
@@ -113,7 +113,7 @@ class TestCreateMinimalConfiguration:
             peer_address='192.168.1.1',
             local_address='192.168.1.2',
         )
-        neighbor = list(config.neighbors.values())[0]
+        neighbor = next(iter(config.neighbors.values()))
         assert str(neighbor.session.peer_address) == '192.168.1.1'
         assert str(neighbor.session.local_address) == '192.168.1.2'
 
@@ -122,7 +122,7 @@ class TestCreateMinimalConfiguration:
         from exabgp.configuration.setup import create_minimal_configuration
 
         config = create_minimal_configuration(families='ipv4 unicast ipv6 unicast')
-        neighbor = list(config.neighbors.values())[0]
+        neighbor = next(iter(config.neighbors.values()))
         # families() is a method that returns list of (AFI, SAFI) tuples
         assert len(neighbor.families()) == 2
 
@@ -131,7 +131,7 @@ class TestCreateMinimalConfiguration:
         from exabgp.configuration.setup import create_minimal_configuration
 
         config = create_minimal_configuration(add_path=True)
-        neighbor = list(config.neighbors.values())[0]
+        neighbor = next(iter(config.neighbors.values()))
         # addpaths() is a method that returns list of (AFI, SAFI) tuples
         assert len(neighbor.addpaths()) > 0
 
@@ -140,7 +140,7 @@ class TestCreateMinimalConfiguration:
         from exabgp.configuration.setup import create_minimal_configuration
 
         config = create_minimal_configuration(families='all')
-        neighbor = list(config.neighbors.values())[0]
+        neighbor = next(iter(config.neighbors.values()))
         # families() is a method - should have all families
         assert len(neighbor.families()) == len(Family.size)
 
@@ -156,7 +156,7 @@ class TestAddRouteToConfig:
         result = add_route_to_config(config, 'route 10.0.0.0/24 next-hop 1.2.3.4')
 
         assert result is True
-        neighbor = list(config.neighbors.values())[0]
+        neighbor = next(iter(config.neighbors.values()))
         routes = list(neighbor.rib.outgoing.cached_routes())
         assert len(routes) == 1
         assert '10.0.0.0/24' in str(routes[0])
@@ -190,7 +190,7 @@ class TestAddRouteToConfig:
         add_route_to_config(config, 'route 10.0.0.0/24 next-hop 1.2.3.4')
         add_route_to_config(config, 'route 10.0.1.0/24 next-hop 1.2.3.5')
 
-        neighbor = list(config.neighbors.values())[0]
+        neighbor = next(iter(config.neighbors.values()))
         routes = list(neighbor.rib.outgoing.cached_routes())
         assert len(routes) == 2
 
@@ -209,7 +209,7 @@ class TestCreateConfigurationWithRoutes:
         )
 
         assert len(config.neighbors) == 1
-        neighbor = list(config.neighbors.values())[0]
+        neighbor = next(iter(config.neighbors.values()))
         routes = list(neighbor.rib.outgoing.cached_routes())
         assert len(routes) == 1
 
@@ -225,7 +225,7 @@ class TestCreateConfigurationWithRoutes:
             families='ipv4 unicast',
         )
 
-        neighbor = list(config.neighbors.values())[0]
+        neighbor = next(iter(config.neighbors.values()))
         assert neighbor.session.local_as == 65000
         assert neighbor.session.peer_as == 65001
 

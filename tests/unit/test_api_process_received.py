@@ -213,7 +213,7 @@ class TestReadErrors:
     def test_a_fatal_errno_is_a_problem(self, processes: Any, pipe: Any) -> None:
         _, write_fd = pipe
         os.write(write_fd, b'x')
-        fatal = sorted(error.fatal)[0]
+        fatal = min(error.fatal)
 
         with patch('exabgp.reactor.api.processes.os.read', side_effect=OSError(fatal, 'fatal')):
             assert list(processes.received()) == []
@@ -234,7 +234,7 @@ class TestReadErrors:
         """EINTR usually means the data is there; the next reactor cycle will collect it."""
         _, write_fd = pipe
         os.write(write_fd, b'x')
-        block = sorted(error.block)[0]
+        block = min(error.block)
 
         with patch('exabgp.reactor.api.processes.os.read', side_effect=OSError(block, 'again')):
             assert list(processes.received()) == []

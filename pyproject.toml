@@ -142,6 +142,9 @@ select = [
 	"C401", "C402", "C404", "C405", "C408", "C413", "C414",
 	# flake8-simplify
 	"SIM102", "SIM103", "SIM113", "SIM115", "SIM117", "SIM118", "SIM201", "SIM202", "SIM210",
+	# the rest of the ruff 0.17 default, rules of one or two findings each
+	"FURB161", "FURB166", "FURB192", "ISC004", "PERF102", "PERF402", "PIE810", "PLC0206", "PLC0414",
+	"PLR1704", "RUF007", "RUF015", "RUF017", "RUF022", "RUF046", "UP028", "UP036",
 	# isort
 	"I001",
 ]

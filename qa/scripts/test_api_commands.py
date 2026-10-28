@@ -76,7 +76,7 @@ def test_api_commands():
                 # Show test output
                 print('\nTest output:')
                 for line in stderr.strip().split('\n'):
-                    if line.startswith('TEST:') or line.startswith('  PASS:') or line.startswith('SUCCESS:'):
+                    if line.startswith(('TEST:', '  PASS:', 'SUCCESS:')):
                         print(f'  {line}')
             print('=' * 70)
             return True

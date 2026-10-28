@@ -81,7 +81,7 @@ _ANSWER_LINES = frozenset(
 
 def _is_answer(data: bytes) -> bool:
     """True for a queued line which only answers a command (`done`, `error`, and why it failed)."""
-    return data in _ANSWER_LINES or data.startswith(b'error: ') or data.startswith(b'{"error": ')
+    return data in _ANSWER_LINES or data.startswith((b'error: ', b'{"error": '))
 
 
 # NetBSD sys/sys/filio.h: FIONWRITE is _IOR('f', 121, int), which Python's termios does not export
@@ -669,9 +669,9 @@ class Processes:
         # Identify which processes need restart (compare before updating self._configuration)
         processes_to_restart = set()
         if restart:
-            for process in configuration:
+            for process, settings in configuration.items():
                 if process in self._process:
-                    if self._configuration.get(process, {}) != configuration[process]:
+                    if self._configuration.get(process, {}) != settings:
                         log.debug(lazymsg('process.config.changed process={p} action=restart', p=process), 'processes')
                         self._queue_exit(process)
                         processes_to_restart.add(process)
@@ -1606,8 +1606,7 @@ class Processes:
     def _notify(self, neighbor: Neighbor, event: str) -> Generator[str, None, None]:
         if not neighbor.api:
             return
-        for process in neighbor.api.get(event, []):
-            yield process
+        yield from neighbor.api.get(event, [])
 
     # invalid-name
     @silenced

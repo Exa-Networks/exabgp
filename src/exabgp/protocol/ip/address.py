@@ -95,8 +95,7 @@ class IP(IPBase):
         return self
 
     def __iter__(self) -> Iterator[str]:
-        for letter in IP.ntop(self._packed):
-            yield letter
+        yield from IP.ntop(self._packed)
 
     @staticmethod
     def pton(ip: str) -> bytes:

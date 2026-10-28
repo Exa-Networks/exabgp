@@ -69,8 +69,7 @@ class Cache:
 
         # we use list() to make a snapshot of the data at the time we run the command
         for family in requested_families:
-            for route in list(self._seen.get(family, {}).values()):
-                yield route
+            yield from list(self._seen.get(family, {}).values())
 
     def in_cache(self, route: Route) -> bool:
         """Check if route is already in cache (for announce deduplication).

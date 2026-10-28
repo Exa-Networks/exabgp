@@ -115,7 +115,7 @@ def test_every_nlri_family_decoder_is_reached(monkeypatch: pytest.MonkeyPatch) -
     """Every registered family must be entered by the bytes the suite feeds it."""
     tally: Counter = Counter()
     seen: set[int] = set()
-    for family, klass in NLRI.registered_nlri.items():
+    for klass in NLRI.registered_nlri.values():
         if id(klass) in seen:
             continue
         seen.add(id(klass))

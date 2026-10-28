@@ -64,7 +64,7 @@ class Resource(BaseValue):
             if 0 <= value <= RESOURCE_VALUE_MAX:
                 return value
         if string_is_hex(string):
-            value = int(string[2:], 16)
+            value = int(string, 0)
             if 0 <= value <= RESOURCE_VALUE_MAX:
                 return value
         raise ValueError(f'unknown {cls.NAME} {name}')

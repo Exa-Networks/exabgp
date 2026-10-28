@@ -347,7 +347,7 @@ class OutputFormatter:
             output_stripped = output_stripped[:-4].strip()
 
         # Try to parse and pretty-print as JSON (single object/array)
-        if output_stripped.startswith('{') or output_stripped.startswith('['):
+        if output_stripped.startswith(('{', '[')):
             # Output which is not one JSON document is not an error to report: the
             # daemon also answers with one JSON object per line, and with plain text,
             # and the two passes below read those. Whatever none of them can read is
@@ -385,7 +385,7 @@ class OutputFormatter:
                 formatted_lines.append('')
                 continue
 
-            if line_stripped.startswith('{') or line_stripped.startswith('['):
+            if line_stripped.startswith(('{', '[')):
                 try:
                     parsed = json.loads(line_stripped)
                     pretty_json = json.dumps(parsed, indent=2, ensure_ascii=False)

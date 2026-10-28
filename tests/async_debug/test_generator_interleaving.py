@@ -145,8 +145,7 @@ async def test_state_modification_during_consumption():
             data_snapshot = list(self._data)
             self._data = []  # Clear during iteration (like line 261)
             print(f'[RIB] Cleared _data, yielding {len(data_snapshot)} items')
-            for item in data_snapshot:
-                yield item
+            yield from data_snapshot
 
     rib = RIBSimulator()
 
@@ -154,18 +153,14 @@ async def test_state_modification_during_consumption():
     rib.add_data(['item1', 'item2', 'item3'])
 
     # Consume first batch
-    results1 = []
-    for item in rib.updates():
-        results1.append(item)
+    results1 = list(rib.updates())
     print(f'First consumption: {results1}')
 
     # Add more data (simulates second flush command)
     rib.add_data(['item4', 'item5'])
 
     # Consume second batch
-    results2 = []
-    for item in rib.updates():
-        results2.append(item)
+    results2 = list(rib.updates())
     print(f'Second consumption: {results2}')
 
     # This should work fine - testing if async changes behavior

@@ -49,8 +49,8 @@ from exabgp.bgp.message.update.nlri.bgpls.srv6sid import SRv6SID
 
 __all__ = [
     'BGPLS',
-    'NODE',
     'LINK',
+    'NODE',
     'PREFIXv4',
     'PREFIXv6',
     'SRv6SID',

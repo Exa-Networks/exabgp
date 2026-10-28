@@ -49,7 +49,7 @@ def hexadecimal(word: str) -> int:
     """The number the word writes as 0x and ASCII hexadecimal digits; ValueError for any other word."""
     if not is_hexadecimal(word):
         raise ValueError(f"'{word}' is not a hexadecimal number, it is 0x and the digits 0 to 9, a to f")
-    return int(word[2:], 16)
+    return int(word, 0)
 
 
 def lenient_number(word: str) -> bool:

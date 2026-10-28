@@ -116,9 +116,9 @@ class API:
         # (not group end which should be processed normally)
         if group_cmd.is_grouping(service):
             cmd_lower = command.strip().lower()
-            if cmd_lower.startswith('group end') or cmd_lower.startswith('group start'):
+            if cmd_lower.startswith(('group end', 'group start')):
                 pass  # Process normally
-            elif cmd_lower.startswith('announce') or cmd_lower.startswith('withdraw'):
+            elif cmd_lower.startswith(('announce', 'withdraw')):
                 # Buffer the command for later processing
                 # For multi-line groups, we use all peers (selector was on group start)
                 peers = list(reactor.peers(service))
@@ -156,9 +156,9 @@ class API:
         # (not group end which should be processed normally)
         if group_cmd.is_grouping(service):
             cmd_lower = command.strip().lower()
-            if cmd_lower.startswith('group end') or cmd_lower.startswith('group start'):
+            if cmd_lower.startswith(('group end', 'group start')):
                 pass  # Process normally
-            elif cmd_lower.startswith('announce') or cmd_lower.startswith('withdraw'):
+            elif cmd_lower.startswith(('announce', 'withdraw')):
                 # Buffer the command for later processing
                 # For multi-line groups, we use all peers (selector was on group start)
                 peers = list(reactor.peers(service))

@@ -12,6 +12,8 @@ template was given the routes of the second. `inherit` inside a template was ign
 
 from __future__ import annotations
 
+import itertools
+
 import pytest
 
 from exabgp.configuration.grammar.error import ConfigError
@@ -106,7 +108,7 @@ def test_a_template_inheriting_itself_is_refused() -> None:
 
 def test_templates_inheriting_too_deep_are_refused() -> None:
     names = [f't{index}' for index in range(MAX_INHERIT_DEPTH + 1)]
-    text = ''.join(_template(name, f'inherit {parent};') for name, parent in zip(names, names[1:]))
+    text = ''.join(_template(name, f'inherit {parent};') for name, parent in itertools.pairwise(names))
     text += _template(names[-1], 'hold-time 60;')
     with pytest.raises(ConfigError, match='more than'):
         read_text(text + NEIGHBOR.format(peer='127.0.0.2', inherit=names[0]))
@@ -114,7 +116,7 @@ def test_templates_inheriting_too_deep_are_refused() -> None:
 
 def test_templates_inheriting_as_deep_as_allowed_are_read() -> None:
     names = [f't{index}' for index in range(MAX_INHERIT_DEPTH)]
-    text = ''.join(_template(name, f'inherit {parent};') for name, parent in zip(names, names[1:]))
+    text = ''.join(_template(name, f'inherit {parent};') for name, parent in itertools.pairwise(names))
     text += _template(names[-1], 'hold-time 60;')
     assert read_text(text + NEIGHBOR.format(peer='127.0.0.2', inherit=names[0])).neighbors[0].hold_time == 60
 

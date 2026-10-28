@@ -441,7 +441,7 @@ class TestNeighborCreateCommand:
         assert len(reactor._peers) == 1
 
         # Get the created peer
-        peer_key = list(reactor._peers.keys())[0]
+        peer_key = next(iter(reactor._peers.keys()))
         peer = reactor._peers[peer_key]
 
         # Verify peer neighbor configuration
@@ -471,7 +471,7 @@ class TestNeighborCreateCommand:
         assert result is True
 
         # Get the created peer
-        peer = list(reactor._peers.values())[0]
+        peer = next(iter(reactor._peers.values()))
         neighbor = peer.neighbor
 
         # Verify API processes
@@ -526,7 +526,7 @@ class TestPeerDeleteCommand:
 
         initial_count = len(reactor._peers)
         all_peers = list(reactor._peers.keys())
-        target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
+        target_peer = next(key for key in all_peers if '127.0.0.1' in key)
 
         # peers list is now passed directly (already matched by dispatcher)
         result = peer_delete(reactor.api, reactor, 'test-service', [target_peer], '', False)
@@ -573,7 +573,7 @@ class TestPeerDeleteCommand:
 
         # Get initial state
         all_peers = list(reactor._peers.keys())
-        target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
+        target_peer = next(key for key in all_peers if '127.0.0.1' in key)
         initial_peers = len(reactor._peers)
         initial_config = len(reactor.configuration.neighbors)
         initial_dynamic = len(reactor._dynamic_peers)
@@ -599,7 +599,7 @@ class TestPeerDeleteCommand:
 
         # Get all peer keys and configurations before delete
         all_peers = list(reactor._peers.keys())
-        target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
+        target_peer = next(key for key in all_peers if '127.0.0.1' in key)
         other_peers = [key for key in all_peers if key != target_peer]
 
         # Store other peer data before deletion
@@ -631,7 +631,7 @@ class TestPeerDeleteCommand:
 
         # Get target peer
         all_peers = list(reactor._peers.keys())
-        target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
+        target_peer = next(key for key in all_peers if '127.0.0.1' in key)
         peer_obj = reactor._peers[target_peer]
 
         # Delete the peer (pass matched peer directly)
@@ -648,7 +648,7 @@ class TestPeerDeleteCommand:
 
         # Get target peer key
         all_peers = list(reactor._peers.keys())
-        target_peer = [key for key in all_peers if '127.0.0.2' in key][0]
+        target_peer = next(key for key in all_peers if '127.0.0.2' in key)
 
         # Verify key exists before deletion
         assert target_peer in reactor._peers
@@ -676,7 +676,7 @@ class TestPeerDeleteCommand:
 
         # Get target peer
         all_peers = list(reactor._peers.keys())
-        target_peer = [key for key in all_peers if '127.0.0.1' in key][0]
+        target_peer = next(key for key in all_peers if '127.0.0.1' in key)
         peer_obj = reactor._peers[target_peer]
         peer_obj.neighbor.api['fsm'] = ['test-service']
         reactor.processes._select_encoder('test-service', {'encoder': 'json'})

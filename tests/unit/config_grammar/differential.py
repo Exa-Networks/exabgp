@@ -16,7 +16,7 @@ import re
 from config_grammar.outcome import Accepted, Outcome, Rejected, agree, read_file, read_text, route_state
 from exabgp.configuration.grammar.read import read_command
 
-__all__ = ['Accepted', 'Outcome', 'Rejected', 'agree', 'grammar', 'grammar_file', 'grammar_command']
+__all__ = ['Accepted', 'Outcome', 'Rejected', 'agree', 'grammar', 'grammar_command', 'grammar_file']
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 CONFIGURATIONS = sorted(

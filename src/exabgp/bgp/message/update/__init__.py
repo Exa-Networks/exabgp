@@ -19,8 +19,8 @@ from exabgp.bgp.message.update.update import (
 from exabgp.bgp.message.update.eor import EOR  # noqa: E402
 
 __all__ = [
-    'AttributeCollection',
     'EOR',
+    'AttributeCollection',
     'MPNLRICollection',
     'NLRICollection',
     'Update',

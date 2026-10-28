@@ -266,7 +266,7 @@ class TestOutputFormatter(unittest.TestCase):
         # Should have 2-space indentation
         lines = clean_output.split('\n')
         # Find a line with "inner" - should be indented 4 spaces (2 levels * 2 spaces)
-        inner_line = [line for line in lines if '"inner"' in line][0]
+        inner_line = next(line for line in lines if '"inner"' in line)
         # Count leading spaces
         leading_spaces = len(inner_line) - len(inner_line.lstrip())
         self.assertEqual(leading_spaces, 4)  # 2 levels of 2-space indent

@@ -190,15 +190,12 @@ def parse() -> argparse.Namespace:
     if options.config is not None:
         # A configuration file has been provided. Read each line and
         # build an equivalent command line.
-        args = sum(
-            [
-                f'--{line.strip()}'.split('=', 1)
-                for line in options.config.readlines()
-                if not line.strip().startswith('#') and line.strip()
-            ],
-            [],
-        )
-        args = [x.strip() for x in args]
+        args = [
+            part.strip()
+            for line in options.config.readlines()
+            if line.strip() and not line.strip().startswith('#')
+            for part in f'--{line.strip()}'.split('=', 1)
+        ]
         args.extend(sys.argv[1:])
         options = parser.parse_args(args)
     options.ip_ifnames = parse_ip_ifnames(options.ip_ifnames, options.ips)
@@ -280,7 +277,7 @@ def system_ips(
         if mo.group('mask'):
             mask = int(mo.group('mask'))
         else:
-            mask = bin(int(mo.group('netmask'), 16)).count('1')
+            mask = int(mo.group('netmask'), 16).bit_count()
         try:
             ip = ip_network(f'{mo.group("ip")}/{mask}')
         except ValueError:

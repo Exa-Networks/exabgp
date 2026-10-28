@@ -137,7 +137,7 @@ def test_decode_basic():
     try:
         announce = data['neighbor']['message']['update']['announce']
         ipv4 = announce['ipv4 unicast']
-        nexthop = list(ipv4.keys())[0]
+        nexthop = next(iter(ipv4.keys()))
         nlri = ipv4[nexthop][0]['nlri']
 
         if nlri != '10.0.0.0/24':

@@ -82,8 +82,8 @@ class option:
 
         levels = 'FATAL CRITICAL ERROR WARNING INFO DEBUG NOTSET'
         index = levels.index(level)
-        for level in levels.split():
-            cls.logit[level] = levels.index(level) <= index
+        for name in levels.split():
+            cls.logit[name] = levels.index(name) <= index
 
     @classmethod
     def log_enabled(cls, source: str, level: str) -> bool:
@@ -124,7 +124,7 @@ class option:
             cls.destination = destination
         elif destination.startswith('file:'):
             cls.destination = destination[5:]
-        elif destination.startswith('/') or destination.startswith('~'):
+        elif destination.startswith(('/', '~')):
             cls.destination = os.path.expanduser(destination)
         else:
             sys.stderr.write(

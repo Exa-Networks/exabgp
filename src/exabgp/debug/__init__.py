@@ -9,4 +9,4 @@ from __future__ import annotations
 
 from exabgp.debug.report import format_exception, format_panic, string_exception
 
-__all__ = ['string_exception', 'format_exception', 'format_panic']
+__all__ = ['format_exception', 'format_panic', 'string_exception']

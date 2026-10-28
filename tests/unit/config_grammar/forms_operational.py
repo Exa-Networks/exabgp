@@ -48,9 +48,11 @@ OPERATIONAL_FORMS: list[tuple[str, bool]] = [
 # whole neighbor bodies: several messages, several blocks, a template
 OPERATIONAL_DOCUMENT_BODIES: list[tuple[str, bool]] = [
     (
-        'operational { rpcq afi ipv4 safi unicast sequence 1; asm afi ipv4 safi unicast advisory a; '
-        'apcp afi ipv4 safi unicast sequence 2 counter 3; rpcq afi ipv4 safi unicast sequence 4; '
-        'asm afi ipv4 safi unicast advisory b; }',
+        (
+            'operational { rpcq afi ipv4 safi unicast sequence 1; asm afi ipv4 safi unicast advisory a; '
+            'apcp afi ipv4 safi unicast sequence 2 counter 3; rpcq afi ipv4 safi unicast sequence 4; '
+            'asm afi ipv4 safi unicast advisory b; }'
+        ),
         True,
     ),
     # a second block adds to the first (it replaced it)

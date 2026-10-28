@@ -12,7 +12,7 @@ def _find_root() -> str:
         root = os.path.dirname(sys.argv[0])
     root = os.path.normpath(os.path.abspath(root))
 
-    if root.endswith('/bin') or root.endswith('/sbin'):
+    if root.endswith(('/bin', '/sbin')):
         root = os.path.normpath(os.path.join(root, '..'))
 
     _index = root.find(app_folder)

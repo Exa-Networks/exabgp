@@ -40,9 +40,9 @@ from exabgp.bgp.message.update.nlri.qualifier.rd import RouteDistinguisher
 
 __all__ = [
     'ESI',
+    'MAC',
     'EthernetTag',
     'Labels',
-    'MAC',
     'PathInfo',
     'RouteDistinguisher',
 ]

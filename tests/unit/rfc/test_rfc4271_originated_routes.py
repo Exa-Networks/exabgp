@@ -29,8 +29,10 @@ def configured(
     local = '2001:db8::2' if ':' in peer else '192.0.2.2'
     configuration = Configuration(
         [
-            f'neighbor {peer} {{ router-id 192.0.2.2; local-address {local}; local-as {local_as}; peer-as 65002; '
-            f'{extra} family {{ {family} }} static {{ {static} }} }}'
+            (
+                f'neighbor {peer} {{ router-id 192.0.2.2; local-address {local}; local-as {local_as}; peer-as 65002; '
+                f'{extra} family {{ {family} }} static {{ {static} }} }}'
+            )
         ],
         text=True,
     )

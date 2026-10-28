@@ -286,8 +286,7 @@ class OutgoingRIB(Cache):
             requested_families = set(self.families).intersection([family])
 
         if enhanced_refresh:
-            for family in requested_families:
-                self._refresh_families.add(family)
+            self._refresh_families.update(requested_families)
 
         # What a refresh replays is the adj-rib-out, and nothing else. A limited family used
         # to replay its held paths from _path_selection when there was no cache, which made
@@ -310,8 +309,7 @@ class OutgoingRIB(Cache):
     def queued_routes(self) -> Iterator[Route]:
         if not self.enabled:
             return
-        for route in self._new_nlri.values():
-            yield route
+        yield from self._new_nlri.values()
 
     def replace_restart(self, previous: list[Route], new: list[Route]) -> None:
         if not self.enabled:

@@ -498,13 +498,17 @@ NEIGHBOR_DOCUMENTS: list[tuple[str, bool]] = [
     # link-local
     ('neighbor fe80::2 { router-id 10.0.0.1; local-address fe80::1; local-as 1; peer-as 2; }', False),
     (
-        'neighbor fe80::2 { router-id 10.0.0.1; local-address fe80::1; local-as 1; peer-as 2; '
-        'capability { link-local-nexthop enable; } }',
+        (
+            'neighbor fe80::2 { router-id 10.0.0.1; local-address fe80::1; local-as 1; peer-as 2; '
+            'capability { link-local-nexthop enable; } }'
+        ),
         True,
     ),
     (
-        'neighbor fe80::2 { router-id 10.0.0.1; local-address fe80::1; local-as 1; peer-as 2; outgoing-ttl 2; '
-        'capability { link-local-nexthop enable; } }',
+        (
+            'neighbor fe80::2 { router-id 10.0.0.1; local-address fe80::1; local-as 1; peer-as 2; outgoing-ttl 2; '
+            'capability { link-local-nexthop enable; } }'
+        ),
         False,
     ),
     # authentication
@@ -533,13 +537,17 @@ NEIGHBOR_DOCUMENTS: list[tuple[str, bool]] = [
     (f'neighbor 127.0.0.1 {{ {_N} api {{ }} api {{ }} }}', True),
     (f'neighbor 127.0.0.1 {{ {_N} api "a b" {{ }} }}', False),
     (
-        'process a { run /bin/cat; } process b { run /bin/cat; } '
-        f'neighbor 127.0.0.1 {{ {_N} api {{ processes [ a ]; send {{ packets; }} }} api {{ processes [ b ]; receive {{ update; }} }} }}',
+        (
+            'process a { run /bin/cat; } process b { run /bin/cat; } '
+            f'neighbor 127.0.0.1 {{ {_N} api {{ processes [ a ]; send {{ packets; }} }} api {{ processes [ b ]; receive {{ update; }} }} }}'
+        ),
         True,
     ),
     (
-        'process a1 { run /bin/cat; } '
-        f'neighbor 127.0.0.1 {{ {_N} api {{ processes-match [ ^a ]; neighbor-changes; }} }}',
+        (
+            'process a1 { run /bin/cat; } '
+            f'neighbor 127.0.0.1 {{ {_N} api {{ processes-match [ ^a ]; neighbor-changes; }} }}'
+        ),
         True,
     ),
     # templates
@@ -553,28 +561,38 @@ NEIGHBOR_DOCUMENTS: list[tuple[str, bool]] = [
         True,
     ),
     (
-        'template { neighbor t { family { ipv4 unicast; } } neighbor u { family { ipv6 unicast; } } } '
-        f'neighbor 127.0.0.1 {{ inherit [ t u ]; {_N} }}',
+        (
+            'template { neighbor t { family { ipv4 unicast; } } neighbor u { family { ipv6 unicast; } } } '
+            f'neighbor 127.0.0.1 {{ inherit [ t u ]; {_N} }}'
+        ),
         True,
     ),
     (
-        'template { neighbor t { family { ipv4 unicast; } } neighbor u { family { ipv6 unicast; } } } '
-        f'neighbor 127.0.0.1 {{ inherit [ t u ]; {_N} }} neighbor 127.0.0.2 {{ inherit t; {_N} }}',
+        (
+            'template { neighbor t { family { ipv4 unicast; } } neighbor u { family { ipv6 unicast; } } } '
+            f'neighbor 127.0.0.1 {{ inherit [ t u ]; {_N} }} neighbor 127.0.0.2 {{ inherit t; {_N} }}'
+        ),
         True,
     ),
     (
-        'template { neighbor t { family { ipv4 unicast; } } } '
-        f'neighbor 127.0.0.1 {{ inherit t; {_N} family {{ ipv6 unicast; }} }}',
+        (
+            'template { neighbor t { family { ipv4 unicast; } } } '
+            f'neighbor 127.0.0.1 {{ inherit t; {_N} family {{ ipv6 unicast; }} }}'
+        ),
         True,
     ),
     (
-        'process a { run /bin/cat; } template { neighbor t { capability { route-refresh; } api { processes [ a ]; } } } '
-        f'neighbor 127.0.0.1 {{ inherit t; {_N} }} neighbor 127.0.0.2 {{ inherit t; {_N} }}',
+        (
+            'process a { run /bin/cat; } template { neighbor t { capability { route-refresh; } api { processes [ a ]; } } } '
+            f'neighbor 127.0.0.1 {{ inherit t; {_N} }} neighbor 127.0.0.2 {{ inherit t; {_N} }}'
+        ),
         True,  # the api of the template is read once, when the template is
     ),
     (
-        'template { neighbor t { confederation { identifier 9; members [ 3 ]; } } } '
-        f'neighbor 127.0.0.1 {{ inherit t; {_N} confederation {{ members [ 4 ]; }} }}',
+        (
+            'template { neighbor t { confederation { identifier 9; members [ 3 ]; } } } '
+            f'neighbor 127.0.0.1 {{ inherit t; {_N} confederation {{ members [ 4 ]; }} }}'
+        ),
         True,  # the neighbor's members, the template's identifier: both giving members was refused
     ),
     (f'template {{ neighbor t {{ }} neighbor t {{ }} }} neighbor 127.0.0.1 {{ {_N} }}', False),

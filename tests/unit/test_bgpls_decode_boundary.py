@@ -55,7 +55,7 @@ def one_tlv(code: int, width: int = 4) -> bytes:
 
 def raising_decoder(monkeypatch: pytest.MonkeyPatch, exception: Exception) -> int:
     """Make the lowest registered TLV decoder raise, and return its code."""
-    code = sorted(LinkState.registered_lsids)[0]
+    code = min(LinkState.registered_lsids)
     klass = LinkState.registered_lsids[code]
 
     def raising(cls: type, data: object) -> None:
@@ -99,7 +99,7 @@ def test_a_notify_a_decoder_raised_itself_is_passed_through(monkeypatch: pytest.
 def test_the_patched_decoder_is_the_one_being_entered(monkeypatch: pytest.MonkeyPatch) -> None:
     """Otherwise every assertion above could be passing for the wrong reason."""
     entered: list[int] = []
-    code = sorted(LinkState.registered_lsids)[0]
+    code = min(LinkState.registered_lsids)
     klass = LinkState.registered_lsids[code]
     original = klass.unpack_bgpls
 

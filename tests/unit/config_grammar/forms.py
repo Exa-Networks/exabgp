@@ -71,8 +71,8 @@ def _nested(path: tuple[str, ...], keyword: str = '') -> str:
     if len(kept) != len([each for each in needs.split(';') if each.strip()]):
         needs = ''.join(f'{each};' for each in kept)
     inner = needs + ' {form};'
-    for keyword in reversed(path):
-        inner = f'{SECTION_OPEN.get(keyword, keyword)} {{{{ {inner} }}}}'
+    for section in reversed(path):
+        inner = f'{SECTION_OPEN.get(section, section)} {{{{ {inner} }}}}'
     return inner
 
 
@@ -434,8 +434,10 @@ DOCUMENTS.extend(
 # the messages of the neighbor, then those of its template
 DOCUMENTS.append(
     (
-        'template { neighbor t { operational { rpcq afi ipv4 safi unicast sequence 3; } } } '
-        f'neighbor 127.0.0.1 {{ inherit t; {_N} operational {{ apcq afi ipv4 safi unicast sequence 4; }} }}',
+        (
+            'template { neighbor t { operational { rpcq afi ipv4 safi unicast sequence 3; } } } '
+            f'neighbor 127.0.0.1 {{ inherit t; {_N} operational {{ apcq afi ipv4 safi unicast sequence 4; }} }}'
+        ),
         True,
     )
 )

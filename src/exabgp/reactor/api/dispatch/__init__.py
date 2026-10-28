@@ -27,18 +27,18 @@ from exabgp.reactor.api.dispatch.v4 import dispatch_v4
 from exabgp.reactor.api.dispatch.v6 import dispatch_v6
 
 __all__ = [
-    'Handler',
-    'UnknownCommand',
-    'NoMatchingPeers',
     'COMMANDS',
-    'get_commands',
+    'SELECTOR_KEY',
+    'DispatchNode',
     # Tree dispatch infrastructure
     'DispatchTree',
-    'DispatchNode',
-    'SELECTOR_KEY',
+    'Handler',
+    'NoMatchingPeers',
+    'UnknownCommand',
     'dispatch',
-    'extract_selector',
     # Dispatchers
     'dispatch_v4',
     'dispatch_v6',
+    'extract_selector',
+    'get_commands',
 ]

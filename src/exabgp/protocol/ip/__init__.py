@@ -18,11 +18,11 @@ from exabgp.protocol.ip.address import (
 
 __all__ = [
     'IP',
+    'IPT',
     'IPBase',
     'IPFactory',
     'IPRange',
     'IPSelf',
-    'IPT',
     'IPv4',
     'IPv6',
 ]

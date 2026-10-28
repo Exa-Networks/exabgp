@@ -11,7 +11,6 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 import json
-import sys
 from typing import ClassVar
 
 from exabgp.protocol.resource import Resource
@@ -27,17 +26,10 @@ def _load_port_data() -> dict[int, str]:
     Returns:
         Dictionary mapping port numbers (int) to service names (str)
     """
-    if sys.version_info >= (3, 9):
-        # Python 3.9+ has importlib.resources.files()
-        from importlib.resources import files
+    from importlib.resources import files
 
-        data_file = files('exabgp.protocol.ip').joinpath('port_data.json')
-        content = data_file.read_text(encoding='utf-8')
-    else:
-        # Python 3.8 compatibility
-        from importlib.resources import read_text
-
-        content = read_text('exabgp.protocol.ip', 'port_data.json')
+    data_file = files('exabgp.protocol.ip').joinpath('port_data.json')
+    content = data_file.read_text(encoding='utf-8')
 
     data = json.loads(content)
     # JSON keys are strings, convert to int

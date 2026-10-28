@@ -259,7 +259,7 @@ def test_bgpls_opaque_tlv_cannot_inject_a_json_member(code: int) -> None:
     # IGP TLVs rather than text, so this asserts the bytes round trip rather than that a
     # particular rendering of them appears.  Hex is the stronger position of the two: an
     # escaped string still has to be escaped correctly, and hex has no quotes to escape.
-    rendered = list(decoded.values())[0]
+    rendered = next(iter(decoded.values()))
     assert bytes.fromhex(rendered) == payload, 'the opaque payload did not survive the render'
 
 
@@ -542,7 +542,7 @@ def api_neighbor():
 
     configuration = create_minimal_configuration(families='all', add_path=False)
     configuration.reload()
-    return list(configuration.neighbors.values())[0]
+    return next(iter(configuration.neighbors.values()))
 
 
 @pytest.mark.parametrize('description, advisory', ADVISORIES, ids=[name for name, _ in ADVISORIES])

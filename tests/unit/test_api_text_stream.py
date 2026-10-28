@@ -36,7 +36,7 @@ FORGED = 'a\nneighbor 1.2.3.4 down - forged'
 def neighbor():
     configuration = create_minimal_configuration(families='all', add_path=False)
     configuration.reload()
-    return list(configuration.neighbors.values())[0]
+    return next(iter(configuration.neighbors.values()))
 
 
 # Response.V4.Text is the ONLY text encoder production builds (reactor/api/processes.py):

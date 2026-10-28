@@ -45,7 +45,7 @@ from exabgp.bgp.message.update.nlri.mvpn.sourcejoin import SourceJoin
 
 __all__ = [
     'MVPN',
+    'SharedJoin',
     'SourceAD',
     'SourceJoin',
-    'SharedJoin',
 ]

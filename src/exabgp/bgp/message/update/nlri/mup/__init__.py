@@ -49,8 +49,8 @@ from exabgp.bgp.message.update.nlri.mup.t2st import Type2SessionTransformedRoute
 
 __all__ = [
     'MUP',
-    'InterworkSegmentDiscoveryRoute',
     'DirectSegmentDiscoveryRoute',
+    'InterworkSegmentDiscoveryRoute',
     'Type1SessionTransformedRoute',
     'Type2SessionTransformedRoute',
 ]

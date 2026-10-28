@@ -178,13 +178,17 @@ FLOW_DOCUMENT_BODIES: list[tuple[str, bool]] = [
     ('flow { route r { match { destination 10.0.0.0/24; } then { copy-simpson 10.0.0.1; discard; } } }', True),
     # two actions to an IPv6 address are one attribute: the second was dropped, or refused
     (
-        'family { ipv6 flow; } flow { route r { match { destination-ipv6 2001:db8::/32/0; } '
-        'then { copy 2001:db8::1; copy 2001:db8::2; } } }',
+        (
+            'family { ipv6 flow; } flow { route r { match { destination-ipv6 2001:db8::/32/0; } '
+            'then { copy 2001:db8::1; copy 2001:db8::2; } } }'
+        ),
         True,
     ),
     (
-        'family { ipv6 flow; } flow { route r { match { destination-ipv6 2001:db8::/32/0; } '
-        'then { copy 2001:db8::1; redirect-to-nexthop-ietf 2001:db8::2; } } }',
+        (
+            'family { ipv6 flow; } flow { route r { match { destination-ipv6 2001:db8::/32/0; } '
+            'then { copy 2001:db8::1; redirect-to-nexthop-ietf 2001:db8::2; } } }'
+        ),
         True,
     ),
     (

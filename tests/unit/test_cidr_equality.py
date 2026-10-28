@@ -14,6 +14,8 @@ at once.
 
 from __future__ import annotations
 
+import itertools
+
 import pytest
 
 from exabgp.bgp.message.update.nlri.cidr import CIDR
@@ -132,5 +134,5 @@ def test_the_ordering_is_a_total_order_over_a_mixed_set() -> None:
     backward = sorted(prefixes)
     assert forward == backward, 'the sort depends on the order the prefixes arrived in'
 
-    for earlier, later in zip(forward, forward[1:]):
+    for earlier, later in itertools.pairwise(forward):
         assert earlier < later, 'two entries in a sorted list compare as neither smaller'

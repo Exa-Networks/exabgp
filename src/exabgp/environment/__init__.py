@@ -14,14 +14,14 @@ from exabgp.environment.base import (
 from exabgp.environment.config import Environment  # noqa: F401,E261
 
 __all__ = [
-    'ROOT',
+    'APPLICATION',
     'ENVFILE',
     'ETC',
-    'APPLICATION',
-    'Environment',
+    'ROOT',
     'Env',
-    'getenv',
+    'Environment',
     'getconf',
+    'getenv',
 ]
 
 
