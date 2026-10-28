@@ -50,7 +50,7 @@ class ACL:
         if key not in cls._known:
             return
         # removing key first so the call to clear never loops forever
-        uid, acl = cls._known.pop(key)
+        uid, _acl = cls._known.pop(key)
         filename = cls._file(uid)
         try:
             if os.path.isfile(filename):

@@ -51,6 +51,7 @@ def setting(environment: dict[str, str], name: str = 'api.ack') -> str:
         capture_output=True,
         text=True,
         env={**os.environ, 'exabgp_log_enable': 'false', **environment},
+        check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     for line in result.stdout.split('\n'):
@@ -96,7 +97,7 @@ class TestShellSyntax:
         if not shutil.which(shell):
             pytest.skip(f'{shell} is not installed')
         script = f"export {DOTTED}=false; {sys.executable} -c \"import os; print(os.environ.get('{DOTTED}', 'unset'))\""
-        result = subprocess.run([shell, '-c', script], capture_output=True, text=True)
+        result = subprocess.run([shell, '-c', script], capture_output=True, text=True, check=False)
         assert 'false' not in result.stdout, f'{shell} exported a dotted name: {result.stdout!r}'
 
     @pytest.mark.parametrize('shell', ['bash', 'zsh', 'sh', 'dash', 'ksh'])
@@ -104,9 +105,7 @@ class TestShellSyntax:
         if not shutil.which(shell):
             pytest.skip(f'{shell} is not installed')
         result = subprocess.run(
-            [shell, '-c', f'export {UNDERSCORE}=false; echo reached'],
-            capture_output=True,
-            text=True,
+            [shell, '-c', f'export {UNDERSCORE}=false; echo reached'], capture_output=True, text=True, check=False
         )
         assert result.returncode == 0, result.stdout + result.stderr
         assert 'reached' in result.stdout
@@ -116,7 +115,7 @@ class TestShellSyntax:
         if not shutil.which(shell):
             pytest.skip(f'{shell} is not installed')
         script = f"env '{DOTTED}=false' {sys.executable} -c \"import os; print(os.environ['{DOTTED}'])\""
-        result = subprocess.run([shell, '-c', script], capture_output=True, text=True)
+        result = subprocess.run([shell, '-c', script], capture_output=True, text=True, check=False)
         assert result.returncode == 0, result.stdout + result.stderr
         assert result.stdout.strip() == 'false'
 
@@ -128,6 +127,7 @@ class TestShellSyntax:
             ['sh', '-c', f"env '{DOTTED}=false' exabgp_log_enable=false {EXABGP} env -e"],
             capture_output=True,
             text=True,
+            check=False,
         )
         assert result.returncode == 0, result.stdout + result.stderr
         assert f'{DOTTED}=false' in result.stdout

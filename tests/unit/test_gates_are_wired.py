@@ -187,7 +187,9 @@ GATE_ROOT = ROOT / 'qa' / 'bin'
 
 
 def run_gate(*arguments: str) -> subprocess.CompletedProcess:
-    return subprocess.run([str(GATE_ROOT / 'compat_gate'), *arguments], cwd=str(ROOT), capture_output=True, timeout=600)
+    return subprocess.run(
+        [str(GATE_ROOT / 'compat_gate'), *arguments], cwd=str(ROOT), capture_output=True, timeout=600, check=False
+    )
 
 
 def test_a_tree_it_cannot_read_is_not_reported_as_a_finding() -> None:

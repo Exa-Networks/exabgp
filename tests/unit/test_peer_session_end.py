@@ -434,7 +434,7 @@ def test_a_connection_which_sent_no_open_is_closed_without_a_cease() -> None:
 @pytest.mark.rfc('rfc4486#4-peer-de-configured')
 def test_a_removed_peer_is_sent_peer_de_configured(state: FSMState) -> None:
     peer = session_peer()
-    proto, theirs = connected(peer)
+    _proto, theirs = connected(peer)
     peer.fsm.change(state)
     try:
         peer.remove()
@@ -447,7 +447,7 @@ def test_a_removed_peer_is_sent_peer_de_configured(state: FSMState) -> None:
 @pytest.mark.rfc('rfc4486#4-administrative-shutdown')
 def test_a_shutdown_sends_administrative_shutdown() -> None:
     peer = session_peer()
-    proto, theirs = connected(peer)
+    _proto, theirs = connected(peer)
     peer.fsm.change(FSM.ESTABLISHED)
     try:
         peer.shutdown()
@@ -474,7 +474,7 @@ def test_a_shutdown_with_graceful_restart_closes_quietly() -> None:
 
 def test_a_peer_still_connecting_is_closed_without_a_cease() -> None:
     peer = session_peer()
-    proto, theirs = connected(peer)
+    _proto, theirs = connected(peer)
     peer.fsm.change(FSM.CONNECT)
     try:
         peer.remove()
@@ -487,7 +487,7 @@ def test_a_peer_still_connecting_is_closed_without_a_cease() -> None:
 async def test_a_removed_peer_stops_the_task_of_its_session() -> None:
     """The session task was left running on a connection which was gone."""
     peer = session_peer()
-    proto, theirs = connected(peer)
+    _proto, theirs = connected(peer)
     theirs.sendall(their_open('192.0.2.2'))
     run = asyncio.create_task(peer._run_session())
     try:

@@ -113,6 +113,8 @@ def test_in_a_zipapp_the_package_is_the_archive(tmp_path: Path) -> None:
             writer.write(module, Path('exabgp') / module.relative_to(source))
 
     code = 'import sys; sys.path.insert(0, sys.argv[1]); from exabgp.reactor.daemon import PACKAGE; print(PACKAGE)'
-    result = subprocess.run([sys.executable, '-I', '-c', code, str(archive)], capture_output=True, text=True)
+    result = subprocess.run(
+        [sys.executable, '-I', '-c', code, str(archive)], capture_output=True, text=True, check=False
+    )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == str(archive)

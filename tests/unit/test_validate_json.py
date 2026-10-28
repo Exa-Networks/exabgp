@@ -40,6 +40,7 @@ def validate(path: pathlib.Path, returncode: int) -> dict[str, Any]:
         env=environ,
         cwd=str(ROOT),
         timeout=180,
+        check=False,
     )
     assert result.returncode == returncode, result.stdout + result.stderr
     document = json.loads(result.stdout)

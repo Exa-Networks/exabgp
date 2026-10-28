@@ -189,7 +189,7 @@ class TestStartEnvironment:
 
     def test_the_terminal_is_declared_dumb(self, environment: Any, spawn: Any) -> None:
         """A capable TERM makes the shell emit escape codes into the start of the pipe."""
-        popen, _, _ = spawn
+        _popen, _, _ = spawn
         processes = configured(environment)
 
         with patch.dict(os.environ, {'TERM': 'xterm-256color'}):

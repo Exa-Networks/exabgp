@@ -648,7 +648,7 @@ class TestCacheInteractions:
         assert rib.pending(), 'force=True should override cache'
 
         updates = consume_updates(rib)
-        announces, withdraws = count_announces_withdraws(updates)
+        announces, _withdraws = count_announces_withdraws(updates)
 
         assert announces == 1, 'Should have 1 announce'
 

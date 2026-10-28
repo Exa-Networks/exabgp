@@ -146,6 +146,7 @@ neighbor 127.0.0.1 {
         env=environ,
         cwd=str(ROOT),
         timeout=180,
+        check=False,
     )
     combined = result.stdout + result.stderr
     assert result.returncode != 0, combined[-1500:]

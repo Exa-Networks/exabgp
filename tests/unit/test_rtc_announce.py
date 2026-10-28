@@ -66,6 +66,7 @@ def validate(tmp_path, body):
         env=environ,
         cwd=str(ROOT),
         timeout=180,
+        check=False,
     )
 
 

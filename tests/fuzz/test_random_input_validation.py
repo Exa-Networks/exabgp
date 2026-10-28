@@ -150,7 +150,7 @@ def test_nested_config_blocks(nesting_level: int) -> None:
 def test_connection_reader_robustness(data: bytes) -> None:
     """Test BGP connection reader doesn't crash on random binary data."""
     try:
-        length, msg_type, header, body, error = read_message(data)
+        length, _msg_type, header, _body, error = read_message(data)
     except LostConnection:
         # The peer closed before sending the whole message
         return
@@ -181,7 +181,7 @@ def test_bgp_header_validation(valid_marker: bool, length: int, msg_type: int) -
     body_data = b'\x00' * body_size
     data = header_data + body_data
 
-    result_length, result_type, header, body, error = read_message(data)
+    result_length, result_type, _header, body, error = read_message(data)
 
     if not valid_marker:
         assert error is not None
@@ -313,7 +313,7 @@ def test_truncated_bgp_header(truncate_at: int) -> None:
             read_message(truncated)
         return
 
-    result_length, result_type, header, body, error = read_message(truncated)
+    result_length, result_type, _header, _body, error = read_message(truncated)
     assert error is None
     assert (result_length, result_type) == (19, Message.CODE.KEEPALIVE)
 

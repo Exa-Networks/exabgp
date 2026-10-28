@@ -103,7 +103,7 @@ class TestRTCPackUnpack:
         nlri = RTC.make_rtc(ASN(65000), rt)
 
         packed = nlri.pack_nlri(create_negotiated())
-        unpacked, leftover = RTC.unpack_nlri(
+        unpacked, _leftover = RTC.unpack_nlri(
             AFI.ipv4, SAFI.rtc, packed, Action.ANNOUNCE, False, negotiated=create_negotiated()
         )
 
@@ -119,7 +119,7 @@ class TestRTCPackUnpack:
             rt = RouteTarget.make_route_target(64512, 100)
             nlri = RTC.make_rtc(ASN(asn), rt)
             packed = nlri.pack_nlri(create_negotiated())
-            unpacked, leftover = RTC.unpack_nlri(
+            unpacked, _leftover = RTC.unpack_nlri(
                 AFI.ipv4, SAFI.rtc, packed, Action.UNSET, False, negotiated=create_negotiated()
             )
 
@@ -136,7 +136,7 @@ class TestRTCPackUnpack:
         for rt in test_rts:
             nlri = RTC.make_rtc(ASN(65000), rt)
             packed = nlri.pack_nlri(create_negotiated())
-            unpacked, leftover = RTC.unpack_nlri(
+            unpacked, _leftover = RTC.unpack_nlri(
                 AFI.ipv4, SAFI.rtc, packed, Action.UNSET, False, negotiated=create_negotiated()
             )
 
@@ -149,7 +149,7 @@ class TestRTCPackUnpack:
         nlri = RTC.make_rtc(ASN(65000), rt)
 
         packed = nlri.pack_nlri(create_negotiated()) + b'\x01\x02\x03\x04'
-        unpacked, leftover = RTC.unpack_nlri(
+        _unpacked, leftover = RTC.unpack_nlri(
             AFI.ipv4, SAFI.rtc, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 

@@ -140,7 +140,7 @@ class TestParseNeighborParams:
 
     def test_ipv6_neighbor(self):
         line = 'neighbor 2001:db8::2 local-ip 2001:db8::1 local-as 65000 peer-as 65001 router-id 1.2.3.4 create'
-        params, api_processes = _parse_neighbor_params(line)
+        params, _api_processes = _parse_neighbor_params(line)
 
         assert params['peer-address'].afi == AFI.ipv6
 

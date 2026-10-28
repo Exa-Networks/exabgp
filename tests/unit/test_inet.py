@@ -222,7 +222,7 @@ class TestLabelUnpack:
         null_label = b'\x00\x00\x00\x00'
         data = b'\x38' + null_label + b'\xc0\xa8\x01'
 
-        nlri, leftover = Label.unpack_nlri(
+        nlri, _leftover = Label.unpack_nlri(
             AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
         )
 
@@ -238,7 +238,7 @@ class TestLabelUnpack:
         # Mask = 24 (label) + 24 (for /24 prefix) = 48
         data = b'\x30' + bos_label + b'\xc0\xa8\x01\x00'
 
-        nlri, leftover = Label.unpack_nlri(
+        nlri, _leftover = Label.unpack_nlri(
             AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
         )
 
@@ -254,7 +254,7 @@ class TestINETUnpackMulticast:
         # Simple IPv4 multicast prefix
         data = b'\x18\xc0\xa8\x01'  # 192.168.1.0/24
 
-        nlri, leftover = INET.unpack_nlri(
+        nlri, _leftover = INET.unpack_nlri(
             AFI.ipv4, SAFI.multicast, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
         )
 
@@ -267,7 +267,7 @@ class TestINETUnpackMulticast:
         # IPv6 prefix ff00::/8
         data = b'\x08\xff'
 
-        nlri, leftover = INET.unpack_nlri(
+        nlri, _leftover = INET.unpack_nlri(
             AFI.ipv6, SAFI.multicast, data, Action.ANNOUNCE, addpath=False, negotiated=create_negotiated()
         )
 

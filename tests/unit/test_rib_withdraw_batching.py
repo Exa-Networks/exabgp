@@ -140,7 +140,7 @@ class TestWithdrawalsShareAMessage:
     def test_a_wide_batch_is_split_and_loses_nothing(self):
         routes = [route4(index) for index in range(WIDE_WITHDRAWAL_COUNT)]
         negotiated = session()
-        updates, packed = announce_then_withdraw(routes, grouped=True)
+        _updates, packed = announce_then_withdraw(routes, grouped=True)
 
         assert len(packed) > 1, 'two thousand /32 do not fit one UPDATE'
         assert max(len(message) for message in packed) <= negotiated.msg_size

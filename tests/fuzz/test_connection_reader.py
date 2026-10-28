@@ -57,7 +57,7 @@ def test_reader_with_invalid_marker() -> None:
     # Invalid marker (all zeros instead of all 0xFF)
     data = b'\x00' * 16 + struct.pack('!H', 19) + b'\x01'
 
-    length, msg_type, header, body, error = read_message(data)
+    _length, _msg_type, _header, _body, error = read_message(data)
 
     assert error is not None
     assert isinstance(error, NotifyError)
@@ -71,7 +71,7 @@ def test_reader_with_invalid_length_too_small() -> None:
     # Length = 18 (one below minimum)
     data = b'\xff' * 16 + struct.pack('!H', 18) + b'\x01'
 
-    length, msg_type, header, body, error = read_message(data)
+    _length, _msg_type, _header, _body, error = read_message(data)
 
     assert error is not None
     assert isinstance(error, NotifyError)
@@ -87,7 +87,7 @@ def test_reader_with_invalid_length_too_large() -> None:
     # Length = 4097 (one above standard maximum)
     data = b'\xff' * 16 + struct.pack('!H', 4097) + b'\x01'
 
-    length, msg_type, header, body, error = read_message(data)
+    _length, _msg_type, _header, _body, error = read_message(data)
 
     assert error is not None
     assert isinstance(error, NotifyError)
@@ -123,7 +123,7 @@ def test_reader_with_all_valid_lengths(length: int) -> None:
     body_data = b'\x00' * body_size
     data = header_data + body_data
 
-    result_length, msg_type, header, body, error = read_message(data)
+    result_length, msg_type, _header, body, error = read_message(data)
 
     # KEEPALIVE should only be exactly 19 bytes
     if length == 19:

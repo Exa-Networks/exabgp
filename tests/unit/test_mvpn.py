@@ -557,7 +557,7 @@ class TestMVPNGeneric:
         packed = bytes([99, 8]) + packed_rd
 
         # Should return GenericMVPN
-        unpacked, leftover = MVPN.unpack_nlri(
+        unpacked, _leftover = MVPN.unpack_nlri(
             AFI.ipv4, SAFI.mcast_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 

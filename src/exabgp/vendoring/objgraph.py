@@ -897,7 +897,7 @@ def _present_graph(dot_filename: str, filename: str | None = None) -> None:
         if not filename:
             print('Graph viewer (xdot) not found, generating a png instead')
             filename = dot_filename[:-4] + '.png'
-        stem, ext = os.path.splitext(filename)
+        _stem, ext = os.path.splitext(filename)
         cmd = ['dot', '-T' + ext[1:], '-o' + filename, dot_filename]
         dot = subprocess.Popen(cmd, close_fds=False)
         dot.wait()

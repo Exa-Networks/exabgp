@@ -98,7 +98,7 @@ def test_a_reload_waits_for_the_routes_then_happens(signal: int) -> None:
 
 
 def test_a_full_reload_is_not_downgraded_by_a_reload_after_it() -> None:
-    reactor, peer, configuration = reactor_sending_routes()
+    reactor, peer, _configuration = reactor_sending_routes()
     reactor.signal.received = Signal.FULL_RELOAD
     reactor._signalled()
     reactor.signal.received = Signal.RELOAD

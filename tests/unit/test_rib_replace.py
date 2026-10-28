@@ -120,7 +120,7 @@ class TestReplaceRestart:
         assert rib.pending()
 
         updates = consume_updates(rib)
-        announces, withdraws = count_announces_withdraws(updates)
+        announces, _withdraws = count_announces_withdraws(updates)
 
         # Both cached routes should be re-announced
         assert announces == 2

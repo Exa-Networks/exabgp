@@ -81,7 +81,7 @@ async def established(neighbor: Neighbor, *, they_advertise: bool) -> tuple[Peer
 @pytest.mark.parametrize('they_advertise', [True, False], ids=['both-advertise', 'only-we-advertise'])
 @pytest.mark.asyncio
 async def test_advertising_the_capability_raises_what_we_receive(local_as: int, they_advertise: bool) -> None:
-    peer, proto, theirs = await established(configured(local_as=local_as), they_advertise=they_advertise)
+    _peer, proto, theirs = await established(configured(local_as=local_as), they_advertise=they_advertise)
     try:
         assert proto.connection is not None
         assert proto.connection.msg_size == EXTENDED
@@ -93,7 +93,7 @@ async def test_advertising_the_capability_raises_what_we_receive(local_as: int, 
 @pytest.mark.rfc('rfc8654#5-not-advertised-not-accepted')
 @pytest.mark.asyncio
 async def test_not_advertising_the_capability_keeps_what_we_receive_to_4096() -> None:
-    peer, proto, theirs = await established(configured(advertise=False), they_advertise=True)
+    _peer, proto, theirs = await established(configured(advertise=False), they_advertise=True)
     try:
         assert proto.connection is not None
         assert proto.connection.msg_size == STANDARD
@@ -105,7 +105,7 @@ async def test_not_advertising_the_capability_keeps_what_we_receive_to_4096() ->
 @pytest.mark.asyncio
 async def test_an_extended_message_we_did_not_advertise_for_is_a_bad_message_length() -> None:
     """The peer sends one anyway: RFC 8654 4 has the listener answer Bad Message Length."""
-    peer, proto, theirs = await established(configured(advertise=False), they_advertise=True)
+    _peer, proto, theirs = await established(configured(advertise=False), they_advertise=True)
     length = STANDARD + 1
     theirs.sendall(Message.MARKER + pack('!H', length) + bytes([2]) + bytes(length - Message.HEADER_LEN))
     try:
@@ -127,7 +127,7 @@ async def test_what_we_send_is_extended_only_with_their_capability(
     we_advertise: bool, they_advertise: bool, size: int
 ) -> None:
     """Sending needs theirs. It also still needs ours: a MAY, declined while we did not offer it."""
-    peer, proto, theirs = await established(configured(advertise=we_advertise), they_advertise=they_advertise)
+    _peer, proto, theirs = await established(configured(advertise=we_advertise), they_advertise=they_advertise)
     try:
         assert proto.negotiated.msg_size == size
     finally:

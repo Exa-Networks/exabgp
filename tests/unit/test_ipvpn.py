@@ -209,7 +209,7 @@ class TestIPVPNPackUnpack:
         )
 
         packed = nlri.pack_nlri(create_negotiated()) + b'\x01\x02\x03\x04'
-        unpacked, leftover = IPVPN.unpack_nlri(
+        _unpacked, leftover = IPVPN.unpack_nlri(
             AFI.ipv4, SAFI.mpls_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 

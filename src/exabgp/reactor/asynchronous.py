@@ -154,7 +154,7 @@ class ASYNC:
             return False
 
         # Check if we have a mix of generators and coroutines
-        first_uid, first_callback = self._async[0]
+        _first_uid, first_callback = self._async[0]
 
         if inspect.iscoroutine(first_callback) or inspect.iscoroutinefunction(first_callback):
             # Process ALL coroutines in the queue atomically

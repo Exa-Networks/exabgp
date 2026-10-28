@@ -200,7 +200,7 @@ def test_unpack_preserves_data_integrity() -> None:
     )
 
     # Verify split extracts the data correctly
-    withdrawn, attrs, announced = UpdateCollection.split(data)
+    withdrawn, _attrs, _announced = UpdateCollection.split(data)
     assert withdrawn == test_prefix
 
     # Verify unpack_message processes the same data

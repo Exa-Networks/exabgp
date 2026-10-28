@@ -536,7 +536,7 @@ class UpdateCollection:
         if mp_withdraws and only_withdraws:
             # Check if all MP withdraws are unicast/multicast (simple case)
             for family in mp_withdraws.keys():
-                afi, safi = family
+                _afi, safi = family
                 if safi not in (SAFI.unicast, SAFI.multicast):
                     break
             # no break - all families are unicast/multicast

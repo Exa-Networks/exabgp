@@ -91,7 +91,7 @@ class TestVPLSPackUnpack:
             vpls = VPLS.make_vpls(rd, endpoint, base, offset, size)
 
             packed = vpls.pack_nlri(create_negotiated())
-            unpacked, leftover = VPLS.unpack_nlri(
+            unpacked, _leftover = VPLS.unpack_nlri(
                 AFI.l2vpn, SAFI.vpls, packed, Action.ANNOUNCE, False, negotiated=create_negotiated()
             )
 

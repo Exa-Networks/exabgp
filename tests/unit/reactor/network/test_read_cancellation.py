@@ -324,7 +324,7 @@ def test_a_recv_cancelled_while_still_pending_is_cancelled_cleanly(pair: object)
 
     A recovery which blindly read the future's result would raise or record garbage here.
     """
-    connection, peer = pair
+    connection, _peer = pair
 
     async def scenario() -> None:
         task = asyncio.ensure_future(connection._reader_async(Message.HEADER_LEN))

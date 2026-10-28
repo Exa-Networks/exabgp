@@ -122,7 +122,7 @@ class MockBGPServer:
         """Server loop that accepts connections and handles messages"""
         try:
             if self.accept_connections:
-                self.client_socket, addr = self.server_socket.accept()
+                self.client_socket, _addr = self.server_socket.accept()
                 self.client_socket.settimeout(2.0)
                 self.connection_established = True
 
@@ -389,7 +389,7 @@ class TestOutgoingConnectionLifecycle:
             time.sleep(0.2)
 
             # Read the message
-            length, msg_type, header, body, error = read_one(outgoing)
+            length, msg_type, _header, _body, error = read_one(outgoing)
 
             assert error is None, 'Should not have error'
             assert length == 19, 'KEEPALIVE is 19 bytes'
@@ -433,7 +433,7 @@ class TestOutgoingConnectionLifecycle:
             time.sleep(0.2)
 
             # 3. Receive server OPEN
-            length, msg_type, header, body, error = read_one(outgoing)
+            _length, msg_type, _header, _body, error = read_one(outgoing)
 
             assert error is None
             assert msg_type == 1, 'Should receive OPEN (type 1)'
@@ -448,7 +448,7 @@ class TestOutgoingConnectionLifecycle:
             time.sleep(0.1)
 
             # 5. Receive KEEPALIVE
-            length, msg_type, header, body, error = read_one(outgoing)
+            _length, msg_type, _header, _body, error = read_one(outgoing)
 
             assert error is None
             assert msg_type == 4, 'Should receive KEEPALIVE (type 4)'
@@ -498,7 +498,7 @@ class TestIncomingConnectionLifecycle:
             time.sleep(0.1)
 
             # Read the message
-            length, msg_type, header, body, error = read_one(incoming)
+            length, msg_type, _header, _body, error = read_one(incoming)
 
             assert error is None
             assert length == 19
@@ -594,7 +594,7 @@ class TestConnectionErrorScenarios:
             time.sleep(0.1)
 
             # Read should detect error
-            length, msg_type, header, body, error = read_one(incoming)
+            _length, _msg_type, _header, _body, error = read_one(incoming)
 
             # Should have a NotifyError
             assert isinstance(error, NotifyError)
@@ -651,7 +651,7 @@ class TestConnectionConcurrency:
                 # Try to receive
                 if messages_received < 3:
                     try:
-                        length, msg_type, header, body, error = read_one(outgoing, POLL_SECONDS)
+                        length, _msg_type, _header, _body, _error = read_one(outgoing, POLL_SECONDS)
                     except TimeoutError:
                         # Nothing arrived yet; the partial read is kept for the next try
                         length = 0

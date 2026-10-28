@@ -85,7 +85,7 @@ def test_invalid_marker_single_byte(byte_value: int, position: int) -> None:
 
     header = create_bgp_header(bytes(marker), 19, 4)  # KEEPALIVE
 
-    length, msg_type, hdr, body, error = read_message(header)
+    _length, _msg_type, _hdr, _body, error = read_message(header)
 
     # Should detect invalid marker
     assert error is not None
@@ -104,7 +104,7 @@ def test_random_marker_pattern(marker_pattern: bytes) -> None:
     is_valid = marker_pattern == b'\xff' * 16
     header = create_bgp_header(marker_pattern, 19, 4)
 
-    length, msg_type, hdr, body, error = read_message(header)
+    length, _msg_type, _hdr, _body, error = read_message(header)
 
     if is_valid:
         assert error is None
@@ -125,7 +125,7 @@ def test_length_too_small(length: int) -> None:
 
     header = create_bgp_header(b'\xff' * 16, length, 4)
 
-    length_result, msg_type, hdr, body, error = read_message(header)
+    _length_result, _msg_type, _hdr, _body, error = read_message(header)
 
     # Should reject length < 19
     assert error is not None
@@ -146,7 +146,7 @@ def test_length_too_large(length: int) -> None:
     body = b'\x00' * min(length - 19, 100)
     data = header + body
 
-    length_result, msg_type, hdr, body_result, error = read_message(data)
+    _length_result, _msg_type, _hdr, _body_result, error = read_message(data)
 
     # Should reject length > 4096
     assert error is not None
@@ -431,7 +431,7 @@ def test_keepalive_with_extra_data(extra_bytes: bytes) -> None:
     header = create_bgp_header(b'\xff' * 16, length, 4)
     data = header + extra_bytes
 
-    length_result, msg_type, hdr, body, error = read_message(data)
+    _length_result, _msg_type, _hdr, _body, error = read_message(data)
 
     # KEEPALIVE with extra data should be rejected
     assert error is not None
@@ -461,7 +461,7 @@ def test_length_body_mismatch(claimed_length: int, actual_body_size: int) -> Non
     data = header + body
 
     try:
-        length_result, msg_type, hdr, body_result, error = read_message(data)
+        length_result, _msg_type, _hdr, body_result, error = read_message(data)
     except LostConnection:
         # The peer closed before sending the body its header promised
         assert actual_body_size < body_size_expected
@@ -484,7 +484,7 @@ def test_message_exactly_19_bytes() -> None:
 
     header = create_bgp_header(b'\xff' * 16, 19, 4)  # Valid KEEPALIVE
 
-    length, msg_type, hdr, body, error = read_message(header)
+    length, msg_type, _hdr, body, error = read_message(header)
 
     assert error is None
     assert length == 19
@@ -500,7 +500,7 @@ def test_message_exactly_4096_bytes() -> None:
     body = b'\x00' * (4096 - 19)
     data = header + body
 
-    length, msg_type, hdr, body_result, error = read_message(data)
+    length, msg_type, _hdr, body_result, error = read_message(data)
 
     assert error is None
     assert length == 4096
@@ -522,7 +522,7 @@ def test_all_valid_message_types(msg_type: int) -> None:
     body = b'\x00' * (length - 19)
     data = header + body
 
-    length_result, type_result, hdr, body_result, error = read_message(data)
+    _length_result, _type_result, _hdr, _body_result, error = read_message(data)
 
     # Header parsing should succeed (body may be invalid)
     # For KEEPALIVE, length must be exactly 19

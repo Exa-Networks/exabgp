@@ -40,6 +40,7 @@ def test_a_helper_exits_when_its_stdin_closes_in_the_status_loop(helper: str) ->
             stderr=subprocess.DEVNULL,
             text=True,
             timeout=EXIT_WITHIN,
+            check=False,
         )
     except subprocess.TimeoutExpired:
         pytest.fail(f'{helper} was still running {EXIT_WITHIN}s after its stdin closed')

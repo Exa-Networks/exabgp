@@ -40,5 +40,6 @@ def test_a_configuration_loaded_by_one_test_does_not_reach_the_next() -> None:
         capture_output=True,
         text=True,
         timeout=120,
+        check=False,
     )
     assert result.returncode == 0, result.stdout[-2000:]

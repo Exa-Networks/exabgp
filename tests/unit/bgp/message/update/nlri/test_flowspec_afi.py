@@ -58,7 +58,7 @@ class TestIPrefix4:
     def test_make_slash32(self):
         """IPrefix4.make parses /32 wire format correctly."""
         bgp = bytes([32, 192, 168, 1, 1])
-        prefix, remaining = IPrefix4.make(bgp)
+        prefix, _remaining = IPrefix4.make(bgp)
         assert prefix.cidr.mask == 32
         assert prefix.cidr.prefix() == '192.168.1.1/32'
 
@@ -147,7 +147,7 @@ class TestIPrefix6:
         """IPrefix6.make parses /64 wire format correctly."""
         # Wire format: [mask][offset][ip...]
         bgp = bytes([64, 0, 0x20, 0x01, 0x0D, 0xB8, 0, 0, 0, 1])
-        prefix, remaining = IPrefix6.make(bgp)
+        prefix, _remaining = IPrefix6.make(bgp)
         assert prefix.cidr.mask == 64
         assert '2001:db8:0:1::/64' in prefix.cidr.prefix()
 

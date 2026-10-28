@@ -73,6 +73,7 @@ def validate(tmp_path, text):
         env=environ,
         cwd=str(ROOT),
         timeout=180,
+        check=False,
     )
 
 
@@ -138,5 +139,6 @@ def test_every_shipped_flow_configuration_still_validates() -> None:
             env=environ,
             cwd=str(ROOT),
             timeout=180,
+            check=False,
         )
         assert result.returncode == 0, f'{conf.name} stopped validating: {(result.stdout + result.stderr)[-1200:]}'

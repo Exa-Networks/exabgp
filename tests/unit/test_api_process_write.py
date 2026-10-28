@@ -162,7 +162,7 @@ class TestWrite:
 
     def test_in_async_mode_the_line_is_queued_and_not_written(self, processes: Any, pipe: Any) -> None:
         """The event loop must not be blocked, so write() only enqueues."""
-        read_fd, write_fd = pipe
+        _read_fd, write_fd = pipe
         with_stdin(processes, 'helper', write_fd)
         processes._async_mode = True
 
@@ -194,7 +194,7 @@ class TestFlushWriteQueue:
 
     def test_only_ten_items_are_written_per_call(self, processes: Any, pipe: Any) -> None:
         """The batch cap is what keeps the reactor responsive under a flood of ACKs."""
-        read_fd, write_fd = pipe
+        _read_fd, write_fd = pipe
         with_stdin(processes, 'helper', write_fd)
         processes._async_mode = True
         for index in range(15):
@@ -273,7 +273,7 @@ class TestFlushWriteQueue:
 
     def test_an_empty_queue_entry_is_kept_for_the_next_write(self, processes: Any, pipe: Any) -> None:
         """A helper with nothing pending is skipped, not forgotten."""
-        read_fd, write_fd = pipe
+        _read_fd, write_fd = pipe
         with_stdin(processes, 'helper', write_fd)
         processes._async_mode = True
         processes._write_queue['helper'] = collections.deque()

@@ -52,7 +52,7 @@ class PreferenceSubTLV(SubTLV):
             raise MalformedSubTLV(
                 f'SR Policy preference sub-TLV is {len(data)} bytes, it must be {_PREFERENCE_VALUE_SIZE}'
             )
-        flags, reserved, preference = unpack('!BBI', data[:6])
+        flags, _reserved, preference = unpack('!BBI', data[:6])
         return cls(preference=preference, flags=flags)
 
 

@@ -45,7 +45,7 @@ class TestRibFlushFIFOOrdering:
         # Dequeue and verify FIFO order
         results = []
         while command_queue:
-            service, command = command_queue.popleft()  # FIFO - from start
+            _service, command = command_queue.popleft()  # FIFO - from start
             results.append(command)
 
         # Verify order is preserved
@@ -69,7 +69,7 @@ class TestRibFlushFIFOOrdering:
         # Dequeue with pop() - LIFO (wrong)
         results = []
         while command_list:
-            service, command = command_list.pop()  # LIFO - from end
+            _service, command = command_list.pop()  # LIFO - from end
             results.append(command)
 
         # Verify this gives REVERSE order (wrong)
@@ -155,7 +155,7 @@ class TestRibClearThenAnnounce:
         # Process ONE command per iteration (matches our fix)
         for _ in range(len(commands)):
             if commands:
-                cmd_type, cmd_func = commands.popleft()
+                _cmd_type, cmd_func = commands.popleft()
                 result = cmd_func()
                 execution_log.extend(result)
                 # Only ONE command processed per iteration
@@ -163,7 +163,7 @@ class TestRibClearThenAnnounce:
 
         # Continue with next iteration
         if commands:
-            cmd_type, cmd_func = commands.popleft()
+            _cmd_type, cmd_func = commands.popleft()
             result = cmd_func()
             execution_log.extend(result)
 

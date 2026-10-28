@@ -136,6 +136,8 @@ select = [
 	"B008", "B015", "B017", "B018", "PLR0124", "RUF012", "S102", "T100", "TC004",
 	# an exception caught whole: only exabgp.util.isolated may, everywhere else names it
 	"BLE001", "S110", "S112",
+	# a subprocess.run says whether it checks; an unpacked value which is unused says so
+	"PLW1510", "RUF059",
 	# isort
 	"I001",
 ]

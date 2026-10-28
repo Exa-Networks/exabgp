@@ -225,19 +225,19 @@ class TestMigrateApiCommand:
         assert len(changes) == 1
 
     def test_announce_without_peer(self) -> None:
-        result, changes = migrate_api_command('announce route 10.0.0.0/24 next-hop 1.2.3.4', '4', 'main')
+        result, _changes = migrate_api_command('announce route 10.0.0.0/24 next-hop 1.2.3.4', '4', 'main')
         assert result == 'peer * announce route 10.0.0.0/24 next-hop 1.2.3.4'
 
     def test_withdraw_without_peer(self) -> None:
-        result, changes = migrate_api_command('withdraw route 10.0.0.0/24', '4', 'main')
+        result, _changes = migrate_api_command('withdraw route 10.0.0.0/24', '4', 'main')
         assert result == 'peer * withdraw route 10.0.0.0/24'
 
     def test_neighbor_to_peer(self) -> None:
-        result, changes = migrate_api_command('neighbor 10.0.0.1 announce route 10.0.0.0/24', '4', 'main')
+        result, _changes = migrate_api_command('neighbor 10.0.0.1 announce route 10.0.0.0/24', '4', 'main')
         assert result == 'peer 10.0.0.1 announce route 10.0.0.0/24'
 
     def test_show_adj_rib(self) -> None:
-        result, changes = migrate_api_command('show adj-rib out', '4', 'main')
+        result, _changes = migrate_api_command('show adj-rib out', '4', 'main')
         assert result == 'rib show out'
 
     def test_no_change_for_4_to_5(self) -> None:
@@ -272,25 +272,25 @@ class TestMigrateApiJson:
 
     def test_bgpls_key_renames(self) -> None:
         data = {'bgp-ls': {'sr_capability_flags': 'value'}}
-        result, changes = migrate_api_json(data, '4', '5')
+        result, _changes = migrate_api_json(data, '4', '5')
         assert 'sr-capability-flags' in str(result)
         assert 'sr_capability_flags' not in str(result)
 
     def test_ip_to_prefix_in_context(self) -> None:
         data = {'ip-reachability-tlv': {'ip': '10.0.0.1'}}
-        result, changes = migrate_api_json(data, '5', 'main')
+        result, _changes = migrate_api_json(data, '5', 'main')
         assert result['ip-reachability-tlv']['prefix'] == '10.0.0.1'
         assert 'ip' not in result['ip-reachability-tlv']
 
     def test_ip_not_renamed_without_context(self) -> None:
         data = {'other': {'ip': '10.0.0.1'}}
-        result, changes = migrate_api_json(data, '5', 'main')
+        result, _changes = migrate_api_json(data, '5', 'main')
         # 'ip' should NOT be renamed without proper context
         assert result['other']['ip'] == '10.0.0.1'
 
     def test_nested_transformation(self) -> None:
         data = {'bgp-ls': {'nested': {'sr_capability_flags': 'value'}}}
-        result, changes = migrate_api_json(data, '4', '5')
+        result, _changes = migrate_api_json(data, '4', '5')
         assert result['bgp-ls']['nested']['sr-capability-flags'] == 'value'
 
 
@@ -345,14 +345,14 @@ class TestWrapRunCommands:
         config = """process test {
     run /usr/bin/test.py;
 }"""
-        result, changes = wrap_run_commands(config, '4')
+        result, _changes = wrap_run_commands(config, '4')
         assert '-f 4 -t main' in result
 
     def test_version_5_api(self) -> None:
         config = """process test {
     run /usr/bin/test.py;
 }"""
-        result, changes = wrap_run_commands(config, '5')
+        result, _changes = wrap_run_commands(config, '5')
         assert '-f 5 -t main' in result
 
     def test_skip_already_wrapped(self) -> None:
@@ -367,7 +367,7 @@ class TestWrapRunCommands:
         config = """process test {
     run /usr/bin/script.py --arg1 --arg2 value;
 }"""
-        result, changes = wrap_run_commands(config, '4')
+        result, _changes = wrap_run_commands(config, '4')
         assert '--exec /usr/bin/script.py --arg1 --arg2 value' in result
 
 
@@ -396,21 +396,21 @@ class TestReverseMigrateApiJson:
     def test_reverse_bgpls_key_renames(self) -> None:
         # New format (main) -> Old format (4)
         data = {'bgp-ls': {'sr-capability-flags': 'value'}}
-        result, changes = reverse_migrate_api_json(data, '4', 'main')
+        result, _changes = reverse_migrate_api_json(data, '4', 'main')
         assert 'sr_capability_flags' in str(result)
         assert 'sr-capability-flags' not in str(result)
 
     def test_reverse_prefix_to_ip(self) -> None:
         # New format (main) -> Old format (5)
         data = {'ip-reachability-tlv': {'prefix': '10.0.0.1'}}
-        result, changes = reverse_migrate_api_json(data, '5', 'main')
+        result, _changes = reverse_migrate_api_json(data, '5', 'main')
         assert result['ip-reachability-tlv']['ip'] == '10.0.0.1'
         assert 'prefix' not in result['ip-reachability-tlv']
 
     def test_reverse_no_context_no_change(self) -> None:
         # prefix outside of ip-reachability-tlv should NOT be renamed
         data = {'other': {'prefix': '10.0.0.1'}}
-        result, changes = reverse_migrate_api_json(data, '5', 'main')
+        result, _changes = reverse_migrate_api_json(data, '5', 'main')
         assert result['other']['prefix'] == '10.0.0.1'
         assert 'ip' not in result['other']
 
@@ -423,7 +423,7 @@ class TestReverseMigrateApiJson:
             },
             'ip-reachability-tlv': {'prefix': '10.0.0.0/24'},
         }
-        result, changes = reverse_migrate_api_json(data, '4', 'main')
+        result, _changes = reverse_migrate_api_json(data, '4', 'main')
         # BGP-LS renames should be reversed
         assert 'sr_capability_flags' in result['bgp-ls']
         assert 'interface-address' in result['bgp-ls']
@@ -436,7 +436,7 @@ class TestReverseMigrateApiLine:
 
     def test_reverse_json_line(self) -> None:
         line = '{"bgp-ls":{"sr-capability-flags":"test"}}'
-        result, changes = reverse_migrate_api_line(line, '4', 'main')
+        result, _changes = reverse_migrate_api_line(line, '4', 'main')
         assert 'sr_capability_flags' in result
         assert 'sr-capability-flags' not in result
 

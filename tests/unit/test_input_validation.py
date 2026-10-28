@@ -93,7 +93,7 @@ def test_incomplete_tcp_ao_is_rejected() -> None:
 
 
 def test_complete_tcp_ao_is_accepted() -> None:
-    ok, configuration = load(
+    ok, _configuration = load(
         NEIGHBOR
         % '    local-as 65000;\n    peer-as 65001;\n    tcp-ao {\n        keyid 1;\n        algorithm hmac-sha-256;\n        password secret;\n    }',
     )

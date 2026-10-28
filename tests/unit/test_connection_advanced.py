@@ -367,7 +367,7 @@ class TestBGPHeaderValidation:
         # Invalid marker (all zeros instead of all 0xFF)
         header_data = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
 
-        length, msg_type, header, body, error = read_message(header_data)
+        _length, _msg_type, _header, _body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -379,7 +379,7 @@ class TestBGPHeaderValidation:
         # Length = 18 (below minimum)
         header_data = Message.MARKER + struct.pack('!H', 18) + b'\x01'
 
-        length, msg_type, header, body, error = read_message(header_data)
+        _length, _msg_type, _header, _body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -393,7 +393,7 @@ class TestBGPHeaderValidation:
         # Length = 4097 (above default maximum of 4096)
         header_data = Message.MARKER + struct.pack('!H', 4097) + b'\x01'
 
-        length, msg_type, header, body, error = read_message(header_data)
+        _length, _msg_type, _header, _body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -407,7 +407,7 @@ class TestBGPHeaderValidation:
         # KEEPALIVE with length 20 (should be exactly 19)
         header_data = Message.MARKER + struct.pack('!H', 20) + b'\x04' + b'\x00'
 
-        length, msg_type, header, body, error = read_message(header_data)
+        _length, _msg_type, _header, _body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -421,7 +421,7 @@ class TestBGPHeaderValidation:
         # OPEN with length 28 (below minimum of 29)
         header_data = Message.MARKER + struct.pack('!H', 28) + b'\x01' + b'\x00' * 9
 
-        length, msg_type, header, body, error = read_message(header_data)
+        _length, _msg_type, _header, _body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -435,7 +435,7 @@ class TestBGPHeaderValidation:
         # UPDATE with length 22 (below minimum of 23)
         header_data = Message.MARKER + struct.pack('!H', 22) + b'\x02' + b'\x00' * 3
 
-        length, msg_type, header, body, error = read_message(header_data)
+        _length, _msg_type, _header, _body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -501,7 +501,7 @@ class TestMultiPacketAssembly:
 
         try:
             with patch('exabgp.reactor.network.connection.log'):
-                length, msg_type, header, body, error = asyncio.run(read_split_message())
+                length, _msg_type, _header, body, error = asyncio.run(read_split_message())
             assert error is None
             assert length == 29
             assert body == body_data
@@ -628,7 +628,7 @@ class TestBufferManagement:
         # KEEPALIVE has no body, just header
         header_data = Message.MARKER + struct.pack('!H', 19) + b'\x04'
 
-        length, msg_type, header, body, error = read_message(header_data)
+        length, msg_type, _header, body, error = read_message(header_data)
 
         assert error is None
         assert length == 19
@@ -841,7 +841,7 @@ class TestExtendedMessageSize:
         # Message with length 101 (exceeds msg_size)
         header_data = Message.MARKER + struct.pack('!H', 101) + b'\x02'
 
-        length, msg_type, header, body, error = read_message(header_data, msg_size=100)
+        _length, _msg_type, _header, _body, error = read_message(header_data, msg_size=100)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -937,7 +937,7 @@ class TestNotificationErrorTypes:
         # Invalid marker
         header_data = b'\x00' * 16 + struct.pack('!H', 19) + b'\x04'
 
-        length, msg_type, header, body, error = read_message(header_data)
+        _length, _msg_type, _header, _body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -949,7 +949,7 @@ class TestNotificationErrorTypes:
         # Length 10 (below minimum 19)
         header_data = Message.MARKER + struct.pack('!H', 10) + b'\x01'
 
-        length, msg_type, header, body, error = read_message(header_data)
+        _length, _msg_type, _header, _body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)
@@ -963,7 +963,7 @@ class TestNotificationErrorTypes:
         # Length 65535 (the largest the field holds, above the 4096 maximum)
         header_data = Message.MARKER + struct.pack('!H', 65535) + b'\x01'
 
-        length, msg_type, header, body, error = read_message(header_data)
+        _length, _msg_type, _header, _body, error = read_message(header_data)
 
         assert error is not None
         assert isinstance(error, NotifyError)

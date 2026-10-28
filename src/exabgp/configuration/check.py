@@ -531,7 +531,7 @@ def _make_update(neighbor: Neighbor, raw: bytes) -> UpdateCollection | None:
 
 def _make_notification(neighbor: Neighbor, raw: bytes) -> Notification | None:
     option.enabled['parser'] = True
-    negotiated_in, negotiated_out = _negotiated(neighbor)
+    negotiated_in, _negotiated_out = _negotiated(neighbor)
 
     if raw.startswith(b'\xff' * 16):
         if len(raw) < BGP_HEADER_SIZE:

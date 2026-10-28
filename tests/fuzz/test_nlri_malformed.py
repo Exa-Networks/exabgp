@@ -59,7 +59,7 @@ def test_ipv4_prefix_length_too_large(mask: int) -> None:
     data = bytes([mask]) + b'\xc0\xa8\x01\x00'
 
     try:
-        nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
+        _nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
         # If it parses, should at least not crash
         # Some implementations may accept > 32 masks
     except Notify:
@@ -79,7 +79,7 @@ def test_ipv6_prefix_length_too_large(mask: int) -> None:
     data = bytes([mask]) + b'\x20\x01\x0d\xb8' + b'\x00' * 12
 
     try:
-        nlri, _ = INET.unpack_nlri(AFI.ipv6, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
+        _nlri, _ = INET.unpack_nlri(AFI.ipv6, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     except Notify:
         # Expected - invalid mask
         pass
@@ -101,7 +101,7 @@ def test_ipv4_truncated_prefix(mask: int) -> None:
     data = bytes([mask]) + b'\x00' * (needed_bytes - 1)
 
     try:
-        nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
+        _nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     except Notify:
         # Expected - truncated data
         pass
@@ -114,7 +114,7 @@ def test_inet_empty_data() -> None:
     from exabgp.bgp.message.update.nlri.inet import INET
 
     try:
-        nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, b'', Action.ANNOUNCE, False, Negotiated.UNSET)
+        _nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, b'', Action.ANNOUNCE, False, Negotiated.UNSET)
     except Notify:
         # Expected - no data
         pass
@@ -128,7 +128,7 @@ def test_inet_random_data(random_data: bytes) -> None:
     from exabgp.bgp.message.update.nlri.inet import INET
 
     try:
-        nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, random_data, Action.ANNOUNCE, False, Negotiated.UNSET)
+        _nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, random_data, Action.ANNOUNCE, False, Negotiated.UNSET)
     except Notify:
         pass
 
@@ -153,7 +153,7 @@ def test_inet_with_addpath(path_id: bytes, mask: int) -> None:
     negotiated = create_mock_negotiated(addpath=True)
 
     try:
-        nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, True, negotiated)
+        nlri, _leftover = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, True, negotiated)
         # If successful, verify path_id is preserved
         assert nlri.path_info.pack_path() == path_id
     except Notify:
@@ -172,7 +172,7 @@ def test_inet_addpath_truncated() -> None:
     negotiated = create_mock_negotiated(addpath=True)
 
     try:
-        nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, True, negotiated)
+        _nlri, _ = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, True, negotiated)
     except Notify:
         # Expected - truncated path_id
         pass
@@ -227,7 +227,7 @@ def test_labeled_nlri_no_bottom_of_stack() -> None:
     data = bytes([48]) + label + b'\xc0\xa8\x01'
 
     try:
-        nlri, _ = Label.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, False, Negotiated.UNSET)
+        _nlri, _ = Label.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, data, Action.ANNOUNCE, False, Negotiated.UNSET)
         # May parse but labels may be incomplete
     except Notify:
         # Expected - no bottom of stack
@@ -242,7 +242,7 @@ def test_labeled_nlri_random_data(random_data: bytes) -> None:
     from exabgp.bgp.message.update.nlri.label import Label
 
     try:
-        nlri, _ = Label.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, random_data, Action.ANNOUNCE, False, Negotiated.UNSET)
+        _nlri, _ = Label.unpack_nlri(AFI.ipv4, SAFI.nlri_mpls, random_data, Action.ANNOUNCE, False, Negotiated.UNSET)
     except Notify:
         pass
 
@@ -295,7 +295,7 @@ def test_vpn_nlri_truncated_rd() -> None:
     data = bytes([112]) + label + rd + b'\xc0\xa8\x01'
 
     try:
-        nlri, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, data, Action.ANNOUNCE, False, Negotiated.UNSET)
+        _nlri, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     except Notify:
         # Expected - truncated RD
         pass
@@ -309,7 +309,7 @@ def test_vpn_nlri_random_data(random_data: bytes) -> None:
     from exabgp.bgp.message.update.nlri.ipvpn import IPVPN
 
     try:
-        nlri, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, random_data, Action.ANNOUNCE, False, Negotiated.UNSET)
+        _nlri, _ = IPVPN.unpack_nlri(AFI.ipv4, SAFI.mpls_vpn, random_data, Action.ANNOUNCE, False, Negotiated.UNSET)
     except Notify:
         pass
 
@@ -328,7 +328,7 @@ def test_cidr_mask_zero() -> None:
     data = bytes([0])
 
     try:
-        nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
+        nlri, _leftover = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
         assert nlri.cidr.mask == 0
     except Notify:
         pass
@@ -342,7 +342,7 @@ def test_cidr_mask_max_ipv4() -> None:
     # Mask 32 = 4 prefix bytes needed
     data = bytes([32]) + b'\xc0\xa8\x01\x01'
 
-    nlri, leftover = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
+    nlri, _leftover = INET.unpack_nlri(AFI.ipv4, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     assert nlri.cidr.mask == 32
 
 
@@ -354,7 +354,7 @@ def test_cidr_mask_max_ipv6() -> None:
     # Mask 128 = 16 prefix bytes needed
     data = bytes([128]) + b'\x20\x01\x0d\xb8' + b'\x00' * 12
 
-    nlri, leftover = INET.unpack_nlri(AFI.ipv6, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
+    nlri, _leftover = INET.unpack_nlri(AFI.ipv6, SAFI.unicast, data, Action.ANNOUNCE, False, Negotiated.UNSET)
     assert nlri.cidr.mask == 128
 
 

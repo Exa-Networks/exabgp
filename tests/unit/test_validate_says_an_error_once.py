@@ -37,6 +37,7 @@ def validate(path: pathlib.Path, log: str) -> str:
         env=environ,
         cwd=str(ROOT),
         timeout=180,
+        check=False,
     )
     assert result.returncode == 1, result.stdout + result.stderr
     return result.stdout + result.stderr

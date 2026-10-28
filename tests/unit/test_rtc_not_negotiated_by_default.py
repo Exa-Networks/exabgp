@@ -69,5 +69,6 @@ def test_decode_still_reads_rtc_without_being_told_the_family() -> None:
         env=environ,
         cwd=str(ROOT),
         timeout=180,
+        check=False,
     )
     assert '"ipv4 rtc"' in result.stdout, result.stdout[-1500:] + result.stderr[-1500:]

@@ -154,7 +154,7 @@ def test_blocked_held_path_is_not_promoted_and_refusal_frees_slot():
 
 
 def test_shared_self_instruction_is_resolved_without_mutation():
-    neighbor, negotiated = configured()
+    _neighbor, negotiated = configured()
     desired = route('self')
     before = desired.attributes.index(), str(desired.attributes), desired.attributes.json()
     update = UpdateCollection([RoutedNLRI(desired.nlri, desired.nexthop)], [], desired.attributes)
@@ -184,7 +184,7 @@ def test_mixed_unicast_multicast_preserves_family_and_limits_automatic_marking()
 
 @pytest.mark.parametrize('compact,v4_json', [(False, False), (True, False), (False, True), (True, True)])
 def test_ingress_metadata_is_per_announcement_and_optional(compact, v4_json):
-    neighbor, negotiated = configured('provider')
+    _neighbor, negotiated = configured('provider')
     incoming = route('65009')
     collection = UpdateCollection([RoutedNLRI(incoming.nlri, incoming.nexthop)], [], incoming.attributes)
     collection.classify_otc(negotiated)

@@ -248,7 +248,7 @@ def test_update_split_truncation(truncate_at: int) -> None:
     data = valid_update[:truncate_at]
 
     try:
-        withdrawn, attributes, announced = UpdateCollection.split(data)
+        _withdrawn, _attributes, _announced = UpdateCollection.split(data)
 
         # If it succeeds, verify it's either:
         # 1. Complete message

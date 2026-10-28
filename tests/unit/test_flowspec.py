@@ -787,7 +787,7 @@ class TestFlowUnpack:
         packed = flow1.pack_nlri(negotiated)
 
         # Unpack it
-        flow2, leftover = Flow.unpack_nlri(
+        flow2, _leftover = Flow.unpack_nlri(
             AFI.ipv4, SAFI.flow_vpn, packed, Action.UNSET, False, negotiated=create_negotiated()
         )
 

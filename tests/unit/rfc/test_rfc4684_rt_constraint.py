@@ -212,7 +212,7 @@ neighbor 192.0.2.1 {
 def test_many_membership_updates_replay_the_vpn_routes_once(monkeypatch: pytest.MonkeyPatch) -> None:
     """A peer sends its membership in as many UPDATEs as it likes: each must not queue the
     VPN table again, or the queue grows with the number of UPDATEs before a batch is built."""
-    rib, wanted, unwanted = vpn_rib(monkeypatch, [WANTED_TARGET])
+    rib, wanted, _unwanted = vpn_rib(monkeypatch, [WANTED_TARGET])
     negotiated = filtering_session()
     sent_vpn(rib, negotiated)
     assert not rib.outgoing.pending()

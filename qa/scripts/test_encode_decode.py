@@ -71,7 +71,7 @@ def test_encode_ipv6():
     """Test encoding an IPv6 route."""
     print('TEST: encode IPv6 route')
 
-    exit_code, stdout, stderr = run_exabgp(['encode', '-f', 'ipv6 unicast', 'route 2001:db8::/32 next-hop 2001:db8::1'])
+    exit_code, stdout, _stderr = run_exabgp(['encode', '-f', 'ipv6 unicast', 'route 2001:db8::/32 next-hop 2001:db8::1'])
 
     if exit_code != 0:
         print(f'  FAIL: exit code {exit_code}')
@@ -92,7 +92,7 @@ def test_encode_nlri_only():
     """Test encoding with NLRI-only flag."""
     print('TEST: encode NLRI-only')
 
-    exit_code, stdout, stderr = run_exabgp(['encode', '-n', 'route 10.0.0.0/24 next-hop 192.168.1.1'])
+    exit_code, stdout, _stderr = run_exabgp(['encode', '-n', 'route 10.0.0.0/24 next-hop 192.168.1.1'])
 
     if exit_code != 0:
         print(f'  FAIL: exit code {exit_code}')
@@ -120,7 +120,7 @@ def test_decode_basic():
 
     hex_payload = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0030020000001540010100400200400304C0A8010140050400000064180A0000'
 
-    exit_code, stdout, stderr = run_exabgp(['decode', hex_payload])
+    exit_code, stdout, _stderr = run_exabgp(['decode', hex_payload])
 
     if exit_code != 0:
         print(f'  FAIL: exit code {exit_code}')
@@ -162,7 +162,7 @@ def test_decode_stdin():
 
     hex_payload = 'FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0030020000001540010100400200400304C0A8010140050400000064180A0000\n'
 
-    exit_code, stdout, stderr = run_exabgp(['decode'], stdin_input=hex_payload)
+    exit_code, stdout, _stderr = run_exabgp(['decode'], stdin_input=hex_payload)
 
     if exit_code != 0:
         print(f'  FAIL: exit code {exit_code}')
@@ -185,7 +185,7 @@ def test_decode_stdin_multiple():
 
     stdin_input = hex1 + '\n' + hex2 + '\n'
 
-    exit_code, stdout, stderr = run_exabgp(['decode'], stdin_input=stdin_input)
+    exit_code, stdout, _stderr = run_exabgp(['decode'], stdin_input=stdin_input)
 
     if exit_code != 0:
         print(f'  FAIL: exit code {exit_code}')
@@ -213,14 +213,14 @@ def test_roundtrip_ipv4():
     print('TEST: round-trip IPv4')
 
     # Encode
-    exit_code, encoded, stderr = run_exabgp(['encode', 'route 172.16.0.0/16 next-hop 10.0.0.1'])
+    exit_code, encoded, _stderr = run_exabgp(['encode', 'route 172.16.0.0/16 next-hop 10.0.0.1'])
 
     if exit_code != 0:
         print(f'  FAIL: encode failed with {exit_code}')
         return False
 
     # Decode
-    exit_code, decoded, stderr = run_exabgp(['decode', encoded.strip()])
+    exit_code, decoded, _stderr = run_exabgp(['decode', encoded.strip()])
 
     if exit_code != 0:
         print(f'  FAIL: decode failed with {exit_code}')
@@ -244,7 +244,7 @@ def test_roundtrip_ipv6():
     print('TEST: round-trip IPv6')
 
     # Encode
-    exit_code, encoded, stderr = run_exabgp(
+    exit_code, encoded, _stderr = run_exabgp(
         ['encode', '-f', 'ipv6 unicast', 'route 2001:db8:1234::/48 next-hop 2001:db8::1']
     )
 
@@ -253,7 +253,7 @@ def test_roundtrip_ipv6():
         return False
 
     # Decode with family hint
-    exit_code, decoded, stderr = run_exabgp(['decode', '-f', 'ipv6 unicast', encoded.strip()])
+    exit_code, decoded, _stderr = run_exabgp(['decode', '-f', 'ipv6 unicast', encoded.strip()])
 
     if exit_code != 0:
         print(f'  FAIL: decode failed with {exit_code}')
@@ -273,14 +273,14 @@ def test_roundtrip_with_attributes():
 
     # Encode with attributes
     route = 'route 192.168.100.0/24 next-hop 10.0.0.1 origin igp local-preference 200 community [65000:100]'
-    exit_code, encoded, stderr = run_exabgp(['encode', route])
+    exit_code, encoded, _stderr = run_exabgp(['encode', route])
 
     if exit_code != 0:
         print(f'  FAIL: encode failed with {exit_code}')
         return False
 
     # Decode
-    exit_code, decoded, stderr = run_exabgp(['decode', encoded.strip()])
+    exit_code, decoded, _stderr = run_exabgp(['decode', encoded.strip()])
 
     if exit_code != 0:
         print(f'  FAIL: decode failed with {exit_code}')
@@ -319,7 +319,7 @@ def test_pipe_encode_to_decode():
 
     proc = subprocess.Popen(cmd, shell=True, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
-    stdout, stderr = proc.communicate(timeout=30)
+    stdout, _stderr = proc.communicate(timeout=30)
 
     if proc.returncode != 0:
         print(f'  FAIL: pipe failed with {proc.returncode}')
