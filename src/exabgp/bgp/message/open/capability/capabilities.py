@@ -8,7 +8,7 @@ License: 3-clause BSD. (See the COPYRIGHT file)
 from __future__ import annotations
 
 from struct import pack, unpack
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, ClassVar, cast
 
 from exabgp.bgp.message.notification import Notify
 from exabgp.bgp.message.open.asn import AS_TRANS, ASN
@@ -103,17 +103,29 @@ class Capabilities(dict[CapabilityCode, Capability]):
     def announced(self, capability: CapabilityCode) -> bool:
         return capability in self
 
-    def role(self) -> RoleValue:
-        capability = self.get(Capability.CODE.ROLE)
+    def parsed[C: Capability](self, code: CapabilityCode, klass: type[C]) -> C | None:
+        """The capability under `code`, as `klass`: None when it is not there.
+
+        Decoding stores each code as the class the registry has for it, and new() and the
+        configuration check store the same: that is asserted here, on the registry, rather than
+        at each caller on the instance. One class may be registered for several codes, so the
+        code is the caller's, not `klass.ID`.
+        """
+        capability = self.get(code)
         if capability is None:
-            return RoleValue.NO_ROLE
-        assert isinstance(capability, Role), 'Role capability must be decoded as Role'
-        return capability.value
+            return None
+        assert Capability.registered_capability.get(code) is klass, f'{code} is not decoded as {klass.__name__}'
+        return cast(C, capability)
+
+    def role(self) -> RoleValue:
+        capability = self.parsed(Capability.CODE.ROLE, Role)
+        return RoleValue.NO_ROLE if capability is None else capability.value
 
     def four_octet_asn(self) -> ASN:
         """The AS number of the four-octet AS capability (RFC 6793), which must be present."""
-        capability = self[Capability.CODE.FOUR_BYTES_ASN]
-        assert isinstance(capability, ASN4), 'the four-octet AS capability must be decoded as ASN4'
+        capability = self.parsed(Capability.CODE.FOUR_BYTES_ASN, ASN4)
+        if capability is None:
+            raise KeyError(Capability.CODE.FOUR_BYTES_ASN)
         return capability.asn
 
     def __str__(self) -> str:
@@ -224,8 +236,8 @@ class Capabilities(dict[CapabilityCode, Capability]):
         if not neighbor.capability.add_path:
             return
 
-        addpath_cap = self.get(Capability.CODE.ADD_PATH, None)
-        if not isinstance(addpath_cap, AddPath):
+        addpath_cap = self.parsed(Capability.CODE.ADD_PATH, AddPath)
+        if addpath_cap is None:
             return
 
         from exabgp.bgp.message.open.capability.negotiated import RequirePath

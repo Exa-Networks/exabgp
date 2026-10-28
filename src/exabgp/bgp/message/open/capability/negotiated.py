@@ -223,9 +223,9 @@ class Negotiated:
             from exabgp.bgp.message.open.capability.addpath import AddPath
             from exabgp.bgp.message.open.capability.pathslimit import PathsLimit
 
-            recv_pl = recv_capa.get(Capability.CODE.PATHS_LIMIT, None)
-            recv_ap = recv_capa.get(Capability.CODE.ADD_PATH, None)
-            if isinstance(recv_pl, PathsLimit) and isinstance(recv_ap, AddPath):
+            recv_pl = recv_capa.parsed(Capability.CODE.PATHS_LIMIT, PathsLimit)
+            recv_ap = recv_capa.parsed(Capability.CODE.ADD_PATH, AddPath)
+            if recv_pl is not None and recv_ap is not None:
                 for family, limit in recv_pl.items():
                     if family not in recv_ap:
                         continue
@@ -233,9 +233,9 @@ class Negotiated:
                     if self.addpath.send(afi, safi):
                         self.paths_limit[family] = limit
 
-            sent_pl = sent_capa.get(Capability.CODE.PATHS_LIMIT, None)
-            sent_ap = sent_capa.get(Capability.CODE.ADD_PATH, None)
-            if isinstance(sent_pl, PathsLimit) and isinstance(sent_ap, AddPath):
+            sent_pl = sent_capa.parsed(Capability.CODE.PATHS_LIMIT, PathsLimit)
+            sent_ap = sent_capa.parsed(Capability.CODE.ADD_PATH, AddPath)
+            if sent_pl is not None and sent_ap is not None:
                 for family, limit in sent_pl.items():
                     if family not in sent_ap:
                         continue
@@ -255,10 +255,10 @@ class Negotiated:
 
         if self.multisession:
             multisession_code = Capability.CODE.MULTISESSION if rfc_multisession else Capability.CODE.MULTISESSION_CISCO
-            sent_ms = sent_capa[multisession_code]
-            recv_ms = recv_capa[multisession_code]
-            sent_ms_capa: set[CapabilityCode] = set(sent_ms) if isinstance(sent_ms, MultiSession) else set()
-            recv_ms_capa: set[CapabilityCode] = set(recv_ms) if isinstance(recv_ms, MultiSession) else set()
+            sent_ms = sent_capa.parsed(multisession_code, MultiSession)
+            recv_ms = recv_capa.parsed(multisession_code, MultiSession)
+            sent_ms_capa: set[CapabilityCode] = set(sent_ms) if sent_ms is not None else set()
+            recv_ms_capa: set[CapabilityCode] = set(recv_ms) if recv_ms is not None else set()
 
             if not sent_ms_capa:
                 sent_ms_capa = {Capability.CODE.MULTIPROTOCOL}
@@ -304,10 +304,10 @@ class Negotiated:
         what the peer offered and we offered too: the peer's triple is what section 4 asks
         for, ours is the operator's consent to an IPv6 next hop for the family.
         """
-        sent_nh = sent_capa.get(Capability.CODE.NEXTHOP, None)
-        recv_nh = recv_capa.get(Capability.CODE.NEXTHOP, None)
-        ours = list(sent_nh) if isinstance(sent_nh, NextHop) else []
-        theirs = list(recv_nh) if isinstance(recv_nh, NextHop) else []
+        sent_nh = sent_capa.parsed(Capability.CODE.NEXTHOP, NextHop)
+        recv_nh = recv_capa.parsed(Capability.CODE.NEXTHOP, NextHop)
+        ours = list(sent_nh) if sent_nh is not None else []
+        theirs = list(recv_nh) if recv_nh is not None else []
         self.nexthop_receive = ours
         self.nexthop = [entry for entry in theirs if entry in ours]
 
@@ -321,8 +321,9 @@ class Negotiated:
         """
         if not capabilities.announced(Capability.CODE.MULTIPROTOCOL):
             return [(AFI.ipv4, SAFI.unicast)]
-        # the registry decodes code 1 as MultiProtocol
-        return list(cast(MultiProtocol, capabilities[Capability.CODE.MULTIPROTOCOL]))
+        multiprotocol = capabilities.parsed(Capability.CODE.MULTIPROTOCOL, MultiProtocol)
+        assert multiprotocol is not None, 'announced, so present'
+        return list(multiprotocol)
 
     def _negotiate_role(self, sent_capa: Capabilities, recv_capa: Capabilities) -> None:
         self.role = sent_capa.role()
