@@ -71,7 +71,7 @@ class IP(IPBase):
     # BITS and BYTES are defined as ClassVar in subclasses (IPv4/IPv6)
     # Not annotated here to allow proper ClassVar override
 
-    _known: ClassVar[dict[AFI, IPFactory]] = dict()
+    _known: ClassVar[dict[AFI, IPFactory]] = {}
 
     _UNICAST: ClassVar[SAFI] = SAFI.unicast
     _MULTICAST: ClassVar[SAFI] = SAFI.multicast

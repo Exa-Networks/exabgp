@@ -63,7 +63,7 @@ class LinkState(Attribute):
     DISCARD: ClassVar[bool] = True
 
     # Registered subclasses we know how to decode
-    registered_lsids: ClassVar[dict[int, type]] = dict()
+    registered_lsids: ClassVar[dict[int, type]] = {}
 
     # what this implementation knows as LS attributes
     node_lsids: ClassVar[list[int]] = []

@@ -22,11 +22,11 @@ class Signal:
     FULL_RELOAD: ClassVar[int] = -8
 
     _names: ClassVar[dict[int, str]] = {
-        **dict(
-            (k, v)
-            for v, k in reversed(sorted(signal.__dict__.items()))
+        **{
+            k: v
+            for v, k in sorted(signal.__dict__.items(), reverse=True)
             if v.startswith('SIG') and not v.startswith('SIG_')
-        ),
+        },
         NONE: 'none',
         SHUTDOWN: 'shutdown',
         RESTART: 'restart',

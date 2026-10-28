@@ -104,7 +104,7 @@ class BGPLS(NLRI):
     # BGPLS has no additional instance attributes beyond NLRI base class
     __slots__ = ()
 
-    registered_bgpls: ClassVar[dict[int, type[BGPLS]]] = dict()
+    registered_bgpls: ClassVar[dict[int, type[BGPLS]]] = {}
 
     CODE: ClassVar[int] = -1
     NAME: ClassVar[str] = 'Unknown'

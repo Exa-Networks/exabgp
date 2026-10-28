@@ -61,7 +61,7 @@ class NLRI(Family):
 
     IS_EOR: ClassVar[bool] = False
 
-    registered_nlri: ClassVar[dict[str, type[NLRI]]] = dict()
+    registered_nlri: ClassVar[dict[str, type[NLRI]]] = {}
     registered_families: ClassVar[list[FamilyTuple]] = [(AFI.ipv4, SAFI.multicast)]
 
     addpath: PathInfo

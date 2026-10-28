@@ -172,7 +172,7 @@ class CapabilityCodes:
 class Capability:
     CODE: ClassVar[type[CapabilityCodes]] = CapabilityCodes
 
-    registered_capability: ClassVar[dict[CapabilityCode, type[Capability]]] = dict()
+    registered_capability: ClassVar[dict[CapabilityCode, type[Capability]]] = {}
     unknown_capability: ClassVar[type[Capability] | None] = None
 
     # The code the class is registered under. RouteRefresh and MultiSession are also

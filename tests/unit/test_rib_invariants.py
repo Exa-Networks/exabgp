@@ -493,8 +493,8 @@ class TestConsistencyInvariants:
         consume_updates(rib)
 
         # Get snapshots twice
-        snapshot1 = set(r.index() for r in rib.cached_routes(None))
-        snapshot2 = set(r.index() for r in rib.cached_routes(None))
+        snapshot1 = {r.index() for r in rib.cached_routes(None)}
+        snapshot2 = {r.index() for r in rib.cached_routes(None)}
 
         assert snapshot1 == snapshot2, 'INVARIANT: cached_routes() must be consistent across calls'
 

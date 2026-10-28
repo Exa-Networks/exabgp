@@ -35,8 +35,8 @@ class ICMPType(Resource):
     EXPERIMENTAL_ONE: ClassVar[int] = 0xFD
     EXPERIMENTAL_TWO: ClassVar[int] = 0xFE
 
-    codes: ClassVar[dict[str, int]] = dict(
-        (k.lower().replace('_', '-'), v)
+    codes: ClassVar[dict[str, int]] = {
+        k.lower().replace('_', '-'): v
         for (k, v) in {
             'ECHO_REPLY': ECHO_REPLY,
             'UNREACHABLE': UNREACHABLE,
@@ -55,9 +55,9 @@ class ICMPType(Resource):
             'EXPERIMENTAL_ONE': EXPERIMENTAL_ONE,
             'EXPERIMENTAL_TWO': EXPERIMENTAL_TWO,
         }.items()
-    )
+    }
 
-    names: ClassVar[dict[int, str]] = dict([(value, name) for (name, value) in codes.items()])
+    names: ClassVar[dict[int, str]] = {value: name for (name, value) in codes.items()}
 
 
 # https://www.iana.org/assignments/icmp-parameters
@@ -96,8 +96,8 @@ class ICMPCode(Resource):
     REQUIRED_OPTION_MISSING: ClassVar[int] = 0x1
     IP_HEADER_BAD: ClassVar[int] = 0x2
 
-    codes: ClassVar[dict[str, int]] = dict(
-        (k.lower().replace('_', '-'), v)
+    codes: ClassVar[dict[str, int]] = {
+        k.lower().replace('_', '-'): v
         for (k, v) in {
             'NETWORK_UNREACHABLE': NETWORK_UNREACHABLE,
             'HOST_UNREACHABLE': HOST_UNREACHABLE,
@@ -124,7 +124,7 @@ class ICMPCode(Resource):
             'REQUIRED_OPTION_MISSING': REQUIRED_OPTION_MISSING,
             'IP_HEADER_BAD': IP_HEADER_BAD,
         }.items()
-    )
+    }
 
     # names would have non-unique keys (some codes overlap for different types)
 

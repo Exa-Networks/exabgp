@@ -106,7 +106,7 @@ class Operational(Message):
     ID: ClassVar = Message.CODE.OPERATIONAL
     FIXED_SIZE: ClassVar[int] = 4  # the operational header: a two octet type and a two octet length
 
-    registered_operational: ClassVar[dict[int, type[Operational]]] = dict()
+    registered_operational: ClassVar[dict[int, type[Operational]]] = {}
 
     # the operational types, draft-ietf-idr-operational-message
     SUBTYPE: ClassVar[type[OperationalSubtype]] = OperationalSubtype

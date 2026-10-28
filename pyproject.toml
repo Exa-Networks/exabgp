@@ -138,6 +138,8 @@ select = [
 	"BLE001", "S110", "S112",
 	# a subprocess.run says whether it checks; an unpacked value which is unused says so
 	"PLW1510", "RUF059",
+	# flake8-comprehensions
+	"C401", "C402", "C404", "C405", "C408", "C413", "C414",
 	# isort
 	"I001",
 ]

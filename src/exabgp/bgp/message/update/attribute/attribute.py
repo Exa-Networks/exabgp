@@ -178,7 +178,7 @@ class Attribute:
     NO_GENERATION: ClassVar[bool] = False
 
     # Registered subclasses we know how to decode
-    registered_attributes: ClassVar[dict[tuple[int, int], type[Attribute]]] = dict()
+    registered_attributes: ClassVar[dict[tuple[int, int], type[Attribute]]] = {}
 
     # what this implementation knows as attributes
     attributes_known: ClassVar[list[int]] = []

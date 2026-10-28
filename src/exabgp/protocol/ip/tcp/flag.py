@@ -28,8 +28,8 @@ class TCPFlag(BitResource):
     CWR: ClassVar[int] = 0x80
     NS: ClassVar[int] = 0x100
 
-    codes: ClassVar[dict[str, int]] = dict(
-        (k.lower().replace('_', '-'), v)
+    codes: ClassVar[dict[str, int]] = {
+        k.lower().replace('_', '-'): v
         for (k, v) in {
             'FIN': FIN,
             'SYN': SYN,
@@ -41,9 +41,9 @@ class TCPFlag(BitResource):
             'CWR': CWR,
             'NS': NS,
         }.items()
-    )
+    }
 
-    names: ClassVar[dict[int, str]] = dict([(value, name) for (name, value) in codes.items()])
+    names: ClassVar[dict[int, str]] = {value: name for (name, value) in codes.items()}
 
 
 # Backward compatibility

@@ -38,7 +38,7 @@ class MUP(NLRI):
 
     # Registry for MUP route types, keyed by "archtype:code" string
     # Values are MUP subclasses that implement unpack_mup_route classmethod
-    registered_mup: ClassVar[dict[str, type[MUP]]] = dict()
+    registered_mup: ClassVar[dict[str, type[MUP]]] = {}
 
     # Set by the decorator
     ARCHTYPE: ClassVar[int] = 0

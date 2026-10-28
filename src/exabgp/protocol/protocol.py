@@ -32,8 +32,8 @@ class Protocol(Resource):
     PIM: ClassVar[int] = 0x67
     SCTP: ClassVar[int] = 0x84
 
-    codes: ClassVar = dict(
-        (k.lower().replace('_', '-'), v)
+    codes: ClassVar = {
+        k.lower().replace('_', '-'): v
         for (k, v) in {
             'ICMP': ICMP,
             'IGMP': IGMP,
@@ -49,9 +49,9 @@ class Protocol(Resource):
             'PIM': PIM,
             'SCTP': SCTP,
         }.items()
-    )
+    }
 
-    names: ClassVar = dict([(value, name) for (name, value) in codes.items()])
+    names: ClassVar = {value: name for (name, value) in codes.items()}
 
     def pack(self) -> bytes:
         return bytes([self.value])

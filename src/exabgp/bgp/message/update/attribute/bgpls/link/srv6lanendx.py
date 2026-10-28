@@ -69,7 +69,7 @@ OSPF = 2
 
 
 class Srv6(FlagLS):
-    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = {}
 
     @classmethod
     def _unpack_data(cls, data: Buffer, protocol_type: int) -> dict[str, object]:
@@ -112,7 +112,7 @@ class Srv6(FlagLS):
 class Srv6LanEndXISIS(Srv6):
     FLAGS: ClassVar = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     MERGE: ClassVar[bool] = True  # LinkState.json() will group into array
-    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = {}
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with packed bytes."""
@@ -210,7 +210,7 @@ LinkState.register_lsid(tlv=1107, json_key='srv6-lan-endx-isis', repr_name='SRv6
 class Srv6LanEndXOSPF(Srv6):
     FLAGS: ClassVar = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     MERGE: ClassVar[bool] = True  # LinkState.json() groups into array
-    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = {}
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with packed bytes."""

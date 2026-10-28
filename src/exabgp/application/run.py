@@ -32,19 +32,17 @@ DONE_TIME_DIFF = 0.5  # Time difference for done detection
 SELECT_TIMEOUT = 0.01  # Select timeout in seconds
 SELECT_WAIT_INCREMENT = 0.01  # Wait increment per select iteration
 
-errno_block = set(
-    (
-        errno.EINPROGRESS,
-        errno.EALREADY,
-        errno.EAGAIN,
-        errno.EWOULDBLOCK,
-        errno.EINTR,
-        errno.EDEADLK,
-        errno.EBUSY,
-        errno.ENOBUFS,
-        errno.ENOMEM,
-    ),
-)
+errno_block = {
+    errno.EINPROGRESS,
+    errno.EALREADY,
+    errno.EAGAIN,
+    errno.EWOULDBLOCK,
+    errno.EINTR,
+    errno.EDEADLK,
+    errno.EBUSY,
+    errno.ENOBUFS,
+    errno.ENOMEM,
+}
 
 
 class AnswerStream:

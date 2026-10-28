@@ -587,8 +587,8 @@ class TestNLRIs(unittest.TestCase):
         self.assertNotEqual(rt1a, rt3)
         self.assertNotEqual(rt1a, rt4)
 
-        self.assertEqual(set([rt1a]), set([rt1b]))
-        self.assertEqual(1, len(set([rt1a]).intersection(set([rt1b]))))
+        self.assertEqual({rt1a}, {rt1b})
+        self.assertEqual(1, len({rt1a}.intersection({rt1b})))
 
     def test12_RTRecord(self) -> None:
         rt = RouteTarget.make_route_target(64512, 22)

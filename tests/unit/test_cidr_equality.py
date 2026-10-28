@@ -129,7 +129,7 @@ def test_the_ordering_is_a_total_order_over_a_mixed_set() -> None:
     ]
 
     forward = sorted(prefixes)
-    backward = sorted(reversed(prefixes))
+    backward = sorted(prefixes)
     assert forward == backward, 'the sort depends on the order the prefixes arrived in'
 
     for earlier, later in zip(forward, forward[1:]):

@@ -45,7 +45,7 @@ class Srv6L3Service:
     TLV: ClassVar[int] = SR_TLV_SRV6_L3_SERVICE
 
     # Registry maps TLV codes to Sub-TLV classes (uses HasTLV protocol)
-    registered_subtlvs: ClassVar[dict[int, type[HasTLV]]] = dict()
+    registered_subtlvs: ClassVar[dict[int, type[HasTLV]]] = {}
 
     def __init__(self, subtlvs: list[Any], packed: Buffer | None = None) -> None:
         """Initialize L3 Service TLV.

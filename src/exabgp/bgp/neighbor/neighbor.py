@@ -140,7 +140,7 @@ class Neighbor:
         self.previous = None
 
         self.eor = deque()
-        self.asm = dict()
+        self.asm = {}
 
         self.messages = deque()
         self.refresh = deque()
@@ -301,7 +301,7 @@ class Neighbor:
         # this list() is important .. as we use the function to modify self._families
         if family not in self.families():
             afi, safi = family
-            d: dict[AFI, list[SAFI]] = dict()
+            d: dict[AFI, list[SAFI]] = {}
             d[afi] = [
                 safi,
             ]
@@ -318,7 +318,7 @@ class Neighbor:
         # this list() is important .. as we use the function to modify self._add_path
         if family not in self.addpaths():
             afi, safi = family
-            d: dict[AFI, list[SAFI]] = dict()
+            d: dict[AFI, list[SAFI]] = {}
             d[afi] = [
                 safi,
             ]

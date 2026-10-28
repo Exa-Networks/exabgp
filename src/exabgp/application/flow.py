@@ -34,7 +34,7 @@ class ACL:
     suffix: ClassVar[str] = '.rules'
 
     __uid: ClassVar[int] = 0
-    _known: ClassVar[dict[str, tuple[int, str]]] = dict()
+    _known: ClassVar[dict[str, tuple[int, str]]] = {}
 
     @classmethod
     def _uid(cls) -> int:

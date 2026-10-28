@@ -96,7 +96,7 @@ class NetMask(Resource):
         0: '0.0.0.0',
     }
 
-    codes: ClassVar[dict[str, int]] = dict([(inst, name) for (name, inst) in names.items()])
+    codes: ClassVar[dict[str, int]] = {inst: name for (name, inst) in names.items()}
 
     @classmethod
     def make_netmask(cls, string: str | int, afi: AFI) -> NetMask:

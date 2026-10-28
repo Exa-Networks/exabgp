@@ -132,7 +132,7 @@ class PMSI(Attribute):
     # Ingress Replication), gets the generic PMSI and is shown as hex.
     TUNNEL_SIZE: ClassVar[int | None] = None
 
-    _pmsi_known: ClassVar[dict[int, type[PMSI]]] = dict()
+    _pmsi_known: ClassVar[dict[int, type[PMSI]]] = {}
     _name: ClassVar[dict[int, str]] = {
         0: 'No tunnel',
         1: 'RSVP-TE P2MP LSP',

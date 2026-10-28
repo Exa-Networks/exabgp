@@ -70,7 +70,7 @@ class PrefixSid(Attribute):
     VALID_ZERO: ClassVar[bool] = True
 
     # Registered subclasses we know how to decode
-    registered_srids: ClassVar[dict[int, type[Any]]] = dict()
+    registered_srids: ClassVar[dict[int, type[Any]]] = {}
 
     def __init__(self, sr_attrs: list[Any], packed: Buffer | None = None) -> None:
         self.sr_attrs: list[Any] = sr_attrs

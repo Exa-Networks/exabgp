@@ -136,7 +136,7 @@ class MVPN(NLRI):
     # MVPN has no additional instance attributes beyond NLRI base class
     __slots__ = ()
 
-    registered_mvpn: ClassVar[dict[int, type[MVPN]]] = dict()
+    registered_mvpn: ClassVar[dict[int, type[MVPN]]] = {}
 
     # Wire format constant
     HEADER_SIZE: ClassVar[int] = 2  # type(1) + length(1)

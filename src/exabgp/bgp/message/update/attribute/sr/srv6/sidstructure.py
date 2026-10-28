@@ -38,7 +38,7 @@ class Srv6SidStructure:
     TLV: ClassVar[int] = 1
     LENGTH: ClassVar[int] = 6
 
-    registered_subsubtlvs: ClassVar[dict[int, type]] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type]] = {}
 
     def __init__(self, packed: Buffer) -> None:
         if len(packed) != self.LENGTH:

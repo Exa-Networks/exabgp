@@ -261,7 +261,7 @@ def get_leaking_objects(objects: Sequence[object] | None = None) -> list[object]
         gc.collect()
         objects = gc.get_objects()
     try:
-        ids = set(id(i) for i in objects)
+        ids = {id(i) for i in objects}
         for referrer in objects:
             ids.difference_update(map(id, gc.get_referents(referrer)))
         # this then is our set of objects without referrers

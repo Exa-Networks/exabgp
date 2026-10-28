@@ -42,7 +42,7 @@ class EVPN(NLRI):
     # EVPN has no additional instance attributes beyond NLRI base class
     __slots__ = ()
 
-    registered_evpn: ClassVar[dict[int, type[EVPN]]] = dict()
+    registered_evpn: ClassVar[dict[int, type[EVPN]]] = {}
 
     # Wire format constant
     HEADER_SIZE: ClassVar[int] = 2  # type(1) + length(1)

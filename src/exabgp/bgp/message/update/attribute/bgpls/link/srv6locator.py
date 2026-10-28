@@ -39,7 +39,7 @@ class Srv6Locator(FlagLS):
     # RFC 9514 7.1: a node may advertise a locator per algorithm
     MERGE: ClassVar[bool] = True
     FLAGS: ClassVar = ['D'] + ['RSV' for _ in range(7)]
-    registered_subsubtlvs: ClassVar[dict[int, type]] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type]] = {}
 
     # flags property inherited from FlagLS - unpacks from _packed[0:1]
 

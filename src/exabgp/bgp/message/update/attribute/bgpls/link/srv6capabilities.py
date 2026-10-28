@@ -41,7 +41,7 @@ SRV6_CAPABILITIES_O_FLAG = 0x4000
 
 class Srv6Capabilities(BaseLS):
     LEN: ClassVar = SRV6_CAPABILITIES_LEN
-    registered_subsubtlvs: ClassVar[dict[int, type]] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type]] = {}
 
     @property
     def flags(self) -> dict[str, int]:

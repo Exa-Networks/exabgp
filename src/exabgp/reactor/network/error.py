@@ -38,41 +38,35 @@ __all__ = [
 
 
 class error:
-    block: ClassVar[set[int]] = set(
-        (
-            errno.EINPROGRESS,
-            errno.EALREADY,
-            errno.EAGAIN,
-            errno.EWOULDBLOCK,
-            errno.EINTR,
-            errno.EDEADLK,
-            errno.EBUSY,
-            errno.ENOBUFS,
-            errno.ENOMEM,
-            errno.ENOTCONN,
-        ),
-    )
+    block: ClassVar[set[int]] = {
+        errno.EINPROGRESS,
+        errno.EALREADY,
+        errno.EAGAIN,
+        errno.EWOULDBLOCK,
+        errno.EINTR,
+        errno.EDEADLK,
+        errno.EBUSY,
+        errno.ENOBUFS,
+        errno.ENOMEM,
+        errno.ENOTCONN,
+    }
 
-    fatal: ClassVar[set[int]] = set(
-        (
-            errno.ECONNABORTED,
-            errno.EPIPE,
-            errno.ECONNREFUSED,
-            errno.EBADF,
-            errno.ESHUTDOWN,
-            errno.ENOTCONN,
-            errno.ECONNRESET,
-            errno.ETIMEDOUT,
-            errno.EINVAL,
-        ),
-    )
+    fatal: ClassVar[set[int]] = {
+        errno.ECONNABORTED,
+        errno.EPIPE,
+        errno.ECONNREFUSED,
+        errno.EBADF,
+        errno.ESHUTDOWN,
+        errno.ENOTCONN,
+        errno.ECONNRESET,
+        errno.ETIMEDOUT,
+        errno.EINVAL,
+    }
 
-    unavailable: ClassVar[set[int]] = set(
-        (
-            errno.ECONNREFUSED,
-            errno.EHOSTUNREACH,
-        ),
-    )
+    unavailable: ClassVar[set[int]] = {
+        errno.ECONNREFUSED,
+        errno.EHOSTUNREACH,
+    }
 
 
 class NetworkError(Exception):

@@ -154,15 +154,15 @@ AFI.common = {
     AFI.bgpls.pack_afi(): AFI.bgpls,
 }
 
-AFI.codes = dict(
-    (k.lower().replace('_', '-'), v)
+AFI.codes = {
+    k.lower().replace('_', '-'): v
     for (k, v) in {
         'ipv4': AFI.ipv4,
         'ipv6': AFI.ipv6,
         'l2vpn': AFI.l2vpn,
         'bgp-ls': AFI.bgpls,
     }.items()
-)
+}
 
 AFI.cache = {inst.value: inst for inst in AFI.codes.values()}
 AFI.inet_names = {inst.value: name.replace('ipv', 'inet') for (name, inst) in AFI.codes.items()}
@@ -323,8 +323,8 @@ SAFI.common = {
     SAFI.flow_vpn.pack_safi(): SAFI.flow_vpn,
 }
 
-SAFI.codes = dict(
-    (k.lower().replace('_', '-'), v)
+SAFI.codes = {
+    k.lower().replace('_', '-'): v
     for (k, v) in {
         'unicast': SAFI.unicast,
         'multicast': SAFI.multicast,
@@ -342,7 +342,7 @@ SAFI.codes = dict(
         'flow': SAFI.flow_ip,
         'flow-vpn': SAFI.flow_vpn,
     }.items()
-)
+}
 
 SAFI.cache = {inst.value: inst for inst in SAFI.codes.values()}
 

@@ -56,7 +56,7 @@ SRV6_ENDX_MIN_LENGTH = 22
 class Srv6EndX(FlagLS):
     FLAGS: ClassVar = ['B', 'S', 'P', 'RSV', 'RSV', 'RSV', 'RSV', 'RSV']
     MERGE: ClassVar[bool] = True  # LinkState.json() groups into array
-    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = dict()
+    registered_subsubtlvs: ClassVar[dict[int, type[SubSubTLV]]] = {}
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with packed bytes."""

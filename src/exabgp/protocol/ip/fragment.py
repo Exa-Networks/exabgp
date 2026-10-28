@@ -35,14 +35,14 @@ class Fragment(BitResource):
     LAST: ClassVar[int] = 0x08
     # reserved = 0xF0
 
-    codes: ClassVar[dict[str, int]] = dict(
-        (k.lower().replace('_', '-'), v)
+    codes: ClassVar[dict[str, int]] = {
+        k.lower().replace('_', '-'): v
         for (k, v) in {
             'DONT-FRAGMENT': DONT,
             'IS-FRAGMENT': IS,
             'FIRST-FRAGMENT': FIRST,
             'LAST-FRAGMENT': LAST,
         }.items()
-    )
+    }
 
-    names: ClassVar[dict[int, str]] = dict([(value, name) for (name, value) in codes.items()])
+    names: ClassVar[dict[int, str]] = {value: name for (name, value) in codes.items()}
