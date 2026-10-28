@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """Comprehensive BGP-LS (Link-State) NLRI tests
 
 Tests all BGP-LS NLRI types:

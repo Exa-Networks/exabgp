@@ -147,6 +147,8 @@ select = [
 	"PLR1704", "RUF007", "RUF015", "RUF017", "RUF022", "RUF046", "UP028", "UP036",
 	# printf formatting, converted where mypy proved each %d an int
 	"UP031",
+	# a shebang on a file which is run, none on one which is imported
+	"EXE001", "EXE002",
 	# isort
 	"I001",
 ]

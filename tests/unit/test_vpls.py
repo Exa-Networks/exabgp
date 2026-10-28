@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Comprehensive tests for VPLS (Virtual Private LAN Service) NLRI (RFC 4761/4762)
 
 Created for comprehensive test coverage improvement

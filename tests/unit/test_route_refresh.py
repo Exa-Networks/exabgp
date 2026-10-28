@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_route_refresh.py
 
 Comprehensive tests for BGP ROUTE_REFRESH messages (RFC 2918, RFC 7313)

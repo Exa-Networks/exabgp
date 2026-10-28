@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_ip_link_local.py
 
 Tests for IP address link-local detection.

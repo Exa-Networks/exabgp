@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Tests for Route refcount and Configuration global route store.
 

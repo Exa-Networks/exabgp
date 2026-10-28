@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_llnh_nexthop.py
 
 Tests for Link-Local Next Hop (LLNH) Capability nexthop encoding.

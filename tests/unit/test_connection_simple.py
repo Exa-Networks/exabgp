@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_connection_simple.py
 
 Simplified tests for network connection layer functionality.

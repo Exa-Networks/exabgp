@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """Non-interactive command execution for ExaBGP"""
 
 from __future__ import annotations

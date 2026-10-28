@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """Unit tests for BGP-LS packed-bytes-first pattern conversion
 
 Tests the new packed-bytes-first pattern for BGP-LS classes:

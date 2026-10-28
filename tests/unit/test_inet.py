@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Comprehensive tests for INET NLRI (IPv4/IPv6 Unicast and Multicast)
 
 Created for comprehensive test coverage improvement

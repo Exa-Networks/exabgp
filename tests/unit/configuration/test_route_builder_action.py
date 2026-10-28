@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Tests for route validation when a route is read.
 

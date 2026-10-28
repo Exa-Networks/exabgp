@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Tests for RIB replace_restart() and replace_reload() operations.
 

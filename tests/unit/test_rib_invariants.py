@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Property-based invariant tests for RIB.
 

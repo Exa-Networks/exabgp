@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_multisession_negotiation.py
 
 Regression tests for F7: MultiSession.unpack_capability ignored its `data`

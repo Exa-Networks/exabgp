@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """Interactive REPL mode for ExaBGP CLI with readline support"""
 
 from __future__ import annotations

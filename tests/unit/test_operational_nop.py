@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_operational_nop.py
 
 Comprehensive tests for BGP OPERATIONAL messages

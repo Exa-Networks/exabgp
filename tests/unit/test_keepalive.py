@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_keepalive.py
 
 Comprehensive tests for BGP KEEPALIVE messages (RFC 4271 Section 4.4)

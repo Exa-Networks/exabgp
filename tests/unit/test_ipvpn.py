@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Comprehensive tests for IPVPN (IP VPN) NLRI (RFC 4364)
 
 Created for comprehensive test coverage improvement

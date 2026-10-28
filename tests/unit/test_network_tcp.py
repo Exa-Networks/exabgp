@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_network_tcp.py
 
 Comprehensive tests for TCP network layer functionality.

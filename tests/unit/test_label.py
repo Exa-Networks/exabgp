@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Comprehensive tests for Label (MPLS-labeled routes) NLRI (RFC 3107)
 
 Created for comprehensive test coverage improvement

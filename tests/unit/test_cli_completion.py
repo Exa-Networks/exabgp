@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Test CLI tab completion and auto-expansion functionality
 """

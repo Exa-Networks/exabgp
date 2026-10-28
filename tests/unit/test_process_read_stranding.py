@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """The process readers must read the kernel fd, never the BufferedReader over it
 
 Both readers decide whether a helper process has anything to say by asking the

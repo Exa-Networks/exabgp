@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Comprehensive tests for RTC (Route Target Constraint) NLRI (RFC 4684)
 
 Created for comprehensive test coverage improvement

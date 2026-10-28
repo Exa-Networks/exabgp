@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_environment_naming.py
 
 The dotted setting name is the primary form: exabgp.api.ack is what the code looks for

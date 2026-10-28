@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_bgp_timers.py
 
 Comprehensive tests for BGP timer implementations.

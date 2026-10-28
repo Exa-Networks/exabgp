@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """notification_test.py
 
 Unit tests for the Notify exception and BGP NOTIFICATION packet generation.

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_encode_decode.py
 
 Tests for the encode and decode CLI commands.

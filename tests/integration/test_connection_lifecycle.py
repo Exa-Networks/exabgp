@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_connection_lifecycle.py
 
 Integration tests for full connection lifecycle with real socket mocks.

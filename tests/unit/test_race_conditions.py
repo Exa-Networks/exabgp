@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """test_race_conditions.py
 
 Race condition tests for concurrent connection scenarios in ExaBGP.

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """Healthchecker for exabgp.
 
 This program is to be used as a process for exabgp. It will announce

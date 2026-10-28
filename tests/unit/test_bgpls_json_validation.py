@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 """BGP-LS JSON Validation Tests
 
 Validates that all BGP-LS attribute classes produce valid JSON output.

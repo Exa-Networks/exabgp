@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Tests for NLRICollection and MPNLRICollection wire containers
 
 Tests the packed-bytes-first pattern for NLRI collection classes.
