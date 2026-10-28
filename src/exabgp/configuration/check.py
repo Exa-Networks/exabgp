@@ -48,7 +48,6 @@ from exabgp.version import json as json_version
 from exabgp.version import json_v4 as json_v4_version
 
 if TYPE_CHECKING:
-    from exabgp.bgp.neighbor import Neighbor
     from exabgp.reactor.api.response import JSONEncoder
 
 # Type alias for log message lambdas

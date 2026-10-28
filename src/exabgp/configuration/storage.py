@@ -129,10 +129,7 @@ def safe_backup(filepath: str | Path) -> str | None:
     # Read file content atomically with O_NOFOLLOW
     # This is the critical TOCTOU protection - even if attacker swaps
     # the file for a symlink between lstat and here, O_NOFOLLOW fails
-    try:
-        content = _read_nofollow(filepath)
-    except ConfigurationStorageError:
-        raise
+    content = _read_nofollow(filepath)
 
     # Write backup atomically
     tmp_path = None

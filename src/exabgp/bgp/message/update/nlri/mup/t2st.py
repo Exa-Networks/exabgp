@@ -85,7 +85,7 @@ class Type2SessionTransformedRoute(MUP):
         teid_size = endpoint_len - endpoint_size
 
         if teid_size < 0 or teid_size > MUP_T2ST_TEID_MAX_SIZE:
-            raise Exception('teid is too large %d (range 0~32)' % teid_size)
+            raise ValueError('teid is too large %d (range 0~32)' % teid_size)
 
         teid_packed = pack('!I', teid)
 

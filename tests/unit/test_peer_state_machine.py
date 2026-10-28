@@ -153,6 +153,16 @@ def notifications_sent(refusal: Any, connecting: Any) -> list[tuple[int, int]]:
     return [(body[0], body[1]) for kind, body in messages(data) if kind == NOTIFICATION]
 
 
+def _counting(calls: dict[str, int], name: str, real: Any) -> Any:
+    """`real`, a method of Negotiated, counting its calls in calls[name]."""
+
+    def counted(self: Negotiated, message: Open) -> Any:
+        calls[name] += 1
+        return real(self, message)
+
+    return counted
+
+
 def received_open(router_id: str) -> Open:
     return Open.make_open(Version(4), ASN(65002), HoldTime(180), RouterID(router_id), Capabilities())
 
@@ -516,12 +526,7 @@ class TestPeerConnectionAttempts:
         counting = []
         if not COMPILED:
             for name in calls:
-
-                def counted(self: Negotiated, message: Open, _name: str = name, _real: Any = getattr(Negotiated, name)):
-                    calls[_name] += 1
-                    return _real(self, message)
-
-                counting.append(patch.object(Negotiated, name, counted))
+                counting.append(patch.object(Negotiated, name, _counting(calls, name, getattr(Negotiated, name))))
         for each in counting:
             each.start()
         try:

@@ -29,7 +29,7 @@ import signal
 import socket
 import tempfile
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, ClassVar
 
 import pytest
 
@@ -48,7 +48,7 @@ def pipe_arguments() -> argparse.Namespace:
 class FakeSocket:
     """A unix socket whose connect and sendall the test decides."""
 
-    sent: list[bytes] = []
+    sent: ClassVar[list[bytes]] = []
 
     def __init__(self, fail_on: str = '') -> None:
         self._fail_on = fail_on

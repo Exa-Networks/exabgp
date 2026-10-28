@@ -172,10 +172,7 @@ def parse() -> argparse.Namespace:
             if len(ip_ifname) != IP_IFNAME_PARTS:
                 raise ValueError(f"Expected IP to IFNAME parameter: <ip_address>%<ifname>, got '{val}'")
             # Is the ip address valid?
-            try:
-                ip = ip_network(ip_ifname[0])
-            except ValueError as e:
-                raise e
+            ip = ip_network(ip_ifname[0])
             # Is the ip address defined
             if ip not in ips:
                 raise ValueError(f"No 'ip' parameter has been defined for the ip_ifname pair '{val}'")
@@ -702,8 +699,8 @@ def main() -> None:
     except AddressSetupError as e:
         logger.error(str(e))
         sys.exit(1)
-    except Exception as e:  # pylint: disable=W0703
-        logger.exception(f'Uncaught exception: {e}')
+    except Exception:  # pylint: disable=W0703
+        logger.exception('Uncaught exception')
         sys.exit(1)
 
 

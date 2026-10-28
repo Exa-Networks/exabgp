@@ -12,7 +12,7 @@ import stat
 import threading
 from collections.abc import Iterator
 from queue import Empty, Queue
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import Mock, patch
 
 import pytest
@@ -423,7 +423,7 @@ class TestResponseRouter:
 class FakeDaemonSocket:
     """A unix socket to a daemon which answers a ping, and records what the client sends."""
 
-    made: list['FakeDaemonSocket'] = []
+    made: ClassVar[list['FakeDaemonSocket']] = []
 
     def __init__(self, *args: object) -> None:
         self.replies = [b'{"pong": "daemon-uuid-one", "active": true}\ndone\n']

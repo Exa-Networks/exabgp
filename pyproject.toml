@@ -130,8 +130,10 @@ select = [
 	# the small ones ruff fixes itself
 	"B009", "B010", "FURB188", "PIE790", "PIE808", "PLR0402", "PLR1711", "PLR1730",
 	"PYI019", "PYI055", "RET501", "RUF010", "RUF019", "RUF023", "SIM114", "SIM208", "TC005",
-	# tryceratops: a type test raising ValueError, which this tree now has none of
-	"TRY004",
+	# tryceratops
+	"TRY002", "TRY004", "TRY201", "TRY203", "TRY401",
+	# what looks like a bug: a value computed and dropped, a blind pytest.raises, exec
+	"B008", "B015", "B017", "B018", "PLR0124", "RUF012", "S102", "T100", "TC004",
 	# isort
 	"I001",
 ]

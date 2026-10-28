@@ -66,9 +66,9 @@ class LinkState(Attribute):
     registered_lsids: ClassVar[dict[int, type]] = dict()
 
     # what this implementation knows as LS attributes
-    node_lsids: list[int] = []
-    link_lsids: list[int] = []
-    prefix_lsids: list[int] = []
+    node_lsids: ClassVar[list[int]] = []
+    link_lsids: ClassVar[list[int]] = []
+    prefix_lsids: ClassVar[list[int]] = []
 
     def __init__(self, packed: Buffer) -> None:
         """Initialize with raw attribute bytes (stores, parses on first access)."""
@@ -129,7 +129,7 @@ class LinkState(Attribute):
                 # pattern we do not know is the peer's error and belongs to the decoder;
                 # leaving it to the first render put the Notify in the API writer. The
                 # instance caches it, so the render does not pay for it again.
-                instance.flags
+                _ = instance.flags
         except Notify:
             raise
         except (IndexError, struct_error) as exc:
@@ -199,7 +199,7 @@ class LinkState(Attribute):
         # a statement, never an assertion: -O deletes an assert, and with it the whole
         # boundary this commit exists to create (EXA_STYLE.md 1.2, nothing may depend on
         # an assertion running). Reading the property is what parses.
-        instance.ls_attrs
+        _ = instance.ls_attrs
         return instance
 
     @staticmethod

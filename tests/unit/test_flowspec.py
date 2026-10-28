@@ -8,6 +8,8 @@ Tests cover RFC 5575 (Dissemination of Flow Specification Rules) components:
 - JSON serialization
 """
 
+import operator
+
 import pytest
 
 from exabgp.bgp.message.action import Action
@@ -551,7 +553,7 @@ class TestFlowNLRI:
         flow2.add(dest)
         flow2.add(src)
 
-        assert flow1 == flow1
+        assert operator.eq(flow1, flow1)  # a flow equals itself
         # Flows with same components are equal
         assert flow1 == flow2
 

@@ -321,7 +321,7 @@ class Listener:
             raise _bind_error(exc, local_ip, local_port) from None
         except NetworkError as exc:
             log.critical(lazymsg('{exc}', exc=str(exc)), 'network')
-            raise exc
+            raise
 
     def listen_on(
         self,

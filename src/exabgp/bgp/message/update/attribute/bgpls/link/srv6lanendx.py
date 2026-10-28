@@ -155,7 +155,7 @@ class Srv6LanEndXISIS(Srv6):
         the first render, which is the writer feeding the API subprocesses.
         """
         instance = cls(data)
-        instance.content
+        _ = instance.content
         return instance
 
     @classmethod
@@ -253,7 +253,7 @@ class Srv6LanEndXOSPF(Srv6):
         the first render, which is the writer feeding the API subprocesses.
         """
         instance = cls(data)
-        instance.content
+        _ = instance.content
         return instance
 
     @classmethod

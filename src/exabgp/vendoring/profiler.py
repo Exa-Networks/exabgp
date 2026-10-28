@@ -23,7 +23,7 @@ import importlib.util  # noqa: E402
 import inspect  # noqa: E402
 import linecache  # noqa: E402
 import os  # noqa: E402
-import pdb  # noqa: E402
+import pdb  # noqa: E402, T100 (the profiler's --pdb option starts the debugger)
 import subprocess  # noqa: E402
 import sys  # noqa: E402
 import time  # noqa: E402
@@ -270,7 +270,7 @@ class LineProfiler:
         """Profile a single executable statement in the given namespaces."""
         self.enable_by_count()
         try:
-            exec(cmd, globals, locals)
+            exec(cmd, globals, locals)  # noqa: S102 (profiling a statement is running it)
         finally:
             self.disable_by_count()
         return self
@@ -471,7 +471,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         with open(script) as source:
             code = compile(source.read(), script, 'exec')
-        exec(code, namespace)
+        exec(code, namespace)  # noqa: S102 (profiling a script is running it)
     finally:
         show_results(prof, precision=options.precision)
     return 0

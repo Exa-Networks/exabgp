@@ -108,7 +108,7 @@ def test_a_route_built_without_its_label_size_is_refused() -> None:
     built = Label(labelled(LABEL_17), AFI.ipv4, has_labels=True)
 
     with pytest.raises(ValueError, match='without recording its label size'):
-        built.cidr
+        _ = built.cidr
 
 
 def test_the_withdraw_label_no_longer_eats_the_prefix() -> None:
@@ -121,7 +121,7 @@ def test_the_withdraw_label_no_longer_eats_the_prefix() -> None:
     built = Label(labelled(WITHDRAW_LABEL), AFI.ipv4, has_labels=True)
 
     with pytest.raises(ValueError):
-        built.cidr
+        _ = built.cidr
 
 
 @pytest.mark.parametrize(

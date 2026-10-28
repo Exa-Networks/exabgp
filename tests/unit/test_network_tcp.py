@@ -126,7 +126,7 @@ class TestSocketBinding:
         io2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
         # Don't set SO_REUSEADDR or SO_REUSEPORT
 
-        with pytest.raises(Exception):  # Should get some binding error
+        with pytest.raises(OSError):  # the address is in use
             io2.bind(('127.0.0.1', port))
 
         io1.close()

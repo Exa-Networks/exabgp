@@ -252,7 +252,7 @@ class NLRI(Family):
         return self.index()
 
     def pack_nlri(self, negotiated: Negotiated) -> Buffer:
-        raise Exception('unimplemented in NLRI children class')
+        raise NotImplementedError('unimplemented in NLRI children class')
 
     def pack_withdraw(self, negotiated: Negotiated) -> Buffer:
         """The NLRI as MP_UNREACH_NLRI carries it: the announced encoding, unless a family says otherwise.

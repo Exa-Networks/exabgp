@@ -17,6 +17,7 @@ routes carry the same attributes" was answered by counting them.
 
 from __future__ import annotations
 
+import operator
 from struct import pack
 
 import pytest
@@ -245,7 +246,7 @@ def test_every_registered_attribute_can_be_compared_at_all() -> None:
             if decoded is None:
                 continue
             try:
-                decoded == decoded
+                operator.eq(decoded, decoded)
             except NotImplementedError:
                 uncomparable.append(klass.__name__)
             break

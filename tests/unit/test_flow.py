@@ -6,6 +6,7 @@ Copyright (c) 2009-2015 Exa Networks. All rights reserved.
 License: 3-clause BSD. (See the COPYRIGHT file)
 """
 
+import operator
 import unittest
 
 from exabgp.bgp.message.direction import Direction
@@ -119,7 +120,7 @@ class TestFlow(unittest.TestCase):
         for key in ['destination', 'source', 'anyport_3']:
             flow2.add(components[key])
 
-        if flow1 != flow1:
+        if operator.ne(flow1, flow1):  # a flow equals itself
             self.fail('the flows are the same')
 
         if flow1 == flow2:

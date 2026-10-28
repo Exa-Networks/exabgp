@@ -595,7 +595,7 @@ class TestCompleterWithGetNeighborsCallback:
         mock_send = Mock(return_value='[]')
 
         def failing_callback():
-            raise Exception('Callback failed')
+            raise RuntimeError('Callback failed')
 
         completer = CommandCompleter(mock_send, get_neighbors=failing_callback)
 

@@ -117,7 +117,7 @@ class Srv6EndX(FlagLS):
         the first render, which is the writer feeding the API subprocesses.
         """
         instance = cls(data)
-        instance.content
+        _ = instance.content
         return instance
 
     @classmethod

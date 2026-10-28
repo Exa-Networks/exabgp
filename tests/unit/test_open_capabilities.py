@@ -15,6 +15,8 @@ Created for ExaBGP testing framework
 License: 3-clause BSD
 """
 
+import operator
+
 from exabgp.bgp.message import Message
 from exabgp.bgp.message.direction import Direction
 from exabgp.bgp.message.open import ASN, HoldTime, Open, RouterID, Version
@@ -706,16 +708,16 @@ def test_link_local_nexthop_ordering_raises() -> None:
     cap2 = LinkLocalNextHop()
 
     with pytest.raises(RuntimeError):
-        cap1 < cap2
+        operator.lt(cap1, cap2)
 
     with pytest.raises(RuntimeError):
-        cap1 <= cap2
+        operator.le(cap1, cap2)
 
     with pytest.raises(RuntimeError):
-        cap1 > cap2
+        operator.gt(cap1, cap2)
 
     with pytest.raises(RuntimeError):
-        cap1 >= cap2
+        operator.ge(cap1, cap2)
 
 
 def test_open_with_link_local_nexthop_capability() -> None:

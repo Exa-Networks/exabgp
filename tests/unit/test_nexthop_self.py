@@ -7,6 +7,8 @@ Tests cover:
 - RIB rejection of unresolved sentinels
 """
 
+import operator
+
 import pytest
 
 from exabgp.bgp.message.open.asn import ASN
@@ -97,7 +99,7 @@ class TestNextHopSelfSentinel:
         """NextHopSelf.__eq__() raises RuntimeError."""
         sentinel = NextHopSelf(AFI.ipv4)
         with pytest.raises(RuntimeError, match='do not use __eq__'):
-            sentinel == sentinel
+            operator.eq(sentinel, sentinel)
 
     def test_pack_attribute_raises_before_resolution(self) -> None:
         """NextHopSelf.pack_attribute() raises ValueError before resolve()."""

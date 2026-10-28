@@ -84,7 +84,7 @@ def load_disarmed():
     ast.fix_missing_locations(tree)
     module = types.ModuleType('test_everything_disarmed')
     module.__file__ = str(GATE)
-    exec(compile(tree, str(GATE), 'exec'), module.__dict__)
+    exec(compile(tree, str(GATE), 'exec'), module.__dict__)  # noqa: S102 (loads the runner under test)
     return module
 
 

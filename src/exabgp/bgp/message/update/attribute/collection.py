@@ -736,7 +736,7 @@ class AttributeCollection(MutableMapping[int, Attribute]):
             if kls and kls.DISCARD:
                 self._malformation(aid, ATTRIBUTE_DISCARD_ACTION, str(exc))
                 return
-            raise exc
+            raise
         except TreatAsWithdrawNotify as exc:
             # the decoder named the RFC 7606 action itself, see TreatAsWithdrawNotify
             self._malformation(aid, TREAT_AS_WITHDRAW_ACTION, exc.detail)

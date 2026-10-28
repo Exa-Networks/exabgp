@@ -753,7 +753,7 @@ class TestType2SessionTransformedRoute:
         endpoint_ip = IP.from_string('192.168.1.1')
 
         # endpoint_len = 32 (IP) + 33 (TEID bits) = 65 - too large!
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError, match='teid is too large'):
             route = Type2SessionTransformedRoute.make_t2st(rd, 65, endpoint_ip, 0xFFFFFFFF, AFI.ipv4)
             route.pack_nlri(create_negotiated())  # This should raise when packing
 

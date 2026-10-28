@@ -97,7 +97,7 @@ class NODE(BGPLS):
 
     def check(self) -> None:
         """Parse the node descriptors now, so a malformed sub-tlv is refused at the boundary."""
-        self.node_ids
+        _ = self.node_ids
 
     @property
     def proto_id(self) -> int:
