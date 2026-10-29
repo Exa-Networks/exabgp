@@ -66,6 +66,17 @@ def _poller(**kwargs: object) -> Mock:
     return poller
 
 
+def _socket() -> Mock:
+    """A stand-in for a socket, whose close() returns None as the real one does.
+
+    The compiled build checks what close() returns against its declared None, so the
+    Mock default of returning another Mock would fail there before the test is reached.
+    """
+    sock = Mock()
+    sock.close.return_value = None
+    return sock
+
+
 class TestSocketReader:
     """Test _reader_async(), which reads an exact number of bytes off the socket"""
 
@@ -81,7 +92,7 @@ class TestSocketReader:
     def test_reader_zero_bytes_returns_empty(self) -> None:
         """Test _reader_async(0) returns an empty memoryview immediately"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        conn.io = Mock()
+        conn.io = _socket()
 
         result = asyncio.run(conn._reader_async(0))
 
@@ -112,7 +123,7 @@ class TestSocketReader:
         """Test _reader_async() assembles data from multiple recv_into() calls"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -157,7 +168,7 @@ class TestSocketReader:
         """Test _reader_async() raises LostConnection when recv_into returns 0"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
         mock_sock.recv_into.return_value = 0  # Connection closed (recv_into returns 0)
@@ -174,7 +185,7 @@ class TestSocketReader:
         """Test _reader_async() raises TooSlowError on socket timeout"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
         mock_sock.recv_into.side_effect = TimeoutError('timed out')
@@ -191,7 +202,7 @@ class TestSocketReader:
         """Test _reader_async() raises LostConnection on fatal socket errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
         mock_sock.recv_into.side_effect = OSError(errno.ECONNRESET, 'Connection reset')
@@ -221,7 +232,7 @@ class TestGeneratorBasedWriter:
         """Test writer() yields False while waiting for socket ready"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -250,7 +261,7 @@ class TestGeneratorBasedWriter:
         """Test writer() handles partial send() results"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -277,7 +288,7 @@ class TestGeneratorBasedWriter:
         """Test writer() handles EAGAIN/EWOULDBLOCK errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -308,7 +319,7 @@ class TestGeneratorBasedWriter:
         """Test writer() raises NetworkError on EPIPE (broken pipe)"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -334,7 +345,7 @@ class TestGeneratorBasedWriter:
         """Test writer() raises LostConnection when send returns 0"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
         mock_sock.send.return_value = 0  # Connection lost
@@ -514,7 +525,7 @@ class TestBufferManagement:
         """Test _reader_async() assembles header from small incremental reads"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -540,7 +551,7 @@ class TestBufferManagement:
         """Test _reader_async() handles variable-size recv_into() chunks"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -571,7 +582,7 @@ class TestBufferManagement:
         """Test writer() handles incremental send() results"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -598,7 +609,7 @@ class TestBufferManagement:
         """Test _reader_async() handles exact buffer boundaries"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -637,7 +648,7 @@ class TestPollingMechanisms:
         """Test writing() registers poller only once"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -660,7 +671,7 @@ class TestPollingMechanisms:
         """Test writing() detects POLLERR event"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -736,7 +747,7 @@ class TestConnectionBasics:
         """Test fd() returns file descriptor when socket exists"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 42
         conn.io = mock_sock
 
@@ -777,7 +788,7 @@ class TestConnectionBasics:
         """Test close() properly closes active socket"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         conn.io = mock_sock
 
         with patch('exabgp.reactor.network.connection.log'):
@@ -801,7 +812,7 @@ class TestConnectionBasics:
         """Test close() handles socket errors gracefully"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.close.side_effect = OSError('Socket already closed')
         conn.io = mock_sock
 
@@ -865,7 +876,7 @@ class TestErrorPropagation:
         """Test writer() propagates fatal socket errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -894,7 +905,7 @@ class TestErrorPropagation:
         """Test _reader_async() propagates fatal socket errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
         mock_sock.recv_into.side_effect = OSError(errno.ECONNREFUSED, 'Connection refused')
@@ -910,7 +921,7 @@ class TestErrorPropagation:
         """Test _reader_async() clears socket on connection loss"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
         mock_sock.recv_into.return_value = 0  # Connection closed (recv_into returns 0)
@@ -1008,7 +1019,7 @@ class TestEdgeCasesAndDefensiveMode:
         """Test _reader_async() handles undefined socket errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
         mock_sock.recv_into.side_effect = OSError(999, 'Undefined error')
@@ -1022,7 +1033,7 @@ class TestEdgeCasesAndDefensiveMode:
         """Test writer() handles undefined socket errors"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -1093,7 +1104,7 @@ class TestEdgeCasesAndDefensiveMode:
         """Test writing() returns False when socket not writable"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 
@@ -1111,7 +1122,7 @@ class TestEdgeCasesAndDefensiveMode:
         """Test writing() detects POLLNVAL event and clears poller"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 5
         conn.io = mock_sock
 

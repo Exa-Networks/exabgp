@@ -21,6 +21,17 @@ from exabgp.protocol.family import AFI
 from exabgp.reactor.network.connection import Connection
 
 
+def _socket() -> Mock:
+    """A stand-in for a socket, whose close() returns None as the real one does.
+
+    The compiled build checks what close() returns against its declared None, so the
+    Mock default of returning another Mock would fail there before the test is reached.
+    """
+    sock = Mock()
+    sock.close.return_value = None
+    return sock
+
+
 class TestConnectionBasics:
     """Test basic Connection functionality"""
 
@@ -74,7 +85,7 @@ class TestConnectionBasics:
         """Test fd() returns file descriptor with socket"""
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 42
         conn.io = mock_sock
 
@@ -105,7 +116,7 @@ class TestConnectionBasics:
 
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         conn.io = mock_sock
 
         # Mock the logger to allow close to proceed
@@ -121,7 +132,7 @@ class TestConnectionBasics:
 
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         mock_sock.close.side_effect = OSError('Close failed')
         conn.io = mock_sock
 
@@ -136,7 +147,7 @@ class TestConnectionBasics:
 
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
-        mock_sock = Mock()
+        mock_sock = _socket()
         conn.io = mock_sock
 
         # Mock the logger to allow close to proceed

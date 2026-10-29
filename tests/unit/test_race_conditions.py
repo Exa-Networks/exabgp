@@ -44,6 +44,17 @@ def _poller() -> MagicMock:
     return poller
 
 
+def _socket() -> MagicMock:
+    """A stand-in for a socket, whose close() returns None as the real one does.
+
+    The compiled build checks what close() returns against its declared None, so the
+    MagicMock default of returning another MagicMock would fail there before the test is reached.
+    """
+    sock = MagicMock(spec=socket.socket)
+    sock.close.return_value = None
+    return sock
+
+
 class TestSimultaneousBidirectionalConnections:
     """Test race conditions when both peers connect simultaneously"""
 
@@ -58,9 +69,9 @@ class TestSimultaneousBidirectionalConnections:
         conn2 = Connection(AFI.ipv4, '192.0.2.2', '192.0.2.1')
 
         # Mock sockets for both connections
-        mock_sock1 = MagicMock(spec=socket.socket)
+        mock_sock1 = _socket()
         mock_sock1.fileno.return_value = 5
-        mock_sock2 = MagicMock(spec=socket.socket)
+        mock_sock2 = _socket()
         mock_sock2.fileno.return_value = 6
 
         conn1.io = mock_sock1
@@ -88,7 +99,7 @@ class TestSimultaneousBidirectionalConnections:
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
 
         # First socket with fd=5
-        mock_sock1 = MagicMock(spec=socket.socket)
+        mock_sock1 = _socket()
         mock_sock1.fileno.return_value = 5
         conn.io = mock_sock1
 
@@ -106,7 +117,7 @@ class TestSimultaneousBidirectionalConnections:
                 conn.close()
 
             # Create new socket that reuses fd=5
-            mock_sock2 = MagicMock(spec=socket.socket)
+            mock_sock2 = _socket()
             mock_sock2.fileno.return_value = 5
             conn.io = mock_sock2
 
@@ -121,13 +132,13 @@ class TestSimultaneousBidirectionalConnections:
         """
         # Simulate incoming connection
         incoming_conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        incoming_sock = MagicMock(spec=socket.socket)
+        incoming_sock = _socket()
         incoming_sock.fileno.return_value = 10
         incoming_conn.io = incoming_sock
 
         # Simulate outgoing connection
         outgoing_conn = Connection(AFI.ipv4, '192.0.2.2', '192.0.2.1')
-        outgoing_sock = MagicMock(spec=socket.socket)
+        outgoing_sock = _socket()
         outgoing_sock.fileno.return_value = 11
         outgoing_conn.io = outgoing_sock
 
@@ -154,7 +165,7 @@ class TestConnectionResetDuringIO:
         Expected: Graceful error handling, no corruption
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 7
         conn.io = mock_sock
 
@@ -192,7 +203,7 @@ class TestConnectionResetDuringIO:
         Expected: Proper error propagation, buffer cleanup
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 8
         conn.io = mock_sock
 
@@ -217,7 +228,7 @@ class TestConnectionResetDuringIO:
         Expected: Reader detects closed socket and raises NotConnected
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 9
         conn.io = mock_sock
 
@@ -248,7 +259,7 @@ class TestRapidConnectDisconnectCycles:
         # Create multiple connections
         for i in range(10):
             conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-            mock_sock = MagicMock(spec=socket.socket)
+            mock_sock = _socket()
             mock_sock.fileno.return_value = 100 + i
             conn.io = mock_sock
 
@@ -273,7 +284,7 @@ class TestRapidConnectDisconnectCycles:
         with patch('exabgp.reactor.network.connection.log'):
             for i in range(5):
                 conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-                mock_sock = MagicMock(spec=socket.socket)
+                mock_sock = _socket()
                 mock_sock.fileno.return_value = 50 + i
                 conn.io = mock_sock
 
@@ -295,7 +306,7 @@ class TestRapidConnectDisconnectCycles:
         Expected: Graceful handling, no stuck generators
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 20
         conn.io = mock_sock
 
@@ -335,7 +346,7 @@ class TestPollingStateRaces:
         Expected: Consistent poller state, no corruption
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 15
         conn.io = mock_sock
 
@@ -358,7 +369,7 @@ class TestPollingStateRaces:
         Expected: Connection closed and the partial read forgotten
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 16
         conn.io = mock_sock
 
@@ -401,7 +412,7 @@ class TestMessageQueueOrderingRaces:
         Expected: Proper ordering maintained, no message loss
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 25
         conn.io = mock_sock
 
@@ -442,7 +453,7 @@ class TestMessageQueueOrderingRaces:
         Expected: Messages assembled in correct order
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 26
         conn.io = mock_sock
 
@@ -482,7 +493,7 @@ class TestMessageQueueOrderingRaces:
         Expected: Buffer accumulates correctly, no data loss
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 27
         conn.io = mock_sock
 
@@ -521,7 +532,7 @@ class TestConnectionStateTransitionRaces:
         Expected: Clean abort, no half-open connections
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 30
         conn.io = mock_sock
 
@@ -543,7 +554,7 @@ class TestConnectionStateTransitionRaces:
         Expected: No errors, socket closed only once
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 31
         conn.io = mock_sock
 
@@ -564,7 +575,7 @@ class TestConnectionStateTransitionRaces:
         Expected: NotConnected raised immediately for read, True yielded for write
         """
         conn = Connection(AFI.ipv4, '192.0.2.1', '192.0.2.2')
-        mock_sock = MagicMock(spec=socket.socket)
+        mock_sock = _socket()
         mock_sock.fileno.return_value = 32
         conn.io = mock_sock
 

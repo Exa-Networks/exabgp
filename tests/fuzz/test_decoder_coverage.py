@@ -16,6 +16,7 @@ is the rule that a sweep is evidence only once it has been made to go red.
 
 from __future__ import annotations
 
+import inspect
 import struct
 from collections import Counter
 from typing import Any
@@ -36,18 +37,32 @@ def _counted(owner: Any, name: str, label: str, tally: Counter) -> None:
 
     getattr walks the MRO and setattr lands on the subclass, so a decoder which is
     inherited rather than overridden is still counted for the class which uses it.
+
+    A classmethod is rebound to the class it is called on through its descriptor, not
+    through __func__: compiled, a classmethod read off a class is a builtin method with no
+    __func__, and calling it as it was read would decode as the class it came from.
     """
     original = getattr(owner, name, None)
     if original is None:
         return
-    function = original.__func__ if hasattr(original, '__func__') else original
     tally.setdefault(label, 0)
 
-    def counting(*arguments: Any, **keywords: Any) -> Any:
-        tally[label] += 1
-        return function(*arguments, **keywords)
+    if getattr(original, '__self__', None) is not owner:
 
-    setattr(owner, name, classmethod(counting) if hasattr(original, '__func__') else counting)
+        def counting(*arguments: Any, **keywords: Any) -> Any:
+            tally[label] += 1
+            return original(*arguments, **keywords)
+
+        setattr(owner, name, counting)
+        return
+
+    descriptor = inspect.getattr_static(owner, name)
+
+    def counting_class(cls: type, *arguments: Any, **keywords: Any) -> Any:
+        tally[label] += 1
+        return descriptor.__get__(None, cls)(*arguments, **keywords)
+
+    setattr(owner, name, classmethod(counting_class))
 
 
 @pytest.mark.fuzz
@@ -60,7 +75,7 @@ def test_every_bgpls_tlv_decoder_is_reached(monkeypatch: pytest.MonkeyPatch) -> 
     """
     tally: Counter = Counter()
     for code, klass in LinkState.registered_lsids.items():
-        monkeypatch.setattr(klass, 'unpack_bgpls', klass.unpack_bgpls, raising=False)
+        monkeypatch.setattr(klass, 'unpack_bgpls', inspect.getattr_static(klass, 'unpack_bgpls'), raising=False)
         _counted(klass, 'unpack_bgpls', f'{code}', tally)
 
     attribute = Attribute.klass_by_id(Attribute.CODE.BGP_LS)
@@ -119,7 +134,7 @@ def test_every_nlri_family_decoder_is_reached(monkeypatch: pytest.MonkeyPatch) -
         if id(klass) in seen:
             continue
         seen.add(id(klass))
-        monkeypatch.setattr(klass, 'unpack_nlri', klass.unpack_nlri, raising=False)
+        monkeypatch.setattr(klass, 'unpack_nlri', inspect.getattr_static(klass, 'unpack_nlri'), raising=False)
         _counted(klass, 'unpack_nlri', klass.__name__, tally)
 
     for afi, safi in sorted(set(NLRI.known_families()), key=lambda f: (int(f[0]), int(f[1]))):
