@@ -129,12 +129,8 @@ def arguments() -> argparse.ArgumentParser:
         help='interactive CLI with tab completion',
         description='Interactive REPL mode with intelligent tab completion',
     )
-    sub.set_defaults(
-        func=lambda args: cli.cmdline_interactive(
-            args.pipename if hasattr(args, 'pipename') else 'exabgp', 'exabgp', False, args
-        )
-    )
-    sub.add_argument('--pipename', dest='pipename', metavar='NAME', help='Name of the pipe')
+    sub.set_defaults(func=lambda args: cli.cmdline_interactive(args.pipename, 'exabgp', False, args))
+    sub.add_argument('--pipename', dest='pipename', metavar='NAME', default='exabgp', help='Name of the pipe')
     sub.add_argument('--no-color', dest='no_color', action='store_true', help='Disable colored output')
 
     sub = subparsers.add_parser('run', help='execute single command (non-interactive)', description=_description(run))

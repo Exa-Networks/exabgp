@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import pytest
 
-from exabgp.application.main import main, restore_library_path
+from exabgp.application.main import arguments, main, restore_library_path
 
 
 class TestMainFunction:
@@ -155,6 +155,13 @@ class TestSubcommandDispatch:
             main()
 
         mock_cmdline.assert_called_once()
+
+    def test_cli_without_pipename_uses_the_default_pipe(self) -> None:
+        """cli with no --pipename is given the pipe name exabgp, not None.
+
+        Compiled, cmdline_interactive declares a str and refuses the None.
+        """
+        assert arguments().parse_args(['cli']).pipename == 'exabgp'
 
     def test_decode_dispatches_to_decode_module(self) -> None:
         """decode subcommand should call decode.cmdline."""
