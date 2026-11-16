@@ -51,6 +51,9 @@ blocklists = [
     {'url': 'https://blocklist.greensnow.co/greensnow.txt', 'refresh': 7200},
     {'url': 'https://sigs.interserver.net/ipslim.txt', 'refresh': 7200},
     {'url': 'https://api.blocklist.de/getlast.php?time=3600', 'refresh': 3600},
+    # NetAPI honeypot feed (CC BY 4.0): https://netapi.com/compromised-ips/
+    # Each address becomes a /32 route: about 22,000 addresses on 2026-11-16.
+    # Allow for this additional route load; the feed size varies over time.
     {'url': 'https://netapi.com/api2/?method=compromised&dataset_type=ip', 'refresh': 3600},
 ]
 
