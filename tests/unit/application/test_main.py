@@ -120,8 +120,14 @@ class TestBackwardsCompatibility:
         ]
 
         for subcmd in known_subcommands:
-            # a subcommand which reads its input gets none, rather than pytest's refusal
-            with patch('sys.argv', ['exabgp', subcmd]), patch('sys.stdin', io.StringIO('')):
+            # a subcommand which reads its input gets none, rather than pytest's refusal;
+            # healthcheck would otherwise discover any extra loopback address on this host
+            # and enter its infinite monitoring loop
+            with (
+                patch('sys.argv', ['exabgp', subcmd]),
+                patch('sys.stdin', io.StringIO('')),
+                patch('exabgp.application.healthcheck.cmdline', return_value=None),
+            ):
                 # These should be recognized as subcommands
                 # For most, just verify they don't crash on import/setup
                 try:
