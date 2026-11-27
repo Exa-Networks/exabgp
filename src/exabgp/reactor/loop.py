@@ -75,6 +75,11 @@ class Reactor:
     # [hex(ord(c)) for c in os.popen('clear').read()]
     clear: ClassVar[bytes] = b'\x1b[H\x1b[2J'
 
+    # How long a reactor with nothing to do waits before it looks again. What cannot wait
+    # that long wakes it (wake()); a signal, a connection or a peer which ended are found
+    # by the next look, so this is the most any of them is delayed by.
+    IDLE_WAIT_SECONDS: ClassVar[float] = 0.01
+
     def __init__(self, configuration: Any) -> None:
         self._ips: list[Any] = getenv().tcp.bind
         self._port: int = getenv().tcp.port
@@ -108,11 +113,46 @@ class Reactor:
         self._helper_lost: bool = False
         # a reload signalled while routes were on their way to a peer, done once they are out
         self._reload_waiting: int = Signal.NONE
+        # an instance value so a test can make the wait long enough to see what ends it
+        self.idle_wait_seconds: float = self.IDLE_WAIT_SECONDS
+        self._wake: asyncio.Event = asyncio.Event()
 
     def _termination(self, reason: str, exit_code: int) -> None:
         self.exit_code = exit_code
         self.signal.received = Signal.SHUTDOWN
         log.critical(lazymsg('reactor.termination reason={r}', r=reason), 'reactor')
+
+    def wake(self) -> None:
+        """End the wait of an idle reactor: there is something for it to look at now."""
+        self._wake.set()
+
+    def _listen_to_helpers(self) -> None:
+        """Have what a helper writes, and its going away, wake the reactor."""
+        self.processes.wake = self.wake
+
+    def _work_waiting(self) -> bool:
+        """Whether the next pass already has something to do, so must not be waited for."""
+        return (
+            self.signal.received != Signal.NONE
+            or self._reload_waiting != Signal.NONE
+            or not self.asynchronous.ready()
+            or self.processes.waiting()
+        )
+
+    async def _idle(self) -> None:
+        """Wait until woken, or until it is time to look anyway.
+
+        The loop used to end each pass with asyncio.sleep(0) and so never let the event
+        loop sleep: a daemon with nothing to do took a whole core.
+        """
+        # Nobody waking us is the usual way out, so the wait ends itself: the pass which
+        # follows is then the periodic look at what does not announce itself.
+        alarm = asyncio.get_running_loop().call_later(self.idle_wait_seconds, self._wake.set)
+        try:
+            await self._wake.wait()
+        finally:
+            alarm.cancel()
+            self._wake.clear()
 
     def _terminate_on_lost_helper(self) -> None:
         """With api.terminate set, shut down once any helper is gone for good.
@@ -214,8 +254,8 @@ class Reactor:
             self._prevent_spin()
             return []
 
-    async def _run_async_peers(self) -> None:
-        """Run all active peers concurrently as asyncio tasks
+    async def _run_async_peers(self) -> bool:
+        """Run all active peers concurrently as asyncio tasks: whether one was started or ended
 
         This method manages peer lifecycle:
         - Creates async tasks for each peer
@@ -224,6 +264,8 @@ class Reactor:
         - Coordinates concurrent peer execution
         - Applies rate limiting (matches sync mode line 565)
         """
+        changed = False
+
         # Start all active peers as async tasks
         for key in self.active_peers():
             peer = self._peers[key]
@@ -234,6 +276,7 @@ class Reactor:
 
             if peer._async_task is None:
                 peer.start_async_task()
+                changed = True
 
         # Wait briefly to allow tasks to run
         await asyncio.sleep(0)
@@ -253,15 +296,58 @@ class Reactor:
             if key in self._peers:
                 del self._peers[key]
 
+        return changed or bool(completed_peers)
+
+    async def _pass(self) -> bool:
+        """Look once at the connections, the peers, the helpers and what is scheduled.
+
+        Returns whether anything was found to do, which is what says the next pass
+        should follow at once.
+        """
+        busy = False
+
+        # Check for incoming connections
+        if self.listener.incoming():
+            busy = True
+            self.asynchronous.schedule(
+                str(uuid.uuid1()),
+                'checking for new connection(s)',
+                self.listener.new_connections(),
+            )
+
+        # Run all peers concurrently (matches sync mode line 563-597)
+        if await self._run_async_peers():
+            busy = True
+
+        # Process API commands (matches sync mode line 600-602)
+        # Read at least one message per process if there is some and parse it
+        for service, command in self.processes.received_async():
+            busy = True
+            if command == Processes.EXITED:
+                self._withdraw_helper_routes(service)
+                continue
+            self.api.process(self, service, command)
+
+        # Run async scheduled tasks (matches sync mode line 604)
+        # Must use _run_async() instead of run() since event loop is already running
+        if self.asynchronous._async:
+            busy = True
+            await self.asynchronous._run_async()
+
+        # Flush API process write queue (send ACKs and responses)
+        await self.processes.flush_write_queue()
+
+        return busy
+
     async def _async_main_loop(self) -> None:
         """Async version of the main event loop
 
         This replaces the generator-based event loop in run() with
         async/await patterns while maintaining identical behavior.
 
-        NOTE: In async mode, we use minimal sleep (asyncio.sleep(0)) to yield
-        control to peer tasks while processing events as fast as possible.
-        The asyncio event loop handles I/O waiting automatically.
+        A pass which found something to do is followed by the next at once
+        (asyncio.sleep(0), which only yields to the peer tasks), so work is done as
+        fast as it comes. A pass which found nothing waits in _idle().
         """
         # Timing instrumentation for performance analysis
         loop_timer = LoopTimer('async_main_loop', warn_threshold_ms=100)
@@ -282,38 +368,15 @@ class Reactor:
                     # a reload, done
                     continue
 
-                # Check for incoming connections
-                if self.listener.incoming():
-                    self.asynchronous.schedule(
-                        str(uuid.uuid1()),
-                        'checking for new connection(s)',
-                        self.listener.new_connections(),
-                    )
-
-                # Run all peers concurrently (matches sync mode line 563-597)
-                await self._run_async_peers()
-
-                # Process API commands (matches sync mode line 600-602)
-                # Read at least one message per process if there is some and parse it
-                for service, command in self.processes.received_async():
-                    if command == Processes.EXITED:
-                        self._withdraw_helper_routes(service)
-                        continue
-                    self.api.process(self, service, command)
-
-                # Run async scheduled tasks (matches sync mode line 604)
-                # Must use _run_async() instead of run() since event loop is already running
-                if self.asynchronous._async:
-                    await self.asynchronous._run_async()
-
-                # Flush API process write queue (send ACKs and responses)
-                await self.processes.flush_write_queue()
+                busy = await self._pass()
 
                 self._terminate_on_lost_helper()
 
-                # Yield control to peer tasks (minimal sleep)
-                # asyncio event loop handles I/O waiting automatically
-                await asyncio.sleep(0)
+                if busy or self._work_waiting():
+                    # Yield control to peer tasks, and go round again
+                    await asyncio.sleep(0)
+                else:
+                    await self._idle()
 
                 # Check if stopping and no peers left
                 if self._stopping and not self._peers.keys():
@@ -560,6 +623,7 @@ class Reactor:
 
         # Create processes after closing file descriptors
         self.processes = Processes()
+        self._listen_to_helpers()
 
         # Wire up ASYNC error handler so failed callbacks send error to CLI
         self.asynchronous.set_error_handler(self.processes.answer_error_sync)

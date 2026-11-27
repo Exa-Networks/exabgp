@@ -169,6 +169,10 @@ def register_process(
     return closure
 
 
+def _nobody_to_wake() -> None:
+    """What Processes.wake is until a reactor asks to be woken: nobody is waiting."""
+
+
 class Processes:
     """Manages external API subprocess lifecycle and communication.
 
@@ -234,6 +238,9 @@ class Processes:
         # Write queue for async mode (process_name -> deque of strings to write)
         self._write_queue: dict[str, collections.deque[bytes]] = {}
         self._command_queue: collections.deque[tuple[str, str]] = collections.deque()
+        # called when a helper wrote, went away or has a line to be sent: the reactor sets
+        # it to end its idle wait
+        self.wake: Callable[[], None] = _nobody_to_wake
         # the helpers no longer read while the queue is full, read again once it has drained
         self._paused: set[str] = set()
 
@@ -291,6 +298,8 @@ class Processes:
     def _handle_problem(self, process: str) -> None:
         if process not in self._process:
             return
+        # a helper lost is for the reactor to act on: its routes, and api.terminate
+        self.wake()
         self._queue_exit(process)
         # api.terminate asks for the daemon to stop when a helper dies, so a helper which
         # would have been respawned is not: the reactor sees it in lost() and shuts down
@@ -976,7 +985,12 @@ class Processes:
                 continue
             log.debug(lazymsg('api.command.received process={pn} command={ln}', pn=process_name, ln=line), 'processes')
             self._command_queue.append((process_name, formated(line)))
+        self.wake()
         return raw
+
+    def waiting(self) -> bool:
+        """Whether a command is queued for the reactor, or a write for a helper."""
+        return bool(self._command_queue) or any(self._write_queue.values())
 
     def received_async(self) -> Generator[tuple[str, str], None, None]:
         """Async-compatible version of received() that yields buffered commands
@@ -1147,6 +1161,8 @@ class Processes:
                 self._write_queue[process] = collections.deque()
             self._write_queue[process].append(data)
             log.debug(lazymsg('async.write.queued process={p} bytes={b}', p=process, b=len(data)), 'processes')
+            # the reactor is what flushes the queue, and a peer task may be what filled it
+            self.wake()
             return True
 
         return self._write_blocking(process, data)
