@@ -190,3 +190,61 @@ def test_a_reactor_hears_its_helpers() -> None:
         return reactor._wake.is_set()
 
     assert asyncio.run(heard())
+
+
+def test_a_helper_with_a_full_pipe_does_not_keep_the_reactor_spinning(
+    helper: tuple[Processes, Woken],
+) -> None:
+    """EAGAIN on a helper's stdin means the pipe is full, so the reactor waits instead of spinning."""
+    import errno
+    from unittest.mock import MagicMock, patch
+
+    processes, _ = helper
+    processes._async_mode = True
+    stdin_mock = MagicMock()
+    stdin_mock.fileno.return_value = 7
+    cast(Any, processes._process['test']).stdin = stdin_mock
+    processes.write('test', 'neighbor 192.0.2.1 up')
+    assert processes.waiting()
+
+    with (
+        patch('exabgp.reactor.api.processes.log', MagicMock()),
+        patch('exabgp.reactor.api.processes.os.write', side_effect=OSError(errno.EAGAIN, 'again')),
+    ):
+        asyncio.run(processes.flush_write_queue())
+
+    assert processes._write_queue['test']
+    assert not processes.waiting()
+
+
+def test_a_reactor_with_a_stalled_helper_leaves_the_cpu_alone() -> None:
+    """A helper that stops reading keeps its queue full without spinning the event loop."""
+    import errno
+    from unittest.mock import MagicMock, patch
+
+    async def run_with_full_pipe(seconds: float) -> float:
+        reactor = idle_reactor()
+        reactor.processes._async_mode = True
+        proc = MagicMock()
+        proc.stdin.fileno.return_value = 7
+        reactor.processes._process['stalled'] = proc
+        encoder = MagicMock()
+        encoder.shutdown.return_value = None
+        reactor.processes._encoder['stalled'] = encoder
+        reactor.processes.write('stalled', 'neighbor 192.0.2.1 up')
+        with (
+            patch('exabgp.reactor.api.processes.log', MagicMock()),
+            patch('exabgp.reactor.api.processes.os.write', side_effect=OSError(errno.EAGAIN, 'again')),
+        ):
+            running = asyncio.create_task(reactor._async_main_loop())
+            await asyncio.sleep(0.1)
+            before = time.process_time()
+            await asyncio.sleep(seconds)
+            used = time.process_time() - before
+            await stop(reactor, running)
+            return used
+
+    waited = 1.0
+    used = asyncio.run(run_with_full_pipe(waited))
+
+    assert used < waited / 4, f'a reactor with a full helper pipe used {used:.2f}s of CPU in {waited:.0f}s'

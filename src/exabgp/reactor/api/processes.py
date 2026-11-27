@@ -379,6 +379,8 @@ class Processes:
 
         self._buffer.pop(process_name, None)
         self._decoder.pop(process_name, None)
+        self._pipe_full_since.pop(process_name, None)
+        self._write_queue.pop(process_name, None)
         clear_group(process_name)
         self._update_fds()
         thread = Thread(target=self._terminate_run, args=(process, process_name))
@@ -989,8 +991,14 @@ class Processes:
         return raw
 
     def waiting(self) -> bool:
-        """Whether a command is queued for the reactor, or a write for a helper."""
-        return bool(self._command_queue) or any(self._write_queue.values())
+        """Whether a command is queued for the reactor, or a write for a helper whose pipe has room.
+
+        A helper whose last write hit EAGAIN is in _pipe_full_since: spinning on it cannot
+        make it read faster, so the loop waits its idle interval before trying again.
+        """
+        if self._command_queue:
+            return True
+        return any(queue and name not in self._pipe_full_since for name, queue in self._write_queue.items())
 
     def received_async(self) -> Generator[tuple[str, str], None, None]:
         """Async-compatible version of received() that yields buffered commands
@@ -1343,6 +1351,7 @@ class Processes:
             # Broken pipe - process died
             self._broken.append(process_name)
             log.debug(lazymsg('async.write.failed process={p} reason=broken_pipe', p=process_name), 'processes')
+            self._pipe_full_since.pop(process_name, None)
             del self._write_queue[process_name]
             return
         # Other error
@@ -1351,6 +1360,7 @@ class Processes:
             lazymsg('async.queue.flush.error process={pn} error={e}', pn=process_name, e=errstr(exc)),
             'processes',
         )
+        self._pipe_full_since.pop(process_name, None)
         del self._write_queue[process_name]
 
     def _stop_unread_answers(self, process_name: str, queue: collections.deque[bytes]) -> None:
@@ -1409,6 +1419,8 @@ class Processes:
                 )
                 written = os.write(stdin_fd, data)
                 log.debug(lazymsg('async.write.result process={p} written={w}', p=process_name, w=written), 'processes')
+                if written > 0:
+                    self._pipe_full_since.pop(process_name, None)
                 if written < len(data):
                     # Partial write - put remaining data back
                     queue.appendleft(data[written:])
@@ -1423,7 +1435,6 @@ class Processes:
                     )
                     break
                 log.debug(lazymsg('async.write.flushed process={p} bytes={b}', p=process_name, b=written), 'processes')
-                self._pipe_full_since.pop(process_name, None)
             except OSError as exc:
                 self._defer_or_drop_queue(process_name, queue, data, exc)
                 break
