@@ -162,6 +162,10 @@ class Reactor:
         """
         if self._helper_lost or not self.processes.terminate_on_error:
             return
+        # A clean shutdown already requested (for instance by the helper itself right
+        # before exiting) must keep its normal exit code rather than turning into an error.
+        if self.signal.received == Signal.SHUTDOWN:
+            return
         lost = self.processes.lost()
         if not lost:
             return

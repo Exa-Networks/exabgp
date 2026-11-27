@@ -150,3 +150,30 @@ def test_nothing_happens_while_every_helper_runs() -> None:
 
     assert not reactor._helper_lost
     assert reactor.signal.received == Signal.NONE
+
+
+def test_shutdown_already_requested_is_not_overwritten_by_lost_helper() -> None:
+    """A helper that sends `shutdown` and exits immediately must leave exit code normal."""
+    reactor = _reactor(terminate=True, lost=['helper'])
+    reactor.signal.request(Signal.SHUTDOWN)
+
+    with patch('exabgp.reactor.loop.log', MagicMock()):
+        Reactor._terminate_on_lost_helper(reactor)
+
+    assert not reactor._helper_lost
+    assert reactor.signal.received == Signal.SHUTDOWN
+
+
+def test_helper_sending_shutdown_then_exiting_gives_normal_exit_code() -> None:
+    """Running the loop when `shutdown` and helper exit arrive on the same pass exits 0."""
+    import asyncio
+
+    reactor = _reactor(terminate=True, lost=['helper'])
+    reactor.processes._ackjson['helper'] = False
+    reactor.processes._ack['helper'] = False
+    reactor.processes._command_queue.append(('helper', 'shutdown'))
+
+    with patch('exabgp.reactor.loop.log', MagicMock()), patch('exabgp.reactor.api.processes.log', MagicMock()):
+        asyncio.run(asyncio.wait_for(reactor._async_main_loop(), timeout=5))
+
+    assert reactor.exit_code == Reactor.Exit.normal
